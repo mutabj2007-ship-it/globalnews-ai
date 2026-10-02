@@ -87,15 +87,78 @@ export const humanitarianPl: HumanitarianLanguageStrings = {
     languageNotStated: 'Źródło nie podało języka',
   },
 
-  citation: {
+
+  translationIsNotEvidence: 'Tłumaczenie nie niesie większej pewności niż oryginał.',
+
+  claimClass: {
+    FACT: 'Zarejestrowane',
+    SOURCE_ASSERTION: 'Podane przez źródło',
+    ESTIMATE: 'Szacunek',
+    INTERPRETATION: 'Interpretacja',
+    UNKNOWN: 'Nie wiadomo',
+  },
+
+  humanitarianPage: {
+    sourceLanguageRowLabel: 'Język źródła',
+    reportLanguageRowLabel: 'Język raportu',
+    notAssessed: 'Nie oceniono',
+    notAssessedDetail:
+      'Żadne dopuszczone źródło tego nie oceniło. To nie znaczy, że nic się nie stało.',
+    retainedReportingHeading: 'Zachowane doniesienia',
+    noRetainedReporting: 'Nie zachowaliśmy jeszcze żadnych doniesień na ten temat.',
+    coverageGap: 'Tego obszaru nie obejmuje żadne dopuszczone źródło.',
+    partial: 'Część tego rekordu jest dostępna. Brakujące elementy są oznaczone.',
+  },
+
+  home: {
+    cardTitle: 'Pomoc humanitarna',
+    cardBlurb: 'Ludzie, potrzeby i reagowanie',
+    noRetainedDataYet: 'Nie zachowaliśmy jeszcze żadnych doniesień humanitarnych.',
+    sourceLanguagesSeen: 'Dotychczasowe źródła: {languages}',
+  },
+
+  map: {
+    layerName: 'Pomoc humanitarna',
+    geometryFromSource: 'Kształt w postaci podanej przez źródło',
+    countryLevelOnly: 'Źródło ustala to wyłącznie na poziomie kraju.',
+    hazardNotImpact: 'Ten kształt to zagrożenie, a nie osoby dotknięte.',
+    precisionUnknown: 'Źródło nie podało, jak dokładnie jest to zlokalizowane.',
+    reportLanguageOnMarker: 'Język raportu: {language}',
+  },
+
+  myIntelligence: {
+    savedSectionTitle: 'Zapisane wyniki humanitarne',
+    reopenedAsStored: 'Otwarte w zapisanej postaci. Nic nie zostało uruchomione ponownie.',
+    storedAnswerLanguage: 'Ten wynik napisano w języku: {language}.',
+    storedSourceLanguageDiffers:
+      'Cytuje źródła opublikowane w: {sourceLanguages}, i nie zastąpił ich tłumaczeniem.',
+  },
+
+  admin: {
+    sectionTitle: 'Metadane językowe — pomoc humanitarna',
+    languageMetadataCoverage: 'Rekordy z podanym językiem źródła: {withLanguage} z {total}',
+    recordsWithNoDeclaredLanguage: 'Bez podanego języka: {count}',
+    recordsWithAmbiguousLanguage: 'Kilka języków, żaden nie wskazany: {count}',
+    bodiesWithheldForLanguage: 'Treści wstrzymane, bo nie dało się zakwalifikować języka: {count}',
+    reliefwebAppnameRequired:
+      'RELIEFWEB_APPNAME_REQUIRED — pozyskiwanie pozostaje wyłączone do czasu zatwierdzenia nazwy.',
+    acquisitionDisabled: 'Pozyskiwanie danych z tego źródła jest wyłączone.',
+    noLanguageInference:
+      'Rekord bez podanego języka liczymy, a nie zgadujemy na podstawie kraju.',
+    sourceUnavailable: 'Jedno ze źródeł nie odpowiedziało. To, co widzisz, może być niepełne.',
+  },
+
+  askDisclosure: {
     publishedByLabel: 'Opublikowane przez: {publisher}',
     sourceLanguageLabel: 'Język źródła: {language}',
     answerLanguageDiffers:
       'Ta odpowiedź jest w języku {answerLanguage}. Cytowane źródło opublikowano w języku {sourceLanguage}.',
     titleShownAsPublished: 'Tytuł źródła pokazujemy w brzmieniu oryginalnym.',
+    answerUsesTranslatedReporting:
+      'Ta odpowiedź opiera się na doniesieniach przetłumaczonych maszynowo. Oryginały są podlinkowane.',
+    someSourcesWithheldForLanguage:
+      'Pominęliśmy {count} zachowanych rekordów, bo nie dało się zakwalifikować ich języka.',
   },
-
-  translationIsNotEvidence: 'Tłumaczenie nie niesie większej pewności niż oryginał.',
 
   vocabulary: {
     observationKind: {

@@ -17,11 +17,11 @@ import {
   assertTitleProvenance, assertCitationIdentity,
   type ObservedLanguageMetadata, type TranslationState, type DisplayLanguage,
 } from '@globalnews-ai/shared';
-import {
-  humanitarianLanguageEn, HUMANITARIAN_CLAIM_CLASSES,
-  type HumanitarianLanguageStrings,
-} from './humanitarianLanguageEn';
-import { humanitarianLanguagePl } from './humanitarianLanguagePl';
+/* Convergence (CTO language-authority ruling): the canonical pair is humanitarianEn/Pl; the claim
+   classes are H's shared list. */
+import { HUMANITARIAN_CLAIM_CLASSES } from '@globalnews-ai/shared';
+import { humanitarianEn as humanitarianLanguageEn, type HumanitarianLanguageStrings } from './humanitarianEn';
+import { humanitarianPl as humanitarianLanguagePl } from './humanitarianPl';
 
 const DICTS: Record<'en' | 'pl', HumanitarianLanguageStrings> = { en: humanitarianLanguageEn, pl: humanitarianLanguagePl };
 const LOCALES = ['en', 'pl'] as const;
@@ -147,3 +147,36 @@ describe('AS-14 · NOT_ASSESSED never becomes "nothing happened"', () => {
   });
 });
 
+
+/* ── CONVERGENCE · one semantic label, one EN owner and one PL owner ─────── */
+describe('canonical Humanitarian dictionary pair (CTO language-authority ruling)', () => {
+  const dir = __dirname;
+  it('the redundant R2 pair is retired', () => {
+    for (const f of ['humanitarianLanguageEn.ts', 'humanitarianLanguagePl.ts']) {
+      expect(require('node:fs').existsSync(join(dir, f))).toBe(false);
+    }
+  });
+  it('R1 citation and R2 askDisclosure are ONE group (askDisclosure), never two', () => {
+    for (const loc of LOCALES) {
+      expect(Object.keys(DICTS[loc])).not.toContain('citation');
+      expect(Object.keys(DICTS[loc].askDisclosure).sort()).toEqual([
+        'answerLanguageDiffers', 'answerUsesTranslatedReporting', 'publishedByLabel',
+        'someSourcesWithheldForLanguage', 'sourceLanguageLabel', 'titleShownAsPublished',
+      ]);
+    }
+  });
+  it('readers never get a source-topology label; Admin owns source health', () => {
+    for (const loc of LOCALES) {
+      expect(Object.keys(DICTS[loc].humanitarianPage)).not.toContain('sourceUnavailable');
+      expect(DICTS[loc].admin.sourceUnavailable.trim().length).toBeGreaterThan(0);
+    }
+  });
+  it('claim-class labels cover exactly H\'s shared taxonomy', () => {
+    for (const loc of LOCALES) {
+      expect(Object.keys(DICTS[loc].claimClass).sort()).toEqual([...HUMANITARIAN_CLAIM_CLASSES].sort());
+    }
+  });
+  it('R1 vocabulary labels (Main) survive the merge', () => {
+    for (const loc of LOCALES) expect(Object.keys(DICTS[loc].vocabulary).length).toBe(6);
+  });
+});

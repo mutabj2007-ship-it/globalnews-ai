@@ -9,6 +9,7 @@ import type {
   HumanitarianImpactMeasure,
   HumanitarianStatusMeasure,
   ImpactAssertionBasis,
+  HumanitarianClaimClass,
 } from '@globalnews-ai/shared';
 
 /**
@@ -53,16 +54,74 @@ export interface HumanitarianLanguageStrings {
     readonly languageNotStated: string;
   };
 
-  /** Ask citations. The source keeps its identity in a Polish answer. */
-  readonly citation: {
+  /** The one sentence that must never be lost. */
+  readonly translationIsNotEvidence: string;
+
+  /** H's claim-class taxonomy (shared HUMANITARIAN_CLAIM_CLASSES); these are its EN/PL labels. */
+  readonly claimClass: Readonly<Record<HumanitarianClaimClass, string>>;
+
+  /* ═══ L R2 SURFACE GROUPS — merged into the canonical pair (CTO language-authority ruling) ═══ */
+  /* ── 1 · THE HUMANITARIAN PAGE ─────────────────────────────────────────── */
+  readonly humanitarianPage: {
+    readonly sourceLanguageRowLabel: string;
+    readonly reportLanguageRowLabel: string;
+    readonly notAssessed: string;
+    readonly notAssessedDetail: string;
+    readonly retainedReportingHeading: string;
+    readonly noRetainedReporting: string;
+    readonly coverageGap: string;
+    readonly partial: string;
+  };
+
+  /* ── 2 · HOME ──────────────────────────────────────────────────────────── */
+  readonly home: {
+    readonly cardTitle: string;
+    readonly cardBlurb: string;
+    readonly noRetainedDataYet: string;
+    readonly sourceLanguagesSeen: string;
+  };
+
+  /* ── 3 · MAP ───────────────────────────────────────────────────────────── */
+  readonly map: {
+    readonly layerName: string;
+    readonly geometryFromSource: string;
+    readonly countryLevelOnly: string;
+    readonly hazardNotImpact: string;
+    readonly precisionUnknown: string;
+    readonly reportLanguageOnMarker: string;
+  };
+
+  /* ── 4 · MY INTELLIGENCE ───────────────────────────────────────────────── */
+  readonly myIntelligence: {
+    readonly savedSectionTitle: string;
+    readonly reopenedAsStored: string;
+    readonly storedAnswerLanguage: string;
+    readonly storedSourceLanguageDiffers: string;
+  };
+
+  /* ── 5 · ADMIN · SOURCE HEALTH ─────────────────────────────────────────── */
+  readonly admin: {
+    readonly sectionTitle: string;
+    readonly languageMetadataCoverage: string;
+    readonly recordsWithNoDeclaredLanguage: string;
+    readonly recordsWithAmbiguousLanguage: string;
+    readonly bodiesWithheldForLanguage: string;
+    readonly reliefwebAppnameRequired: string;
+    readonly acquisitionDisabled: string;
+    readonly noLanguageInference: string;
+    /** Admin-only source health (never shown to readers: public reads are lossy). */
+    readonly sourceUnavailable: string;
+  };
+
+  /* ── 6 · ASK DISCLOSURES ───────────────────────────────────────────────── */
+  readonly askDisclosure: {
     readonly publishedByLabel: string;
     readonly sourceLanguageLabel: string;
     readonly answerLanguageDiffers: string;
     readonly titleShownAsPublished: string;
+    readonly answerUsesTranslatedReporting: string;
+    readonly someSourcesWithheldForLanguage: string;
   };
-
-  /** The one sentence that must never be lost. */
-  readonly translationIsNotEvidence: string;
 
   /**
    * CONVERGENCE (Claude Code, final semantic authority) — reader labels for Main's canonical
@@ -96,7 +155,7 @@ export const humanitarianEn: HumanitarianLanguageStrings = {
     ORIGINAL: 'This is the source’s own text, in the language it was published in.',
     SOURCE_TRANSLATION: 'The source published this translation itself.',
     PLATFORM_TRANSLATED:
-      'GlobalNews AI translated this. The source’s own wording is kept and can be opened.',
+      'GlobalNews AI translated this by machine. The source’s own wording is kept and can be opened.',
     UNTRANSLATED:
       'No translation exists for this text. It is shown in the language the source published.',
     UNKNOWN:
@@ -131,15 +190,77 @@ export const humanitarianEn: HumanitarianLanguageStrings = {
     languageNotStated: 'Language not stated by the source',
   },
 
-  citation: {
+
+  translationIsNotEvidence: 'A translation carries no more certainty than the original.',
+
+  claimClass: {
+    FACT: 'Recorded',
+    SOURCE_ASSERTION: 'Stated by the source',
+    ESTIMATE: 'Estimate',
+    INTERPRETATION: 'Interpretation',
+    UNKNOWN: 'Not known',
+  },
+
+  humanitarianPage: {
+    sourceLanguageRowLabel: 'Source language',
+    reportLanguageRowLabel: 'Report language',
+    notAssessed: 'Not assessed',
+    notAssessedDetail:
+      'No admitted source has assessed this. That is not a statement that nothing happened.',
+    retainedReportingHeading: 'Retained reporting',
+    noRetainedReporting: 'No reporting has been retained for this yet.',
+    coverageGap: 'This area is not covered by an admitted source.',
+    partial: 'Part of this record is available. What is missing is marked.',
+  },
+
+  home: {
+    cardTitle: 'Humanitarian',
+    cardBlurb: 'People, needs and response',
+    noRetainedDataYet: 'No humanitarian reporting has been retained yet.',
+    sourceLanguagesSeen: 'Sources so far: {languages}',
+  },
+
+  map: {
+    layerName: 'Humanitarian',
+    geometryFromSource: 'Shape as the source supplied it',
+    countryLevelOnly: 'The source establishes this only at country level.',
+    hazardNotImpact: 'This shape is the hazard, not the people affected.',
+    precisionUnknown: 'The source did not state how precisely this is located.',
+    reportLanguageOnMarker: 'Report language: {language}',
+  },
+
+  myIntelligence: {
+    savedSectionTitle: 'Saved humanitarian results',
+    reopenedAsStored: 'Reopened as it was stored. Nothing has been re-run.',
+    storedAnswerLanguage: 'This result was written in {language}.',
+    storedSourceLanguageDiffers:
+      'It cites sources published in {sourceLanguages}, which it did not translate away.',
+  },
+
+  admin: {
+    sectionTitle: 'Humanitarian language metadata',
+    languageMetadataCoverage: 'Records with a declared source language: {withLanguage} of {total}',
+    recordsWithNoDeclaredLanguage: 'No declared language: {count}',
+    recordsWithAmbiguousLanguage: 'Several languages, none designated: {count}',
+    bodiesWithheldForLanguage: 'Bodies withheld because the language could not be qualified: {count}',
+    reliefwebAppnameRequired: 'RELIEFWEB_APPNAME_REQUIRED — acquisition stays off until one is approved.',
+    acquisitionDisabled: 'Acquisition is off for this source.',
+    noLanguageInference:
+      'A record with no declared language is counted, never guessed from its country.',
+    sourceUnavailable: 'A source did not answer. What is shown may be incomplete.',
+  },
+
+  askDisclosure: {
     publishedByLabel: 'Published by {publisher}',
     sourceLanguageLabel: 'Source language: {language}',
     answerLanguageDiffers:
       'This answer is in {answerLanguage}. The source it cites was published in {sourceLanguage}.',
     titleShownAsPublished: 'The source’s title is shown as published.',
+    answerUsesTranslatedReporting:
+      'This answer draws on reporting that was machine-translated. The originals are linked.',
+    someSourcesWithheldForLanguage:
+      '{count} retained records were left out because their language could not be qualified.',
   },
-
-  translationIsNotEvidence: 'A translation carries no more certainty than the original.',
 
   vocabulary: {
     observationKind: {
