@@ -229,6 +229,15 @@ export function useAskR2Conversation(
       if (threadId === null) {
         const created = await askV2Api.guestCreateThread(language, sanitizeReturnPath(returnPath));
         if (!created.ok) {
+          /* TRUST R1 (checkpoint 5, live Alpha) — a dropped connection on the guest's FIRST send
+             was reported as 'The service is busy' (a limit notice). It is a failed send: the draft
+             is kept with the retry line, exactly as a failed later send is. Nothing ran. */
+          if (created.reason === 'NETWORK') {
+            const failedTurn: AskR2Turn = { question: q, failure: created.reason };
+            setTurns((t) => [...t, failedTurn]);
+            onTurn?.(failedTurn);
+            return 'failed';
+          }
           if (created.reason === 'UNAVAILABLE') {
             setAvailability('legacy');
             return 'legacy';
