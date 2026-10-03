@@ -149,7 +149,8 @@ describe('§6 — bounded normalization: form only, never meaning', () => {
       'what is inflation?'.replace(/^w/, 'W'),
     );
     expect(normalizeTurn('Right. Now turn that into steps.', 'en').text).toBe(
-      'Right. turn that into steps.',
+      /* fifth pass: the leading filler "Right." is form too */
+      'turn that into steps.',
     );
     expect(normalizeTurn('Now, compare those.', 'en').applied).toContain('DISCOURSE_NOW');
   });

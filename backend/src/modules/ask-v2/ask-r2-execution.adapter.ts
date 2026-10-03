@@ -203,6 +203,10 @@ function routeFor(
       ...(who === undefined ? {} : { identityVerified: who.accountId !== null }),
       /* ASK R3 CONTINUITY — frozen C already reads conversationSubject from it. */
       ...(who?.priorQuestion ? { priorQuestion: who.priorQuestion } : {}),
+      /* CTO R4 fifth pass — the objective the reader stated earlier in this thread */
+      ...(request.conversation?.objective === undefined
+        ? {}
+        : { conversationObjective: request.conversation.objective.text }),
       /* UNIFIED INTELLIGENCE BINDING R2B — THIS turn's server-resolved context, through the
          landed seams only (frozen C and its eligibility rules are untouched). */
       ...routeContextOf(request.context, request.question),

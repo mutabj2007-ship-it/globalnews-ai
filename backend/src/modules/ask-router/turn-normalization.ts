@@ -26,7 +26,7 @@ export interface NormalizedTurn {
   readonly text: string;
   /** Which harmless rewrites were applied (diagnostics; codes only). */
   readonly applied: readonly (
-    'QUOTES' | 'CONTRACTION' | 'POSSESSIVE' | 'DISCOURSE_NOW' | 'WHITESPACE'
+    'QUOTES' | 'CONTRACTION' | 'POSSESSIVE' | 'DISCOURSE_NOW' | 'WHITESPACE' | 'FILLER'
   )[];
 }
 
@@ -66,6 +66,16 @@ export function normalizeTurn(question: string, language: string): NormalizedTur
     .trim();
   if (spaced !== text.trim()) applied.push('WHITESPACE');
   text = spaced;
+  /* CTO R4 fifth pass — leading conversational FILLERS ("ok so", "well,", "um", PL "no to", "dobra")
+     are form; "right now" keeps its time ("right" is a filler only when "now" does not follow) */
+  const unfilled = text.replace(
+    language === 'pl'
+      ? /^(?:(?:ok|okej|dobra|no|więc|wiec|hej|słuchaj|sluchaj)[,.!]?\s+)+(?=\p{L})/iu
+      : /^(?:(?:ok(?:ay)?|so|well|um+|uh+|hmm+|right(?!\s+now)|alright|hey|hi|hello|yeah|sure)[,.!]?\s+)+(?=\p{L})/iu,
+    '',
+  );
+  if (unfilled !== text) applied.push('FILLER');
+  text = unfilled;
   if (language === 'en') {
     let contracted = text;
     for (const [re, to] of EN_CONTRACTIONS) contracted = contracted.replace(re, to);

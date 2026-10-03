@@ -63,6 +63,8 @@ export interface AskRequest {
       /** L-2 — the portable subject after this turn (built only from the reader's words). */
       readonly subject?: string | null;
     };
+    /** CTO R4 fifth pass — the newest objective the reader stated in this thread, with its turn. */
+    readonly objective?: { readonly text: string; readonly sourceTurn: number };
   };
 }
 

@@ -109,6 +109,12 @@ export interface AskRouteContext {
    */
   readonly priorWork?: { readonly kind: string; readonly label: string };
   /**
+   * CTO R4 fifth pass — the objective the READER stated earlier in this thread (bounded semantic
+   * state from their own words, newest wins). A decision with no objective of its own uses it
+   * instead of asking "best for what?".
+   */
+  readonly conversationObjective?: string;
+  /**
    * CTO R4 — the bounded semantic classifier's verdict for an UNRESOLVED question (set only by the
    * executor, after every control): current evidence is required, so the reporting plan applies.
    */
@@ -1082,8 +1088,14 @@ export function routeAskR2(
     readerStatedPeriod: reading.statedTime?.statedPeriod ?? null,
     currentEvidenceNeeded:
       ('currentClauses' in knowledge ? knowledge.currentClauses : undefined) ?? [],
+    /* CTO R4 fifth pass — the turn's own objective, else the conversation's, else the label of a
+       DECISION_CRITERIA artifact: "best for what?" only when none exists */
     decisionObjective:
-      advisory && decision && 'objective' in knowledge ? (knowledge.objective ?? null) : null,
+      advisory && decision
+        ? (('objective' in knowledge ? (knowledge.objective ?? null) : null) ??
+          ctx.conversationObjective ??
+          (ctx.priorWork?.kind === 'DECISION_CRITERIA' ? ctx.priorWork.label : null))
+        : null,
     /* R3 §14 / CTO R4 third pass — the two-country scope, current, historical or conceptual */
     relationship: relationshipAny,
     job,

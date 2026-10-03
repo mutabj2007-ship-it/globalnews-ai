@@ -1,4 +1,5 @@
 import { yearRoles } from './advisory-requirement';
+import { readEvaluationKind } from './decision-objective';
 import { plTolerant, PlTolerantRegExp } from './pl-tolerant';
 
 /**
@@ -577,7 +578,9 @@ export function readUserJob(question: string, language: string, ctx: JobContext)
   const deep = (lang === 'pl' ? PL_DEPTH : EN_DEPTH).test(text);
   const depth: Depth = deep ? 'DEEP' : 'STANDARD';
   const transformation = readTransformation(text, lang);
-  const reference = referencesPriorWork(text, lang);
+  const reference =
+    referencesPriorWork(text, lang) ||
+    readEvaluationKind(text, lang) === 'ARTIFACT_COMPONENT_EVALUATION';
   const anaphora =
     text.length <= 200 &&
     !ctx.namedPlace &&

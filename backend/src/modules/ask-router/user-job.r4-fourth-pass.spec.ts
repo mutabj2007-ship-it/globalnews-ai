@@ -43,7 +43,8 @@ describe('§1 — the temporal interpretation layer', () => {
     ['have prices been rising lately', 'en', 'RECENT_PERIOD', 'CURRENT'],
     ['why is remote work so common these days', 'en', 'CONTEMPORARY_TENDENCY', 'CONTEMPORARY'],
     ['why is remote work so common nowadays', 'en', 'CONTEMPORARY_TENDENCY', 'CONTEMPORARY'],
-    ['what changed since 2008', 'en', 'SINCE_PAST_TO_PRESENT', 'CURRENT'],
+    /* fifth pass: a dated "since" keeps BOTH endpoints → historical + current (still news) */
+    ['what changed since 2008', 'en', 'SINCE_PAST_TO_PRESENT', 'HISTORICAL_AND_CURRENT'],
     ['what happened in the last 30 days', 'en', 'REPORTING_WINDOW', 'CURRENT'],
     ['co się dzieje w tej chwili', 'pl', 'CURRENT_STATE', 'CURRENT'],
     ['co sie dzieje w tej chwili', 'pl', 'CURRENT_STATE', 'CURRENT'],

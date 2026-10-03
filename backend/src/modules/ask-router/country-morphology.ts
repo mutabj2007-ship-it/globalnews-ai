@@ -1,4 +1,8 @@
-import { resolveCountryByAnyIdentifier } from '@globalnews-ai/shared';
+import {
+  COUNTRIES,
+  getLocalizedCountryName,
+  resolveCountryByAnyIdentifier,
+} from '@globalnews-ai/shared';
 import { resolveCountriesByDemonym } from '../news/country/country-relevance.util';
 import { foldPl } from './pl-tolerant';
 
@@ -148,6 +152,85 @@ export function combinedCountryAdjectives(text: string, language: string): Array
     if (a !== null && b !== null && a !== b) out.push([a, b]);
   }
   return out;
+}
+
+/*
+  CTO R4 FIFTH PASS — POLISH COUNTRY NAMES IN ANY GRAMMATICAL CASE. "Stanów Zjednoczonych",
+  "Korei Północnej", "Koreą Południową", "w Stanach Zjednoczonych" are cases of the canonical
+  Polish names the registry already holds (Intl display names: "Stany Zjednoczone", "Korea
+  Północna"). Each word is REVERSE-INFLECTED with a bounded set of Polish case endings and the
+  candidate is accepted ONLY if it is exactly a registry nominative — never a near-spelling.
+*/
+let PL_NOMINATIVES: Map<string, string> | null = null;
+function plNominatives(): Map<string, string> {
+  if (PL_NOMINATIVES !== null) return PL_NOMINATIVES;
+  const map = new Map<string, string>();
+  for (const c of COUNTRIES) {
+    const name = getLocalizedCountryName(c.iso2, 'pl' as never);
+    if (name !== undefined) map.set(foldPl(name.toLowerCase()), c.iso3);
+  }
+  PL_NOMINATIVES = map;
+  return map;
+}
+/* folded case endings → nominative endings (nouns and adjectives, singular and plural) */
+const PL_CASE_ENDINGS: ReadonlyArray<readonly [string, readonly string[]]> = [
+  ['ymi', ['e', 'y']],
+  ['ami', ['y', 'a']],
+  ['ach', ['y']],
+  ['ych', ['e', 'y']],
+  ['ich', ['ie']],
+  ['ow', ['y']],
+  ['om', ['y']],
+  ['ym', ['e', 'y']],
+  ['im', ['i']],
+  ['ej', ['a']],
+  ['ego', ['y', 'e']],
+  ['iem', ['']],
+  ['em', ['']],
+  ['ii', ['ia', 'ie']],
+  ['ji', ['ja']],
+  ['sce', ['ska']],
+  ['dze', ['ga']],
+  ['ie', ['', 'a', 'ia']],
+  ['i', ['a', 'ia', 'ie', 'y']],
+  ['y', ['a', 'y']],
+  ['e', ['a']],
+  ['a', ['a', '']],
+  ['u', ['']],
+  /* a genitive plural with an inserted vowel: Węgier ← Węgry, Niemiec ← Niemcy */
+  ['ier', ['ry']],
+  ['iec', ['cy']],
+];
+function plWordForms(word: string): string[] {
+  const w = foldPl(word.toLowerCase());
+  /* a zero-ending plural genitive ("Czech", "Węgier", "Chin") → its plural nominative (+y / +i) */
+  const out = new Set([w, `${w}y`, `${w}i`]);
+  for (const [ending, replacements] of PL_CASE_ENDINGS)
+    if (w.endsWith(ending) && w.length > ending.length + 2)
+      for (const r of replacements) out.add(w.slice(0, w.length - ending.length) + r);
+  return [...out];
+}
+
+/** A Polish country name in any common case ("Stanów Zjednoczonych" → USA), or null. */
+export function resolvePolishCountryForm(phrase: string): string | null {
+  const words = phrase
+    .trim()
+    .split(/\s+/)
+    .filter((w) => /\p{L}/u.test(w));
+  if (words.length === 0 || words.length > 3) return null;
+  const nominatives = plNominatives();
+  let candidates = [''];
+  for (const word of words) {
+    const next: string[] = [];
+    for (const prefix of candidates)
+      for (const form of plWordForms(word)) next.push(prefix === '' ? form : `${prefix} ${form}`);
+    candidates = next.slice(0, 600);
+  }
+  for (const c of candidates) {
+    const iso3 = nominatives.get(c);
+    if (iso3 !== undefined) return iso3;
+  }
+  return null;
 }
 
 /* lowercase words that are also countries: a possessive is read only when capitalised */

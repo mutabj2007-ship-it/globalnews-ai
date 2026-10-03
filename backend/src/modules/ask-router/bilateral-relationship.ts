@@ -1,7 +1,7 @@
 import { findCountryByIso3, resolveCountryByAnyIdentifier } from '@globalnews-ai/shared';
 import { resolvePolishCountry } from '../analysis/query/polish-country-forms.util';
 import { DEMONYM_SOURCE, normalizeAskQuestion } from './normalization/qualified-reading';
-import { combinedCountryAdjectives } from './country-morphology';
+import { combinedCountryAdjectives, resolvePolishCountryForm } from './country-morphology';
 import { plTolerant } from './pl-tolerant';
 
 /**
@@ -176,6 +176,9 @@ function countryOf(phrase: string, lang: 'en' | 'pl', fromEnd: boolean): string 
     if (lang === 'pl') {
       const c = resolvePolishCountry(cleaned);
       if (c !== undefined && c !== null) return c.iso3;
+      /* CTO R4 fifth pass — any common grammatical case ("Stanów Zjednoczonych", "Korei Północnej") */
+      const inflected = resolvePolishCountryForm(cleaned);
+      if (inflected !== null) return inflected;
     }
     const c = resolveCountryByAnyIdentifier(cleaned);
     if (c !== undefined && cleaned.toUpperCase() !== c.iso2 && cleaned.toUpperCase() !== c.iso3)
@@ -221,6 +224,32 @@ function domainOf(relations: readonly RelationKind[]): BilateralRelationship['do
   return 'GENERAL';
 }
 
+/*
+  CTO R4 FIFTH PASS — TWO-ACTOR EVENTS ARE RELATIONSHIPS. A relation need not be named with
+  "between", "border" or "trade": an EVENT can encode both actors ("the summit of the United
+  States and North Korea", "the dissolution of the union of Norway and Sweden", "a deal Russia and
+  Ukraine agreed", "konflikt Grecji i Turcji o Cypr"). The authority is the STRUCTURE — two
+  COORDINATED actors (a pair or a combined adjective) — and the event / joint-action vocabulary
+  below is only the evidence that a relation joins them. Without the coordinated structure these
+  words never create a relationship.
+*/
+const TWO_ACTOR_EVENT: ReadonlyArray<readonly [RelationKind, RegExp]> = (
+  [
+    [
+      'DIPLOMATIC',
+      /\b(?:summits?|meetings?|talks|negotiat\w*|agreements?|deals?|accords?|treat(?:y|ies)|normali[sz]\w*|met|meets|meeting|agreed|signed|brokered|mediat\w*|reconcil\w*|conflicts?|disputes?|standoffs?)\b|(?:szczyt\p{L}*|spotkani\p{L}*|spotkał\p{L}*|rozmow\p{L}*|negocjacj\p{L}*|negocjował\p{L}*|porozumieni\p{L}*|umow\p{L}*|układ\p{L}*|traktat\p{L}*|zawarł\p{L}*|podpisał\p{L}*|pojedna\p{L}*|konflikt\p{L}*|sp[oó]r\p{L}*)/iu,
+    ],
+    [
+      'HISTORICAL_RELATION',
+      /\b(?:union|unions|unification|unified|united|merger|merged|dissolution|dissolv\w*|break-?up|split|separat\w*|secession|partition\w*|independence\s+from)\b|(?:uni[aięi]|unii|zjednoczeni\p{L}*|zjednoczył\p{L}*|rozpad\p{L}*|rozwiązani\p{L}*|rozwiązał\p{L}*|rozdzieleni\p{L}*|rozdzielił\p{L}*|secesj\p{L}*|podział\p{L}*)/iu,
+    ],
+    [
+      'ECONOMIC',
+      /\b(?:sanctions?|embargo\w*|tariff\s+war|trade\s+war)\b|(?:sankcj\p{L}*|embarg\p{L}*|wojn\p{L}*\s+handlow\p{L}*)/iu,
+    ],
+  ] as ReadonlyArray<readonly [RelationKind, RegExp]>
+).map(([kind, re]) => [kind, plTolerant(re)] as const);
+
 /* the role of a third place, from the preposition that introduces it */
 const OBJECT_ROLE: ReadonlyArray<readonly [EntityRole, RegExp]> = [
   [
@@ -233,7 +262,7 @@ const OBJECT_ROLE: ReadonlyArray<readonly [EntityRole, RegExp]> = [
   ],
   [
     'VENUE',
-    /(?:\b(?:hosted\s+in|held\s+in|talks\s+in|summit\s+in|meeting\s+in|mediated\s+(?:by|in))|(?:^|\s)(?:rozmow\p{L}*\s+w|szczyt\p{L}*\s+w))\s+(?:the\s+)?$/iu,
+    /(?:\b(?:hosted\s+(?:in|by)|held\s+in|talks\s+in|summit\s+in|meeting\s+in|mediated\s+(?:by|in)|brokered\s+(?:in|by)|signed\s+in|agreed\s+in|concluded\s+in|met\s+in|negotiated\s+in)|(?:^|\s)(?:rozmow\p{L}*\s+w|szczyt\p{L}*\s+w))\s+(?:the\s+)?$/iu,
   ],
 ];
 
@@ -262,12 +291,22 @@ export function readBilateralRelationship(
     an OBJECT / VENUE / CORRIDOR of the relation, never a reason to drop the pair.
   */
   const adjective = combinedCountryAdjectives(question, language)[0] ?? null;
+  /* CTO R4 fifth pass — the COORDINATED structure is the strongest actor evidence: a venue or a
+     disputed place the gazetteer happens to read never displaces an actor */
+  const coordinated = adjective ?? coordinatedCountryPair(question, language);
   const actors: [string, string] | null =
-    read.length === 2
-      ? [read[0], read[1]]
-      : (adjective ?? coordinatedCountryPair(question, language));
+    coordinated ?? (read.length === 2 ? [read[0], read[1]] : null);
   if (actors === null) return null;
-  const relations = RELATIONS.filter(([, re]) => re.test(question)).map(([kind]) => kind);
+  const eventKinds =
+    coordinated === null
+      ? []
+      : TWO_ACTOR_EVENT.filter(([, re]) => re.test(question)).map(([kind]) => kind);
+  const relations = [
+    ...new Set([
+      ...RELATIONS.filter(([, re]) => re.test(question)).map(([kind]) => kind),
+      ...eventKinds,
+    ]),
+  ];
   const between = BETWEEN.test(question);
   /* A comparison is two subjects side by side, not their relationship — unless a relation word
      ("Compare trade between…") or a combined adjective ("the Franco-German relationship") says it
@@ -289,7 +328,12 @@ export function readBilateralRelationship(
           ? lower.indexOf(g.matchedText.toLowerCase())
           : (words.map((w) => lower.indexOf(w.replace(/s$/, ''))).find((i) => i >= 0) ?? -1);
       const before = at < 0 ? '' : question.slice(Math.max(0, at - 40), at);
-      const role = OBJECT_ROLE.find(([, re]) => re.test(before))?.[0] ?? 'LOCATION';
+      const role =
+        OBJECT_ROLE.find(([, re]) => re.test(before))?.[0] ??
+        /* a place "in" an event between the two actors is where it happened: its venue */
+        (eventKinds.length > 0 && /(?:\b(?:in|at)|(?:^|\s)(?:w|we))\s+(?:the\s+)?$/iu.test(before)
+          ? 'VENUE'
+          : 'LOCATION');
       return { iso3: g.value, role };
     })
     .filter((e, i, all) => all.findIndex((x) => x.iso3 === e.iso3) === i);

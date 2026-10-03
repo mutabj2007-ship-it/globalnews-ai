@@ -676,3 +676,58 @@ describe('R4 fourth pass §12 — present / recent language reaches the evidence
     expect(h.calls.analysis.length).toBeGreaterThan(0);
   });
 });
+
+/* ── CTO R4 FIFTH PASS ──────────────────────────────────────────────────────────────────────── */
+
+describe('R4 fifth pass D — the conversation objective answers "best for what?"', () => {
+  const trace = {
+    job: 'UNKNOWN',
+    ownJob: 'UNKNOWN',
+    carried: [],
+    overridden: [],
+    reset: false,
+    composed: null,
+  };
+  it('a decision with the objective stated two turns earlier is answered, not clarified', async () => {
+    const h = harness({});
+    const request: AskRequest = {
+      question: 'Which one fits me better?',
+      language: 'en',
+      intent: 'ask',
+      conversation: {
+        officialSourcesOnly: false,
+        constraintOnly: false,
+        trace,
+        objective: { text: 'income stability and working abroad', sourceTurn: 1 },
+      },
+    };
+    const plan = await h.adapter.prepare(request);
+    const p = JSON.parse(
+      (await inRequest(() => h.adapter.execute(request, plan, 'op'))).payloadJson,
+    ) as Payload;
+    expect(p.answer.basis).not.toBe('DECISION_OBJECTIVE_MISSING');
+    expect(h.calls.analysis).toHaveLength(0);
+    expect(h.calls.background).toHaveLength(1);
+  });
+  it('with no objective anywhere, "best for what?" is still asked (zero compute)', async () => {
+    const h = harness({});
+    const request: AskRequest = {
+      question: 'Which country is best?',
+      language: 'en',
+      intent: 'ask',
+    };
+    const plan = await h.adapter.prepare(request);
+    const p = JSON.parse(
+      (await inRequest(() => h.adapter.execute(request, plan, 'op'))).payloadJson,
+    ) as Payload;
+    expect(p.answer.basis).toBe('DECISION_OBJECTIVE_MISSING');
+    expect(h.calls.background).toHaveLength(0);
+  });
+  it('a component evaluation of earlier work is answered on that work (never "best for what?")', async () => {
+    const h = harness({});
+    const p = await run(h, "Which of the critic's points is the strongest, and why?", 'en', PRIME);
+    expect(p.answer.basis).not.toBe('DECISION_OBJECTIVE_MISSING');
+    expect(p.diagnostics.job.discourseReference).toBe('PRIOR_WORK');
+    expect(h.calls.analysis).toHaveLength(0);
+  });
+});

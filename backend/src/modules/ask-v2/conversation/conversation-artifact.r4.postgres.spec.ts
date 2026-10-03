@@ -212,6 +212,25 @@ live('R4 ConversationArtifact memory — live PostgreSQL through AskV2Service', 
     }
   });
 
+  it('CTO R4 fifth pass — the objective the reader stated two turns earlier travels with the request (source turn kept; quote = execute; newer overrides)', async () => {
+    const t = await thread();
+    await ask(t, 'I am choosing between studying law and studying medicine.');
+    await ask(t, 'What matters most to me is income stability and working abroad.');
+    await ask(t, 'Hmm, good points.');
+    const decision = await ask(t, 'So which one fits me better?');
+    expect(decision.quoted.conversation?.objective).toEqual({
+      text: 'income stability and working abroad',
+      sourceTurn: 1,
+    });
+    expect(decision.executed.conversation?.objective).toEqual(
+      decision.quoted.conversation?.objective,
+    );
+    await ask(t, 'Actually, my priority is a short training path.');
+    const again = await ask(t, 'Which one fits me better now?');
+    expect(again.quoted.conversation?.objective?.text).toBe('a short training path');
+    expect(again.quoted.conversation?.objective?.sourceTurn).toBe(4);
+  });
+
   it('a malformed or evidence-claiming artifact in a stored payload is never trusted', async () => {
     const t = await thread();
     nextArtifact = {

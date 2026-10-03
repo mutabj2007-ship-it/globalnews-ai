@@ -151,7 +151,8 @@ function conversationOf(turn: ConversationalTurn | null): Pick<AskRequest, 'conv
     !t.reset &&
     t.composed === null &&
     !turn.state.officialSourcesOnly &&
-    !turn.constraintOnly;
+    !turn.constraintOnly &&
+    (turn.objective === undefined || turn.objective === null);
   return trivial
     ? {}
     : {
@@ -159,6 +160,9 @@ function conversationOf(turn: ConversationalTurn | null): Pick<AskRequest, 'conv
           officialSourcesOnly: turn.state.officialSourcesOnly,
           constraintOnly: turn.constraintOnly,
           trace: t,
+          ...(turn.objective === undefined || turn.objective === null
+            ? {}
+            : { objective: { text: turn.objective.text, sourceTurn: turn.objective.sourceTurn } }),
         },
       };
 }

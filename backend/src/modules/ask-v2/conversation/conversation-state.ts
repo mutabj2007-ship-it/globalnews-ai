@@ -14,6 +14,10 @@ import {
 import { readDecisionSupport } from '../../ask-router/decision-support';
 import { readRequestAct, readTemporalRoles, readTransformation } from '../../ask-router/user-job';
 import {
+  conversationObjective,
+  type ConversationObjective,
+} from '../../ask-router/decision-objective';
+import {
   readBilateralRelationship,
   relationKindsIn,
   type BilateralRelationship,
@@ -145,6 +149,8 @@ export interface ConversationalTurn {
   /** The turn only stated a preference / constraint and composed nothing (no job to serve). */
   readonly constraintOnly: boolean;
   readonly trace: TurnStateTrace;
+  /** CTO R4 fifth pass — the newest objective the reader stated in this thread (incl. this turn). */
+  readonly objective?: ConversationObjective | null;
 }
 
 export interface EarlierTurnText {
@@ -1141,5 +1147,11 @@ export function readConversationalTurn(
   let state = EMPTY(lang);
   for (let i = window.length - 1; i >= 0; i--)
     state = step(state, window[i].question, lang, window.slice(i + 1), false).state;
-  return step(state, question, lang, window, options.hasOwnContext === true);
+  const turn = step(state, question, lang, window, options.hasOwnContext === true);
+  /* bounded objective memory: the reader's own words, oldest → newest, the newest objective wins */
+  const objective = conversationObjective(
+    [...window.map((t) => t.question).reverse(), question],
+    lang,
+  );
+  return objective === null ? turn : { ...turn, objective };
 }

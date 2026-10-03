@@ -12,7 +12,9 @@ import {
 } from './advisory-requirement';
 import { readDecisionSupport } from './decision-support';
 import { foldPl, plTolerant } from './pl-tolerant';
-import { temporallyCurrent, temporallyPastOnly } from './temporal-semantics';
+import { readTemporalSemantics, temporallyCurrent, temporallyPastOnly } from './temporal-semantics';
+import { mixedFromIntents, readClauseIntents } from './clause-intent';
+import { readEvaluationKind } from './decision-objective';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -120,6 +122,11 @@ const STABLE_SHAPES: Readonly<Record<'en' | 'pl', readonly RegExp[]>> = {
     /^what\s+(?:are|is)\s+the\s+(?:consequences?|effects?|implications?|impacts?|causes?|roots?|origins?|similarit(?:y|ies)|mechanisms?|drivers?)\s+of\b/i,
     /^what\s+(?:does|would|could)\s+.{2,80}?\s+mean\s+for\b/i,
     /^what\s+(?:impact|effect|role)\s+(?:does|do|can|could|did)\b/i,
+    /* CTO R4 fifth pass — what something does / is for, what makes it what it is, why it matters */
+    /^what\s+(?:exactly\s+|actually\s+|really\s+)?(?:does|do)\s+.{1,80}?\s+(?:do|involve|entail|cover)\b/i,
+    /^what\s+(?:exactly\s+)?makes\b/i,
+    /^what\s+is\s+the\s+(?:role|purpose|function|point)\s+of\b/i,
+    /^why\s+(?:does|do)\s+.{1,80}?\s+matter\b/i,
   ],
   pl: [
     /^(?:czym\s+(?:jest|s[ąa])|co\s+to\s+(?:jest|s[ąa]|za))\b/iu,
@@ -521,7 +528,12 @@ export function deriveKnowledgeRequirement(
   }
   /* R3 §12 — a non-political choice weighed against an objective. Read before the general
      advisory cue (it is the more specific form) and before the news-oriented freshness rules. */
-  const decision = readDecisionSupport(text, lang);
+  /* CTO R4 fifth pass — evaluating COMPONENTS of earlier work ("which argument is strongest") is
+     not a choice between options: it never asks "best for what?" */
+  const decision =
+    readEvaluationKind(text, lang) === 'ARTIFACT_COMPONENT_EVALUATION'
+      ? null
+      : readDecisionSupport(text, lang);
   if (decision !== null) {
     return {
       requirement: 'DECISION_SUPPORT',
@@ -561,12 +573,6 @@ export function deriveKnowledgeRequirement(
     a current one ("…and what happened to X this week?") keeps BOTH halves, so a failed current
     retrieval never erases the stable answer. The current clauses are named on a partial answer.
   */
-  const clauses = text
-    .split(
-      /(?<=[?.!;])\s+|,\s+(?:and|but|while|plus)\s+|,?\s+(?:and|but|plus|i|a|oraz)\s+(?=(?:what|which|who|how|where|when|why|is|are|do|does|did|tell|give|show|update|co|jak|jaki|jaka|jakie|jakich|kto|czy|ile|gdzie|dlaczego|powiedz|podaj|pokaż|pokaz|czym|skąd|skad)(?![\p{L}\d]))/iu,
-    )
-    .map((c) => c.trim())
-    .filter((c) => c.length > 0);
   const clauseFresh = (c: string): boolean =>
     assertsFreshness(c) ||
     FRESHNESS[lang].test(c) ||
@@ -576,13 +582,18 @@ export function deriveKnowledgeRequirement(
     temporallyCurrent(c, lang, requestYear) ||
     NEWS_REQUEST[lang].test(c) ||
     refersToCurrentYear(c, lang, requestYear);
-  const timed = clauses.filter(clauseFresh);
-  const stableClause = clauses.some(
-    (c) =>
-      !clauseFresh(c) &&
-      (STABLE_SHAPES[lang].some((shape) => shape.test(c)) || BACKGROUND_REQUEST[lang].test(c)),
-  );
-  if ((explanatory && fresh) || (stableClause && timed.length > 0)) {
+  /* CTO R4 fifth pass — CLAUSE INTENT (clause-intent.ts): each clause is read on its own and
+     MIXED emerges from the set; a statement of conceptual context counts as a stable clause */
+  const intents = readClauseIntents(text, lang, {
+    current: clauseFresh,
+    historical: (c) => temporallyPastOnly(c, lang, requestYear),
+    stableShape: (c) =>
+      STABLE_SHAPES[lang].some((shape) => shape.test(c)) || BACKGROUND_REQUEST[lang].test(c),
+  });
+  const timed = intents.filter((c) => c.intent === 'CURRENT').map((c) => c.text);
+  const historicalAndCurrent =
+    readTemporalSemantics(text, lang, requestYear).currentness === 'HISTORICAL_AND_CURRENT';
+  if ((explanatory && fresh) || mixedFromIntents(intents) || historicalAndCurrent) {
     return {
       requirement: 'MIXED_REFERENCE_CURRENT',
       reason: 'a stable part plus a current part',
@@ -613,13 +624,16 @@ export function genuineFreshness(text: string, language: string, requestYear?: n
   const lang: 'en' | 'pl' = language === 'pl' ? 'pl' : 'en';
   const travel = TRAVEL_FRAME[lang].test(text);
   const freshText = travel ? withoutFuturePeriods(text, lang, requestYear) : text;
+  /* CTO R4 fifth pass — a COMPLETED historical anchor outranks the specific-event reading: "the
+     result" of the 2000 election is history, not "the latest result" */
+  const pastOnly = temporallyPastOnly(freshText, lang, requestYear);
   return (
     hasExplicitTime(freshText, lang, requestYear) ||
     temporallyCurrent(freshText, lang, requestYear) ||
     NEWS_REQUEST[lang].test(freshText) ||
     CHANGING[lang].test(freshText) ||
     assertsFreshness(freshText) ||
-    SPECIFIC_EVENT[lang].test(freshText) ||
+    (!pastOnly && SPECIFIC_EVENT[lang].test(freshText)) ||
     CHANGED[lang].test(freshText)
   );
 }

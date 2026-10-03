@@ -100,9 +100,10 @@ const SINCE_PRESENT: Readonly<Record<Lang, RegExp>> = {
 };
 /* an explicit comparison with the present ("compare with conditions today", "than today") */
 const PRESENT_COMPARISON: Readonly<Record<Lang, RegExp>> = {
-  en: /\b(?:compare[sd]?|comparison|differ\w*|similar\w*|versus|vs\.?|than|like)\b[^.?!]{0,60}\b(?:today|now|current(?:ly)?|the\s+present|present-?day|nowadays|these\s+days)\b|\b(?:today|now|present-?day)\b[^.?!]{0,40}\b(?:compare[sd]?|versus|vs\.?|than)\b/i,
+  en: /\b(?:compare[sd]?|comparison|differ\w*|similar\w*|versus|vs\.?|than|like)\b[^.?!]{0,60}\b(?:today|now|current(?:ly)?|the\s+present|present-?day|nowadays|these\s+days)\b|\b(?:today|now|present-?day)\b[^.?!]{0,40}\b(?:compare[sd]?|versus|vs\.?|than)\b|\b(?:until|till|up\s+to|through\s+to|to)\s+(?:today|now|the\s+present(?:\s+day)?|this\s+day)\b/i,
+  /* CTO R4 fifth pass — a past anchor carried "to today" ("od … 2011 roku do dziś") */
   pl: plTolerant(
-    /(?:porówn\p{L}*|różni\p{L}*|podobn\p{L}*|w\s+porównaniu)[^.?!]{0,60}(?:dziś|dzisiaj|obecn\p{L}*|teraz|współczesn\p{L}*)/iu,
+    /(?:porówn\p{L}*|różni\p{L}*|podobn\p{L}*|w\s+porównaniu)[^.?!]{0,60}(?:dziś|dzisiaj|obecn\p{L}*|teraz|współczesn\p{L}*)|(?:^|\s)(?:aż\s+)?do\s+(?:dziś|dzisiaj|teraz|dnia\s+dzisiejszego|chwili\s+obecnej|obecnych\s+czasów)(?=$|[\s,.?!])/iu,
   ),
 };
 /* named historical periods that are completed by definition */
@@ -187,8 +188,14 @@ export function readTemporalSemantics(
     has('REPORTING_WINDOW') ||
     has('SINCE_PAST_TO_PRESENT') ||
     has('CONTEST_STATE');
+  /* CTO R4 fifth pass — "since 2015" / "od 2015 roku do dziś" keeps BOTH endpoints: a dated past
+     anchor AND the present — historical + current (MIXED), never only one of them */
+  const sinceDatedPast = spans.some(
+    (s) => s.role === 'SINCE_PAST_TO_PRESENT' && typeof s.from === 'number',
+  );
   const currentness: TemporalCurrentness =
-    past && (PRESENT_COMPARISON[lang].test(text) || has('SINCE_PAST_TO_PRESENT'))
+    (past && (PRESENT_COMPARISON[lang].test(text) || has('SINCE_PAST_TO_PRESENT'))) ||
+    sinceDatedPast
       ? 'HISTORICAL_AND_CURRENT'
       : present && !(past && !has('SINCE_PAST_TO_PRESENT') && onlyPastTense(text, lang))
         ? 'CURRENT'
