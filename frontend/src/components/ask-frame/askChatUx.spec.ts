@@ -82,6 +82,8 @@ describe('TRUST R1 — mixed answer: recent reporting is listed, labelled and lo
     expect(view).toContain('That is not evidence that nothing is happening');
     expect(view).toContain('could not be checked');
     expect(view).not.toMatch(/fetch\(|askV2Api\.|useEffect/);
+    /* CTO checkpoint 3 §13 — a listed report is never numbered as a citation of the answer */
+    expect(view).not.toMatch(/data-citation|data-ask="citation"/);
     const turn = code(read('AskR2TurnView.tsx'));
     expect(turn).toMatch(/payload\.analysis === null && payload\.recentReporting != null/);
   });

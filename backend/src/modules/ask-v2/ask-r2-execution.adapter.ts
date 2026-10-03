@@ -138,6 +138,8 @@ export interface RecentReporting {
 const RECENT_REPORTING_LIMIT = 5;
 const RECENT_REPORTING_DAYS = 14;
 const RECENT_REPORTING_DEADLINE_MS = 2500;
+/** A publication time this far ahead of the server clock is tolerated (provider clock skew). */
+const RECENT_REPORTING_CLOCK_SKEW_MS = 5 * 60 * 1000;
 
 /** How long a prepared plan (and so its stored result) stays valid. */
 const PLAN_VALIDITY_MS = 15 * 60 * 1000;
@@ -1332,7 +1334,22 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         RECENT_REPORTING_DEADLINE_MS,
         'ask-recent-reporting',
       );
-      const items = articles.slice(0, RECENT_REPORTING_LIMIT).map((a) => ({
+      /* CTO checkpoint 3 §13 — checked again at this boundary, never trusted from the read:
+         the article's OWN stored country must be the place asked about (absent = unknown =
+         not listed), and its publication time must lie inside the window (a stale, future or
+         unparseable time is never presented as recent). */
+      const now = Date.now();
+      const oldest = now - RECENT_REPORTING_DAYS * 24 * 60 * 60 * 1000;
+      const recent = articles.filter((a) => {
+        const t = Date.parse(a.publishedAt);
+        return (
+          a.countryCode === country.iso2 &&
+          Number.isFinite(t) &&
+          t >= oldest &&
+          t <= now + RECENT_REPORTING_CLOCK_SKEW_MS
+        );
+      });
+      const items = recent.slice(0, RECENT_REPORTING_LIMIT).map((a) => ({
         title: a.title,
         url: a.url,
         sourceName: a.sourceName,

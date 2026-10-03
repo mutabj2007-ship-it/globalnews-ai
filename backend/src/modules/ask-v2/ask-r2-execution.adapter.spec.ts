@@ -2535,7 +2535,8 @@ describe('PUBLIC BETA HARDENING R1B — broad global headlines are routed as hea
 
 describe('TRUST R1 — mixed answer: place background + retained recent reporting (listed, not analysed)', () => {
   const TRAVEL = 'I want to visit Tanzania especially Safari national park, I want to know some information before going there';
-  const article = (n: number) => ({ id: `a${n}`, title: `Report ${n}`, url: `https://example.test/${n}`, sourceName: 'Example', publishedAt: '2026-10-01T08:00:00Z' });
+  const RECENT = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
+  const article = (n: number, over: Record<string, unknown> = {}) => ({ id: `a${n}`, title: `Report ${n}`, url: `https://example.test/${n}`, sourceName: 'Example', publishedAt: RECENT, countryCode: 'TZ', ...over });
 
   it('a travel question gets background PLUS dated retained reports — one model call, no analysis call', async () => {
     const asked: unknown[] = [];
@@ -2550,7 +2551,7 @@ describe('TRUST R1 — mixed answer: place background + retained recent reportin
       country: 'TZA',
       status: 'LISTED',
       windowDays: 14,
-      items: [1, 2].map((n) => ({ title: `Report ${n}`, url: `https://example.test/${n}`, sourceName: 'Example', publishedAt: '2026-10-01T08:00:00Z' })),
+      items: [1, 2].map((n) => ({ title: `Report ${n}`, url: `https://example.test/${n}`, sourceName: 'Example', publishedAt: RECENT })),
     });
     expect(asked).toEqual([['TZ', 5, 14 * 24 * 60]]);
     expect(calls.analysis).toEqual([]);
@@ -2567,7 +2568,50 @@ describe('TRUST R1 — mixed answer: place background + retained recent reportin
       const payload = JSON.parse((await inRequest(() => adapter.execute(req(TRAVEL), plan, 'op-1'))).payloadJson);
       expect(payload.recentReporting.status).toBe(status);
       expect(payload.recentReporting.items).toEqual([]);
+      /* §13 — a failed or empty read never erases the valid background answer */
+      expect(payload.background).toEqual({ text: 'bg' });
     }
+  });
+
+  it('§13 — only reports whose OWN country is the place asked about are listed', async () => {
+    const { adapter } = harness({
+      background: async () => ({ text: 'bg' }),
+      news: { findRetainedByCountry: async () => [article(1), article(2, { countryCode: 'KE' }), article(3, { countryCode: undefined })] },
+    });
+    const plan = await adapter.prepare(req(TRAVEL));
+    const payload = JSON.parse((await inRequest(() => adapter.execute(req(TRAVEL), plan, 'op-1'))).payloadJson);
+    expect(payload.recentReporting.items.map((i: { title: string }) => i.title)).toEqual(['Report 1']);
+  });
+
+  it('§13 — a stale, future-dated or undated report is never presented as recent', async () => {
+    const day = 24 * 60 * 60 * 1000;
+    const { adapter } = harness({
+      background: async () => ({ text: 'bg' }),
+      news: {
+        findRetainedByCountry: async () => [
+          article(1, { publishedAt: new Date(Date.now() - 15 * day).toISOString() }),
+          article(2, { publishedAt: new Date(Date.now() + 2 * day).toISOString() }),
+          article(3, { publishedAt: 'not a date' }),
+        ],
+      },
+    });
+    const plan = await adapter.prepare(req(TRAVEL));
+    const payload = JSON.parse((await inRequest(() => adapter.execute(req(TRAVEL), plan, 'op-1'))).payloadJson);
+    expect(payload.recentReporting).toMatchObject({ status: 'NONE_RETAINED', items: [] });
+  });
+
+  it('§13 — listed reports are never handed to the model: the background is not presented as corroborated by them', async () => {
+    const seen: string[] = [];
+    const { adapter, calls } = harness({
+      background: async (...args: unknown[]) => (seen.push(JSON.stringify(args)), { text: 'General background.' }),
+      news: { findRetainedByCountry: async () => [article(1, { title: 'UNIQUE-REPORT-HEADLINE' })] },
+    });
+    const plan = await adapter.prepare(req(TRAVEL));
+    const payload = JSON.parse((await inRequest(() => adapter.execute(req(TRAVEL), plan, 'op-1'))).payloadJson);
+    expect(payload.recentReporting.items).toHaveLength(1);
+    expect(seen.join('')).not.toContain('UNIQUE-REPORT-HEADLINE');
+    expect(calls.analysis).toEqual([]);
+    expect(payload.analysis).toBeNull();
   });
 
   it('a stable concept with no place carries no recent-reporting section at all', async () => {
