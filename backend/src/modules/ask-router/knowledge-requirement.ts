@@ -3,7 +3,7 @@ import { resolvePrimaryCountry } from '../news/country/country-relevance.util';
 import { deriveEventFrame } from '../analysis/query/event-frame.util';
 import { solveComputation } from '../ask-v2/computation/deterministic-computation';
 import { assertsFreshness } from '../analysis/query/query-intent.util';
-import { readAdvisory } from './advisory-requirement';
+import { EN_PUBLIC_EVENT, PL_PUBLIC_EVENT, readAdvisory } from './advisory-requirement';
 import { readDecisionSupport } from './decision-support';
 
 /**
@@ -72,8 +72,9 @@ export type KnowledgeRequirement =
 export interface KnowledgeRequirementReading {
   readonly requirement: KnowledgeRequirement | null;
   readonly reason: string;
-  /** TRUST R1 §14 — which PLACE_REFERENCE frame matched (travel preparation or the past). */
-  readonly frame?: 'TRAVEL' | 'HISTORY';
+  /** TRUST R1 §14 — which PLACE_REFERENCE frame matched (travel preparation, the past, or — R3 —
+   *  a stable structural explanation of a place: "Why is Chile's economy so dependent on copper?"). */
+  readonly frame?: 'TRAVEL' | 'HISTORY' | 'EXPLANATION';
   /** CTO P0 — for MIXED_ADVISORY_CURRENT, the time-anchored clauses that need current evidence. */
   readonly currentClauses?: readonly string[];
   /** R3 §12 — for DECISION_SUPPORT, the reader's objective (null: not stated). */
@@ -100,6 +101,8 @@ const STABLE_SHAPES: Readonly<Record<'en' | 'pl', readonly RegExp[]>> = {
     /^what\s+causes\b/i,
     /^what\s+physically\s+happens\b/i,
     /^what\s+does\s+.+\s+mean\b/i,
+    /* R3 — the past as explanation ("How did the Meiji restoration begin?") */
+    /^how\s+did\b/i,
   ],
   pl: [
     /^(?:czym\s+(?:jest|s[ąa])|co\s+to\s+(?:jest|s[ąa]|za))\b/iu,
@@ -111,6 +114,7 @@ const STABLE_SHAPES: Readonly<Record<'en' | 'pl', readonly RegExp[]>> = {
     /^jaka\s+jest\s+r[óo][żz]nica\s+mi[ęe]dzy\b/iu,
     /^na\s+czym\s+polega\b/iu,
     /^co\s+powoduje\b/iu,
+    /^jak\s+dosz[łl]o\b/iu,
   ],
 };
 
@@ -133,6 +137,13 @@ const FRESHNESS: Readonly<Record<'en' | 'pl', RegExp>> = {
 const CHANGING: Readonly<Record<'en' | 'pl', RegExp>> = {
   en: /\b(?:is|are|was|were|has\s+been|have\s+been|keeps?)\b[^.?!]{0,40}?\b(?:rising|falling|increasing|decreasing|surging|soaring|dropping|plunging|climbing|slumping|happening|going\s+on|changing|collapsing|escalating|developing|evolving|growing|shrinking|progressing|worsening|improving)\b/i,
   pl: /(?:ro[śs]nie|rosn[ąa]|spada(?:j[ąa])?|rozwija(?:j[ąa])?\s+si[ęe]|zmienia(?:j[ąa])?\s+si[ęe]|pogarsza\s+si[ęe]|poprawia\s+si[ęe]|dzieje\s+si[ęe])/iu,
+};
+
+/** R3 — something asked about as in progress ("What is driving…", "Why are … rising") is current. */
+const IN_PROGRESS: Readonly<Record<'en' | 'pl', RegExp>> = {
+  en: /\b(?:is|are|was|were|has\s+been|have\s+been)\s+(?:[\p{L}']+\s+){0,2}[\p{L}]+ing\b(?<!\bthing)(?<!\bbeing)/iu,
+  /* Polish has no progressive form; its changing verbs are already read by CHANGING */
+  pl: /(?!)/u,
 };
 
 /** The current edition / requirements of a named standard or rule: an official reference. */
@@ -158,7 +169,7 @@ const HISTORY_FRAME: Readonly<Record<'en' | 'pl', RegExp>> = {
   pl: /^(?:kiedy\s+(?:\p{L}+\s+)?(?:by[łl]\p{L}*|wst[ąa]pi\p{L}*|uzyska\p{L}*)|kto\s+(?:by[łl]\p{L}*|za[łl]o[żz]y[łl]\p{L}*)|co\s+spowodowa[łl]\p{L}*|dlaczego\s+dosz[łl]o)|(?:histori\p{L}*|niepodleg[łl]o[śs]\p{L}*|kolonial\p{L}*|staro[żz]ytn\p{L}*)/iu,
 };
 export const TRAVEL_FRAME: Readonly<Record<'en' | 'pl', RegExp>> = {
-  en: /\b(?:visit(?:ing)?|travel(?:l?ing)?\s+(?:to|in|around)|trip\s+to|holiday\s+in|vacation\s+in|safari|itinerary|pack\s+for|before\s+(?:going|travelling|traveling|my\s+trip)|tourist(?:s)?\s+(?:attractions|sites)|things\s+to\s+(?:do|see))\b/i,
+  en: /\b(?:visit(?:ing)?|travel(?:l?ing)?\s+(?:to|in|around)|trip\s+to|holiday\s+in|vacation\s+in|safari|itinerary|pack\s+for|before\s+(?:going|travelling|traveling|my\s+trip)|tourist(?:s)?\s+(?:attractions|sites)|things\s+to\s+(?:do|see)|on\s+(?:a|my|our)\s+(?:[\w-]+\s+){0,2}(?:trip|holiday|vacation|honeymoon))\b/i,
   pl: /(?:odwiedzi\p{L}*|podr[óo][żz]\p{L}*\s+do|wycieczk\p{L}*|wakacj\p{L}*\s+w|zwiedz\p{L}*|safari|spakowa\p{L}*|przed\s+wyjazdem|atrakcj\p{L}*\s+turystyczn\p{L}*)/iu,
 };
 
@@ -284,6 +295,28 @@ export function deriveKnowledgeRequirement(
       requirement: 'PLACE_REFERENCE',
       reason: travel ? 'travel preparation for a named place' : 'history of a named place',
       frame: travel ? 'TRAVEL' : 'HISTORY',
+    };
+  }
+  /*
+    CONVERSATIONAL INTELLIGENCE JOURNEY R3 §5 (blind evaluation) — a STABLE EXPLANATORY question
+    about a named place ("Why is Chile's economy so dependent on copper?", "Explain how remittances
+    shape the Philippine economy", "Dlaczego Norwegia ma tak duży fundusz?") asks how the place
+    works, not what happened: place background. Never when it asserts freshness, names a public
+    event (war, protests, an election, a crisis…), or asks about something in progress ("Why are
+    prices rising in Kenya?") — those stay current reporting.
+  */
+  if (
+    place &&
+    !fresh &&
+    explanatory &&
+    !(lang === 'pl' ? PL_PUBLIC_EVENT : EN_PUBLIC_EVENT).test(text) &&
+    !IN_PROGRESS[lang].test(text) &&
+    readAdvisory(text, lang) === null
+  ) {
+    return {
+      requirement: 'PLACE_REFERENCE',
+      reason: 'a stable explanation of a named place',
+      frame: 'EXPLANATION',
     };
   }
   /* R3 §12 — a non-political choice weighed against an objective. Read before the general

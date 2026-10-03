@@ -418,6 +418,8 @@ interface TurnFeatures {
   readonly statedPeriod: string | null;
   /** The turn is ONLY a time shift ("What about yesterday?"). */
   readonly timeOnly: boolean;
+  /** Read as current reporting ONLY because it names a place (no freshness, no other job). */
+  readonly placeOnly: boolean;
   readonly words: number;
 }
 
@@ -464,11 +466,27 @@ function readTurn(question: string, lang: 'en' | 'pl'): TurnFeatures {
     officialOnly: readOfficialOnly(question, lang),
     statedPeriod,
     timeOnly: statedPeriod !== null && rest.replace(/[?!.…\s]+/gu, '').length === 0,
+    placeOnly:
+      job === 'CURRENT_REPORTING' &&
+      deriveKnowledgeRequirement(question, lang, typed.length > 0).reason === 'a named place',
     words: wordCount(question),
   };
 }
 
 /** A turn that states only constraints/preferences ("I have five days and prefer nature."). */
+/*
+  A QUESTION is never "only a constraint": "What are the main sights of Rome if I only have three
+  days?" states a duration AND asks — it is answered, never merely noted (blind eval B-054).
+*/
+const EN_QUESTION =
+  /\?|^\s*(?:what|which|how|why|where|when|who|whom|whose|is|are|can|could|should|do|does|did|will|would|tell|give|list|show|suggest|recommend|explain|describe|compare)\b/i;
+const PL_QUESTION =
+  /\?|^\s*(?:jak\p{L}*|co|gdzie|kiedy|dlaczego|czemu|czy|któr\p{L}*|ile|kto|podaj|wymień|pokaż|poleć|doradź|wyjaśnij|opisz|porównaj)(?=\s|$)/iu;
+
+export function isQuestion(text: string, lang: 'en' | 'pl'): boolean {
+  return (lang === 'pl' ? PL_QUESTION : EN_QUESTION).test(text.trim());
+}
+
 function isConstraintStatement(f: TurnFeatures): boolean {
   return (
     f.job === 'UNKNOWN' &&
@@ -555,6 +573,13 @@ function applyTurn(
       f.ellipsisTo !== null ||
       /* "What about yesterday?" — a time shift continues the open job */
       f.timeOnly ||
+      /* a trip follow-up read as "news" only because it names a place ("Which is cheaper to stay
+         in, Hanoi or Ho Chi Minh City?", "A może zamiast tego Słowenia?") continues the trip
+         when it points back into it */
+      (prev.job === 'TRAVEL_PLANNING' &&
+        f.placeOnly &&
+        f.countries.length === 1 &&
+        pointsBackInto(prev.job, question, f)) ||
       /* a short place-free current reading inside a trip / relationship ("anything current?") */
       ((prev.job === 'TRAVEL_PLANNING' || prev.job === 'RELATIONSHIP') &&
         f.job === 'CURRENT_REPORTING' &&
@@ -870,7 +895,8 @@ export function readConversationalTurn(
     composition: null,
     state: applied.state,
     trace: trace(null),
-    constraintOnly: isConstraintStatement(f) && f.countries.length === 0,
+    constraintOnly:
+      isConstraintStatement(f) && f.countries.length === 0 && !isQuestion(question, lang),
   };
   if (options.hasOwnContext === true) return none;
   const from = state.anchorQuestion ?? earlierNewestFirst[0]?.question ?? question;

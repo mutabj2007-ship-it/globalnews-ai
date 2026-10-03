@@ -68,6 +68,7 @@ export * from './language';
 export * from './economy';
 export * from './economy/lineage';
 export * from './economy/route-eligibility';
+export * from './economy/comparability';
 export * from './signals';
 export * from './support';
 export * from './follows';

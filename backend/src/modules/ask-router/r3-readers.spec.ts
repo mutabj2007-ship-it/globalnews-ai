@@ -167,3 +167,49 @@ describe('§4 / §43 inappropriate context carry — self-contained questions ne
     expect(readConversationalTurn(q, 'en', TRIP)?.composition?.kind).toBe('JOB_CONTEXT');
   });
 });
+
+describe('R3 blind-evaluation fixes — generic forms (never the blind items themselves)', () => {
+  it.each([
+    ['Why is Argentina so exposed to inflation shocks?', 'PLACE_REFERENCE'],
+    ["Explain how Ghana's cocoa sector is organised", 'PLACE_REFERENCE'],
+    ['Dlaczego Szwajcaria ma tak silną walutę?', 'PLACE_REFERENCE'],
+    ['Why are prices rising in Ghana?', 'CURRENT'],
+    ['Why is there a war in Sudan?', 'CURRENT'],
+    ['Why did Ghana’s inflation jump this month?', 'CURRENT'],
+  ])('%s → %s', (q, requirement) => {
+    const lang = /[ąćęłńóśźż]|^Dlaczego/i.test(q) ? 'pl' : 'en';
+    /* CURRENT: any current reading (plain or mixed) — never place background */
+    expect(deriveKnowledgeRequirement(q, lang, true).requirement).toMatch(new RegExp(requirement));
+  });
+
+  it.each([
+    ['Help me outline a launch plan for a fintech app in Vietnam', 'en'],
+    ['Draft a budget for a two-week family holiday', 'en'],
+    ['Od czego zacząć zakładanie firmy w Czechach?', 'pl'],
+    ['Napisz plan marketingowy dla małej kawiarni', 'pl'],
+  ])('%s → advice / planning, not news', (q, lang) => {
+    expect(deriveKnowledgeRequirement(q, lang, true).requirement).toMatch(/ADVISORY/);
+  });
+
+  it('a question that states a duration is answered, never merely "noted"', () => {
+    const turn = readConversationalTurn(
+      'What should I see in Lisbon if I only have two days?',
+      'en',
+      [],
+    );
+    expect(turn?.constraintOnly).toBe(false);
+    expect(readConversationalTurn('I only have two days.', 'en', [])?.constraintOnly).toBe(true);
+  });
+
+  it('a trip follow-up that names a city or switches country continues the trip', () => {
+    const trip = [{ question: 'What should I see in Chile on a two-week trip?', language: 'en' }];
+    expect(
+      readConversationalTurn('Which is cheaper to stay in, Santiago or Valparaiso?', 'en', trip)
+        ?.composition?.kind,
+    ).toBe('JOB_CONTEXT');
+    const pl = [{ question: 'Co warto zwiedzić w Hiszpanii latem?', language: 'pl' }];
+    const turn = readConversationalTurn('A może zamiast tego Portugalia?', 'pl', pl);
+    expect(turn?.composition?.kind).toBe('JOB_CONTEXT');
+    expect(turn?.state.geography).toEqual(['PRT']);
+  });
+});

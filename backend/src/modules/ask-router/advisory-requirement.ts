@@ -47,6 +47,15 @@ const EN_DECISION_FRAMES: readonly RegExp[] = [
   /\bwhat\s+(?:do|should|must)\s+(?:i|we)\s+(?:need\s+to\s+)?(?:consider|know|keep\s+in\s+mind|prioriti[sz]e|avoid)\b/i,
   /\b(?:pros\s+and\s+cons|trade-?offs?|best\s+practices?)\b/i,
   /\b(?:indicate|explain|outline|describe)\s+how\s+(?:i|we)\s+(?:can|could|might)\b/i,
+  /*
+    CONVERSATIONAL INTELLIGENCE JOURNEY R3 §5 — WRITING / PLANNING (blind evaluation). A request
+    to produce a plan, checklist or draft is work for the reasoning provider, not a news search:
+    "Help me sketch a 3-month go-to-market plan…", "Draft a checklist for relocating…".
+  */
+  /\bhelp\s+(?:me|us)\s+(?:to\s+)?(?:sketch|draft|outline|prepare|create|put\s+together|map\s+out|organi[sz]e)\b/i,
+  /^\s*(?:please\s+|can\s+you\s+|could\s+you\s+)?(?:draft|write|outline|sketch|prepare|create|put\s+together|make|build)\s+(?:me\s+|us\s+)?(?:a|an|my|our)\s+(?:[\p{L}0-9-]+\s+){0,4}?(?:plan|checklist|list|outline|template|email|letter|proposal|pitch|strategy|roadmap|budget|itinerary|agenda|timeline|schedule|brief|summary)\b/iu,
+  /* advice for a generic small enterprise of any trade ("How should a small coffee exporter…") */
+  /\b(?:how|what)\s+(?:should|could|can|might)\s+(?:a|an|my|our)\s+(?:[\p{L}-]+\s+){0,3}?(?:exporter|importer|manufacturer|retailer|wholesaler|farmer|freelancer|consultant|seller|producer|supplier|distributor|restaurant|caf[eé]|clinic|cooperative|family|household|student|investor|landlord|employer)\s+(?:think\s+about|approach|handle|manage|plan|prepare|deal\s+with|decide)\b/iu,
 ];
 /* the professional-planning subjects decision support is about (never a public-affairs subject) */
 const EN_PLANNING_SUBJECTS =
@@ -61,6 +70,11 @@ const PL_DECISION_FRAMES: readonly RegExp[] = [
   /(?:^|\s)co\s+(?:powinienem|powinnam|powinniśmy|polecasz|radzisz|doradzisz|sugerujesz|warto)(?=\s|$|[?,.])/iu,
   /(?:^|\s)(?:doradź|poradź|porad[aęy]|rekomend\p{L}*|sugesti\p{L}*|zalece\p{L}*|wskazówk\p{L}*)/iu,
   /(?:^|\s)(?:zalety\s+i\s+wady|plusy\s+i\s+minusy|kompromis\p{L}*)/iu,
+  /* R3 §5 — planning / writing in Polish ("od czego zacząć", "jak się przygotować", "napisz plan") */
+  /(?:^|\s)od\s+czego\s+zacz\p{L}*/iu,
+  /(?:^|\s)jak\s+(?:najlepiej\s+)?(?:się\s+)?(?:przygotować|zaplanować|zorganizować|przygotowa\p{L}*\s+się)(?=\s|$|[?,.])/iu,
+  /(?:^|\s)pomóż\s+(?:mi|nam)\s+(?:\p{L}+)/iu,
+  /^\s*(?:proszę\s+)?(?:napisz|przygotuj|zaplanuj|stwórz|rozpisz|sporządź)\s+(?:mi\s+|nam\s+)?\p{L}+/iu,
 ];
 const PL_PLANNING_SUBJECTS =
   /(?:model\p{L}*\s+biznesow\p{L}*|monetyz\p{L}*|strategi\p{L}*\s+cenow\p{L}*|subskrypc\p{L}*|segment\p{L}*\s+klient\p{L}*|klient\p{L}*\s+docelow\p{L}*|utrzyma\p{L}*\s+klient\p{L}*|retencj\p{L}*|plan\p{L}*\s+biznesow\p{L}*|plan\p{L}*\s+marketingow\p{L}*|harmonogram\p{L}*\s+produkt\p{L}*|propozycj\p{L}*\s+wartości)/iu;
@@ -75,9 +89,9 @@ const PL_INTERROGATIVE =
   then not advisory — only together with a planning subject or the reader's own venture ("How
   should our company adapt its pricing to the sanctions?").
 */
-const EN_PUBLIC_EVENT =
+export const EN_PUBLIC_EVENT =
   /\b(?:wars?|conflicts?|fighting|invasion|ceasefire|coup|elections?|referendum|protests?|unrest|riots?|crisis|crises|attacks?|sanctions|genocide|famine|outbreak|epidemic|pandemic|earthquake|floods?|hurricane|cyclone)\b/i;
-const PL_PUBLIC_EVENT =
+export const PL_PUBLIC_EVENT =
   /(?:^|\s)(?:wojn\p{L}*|konflikt\p{L}*|walk[aiię]|walkach|inwazj\p{L}*|zawieszeni\p{L}*\s+broni|zamach\p{L}*|wybor(?:y|ów|ach|ami|cz\p{L}*)|referend\p{L}*|protest\p{L}*|zamieszk\p{L}*|kryzys\p{L}*|atak\p{L}*|sankcj\p{L}*|ludobójstw\p{L}*|głód|epidemi\p{L}*|pandemi\p{L}*|trzęsieni\p{L}*\s+ziemi|powodzi\p{L}*|powódź)/iu;
 
 /* ── genuine freshness: an explicit time marker, never a topic noun ───────────────────────── */

@@ -31,6 +31,9 @@ const EN_CHOICE: readonly RegExp[] = [
   /\b(?:best|better|strongest|stronger)\s+(?:country|countries|market|markets|economy|economies|option|options|choice|destination|location|city|place|base|hub)\s+for\b/i,
   /\bwhat\s+does\s+(?:this|that|it)\s+mean\s+for\s+(?:my|our)\s+(?:decision|choice|plan|expansion|business)\b/i,
   /\b(?:is|would)\s+\p{Lu}[\p{L}-]+\s+(?:or|a\s+better\s+choice\s+than)\s+\p{Lu}[\p{L}-]+\s+(?:better|a\s+better\s+choice)\s+for\b/iu,
+  /* R3 (blind evaluation) — "…which makes more sense?", "Compare A and B as a base for X" */
+  /\bwhich\b[^?.!]{0,40}?\bmakes?\s+(?:more|the\s+most)\s+sense\b/i,
+  /\bcompar\w*\b.+\bas\s+(?:a|an|the)\s+(?:base|hub|location|destination|market|place|home|headquarters)\s+for\b/i,
 ];
 const PL_CHOICE: readonly RegExp[] = [
   /(?:któr\p{L}*|co)\b[^?.!]{0,60}?(?:jest|będzie|wydaje\s+się)?\s*(?:lepsz\p{L}*|najlepsz\p{L}*|silniejsz\p{L}*|najsilniejsz\p{L}*|bardziej\s+odpowiedni\p{L}*|najbardziej\s+odpowiedni\p{L}*|korzystniejsz\p{L}*)/iu,
@@ -43,7 +46,7 @@ const POLITICAL =
 
 /* "for (a|an|my|our) <objective>" / "for <objective>" — the reader's goal */
 const EN_OBJECTIVE =
-  /\b(?:for|suits?|fits?)\s+(?:a|an|my|our|the|your)?\s*((?:[\p{L}-]+\s+){0,4}?(?:expansion|investment|investing|logistics|hub|base|office|warehouse|manufacturing|sourcing|operations?|growth|market\s+entry|entry|trade|exports?|imports?|distribution|retail|tourism|travel|trip|holiday|relocation|living|study|startup|business|partnership|supply\s+chain|e-?commerce|agriculture|mining|energy|it\s+services|services|safari|visit|nature|budget|families|family|retirement)(?:\s+[\p{L}-]+){0,2}?)(?=\s*(?:[?.!,;:]|$|\s+(?:in|between|among|and|or|—|-)\s))/iu;
+  /\b(?:for|suits?|fits?)\s+(?:a|an|my|our|the|your)?\s*((?:[\p{L}-]+\s+){0,4}?(?:expansion|investment|investing|logistics|hub|base|office|warehouse|manufacturing|sourcing|operations?|growth|market\s+entry|entry|trade|exports?|imports?|distribution|retail|tourism|travel|trip|holiday|relocation|living|study|startup|business|partnership|supply\s+chain|e-?commerce|agriculture|mining|energy|it\s+services|services|safari|visit|nature|budget|families|family|retirement|cent(?:re|er)|factory|plant|headquarters|hq)(?:\s+[\p{L}-]+){0,2}?)(?=\s*(?:[?.!,;:]|$|\s+(?:in|between|among|and|or|—|-)\s))/iu;
 const PL_OBJECTIVE =
   /(?:dla|pod\s+kątem|do)\s+((?:[\p{L}-]+\s+){0,3}?(?:ekspansj\p{L}*|inwestycj\p{L}*|logistyk\p{L}*|hub\p{L}*|biur\p{L}*|magazyn\p{L}*|produkcj\p{L}*|wzrost\p{L}*|wejści\p{L}*\s+na\s+rynek|handl\p{L}*|eksport\p{L}*|turystyk\p{L}*|podróż\p{L}*|wycieczk\p{L}*|biznes\p{L}*|startup\p{L}*|safari)(?:\s+[\p{L}-]+){0,2}?)(?=\s*(?:[?.!,;:]|$))/iu;
 

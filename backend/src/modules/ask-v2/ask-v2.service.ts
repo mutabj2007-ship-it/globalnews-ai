@@ -136,13 +136,30 @@ function withContinuation(result: ExecutionResult, request: Readonly<AskRequest>
   }
 }
 
-/** R3 — the request's conversation block from the service's own state reading. */
-function conversationOf(turn: ConversationalTurn): NonNullable<AskRequest['conversation']> {
-  return {
-    officialSourcesOnly: turn.state.officialSourcesOnly,
-    constraintOnly: turn.constraintOnly,
-    trace: turn.trace,
-  };
+/**
+ * R3 — the request's conversation block from the service's own state reading, or nothing when
+ * the turn carried, overrode, reset and constrained nothing: a plain turn's request stays
+ * byte-identical to before.
+ */
+function conversationOf(turn: ConversationalTurn | null): Pick<AskRequest, 'conversation'> {
+  if (turn === null) return {};
+  const t = turn.trace;
+  const trivial =
+    t.carried.length === 0 &&
+    t.overridden.length === 0 &&
+    !t.reset &&
+    t.composed === null &&
+    !turn.state.officialSourcesOnly &&
+    !turn.constraintOnly;
+  return trivial
+    ? {}
+    : {
+        conversation: {
+          officialSourcesOnly: turn.state.officialSourcesOnly,
+          constraintOnly: turn.constraintOnly,
+          trace: t,
+        },
+      };
 }
 
 /** A context the service itself inherited from the conversation (never a surface's). */
@@ -734,7 +751,7 @@ export class AskV2Service {
               kind: composed.kind,
             },
           }),
-      ...(conversational === null ? {} : { conversation: conversationOf(conversational) }),
+      ...conversationOf(conversational),
     };
     const owner = ownerOf(p);
     /* R2B — a context-bearing turn appends its SERVER-RESOLVED identity; a context-free turn
@@ -1018,7 +1035,7 @@ export class AskV2Service {
                 kind: composed.kind,
               },
             }),
-        ...(conversational === null ? {} : { conversation: conversationOf(conversational) }),
+        ...conversationOf(conversational),
       } as AskRequest;
       // Revalidate pending R1 operations too. Stored reuse above never calls the adapter.
       try {
