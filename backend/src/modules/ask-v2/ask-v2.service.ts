@@ -54,6 +54,7 @@ import { isSubjectFollowUp } from '../analysis/anchor/conversation-subject.util'
 import { isAnaphoricFollowUp } from '../analysis/anchor/event-anchor.util';
 import { ComputeMeterService } from '../compute-controls/compute-meter.service';
 import { OperationalSwitchService } from '../compute-controls/operational-switch.service';
+import { withComparisonTable } from './comparison-table';
 import {
   dayBucket,
   GUEST_EXECUTIONS_ALL_SCOPE,
@@ -567,7 +568,8 @@ export class AskV2Service {
           result && operation.status === 'COMPLETED'
             ? {
                 id: result.id,
-                payload: result.payload,
+                /* R2-S1 — the evidence-linked comparison table, projected on read (no AI). */
+                payload: withComparisonTable(result.payload),
                 evidenceRevision: result.evidenceRevision,
                 expiresAt: result.expiresAt,
                 expired: result.expiresAt.getTime() <= Date.now(),

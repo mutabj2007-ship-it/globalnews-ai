@@ -37,6 +37,8 @@ export const EMBEDDED_ASK_SOURCES = [
   'components/ask-frame/AskSourcesColumn.tsx',
   'components/ask-frame/AskTurnCopy.tsx',
   'components/ask-frame/AskRecentReporting.tsx',
+  /* R2-S1 — the evidence-linked comparison table inside the answer. */
+  'components/ask/AskEvidenceTable.tsx',
   /* TRUST R1 — Recent / Saved / Settings / Help under AskThemedSurface. */
   'components/ask/AskRecentClient.tsx',
   'components/ask/SavedClient.tsx',

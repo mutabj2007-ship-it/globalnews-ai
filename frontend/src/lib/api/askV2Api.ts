@@ -171,6 +171,24 @@ export interface AskR2Payload {
     readonly considered: readonly string[];
     readonly contributions: readonly AskContribution[];
   } | null;
+  /**
+   * R2-S1 — the evidence-linked comparison table, projected by the server from the validated
+   * analysis (agreements and difference positions with their sources; zero AI). Absent when
+   * there is nothing to compare.
+   */
+  readonly comparisonTable?: AskComparisonTable;
+}
+
+/** R2-S1 — one row per validated agreement / difference position, with its source ids. */
+export interface AskComparisonTable {
+  readonly schema: 'ask-comparison-table/1';
+  readonly rows: readonly {
+    readonly kind: 'AGREEMENT' | 'DIFFERENCE';
+    readonly topic: string | null;
+    readonly statement: string;
+    readonly sourceArticleIds: readonly string[];
+  }[];
+  readonly omittedRows: number;
 }
 
 /** ASK INTELLIGENCE BINDING R1 — one governed observation, with its provenance. */

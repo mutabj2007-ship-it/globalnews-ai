@@ -1,6 +1,10 @@
 'use client';
 
-import { comparisonCoverageLines, resolveEvidenceState, safeExternalHref } from '@globalnews-ai/shared';
+import {
+  comparisonCoverageLines,
+  resolveEvidenceState,
+  safeExternalHref,
+} from '@globalnews-ai/shared';
 import type { AnalysisApiResponse, LanguageCode, StoryContext } from '@globalnews-ai/shared';
 import { AnalysisModeBadge } from '@/components/search/AnalysisModeBadge';
 import { EvidenceFreshnessNotice } from '@/components/search/EvidenceFreshnessNotice';
@@ -21,6 +25,8 @@ import { grantAnalysisConsent } from '@/lib/analysis/analysisComputeConsent';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { AskCitedBrief, citedSourceNumbers } from './AskCitedBrief';
 import { StoryBookmark } from '@/components/bookmark/StoryBookmark';
+import type { AskComparisonTable } from '@/lib/api/askV2Api';
+import { AskEvidenceTable } from './AskEvidenceTable';
 
 /**
  * ═══ ASK AI REV A §6 — THE COMPACT RESULT ════════════════════════════════
@@ -129,6 +135,8 @@ interface AskCompactResultProps {
    * (GET /users/me/saved/stories), which is outside standalone Ask's Saved Questions.
    */
   readonly storyBookmarks?: boolean;
+  /** R2-S1 — the server's evidence-linked comparison table (Ask R2 payloads only). */
+  readonly comparisonTable?: AskComparisonTable | null;
 }
 
 export function AskCompactResult({
@@ -140,6 +148,7 @@ export function AskCompactResult({
   newTopicStarted = false,
   showFullAnalysisLink = true,
   storyBookmarks = true,
+  comparisonTable = null,
 }: AskCompactResultProps): JSX.Element {
   const dictionary = getDictionary(language);
   const t = dictionary.askAi;
@@ -202,7 +211,8 @@ export function AskCompactResult({
      vs absence before dataMode is consulted. */
   const retrievalUnavailable =
     (response.retrievalContext.evidenceState ??
-      resolveEvidenceState(response.retrievalContext, response.articles.length)) === 'degraded-fallback';
+      resolveEvidenceState(response.retrievalContext, response.articles.length)) ===
+    'degraded-fallback';
   /* ANCHORING R1 — an ambiguous country is asked about, never reported as "no evidence". */
   const ambiguousCountry = resolveAmbiguousCountryQuestion(response.retrievalContext, language);
   /* ASK R2 ALPHA ENABLEMENT R1 — asked, not searched (MC-055 / MC-070). */
@@ -212,8 +222,8 @@ export function AskCompactResult({
     : askedNotSearched
       ? askedNotSearched.sentence
       : retrievalUnavailable
-      ? t.resultNoAnswerProvider
-      : t.resultNoAnswerEvidence;
+        ? t.resultNoAnswerProvider
+        : t.resultNoAnswerEvidence;
   const canOpenFullAnalysis = hasAnalysis || response.articles.length > 0;
 
   return (
@@ -225,12 +235,18 @@ export function AskCompactResult({
           articleCount={response.articles.length}
           language={language}
         />
-        {telemetry.retrievedArticleCount === null && telemetry.reportingClusterCount === null ? null : (
-          <span data-ask="telemetry" className="font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">
+        {telemetry.retrievedArticleCount === null &&
+        telemetry.reportingClusterCount === null ? null : (
+          <span
+            data-ask="telemetry"
+            className="font-mono text-[10px] uppercase tracking-wide text-ink-tertiary"
+          >
             {telemetry.retrievedArticleCount === null
               ? null
               : `${telemetry.retrievedArticleCount} ${t.telemetryReports}`}
-            {telemetry.retrievedArticleCount !== null && telemetry.reportingClusterCount !== null ? ' · ' : null}
+            {telemetry.retrievedArticleCount !== null && telemetry.reportingClusterCount !== null
+              ? ' · '
+              : null}
             {telemetry.reportingClusterCount === null
               ? null
               : `${telemetry.reportingClusterCount} ${t.telemetryClusters}`}
@@ -267,7 +283,10 @@ export function AskCompactResult({
               data-ask="continuing-subject"
               className="rounded-full border border-border-strong px-2.5 py-0.5 text-xs text-ink-secondary"
             >
-              {t.continuingSubject.replace('{subject}', response.retrievalContext.conversationSubject.subject)}
+              {t.continuingSubject.replace(
+                '{subject}',
+                response.retrievalContext.conversationSubject.subject,
+              )}
               {/* D.1 — the current turn's focus, in the reader's own words. */}
               {(response.retrievalContext.conversationSubject.focus ?? []).length > 0
                 ? ` · ${formatFocus(focusForDisplay(response.retrievalContext.conversationSubject), language)}`
@@ -289,15 +308,28 @@ export function AskCompactResult({
           {response.retrievalContext.conversationSubject.disclosures.includes(
             'PRODUCT_APPLICABILITY_NOT_ESTABLISHED',
           ) ? (
-            <p data-ask="product-applicability" role="note" className="text-xs leading-relaxed text-ink-secondary">
+            <p
+              data-ask="product-applicability"
+              role="note"
+              className="text-xs leading-relaxed text-ink-secondary"
+            >
               {t.productApplicabilityNotEstablished}
             </p>
           ) : null}
-          {response.retrievalContext.conversationSubject.disclosures.includes('FOCUS_NOT_IN_EVIDENCE') ? (
-            <p data-ask="focus-not-in-evidence" role="note" className="text-xs leading-relaxed text-ink-secondary">
+          {response.retrievalContext.conversationSubject.disclosures.includes(
+            'FOCUS_NOT_IN_EVIDENCE',
+          ) ? (
+            <p
+              data-ask="focus-not-in-evidence"
+              role="note"
+              className="text-xs leading-relaxed text-ink-secondary"
+            >
               {t.focusNotInEvidence.replace(
                 '{focus}',
-                formatFocus(focusForDisplay(response.retrievalContext.conversationSubject), language),
+                formatFocus(
+                  focusForDisplay(response.retrievalContext.conversationSubject),
+                  language,
+                ),
               )}
             </p>
           ) : null}
@@ -307,7 +339,10 @@ export function AskCompactResult({
       <EventAnchorNotice retrievalContext={response.retrievalContext} language={language} compact />
 
       {analysis?.relationalComposition ? (
-        <div data-ask="relational-answer" className="rounded-2xl border border-signal/35 bg-signal/10 px-4 py-3">
+        <div
+          data-ask="relational-answer"
+          className="rounded-2xl border border-signal/35 bg-signal/10 px-4 py-3"
+        >
           <p className="mb-2 font-mono text-[10px] uppercase tracking-wide text-signal">
             {dictionary.analysisFrame.relationalAnswer}
           </p>
@@ -323,9 +358,7 @@ export function AskCompactResult({
           data-ask-asked={askedNotSearched?.code}
           className="border-s-2 border-border-strong ps-3 pe-1 py-1"
         >
-          <p className="text-sm font-medium leading-relaxed text-ink-primary">
-            {noAnswerMessage}
-          </p>
+          <p className="text-sm font-medium leading-relaxed text-ink-primary">{noAnswerMessage}</p>
           {askedNotSearched && askedNotSearched.places.length > 0 ? (
             <ul data-ask="asked-places" className="mt-2 flex flex-wrap gap-1.5">
               {askedNotSearched.places.map((place) => (
@@ -360,7 +393,9 @@ export function AskCompactResult({
               <p className="font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">
                 {dictionary.analysisResultView.briefWithheldHeading}
               </p>
-              <p className="text-sm text-ink-secondary">{dictionary.analysisResultView.briefWithheldBody}</p>
+              <p className="text-sm text-ink-secondary">
+                {dictionary.analysisResultView.briefWithheldBody}
+              </p>
               {brief.briefWithheldReason === null ? null : (
                 <p data-ask="brief-withheld-reason" className="text-sm text-ink-secondary">
                   {brief.briefWithheldReason}
@@ -384,6 +419,11 @@ export function AskCompactResult({
             />
           ) : null}
 
+          {/* R2-S1 — rows the validated answer already holds, each with its sources (no AI). */}
+          {briefAccepted ? (
+            <AskEvidenceTable table={comparisonTable} sources={sources} language={language} />
+          ) : null}
+
           <div data-ask="sources" className="flex flex-col gap-2">
             <p className="font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">
               {t.resultSourcesHeading}
@@ -395,8 +435,15 @@ export function AskCompactResult({
             ) : (
               <ul className="flex flex-col gap-2">
                 {shown.map(({ source, number }) => (
-                  <li key={source.articleId} data-ask="source" data-source-number={number} className="text-sm">
-                    <span className="me-1.5 font-mono text-[11px] text-ink-tertiary">[{number}]</span>
+                  <li
+                    key={source.articleId}
+                    data-ask="source"
+                    data-source-number={number}
+                    className="text-sm"
+                  >
+                    <span className="me-1.5 font-mono text-[11px] text-ink-tertiary">
+                      [{number}]
+                    </span>
                     <a
                       href={safeExternalHref(source.url)}
                       target="_blank"
@@ -417,7 +464,10 @@ export function AskCompactResult({
                             t,
                           );
                           return label === null ? null : (
-                            <span data-ask="source-date" className="ms-2 text-xs text-ink-secondary">
+                            <span
+                              data-ask="source-date"
+                              className="ms-2 text-xs text-ink-secondary"
+                            >
                               {label}
                             </span>
                           );
@@ -458,32 +508,43 @@ export function AskCompactResult({
         rather than hidden in client state. The full workspace is the only
         place full analytical detail is rendered (§2.3).
       */}
-      {showFullAnalysisLink && (<>{canOpenFullAnalysis ? (
-        <div className="flex flex-col items-start gap-0.5">
-        <a
-          data-ask="open-full"
-          href={fullAnalysisHref(question, context)}
-          /*
+      {showFullAnalysisLink && (
+        <>
+          {canOpenFullAnalysis ? (
+            <div className="flex flex-col items-start gap-0.5">
+              <a
+                data-ask="open-full"
+                href={fullAnalysisHref(question, context)}
+                /*
             ASK/SEARCH R1 — THIS TRANSITION IS THE ACCEPTED DEEPER-COMPUTE
             ACTION. A plain same-tab activation leaves a one-shot grant for
             exactly this href, so /search runs the full analysis once. A
             modified click (new tab/window), a copied link or a reload carries
             no grant and lands on the staged question, at zero requests.
           */
-          onClick={(event) => {
-            if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-            grantAnalysisConsent(fullAnalysisHref(question, context));
-          }}
-          className="self-start rounded-lg px-1 py-0.5 text-sm font-medium text-signal underline decoration-signal/50 underline-offset-4 hover:decoration-signal"
-        >
-          {/* CTO ruling 2 — the control starts compute, so it says Run. */}
-          {t.runFullAnalysis}
-        </a>
-        <span data-ask="run-full-note" className="px-1 text-xs text-ink-tertiary">
-          {t.runFullAnalysisNote}
-        </span>
-        </div>
-      ) : null}</>)}
+                onClick={(event) => {
+                  if (
+                    event.button !== 0 ||
+                    event.metaKey ||
+                    event.ctrlKey ||
+                    event.shiftKey ||
+                    event.altKey
+                  )
+                    return;
+                  grantAnalysisConsent(fullAnalysisHref(question, context));
+                }}
+                className="self-start rounded-lg px-1 py-0.5 text-sm font-medium text-signal underline decoration-signal/50 underline-offset-4 hover:decoration-signal"
+              >
+                {/* CTO ruling 2 — the control starts compute, so it says Run. */}
+                {t.runFullAnalysis}
+              </a>
+              <span data-ask="run-full-note" className="px-1 text-xs text-ink-tertiary">
+                {t.runFullAnalysisNote}
+              </span>
+            </div>
+          ) : null}
+        </>
+      )}
     </div>
   );
 }

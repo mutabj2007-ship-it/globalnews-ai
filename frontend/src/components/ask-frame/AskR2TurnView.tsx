@@ -438,6 +438,7 @@ export function AskR2TurnView({
               context={context}
               showFullAnalysisLink={false}
               storyBookmarks={storyBookmarks}
+              comparisonTable={payload.comparisonTable ?? null}
             />
           )}
           {/*
