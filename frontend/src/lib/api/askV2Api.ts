@@ -96,6 +96,19 @@ export type AskPlanChips =
   | { readonly kind: 'PENDING' };
 
 /** The `ask-r2-result/1` display artifact the execution adapter stores. */
+/** TRUST R1 — see AskRecentReporting component. */
+export interface AskRecentReporting {
+  readonly country: string;
+  readonly status: 'LISTED' | 'NONE_RETAINED' | 'UNAVAILABLE';
+  readonly windowDays: number;
+  readonly items: readonly {
+    readonly title: string;
+    readonly url: string;
+    readonly sourceName: string;
+    readonly publishedAt: string;
+  }[];
+}
+
 export interface AskR2Payload {
   readonly schema: 'ask-r2-result/1';
   readonly route: {
@@ -131,6 +144,8 @@ export interface AskR2Payload {
    * with `analysis`: exactly one of the two carries body text for a given payload.
    */
   readonly background?: { readonly text: string } | null;
+  /** TRUST R1 — retained reporting listed beside a place-background answer (listed, not analysed). */
+  readonly recentReporting?: AskRecentReporting;
   /** ASK TECHNICAL / SCIENTIFIC REASONING CONVERGENCE R1 — the deterministic computation. */
   readonly computation?: AskComputation;
   /**

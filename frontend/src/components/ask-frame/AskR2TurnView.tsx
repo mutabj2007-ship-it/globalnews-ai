@@ -10,6 +10,7 @@ import { openFullAnalysisHref, type AskR2Turn } from '@/lib/ask/useAskR2Conversa
 import { localisedCountryName } from '@/lib/map/geography/displayName';
 import { AskTurnSave } from './AskTurnSave';
 import { AskTurnCopy } from './AskTurnCopy';
+import { AskRecentReporting } from './AskRecentReporting';
 
 /**
  * ASK R2 CONSOLIDATED INTEGRATION R1 · GATE G — ONE ASK R2 TURN, AS D25 DRAWS IT.
@@ -454,6 +455,10 @@ export function AskR2TurnView({
             >
               {payload.background.text}
             </p>
+          )}
+          {/* TRUST R1 — mixed answer: retained recent reporting about the same place. */}
+          {payload.analysis === null && payload.recentReporting != null && (
+            <AskRecentReporting reporting={payload.recentReporting} locale={locale} />
           )}
           {view.badge === 'ref' && view.sourceCount === 0 && (
             <p data-ask="no-citable" className="font-mono text-[12px] text-[#8fa6c0]">

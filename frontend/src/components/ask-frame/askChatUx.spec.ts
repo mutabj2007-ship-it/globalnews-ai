@@ -74,3 +74,15 @@ describe('copy is local only', () => {
     expect(copy).not.toMatch(/fetch\(|askV2Api|navigator\.share|sendBeacon/);
   });
 });
+
+describe('TRUST R1 — mixed answer: recent reporting is listed, labelled and local', () => {
+  it('states "listed, not analysed", says absence/unavailability, and reaches no API', () => {
+    const view = code(read('AskRecentReporting.tsx'));
+    expect(view).toContain('Listed, not analysed');
+    expect(view).toContain('That is not evidence that nothing is happening');
+    expect(view).toContain('could not be checked');
+    expect(view).not.toMatch(/fetch\(|askV2Api\.|useEffect/);
+    const turn = code(read('AskR2TurnView.tsx'));
+    expect(turn).toMatch(/payload\.analysis === null && payload\.recentReporting != null/);
+  });
+});

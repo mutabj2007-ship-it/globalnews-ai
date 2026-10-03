@@ -5,6 +5,9 @@ import type {
   MultiStoryAction,
   SelectedStoryRef,
 } from '@globalnews-ai/shared';
+import { findCountryByIso3 } from '@globalnews-ai/shared';
+import { NewsService } from '../news/news.service';
+import { withDeadline } from '../compute-controls/compute-scopes';
 import { AnalysisService } from '../analysis/service/analysis.service';
 import { AnalysisConfigService } from '../analysis/config/analysis-config.service';
 import { ANALYSIS_PROVIDER } from '../analysis/providers/provider.tokens';
@@ -119,6 +122,22 @@ import {
 
 export const ASK_R2_ADAPTER_VERSION = 'ask-r2-adapter/1';
 export const ASK_R2_PAYLOAD_SCHEMA = 'ask-r2-result/1';
+
+/** TRUST R1 — retained reporting listed beside a place-background answer (listed, not analysed). */
+export interface RecentReporting {
+  readonly country: string;
+  readonly status: 'LISTED' | 'NONE_RETAINED' | 'UNAVAILABLE';
+  readonly windowDays: number;
+  readonly items: readonly {
+    readonly title: string;
+    readonly url: string;
+    readonly sourceName: string;
+    readonly publishedAt: string;
+  }[];
+}
+const RECENT_REPORTING_LIMIT = 5;
+const RECENT_REPORTING_DAYS = 14;
+const RECENT_REPORTING_DEADLINE_MS = 2500;
 
 /** How long a prepared plan (and so its stored result) stays valid. */
 const PLAN_VALIDITY_MS = 15 * 60 * 1000;
@@ -420,6 +439,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     /* ASK GUEST TRIAL R3 — optional so every existing construction is unchanged; a guest
        request without it is refused (fail closed). */
     @Optional() private readonly guests?: GuestSessionService,
+    /* TRUST R1 — optional retained-reporting read for place-background answers (no provider call). */
+    @Optional() private readonly news?: NewsService,
   ) {
     this.deps = {
       /*
@@ -1275,7 +1296,62 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       text,
       null,
       contributions,
+      null,
+      await this.recentReportingFor(route),
     );
+  }
+
+  /**
+   * TRUST & CONVERSATIONAL EXPERIENCE R1 — MIXED BACKGROUND + CURRENT DEVELOPMENTS.
+   * A place-background answer (history, travel preparation, "tell me about") is general knowledge;
+   * current developments are listed BESIDE it from RETAINED reporting about the same place: no
+   * provider call, no second model call, no analysis — dated headlines with their publishers,
+   * stated as "listed, not analysed". Its absence is said, never silently dropped.
+   */
+  private async recentReportingFor(route: AskR2Route): Promise<RecentReporting | null> {
+    if (route.knowledgeRequirement !== 'PLACE_REFERENCE') return null;
+    const iso3 = route.envelope.geography.candidates.find(
+      (c) => c.source === 'TYPED_GEOGRAPHY' || c.source === 'ENTITY_GEOGRAPHY',
+    )?.value;
+    const country = iso3 === undefined ? undefined : findCountryByIso3(iso3);
+    if (country === undefined) return null;
+    if (this.news === undefined)
+      return {
+        country: country.iso3,
+        status: 'UNAVAILABLE',
+        windowDays: RECENT_REPORTING_DAYS,
+        items: [],
+      };
+    try {
+      const articles = await withDeadline(
+        this.news.findRetainedByCountry(
+          country.iso2,
+          RECENT_REPORTING_LIMIT,
+          RECENT_REPORTING_DAYS * 24 * 60,
+        ),
+        RECENT_REPORTING_DEADLINE_MS,
+        'ask-recent-reporting',
+      );
+      const items = articles.slice(0, RECENT_REPORTING_LIMIT).map((a) => ({
+        title: a.title,
+        url: a.url,
+        sourceName: a.sourceName,
+        publishedAt: a.publishedAt,
+      }));
+      return {
+        country: country.iso3,
+        status: items.length === 0 ? 'NONE_RETAINED' : 'LISTED',
+        windowDays: RECENT_REPORTING_DAYS,
+        items,
+      };
+    } catch {
+      return {
+        country: country.iso3,
+        status: 'UNAVAILABLE',
+        windowDays: RECENT_REPORTING_DAYS,
+        items: [],
+      };
+    }
   }
 
   /**
@@ -1405,6 +1481,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     intelligence: AskContributionSet = NO_CONTRIBUTIONS,
     /** ASK TECHNICAL / SCIENTIFIC REASONING CONVERGENCE R1 — the deterministic computation. */
     computation: ComputationResult | null = null,
+    /** TRUST R1 — retained recent reporting listed beside a place-background answer. */
+    recentReporting: RecentReporting | null = null,
   ): ExecutionResult {
     this.logger.log(
       `ask-r2 operation=${operationId} class=${route.plan.questionClass} terminal=${route.plan.terminalState} ` +
@@ -1446,6 +1524,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
            background text (never present alongside a non-null `analysis`). */
         background: backgroundText === null ? null : { text: backgroundText },
         ...(computation === null ? {} : { computation }),
+        ...(recentReporting === null ? {} : { recentReporting }),
         verification,
         intelligence:
           intelligence.considered.length === 0

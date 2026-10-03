@@ -46,6 +46,8 @@ function harness(opts: {
   }) => Promise<{ text: string | null }>;
   /** ASK INTELLIGENCE BINDING R1 — the governed contribution set the coordinator returns. */
   intelligence?: (route: AskR2Route) => AskContributionSet;
+  /** TRUST R1 — the retained-reporting read (absent = not wired). */
+  news?: { findRetainedByCountry: (iso2: string, limit: number, maxAgeMinutes: number) => Promise<unknown[]> };
 }) {
   const calls: Calls = {
     analysis: [],
@@ -156,6 +158,8 @@ function harness(opts: {
         return opts.intelligence?.(route) ?? { considered: [], contributions: [] };
       }),
     } as never,
+    undefined,
+    opts.news as never,
   );
   return { adapter, calls, observed, reads };
 }
@@ -2526,5 +2530,50 @@ describe('PUBLIC BETA HARDENING R1B — broad global headlines are routed as hea
       "What has changed in Kenya's economy?",
     );
     expect(broad).toBe(false);
+  });
+});
+
+describe('TRUST R1 — mixed answer: place background + retained recent reporting (listed, not analysed)', () => {
+  const TRAVEL = 'I want to visit Tanzania especially Safari national park, I want to know some information before going there';
+  const article = (n: number) => ({ id: `a${n}`, title: `Report ${n}`, url: `https://example.test/${n}`, sourceName: 'Example', publishedAt: '2026-10-01T08:00:00Z' });
+
+  it('a travel question gets background PLUS dated retained reports — one model call, no analysis call', async () => {
+    const asked: unknown[] = [];
+    const { adapter, calls } = harness({
+      background: async () => ({ text: 'General background.' }),
+      news: { findRetainedByCountry: async (...args) => (asked.push(args), [article(1), article(2)]) },
+    });
+    const plan = await adapter.prepare(req(TRAVEL));
+    const payload = JSON.parse((await inRequest(() => adapter.execute(req(TRAVEL), plan, 'op-1'))).payloadJson);
+    expect(payload.background).toEqual({ text: 'General background.' });
+    expect(payload.recentReporting).toEqual({
+      country: 'TZA',
+      status: 'LISTED',
+      windowDays: 14,
+      items: [1, 2].map((n) => ({ title: `Report ${n}`, url: `https://example.test/${n}`, sourceName: 'Example', publishedAt: '2026-10-01T08:00:00Z' })),
+    });
+    expect(asked).toEqual([['TZ', 5, 14 * 24 * 60]]);
+    expect(calls.analysis).toEqual([]);
+    expect(calls.background).toHaveLength(1);
+  });
+
+  it('no retained reporting is SAID, and a failed read is SAID — never silently dropped', async () => {
+    for (const [news, status] of [
+      [{ findRetainedByCountry: async () => [] }, 'NONE_RETAINED'],
+      [{ findRetainedByCountry: async () => { throw new Error('db down'); } }, 'UNAVAILABLE'],
+    ] as const) {
+      const { adapter } = harness({ background: async () => ({ text: 'bg' }), news: news as never });
+      const plan = await adapter.prepare(req(TRAVEL));
+      const payload = JSON.parse((await inRequest(() => adapter.execute(req(TRAVEL), plan, 'op-1'))).payloadJson);
+      expect(payload.recentReporting.status).toBe(status);
+      expect(payload.recentReporting.items).toEqual([]);
+    }
+  });
+
+  it('a stable concept with no place carries no recent-reporting section at all', async () => {
+    const { adapter } = harness({ background: async () => ({ text: 'bg' }), news: { findRetainedByCountry: async () => [article(1)] } });
+    const plan = await adapter.prepare(req('How does photosynthesis work?'));
+    const payload = JSON.parse((await inRequest(() => adapter.execute(req('How does photosynthesis work?'), plan, 'op-1'))).payloadJson);
+    expect(payload).not.toHaveProperty('recentReporting');
   });
 });
