@@ -616,6 +616,35 @@ export function deriveKnowledgeRequirement(
 }
 
 /**
+ * CTO R4 SEMANTIC IR — the knowledge reader's per-CLAUSE signals, exported so the one semantic
+ * composition (semantic-ir/interpret-turn.ts) reads clauses with exactly these readers.
+ */
+export function clauseFreshSignal(clause: string, language: string, requestYear?: number): boolean {
+  const lang: 'en' | 'pl' = language === 'pl' ? 'pl' : 'en';
+  return (
+    assertsFreshness(clause) ||
+    FRESHNESS[lang].test(clause) ||
+    CHANGING[lang].test(clause) ||
+    CHANGED[lang].test(clause) ||
+    anchoredState(clause, lang, false, requestYear) ||
+    temporallyCurrent(clause, lang, requestYear) ||
+    NEWS_REQUEST[lang].test(clause) ||
+    refersToCurrentYear(clause, lang, requestYear)
+  );
+}
+export function clauseStableShapeSignal(clause: string, language: string): boolean {
+  const lang: 'en' | 'pl' = language === 'pl' ? 'pl' : 'en';
+  return (
+    STABLE_SHAPES[lang].some((shape) => shape.test(clause)) || BACKGROUND_REQUEST[lang].test(clause)
+  );
+}
+/** Does the text ask about something IN PROGRESS ("Why are prices rising")? */
+export function inProgressSignal(text: string, language: string): boolean {
+  const lang: 'en' | 'pl' = language === 'pl' ? 'pl' : 'en';
+  return IN_PROGRESS[lang].test(text) || CHANGING[lang].test(text);
+}
+
+/**
  * CTO R4 — GENUINE freshness: an explicit time marker, a changing quantity asked in the progressive,
  * or the governed freshness reading. Topic nouns ("crisis", "news", "situation") are SUBJECT, not
  * time — the job classifier keeps job and freshness on separate axes.

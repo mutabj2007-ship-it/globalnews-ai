@@ -33,11 +33,33 @@ const PL_COMPONENT_EVALUATION = plTolerant(
   /(?:któr\p{L}*|co)\s+(?:z\s+(?:tych|nich|twoich|jego|jej|ich)\s+(?:\p{L}+\s+)?)?(?:argument\p{L}*|punkt\p{L}*|część|części|element\p{L}*|czynnik\p{L}*|powod\p{L}*|powód|założeni\p{L}*|rekomendacj\p{L}*|zarzut\p{L}*|krok\p{L}*|ryzyk\p{L}*|scenariusz\p{L}*|słab\p{L}*\s+stron\p{L}*)|(?:któr\p{L}*|co)\s+z\s+(?:tych|nich|powyższ\p{L}*)/iu,
 );
 
+/*
+  CTO R4 semantic IR §18 — a BARE "which of them / które z nich" names no component: with a
+  choice verb ("would you pick", "do you recommend", "polecasz", "wybrać") it is a CHOICE among the
+  options under discussion; without one it evaluates the earlier work's components.
+*/
+const EN_NAMED_COMPONENT = new RegExp(
+  String.raw`\b(?:which|what)\s+(?:one\s+)?(?:of\s+(?:the|these|those|his|her|their|your|my|our|them)\s+(?:[\p{L}'’-]+['’]s\s+)?(?:[\p{L}-]+\s+)?)?${COMPONENT_NOUN}\b|\b(?:the|your|their)\s+(?:strongest|weakest|best|worst|most\s+(?:important|convincing|persuasive|fragile|critical)|least\s+(?:convincing|important|robust))\s+${COMPONENT_NOUN}\b`,
+  'iu',
+);
+const PL_NAMED_COMPONENT = plTolerant(
+  /(?:któr\p{L}*|co)\s+(?:z\s+(?:tych|nich|twoich|jego|jej|ich)\s+(?:\p{L}+\s+)?)?(?:argument\p{L}*|punkt\p{L}*|część|części|element\p{L}*|czynnik\p{L}*|powod\p{L}*|powód|założeni\p{L}*|rekomendacj\p{L}*|zarzut\p{L}*|krok\p{L}*|ryzyk\p{L}*|scenariusz\p{L}*|słab\p{L}*\s+stron\p{L}*)/iu,
+);
+const EN_CHOICE_VERB =
+  /\b(?:pick|choose|go\s+(?:with|for)|recommend|suggest|prefer|opt\s+for|buy|take|best|better|fits?|suits?)\b/i;
+const PL_CHOICE_VERB = plTolerant(
+  /(?:wybra\p{L}*|wybier\p{L}*|polec\p{L}*|rekomend\p{L}*|doradz\p{L}*|najlepsz\p{L}*|lepsz\p{L}*|wziąć|bierzesz)/iu,
+);
+
 /** Is the turn an evaluation of COMPONENTS of earlier work (never "best for what?")? */
 export function readEvaluationKind(text: string, language: string): EvaluationKind | null {
   const lang = language === 'pl' ? 'pl' : 'en';
-  if ((lang === 'pl' ? PL_COMPONENT_EVALUATION : EN_COMPONENT_EVALUATION).test(text))
+  if ((lang === 'pl' ? PL_NAMED_COMPONENT : EN_NAMED_COMPONENT).test(text))
     return 'ARTIFACT_COMPONENT_EVALUATION';
+  if ((lang === 'pl' ? PL_COMPONENT_EVALUATION : EN_COMPONENT_EVALUATION).test(text))
+    return (lang === 'pl' ? PL_CHOICE_VERB : EN_CHOICE_VERB).test(text)
+      ? 'CHOICE_EVALUATION'
+      : 'ARTIFACT_COMPONENT_EVALUATION';
   return readDecisionSupport(text, lang) !== null ? 'CHOICE_EVALUATION' : null;
 }
 

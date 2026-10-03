@@ -30,7 +30,8 @@ import { ALL_ISO3_CODES } from '@globalnews-ai/shared';
 
 /** The observation shape this build writes. A later shape gets a later version. */
 /* /2 — CTO R4 closeout: the governed user-job codes (jobKind … jobArtifactProducedKind). */
-export const ASK_OBSERVATION_SCHEMA = 'ask-observation/2' as const;
+/* /3 — CTO R4 semantic IR: the turn's interpretation codes (semanticPath … interpreter tokens). */
+export const ASK_OBSERVATION_SCHEMA = 'ask-observation/3' as const;
 
 /*
   CTO R4 CLOSEOUT — THE GOVERNED USER JOB, AS CODES. Closed vocabularies, copied here on purpose
@@ -88,9 +89,80 @@ export const OBSERVED_ARTIFACT_KINDS: ReadonlySet<string> = new Set([
   'SUMMARY',
 ]);
 
+/*
+  CTO R4 SEMANTIC IR — the turn's interpretation, as CODES (semantic-turn-ir.ts). Copied on
+  purpose (this module reaches no router file); askObservation.job.spec.ts proves they equal the
+  router's own lists. Places are ISO3, a governed REGION key, or CITY:<ISO2> — a city's country,
+  never its name.
+*/
+export const OBSERVED_SEMANTIC_PATHS: ReadonlySet<string> = new Set([
+  'DETERMINISTIC',
+  'SEMANTIC',
+  'FALLBACK',
+]);
+export const OBSERVED_SEMANTIC_CONFLICTS: ReadonlySet<string> = new Set([
+  'STABLE_SHAPE_WITH_CURRENT_MARKER',
+  'WEAK_CURRENTNESS_IN_EXPLANATION',
+  'TEMPORAL_AMBIGUOUS',
+  'CLAUSE_INTENT_UNRESOLVED',
+  'GEO_ROLES_UNRESOLVED',
+  'RELATION_ROLES_UNCLEAR',
+  'REFERENCE_UNRESOLVED',
+  'JOB_UNRESOLVED',
+]);
+export const OBSERVED_SEMANTIC_FRESHNESS: ReadonlySet<string> = new Set([
+  'NONE',
+  'CURRENT',
+  'MIXED',
+]);
+export const OBSERVED_SEMANTIC_EVIDENCE: ReadonlySet<string> = new Set([
+  'NONE',
+  'CURRENT_REPORTING',
+  'OFFICIAL',
+  'DETERMINISTIC',
+]);
+export const OBSERVED_SEMANTIC_RELATIONS: ReadonlySet<string> = new Set([
+  'BORDER',
+  'CORRIDOR',
+  'TRADE',
+  'TRANSPORT',
+  'ENERGY',
+  'INSTITUTIONAL',
+  'DIPLOMATIC',
+  'SECURITY',
+  'WAR',
+  'TERRITORIAL_DISPUTE',
+  'ALLIANCE',
+  'COMPETITION',
+  'POLICY_COORDINATION',
+  'ECONOMIC',
+  'HISTORICAL_RELATION',
+  'GENERAL',
+]);
+export const OBSERVED_SEMANTIC_REFERENCES: ReadonlySet<string> = new Set([
+  'NONE',
+  'ARTIFACT',
+  'ARTIFACT_COMPONENT',
+  'CHOICE_SET',
+  'PORTABLE_SUBJECT',
+]);
+/** A governed place code: ISO3, REGION:<KEY>, or CITY:<ISO2> (never a name). */
+export const OBSERVED_PLACE_CODE = /^(?:[A-Z]{3}|REGION:[A-Z_]{2,40}|CITY:[A-Z]{2})$/;
+
 /** A code from its closed vocabulary, or null. */
 export function governedCode(value: string | null, vocabulary: ReadonlySet<string>): string | null {
   return value !== null && vocabulary.has(value) ? value : null;
+}
+
+/** Only the codes of a list that belong to the vocabulary (bounded). */
+export function governedCodes(
+  values: readonly string[],
+  accept: ReadonlySet<string> | RegExp,
+  max = 8,
+): string[] {
+  return values
+    .filter((v) => (accept instanceof RegExp ? accept.test(v) : accept.has(v)))
+    .slice(0, max);
 }
 
 /**
@@ -280,6 +352,21 @@ export interface AskObservationInput {
   readonly jobDiscourseReference: string | null;
   readonly jobArtifactUsedKind: string | null;
   readonly jobArtifactProducedKind: string | null;
+
+  /* CTO R4 SEMANTIC IR — the turn's interpretation (codes; null / empty = not interpreted) */
+  readonly semanticPath: string | null;
+  readonly semanticConflicts: readonly string[];
+  readonly semanticClauseCount: number | null;
+  readonly semanticFreshness: string | null;
+  readonly semanticEvidence: string | null;
+  readonly semanticActorCodes: readonly string[];
+  readonly semanticVenueCodes: readonly string[];
+  readonly semanticObjectCodes: readonly string[];
+  readonly semanticRelation: string | null;
+  readonly semanticObjectiveSourceTurn: number | null;
+  readonly semanticReferenceKind: string | null;
+  readonly semanticInterpreterPromptTokens: number | null;
+  readonly semanticInterpreterCompletionTokens: number | null;
 }
 
 /**
@@ -353,6 +440,19 @@ export function newAskObservationDraft(
     jobDiscourseReference: null,
     jobArtifactUsedKind: null,
     jobArtifactProducedKind: null,
+    semanticPath: null,
+    semanticConflicts: [],
+    semanticClauseCount: null,
+    semanticFreshness: null,
+    semanticEvidence: null,
+    semanticActorCodes: [],
+    semanticVenueCodes: [],
+    semanticObjectCodes: [],
+    semanticRelation: null,
+    semanticObjectiveSourceTurn: null,
+    semanticReferenceKind: null,
+    semanticInterpreterPromptTokens: null,
+    semanticInterpreterCompletionTokens: null,
   };
 }
 

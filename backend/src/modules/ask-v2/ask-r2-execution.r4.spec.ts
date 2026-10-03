@@ -2,6 +2,7 @@ import type { AskRequest } from './ask-compute.contract';
 import { AskR2ExecutionAdapter } from './ask-r2-execution.adapter';
 import { askRequestContext } from './ask-request-context';
 import { validateArtifact, type PriorArtifact } from './conversation/conversation-artifact';
+import { SEMANTIC_INTERPRETER_MAX_TOKENS } from '../ask-router/semantic-ir/semantic-interpreter';
 
 /**
  * CTO R4 — DEEP CONVERSATIONAL INTELLIGENCE through the execution adapter, every dependency faked
@@ -291,7 +292,8 @@ describe('R4 — the bounded semantic classifier (UNRESOLVED questions only)', (
     });
     const p = await run(h, Q);
     expect(h.calls.classify).toHaveLength(1);
-    expect(h.calls.classify[0].maxCompletionTokens).toBe(120);
+    /* CTO R4 semantic IR — the ONE bounded interpretation returns the closed IR fields */
+    expect(h.calls.classify[0].maxCompletionTokens).toBe(SEMANTIC_INTERPRETER_MAX_TOKENS);
     expect(h.calls.classify[0].user).toContain('<<<Are we approaching our prime moment?>>>');
     expect(h.calls.analysis).toHaveLength(0);
     expect(h.calls.reserve).toHaveLength(2); /* classifier + answer, each metered */
@@ -729,5 +731,87 @@ describe('R4 fifth pass D — the conversation objective answers "best for what?
     expect(p.answer.basis).not.toBe('DECISION_OBJECTIVE_MISSING');
     expect(p.diagnostics.job.discourseReference).toBe('PRIOR_WORK');
     expect(h.calls.analysis).toHaveLength(0);
+  });
+});
+
+describe('CTO R4 SEMANTIC IR — one bounded interpretation, only for ambiguous turns, before any provider', () => {
+  const CONFLICT = 'What is the current federal funds target range?';
+  const verdict = (needsCurrentEvidence: boolean) => async () =>
+    JSON.stringify({
+      job: needsCurrentEvidence ? 'OFFICIAL_CURRENT_REFERENCE' : 'EXPLANATION',
+      needsCurrentEvidence,
+      depth: 'STANDARD',
+      transformation: null,
+      confidence: 'HIGH',
+      clauses: [{ id: 0, kind: needsCurrentEvidence ? 'CURRENT' : 'STABLE' }],
+      relation: null,
+      reference: 'NONE',
+    });
+
+  it('§4 FAST PATH — an obvious current question makes ZERO interpretation calls', async () => {
+    const h = harness({ classify: verdict(true) });
+    await run(h, 'What happened in Kenya today?');
+    expect(h.calls.classify).toHaveLength(0);
+    expect(h.observed[0]).toMatchObject({ semanticPath: 'DETERMINISTIC', semanticConflicts: [] });
+  });
+
+  it('§4 FAST PATH — an obvious conceptual question makes ZERO interpretation calls and no news', async () => {
+    const h = harness({ classify: verdict(true) });
+    await run(h, 'Explain deeply what resilience means.');
+    expect(h.calls.classify).toHaveLength(0);
+    expect(h.calls.analysis).toHaveLength(0);
+  });
+
+  it('§5/§6 — a CONFLICT gets exactly ONE interpretation, BEFORE the news provider; its verdict (current) decides', async () => {
+    const h = harness({ classify: verdict(true) });
+    await run(h, CONFLICT);
+    expect(h.calls.classify).toHaveLength(1);
+    expect(h.calls.classify[0].system).toContain('interpret the MEANING of ONE user turn');
+    expect(h.calls.classify[0].user).toContain('Unresolved: STABLE_SHAPE_WITH_CURRENT_MARKER');
+    expect(h.calls.analysis).toHaveLength(1);
+    expect(h.observed[0]).toMatchObject({
+      semanticPath: 'SEMANTIC',
+      semanticConflicts: ['STABLE_SHAPE_WITH_CURRENT_MARKER'],
+      semanticFreshness: 'CURRENT',
+      semanticInterpreterPromptTokens: 120,
+      semanticInterpreterCompletionTokens: 30,
+      jobClassifierUsed: true,
+    });
+    /* the interpretation is a model invocation of this Ask too */
+    expect(h.observed[0].modelInvocationCount).toBeGreaterThanOrEqual(1);
+  });
+
+  it('§5 — the interpreter may decide the opposite (no current evidence): reasoning, zero news', async () => {
+    const h = harness({ classify: verdict(false) });
+    await run(h, CONFLICT);
+    expect(h.calls.classify).toHaveLength(1);
+    expect(h.calls.analysis).toHaveLength(0);
+    expect(h.observed[0]).toMatchObject({ semanticPath: 'SEMANTIC', semanticFreshness: 'NONE' });
+  });
+
+  it('§5 FALLBACK — no interpreter: the governed default (explicit currentness outranks shape) stands, 0 calls', async () => {
+    const h = harness({});
+    await run(h, CONFLICT);
+    expect(h.calls.classify).toHaveLength(0);
+    expect(h.calls.analysis).toHaveLength(1);
+    expect(h.observed[0]).toMatchObject({ semanticPath: 'FALLBACK', semanticFreshness: 'CURRENT' });
+  });
+
+  it('§5 — an invalid interpretation (outside the closed schema) is the governed default, never news by itself', async () => {
+    const h = harness({ classify: async () => '{"job":"NEWS","needsCurrentEvidence":"yes"}' });
+    await run(h, 'Are we approaching our prime moment?');
+    expect(h.calls.classify).toHaveLength(1);
+    expect(h.calls.analysis).toHaveLength(0);
+    expect(h.observed[0]).toMatchObject({ semanticPath: 'FALLBACK' });
+  });
+
+  it('§12 / §20 — a venue city is observed as CITY:<ISO2> (never a name), the actors as ISO3', async () => {
+    const h = harness({ classify: verdict(true) });
+    await run(h, 'Has anything come out of the DR Congo–Rwanda peace talks in Doha this week?');
+    expect(h.observed[0]).toMatchObject({
+      semanticActorCodes: ['COD', 'RWA'],
+      semanticVenueCodes: ['CITY:QA'],
+      semanticRelation: 'DIPLOMATIC',
+    });
   });
 });

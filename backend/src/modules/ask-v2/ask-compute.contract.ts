@@ -63,8 +63,24 @@ export interface AskRequest {
       /** L-2 — the portable subject after this turn (built only from the reader's words). */
       readonly subject?: string | null;
     };
-    /** CTO R4 fifth pass — the newest objective the reader stated in this thread, with its turn. */
-    readonly objective?: { readonly text: string; readonly sourceTurn: number };
+    /**
+     * CTO R4 fifth pass / semantic IR §9 — the newest objective the READER stated in this thread:
+     * the criterion (`text`), its turn, and — when stated — the preferred / dispreferred value, the
+     * constraints and the decision target. The reader's words only, never model prose.
+     */
+    readonly objective?: {
+      readonly text: string;
+      readonly sourceTurn: number;
+      readonly prefer?: string | null;
+      readonly over?: string | null;
+      readonly constraints?: readonly string[];
+      readonly target?: string | null;
+      readonly inherited?: boolean;
+    };
+    /** CTO R4 semantic IR §17 — the newest options the reader named (bounded, their words). */
+    readonly choiceSet?: readonly string[];
+    /** the 0-based ordinal of this reader turn in the bounded thread */
+    readonly turnIndex?: number;
   };
 }
 

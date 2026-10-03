@@ -14,9 +14,10 @@ import {
 import { readDecisionSupport } from '../../ask-router/decision-support';
 import { readRequestAct, readTemporalRoles, readTransformation } from '../../ask-router/user-job';
 import {
-  conversationObjective,
-  type ConversationObjective,
-} from '../../ask-router/decision-objective';
+  conversationObjectiveState,
+  readChoiceSet,
+  type ObjectiveState,
+} from '../../ask-router/semantic-ir/objective-state';
 import {
   readBilateralRelationship,
   relationKindsIn,
@@ -149,8 +150,16 @@ export interface ConversationalTurn {
   /** The turn only stated a preference / constraint and composed nothing (no job to serve). */
   readonly constraintOnly: boolean;
   readonly trace: TurnStateTrace;
-  /** CTO R4 fifth pass — the newest objective the reader stated in this thread (incl. this turn). */
-  readonly objective?: ConversationObjective | null;
+  /**
+   * CTO R4 semantic IR §9 — the newest objective the READER stated in this thread (incl. this
+   * turn), as a structured slot (criterion, preference, constraints, source turn, inherited).
+   * `text` is the criterion (compat). Never built from model prose.
+   */
+  readonly objective?: (ObjectiveState & { readonly text: string }) | null;
+  /** CTO R4 semantic IR §17 — the newest set of options the reader named (bounded, their words) */
+  readonly choiceSet?: readonly string[];
+  /** the 0-based ordinal of this reader turn in the (bounded) thread */
+  readonly turnIndex?: number;
 }
 
 export interface EarlierTurnText {
@@ -1149,9 +1158,16 @@ export function readConversationalTurn(
     state = step(state, window[i].question, lang, window.slice(i + 1), false).state;
   const turn = step(state, question, lang, window, options.hasOwnContext === true);
   /* bounded objective memory: the reader's own words, oldest → newest, the newest objective wins */
-  const objective = conversationObjective(
-    [...window.map((t) => t.question).reverse(), question],
-    lang,
-  );
-  return objective === null ? turn : { ...turn, objective };
+  const readerTurns = [...window.map((t) => t.question).reverse(), question];
+  const objective = conversationObjectiveState(readerTurns, lang);
+  /* the newest set of options the reader named (their words, bounded) */
+  let choiceSet: string[] = [];
+  for (let i = readerTurns.length - 1; i >= 0 && choiceSet.length === 0; i--)
+    choiceSet = readChoiceSet(readerTurns[i], lang);
+  return {
+    ...turn,
+    ...(objective === null ? {} : { objective: { ...objective, text: objective.criterion } }),
+    ...(choiceSet.length === 0 ? {} : { choiceSet }),
+    turnIndex: readerTurns.length - 1,
+  };
 }

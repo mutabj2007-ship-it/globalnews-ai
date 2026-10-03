@@ -1,10 +1,16 @@
 import {
   governedCode,
+  governedCodes,
   OBSERVED_ARTIFACT_KINDS,
   OBSERVED_JOB_KINDS,
+  OBSERVED_PLACE_CODE,
+  OBSERVED_SEMANTIC_CONFLICTS,
+  OBSERVED_SEMANTIC_RELATIONS,
   OBSERVED_TRANSFORMATIONS,
 } from './ask-observation.contract';
 import { TRANSFORMATIONS, USER_JOBS } from '../ask-router/user-job';
+import { IR_CONFLICTS } from '../ask-router/semantic-ir/semantic-turn-ir';
+import { RELATION_KINDS } from '../ask-router/bilateral-relationship';
 import { ARTIFACT_KINDS } from '../ask-v2/conversation/conversation-artifact';
 
 /**
@@ -21,6 +27,23 @@ describe('R4 — observed job vocabularies equal their authorities', () => {
   });
   it('artifact kinds = ARTIFACT_KINDS', () => {
     expect([...OBSERVED_ARTIFACT_KINDS].sort()).toEqual([...ARTIFACT_KINDS].sort());
+  });
+  it('CTO R4 semantic IR — conflict / relation vocabularies equal their authorities', () => {
+    expect([...OBSERVED_SEMANTIC_CONFLICTS].sort()).toEqual([...IR_CONFLICTS].sort());
+    expect([...OBSERVED_SEMANTIC_RELATIONS].sort()).toEqual([...RELATION_KINDS].sort());
+  });
+  it('CTO R4 semantic IR — place codes are ISO3 / REGION key / CITY:<ISO2>; names and prose are dropped', () => {
+    expect(governedCodes(['COD', 'REGION:SENKAKU', 'CITY:QA'], OBSERVED_PLACE_CODE)).toEqual([
+      'COD',
+      'REGION:SENKAKU',
+      'CITY:QA',
+    ]);
+    expect(
+      governedCodes(['CITY:QA:Doha', 'Doha', 'the Falklands', 'rwa'], OBSERVED_PLACE_CODE),
+    ).toEqual([]);
+    expect(governedCodes(['JOB_UNRESOLVED', 'why did they…'], OBSERVED_SEMANTIC_CONFLICTS)).toEqual(
+      ['JOB_UNRESOLVED'],
+    );
   });
   it('POSITIVE CONTROL — a value outside the vocabulary (free text) is dropped to null', () => {
     expect(governedCode('DEEP_CONCEPTUAL_ANALYSIS', OBSERVED_JOB_KINDS)).toBe(

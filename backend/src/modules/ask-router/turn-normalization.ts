@@ -42,6 +42,12 @@ const EN_CONTRACTIONS: ReadonlyArray<readonly [RegExp, string]> = [
   [/\b(i|you|we|they)['’]ve\b/gi, '$1 have'],
   [/\b(i|you|we|they|he|she)['’]ll\b/gi, '$1 will'],
   [/\b(let)['’]s\b/gi, 'let us'],
+  /* CTO R4 semantic IR §16 — "why'd / how'd / where'd …" is "did" unless a would-verb follows
+     ("why'd anyone want that" keeps its modal reading) */
+  [
+    /\b(why|how|where|what|who|when)['’]d\b(?!(?:\s+[\p{L}'’-]+){0,3}?\s+(?:like|rather|prefer|want|be|have|need)\b)/giu,
+    '$1 did',
+  ],
 ];
 
 /* a discourse "now": sentence-initial (optionally after ok / right / so / and / great …), followed
@@ -70,7 +76,7 @@ export function normalizeTurn(question: string, language: string): NormalizedTur
      are form; "right now" keeps its time ("right" is a filler only when "now" does not follow) */
   const unfilled = text.replace(
     language === 'pl'
-      ? /^(?:(?:ok|okej|dobra|no|więc|wiec|hej|słuchaj|sluchaj)[,.!]?\s+)+(?=\p{L})/iu
+      ? /^(?:(?:ok|okej|dobra|no\s+to|no|więc|wiec|hej|słuchaj|sluchaj|to\s+(?=(?:czym|co|jak|dlaczego|czy|na\s+czym|który|która|które|ile|gdzie|kiedy)(?![\p{L}])))[,.!]?\s*)+(?=\p{L})/iu
       : /^(?:(?:ok(?:ay)?|so|well|um+|uh+|hmm+|right(?!\s+now)|alright|hey|hi|hello|yeah|sure)[,.!]?\s+)+(?=\p{L})/iu,
     '',
   );

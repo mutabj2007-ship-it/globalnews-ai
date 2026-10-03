@@ -102,12 +102,15 @@ describe('B — two-actor EVENTS are relationships; Polish grammatical cases; th
     expect(cls(q, lang)).toBe('REASONING');
   });
   it('the venue / disputed place is never an actor', () => {
-    expect(
-      readBilateralRelationship(
-        'Why did Russia and Ukraine sign the grain deal brokered in Istanbul in 2022?',
-        'en',
-      )?.entities,
-    ).toContainEqual({ iso3: 'TUR', role: 'VENUE' });
+    /* CTO R4 semantic IR §12 — Istanbul is the VENUE as a city (no country identity): Turkey is
+       never promoted into the relation by its city */
+    const istanbul = readBilateralRelationship(
+      'Why did Russia and Ukraine sign the grain deal brokered in Istanbul in 2022?',
+      'en',
+    );
+    expect(istanbul?.countries).toEqual(['RUS', 'UKR']);
+    expect(istanbul?.entities).toContainEqual({ iso3: null, role: 'VENUE' });
+    expect(istanbul?.entities?.some((e) => e.iso3 === 'TUR')).toBe(false);
     expect(
       readBilateralRelationship(
         'Na czym polegał konflikt Grecji i Turcji o Cypr w 1974 roku?',

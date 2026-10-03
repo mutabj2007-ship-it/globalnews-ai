@@ -69,8 +69,34 @@ live('R1 — the Ask observation store on PostgreSQL', () => {
 
     it('AskObservation exists with every declared column', async () => {
       const columns = await columnsOf('AskObservation');
-      /* 53 + the nine CTO R4 closeout job-code columns (all nullable) */
-      expect(columns.size).toBe(62);
+      /* 53 + the nine CTO R4 closeout job-code columns (all nullable) + the thirteen CTO R4
+         semantic-IR code columns (20261004100000, additive) */
+      expect(columns.size).toBe(75);
+      [
+        'semanticPath',
+        'semanticFreshness',
+        'semanticEvidence',
+        'semanticRelation',
+        'semanticReferenceKind',
+      ].forEach((c) => {
+        expect(columns.get(c)).toMatchObject({ data_type: 'text', is_nullable: 'YES' });
+      });
+      [
+        'semanticConflicts',
+        'semanticActorCodes',
+        'semanticVenueCodes',
+        'semanticObjectCodes',
+      ].forEach((c) => {
+        expect(columns.get(c)).toMatchObject({ data_type: 'ARRAY', is_nullable: 'NO' });
+      });
+      [
+        'semanticClauseCount',
+        'semanticObjectiveSourceTurn',
+        'semanticInterpreterPromptTokens',
+        'semanticInterpreterCompletionTokens',
+      ].forEach((c) => {
+        expect(columns.get(c)).toMatchObject({ data_type: 'integer', is_nullable: 'YES' });
+      });
       [
         'jobKind',
         'jobSource',
@@ -313,7 +339,7 @@ live('R1 — the Ask observation store on PostgreSQL', () => {
       ).toBe(true);
       const row = await db.askObservation.findUnique({ where: { operationId: id } });
       expect(row).toMatchObject({
-        schemaVersion: 'ask-observation/2',
+        schemaVersion: 'ask-observation/3',
         jobKind: 'DEEP_CONCEPTUAL_ANALYSIS',
         jobSource: 'DETERMINISTIC',
         jobDepth: 'DEEP',

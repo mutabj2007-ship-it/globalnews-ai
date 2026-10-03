@@ -1,8 +1,10 @@
-import { findCountryByIso3, resolveCountryByAnyIdentifier } from '@globalnews-ai/shared';
+import { resolveCountryByAnyIdentifier } from '@globalnews-ai/shared';
 import { resolvePolishCountry } from '../analysis/query/polish-country-forms.util';
-import { DEMONYM_SOURCE, normalizeAskQuestion } from './normalization/qualified-reading';
-import { combinedCountryAdjectives, resolvePolishCountryForm } from './country-morphology';
+import { resolvePolishCountryForm } from './country-morphology';
 import { plTolerant } from './pl-tolerant';
+import { normalizeTurn } from './turn-normalization';
+import { readEntityCandidates } from './semantic-ir/entities';
+import { assignRoles, toBilateralRelationship } from './semantic-ir/roles';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -44,6 +46,26 @@ export type RelationKind =
   | 'ECONOMIC'
   | 'HISTORICAL_RELATION'
   | 'GENERAL';
+
+/** CTO R4 semantic IR — the closed relation vocabulary (for validation). */
+export const RELATION_KINDS: readonly RelationKind[] = [
+  'BORDER',
+  'CORRIDOR',
+  'TRADE',
+  'TRANSPORT',
+  'ENERGY',
+  'INSTITUTIONAL',
+  'DIPLOMATIC',
+  'SECURITY',
+  'WAR',
+  'TERRITORIAL_DISPUTE',
+  'ALLIANCE',
+  'COMPETITION',
+  'POLICY_COORDINATION',
+  'ECONOMIC',
+  'HISTORICAL_RELATION',
+  'GENERAL',
+];
 
 /** CTO R4 fourth pass — the role a place plays in a multi-place question. */
 export type EntityRole =
@@ -105,7 +127,7 @@ const RELATIONS: ReadonlyArray<readonly [RelationKind, RegExp]> = (
     ],
     [
       'DIPLOMATIC',
-      /\b(?:relations?|relationship|ties|diplomatic|bilateral|agreements?|treaty|treaties|mou|cooperation|dispute|disputes|tensions?|rivals?|rivalry|rivalries|partners?|partnership|allian\w*|allies|allied|reconcil\w*|enmity|friendship|feud\w*|hostilit\w*|normali[sz]\w*|d[ée]tente|rapprochement|antagonism|grievances?|each\s+other|one\s+another|f[ae]ll(?:s|en|ing)?\s+out|clash\w*|quarrel\w*|compet\w*\s+with|cooperat\w*|collaborat\w*|fought|fight(?:s|ing)?\s+(?:over|with)|sided\s+with|negotiat\w*|talks)\b|(?:kłóc\p{L}*|ściera\p{L}*|walczy\p{L}*\s+z|rywalizuj\p{L}*|współpracuj\p{L}*|pogodzi\p{L}*)|(?:stosunk\p{L}*|relacj\p{L}*|dwustronn\p{L}*|umow\p{L}*|współprac\p{L}*|sp[oó]r\p{L}*|napięci\p{L}*|rywal\p{L}*|partner\p{L}*|sojusz\p{L}*|pojedna\p{L}*|wrogoś\p{L}*|wrog\p{L}*|przyjaźń|przyjaźni|normalizacj\p{L}*|wzajemn\p{L}*|negocjacj\p{L}*|rozmow\p{L}*|konflikt\p{L}*\s+(?:między|pomiędzy))/iu,
+      /\b(?:relations?|relationship|ties|diplomatic|bilateral|agreements?|treaty|treaties|mou|cooperation|dispute|disputes|tensions?|rivals?|rivalry|rivalries|partners?|partnership|allian\w*|allies|allied|reconcil\w*|enmity|friendship|feud\w*|hostilit\w*|normali[sz]\w*|d[ée]tente|rapprochement|antagonism|grievances?|each\s+other|one\s+another|f[ae]ll(?:s|en|ing)?\s+out|clash\w*|quarrel\w*|compet\w*\s+with|cooperat\w*|collaborat\w*|fought|fight(?:s|ing)?\s+(?:over|with)|sided\s+with|negotiat\w*|talks|argu(?:e|es|ed|ing)|spar(?:s|red|ring)?|wrangl\w*|bicker\w*)\b|(?:kłóc\p{L}*|ściera\p{L}*|spier\p{L}*\s+się|walczy\p{L}*\s+z|rywalizuj\p{L}*|współpracuj\p{L}*|pogodzi\p{L}*)|(?:stosunk\p{L}*|relacj\p{L}*|dwustronn\p{L}*|umow\p{L}*|współprac\p{L}*|sp[oó]r\p{L}*|napięci\p{L}*|rywal\p{L}*|partner\p{L}*|sojusz\p{L}*|pojedna\p{L}*|wrogoś\p{L}*|wrog\p{L}*|przyjaźń|przyjaźni|normalizacj\p{L}*|wzajemn\p{L}*|negocjacj\p{L}*|rozmow\p{L}*|konflikt\p{L}*\s+(?:między|pomiędzy))/iu,
     ],
     [
       'SECURITY',
@@ -117,7 +139,7 @@ const RELATIONS: ReadonlyArray<readonly [RelationKind, RegExp]> = (
     ],
     [
       'TERRITORIAL_DISPUTE',
-      /\b(?:territor\w*|sovereignty|claims?\s+(?:over|to)|annex\w*|disputed|islands?|maritime\s+(?:border|boundary|dispute|claims?)|(?:dispute|disputes|quarrel\w*|conflict|clash\w*|standoff)\b[^.?!]{0,60}?\bover)\b|(?:terytori\p{L}*|suwerenno\p{L}*|roszczeni\p{L}*|aneksj\p{L}*|sp[oó]r\p{L}*\s+(?:o|terytorialn\p{L}*|graniczn\p{L}*)|wysp\p{L}*|granic\p{L}*\s+morsk\p{L}*)/iu,
+      /\b(?:territor\w*|sovereignty|claims?\s+(?:over|to)|annex\w*|disputed|islands?|maritime\s+(?:border|boundary|dispute|claims?)|(?:dispute|disputes|quarrel\w*|conflict|clash\w*|standoff|argu(?:e|es|ed|ing)|fight\w*|fought|wrangl\w*|spar(?:s|red|ring)?)\b[^.?!]{0,60}?\bover)\b|(?:terytori\p{L}*|suwerenno\p{L}*|roszczeni\p{L}*|aneksj\p{L}*|sp[oó]r\p{L}*\s+(?:[^.?!]{0,60}?\s)?o\s|sp[oó]r\p{L}*\s+(?:terytorialn\p{L}*|graniczn\p{L}*)|spier\p{L}*\s+się\s+o\s|wysp\p{L}*|granic\p{L}*\s+morsk\p{L}*)/iu,
     ],
     [
       'ALLIANCE',
@@ -142,13 +164,13 @@ const RELATIONS: ReadonlyArray<readonly [RelationKind, RegExp]> = (
   ] as ReadonlyArray<readonly [RelationKind, RegExp]>
 ).map(([kind, re]) => [kind, plTolerant(re)] as const);
 
-const BETWEEN = plTolerant(
+export const BETWEEN = plTolerant(
   /\b(?:between|across|linking|connecting)\b|(?:między|pomiędzy|łącząc\p{L}*)/iu,
 );
-const COMPARISON = plTolerant(
+export const COMPARISON = plTolerant(
   /\b(?:compare|comparison|versus|vs\.?|which\s+is|which\s+has)\b|(?:porównaj|porównani\p{L}*|któr\p{L}*\s+(?:jest|ma))/iu,
 );
-const NAMED_CORRIDOR =
+export const NAMED_CORRIDOR =
   /\b((?:central|northern|southern|lobito|dar\s+es\s+salaam|mombasa)\s+corridor|rusumo(?:\s+(?:border|osbp|bridge))?|[\p{Lu}][\p{L}-]+\s+(?:one-?stop\s+)?border\s+post)\b/iu;
 
 /*
@@ -202,7 +224,7 @@ export function relationKindsIn(text: string): RelationKind[] {
   return RELATIONS.filter(([, re]) => re.test(text)).map(([kind]) => kind);
 }
 
-function domainOf(relations: readonly RelationKind[]): BilateralRelationship['domain'] {
+export function domainOf(relations: readonly RelationKind[]): BilateralRelationship['domain'] {
   if (relations.includes('TRADE') || relations.includes('ECONOMIC')) return 'COMMERCIAL';
   if (relations.includes('TRANSPORT') || relations.includes('CORRIDOR')) return 'TRANSPORT';
   if (relations.includes('ENERGY')) return 'ENERGY';
@@ -250,8 +272,13 @@ const TWO_ACTOR_EVENT: ReadonlyArray<readonly [RelationKind, RegExp]> = (
   ] as ReadonlyArray<readonly [RelationKind, RegExp]>
 ).map(([kind, re]) => [kind, plTolerant(re)] as const);
 
+/** CTO R4 semantic IR — the two-actor event kinds whose vocabulary appears in a text. */
+export function twoActorEventKinds(text: string): RelationKind[] {
+  return TWO_ACTOR_EVENT.filter(([, re]) => re.test(text)).map(([kind]) => kind);
+}
+
 /* the role of a third place, from the preposition that introduces it */
-const OBJECT_ROLE: ReadonlyArray<readonly [EntityRole, RegExp]> = [
+export const OBJECT_ROLE: ReadonlyArray<readonly [EntityRole, RegExp]> = [
   [
     'DISPUTED_OBJECT',
     /(?:\b(?:over|about|for\s+control\s+of|regarding|claims?\s+(?:to|over))|(?:^|\s)(?:o|nad|wokół))\s+(?:the\s+)?$/iu,
@@ -266,86 +293,21 @@ const OBJECT_ROLE: ReadonlyArray<readonly [EntityRole, RegExp]> = [
   ],
 ];
 
-/** Null when the question is not about a relationship between two named countries. */
+/**
+ * Null when the question is not about a relationship between two named countries.
+ *
+ * CTO R4 SEMANTIC IR — ONE AUTHORITY. The relationship is read by the semantic layer's two
+ * stages (semantic-ir/entities.ts: canonical identities; semantic-ir/roles.ts: roles and relation
+ * arguments from grammar), on the same normalized reader text the router reads. This export keeps
+ * the established shape for the conversation state and the analysis executor, so every caller
+ * agrees with the route: a venue city is never an actor, a disputed object never replaces both
+ * actors, and "DR Congo" is never the Republic of the Congo.
+ */
 export function readBilateralRelationship(
   question: string,
   language: string,
 ): BilateralRelationship | null {
   if (language !== 'en' && language !== 'pl') return null;
-  const outcome = normalizeAskQuestion({
-    originalQuestion: question,
-    sourceLanguage: language,
-    normalizationLanguage: language,
-    displayLanguage: language,
-    origin: 'ASK',
-  });
-  if (outcome.status === 'NOT_READ') return null;
-  const places = outcome.reading.geography.filter(
-    (g) => g.value !== 'CONTESTED' && g.source !== DEMONYM_SOURCE,
-  );
-  const read = [...new Set(places.map((g) => g.value))];
-  /*
-    CTO R4 fourth pass — the ACTORS: exactly two places read; else a combined adjective
-    ("Franco-German", "polsko-litewskie"); else two coordinated names in any case ("japan and
-    south korea", "Argentina and the United Kingdom … over the Falklands"). Any further place is
-    an OBJECT / VENUE / CORRIDOR of the relation, never a reason to drop the pair.
-  */
-  const adjective = combinedCountryAdjectives(question, language)[0] ?? null;
-  /* CTO R4 fifth pass — the COORDINATED structure is the strongest actor evidence: a venue or a
-     disputed place the gazetteer happens to read never displaces an actor */
-  const coordinated = adjective ?? coordinatedCountryPair(question, language);
-  const actors: [string, string] | null =
-    coordinated ?? (read.length === 2 ? [read[0], read[1]] : null);
-  if (actors === null) return null;
-  const eventKinds =
-    coordinated === null
-      ? []
-      : TWO_ACTOR_EVENT.filter(([, re]) => re.test(question)).map(([kind]) => kind);
-  const relations = [
-    ...new Set([
-      ...RELATIONS.filter(([, re]) => re.test(question)).map(([kind]) => kind),
-      ...eventKinds,
-    ]),
-  ];
-  const between = BETWEEN.test(question);
-  /* A comparison is two subjects side by side, not their relationship — unless a relation word
-     ("Compare trade between…") or a combined adjective ("the Franco-German relationship") says it
-     is about what passes between them. */
-  if (COMPARISON.test(question) && !between && adjective === null) return null;
-  if (relations.length === 0 && !between) return null;
-  const corridor = NAMED_CORRIDOR.exec(question)?.[1] ?? null;
-  const objects: ScopeEntity[] = places
-    .filter((g) => !actors.includes(g.value))
-    .map((g) => {
-      /* where the reader wrote the place: its matched text, else its first word ("Falklands") */
-      const lower = question.toLowerCase();
-      const words = (g.matchedText ?? findCountryByIso3(g.value)?.name ?? '')
-        .toLowerCase()
-        .split(/\s+/)
-        .filter((w) => w.length >= 4);
-      const at =
-        g.matchedText !== undefined && lower.includes(g.matchedText.toLowerCase())
-          ? lower.indexOf(g.matchedText.toLowerCase())
-          : (words.map((w) => lower.indexOf(w.replace(/s$/, ''))).find((i) => i >= 0) ?? -1);
-      const before = at < 0 ? '' : question.slice(Math.max(0, at - 40), at);
-      const role =
-        OBJECT_ROLE.find(([, re]) => re.test(before))?.[0] ??
-        /* a place "in" an event between the two actors is where it happened: its venue */
-        (eventKinds.length > 0 && /(?:\b(?:in|at)|(?:^|\s)(?:w|we))\s+(?:the\s+)?$/iu.test(before)
-          ? 'VENUE'
-          : 'LOCATION');
-      return { iso3: g.value, role };
-    })
-    .filter((e, i, all) => all.findIndex((x) => x.iso3 === e.iso3) === i);
-  return {
-    countries: actors,
-    relations: relations.length === 0 ? ['GENERAL'] : relations,
-    domain: domainOf(relations),
-    corridor,
-    entities: [
-      { iso3: actors[0], role: 'ACTOR' },
-      { iso3: actors[1], role: 'COUNTERPART' },
-      ...objects,
-    ],
-  };
+  const text = normalizeTurn(question, language).text;
+  return toBilateralRelationship(assignRoles(text, language, readEntityCandidates(text, language)));
 }

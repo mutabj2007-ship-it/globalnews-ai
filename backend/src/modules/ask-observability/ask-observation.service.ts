@@ -7,6 +7,14 @@ import {
   ASK_OBSERVATION_STORE_DEADLINE_MS,
   accessBucketStart,
   governedCode,
+  governedCodes,
+  OBSERVED_PLACE_CODE,
+  OBSERVED_SEMANTIC_CONFLICTS,
+  OBSERVED_SEMANTIC_EVIDENCE,
+  OBSERVED_SEMANTIC_FRESHNESS,
+  OBSERVED_SEMANTIC_PATHS,
+  OBSERVED_SEMANTIC_REFERENCES,
+  OBSERVED_SEMANTIC_RELATIONS,
   OBSERVED_ARTIFACT_KINDS,
   OBSERVED_DISCOURSE_REFERENCES,
   OBSERVED_JOB_DEPTHS,
@@ -45,6 +53,11 @@ import {
  * decides instead, and the loser's P2002 is treated as success because the observation it
  * wanted is already there.
  */
+/** A non-negative integer within its bound, or null (never a guess). */
+function boundedCount(value: number | null, max: number): number | null {
+  return value !== null && Number.isInteger(value) && value >= 0 && value <= max ? value : null;
+}
+
 @Injectable()
 export class AskObservationService {
   private readonly logger = new Logger(AskObservationService.name);
@@ -141,6 +154,30 @@ export class AskObservationService {
             jobArtifactProducedKind: governedCode(
               input.jobArtifactProducedKind,
               OBSERVED_ARTIFACT_KINDS,
+            ),
+
+            /* CTO R4 semantic IR — codes from closed vocabularies only; anything else dropped */
+            semanticPath: governedCode(input.semanticPath, OBSERVED_SEMANTIC_PATHS),
+            semanticConflicts: governedCodes(input.semanticConflicts, OBSERVED_SEMANTIC_CONFLICTS),
+            semanticClauseCount: boundedCount(input.semanticClauseCount, 64),
+            semanticFreshness: governedCode(input.semanticFreshness, OBSERVED_SEMANTIC_FRESHNESS),
+            semanticEvidence: governedCode(input.semanticEvidence, OBSERVED_SEMANTIC_EVIDENCE),
+            semanticActorCodes: governedCodes(input.semanticActorCodes, OBSERVED_PLACE_CODE, 2),
+            semanticVenueCodes: governedCodes(input.semanticVenueCodes, OBSERVED_PLACE_CODE, 4),
+            semanticObjectCodes: governedCodes(input.semanticObjectCodes, OBSERVED_PLACE_CODE, 4),
+            semanticRelation: governedCode(input.semanticRelation, OBSERVED_SEMANTIC_RELATIONS),
+            semanticObjectiveSourceTurn: boundedCount(input.semanticObjectiveSourceTurn, 1000),
+            semanticReferenceKind: governedCode(
+              input.semanticReferenceKind,
+              OBSERVED_SEMANTIC_REFERENCES,
+            ),
+            semanticInterpreterPromptTokens: boundedCount(
+              input.semanticInterpreterPromptTokens,
+              1_000_000,
+            ),
+            semanticInterpreterCompletionTokens: boundedCount(
+              input.semanticInterpreterCompletionTokens,
+              1_000_000,
             ),
           },
         }),

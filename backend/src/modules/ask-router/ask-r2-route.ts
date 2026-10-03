@@ -36,15 +36,8 @@
  * recorded in the delivery as the seam it would have been (FS-2), not made.
  */
 
-import { plTolerant } from './pl-tolerant';
 import { reportingWindowFor, type ReportingWindow } from './reporting-window';
-import {
-  deriveKnowledgeRequirement,
-  genuineFreshness,
-  isFuturePeriod,
-  particularPhenomenon,
-  type KnowledgeRequirement,
-} from './knowledge-requirement';
+import { type KnowledgeRequirement } from './knowledge-requirement';
 import { buildEnvelope, type EnvelopeSource } from './frozen-c/src/envelope';
 import { plan as frozenPlan, type PlannerDeps } from './frozen-c/src/planner';
 import { route as frozenRoute } from './frozen-c/src/index';
@@ -70,12 +63,12 @@ import { readCapabilityRequests, type CapabilityRequestKind } from './capability
 import { detectAmbiguousCountryMention } from '../analysis/anchor/event-anchor.util';
 import { readInstitutionalStatusQuestion } from '../news/relevance/governed-institutions';
 import { retainedCycleCovers } from '../ask-intelligence/contributor-selection';
-import { isBroadGlobalHeadlinesQuestion } from '../analysis/query/broad-global-headlines.util';
-import { readBilateralRelationship, type BilateralRelationship } from './bilateral-relationship';
-import { readUserJob, REASONING_JOBS, type JobReading, type UserJob } from './user-job';
-import { EN_PUBLIC_EVENT, PL_PUBLIC_EVENT, yearRoles } from './advisory-requirement';
-import { normalizeTurn } from './turn-normalization';
-import { readTemporalSemantics, type TemporalSemantics } from './temporal-semantics';
+import { type BilateralRelationship } from './bilateral-relationship';
+import { type JobReading, type UserJob } from './user-job';
+import { type TemporalSemantics } from './temporal-semantics';
+import { interpretTurn, type BoundedConversationState } from './semantic-ir/interpret-turn';
+import type { SemanticResolution } from './semantic-ir/semantic-interpreter';
+import { SEMANTIC_IR_VERSION, type SemanticTurnIR } from './semantic-ir/semantic-turn-ir';
 
 /** The vocabulary frozen C derives axes in (its `DERIVATION_COVERAGE`). */
 export const NORMALIZATION_VOCABULARY = 'en';
@@ -115,8 +108,22 @@ export interface AskRouteContext {
    */
   readonly conversationObjective?: string;
   /**
+   * CTO R4 semantic IR §17 — the BOUNDED conversation state the interpretation may use: the latest
+   * artifact (kind / label), the reader's structured objective, the options they named and the
+   * portable subject. Never the transcript, never model prose as an objective.
+   */
+  readonly conversation?: BoundedConversationState;
+  /** the 0-based ordinal of this reader turn in the thread (objective provenance) */
+  readonly turnIndex?: number;
+  /**
+   * CTO R4 semantic IR §5 — the ONE bounded semantic interpretation's validated resolution, set
+   * only by the executor after every control and before any provider (or its FALLBACK default).
+   */
+  readonly semanticResolution?: SemanticResolution;
+  /**
    * CTO R4 — the bounded semantic classifier's verdict for an UNRESOLVED question (set only by the
    * executor, after every control): current evidence is required, so the reporting plan applies.
+   * Kept for compatibility; read as a SemanticResolution.
    */
   readonly semanticJob?: { readonly job: UserJob; readonly needsCurrentEvidence: boolean };
 }
@@ -197,6 +204,12 @@ export interface AskR2Route {
   readonly job: JobReading;
   /** CTO R4 fourth pass — the temporal interpretation of the reader's words (roles + currentness). */
   readonly temporalSemantics?: TemporalSemantics;
+  /**
+   * CTO R4 SEMANTIC IR — the ONE authoritative interpretation of this turn (semantic-turn-ir.ts).
+   * Every R4 field above is derived from it; `resolution.needsSemanticResolution` tells the executor
+   * to make the one bounded semantic call before any provider.
+   */
+  readonly semantic: SemanticTurnIR;
   readonly outcome: NormalizationOutcome;
   readonly source: EnvelopeSource;
   readonly envelope: AskQuestionEnvelope;
@@ -398,8 +411,11 @@ export function composeEnvelopeSource(
   eligibility: InheritedContextEligibility,
   ctx: AskRouteContext,
   capability: ReturnType<typeof readCapabilityRequests>['source'] = {},
+  /** CTO R4 semantic IR — the first ACTOR, when the landed typed place is a venue / object */
+  typedOverride?: string,
 ): EnvelopeSource {
-  const typed = ctx.questionIsStoryHeadline === true ? undefined : typedGeographyOf(reading);
+  const typed =
+    ctx.questionIsStoryHeadline === true ? undefined : (typedOverride ?? typedGeographyOf(reading));
   const entity = typed === undefined ? entityGeographyOf(reading) : undefined;
   /* CURRENT STATUS CORROBORATION R1 — the M2 governed shape (institution AND status subject). */
   const institutional = readInstitutionalStatusQuestion(reading.originalQuestion);
@@ -471,39 +487,38 @@ export function composeEnvelopeSource(
   };
 }
 
+/** A question that was not read has an empty interpretation: frozen C's clarification decides. */
+function unreadIR(language: string): SemanticTurnIR {
+  return {
+    version: SEMANTIC_IR_VERSION,
+    language: language === 'pl' ? 'pl' : 'en',
+    turn: {
+      primaryJob: null,
+      depth: 'STANDARD',
+      freshness: 'NONE',
+      evidence: 'NONE',
+      transformation: null,
+      temporalRole: 'NONE',
+      confidence: 'LOW',
+    },
+    clauses: [],
+    entities: [],
+    relationships: [],
+    references: {
+      artifact: null,
+      objective: false,
+      choiceSet: false,
+      target: 'NONE',
+      confidence: 'LOW',
+    },
+    objective: null,
+    resolution: { path: 'DETERMINISTIC', needsSemanticResolution: false, conflicts: [] },
+  };
+}
+
 /**
  * THE INTEGRATED ASK R2 ROUTE. Pure: no I/O, no clock, no provider, no model call.
  */
-/* CTO R4 third pass — the reader asks for the REPORTING itself (an archive / coverage request) */
-const REPORT_REQUEST: Readonly<Record<'en' | 'pl', RegExp>> = {
-  en: /\b(?:report(?:ed|ing|s)?|coverage|covered|news|headlines|articles?|press|newspapers?|journalists?|media\s+(?:said|reported|coverage))\b/i,
-  pl: plTolerant(
-    /(?:relacj\p{L}*\s+medi\p{L}*|doniesie\p{L}*|doniesi\p{L}*|artykuł\p{L}*|pras\p{L}*|nagłówk\p{L}*|wiadomoś\p{L}*|dziennikar\p{L}*|media\s+(?:pisały|podawały))/iu,
-  ),
-};
-/* an earlier turn ABOUT reported items ("Compare the selected stories", "the latest articles"): the
-   conversation's subject is current reporting, so a follow-up about it carries that evidence */
-const PRIOR_REPORTED_SUBJECT: Readonly<Record<'en' | 'pl', RegExp>> = {
-  en: /\b(?:stor(?:y|ies)|articles?|reports?|reporting|coverage|headlines?|news)\b/i,
-  pl: plTolerant(
-    /(?:artykuł\p{L}*|wiadomoś\p{L}*|doniesie\p{L}*|nagłówk\p{L}*|relacj\p{L}*\s+(?:medi|pras)\p{L}*)/iu,
-  ),
-};
-/* a relationship asked about in its present state */
-const RELATION_PRESENT_STATE: Readonly<Record<'en' | 'pl', RegExp>> = {
-  en: /^\s*(?:how|what)\s+(?:is|are)\s+(?:the\s+)?(?:relations?|relationship|ties|trade|border)\b|\b(?:currently|these\s+days|at\s+the\s+moment|at\s+present|nowadays|today|right\s+now|this\s+(?:week|month|year))\b|\b(?:how|what)\s+is\s+(?:it|things)\s+(?:going|like)\b/i,
-  pl: plTolerant(
-    /^\s*(?:jak\s+(?:wygląda|wyglądają)|jaki\s+jest|jakie\s+są)(?![\p{L}])|(?:obecn\p{L}*|teraz|dziś|dzisiaj|aktualn\p{L}*|w\s+tym\s+(?:tygodniu|miesiącu|roku))(?![\p{L}])/iu,
-  ),
-};
-/* a relationship asked about in its past: past forms, history, completed periods */
-const RELATION_PAST: Readonly<Record<'en' | 'pl', RegExp>> = {
-  en: /\b(?:did|was|were|had|have\s+(?:had|been)|has\s+(?:had|been)|historically|history|historical|went|became|used\s+to|go\s+from|went\s+from|origins?|roots|over\s+the\s+(?:centuries|decades|years)|centur(?:y|ies)|decades)\b|\b(?:after|before|since|during)\s+(?:the\s+)?(?:[\p{L}]+\s+){0,3}(?:war|wars|independence|revolution|treaty|partition|colonial\s+era)\b/iu,
-  pl: plTolerant(
-    /(?:histori\p{L}*|w\s+przeszłości|skąd\s+wzi\p{L}*|(?:^|\s)\p{L}{3,}(?:ł|ła|ło|li|ły)(?![\p{L}])|na\s+przestrzeni|wiek\p{L}*|stuleci\p{L}*|(?:po|przed|w\s+czasie)\s+(?:\p{L}+\s+){0,2}wojn\p{L}*)/iu,
-  ),
-};
-
 export function routeAskR2(
   request: NormalizationRequest,
   ctx: AskRouteContext,
@@ -548,6 +563,7 @@ export function routeAskR2(
         reason: 'question not read',
         basis: 'NONE',
       },
+      semantic: unreadIR(request.sourceLanguage),
       outcome,
       source,
       envelope: routed.envelope,
@@ -623,23 +639,6 @@ export function routeAskR2(
       : { analyticalDomains: [...landed.reading.analyticalDomains, ...namedDomains] }),
     ...(personalMemberSet ? { queryIntent: 'COMPARISON_RESEARCH' as const } : {}),
   };
-  const composedSource = composeEnvelopeSource(
-    reading,
-    landedReading,
-    eligibility,
-    ctx,
-    capability.source,
-  );
-  /*
-    ASK TECHNICAL / SCIENTIFIC REASONING CONVERGENCE R1 — the knowledge requirement, derived
-    BEFORE frozen C (knowledge-requirement.ts). A DOMAIN says what a question is about, never
-    that it needs today's news, and a stable concept with two names is not a comparison of
-    members. For a STABLE_REFERENCE or COMPUTATION question (no stated period, not personal),
-    frozen C is handed a stable, non-present-tense reading with no domain / topic / time
-    constraint — so it plans REFERENCE_BACKGROUND_ONLY (or COMPUTATION) instead of requiring
-    NEWS_REPORTING. Frozen C's bytes are untouched; every other question is composed exactly as
-    before. The domains stay on the seam trace.
-  */
   /* A place the reader NAMED (its words appear in the question) makes it a place question. A
      resolver match the reader never wrote — "used together in TLS" resolved via the ISO code to
      "timor leste" — is an acronym collision in a technical question, not a country. */
@@ -656,363 +655,67 @@ export function routeAskR2(
       /* no matched text: conservatively a place the reader named */
       (g.matchedText === undefined || questionFolded.includes(fold(g.matchedText))),
   );
-  const requestYear =
-    ctx.requestInstant === undefined ? undefined : new Date(ctx.requestInstant).getUTCFullYear();
   /*
-    CTO R4 THIRD PASS — the R4 readers (knowledge requirement, currentness, job, relationship) read
-    the reader's words with harmless FORM normalized (turn-normalization.ts: "whats" → "what is",
-    a discourse "Now," removed). Frozen C, storage and display keep the original words.
+    ════════════════════════════════════════════════════════════════════════════
+    CTO R4 SEMANTIC IR — ONE AUTHORITY FOR SEMANTIC MEANING (semantic-ir/interpret-turn.ts)
+    ════════════════════════════════════════════════════════════════════════════
+    Every R4 reader (knowledge requirement, user job, temporal semantics, clause intent, the
+    currentness function, Stage A entities, Stage B roles, the objective, choice / reference) is a
+    CANDIDATE signal. ONE composition resolves them into the SemanticTurnIR and the routing decision
+    below; this route only hands frozen C the composition that decision names, and never re-reads
+    the raw text to override an IR field. A turn with a named conflict carries
+    needsSemanticResolution: the executor makes ONE bounded semantic call before any provider and
+    recomposes with its validated resolution (ctx.semanticResolution).
   */
-  const year = Number.isFinite(requestYear) ? requestYear : undefined;
-  const lang2: 'en' | 'pl' = reading.sourceLanguage === 'pl' ? 'pl' : 'en';
-  const readerText = normalizeTurn(reading.originalQuestion, reading.sourceLanguage).text;
-  /*
-    CTO R4 THIRD PASS — A COMPLETED HISTORICAL PERIOD IS NOT A REPORTING WINDOW. A stated period
-    whose years are all in the past ("in 2008", "the 1918 pandemic"), with no window reaching the
-    present ("since 2008") and no request for the reporting itself ("what did the press report in
-    2008"), is historical / reference analysis: it never makes the question current.
-  */
-  const statedYears =
-    reading.statedTime === undefined
-      ? null
-      : yearRoles(reading.statedTime.statedPeriod, lang2, year);
-  const reportRequest = REPORT_REQUEST[lang2].test(readerText);
-  const ownKnowledge = deriveKnowledgeRequirement(
-    readerText,
-    reading.sourceLanguage,
+  const resolution: SemanticResolution | undefined =
+    ctx.semanticResolution ??
+    (ctx.semanticJob === undefined
+      ? undefined
+      : {
+          path: 'SEMANTIC',
+          job: ctx.semanticJob.job,
+          needsCurrentEvidence: ctx.semanticJob.needsCurrentEvidence,
+        });
+  const { ir: semantic, decision: d } = interpretTurn({
+    reading,
     namedPlace,
-    year,
-  );
-  const historicalOverride =
-    statedYears !== null &&
-    statedYears.historical.length > 0 &&
-    !statedYears.current &&
-    statedYears.future.length === 0 &&
-    !reportRequest &&
-    /* a marker reaching the present anywhere ("…what happened there since?") keeps it current */
-    !(
-      ownKnowledge.requirement === 'CURRENT_REPORTING' &&
-      ownKnowledge.reason === 'a freshness marker'
-    ) &&
-    ownKnowledge.requirement !== 'MIXED_REFERENCE_CURRENT';
-  /* TRUST & CONVERSATIONAL EXPERIENCE R1 — a follow-up continues the KIND of question it follows:
-     "Compare it with Kenya" after a Tanzania safari question is still travel preparation. Only
-     when the service supplied a prior (a recognised follow-up) and this turn asserts no freshness
-     of its own (a CURRENT_REPORTING reading by place alone is not freshness). */
-  const priorKnowledge =
-    ctx.priorQuestion === undefined
-      ? null
-      : deriveKnowledgeRequirement(
-          normalizeTurn(ctx.priorQuestion, reading.sourceLanguage).text,
-          reading.sourceLanguage,
-        ).requirement;
-  const continuesKind =
-    ownKnowledge.requirement === null ||
-    (ownKnowledge.requirement === 'CURRENT_REPORTING' && ownKnowledge.reason === 'a named place');
-  const knowledge =
-    priorKnowledge === 'PLACE_REFERENCE' && continuesKind
-      ? { requirement: 'PLACE_REFERENCE' as const, reason: 'continues a place-reference question' }
-      : /* CTO P0 — "And for enterprise customers?" after an advisory question is still advice */
-        priorKnowledge === 'ADVISORY' && continuesKind
-        ? { requirement: 'ADVISORY' as const, reason: 'continues an advisory question' }
-        : ownKnowledge;
-  /* R3 §12 — a decision is answered on the advisory path (reasoning, no news call). */
-  const decision = knowledge.requirement === 'DECISION_SUPPORT';
-  /* The landed classifier stays authoritative: a place-bearing or anchored reading (one country,
-     several, a comparison with members, an article anchor) and an ELIGIBLE inherited context are
-     never re-read as stable reference. */
-  const placeFreeIntent = [
-    'CURRENT_EVENT',
-    'EXPLANATION',
-    'ENTITY_BACKGROUND',
-    'CLARIFICATION_REQUIRED',
-  ].includes(landedReading.queryIntent);
-  const stableOrComputed =
-    (knowledge.requirement === 'STABLE_REFERENCE' || knowledge.requirement === 'COMPUTATION') &&
-    (reading.statedTime === undefined || historicalOverride) &&
-    !namedPlace &&
-    placeFreeIntent &&
-    /* an inherited Map / story context that the landed reading made ELIGIBLE scopes the answer */
-    !(
-      eligibility.decision === 'ELIGIBLE' &&
-      (ctx.mapContextCountry !== undefined || ctx.storyAnchorCountry !== undefined)
-    ) &&
-    /* FINAL STAGE 2 CONVERGENCE R1 — a context-dependent follow-up ("How does this affect
-       ordinary households?" after "What has changed in Kenya's economy?") is about the PRIOR
-       subject, not a free-standing concept: its stable shape never detaches it from that
-       subject. The service supplies `priorQuestion` only for subject / anaphoric follow-ups. */
-    ctx.priorQuestion === undefined &&
-    capability.source.personalRequested !== true;
-  /*
-    PUBLIC BETA HARDENING R1B — an open-ended request for the current world headlines ("Any
-    global news can you share?", "What is happening around the world?", "Co się dzieje na
-    świecie?"). Its whole vocabulary is closed (no place, organisation, topic, source or period
-    can occur in it), so the reader category it may carry ("world") is the breadth of the request,
-    not a topic constraint frozen C would have to transport: it is not bound. Never for a
-    follow-up, a named place, an inherited Map / story scope or a personal request.
-  */
-  /*
-    TRUST & CONVERSATIONAL EXPERIENCE R1 — PLACE_REFERENCE (knowledge-requirement.ts): a named
-    place asked about for its history or a journey, with no stated period, no article anchor and
-    no personal request. Frozen C is handed a background reading (no domain, no time requirement)
-    that KEEPS the place, so it plans REFERENCE_BACKGROUND_ONLY scoped to it — exactly the plan
-    "Tell me about Madagascar" already receives. Frozen bytes untouched; recorded on the seam.
-  */
-  const placeReference =
-    !stableOrComputed &&
-    knowledge.requirement === 'PLACE_REFERENCE' &&
-    /* TRUST R1 §14 — a forward-pointing period in a TRAVEL request is the trip's timing, never a
-       reporting window ("Going to Tanzania next year, any tips?"). Any other stated period keeps
-       the existing path. */
-    (reading.statedTime === undefined ||
-      historicalOverride ||
-      ('frame' in knowledge &&
-        knowledge.frame === 'TRAVEL' &&
-        isFuturePeriod(reading.statedTime.statedPeriod, reading.sourceLanguage, requestYear))) &&
-    ctx.hasResolvedArticleAnchor !== true &&
-    capability.source.personalRequested !== true;
-  /*
-    CTO P0 — ADVISORY / DECISION SUPPORT (advisory-requirement.ts). Advice is general guidance
-    from reasoning: frozen C is handed the same background reading a stable question receives (no
-    domain, topic or time constraint; a named place is KEPT as the subject), so it plans
-    REFERENCE_BACKGROUND_ONLY and the existing background/reasoning provider answers it. No news
-    provider is called, so a news outage cannot turn advice into INSUFFICIENT. MIXED keeps the same
-    path; the time-anchored part is named on the answer as needing current sourced evidence.
-    Never for an article-anchored or personal-library question.
-  */
-  const advisory =
-    !stableOrComputed &&
-    !placeReference &&
-    (knowledge.requirement === 'ADVISORY' ||
-      knowledge.requirement === 'MIXED_ADVISORY_CURRENT' ||
-      decision) &&
-    ctx.hasResolvedArticleAnchor !== true &&
-    capability.source.personalRequested !== true;
-  const broadHeadlines =
-    !stableOrComputed &&
-    !placeReference &&
-    !advisory &&
-    isBroadGlobalHeadlinesQuestion(reading.originalQuestion, reading.sourceLanguage) &&
-    ctx.priorQuestion === undefined &&
-    !namedPlace &&
-    !(
-      eligibility.decision === 'ELIGIBLE' &&
-      (ctx.mapContextCountry !== undefined || ctx.storyAnchorCountry !== undefined)
-    ) &&
-    capability.source.personalRequested !== true;
-  /*
-    CTO R4 — THE GOVERNED USER JOB (user-job.ts), on its own axis from freshness. Two changes to
-    what frozen C is handed, nothing else:
-      · a REASONING job (deep conceptual analysis, explanation, planning, a transformation of
-        earlier work, decision support…) that needs no current evidence is answered by reasoning —
-        the same background composition advice already receives (a named place stays the subject);
-      · an UNRESOLVED question (no governed form, no place, no period, no event, no inherited Map /
-        story scope) is no longer defaulted to news: it is planned as reasoning and the executor's
-        bounded semantic classifier decides, behind every control. Its verdict "current evidence
-        is required" comes back as ctx.semanticJob and restores the reporting plan below.
-    Never for a relationship, an article anchor, a personal-library question, broad headlines, or
-    any path already decided above.
-  */
-  /* CTO R4 THIRD PASS — a two-country relationship is a scope object read independently of
-     freshness (and of the place / stable paths, which would collapse it to one country) */
-  const relationshipAny = advisory
-    ? null
-    : readBilateralRelationship(readerText, reading.sourceLanguage);
-  /* a completed historical period in the text (a dated past event is not current affairs) */
-  /* CTO R4 fourth pass — the temporal interpretation layer (temporal-semantics.ts): a completed
-     dated event / historical period is history, resolved BEFORE the particular-event rule */
-  const temporalSemantics = readTemporalSemantics(readerText, reading.sourceLanguage, year);
-  const pastOnly = temporalSemantics.currentness === 'HISTORICAL';
-  /* CTO R4 CLOSEOUT — a public-event noun is current affairs only for a PARTICULAR event (a named
-     place, "the war", "this election", "obecny kryzys"); "how can a war reshape an economy" and
-     "w czasie kryzysu" are conceptual subjects (knowledge-requirement.ts particularPhenomenon). */
-  const publicEvent =
-    !pastOnly &&
-    particularPhenomenon(
-      readerText,
-      reading.sourceLanguage,
-      reading.sourceLanguage === 'pl' ? PL_PUBLIC_EVENT : EN_PUBLIC_EVENT,
-      namedPlace,
-      year,
-    );
-  const fresh = genuineFreshness(readerText, reading.sourceLanguage, year);
-  const formJob = readUserJob(readerText, reading.sourceLanguage, {
-    requirement: knowledge.requirement,
-    requirementReason: knowledge.reason,
-    namedPlace,
-    statedPeriod: reading.statedTime !== undefined && !historicalOverride,
-    fresh,
-    hasPriorWork: ctx.priorWork !== undefined,
-    publicEvent,
-    requestYear: year,
-    reportRequest,
-    inheritedScope:
-      eligibility.decision === 'ELIGIBLE' &&
-      (ctx.mapContextCountry !== undefined || ctx.storyAnchorCountry !== undefined),
+    landedIntent: landedReading.queryIntent,
+    eligibleInheritedScope: eligibility.decision === 'ELIGIBLE',
+    mapOrStoryContext: ctx.mapContextCountry !== undefined || ctx.storyAnchorCountry !== undefined,
+    personal: capability.source.personalRequested === true,
+    hasResolvedArticleAnchor: ctx.hasResolvedArticleAnchor === true,
+    ...(ctx.priorQuestion === undefined ? {} : { priorQuestion: ctx.priorQuestion }),
+    ...(ctx.requestInstant === undefined ? {} : { requestInstant: ctx.requestInstant }),
+    ...(ctx.priorWork === undefined ? {} : { priorWork: ctx.priorWork }),
+    ...(ctx.conversation === undefined ? {} : { conversation: ctx.conversation }),
+    ...(ctx.conversationObjective === undefined
+      ? {}
+      : { conversationObjective: ctx.conversationObjective }),
+    ...(ctx.turnIndex === undefined ? {} : { turnIndex: ctx.turnIndex }),
+    ...(resolution === undefined ? {} : { resolution }),
   });
-  const inheritedScope =
-    eligibility.decision === 'ELIGIBLE' &&
-    (ctx.mapContextCountry !== undefined || ctx.storyAnchorCountry !== undefined);
-  /*
-    CTO R4 THIRD PASS — A RELATIONSHIP IS CURRENT, HISTORICAL OR CONCEPTUAL; ITS SCOPE IS ALWAYS
-    BOTH COUNTRIES. Current (a time, a window, a stated current period, a present-state form:
-    "how are relations between…", "what is the relationship…") → the R3 per-side evidence path.
-    Historical / conceptual (a past form, a completed period, a causal / conceptual question) —
-    or one the place / stable paths would collapse to one country → reasoning, both countries
-    kept as the relationship scope. Otherwise the bounded classifier decides (never news by
-    default), the relationship travelling with the route either way.
-  */
-  const currentStated = reading.statedTime !== undefined && !historicalOverride;
-  const relationCurrent =
-    relationshipAny !== null &&
-    (fresh ||
-      currentStated ||
-      formJob.temporal.some((t) => t.role === 'REPORTING_WINDOW') ||
-      RELATION_PRESENT_STATE[lang2].test(readerText));
-  const relationshipReasoning =
-    relationshipAny !== null &&
-    !relationCurrent &&
-    ctx.hasResolvedArticleAnchor !== true &&
-    capability.source.personalRequested !== true &&
-    (historicalOverride ||
-      pastOnly ||
-      RELATION_PAST[lang2].test(readerText) ||
-      formJob.analysis === 'CAUSAL' ||
-      formJob.job === 'DEEP_CONCEPTUAL_ANALYSIS' ||
-      placeReference ||
-      stableOrComputed);
-  /* the R3 current relationship path */
-  const relationshipRead = relationCurrent ? relationshipAny : null;
-
-  /* paths decided above, and scopes that are never re-read as reasoning */
-  const otherwiseDecided =
-    ((stableOrComputed || placeReference) && !relationshipReasoning) ||
-    relationshipReasoning ||
-    advisory ||
-    broadHeadlines ||
-    relationshipRead !== null ||
-    ctx.hasResolvedArticleAnchor === true ||
-    capability.source.personalRequested === true;
-  /* frozen C's own clarification stays the authority, except for an explicit operation on this
-     conversation's earlier work */
-  const clarificationHolds =
-    landedReading.queryIntent === 'CLARIFICATION_REQUIRED' &&
-    formJob.discourseReference !== 'PRIOR_WORK' &&
-    /* CTO R4 third pass — "Compare a 4-day week with a 5-day week": an imperative comparison of
-       two named things that are not places is answered, not asked "which countries?" */
-    !(formJob.job === 'COMPARISON' && formJob.basis === 'FORM' && !namedPlace);
-  /* 1 · an R4 governed form that needs no current evidence */
-  const reasoningByForm =
-    !otherwiseDecided &&
-    !clarificationHolds &&
-    formJob.basis === 'FORM' &&
-    formJob.job !== null &&
-    REASONING_JOBS.has(formJob.job) &&
-    formJob.freshness === 'NONE';
-  /*
-    2 · UNRESOLVED — no governed form, and nothing (time, event, inherited scope, a follow-up's
-    prior subject) says this is current reporting. A place alone is scope, not freshness. The
-    frozen plan is kept for routing; the executor asks the bounded semantic classifier BEFORE any
-    news provider is spent, and falls back to reasoning — never to news — if it cannot.
-  */
-  const timeAnchored = formJob.temporal.some(
-    (t) =>
-      t.role !== 'PLAN_HORIZON' && t.role !== 'TRIP_DURATION' && t.role !== 'HISTORICAL_PERIOD',
+  const composedSource = composeEnvelopeSource(
+    reading,
+    landedReading,
+    eligibility,
+    ctx,
+    capability.source,
+    d.typedGeographyOverride ?? undefined,
   );
-  /*
-    CTO R4 THIRD PASS §13 — THE SAFETY RAIL: positive CURRENTNESS EVIDENCE. A turn enters current
-    reporting deterministically only with at least one; with none it goes to the bounded semantic
-    classifier (then reasoning / clarification) — never ambiguous → news.
-  */
-  const priorCurrent =
-    ctx.priorQuestion !== undefined &&
-    (() => {
-      const p = normalizeTurn(ctx.priorQuestion, reading.sourceLanguage).text;
-      const k = deriveKnowledgeRequirement(p, reading.sourceLanguage, false, year);
-      return (
-        genuineFreshness(p, reading.sourceLanguage, year) ||
-        PRIOR_REPORTED_SUBJECT[lang2].test(p) ||
-        k.requirement === 'MIXED_REFERENCE_CURRENT' ||
-        k.requirement === 'MIXED_ADVISORY_CURRENT' ||
-        k.requirement === 'EVENT_DISCOVERY' ||
-        k.requirement === 'OFFICIAL_REFERENCE' ||
-        (k.requirement === 'CURRENT_REPORTING' && k.reason !== 'a named place')
-      );
-    })();
-  const governedCurrent =
-    (knowledge.requirement === 'CURRENT_REPORTING' && knowledge.reason !== 'a named place') ||
-    knowledge.requirement === 'EVENT_DISCOVERY' ||
-    knowledge.requirement === 'OFFICIAL_REFERENCE' ||
-    knowledge.requirement === 'MIXED_REFERENCE_CURRENT' ||
-    knowledge.requirement === 'MIXED_ADVISORY_CURRENT';
-  const currentnessEvidence: string[] = [
-    ...(fresh ? ['EXPLICIT_TIME_OR_CHANGE'] : []),
-    ...(currentStated ? ['STATED_CURRENT_PERIOD'] : []),
-    ...(timeAnchored ? ['REPORTING_WINDOW'] : []),
-    ...(publicEvent ? ['PARTICULAR_EVENT'] : []),
-    ...(governedCurrent ? ['GOVERNED_CURRENT_FORM'] : []),
-    ...(relationCurrent ? ['RELATIONSHIP_PRESENT_STATE'] : []),
-    ...(inheritedScope ? ['INHERITED_SURFACE_SCOPE'] : []),
-    ...(priorCurrent ? ['PRIOR_CURRENT_SUBJECT'] : []),
-    ...(ctx.hasResolvedArticleAnchor === true ? ['ARTICLE_ANCHOR'] : []),
-    ...(broadHeadlines ? ['HEADLINES_REQUEST'] : []),
-  ];
-  const unresolvedEligible =
-    !otherwiseDecided &&
-    !clarificationHolds &&
-    !reasoningByForm &&
-    (knowledge.requirement === null ||
-      (knowledge.requirement === 'CURRENT_REPORTING' && knowledge.reason === 'a named place')) &&
-    currentnessEvidence.length === 0;
-  /* 3 · the executor's semantic verdict for an UNRESOLVED question */
-  const reasoningBySemantics =
-    unresolvedEligible && ctx.semanticJob !== undefined && !ctx.semanticJob.needsCurrentEvidence;
-  const reasoning = reasoningByForm || reasoningBySemantics || relationshipReasoning;
-  const resolvedJob: JobReading = relationshipReasoning
-    ? {
-        ...formJob,
-        job: 'RELATIONSHIP_ANALYSIS',
-        freshness: 'NONE',
-        evidence: 'NONE',
-        source: 'DETERMINISTIC',
-        basis: 'FORM',
-        confidence: 'HIGH',
-        reason: 'a historical / conceptual relationship between two countries (both kept as scope)',
-      }
-    : reasoningBySemantics
-      ? {
-          ...formJob,
-          job: ctx.semanticJob!.job,
-          source: 'SEMANTIC',
-          confidence: 'MEDIUM',
-          reason: 'resolved by the bounded semantic classifier',
-        }
-      : unresolvedEligible && ctx.semanticJob !== undefined
-        ? {
-            ...formJob,
-            job: ctx.semanticJob.job,
-            freshness: 'CURRENT',
-            evidence: 'CURRENT_REPORTING',
-            source: 'SEMANTIC',
-            confidence: 'MEDIUM',
-            reason: 'the semantic classifier requires current evidence',
-          }
-        : unresolvedEligible
-          ? { ...formJob, job: null, source: 'UNRESOLVED', confidence: 'LOW' }
-          : formJob.source === 'UNRESOLVED'
-            ? {
-                ...formJob,
-                job: 'CURRENT_REPORTING',
-                freshness: 'CURRENT',
-                evidence: 'CURRENT_REPORTING',
-                source: 'DETERMINISTIC',
-                basis: 'KNOWLEDGE',
-                confidence: 'MEDIUM',
-                reason:
-                  'scoped as current reporting by its time, event, inherited scope or prior subject',
-              }
-            : formJob;
-  const job: JobReading = { ...resolvedJob, currentnessEvidence };
+  const {
+    knowledge,
+    historicalOverride,
+    stableOrComputed,
+    placeReference,
+    advisory,
+    decision,
+    broadHeadlines,
+    relationshipReasoning,
+    reasoning,
+    job,
+    temporalSemantics,
+  } = d;
+  const relationshipAny = d.relationship;
   const {
     temporalRequirement: _time,
     topicTerms: _topic,
@@ -1086,20 +789,15 @@ export function routeAskR2(
       ctx.requestInstant,
     ),
     readerStatedPeriod: reading.statedTime?.statedPeriod ?? null,
-    currentEvidenceNeeded:
-      ('currentClauses' in knowledge ? knowledge.currentClauses : undefined) ?? [],
-    /* CTO R4 fifth pass — the turn's own objective, else the conversation's, else the label of a
-       DECISION_CRITERIA artifact: "best for what?" only when none exists */
-    decisionObjective:
-      advisory && decision
-        ? (('objective' in knowledge ? (knowledge.objective ?? null) : null) ??
-          ctx.conversationObjective ??
-          (ctx.priorWork?.kind === 'DECISION_CRITERIA' ? ctx.priorWork.label : null))
-        : null,
-    /* R3 §14 / CTO R4 third pass — the two-country scope, current, historical or conceptual */
+    currentEvidenceNeeded: d.currentEvidenceNeeded,
+    /* CTO R4 semantic IR — the turn's own objective, else the conversation's (reader's words), else
+       a DECISION_CRITERIA artifact's label: "best for what?" only when none exists */
+    decisionObjective: d.decisionObjective,
+    /* R3 §14 / CTO R4 — the two-country scope from the IR's ACTORS (never a venue / object) */
     relationship: relationshipAny,
     job,
     temporalSemantics,
+    semantic,
     outcome,
     source,
     envelope,

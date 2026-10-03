@@ -145,11 +145,32 @@ function plPart(part: string): string | null {
 
 /** Country pairs written as a combined adjective ("Franco-German", "polsko-litewskie"). */
 export function combinedCountryAdjectives(text: string, language: string): Array<[string, string]> {
-  const out: Array<[string, string]> = [];
+  return combinedCountryAdjectiveSpans(text, language).map((s) => [s.a, s.b]);
+}
+
+export interface CombinedAdjectiveSpan {
+  readonly a: string;
+  readonly b: string;
+  readonly start: number;
+  readonly end: number;
+  readonly surface: string;
+}
+
+/** CTO R4 semantic IR — the same combined adjectives, with where the reader wrote them. */
+export function combinedCountryAdjectiveSpans(
+  text: string,
+  language: string,
+): CombinedAdjectiveSpan[] {
+  const out: CombinedAdjectiveSpan[] = [];
   for (const m of text.matchAll(/(?<![\p{L}-])([\p{L}]{2,})-([\p{L}]{2,})(?![\p{L}])/gu)) {
     const a = language === 'pl' ? (plPart(m[1]) ?? enPart(m[1])) : (enPart(m[1]) ?? plPart(m[1]));
     const b = language === 'pl' ? (plPart(m[2]) ?? enPart(m[2])) : (enPart(m[2]) ?? plPart(m[2]));
-    if (a !== null && b !== null && a !== b) out.push([a, b]);
+    if (a !== null && b !== null && a !== b) {
+      /* a combining FORM ("Franco-", "Sino-", "polsko-") or a demonym pair; two full country names
+         joined by a hyphen ("Congo-Rwanda") are a coordination, read by the entity scanner */
+      const start = m.index ?? 0;
+      out.push({ a, b, start, end: start + m[0].length, surface: m[0] });
+    }
   }
   return out;
 }
@@ -185,8 +206,9 @@ const PL_CASE_ENDINGS: ReadonlyArray<readonly [string, readonly string[]]> = [
   ['im', ['i']],
   ['ej', ['a']],
   ['ego', ['y', 'e']],
-  ['iem', ['']],
-  ['em', ['']],
+  /* neuter nouns ("Maroko" → Marokiem / Maroka, "Kosowo") */
+  ['iem', ['', 'o']],
+  ['em', ['', 'o']],
   ['ii', ['ia', 'ie']],
   ['ji', ['ja']],
   ['sce', ['ska']],
@@ -195,7 +217,7 @@ const PL_CASE_ENDINGS: ReadonlyArray<readonly [string, readonly string[]]> = [
   ['i', ['a', 'ia', 'ie', 'y']],
   ['y', ['a', 'y']],
   ['e', ['a']],
-  ['a', ['a', '']],
+  ['a', ['a', '', 'o']],
   ['u', ['']],
   /* a genitive plural with an inserted vowel: Węgier ← Węgry, Niemiec ← Niemcy */
   ['ier', ['ry']],

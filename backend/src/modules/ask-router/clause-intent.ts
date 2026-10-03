@@ -37,13 +37,21 @@ const INTERROGATIVE_EN =
 const INTERROGATIVE_PL =
   'co|jak|jaki|jaka|jakie|jakich|kto|czy|ile|gdzie|kiedy|dlaczego|czemu|powiedz|podaj|pokaż|pokaz|czym|skąd|skad|wyjaśnij|wyjasnij';
 
+/*
+  CTO R4 SEMANTIC IR §7 — punctuation is only a SEGMENTATION HINT: sentence ends, semicolons, a
+  dash between clauses (" — ", " – ", " - " after normalization), coordinating conjunctions, commas
+  before a new interrogative clause, and — with no punctuation at all — a current-request head
+  ("…what is the latest…", "…any news…", "…is it still…") after at least three words.
+*/
+const EN_INFORMAL_CURRENT_HEAD = String.raw`(?<=(?:\S+\s+){3,}\S+)\s+(?=(?:what\s+is\s+(?:the\s+)?(?:latest|new|happening|going\s+on)|any\s+(?:news|updates?)|is\s+(?:it|that|this)\s+still|are\s+they\s+still|has\s+(?:it|that|this)\s+(?:changed|happened))\b)`;
+const PL_INFORMAL_CURRENT_HEAD = String.raw`(?<=(?:\S+\s+){3,}\S+)\s+(?=(?:co\s+(?:nowego|się\s+(?:teraz\s+)?dzieje)|jakie\s+(?:są\s+)?(?:najnowsze|ostatnie)|czy\s+(?:to\s+)?(?:nadal|wciąż|już))(?![\p{L}\d]))`;
 const SPLIT: Readonly<Record<Lang, RegExp>> = {
   en: new RegExp(
-    String.raw`(?<=[?.!;])\s+|;\s*|,\s+(?:and|but|while|plus|also)\s+|,?\s+(?:and|but|plus|also)\s+(?=(?:${INTERROGATIVE_EN})\b)|,\s*(?=(?:${INTERROGATIVE_EN})\b)`,
+    String.raw`(?<=[?.!;])\s+|;\s*|:\s+|\s+[-–—]\s+|,\s+(?:and|but|while|plus|also)\s+|,?\s+(?:and|but|plus|also)\s+(?=(?:${INTERROGATIVE_EN})\b)|,\s*(?=(?:${INTERROGATIVE_EN})\b)|${EN_INFORMAL_CURRENT_HEAD}`,
     'iu',
   ),
   pl: new RegExp(
-    String.raw`(?<=[?.!;])\s+|;\s*|,\s+(?:a|i|ale|oraz|także|też)\s+|,?\s+(?:i|a|ale|oraz)\s+(?=(?:${INTERROGATIVE_PL})(?![\p{L}\d]))|,\s*(?=(?:${INTERROGATIVE_PL})(?![\p{L}\d]))`,
+    String.raw`(?<=[?.!;])\s+|;\s*|:\s+|\s+[-–—]\s+|,\s+(?:a|i|ale|oraz|także|też)\s+|,?\s+(?:i|a|ale|oraz)\s+(?=(?:${INTERROGATIVE_PL})(?![\p{L}\d]))|,\s*(?=(?:${INTERROGATIVE_PL})(?![\p{L}\d]))|${PL_INFORMAL_CURRENT_HEAD}`,
     'iu',
   ),
 };
@@ -74,6 +82,24 @@ const STABLE_CLAUSE: Readonly<Record<Lang, RegExp>> = {
     /^(?:czym\s+(?:właściwie\s+|dokładnie\s+)?(?:zajmuje\s+się|jest|są|różni)|co\s+(?:właściwie\s+|dokładnie\s+)?(?:robi|oznacza|znaczy)|co\s+sprawia|jaka\s+jest\s+rola|na\s+czym\s+polega|wyjaśnij|opisz|dlaczego\s+.{1,80}?\s+(?:ma\s+znaczenie|jest\s+(?:ważn|istotn)\p{L}*)|(?:rozumiem|wiem|znam|kojarzę)(?![\p{L}]))|(?:^|\s)(?:w\s+teorii|teoretycznie|w\s+zasadzie|co\s+do\s+zasady|ogólnie\s+rzecz\s+biorąc)(?![\p{L}])/iu,
   ),
 };
+
+/*
+  CTO R4 SEMANTIC IR §7 — an EXPLANATORY clause ("Why has Oman been the go-between…", "What led to
+  the split", "Po co jest artykuł 4", "Dlaczego…") asks for an explanation. On its own it may be
+  about anything; joined to a CURRENT clause it is the stable / historical component of a MIXED
+  turn — unless it is itself current (a progressive or a present-state marker, tested first).
+*/
+const EXPLANATORY_CLAUSE: Readonly<Record<Lang, RegExp>> = {
+  en: /^(?:please\s+)?(?:why\b|how\s+come\b|what\s+(?:caused|led\s+to|explains|lies\s+behind|was\s+behind|is\s+behind)\b|how\s+did\b|what\s+(?:is|are|was|were)\s+.{1,60}?\s+for\b|what(?:'s|\s+is)\s+the\s+(?:point|purpose|reason|rationale)\b)/i,
+  pl: plTolerant(
+    /^(?:dlaczego|czemu|po\s+co|skąd|z\s+czego\s+wynika|co\s+spowodował\p{L}*|jak\s+doszło|jaki\s+jest\s+(?:cel|sens|powód))(?![\p{L}])/iu,
+  ),
+};
+
+/** Is the clause an explanation request by form (why / what led to / po co …)? */
+export function explanatoryClauseForm(clause: string, language: string): boolean {
+  return EXPLANATORY_CLAUSE[language === 'pl' ? 'pl' : 'en'].test(clause.trim());
+}
 
 /** Is the clause a STABLE (conceptual / explanatory / context) clause by form? */
 export function stableClauseForm(clause: string, language: string): boolean {

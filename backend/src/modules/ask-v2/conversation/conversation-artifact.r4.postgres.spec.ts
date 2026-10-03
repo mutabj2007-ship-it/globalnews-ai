@@ -218,9 +218,16 @@ live('R4 ConversationArtifact memory — live PostgreSQL through AskV2Service', 
     await ask(t, 'What matters most to me is income stability and working abroad.');
     await ask(t, 'Hmm, good points.');
     const decision = await ask(t, 'So which one fits me better?');
+    /* CTO R4 semantic IR §9 — the STRUCTURED objective (criterion, preference, constraints,
+       target, inherited), from the reader's own turn 1 */
     expect(decision.quoted.conversation?.objective).toEqual({
       text: 'income stability and working abroad',
       sourceTurn: 1,
+      prefer: null,
+      over: null,
+      constraints: [],
+      target: null,
+      inherited: true,
     });
     expect(decision.executed.conversation?.objective).toEqual(
       decision.quoted.conversation?.objective,

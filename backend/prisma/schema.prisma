@@ -1999,6 +1999,30 @@ model AskObservation {
   jobArtifactUsedKind     String?
   jobArtifactProducedKind String?
 
+  /// CTO R4 SEMANTIC IR — the turn's interpretation, as CODES from closed vocabularies
+  /// (semantic-turn-ir.ts). Never text, never model prose, never chain-of-thought. Places are
+  /// ISO3 codes, governed REGION keys or CITY:<ISO2> (a city's country, never its name).
+  /// DETERMINISTIC (fast path) / SEMANTIC (the one bounded interpreter decided) / FALLBACK.
+  semanticPath                        String?
+  /// The named conflicts that required the bounded interpreter (empty on the fast path).
+  semanticConflicts                   String[] @default([])
+  semanticClauseCount                 Int?
+  /// NONE / CURRENT / MIXED.
+  semanticFreshness                   String?
+  /// NONE / CURRENT_REPORTING / OFFICIAL / DETERMINISTIC.
+  semanticEvidence                    String?
+  semanticActorCodes                  String[] @default([])
+  semanticVenueCodes                  String[] @default([])
+  semanticObjectCodes                 String[] @default([])
+  semanticRelation                    String?
+  /// The reader turn the objective came from (an ordinal, never the objective's text).
+  semanticObjectiveSourceTurn         Int?
+  /// NONE / ARTIFACT / ARTIFACT_COMPONENT / CHOICE_SET / PORTABLE_SUBJECT.
+  semanticReferenceKind               String?
+  /// The bounded interpreter's measured usage, when it ran and the provider reported it.
+  semanticInterpreterPromptTokens     Int?
+  semanticInterpreterCompletionTokens Int?
+
   @@index([occurredAt])
   @@index([questionClass, occurredAt])
   @@index([answerState, occurredAt])

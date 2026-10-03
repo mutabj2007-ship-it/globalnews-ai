@@ -36,16 +36,17 @@ import {
   type AskRouteContext,
 } from '../ask-router/ask-r2-route';
 import { DECISION_OBJECTIVE_CANDIDATES } from '../ask-router/decision-support';
+import { completionCeilingFor, jobRulesFor } from './job-execution';
+import type { BoundedConversationState } from '../ask-router/semantic-ir/interpret-turn';
 import {
-  completionCeilingFor,
-  FALLBACK_SEMANTIC_JOB,
-  JOB_CLASSIFIER_MAX_TOKENS,
-  JOB_CLASSIFIER_SYSTEM,
-  jobClassifierUserMessage,
-  jobRulesFor,
-  parseSemanticJob,
-  type SemanticJob,
-} from './job-execution';
+  fallbackResolution,
+  parseSemanticResolution,
+  semanticInterpreterUserMessage,
+  SEMANTIC_INTERPRETER_MAX_TOKENS,
+  SEMANTIC_INTERPRETER_SYSTEM,
+  type SemanticResolution,
+} from '../ask-router/semantic-ir/semantic-interpreter';
+import { semanticReaderText } from '../ask-router/semantic-ir/interpret-turn';
 import {
   artifactIdentity,
   artifactPromptBlock,
@@ -172,11 +173,42 @@ const PLAN_VALIDITY_MS = 15 * 60 * 1000;
  * verified account identity (frozen B7: a personal question is IDENTITY_REQUIRED without
  * one) are server-held facts of THIS request, never read from the question or the client.
  */
+/**
+ * CTO R4 semantic IR §17 — the BOUNDED conversation state the interpretation may use: the latest
+ * artifact's kind / label, the reader's structured objective, the options they named and the
+ * portable subject. Never the transcript; an artifact (model work) is never an objective.
+ */
+function boundedStateOf(request: Readonly<AskRequest>): BoundedConversationState | undefined {
+  const c = request.conversation;
+  const a = request.priorArtifact;
+  if (c === undefined && a === undefined) return undefined;
+  const o = c?.objective;
+  return {
+    ...(a === undefined ? {} : { artifact: { kind: a.kind, label: a.label } }),
+    ...(o === undefined
+      ? {}
+      : {
+          objective: {
+            criterion: o.text,
+            prefer: o.prefer ?? null,
+            over: o.over ?? null,
+            constraints: o.constraints ?? [],
+            sourceTurn: o.sourceTurn,
+            sourceSpan: [0, o.text.length] as const,
+            target: o.target ?? null,
+            inherited: o.inherited ?? true,
+          },
+        }),
+    ...(c?.choiceSet === undefined ? {} : { choiceSet: c.choiceSet }),
+    ...(c?.trace.subject == null ? {} : { portableSubject: c.trace.subject }),
+  };
+}
+
 function routeFor(
   request: Readonly<AskRequest>,
   baseDeps: PlannerDeps,
-  /** CTO R4 — the bounded semantic classifier's verdict for an UNRESOLVED question. */
-  semanticJob?: SemanticJob,
+  /** CTO R4 semantic IR — the ONE bounded interpretation's validated resolution (or FALLBACK). */
+  semanticResolution?: SemanticResolution,
 ): AskR2Route {
   const who = askRequestContext.getStore();
   /*
@@ -203,10 +235,12 @@ function routeFor(
       ...(who === undefined ? {} : { identityVerified: who.accountId !== null }),
       /* ASK R3 CONTINUITY — frozen C already reads conversationSubject from it. */
       ...(who?.priorQuestion ? { priorQuestion: who.priorQuestion } : {}),
-      /* CTO R4 fifth pass — the objective the reader stated earlier in this thread */
-      ...(request.conversation?.objective === undefined
+      /* CTO R4 semantic IR — the bounded conversation state (objective, options, subject, the
+         latest artifact's kind) and this turn's ordinal */
+      ...(boundedStateOf(request) === undefined ? {} : { conversation: boundedStateOf(request) }),
+      ...(request.conversation?.turnIndex === undefined
         ? {}
-        : { conversationObjective: request.conversation.objective.text }),
+        : { turnIndex: request.conversation.turnIndex }),
       /* UNIFIED INTELLIGENCE BINDING R2B — THIS turn's server-resolved context, through the
          landed seams only (frozen C and its eligibility rules are untouched). */
       ...routeContextOf(request.context, request.question),
@@ -214,14 +248,7 @@ function routeFor(
       ...(request.priorArtifact === undefined
         ? {}
         : { priorWork: { kind: request.priorArtifact.kind, label: request.priorArtifact.label } }),
-      ...(semanticJob === undefined
-        ? {}
-        : {
-            semanticJob: {
-              job: semanticJob.job,
-              needsCurrentEvidence: semanticJob.needsCurrentEvidence,
-            },
-          }),
+      ...(semanticResolution === undefined ? {} : { semanticResolution }),
     },
     deps,
   );
@@ -477,18 +504,20 @@ export function estimateBackgroundUnits(
   return Math.ceil(promptChars / 4) + outputWeight * maxCompletionTokens;
 }
 
-/** CTO R4 — the semantic job classifier: a short prompt and a tiny JSON answer. */
+/** CTO R4 semantic IR — the one bounded interpretation: a short prompt and a small JSON answer. */
 export function estimateClassifierUnits(questionChars: number, outputWeight: number): number {
-  return Math.ceil((1200 + questionChars) / 4) + outputWeight * JOB_CLASSIFIER_MAX_TOKENS;
+  return Math.ceil((2400 + questionChars) / 4) + outputWeight * SEMANTIC_INTERPRETER_MAX_TOKENS;
 }
 
-/** CTO R4 — the outcome of the bounded semantic classification of an UNRESOLVED question. */
+/** CTO R4 semantic IR — the outcome of the ONE bounded semantic interpretation of a turn. */
 interface ClassifierRun {
-  readonly verdict: SemanticJob;
-  /** model calls it made (0 when no classifier is available) */
+  readonly verdict: SemanticResolution;
+  /** model calls it made (0 when no interpreter is available or its breaker is open) */
   readonly calls: number;
-  /** SEMANTIC: the classifier decided; FALLBACK: none available / it failed → reasoning, never news */
+  /** SEMANTIC: the interpreter decided; FALLBACK: none available / it failed → governed default */
   readonly source: 'SEMANTIC' | 'FALLBACK';
+  /** the interpreter's measured usage, when the provider reported it (cost gate) */
+  readonly tokens?: { readonly promptTokens: number; readonly completionTokens: number } | null;
 }
 
 @Injectable()
@@ -741,6 +770,32 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         false,
       );
     }
+    /*
+      CTO R4 SEMANTIC IR §5–§6 — ROUTING NEVER PRECEDES SEMANTIC RESOLUTION. When the deterministic
+      interpretation names a conflict (needsSemanticResolution), ONE bounded semantic call resolves
+      it — clause intents, actor roles, reference and currentness together — before ANY routing
+      decision below and before any provider. The route is recomposed with the validated
+      resolution (or, without one, the governed FALLBACK default: never news by default). A zero-AI
+      frozen terminal (clarification, identity, capability) is honoured first and spends nothing.
+      The plan revision was checked on the deterministic route above.
+    */
+    let semanticRun: ClassifierRun | undefined;
+    if (route.semantic.resolution.needsSemanticResolution) {
+      const early0 = answerStateBeforeExecution(route.plan);
+      if (early0 === null || early0.state === 'REFERENCE_BACKGROUND') {
+        semanticRun = await this.interpretSemantics(request, route, draft);
+        const conflicts = route.semantic.resolution.conflicts;
+        route = routeFor(request, this.deps, semanticRun.verdict);
+        /* what is executed is the resolved route; the job source says who decided it */
+        this.observeRoute(route, draft);
+        draft.jobClassifierUsed = semanticRun.calls > 0;
+        /* §20 — the conflict reasons that required the interpreter, and its measured usage */
+        draft.semanticConflicts = [...conflicts];
+        draft.semanticInterpreterPromptTokens = semanticRun.tokens?.promptTokens ?? null;
+        draft.semanticInterpreterCompletionTokens = semanticRun.tokens?.completionTokens ?? null;
+      }
+    }
+
     if (route.knowledgeRequirement === 'DECISION_SUPPORT' && route.decisionObjective === null) {
       return this.result(
         plan,
@@ -770,7 +825,15 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       route.knowledgeRequirement === 'MIXED_REFERENCE_CURRENT' &&
       route.plan.terminalState === 'BROADENING_OFFERED'
     ) {
-      return this.executeBackground(request, plan, route, operationId, draft, 'UNAVAILABLE');
+      return this.executeBackground(
+        request,
+        plan,
+        route,
+        operationId,
+        draft,
+        'UNAVAILABLE',
+        semanticRun,
+      );
     }
 
     /* 2 · a terminal that needs no model answers with ZERO AI. */
@@ -876,7 +939,15 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       closes). One ZERO-Reporting-call model answer, still behind every existing control.
     */
     if (early !== null && early.state === 'REFERENCE_BACKGROUND') {
-      return this.executeBackground(request, plan, route, operationId, draft);
+      return this.executeBackground(
+        request,
+        plan,
+        route,
+        operationId,
+        draft,
+        undefined,
+        semanticRun,
+      );
     }
 
     /* ASK TECHNICAL / SCIENTIFIC REASONING CONVERGENCE R1 — a computation is answered by the
@@ -905,29 +976,20 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     }
 
     /*
-      CTO R4 — UNKNOWN NEVER MEANS NEWS. An UNRESOLVED question (no governed form; nothing about it
-      asks for current evidence) is classified by the bounded semantic classifier BEFORE any news
-      provider is spent, behind the same controls. Reasoning → the background provider answers;
-      current evidence → the reporting path below; no classifier / a failure → reasoning, never
-      news. The plan revision was checked on the deterministic route above.
+      CTO R4 — UNKNOWN NEVER MEANS NEWS (defensive rail). An UNRESOLVED job is interpreted above,
+      before any routing decision; one can only reach here uninterpreted if that step was skipped.
+      It is never sent to news: the governed fallback (reasoning) decides, with zero model calls.
     */
     if (route.job.source === 'UNRESOLVED') {
-      const semantic = await this.classifyUnresolved(request, draft);
-      const resolved = routeFor(request, this.deps, semantic.verdict);
-      /* what is executed is the resolved route; the job source says who decided it */
+      const run: ClassifierRun = semanticRun ?? {
+        verdict: fallbackResolution(route.semantic),
+        calls: 0,
+        source: 'FALLBACK',
+      };
+      const resolved = routeFor(request, this.deps, run.verdict);
       this.observeRoute(resolved, draft);
-      draft.jobSource = semantic.source;
-      draft.jobClassifierUsed = semantic.calls > 0;
       if (resolved.plan.terminalState === 'REFERENCE_BACKGROUND_ONLY')
-        return this.executeBackground(
-          request,
-          plan,
-          resolved,
-          operationId,
-          draft,
-          undefined,
-          semantic,
-        );
+        return this.executeBackground(request, plan, resolved, operationId, draft, undefined, run);
       route = resolved;
     }
 
@@ -1131,7 +1193,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     /* AI executed = the analysis path produced a model answer (the usage sink is metering only). */
     const aiExecuted = response.analysis !== null;
     draft.aiExecuted = aiExecuted;
-    draft.modelInvocationCount = aiExecuted ? 1 : 0;
+    /* CTO R4 semantic IR — the one bounded interpretation, when it ran, is a model invocation too */
+    draft.modelInvocationCount = (aiExecuted ? 1 : 0) + (semanticRun?.calls ?? 0);
     draft.reportingItemCount = response.articles.length;
     draft.evidenceRolesObtained = [
       ...(response.articles.length > 0 ? ['REPORTING'] : []),
@@ -1211,6 +1274,37 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     draft.statedPeriodPresent = envelope.time.statedPeriod !== null;
     draft.evidenceRolesRequested = requiredRolesOf(plan);
     draft.identityState = envelope.identity.state;
+    /* CTO R4 semantic IR §20 — the interpretation, as codes (the writer drops anything else) */
+    const ir = route.semantic;
+    const placeCode = (id: string | null): string | null => {
+      const e = id === null ? undefined : ir.entities.find((x) => x.id === id);
+      if (e === undefined) return null;
+      if (e.iso3 !== null) return e.iso3;
+      if (e.type === 'REGION') return e.id;
+      return e.type === 'CITY' ? `CITY:${e.id.split(':')[1] ?? 'XX'}` : null;
+    };
+    const rel = ir.relationships[0];
+    draft.semanticPath = ir.resolution.path;
+    draft.semanticConflicts = [...ir.resolution.conflicts];
+    draft.semanticClauseCount = ir.clauses.length;
+    draft.semanticFreshness = ir.turn.freshness;
+    draft.semanticEvidence = ir.turn.evidence;
+    draft.semanticActorCodes =
+      rel === undefined
+        ? []
+        : [placeCode(rel.actorA), placeCode(rel.actorB)].filter((c): c is string => c !== null);
+    draft.semanticVenueCodes = ir.entities
+      .filter((e) => e.role === 'VENUE')
+      .map((e) => placeCode(e.id))
+      .filter((c): c is string => c !== null);
+    draft.semanticObjectCodes = ir.entities
+      .filter((e) => e.role === 'DISPUTED_OBJECT')
+      .map((e) => placeCode(e.id))
+      .filter((c): c is string => c !== null);
+    draft.semanticRelation =
+      rel === undefined ? null : (rel.relation.find((r) => r !== 'GENERAL') ?? 'GENERAL');
+    draft.semanticObjectiveSourceTurn = ir.objective?.sourceTurn ?? null;
+    draft.semanticReferenceKind = ir.references.target;
   }
 
   /**
@@ -1388,17 +1482,20 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
   }
 
   /**
-   * CTO R4 — classify an UNRESOLVED question with ONE bounded structured completion (closed schema,
-   * temperature 0, a tiny ceiling) behind the same switches, breaker and meter as every model call.
-   * It never answers, searches or states a fact. No classifier, an open breaker, a failure or a
-   * malformed verdict all FALL BACK to stable reasoning — never to news.
+   * CTO R4 SEMANTIC IR §5 — interpret an AMBIGUOUS turn with ONE bounded structured completion
+   * (closed IR fields only, a small ceiling) behind the same switches, breaker and meter as every
+   * model call, BEFORE any provider. It never answers, searches or states a fact, and it resolves
+   * clause + geography + reference together (never several parsing calls). No interpreter, an open
+   * breaker, a failure or an invalid answer all FALL BACK to the governed conservative default —
+   * an unresolved job is reasoning, never news.
    */
-  private async classifyUnresolved(
+  private async interpretSemantics(
     request: Readonly<AskRequest>,
+    route: AskR2Route,
     draft: AskObservationDraft,
   ): Promise<ClassifierRun> {
     const fallback: ClassifierRun = {
-      verdict: FALLBACK_SEMANTIC_JOB,
+      verdict: fallbackResolution(route.semantic),
       calls: 0,
       source: 'FALLBACK',
     };
@@ -1432,17 +1529,27 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     }
     let usage: { promptTokens: number; completionTokens: number } | null = null;
     let outcome: BreakerOutcome = 'FAILURE';
-    let verdict: SemanticJob | null = null;
+    let verdict: SemanticResolution | null = null;
     try {
+      const state = boundedStateOf(request);
       const raw = await complete({
-        system: JOB_CLASSIFIER_SYSTEM,
-        user: jobClassifierUserMessage(request.question, request.language, request.priorArtifact),
-        maxCompletionTokens: JOB_CLASSIFIER_MAX_TOKENS,
+        system: SEMANTIC_INTERPRETER_SYSTEM,
+        user: semanticInterpreterUserMessage(
+          route.semantic,
+          semanticReaderText(request.question, request.language),
+          {
+            ...(state?.artifact === undefined ? {} : { artifact: state.artifact }),
+            objective: state?.objective?.criterion ?? null,
+            ...(state?.choiceSet === undefined ? {} : { choiceSet: state.choiceSet }),
+            portableSubject: state?.portableSubject ?? null,
+          },
+        ),
+        maxCompletionTokens: SEMANTIC_INTERPRETER_MAX_TOKENS,
         usageSink: (u) => {
           usage = { promptTokens: u.promptTokens, completionTokens: u.completionTokens };
         },
       });
-      verdict = parseSemanticJob(raw);
+      verdict = parseSemanticResolution(raw, route.semantic);
       outcome = 'SUCCESS';
     } catch (error) {
       outcome = /timeout|timed out|deadline/i.test((error as Error)?.message ?? '')
@@ -1459,7 +1566,10 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       );
       await this.breaker.record(provider, outcome, permit.trial);
     }
-    return verdict === null ? { ...fallback, calls: 1 } : { verdict, calls: 1, source: 'SEMANTIC' };
+    const tokens = usage as { promptTokens: number; completionTokens: number } | null;
+    return verdict === null
+      ? { ...fallback, calls: 1, tokens }
+      : { verdict, calls: 1, source: 'SEMANTIC', tokens };
   }
 
   private async executeBackground(
