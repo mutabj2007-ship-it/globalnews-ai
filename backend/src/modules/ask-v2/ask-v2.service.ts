@@ -50,6 +50,7 @@ import { GuestSessionService } from './guest/guest-session.service';
 import { askRequestContext } from './ask-request-context';
 import { isReusableStoredPayload } from './stored-result-reuse';
 import { inheritedConversationCountry, PLACE_LOOKBACK } from './conversation/conversation-place';
+import { composeCrossCountryContinuation } from './conversation/cross-country-continuation';
 import { isSubjectFollowUp } from '../analysis/anchor/conversation-subject.util';
 import { isAnaphoricFollowUp } from '../analysis/anchor/event-anchor.util';
 import { ComputeMeterService } from '../compute-controls/compute-meter.service';
@@ -85,6 +86,32 @@ function anchorQuestionOf(question: string, newestFirst: readonly string[]): str
   if (newestFirst.length === 0) return null;
   const anchor = newestFirst.find((q) => !isSubjectFollowUp(q) && !isAnaphoricFollowUp(q));
   return anchor ?? newestFirst[0];
+}
+
+/**
+ * CTO checkpoint 5 §5 — a composed cross-country continuation is DISCLOSED on the stored answer:
+ * the reader's own words, the question actually answered, and the earlier question it came from.
+ * Nothing else in the payload changes; any other result is returned untouched.
+ */
+function withContinuation(result: ExecutionResult, request: Readonly<AskRequest>): ExecutionResult {
+  if (request.continuation === undefined || !result.succeeded) return result;
+  try {
+    const payload = JSON.parse(result.payloadJson) as Record<string, unknown>;
+    if (payload === null || typeof payload !== 'object') return result;
+    return {
+      ...result,
+      payloadJson: JSON.stringify({
+        ...payload,
+        continuation: {
+          readerQuestion: request.continuation.readerQuestion,
+          answeredAs: request.question,
+          fromQuestion: request.continuation.fromQuestion,
+        },
+      }),
+    };
+  } catch {
+    return result;
+  }
 }
 
 /** `nextSequence` starts at 1, so the first turn is this sequence exactly. */
@@ -160,6 +187,19 @@ export class AskV2Service {
     const others = (earlier ?? []).filter((t, i) => !(i === 0 && t.question === question));
     const iso3 = inheritedConversationCountry(question, language, others);
     return iso3 === null ? undefined : conversationGeography(iso3);
+  }
+
+  /** The reader's own earlier questions in this owner-verified thread, newest first. */
+  private async earlierQuestions(p: AskPrincipal, threadId: string) {
+    return this.atomic(async (tx) => {
+      await this.thread(tx, p, threadId);
+      return tx.askTurn.findMany({
+        where: { threadId },
+        orderBy: { sequence: 'desc' },
+        take: ANCHOR_LOOKBACK,
+        select: { question: true, language: true },
+      });
+    });
   }
 
   private guestDeps(): {
@@ -625,11 +665,23 @@ export class AskV2Service {
     const context =
       (await this.resolveContext(input.context)) ??
       (await this.conversationPlace(p, threadId, question, input.language));
+    /* CTO checkpoint 5 §5 — "And in Kenya?" continues the reader's own earlier subject. */
+    const composed =
+      context === undefined
+        ? composeCrossCountryContinuation(
+            question,
+            input.language,
+            await this.earlierQuestions(p, threadId),
+          )
+        : null;
     const request: AskRequest = {
-      question,
+      question: composed?.effectiveQuestion ?? question,
       language: input.language,
       intent: input.intent,
       ...(context === undefined ? {} : { context }),
+      ...(composed === null
+        ? {}
+        : { continuation: { readerQuestion: question, fromQuestion: composed.fromQuestion } }),
     };
     const owner = ownerOf(p);
     /* R2B — a context-bearing turn appends its SERVER-RESOLVED identity; a context-free turn
@@ -749,7 +801,8 @@ export class AskV2Service {
           data: {
             threadId,
             sequence: thread.nextSequence - 1,
-            question: request.question,
+            /* the reader's own words; a composed continuation is re-derived on execute */
+            question: request.continuation?.readerQuestion ?? request.question,
             language: request.language,
             operationId: operation.id,
           },
@@ -885,16 +938,26 @@ export class AskV2Service {
         where: { threadId: turn.threadId, sequence: { lt: turn.sequence } },
         orderBy: { sequence: 'desc' },
         take: ANCHOR_LOOKBACK,
-        select: { question: true },
+        select: { question: true, language: true },
       });
       /* R2B — the request is rebuilt from durable server state only: the turn's question and
          the plan's persisted, server-resolved context. No client input is re-read here. */
       const persisted = operation.plan as unknown as PersistedAskPlan;
+      /* CTO checkpoint 5 §5 — the same pure composition the quote made, from durable state only */
+      const composed =
+        persisted?.context === undefined
+          ? composeCrossCountryContinuation(turn.question, turn.language, earlierTurns)
+          : null;
       const request = {
-        question: turn.question,
+        question: composed?.effectiveQuestion ?? turn.question,
         language: turn.language,
         intent: operation.kind,
         ...(persisted?.context === undefined ? {} : { context: persisted.context }),
+        ...(composed === null
+          ? {}
+          : {
+              continuation: { readerQuestion: turn.question, fromQuestion: composed.fromQuestion },
+            }),
       } as AskRequest;
       // Revalidate pending R1 operations too. Stored reuse above never calls the adapter.
       try {
@@ -934,7 +997,7 @@ export class AskV2Service {
         return this.getOperation(p, id);
       }
       // A DB settlement failure leaves RUNNING. Retrying execute must not call the provider again.
-      await this.settle(id, claim.runToken, result);
+      await this.settle(id, claim.runToken, withContinuation(result, claim.request));
     }
     return this.getOperation(p, id);
   }

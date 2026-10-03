@@ -132,6 +132,9 @@ export interface AskR2Strings {
   readonly askedBeforeAnswering: string;
   /** GATE H (MD-005) — an opened stored result past its validity. */
   readonly expiredNote: string;
+  /** CTO checkpoint 5 §5 — a composed cross-country continuation, disclosed. */
+  readonly continuationAnsweredAs: string;
+  readonly continuationNote: string;
   /** ALPHA ENABLEMENT R1 (MC-070) — a continuation (“And Kenya?”) with nothing to continue; the place stays a chip. */
   readonly noPriorSubject: string;
   /**
@@ -346,6 +349,8 @@ const EN: AskR2Strings = {
   clarificationFooterNoAi: 'No AI used · nothing was answered',
   askedBeforeAnswering: 'One question before answering · no AI used',
   expiredNote: 'This saved answer has expired · shown as it was, not re-checked',
+  continuationAnsweredAs: 'Answered as',
+  continuationNote: 'continuing your earlier question for the new place',
   /* TRUST R1 (checkpoint 5, live Alpha) — "And in Kenya?" asks back even when the thread HAS an
      earlier question (MC-070: a bare place is never combined with the earlier topic). Saying
      "there's no earlier question" was untrue there; this wording is true in both cases. */
@@ -581,6 +586,8 @@ const PL: AskR2Strings = {
   clarificationFooterNoAi: 'Nie użyto AI · nie udzielono odpowiedzi',
   askedBeforeAnswering: 'Jedno pytanie przed odpowiedzią · nie użyto AI',
   expiredNote: 'Ta zapisana odpowiedź wygasła · pokazana bez ponownego sprawdzenia',
+  continuationAnsweredAs: 'Odpowiedź na pytanie',
+  continuationNote: 'kontynuacja Twojego wcześniejszego pytania dla nowego miejsca',
   noPriorSubject:
     'Co chcesz wiedzieć o tym miejscu? Wcześniejsze pytanie nie przechodzi samo na nowe miejsce.',
   clarify: {

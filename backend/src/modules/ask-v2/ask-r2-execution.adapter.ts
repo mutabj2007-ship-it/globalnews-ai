@@ -660,10 +660,13 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       what they want to know, with the place they named kept as the candidate. 0 AI, no
       control touched.
     */
-    /* ASK R3 CONTINUITY — unchanged on purpose: even WITH a prior question, "And Kenya?" keeps
-       asking. Inheriting the prior subject would need the place AND the topic combined, which
-       the landed readings do not do; answering the bare place would answer a question the
-       reader did not ask. Pronoun follow-ups ("How does this affect…?") DO carry context. */
+    /* CTO CHECKPOINT 5 §5 — MC-070 UPDATED. A continuation whose earlier subject is portable never
+       reaches here as an ellipsis: AskV2Service composes it from the reader's own earlier question
+       (conversation/cross-country-continuation.ts — "How is Madagascar's economy doing?" → "And in
+       Kenya?" is answered as "How is Kenya's economy doing?", disclosed on the answer). What still
+       arrives here as a bare ellipsis has NO portable subject (no earlier turn, "Who was Napoleon?",
+       a comparison, several places, its own story/module context): it keeps asking, with copy that
+       never claims there is no earlier question. */
     const continuation = readContinuationEllipsis(request.question);
     if (continuation !== null) {
       return this.result(

@@ -22,6 +22,13 @@ export interface AskRequest {
    * text). Absent for a context-free turn, whose identity is byte-identical to before.
    */
   context?: ResolvedAskContext;
+  /**
+   * CTO CHECKPOINT 5 §5 — present when the reader's turn was a cross-country continuation ("And in
+   * Kenya?") composed from their own earlier question: `question` is then the composed question
+   * the engine answers, and this records the reader's own words and the earlier question it came
+   * from (disclosed on the answer). Absent for every other turn.
+   */
+  continuation?: { readonly readerQuestion: string; readonly fromQuestion: string };
 }
 
 /** Produced by a CTO-owned, local/read-only planner. No provider call in prepare.

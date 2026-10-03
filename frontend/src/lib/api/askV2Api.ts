@@ -177,6 +177,15 @@ export interface AskR2Payload {
    * there is nothing to compare.
    */
   readonly comparisonTable?: AskComparisonTable;
+  /**
+   * CTO checkpoint 5 §5 — present when the reader's turn ("And in Kenya?") was answered as their
+   * earlier question for the new place. Absent on every other payload.
+   */
+  readonly continuation?: {
+    readonly readerQuestion: string;
+    readonly answeredAs: string;
+    readonly fromQuestion: string;
+  };
 }
 
 /** R2-S1 — one row per validated agreement / difference position, with its source ids. */

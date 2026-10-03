@@ -137,6 +137,12 @@ export function AskR2TurnView({
     <article data-ask-turn data-ask="turn" data-ask-state={view.badge} className={TURN}>
       <p className={EYEBROW}>{s.youAsked}</p>
       <h2 className={QUESTION}>{turn.question}</h2>
+      {/* CTO checkpoint 5 §5 — "And in Kenya?" answered as the earlier question for Kenya: said, never hidden. */}
+      {payload.continuation != null && (
+        <p data-ask="continuation" className="-mt-1 mb-3 text-[13px] leading-[1.5] text-[#9fb4cc]">
+          {s.continuationAnsweredAs}: “{payload.continuation.answeredAs}” · {s.continuationNote}
+        </p>
+      )}
 
       <div data-ask="scope" className="mb-3 flex flex-wrap items-center gap-1.5">
         <span className="me-1 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6f89a8]">
