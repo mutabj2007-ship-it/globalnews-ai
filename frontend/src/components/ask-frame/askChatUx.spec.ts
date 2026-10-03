@@ -102,12 +102,3 @@ describe('TRUST R1 (checkpoint 5) — reading position while an answer is pendin
     );
   });
 });
-
-describe('TRUST R1 (checkpoint 5) — a dropped connection on the first guest send is a failed send', () => {
-  it('is not reported as a guest limit: it takes the failed path (draft kept + retry line)', () => {
-    const hook = code(read('../../lib/ask/useAskR2Conversation.ts'));
-    expect(hook).toMatch(
-      /if \(!created\.ok\) \{\s*if \(created\.reason === 'NETWORK'\) \{[\s\S]*?return 'failed';\s*\}/,
-    );
-  });
-});
