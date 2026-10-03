@@ -6,6 +6,7 @@ import { askV2Api, type AskV2Bookmark, type AskV2Outcome } from '@/lib/api/askV2
 import { askBookmarkReopenHref, filterBookmarks } from '@/lib/ask/askRecentGrouping';
 import { askContinuityStrings } from '@/lib/ask/askContinuityStrings';
 import type { AskLocale } from '@/lib/ask/askStrings';
+import { SavedBriefings } from './SavedBriefings';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -178,6 +179,9 @@ export function SavedClient({ locale }: { readonly locale: AskLocale }): JSX.Ele
           </>
         )}
       </section>
+
+      {/* R2 · D1 — the reader's briefings (only when the server has them switched on). */}
+      <SavedBriefings locale={locale} />
     </main>
   );
 }

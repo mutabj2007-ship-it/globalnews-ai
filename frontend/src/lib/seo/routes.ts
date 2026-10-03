@@ -168,6 +168,16 @@ export const PRIVATE_ROUTES: readonly RouteEntry[] = [
       "reader's own Ask turns and exists only inside their session.",
   },
   {
+    path: '/saved/briefing',
+    indexability: 'noindex',
+    sitemap: false,
+    userDependent: true,
+    ruling: 'authorization',
+    rationale:
+      "§B: user-specific. One reader's own saved briefing (R2 · D1): private by default, " +
+      'readable only inside their session; not a public document.',
+  },
+  {
     path: '/account/settings',
     indexability: 'noindex',
     sitemap: false,

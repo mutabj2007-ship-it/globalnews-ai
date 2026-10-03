@@ -315,6 +315,82 @@ export interface AskV2Bookmark {
   readonly computeClass: string | null;
 }
 
+/* ════ R2 · D1 — DURABLE BRIEFINGS (backend ask-v2/briefings; ASK_BRIEFINGS_ENABLED) ════ */
+export interface AskV2BriefingScope {
+  readonly kind: string;
+  readonly question?: string;
+  readonly language?: string;
+  readonly countryCode?: string;
+  readonly storyId?: string;
+}
+export interface AskV2BriefingSummary {
+  readonly id: string;
+  readonly title: string;
+  readonly scope: AskV2BriefingScope;
+  readonly status: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly latestVersion: number | null;
+  readonly latestAsOf: string | null;
+}
+export interface AskV2BriefingUpdate {
+  readonly kind: 'STORY_MATERIAL_UPDATE';
+  readonly available: boolean;
+  readonly recordedBriefVersion?: number;
+  readonly currentBriefVersion?: number;
+  readonly updatedAt?: string | null;
+  readonly storyGone?: boolean;
+}
+export interface AskV2BriefingDetail {
+  readonly id: string;
+  readonly title: string;
+  readonly scope: AskV2BriefingScope;
+  readonly status: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly versions: readonly {
+    readonly version: number;
+    readonly asOf: string;
+    readonly windowFrom: string | null;
+    readonly windowTo: string | null;
+    readonly createdAt: string;
+  }[];
+  readonly update: AskV2BriefingUpdate | null;
+}
+export interface AskV2BriefingEvidenceRef {
+  readonly id: string;
+  readonly host: string | null;
+  readonly url: string;
+  readonly title: string;
+  readonly publisher: string;
+  readonly publishedAt: string | null;
+}
+export interface AskV2BriefingVersion {
+  readonly briefingId: string;
+  readonly title: string;
+  readonly version: number;
+  readonly asOf: string;
+  readonly windowFrom: string | null;
+  readonly windowTo: string | null;
+  readonly blocks: {
+    readonly schema: string;
+    readonly answerState: string | null;
+    readonly summary: string | null;
+    readonly keyFacts: readonly {
+      readonly claim: string;
+      readonly sourceArticleIds: readonly string[];
+    }[];
+    readonly comparisonTable: AskComparisonTable | null;
+    readonly background: { readonly text: string; readonly citable: false } | null;
+  };
+  readonly evidenceRefs: readonly AskV2BriefingEvidenceRef[];
+  readonly evidenceRevision: string;
+  readonly coverageGaps: readonly string[];
+  readonly createdAt: string;
+  readonly supersededBy: number | null;
+  readonly aiExecuted: false;
+}
+
 export interface AskV2BookmarkWrite {
   readonly turnId: string;
   readonly bookmarked: boolean;
@@ -489,6 +565,39 @@ export const askV2Api = {
   /** Idempotent, and scoped to the caller, so it reveals nothing about others. */
   unbookmark(turnId: string) {
     return call<AskV2BookmarkWrite>(`/ask-v2/bookmarks/${encodeURIComponent(turnId)}`, 'DELETE');
+  },
+  /** R2 · D1 — the reader's briefings. Reads are database reads: 0 AI · 0 provider. */
+  briefings() {
+    return call<readonly AskV2BriefingSummary[]>('/ask-v2/briefings', 'GET');
+  },
+  createBriefing(turnId: string, title?: string) {
+    return call<{ readonly id: string; readonly title: string; readonly version: number }>(
+      '/ask-v2/briefings',
+      'POST',
+      title === undefined ? { turnId } : { turnId, title },
+    );
+  },
+  addBriefingVersion(briefingId: string, turnId: string) {
+    return call<{ readonly briefingId: string; readonly version: number }>(
+      `/ask-v2/briefings/${encodeURIComponent(briefingId)}/versions`,
+      'POST',
+      { turnId },
+    );
+  },
+  briefing(id: string) {
+    return call<AskV2BriefingDetail>(`/ask-v2/briefings/${encodeURIComponent(id)}`, 'GET');
+  },
+  briefingVersion(id: string, version: number) {
+    return call<AskV2BriefingVersion>(
+      `/ask-v2/briefings/${encodeURIComponent(id)}/versions/${encodeURIComponent(String(version))}`,
+      'GET',
+    );
+  },
+  deleteBriefing(id: string) {
+    return call<{ readonly id: string; readonly removed: boolean }>(
+      `/ask-v2/briefings/${encodeURIComponent(id)}`,
+      'DELETE',
+    );
   },
   /** Display-only read of an existing result: 0 AI · 0 provider · no compute (§15). */
   operation(id: string) {
