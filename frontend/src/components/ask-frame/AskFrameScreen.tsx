@@ -18,6 +18,7 @@ import {
   type AskR2Turn,
 } from '@/lib/ask/useAskR2Conversation';
 import { askR2PayloadOf, askV2Api } from '@/lib/api/askV2Api';
+import { readEarlierTurns, rememberConversation } from '@/lib/ask/askThreadRestore';
 import { revokeAnalysisConsent } from '@/lib/analysis/analysisComputeConsent';
 import { ASK_SIGN_IN_HREF, keepQuestion, readKeptQuestion } from '@/lib/ask/askKeptQuestion';
 import { authReturnNotice, type GuestNotice } from '@/lib/ask/askGuestTrial';
@@ -144,6 +145,11 @@ export function AskFrameScreen({
   const notice = r2.guestNotice !== null ? (noticeText[r2.guestNotice] ?? null) : null;
   const operationId = params.get('operation');
   const [opened, setOpened] = useState<AskR2Turn | null>(null);
+  /* CTO P0 · DEFECT F — the reopened conversation's earlier turns (display-only). */
+  const [openedEarlier, setOpenedEarlier] = useState<AskR2Turn[]>([]);
+  /* operations THIS screen wrote to the address bar: already on screen, never re-opened as a copy
+     (Next syncs useSearchParams with history.replaceState) */
+  const remembered = useRef(new Set<string>());
   const lastR2 = r2.turns[r2.turns.length - 1] ?? opened ?? undefined;
   const lastR2View =
     lastR2?.payload != null
@@ -193,22 +199,30 @@ export function AskFrameScreen({
   }, [setGuestNotice]);
   /* "Open full analysis": ONE display-only read of the stored operation. No AI, no provider. */
   useEffect(() => {
-    if (operationId === null) return;
+    if (operationId === null || remembered.current.has(operationId)) return;
     /* GATE H (H-T12 / H-G4) — an operation arrival is a READ. It revokes any pending
        analysis grant, so no later arrival can spend a grant this navigation did not make. */
     revokeAnalysisConsent();
     let live = true;
+    let viaGuest = false;
     void askV2Api
       .operation(operationId)
       /* ASK GUEST TRIAL R3 — a guest reopens its own operation through the guest surface. */
-      .then((read) =>
-        !read.ok && read.reason === 'SIGNED_OUT' ? askV2Api.guestOperation(operationId) : read,
-      )
+      .then((read) => {
+        if (read.ok || read.reason !== 'SIGNED_OUT') return read;
+        viaGuest = true;
+        return askV2Api.guestOperation(operationId);
+      })
       .then((read) => {
         if (!live) return;
         /* ALPHA VISUAL ACCEPTANCE REPAIR R1 (E) — a follow-up continues the reopened thread. */
         if (read.ok && read.value.threadId && read.value.language) {
           continueThread(read.value.threadId, read.value.language);
+          /* CTO P0 · DEFECT F — the conversation's earlier turns come back too (reads only). */
+          const threadId = read.value.threadId;
+          void readEarlierTurns(threadId, operationId, viaGuest).then((earlier) => {
+            if (live) setOpenedEarlier(earlier);
+          });
         }
         setOpened(
           read.ok
@@ -327,6 +341,22 @@ export function AskFrameScreen({
   /* D25 01 region 3 — earlier turns collapse; each opens in place to its full answer. */
   const earlierR2 = r2.turns.slice(0, -1);
   const latestR2 = r2.turns[r2.turns.length - 1];
+  /* a guest's own restore (the hook) may already hold the reopened turn: never render it twice */
+  const openedInLive =
+    opened?.operation !== undefined &&
+    r2.turns.some((t) => t.operation?.operationId === opened.operation?.operationId);
+  /*
+    CTO P0 · DEFECT F — remember this conversation in the address bar after each completed turn
+    (replaceState: no new history entry), so a refresh or a Back returns to it instead of an empty
+    Ask. Plain /ask ("New question") still starts a new conversation.
+  */
+  const latestCompletedOperation =
+    latestR2?.operation?.status === 'COMPLETED' ? latestR2.operation.operationId : null;
+  useEffect(() => {
+    if (latestCompletedOperation === null) return;
+    remembered.current.add(latestCompletedOperation);
+    rememberConversation(latestCompletedOperation);
+  }, [latestCompletedOperation]);
 
   return (
     <main
@@ -518,7 +548,36 @@ export function AskFrameScreen({
                 </div>
               </section>
             )}
-            {opened !== null && (
+            {/* CTO P0 · DEFECT F — the reopened conversation's earlier turns, collapsed. */}
+            {opened !== null && !openedInLive && openedEarlier.length > 0 && (
+              <section
+                data-ask="earlier"
+                data-ask-restored=""
+                aria-label={r2s.earlier}
+                className="mb-5 flex flex-col gap-2"
+              >
+                {openedEarlier.map((turn, i) => (
+                  <details key={`restored-${i}`} data-ask="earlier-turn" className={styles.earlier}>
+                    <summary className="cursor-pointer list-none">
+                      <span className={ASK_EYEBROW}>{r2s.earlier}</span>
+                      <span className="mt-2 block text-[15px] font-bold leading-[1.3] text-[#e6eef6]">
+                        {turn.question}
+                      </span>
+                    </summary>
+                    <div className="mt-3">
+                      <AskR2TurnView
+                        canSave={!guestMode}
+                        turn={turn}
+                        locale={r2Locale}
+                        context={context}
+                        displayOnly
+                      />
+                    </div>
+                  </details>
+                ))}
+              </section>
+            )}
+            {opened !== null && !openedInLive && (
               <div data-ask-latest={r2.turns.length === 0 ? '' : undefined}>
                 <AskR2TurnView
                   canSave={!guestMode}
