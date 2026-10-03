@@ -125,7 +125,9 @@ describe('CONVERGENCE — Unified Intelligence Binding R2 is the ONLY Ask contex
       'lib/ask/askSelectionRef.ts',
       'lib/ask/askModuleRef.ts',
       /* TRUST R1 — askV2Api.ts gains only the additive AskRecentReporting payload type. */
-      'lib/ask/useAskR2Conversation.ts',
+      /* useAskR2Conversation.ts — APPROVED NARROW DEVIATION (CTO checkpoint 5 §3): no longer
+         whole-file pinned; pinned below as "58f80 minus the approved block" plus semantic
+         invariants. This is not a retirement of the Unified Intelligence Binding authority. */
       'components/my-intelligence/MyIntelligenceClient.tsx',
       'lib/myIntelligence/selection.ts',
       'components/home/HomeCompare.tsx',
@@ -134,6 +136,71 @@ describe('CONVERGENCE — Unified Intelligence Binding R2 is the ONLY Ask contex
     ]) {
       expect({ path, same: read(...path.split('/')) === r2(path) }).toEqual({ path, same: true });
     }
+  });
+
+  /*
+    CTO CHECKPOINT 5 §3 — useAskR2Conversation.ts: an APPROVED NARROW DEVIATION from the 58f80 byte
+    baseline (live Alpha defect D: a dropped first guest send was shown as "The service is busy").
+    Two layers replace the whole-file pin:
+      1. the file MINUS the one marked block is still byte-identical to 58f80 — any other drift fails;
+      2. semantic invariants that hold whatever the block says.
+  */
+  describe('useAskR2Conversation.ts — approved narrow deviation from 58f80', () => {
+    const PATH = 'lib/ask/useAskR2Conversation.ts';
+    const current = read(...PATH.split('/'));
+    const hook = code(current);
+    const BEGIN = '/* APPROVED DEVIATION FROM THE 58f80 BASELINE (CTO checkpoint 5 §3) — BEGIN.';
+    const END = '/* APPROVED DEVIATION FROM THE 58f80 BASELINE — END. */';
+
+    it('outside the one marked block, the file is byte-identical to the 58f80 authority', () => {
+      const start = current.indexOf(BEGIN);
+      const end = current.indexOf(END);
+      expect(start).toBeGreaterThan(-1);
+      expect(end).toBeGreaterThan(start);
+      expect(current.indexOf(BEGIN, start + 1)).toBe(-1);
+      const lineStart = current.lastIndexOf('\n', start) + 1;
+      const lineEnd = current.indexOf('\n', end) + 1;
+      expect(current.slice(0, lineStart) + current.slice(lineEnd)).toBe(r2(PATH));
+    });
+
+    it('the block only turns a first-thread NETWORK failure into the ordinary failed send', () => {
+      const block = code(current.slice(current.indexOf(BEGIN), current.indexOf(END)));
+      expect(block).toMatch(/^\s*if \(created\.reason === 'NETWORK'\) \{[\s\S]*?return 'failed';\s*\}\s*$/);
+      expect(block).not.toMatch(/askV2Api|submitAsGuest|setTimeout|retry/i);
+    });
+
+    it('Ask V2 is the only transport: no /analysis/news, no direct fetch, no second client', () => {
+      expect(hook).not.toMatch(/fetch\(|XMLHttpRequest|axios|accountFetch|analyzeNews|\/analysis\/news/);
+      expect(hook).toMatch(/from '@\/lib\/api\/askV2Api'/);
+    });
+
+    it('context travels only as the R2 reference — no second context protocol', () => {
+      expect(hook).toMatch(/context\?: AskV2ContextRef/);
+      expect(hook).not.toMatch(/AskContextRefWire|buildDockContextRef|selectionContextRef|requestDeeperAsk/);
+    });
+
+    it('signed-in and guest paths stay distinct', () => {
+      expect(hook).toContain('askV2Api.guestCreateThread(');
+      expect(hook).toContain('askV2Api.guestSubmit(');
+      expect(hook).toContain('askV2Api.createThread(');
+      expect(hook).toContain('askV2Api.submit(');
+    });
+
+    it('explicit Send stays the execution boundary: no timer, no auto-send, no new auto-retry', () => {
+      expect(hook).not.toMatch(/setTimeout|setInterval|requestAnimationFrame/);
+      /* the ONE pre-existing self-call: a guest session that ended re-decides once (SIGNED_OUT) */
+      expect(hook.match(/submitAsGuest\(q, context, onTurn, true\)/g)).toHaveLength(1);
+      expect(hook).toMatch(/if \(sent\.reason === 'SIGNED_OUT' && !retried\)/);
+    });
+
+    it('governed refusals keep their notices; UNAVAILABLE and context refusal are unchanged', () => {
+      expect(hook).toContain('guestNoticeOf(created.code)');
+      expect(hook).toContain('guestNoticeOf(sent.code)');
+      expect(hook).toMatch(
+        /if \(created\.reason === 'UNAVAILABLE'\) \{\s*setAvailability\('legacy'\);\s*return 'legacy';/,
+      );
+      expect(hook).toContain("return 'context-unavailable';");
+    });
   });
 
   it("Stage A's second context protocol is gone: no files, no symbols", () => {

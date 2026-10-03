@@ -229,6 +229,18 @@ export function useAskR2Conversation(
       if (threadId === null) {
         const created = await askV2Api.guestCreateThread(language, sanitizeReturnPath(returnPath));
         if (!created.ok) {
+          /* APPROVED DEVIATION FROM THE 58f80 BASELINE (CTO checkpoint 5 §3) — BEGIN.
+             Live Alpha: a dropped connection on the guest's FIRST send (thread creation) was shown
+             as 'The service is busy' (a limit notice) with no retry line. A genuine NETWORK failure
+             is a failed send: the draft is kept with the retry line, nothing auto-retries, nothing
+             ran. Governed refusals (codes) keep their notices below. */
+          if (created.reason === 'NETWORK') {
+            const failedTurn: AskR2Turn = { question: q, failure: created.reason };
+            setTurns((t) => [...t, failedTurn]);
+            onTurn?.(failedTurn);
+            return 'failed';
+          }
+          /* APPROVED DEVIATION FROM THE 58f80 BASELINE — END. */
           if (created.reason === 'UNAVAILABLE') {
             setAvailability('legacy');
             return 'legacy';
