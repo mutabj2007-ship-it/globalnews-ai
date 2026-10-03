@@ -108,6 +108,40 @@ export class AlertsService {
     return null;
   }
 
+  /**
+   * TRUST & CONVERSATIONAL EXPERIENCE R1 — the retained report that JOINED the story at this brief
+   * version (recorded by the JOIN identity event), so an alert says what changed instead of only
+   * "new evidence". Null when the event or the retained row is gone; never guessed.
+   */
+  private async joinedEvidenceOf(
+    storyId: string,
+    canonicalId: string,
+    briefVersion: number,
+  ): Promise<{ articleRef: string; articleId: string; title: string; url: string; sourceName: string; publishedAt: string } | null> {
+    const join = await this.prisma.storyIdentityEvent.findFirst({
+      where: { kind: 'JOIN', briefVersion, storyId: { in: [storyId, canonicalId] } },
+      orderBy: { createdAt: 'desc' },
+      select: { articleRefs: true },
+    });
+    const articleRef = join?.articleRefs[0];
+    if (articleRef === undefined) return null;
+    const member = await this.prisma.storyArticle.findFirst({ where: { articleRef }, select: { articleUrl: true } });
+    if (!member) return null;
+    const article = await this.prisma.article.findFirst({
+      where: { url: member.articleUrl },
+      select: { id: true, title: true, url: true, sourceName: true, publishedAt: true },
+    });
+    if (!article) return null;
+    return {
+      articleRef,
+      articleId: article.id,
+      title: article.title,
+      url: article.url,
+      sourceName: article.sourceName,
+      publishedAt: article.publishedAt.toISOString(),
+    };
+  }
+
   private async view(userId: string, alertId: string): Promise<AlertView> {
     const row = await this.prisma.storyAlert.findFirst({ where: { id: alertId, userId } });
     if (!row || row.status === 'REMOVED') throw new NotFoundException();
@@ -221,6 +255,8 @@ export class AlertsService {
         read: e.readAt !== null,
         muted: e.alert.muted,
         subject: subjects.get(key) ?? null,
+        /* TRUST R1 — WHAT changed: the report whose arrival raised this version (JOIN identity event). */
+        newEvidence: e.kind === 'NEW_EVIDENCE' ? await this.joinedEvidenceOf(e.storyId, canonical, e.briefVersion) : null,
       });
     }
     const unreadDevelopments = await this.prisma.storyAlertEvent.count({ where: { readAt: null, alert: { userId, status: { not: 'REMOVED' }, muted: false } } });

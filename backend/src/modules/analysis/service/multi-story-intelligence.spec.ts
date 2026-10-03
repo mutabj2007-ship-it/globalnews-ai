@@ -221,7 +221,7 @@ describe('multi-story bounds: 1 / 2 / 8, and the 9th is rejected', () => {
       SUMMARIZE: 1,
       ASK_SELECTED: 1,
       EXPLAIN_DISAGREEMENTS: 2,
-      WHAT_CHANGED: 1,
+      WHAT_CHANGED: 2, // TRUST R1 — aligned to the frozen planner's minimumStoriesFor
       CREATE_BRIEFING: 2,
     });
   });
@@ -316,9 +316,9 @@ describe('trusted identity, retained evidence, zero evidence = zero AI', () => {
       'en',
       { title: 'Other story', articleId: 's9', countryCode: 'POL' },
       'What caused the plane crash in Congo?',
-      selectionOf('WHAT_CHANGED', 1),
+      selectionOf('WHAT_CHANGED', 2),
     );
-    expect(h.providerInputs[0].articles.map((article) => article.id)).toEqual(['s1']);
+    expect(h.providerInputs[0].articles.map((article) => article.id)).toEqual(['s1', 's2']);
     expect(h.providerInputs[0].eventAnchor).toBeUndefined();
     expect(h.providerInputs[0].conversationSubject).toBeUndefined();
     expect(h.searchCalls).toEqual([]);

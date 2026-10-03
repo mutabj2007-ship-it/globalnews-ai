@@ -160,7 +160,8 @@ export const MULTI_STORY_MIN_STORIES: Readonly<Record<MultiStoryAction, number>>
   SUMMARIZE: 1,
   ASK_SELECTED: 1,
   EXPLAIN_DISAGREEMENTS: 2,
-  WHAT_CHANGED: 1,
+  /* TRUST R1 — aligned to the planner (frozen C minimumStoriesFor: a change needs two reports). */
+  WHAT_CHANGED: 2,
   CREATE_BRIEFING: 2,
 };
 

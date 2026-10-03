@@ -9,6 +9,7 @@ import { fill } from '@/components/home/reva/homeRevaModel';
 import { applyAlertOp, fetchInbox, listAlerts, markAllRead, markEventRead, type AlertOp, type AlertView, type InboxView } from '@/lib/stories/stageBApi';
 import { closePanel, openAlertsCentre, setAlertFor, setUnread, useStageB } from '@/lib/stories/stageBStore';
 import { useHomeSession } from '@/components/home/reva/HomeSession';
+import { dashboardHref } from '@/lib/ask/dashboardContext';
 
 /**
  * HOME R1 · STAGE B — THE ALERTS CENTRE (in-app only) and its header entry.
@@ -163,6 +164,26 @@ export function AlertsCentre({ language, replies }: { readonly language: Languag
                       </a>
                     ) : (
                       <p className="mt-0.5 text-[13px] text-[var(--gt-ink3)]">{t.unavailableStory}</p>
+                    )}
+                    {/* TRUST R1 — what changed, and a contextual Ask that opens as a DRAFT (never auto-runs). */}
+                    {d.newEvidence && (
+                      <div data-development-new-evidence="" className="mt-2 border-t border-[var(--gt-line)] pt-2">
+                        <p className="text-[12px] text-[var(--gt-ink2)]">{t.newReport}</p>
+                        <a href={safeExternalHref(d.newEvidence.url)} target="_blank" rel="noopener noreferrer" className="text-[13px] font-semibold text-[var(--gt-ink)] hover:underline">
+                          {d.newEvidence.title}
+                        </a>
+                        <p className="text-[12px] text-[var(--gt-ink3)]">
+                          {d.newEvidence.sourceName} · {formatRelativeTime(d.newEvidence.publishedAt, language)}
+                        </p>
+                        <a
+                          data-development-ask=""
+                          href={dashboardHref(t.askAboutUpdateDraft, { title: d.newEvidence.title, articleId: d.newEvidence.articleId })}
+                          onClick={() => void markEventRead(d.id).then(read)}
+                          className="mt-1 inline-flex min-h-[44px] items-center text-[13px] font-semibold text-[var(--gt-link)] hover:underline"
+                        >
+                          {t.askAboutUpdate}
+                        </a>
+                      </div>
                     )}
                   </li>
                 ))}

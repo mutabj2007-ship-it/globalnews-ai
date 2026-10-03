@@ -104,6 +104,15 @@ export interface InboxView {
     readonly read: boolean;
     readonly muted: boolean;
     readonly subject: AlertView['subject'];
+    /** TRUST R1 — the retained report that joined the story at this version (what changed). */
+    readonly newEvidence?: {
+      readonly articleRef: string;
+      readonly articleId: string;
+      readonly title: string;
+      readonly url: string;
+      readonly sourceName: string;
+      readonly publishedAt: string;
+    } | null;
   }>;
   readonly replies: ReadonlyArray<{ readonly id: string; readonly createdAt: string; readonly read: boolean; readonly authorLabel: string | null; readonly storyId: string }>;
   readonly unread: { readonly developments: number; readonly replies: number };

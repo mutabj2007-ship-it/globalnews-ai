@@ -341,6 +341,9 @@ live('Stage B — live PostgreSQL', () => {
 
       const inbox = await alerts.inbox(reader, false);
       expect(inbox.unread.developments).toBe(1);
+      /* TRUST R1 — the development names WHAT changed: the report that joined at version 2. */
+      expect(inbox.developments[0].newEvidence).toMatchObject({ articleRef: b.articleRef });
+      expect(inbox.developments[0].newEvidence?.title).toContain('Alerted');
       await alerts.markAllRead(reader);
       expect((await alerts.inbox(reader, false)).unread.developments).toBe(0);
 
