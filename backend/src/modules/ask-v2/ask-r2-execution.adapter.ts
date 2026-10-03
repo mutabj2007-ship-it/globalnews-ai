@@ -1546,6 +1546,17 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         /* ASK GENERAL BACKGROUND EXECUTION R1 — additive. Non-citable, non-sourced model
            background text (never present alongside a non-null `analysis`). */
         background: backgroundText === null ? null : { text: backgroundText },
+        /* CTO P0 — advice is GENERAL GUIDANCE from model reasoning, never current sourced research;
+           a mixed question names the part that needs current sourced evidence. */
+        ...(route.knowledgeRequirement === 'ADVISORY' ||
+        route.knowledgeRequirement === 'MIXED_ADVISORY_CURRENT'
+          ? {
+              guidance: {
+                kind: route.knowledgeRequirement,
+                currentEvidenceNeeded: route.currentEvidenceNeeded,
+              },
+            }
+          : {}),
         ...(computation === null ? {} : { computation }),
         ...(recentReporting === null ? {} : { recentReporting }),
         verification,

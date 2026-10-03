@@ -3,6 +3,7 @@ import { resolvePrimaryCountry } from '../news/country/country-relevance.util';
 import { deriveEventFrame } from '../analysis/query/event-frame.util';
 import { solveComputation } from '../ask-v2/computation/deterministic-computation';
 import { assertsFreshness } from '../analysis/query/query-intent.util';
+import { readAdvisory } from './advisory-requirement';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -50,13 +51,23 @@ export type KnowledgeRequirement =
    * Answered as background SCOPED to the place, never as an empty news search; current details
    * (requirements, safety, prices) are named as needing current sources, never supplied from memory.
    */
-  | 'PLACE_REFERENCE';
+  | 'PLACE_REFERENCE'
+  /**
+   * CTO P0 — advice / decision support (advisory-requirement.ts): answered by the background /
+   * reasoning provider as general guidance, never as current sourced fact, with NO news call.
+   */
+  | 'ADVISORY'
+  /** CTO P0 — advice plus an explicitly time-anchored part: the advice is answered, the current
+   *  part is named as needing current sourced evidence (never the whole answer INSUFFICIENT). */
+  | 'MIXED_ADVISORY_CURRENT';
 
 export interface KnowledgeRequirementReading {
   readonly requirement: KnowledgeRequirement | null;
   readonly reason: string;
   /** TRUST R1 §14 — which PLACE_REFERENCE frame matched (travel preparation or the past). */
   readonly frame?: 'TRAVEL' | 'HISTORY';
+  /** CTO P0 — for MIXED_ADVISORY_CURRENT, the time-anchored clauses that need current evidence. */
+  readonly currentClauses?: readonly string[];
 }
 
 /**
@@ -264,6 +275,22 @@ export function deriveKnowledgeRequirement(
       reason: travel ? 'travel preparation for a named place' : 'history of a named place',
       frame: travel ? 'TRAVEL' : 'HISTORY',
     };
+  }
+  /*
+    CTO P0 — advice / decision support. Read BEFORE the news-oriented freshness rules below: their
+    topic nouns ("news", "situation", "status") are not time, and an advisory question about a
+    "news intelligence product" is not a request for news. Genuine freshness (an explicit time
+    marker) still outranks advice: it makes the question MIXED, and the timed part is named.
+  */
+  const advisory = readAdvisory(text, lang);
+  if (advisory !== null) {
+    return advisory.mode === 'ADVISORY'
+      ? { requirement: 'ADVISORY', reason: 'a request for advice / decision support' }
+      : {
+          requirement: 'MIXED_ADVISORY_CURRENT',
+          reason: 'advice with an explicitly time-anchored part',
+          currentClauses: advisory.currentClauses,
+        };
   }
   if (!place && !fresh && historicalIdentity) {
     return {

@@ -36,6 +36,10 @@ export interface AskR2Strings {
   >;
   readonly referenceNoteTitle: string;
   readonly referenceNoteBody: string;
+  /** CTO P0 — advice / decision support: general guidance from reasoning, not sourced research. */
+  readonly guidanceNoteTitle: string;
+  readonly guidanceNoteBody: string;
+  readonly guidanceCurrentGap: string;
   readonly freshness: {
     readonly reference: string;
     /** LIVE ACCEPTANCE REPAIR R1 — a retained-record answer: not current, no AI. */
@@ -243,6 +247,10 @@ const EN: AskR2Strings = {
     calc: 'CALCULATION',
   },
   referenceNoteTitle: 'Model background · no citations',
+  guidanceNoteTitle: 'General guidance · model reasoning',
+  guidanceNoteBody:
+    'This is general advice from reasoning and general knowledge, not current sourced research. No source was checked, and nothing here is a verified current fact (prices, competitors, market figures).',
+  guidanceCurrentGap: 'Needs current sourced evidence — not answered here:',
   referenceNoteBody:
     'No external reference source is attached to this answer. Treat it as orientation, not as verified current fact.',
   freshness: {
@@ -478,6 +486,10 @@ const PL: AskR2Strings = {
     calc: 'OBLICZENIE',
   },
   referenceNoteTitle: 'Wiedza modelu · bez przypisów',
+  guidanceNoteTitle: 'Ogólne wskazówki · rozumowanie modelu',
+  guidanceNoteBody:
+    'To ogólna rada oparta na rozumowaniu i wiedzy ogólnej, a nie bieżąca analiza źródeł. Nie sprawdzono żadnego źródła i nic tutaj nie jest zweryfikowanym bieżącym faktem (ceny, konkurenci, dane rynkowe).',
+  guidanceCurrentGap: 'Wymaga bieżących źródeł — bez odpowiedzi tutaj:',
   referenceNoteBody:
     'Do tej odpowiedzi nie dołączono zewnętrznego źródła referencyjnego. Traktuj ją jako orientację, a nie zweryfikowany bieżący fakt.',
   freshness: {

@@ -181,6 +181,14 @@ export interface AskR2Payload {
    * CTO checkpoint 5 §5 — present when the reader's turn ("And in Kenya?") was answered as their
    * earlier question for the new place. Absent on every other payload.
    */
+  /**
+   * CTO P0 — present for advice / decision support: general guidance from model reasoning (never
+   * current sourced research); a mixed question lists the parts that need current evidence.
+   */
+  readonly guidance?: {
+    readonly kind: 'ADVISORY' | 'MIXED_ADVISORY_CURRENT';
+    readonly currentEvidenceNeeded: readonly string[];
+  };
   readonly continuation?: {
     readonly readerQuestion: string;
     readonly answeredAs: string;

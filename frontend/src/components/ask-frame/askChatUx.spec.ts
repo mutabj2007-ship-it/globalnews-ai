@@ -121,3 +121,18 @@ describe('CTO checkpoint 5 §5 — a composed cross-country continuation is disc
     expect(turn).toContain('{payload.continuation.answeredAs}');
   });
 });
+
+describe('CTO P0 — advice is labelled as general guidance, never as current sourced research', () => {
+  it('a guidance answer shows the guidance note, and a mixed one lists what needs current evidence', () => {
+    const turn = code(read('AskR2TurnView.tsx'));
+    expect(turn).toContain('payload.guidance != null ? s.guidanceNoteTitle : s.referenceNoteTitle');
+    expect(turn).toContain('data-ask="guidance-current-gap"');
+    expect(turn).toContain('payload.guidance.currentEvidenceNeeded.map(');
+  });
+
+  it('the EN and PL guidance copy says it is not current sourced research', () => {
+    const strings = read('../../lib/ask/askR2Strings.ts');
+    expect(strings).toContain('not current sourced research');
+    expect(strings).toContain('nie bieżąca analiza źródeł');
+  });
+});

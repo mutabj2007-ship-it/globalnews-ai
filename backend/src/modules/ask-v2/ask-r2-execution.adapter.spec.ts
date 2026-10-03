@@ -2622,3 +2622,70 @@ describe('TRUST R1 — mixed answer: place background + retained recent reportin
     expect(payload).not.toHaveProperty('recentReporting');
   });
 });
+
+describe('CTO P0 — advisory / decision support executes through the background reasoning provider, never news', () => {
+  /* live Alpha operation 11218ecd-0096-4e0f-83ca-7b9eef646af9 — the historical failing control */
+  const PO =
+    'You have been programmed to being conversational and could be directive to offer advice based on your knowledge, indicate how a I can benefit from selling secondary data online like GlobalNewsAI will be doing. Who are going to be our best customers and what techniques are we going to implement to keep them around?';
+  type P = {
+    aiExecuted: boolean;
+    answer: { state: string };
+    analysis: unknown;
+    background: { text: string } | null;
+    guidance?: { kind: string; currentEvidenceNeeded: string[] };
+  };
+
+  it('the live PO question: ONE background call, ZERO news-pipeline calls, quota reserved, disclosed as general guidance', async () => {
+    const { adapter, calls } = harness({});
+    const plan = await adapter.prepare(req(PO));
+    expect(plan.contract).toMatch(/:REFERENCE:REFERENCE_BACKGROUND_ONLY$/);
+    const payload = JSON.parse((await inRequest(() => adapter.execute(req(PO), plan, 'op-1'))).payloadJson) as P;
+    expect(calls.analysis).toEqual([]);
+    expect(calls.background).toHaveLength(1);
+    expect(calls.reserve).toHaveLength(1);
+    expect(payload).toMatchObject({ aiExecuted: true, answer: { state: 'REFERENCE_BACKGROUND' }, analysis: null });
+    expect(payload.guidance).toEqual({ kind: 'ADVISORY', currentEvidenceNeeded: [] });
+  });
+
+  it('a news subsystem that would fail (GDELT timeout) cannot turn advice into INSUFFICIENT — it is never called', async () => {
+    const { adapter, calls } = harness({
+      analysis: async () => {
+        throw new Error('GDELT timeout');
+      },
+    });
+    const q = 'How should I monetize a news intelligence product?';
+    const plan = await adapter.prepare(req(q));
+    const payload = JSON.parse((await inRequest(() => adapter.execute(req(q), plan, 'op-1'))).payloadJson) as P;
+    expect(calls.analysis).toEqual([]);
+    expect(payload.answer.state).toBe('REFERENCE_BACKGROUND');
+  });
+
+  it('mixed: the advice is answered, the time-anchored part is named as needing current evidence', async () => {
+    const { adapter, calls } = harness({});
+    const q = 'How should I sell this service, and what are competitors charging today?';
+    const plan = await adapter.prepare(req(q));
+    const payload = JSON.parse((await inRequest(() => adapter.execute(req(q), plan, 'op-1'))).payloadJson) as P;
+    expect(calls.analysis).toEqual([]);
+    expect(payload.answer.state).toBe('REFERENCE_BACKGROUND');
+    expect(payload.guidance?.kind).toBe('MIXED_ADVISORY_CURRENT');
+    expect(payload.guidance?.currentEvidenceNeeded.join(' ')).toContain('competitors charging today');
+  });
+
+  it('PL parity: Polish advice takes the same path', async () => {
+    const { adapter, calls } = harness({});
+    const q = 'Jak powinienem zarabiać na produkcie z analizą wiadomości?';
+    const plan = await adapter.prepare(req(q, 'pl'));
+    const payload = JSON.parse((await inRequest(() => adapter.execute(req(q, 'pl'), plan, 'op-1'))).payloadJson) as P;
+    expect(calls.analysis).toEqual([]);
+    expect(payload.guidance?.kind).toBe('ADVISORY');
+  });
+
+  it('a genuinely current question still uses the news pipeline (freshness outranks advice)', async () => {
+    const { adapter, calls } = harness({});
+    const q = "Based on today's market, which competitors changed their pricing?";
+    const plan = await adapter.prepare(req(q));
+    const payload = JSON.parse((await inRequest(() => adapter.execute(req(q), plan, 'op-1'))).payloadJson) as P;
+    expect(calls.background).toEqual([]);
+    expect(payload.guidance).toBeUndefined();
+  });
+});

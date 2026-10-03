@@ -123,7 +123,8 @@ export interface SeamTrace {
    * frozen C (a domain is not freshness). The wiring guard accepts empty frozen domains ONLY
    * when this says so; any undeclared loss of domains is still a missing seam.
    */
-  readonly knowledgeDecoupling?: 'STABLE_REFERENCE' | 'COMPUTATION' | 'PLACE_REFERENCE' | null;
+  readonly knowledgeDecoupling?:
+    'STABLE_REFERENCE' | 'COMPUTATION' | 'PLACE_REFERENCE' | 'ADVISORY' | null;
 }
 
 export interface AskR2Route {
@@ -148,6 +149,8 @@ export interface AskR2Route {
    * current-status corroboration's 1-day window for "today". Null when none was stated.
    */
   readonly readerStatedPeriod: string | null;
+  /** CTO P0 — for MIXED_ADVISORY_CURRENT, the reader's time-anchored clauses that need current sourced evidence. */
+  readonly currentEvidenceNeeded: readonly string[];
   readonly outcome: NormalizationOutcome;
   readonly source: EnvelopeSource;
   readonly envelope: AskQuestionEnvelope;
@@ -453,6 +456,7 @@ export function routeAskR2(
       broadHeadlines: false,
       reportingWindow: null,
       readerStatedPeriod: null,
+      currentEvidenceNeeded: [],
       outcome,
       source,
       envelope: routed.envelope,
@@ -577,12 +581,16 @@ export function routeAskR2(
     ctx.priorQuestion === undefined
       ? null
       : deriveKnowledgeRequirement(ctx.priorQuestion, reading.sourceLanguage).requirement;
+  const continuesKind =
+    ownKnowledge.requirement === null ||
+    (ownKnowledge.requirement === 'CURRENT_REPORTING' && ownKnowledge.reason === 'a named place');
   const knowledge =
-    priorKnowledge === 'PLACE_REFERENCE' &&
-    (ownKnowledge.requirement === null ||
-      (ownKnowledge.requirement === 'CURRENT_REPORTING' && ownKnowledge.reason === 'a named place'))
+    priorKnowledge === 'PLACE_REFERENCE' && continuesKind
       ? { requirement: 'PLACE_REFERENCE' as const, reason: 'continues a place-reference question' }
-      : ownKnowledge;
+      : /* CTO P0 — "And for enterprise customers?" after an advisory question is still advice */
+        priorKnowledge === 'ADVISORY' && continuesKind
+        ? { requirement: 'ADVISORY' as const, reason: 'continues an advisory question' }
+        : ownKnowledge;
   /* The landed classifier stays authoritative: a place-bearing or anchored reading (one country,
      several, a comparison with members, an article anchor) and an ELIGIBLE inherited context are
      never re-read as stable reference. */
@@ -635,9 +643,25 @@ export function routeAskR2(
         isFuturePeriod(reading.statedTime.statedPeriod, reading.sourceLanguage, requestYear))) &&
     ctx.hasResolvedArticleAnchor !== true &&
     capability.source.personalRequested !== true;
+  /*
+    CTO P0 — ADVISORY / DECISION SUPPORT (advisory-requirement.ts). Advice is general guidance
+    from reasoning: frozen C is handed the same background reading a stable question receives (no
+    domain, topic or time constraint; a named place is KEPT as the subject), so it plans
+    REFERENCE_BACKGROUND_ONLY and the existing background/reasoning provider answers it. No news
+    provider is called, so a news outage cannot turn advice into INSUFFICIENT. MIXED keeps the same
+    path; the time-anchored part is named on the answer as needing current sourced evidence.
+    Never for an article-anchored or personal-library question.
+  */
+  const advisory =
+    !stableOrComputed &&
+    !placeReference &&
+    (knowledge.requirement === 'ADVISORY' || knowledge.requirement === 'MIXED_ADVISORY_CURRENT') &&
+    ctx.hasResolvedArticleAnchor !== true &&
+    capability.source.personalRequested !== true;
   const broadHeadlines =
     !stableOrComputed &&
     !placeReference &&
+    !advisory &&
     isBroadGlobalHeadlinesQuestion(reading.originalQuestion, reading.sourceLanguage) &&
     ctx.priorQuestion === undefined &&
     !namedPlace &&
@@ -672,9 +696,27 @@ export function routeAskR2(
             analyticalDomains: [],
           },
         }
-      : broadHeadlines
-        ? withoutTopic(composedSource)
-        : composedSource;
+      : advisory
+        ? namedPlace
+          ? {
+              ...withoutStatedPeriod(withoutTopic(withoutTime(composedSource))),
+              reading: {
+                ...composedSource.reading,
+                queryIntent: 'ENTITY_BACKGROUND',
+                analyticalDomains: [],
+              },
+            }
+          : {
+              ...withoutStatedPeriod(unconstrained as EnvelopeSource),
+              reading: {
+                ...composedSource.reading,
+                queryIntent: 'EXPLANATION',
+                analyticalDomains: [],
+              },
+            }
+        : broadHeadlines
+          ? withoutTopic(composedSource)
+          : composedSource;
 
   /* Axes derived in the normalization vocabulary; language axis restored to the truth. */
   const derived = buildEnvelope({ ...source, questionLanguage: NORMALIZATION_VOCABULARY });
@@ -698,6 +740,8 @@ export function routeAskR2(
       ctx.requestInstant,
     ),
     readerStatedPeriod: reading.statedTime?.statedPeriod ?? null,
+    currentEvidenceNeeded:
+      ('currentClauses' in knowledge ? knowledge.currentClauses : undefined) ?? [],
     outcome,
     source,
     envelope,
@@ -723,7 +767,9 @@ export function routeAskR2(
         ? (knowledge.requirement as 'STABLE_REFERENCE' | 'COMPUTATION')
         : placeReference
           ? 'PLACE_REFERENCE'
-          : null,
+          : advisory
+            ? 'ADVISORY'
+            : null,
     },
   };
 }

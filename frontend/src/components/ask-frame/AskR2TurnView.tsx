@@ -424,8 +424,24 @@ export function AskR2TurnView({
               data-ask="reference-note"
               className="rounded-[8px] border border-dashed border-[#4a5a6e] bg-[#121a26] px-3 py-2.5 text-[13px] leading-[1.45] text-[#a9b6c6]"
             >
-              <p className="font-bold text-[#d3dbe5]">{s.referenceNoteTitle}</p>
-              <p>{s.referenceNoteBody}</p>
+              {/* CTO P0 — advice is labelled as general guidance, never as current sourced research */}
+              <p className="font-bold text-[#d3dbe5]">
+                {payload.guidance != null ? s.guidanceNoteTitle : s.referenceNoteTitle}
+              </p>
+              <p>{payload.guidance != null ? s.guidanceNoteBody : s.referenceNoteBody}</p>
+            </div>
+          )}
+          {payload.guidance != null && payload.guidance.currentEvidenceNeeded.length > 0 && (
+            <div
+              data-ask="guidance-current-gap"
+              className="rounded-[8px] border border-[#5a4a2a] bg-[#17130c] px-3 py-2.5 text-[13px] leading-[1.45] text-[#c9b27a]"
+            >
+              <p className="font-bold">{s.guidanceCurrentGap}</p>
+              <ul className="list-disc ps-5">
+                {payload.guidance.currentEvidenceNeeded.map((clause) => (
+                  <li key={clause}>{clause}</li>
+                ))}
+              </ul>
             </div>
           )}
           {view.badge === 'insuf' && (
