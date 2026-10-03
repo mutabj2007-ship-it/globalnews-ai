@@ -96,9 +96,76 @@ export const PL_PUBLIC_EVENT =
 
 /* ── genuine freshness: an explicit time marker, never a topic noun ───────────────────────── */
 const EN_EXPLICIT_TIME =
-  /\b(?:today|today's|tonight|right\s+now|now|currently|current\s+(?:market|prices?|pricing|rates?|state|situation|data|figures|events|news|status)|latest|most\s+recent|recent(?:ly)?|this\s+(?:week|month|year|quarter)|yesterday|as\s+of|at\s+the\s+moment|at\s+present|so\s+far\s+this|in\s+(?:19|20)\d{2}|(?:19|20)\d{2})\b/i;
+  /\b(?:today|today's|tonight|right\s+now|now|currently|current\s+(?:market|prices?|pricing|rates?|state|situation|data|figures|events|news|status)|latest|most\s+recent|recent(?:ly)?|this\s+(?:week|month|year|quarter)|yesterday|as\s+of|at\s+the\s+moment|at\s+present|so\s+far\s+this)\b/i;
 const PL_EXPLICIT_TIME =
-  /(?:^|\s)(?:dziś|dzisiaj|dzisiejsz\p{L}*|teraz|obecnie|aktualn\p{L}*|najnowsz\p{L}*|ostatnio|w\s+tym\s+(?:tygodniu|miesiącu|roku|kwartale)|wczoraj|(?:19|20)\d{2})(?=\s|$|[?,.!])/iu;
+  /(?:^|\s)(?:dziś|dzisiaj|dzisiejsz\p{L}*|teraz|obecnie|aktualn\p{L}*|najnowsz\p{L}*|ostatnio|w\s+tym\s+(?:tygodniu|miesiącu|roku|kwartale)|wczoraj)(?=\s|$|[?,.!])/iu;
+
+/*
+  CTO R4 THIRD PASS — A YEAR IS A TIME ROLE, NOT A FRESHNESS TOKEN. A stated year asks for current
+  evidence only when it reaches the present: the request year (or later), or a window "since"
+  a year (which runs to now). A completed past year ("in 2008", "the 1918 pandemic") is a
+  HISTORICAL period — positive evidence AGAINST current reporting. Without a request instant the
+  route never reads a clock, so the conservative legacy reading (any year counts) is kept.
+*/
+const YEAR = /(?<![\d])(1[5-9]\d{2}|20\d{2})(s|'s)?(?![\d])/g;
+const SINCE_YEAR: Readonly<Record<'en' | 'pl', RegExp>> = {
+  /* "since 2008" runs to now; "from 2008" only with "onwards / on / to now / to the present" —
+     "lessons from the 1918 pandemic" is an ORIGIN, not a window */
+  en: /\bsince\s+(?:the\s+)?(?:early\s+|late\s+|mid-?)?(?:1[5-9]\d{2}|20\d{2})(?:s|'s)?\b(?!\s*(?:to|until|till|through|-|and)\s*(?:the\s+)?(?:1[5-9]\d{2}|20\d{2}))|\bfrom\s+(?:the\s+)?(?:1[5-9]\d{2}|20\d{2})(?:s|'s)?\s+(?:onwards?|on\b|to\s+(?:now|today|the\s+present|date))/i,
+  pl: /(?:^|\s)(?:od|począwszy\s+od)\s+(?:roku\s+|lat\s+)?(?:1[5-9]\d{2}|20\d{2})(?![\d])(?!\s*(?:do|-|i)\s*(?:roku\s+)?(?:1[5-9]\d{2}|20\d{2}))/iu,
+};
+
+/** Does a stated year reach the present (current / future year, or "since YEAR")? */
+export function refersToCurrentYear(
+  text: string,
+  lang: 'en' | 'pl',
+  requestYear?: number,
+): boolean {
+  const years = [...text.matchAll(YEAR)];
+  if (years.length === 0) return false;
+  if (requestYear === undefined) return true;
+  if (SINCE_YEAR[lang].test(text)) return true;
+  return years.some((m) => {
+    const y = Number(m[1]);
+    /* a decade ("the 2020s") reaches the present when the request year is inside it */
+    return m[2] !== undefined ? y + 9 >= requestYear : y >= requestYear;
+  });
+}
+
+/** The stated years, by time role: completed past, reaching the present ("since" / this year), future. */
+export function yearRoles(
+  text: string,
+  lang: 'en' | 'pl',
+  requestYear?: number,
+): { historical: number[]; current: boolean; future: number[] } {
+  if (requestYear === undefined) return { historical: [], current: false, future: [] };
+  const years = [...text.matchAll(YEAR)].map((m) => ({
+    y: Number(m[1]),
+    decade: m[2] !== undefined,
+  }));
+  const since = SINCE_YEAR[lang].test(text);
+  return {
+    historical: since
+      ? []
+      : years.filter((x) => (x.decade ? x.y + 9 : x.y) < requestYear).map((x) => x.y),
+    current:
+      since ||
+      years.some((x) =>
+        x.decade ? x.y <= requestYear && x.y + 9 >= requestYear : x.y === requestYear,
+      ),
+    future: years.filter((x) => !x.decade && x.y > requestYear).map((x) => x.y),
+  };
+}
+
+/** The years a text states, read as completed past periods (none without a request instant). */
+export function historicalYears(text: string, lang: 'en' | 'pl', requestYear?: number): number[] {
+  if (requestYear === undefined || SINCE_YEAR[lang].test(text)) return [];
+  return [...text.matchAll(YEAR)]
+    .filter((m) =>
+      m[2] !== undefined ? Number(m[1]) + 9 < requestYear : Number(m[1]) < requestYear,
+    )
+    .map((m) => Number(m[1]));
+}
 
 export type AdvisoryMode = 'ADVISORY' | 'MIXED_ADVISORY_CURRENT';
 
@@ -117,12 +184,19 @@ function clauses(text: string): string[] {
     .filter((c) => c.length > 0);
 }
 
-export function hasExplicitTime(text: string, lang: 'en' | 'pl'): boolean {
-  return (lang === 'pl' ? PL_EXPLICIT_TIME : EN_EXPLICIT_TIME).test(text);
+export function hasExplicitTime(text: string, lang: 'en' | 'pl', requestYear?: number): boolean {
+  return (
+    (lang === 'pl' ? PL_EXPLICIT_TIME : EN_EXPLICIT_TIME).test(text) ||
+    refersToCurrentYear(text, lang, requestYear)
+  );
 }
 
 /** Null when the question is not a request for advice / decision support. */
-export function readAdvisory(question: string, language: string): AdvisoryReading | null {
+export function readAdvisory(
+  question: string,
+  language: string,
+  requestYear?: number,
+): AdvisoryReading | null {
   if (language !== 'en' && language !== 'pl') return null;
   const lang: 'en' | 'pl' = language;
   const text = question.trim();
@@ -146,7 +220,7 @@ export function readAdvisory(question: string, language: string): AdvisoryReadin
     (interrogative && (planningSubject || ownVenture));
   if (!advisory) return null;
 
-  const timed = clauses(text).filter((clause) => hasExplicitTime(clause, lang));
+  const timed = clauses(text).filter((clause) => hasExplicitTime(clause, lang, requestYear));
   if (timed.length === 0) return { mode: 'ADVISORY', currentClauses: [] };
   /* A question that is ONLY a timed fact request with an advice word in it is still advisory in
      part: the advisory guidance is answered, the timed part is named as needing evidence. */

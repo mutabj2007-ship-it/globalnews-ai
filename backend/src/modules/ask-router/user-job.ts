@@ -1,3 +1,5 @@
+import { yearRoles } from './advisory-requirement';
+
 /**
  * ════════════════════════════════════════════════════════════════════════════
  * CTO R4 — THE GOVERNED USER-JOB CLASSIFIER (deterministic layer)
@@ -93,6 +95,14 @@ export interface JobReading {
   /** CTO R4 closeout — a causal / mechanism question (cause → mechanism → amplification →
    *  boundary conditions → counterexample → implications). Absent otherwise. */
   readonly analysis?: 'CAUSAL';
+  /**
+   * CTO R4 third pass §13 — the POSITIVE currentness evidence the route found (codes:
+   * EXPLICIT_TIME_OR_CHANGE, STATED_CURRENT_PERIOD, REPORTING_WINDOW, PARTICULAR_EVENT,
+   * GOVERNED_CURRENT_FORM, RELATIONSHIP_PRESENT_STATE, INHERITED_SURFACE_SCOPE,
+   * PRIOR_CURRENT_SUBJECT, ARTICLE_ANCHOR, HEADLINES_REQUEST). Empty → the turn may not enter
+   * current reporting deterministically: the bounded classifier decides.
+   */
+  readonly currentnessEvidence?: readonly string[];
 }
 
 /** Jobs answered by reasoning (the background provider) when no current evidence is needed. */
@@ -204,7 +214,11 @@ const PL_FUTURE =
   /(?:przyszł\p{L}*|następn\p{L}*|nadchodząc\p{L}*)\s+(?:rok\p{L}*|roku|miesiąc\p{L}*|tydzień|tygodni\p{L}*|lat\p{L}*)|za\s+(\d{1,3}|\p{L}+)\s+(dni|tygodni|miesięcy|lat)/iu;
 const EN_HISTORICAL = /\b(?:in|during|since)\s+(?:the\s+)?(1[5-9]\d{2}|20[0-2]\d)s?\b/i;
 
-export function readTemporalRoles(question: string, lang: 'en' | 'pl'): TemporalReading[] {
+export function readTemporalRoles(
+  question: string,
+  lang: 'en' | 'pl',
+  requestYear?: number,
+): TemporalReading[] {
   const out: TemporalReading[] = [];
   const text = question.trim();
   for (const re of lang === 'pl' ? PL_PLAN_HORIZON : EN_PLAN_HORIZON) {
@@ -236,6 +250,20 @@ export function readTemporalRoles(question: string, lang: 'en' | 'pl'): Temporal
   if (lang === 'en') {
     const deadline = EN_DEADLINE.exec(text);
     if (deadline) out.push({ role: 'DEADLINE', text: deadline[0] });
+  }
+  /* CTO R4 THIRD PASS — a stated year is a TIME ROLE (advisory-requirement.ts yearRoles): a
+     completed past year is HISTORICAL (evidence AGAINST current reporting); "since 2008" and the
+     request year reach the present (a reporting window); a later year is a future horizon. With
+     no request instant the route reads no clock, so only the legacy English form is read. */
+  if (requestYear !== undefined) {
+    const years = yearRoles(text, lang, requestYear);
+    if (years.historical.length > 0)
+      out.push({ role: 'HISTORICAL_PERIOD', text: years.historical.join(', ') });
+    if (years.current && !out.some((t) => t.role === 'REPORTING_WINDOW'))
+      out.push({ role: 'REPORTING_WINDOW', text: 'a stated period reaching the present' });
+    if (years.future.length > 0)
+      out.push({ role: 'FUTURE_HORIZON', text: years.future.join(', ') });
+  } else if (lang === 'en') {
     const historical = EN_HISTORICAL.exec(text);
     if (historical) out.push({ role: 'HISTORICAL_PERIOD', text: historical[0] });
   }
@@ -335,9 +363,9 @@ const PL_SELF_KIND: ReadonlyArray<readonly [TransformationKind, RegExp]> = [
 
 /* ── REFERENCES TO WORK ALREADY DONE IN THIS CONVERSATION ───────────────────────────────────── */
 const EN_REFERENCE =
-  /\b(?:that|this|these|those)\s+(?:idea|framework|concept|model|analysis|diagnosis|plan|conclusion|conclusions|recommendation|recommendations|advice|answer|point|points|list|comparison|approach|argument|definition)\b|\b(?:which|what)\s+(?:part|component|dimension|element|factor|pillar|piece|one)s?\b|\b(?:apply|use|test)\s+(?:that|this|it)\b|^\s*(?:why|how\s+so|in\s+what\s+way)\s*\??\s*$|\b(?:about|on|with|into|of)\s+(?:it|that|this|them)\s*[?.!]?\s*$|^\s*(?:turn|convert|make|put|summari[sz]e|compare|explain|expand|elaborate)\s+(?:that|this|it|them|those|these)\b/i;
+  /\b(?:that|this|these|those|the\s+same)\s+(?:idea|ideas|framework|frameworks|concept|model|analysis|diagnosis|plan|conclusion|conclusions|recommendation|recommendations|advice|answer|point|points|list|comparison|approach|argument|arguments|definition|reason|reasons|assumption|assumptions|criticism|criticisms|critique|criteria|criterion|steps|step|options|option|factors|factor|risks|risk|claims|claim|scenarios|scenario|signals|levers|principles|pillars|dimensions|lessons|trade-?offs|pros|cons|asymmetry|dynamic|mechanism|logic|reasoning|explanation|summary|checklist|table|strategy|model)\b|\b(?:which|what)\s+of\s+(?:those|these|them|the\s+(?:above|ones|options|arguments|reasons|factors|steps|points))\b|\bthe\s+(?:weakest|strongest|biggest|riskiest|most\s+(?:important|fragile|critical|questionable|robust)|least\s+(?:robust|convincing|important)|best|worst|first|last|main|key)\s+(?:part|assumption|argument|point|factor|risk|reason|step|option|element|dimension|one|link|lever|pillar|claim|criterion)\b|\b(?:which|what)\s+(?:part|component|dimension|element|factor|pillar|piece|one|assumption|argument|reason|risk|step|option|claim|criterion|lever|link|point)s?\b|\b(?:apply|use|test)\s+(?:that|this|it)\b|^\s*(?:why|how\s+so|in\s+what\s+way)\s*\??\s*$|\b(?:about|on|with|into|of)\s+(?:it|that|this|them)\s*[?.!]?\s*$|^\s*(?:turn|convert|make|put|summari[sz]e|compare|explain|expand|elaborate)\s+(?:that|this|it|them|those|these)\b/i;
 const PL_REFERENCE =
-  /(?:t[ęa]|to|ten|tę|tego|tej|tym|te|tych)\s+(?:ide\p{L}*|ram\p{L}*|koncepcj\p{L}*|model\p{L}*|analiz\p{L}*|diagnoz\p{L}*|plan\p{L}*|wnios\p{L}*|rekomendacj\p{L}*|rad\p{L}*|odpowied\p{L}*|list\p{L}*|porównani\p{L}*)|(?:któr\p{L}*|jak\p{L}*)\s+(?:część|element|składnik|wymiar|czynnik|filar)|(?:zastosuj|użyj|sprawdź)\s+(?:to|tę|ten|je)|^\s*(?:dlaczego|czemu)\s*\??\s*$|(?:z\s+tym|o\s+tym|w\s+tym|do\s+tego)\s*[?.!]?\s*$|(?:z\s+tym|z\s+tego|o\s+tym)\s+(?:zrobić|zrobimy|robić|począć)\s*[?.!]?\s*$|^\s*(?:przekształć|zamień|podsumuj|porównaj|wyjaśnij|rozwiń)\s+(?:to|tę|ten|je|te)(?![\p{L}\d])/iu;
+  /(?:t[ęa]|to|ten|tę|tego|tej|tym|te|tych|tymi)\s+(?:ide\p{L}*|ram\p{L}*|koncepcj\p{L}*|model\p{L}*|analiz\p{L}*|diagnoz\p{L}*|plan\p{L}*|wnios\p{L}*|rekomendacj\p{L}*|rad\p{L}*|odpowied\p{L}*|list\p{L}*|porównani\p{L}*|argument\p{L}*|powod\p{L}*|powód|założeni\p{L}*|krytyk\p{L}*|kryteri\p{L}*|krok\p{L}*|opcj\p{L}*|czynnik\p{L}*|ryzyk\p{L}*|scenariusz\p{L}*|sygnał\p{L}*|zasad\p{L}*|lekcj\p{L}*|mechanizm\p{L}*|strategi\p{L}*|źród\p{L}*|rzecz\p{L}*|punkt\p{L}*)|(?:któr\p{L}*|co)\s+z\s+(?:nich|tych|tego|tej|powyższ\p{L}*)|najsłabsz\p{L}*\s+(?:część|element|ogniwo|punkt|założeni\p{L}*|argument\p{L}*|stron\p{L}*)|(?:któr\p{L}*|jak\p{L}*)\s+(?:część|element|składnik|wymiar|czynnik|filar|założeni\p{L}*|argument\p{L}*|ryzyk\p{L}*|krok\p{L}*|punkt\p{L}*|opcj\p{L}*)|(?:zastosuj|użyj|sprawdź)\s+(?:to|tę|ten|je)|^\s*(?:dlaczego|czemu)\s*\??\s*$|(?:z\s+tym|o\s+tym|w\s+tym|do\s+tego)\s*[?.!]?\s*$|(?:z\s+tym|z\s+tego|o\s+tym)\s+(?:zrobić|zrobimy|robić|począć)\s*[?.!]?\s*$|^\s*(?:przekształć|zamień|podsumuj|porównaj|wyjaśnij|rozwiń)\s+(?:to|tę|ten|je|te)(?![\p{L}\d])/iu;
 /* a short follow-up that points back with a pronoun or at "your" earlier answer (read only when the
    conversation holds earlier work, and never over a named place, a public event or a fresh ask) */
 const EN_ANAPHORA =
@@ -349,9 +377,9 @@ const EN_APPLY =
 const PL_APPLY =
   /(?:zastosuj|użyj|sprawdź|odnieś)\s+(?:to|tę|ten|je|t\p{L}+)(?![\p{L}\d])[^?.!]{0,40}?(?<![\p{L}\d])(?:do|na|wobec|dla)\s+([\p{L}][\p{L}\d .&'-]{1,60}?)(?=[?.!,]|$)/iu;
 const EN_DIAGNOSE =
-  /\b(?:which|what)\s+(?:part|component|dimension|element|factor|pillar|piece|one)s?\b.{0,30}\b(?:weakest|strongest|most\s+important|matters?\s+most|least|biggest|riskiest|most\s+fragile|missing)\b/i;
+  /\b(?:which|what)\s+(?:(?:part|component|dimension|element|factor|pillar|piece|one|assumption|argument|reason|risk|step|link|lever)s?|of\s+(?:those|these|them|the\s+\w+))\b.{0,40}\b(?:weakest|strongest|most\s+important|matters?\s+most|least|biggest|riskiest|most\s+fragile|missing|hardest|most\s+durable|lasting|most\s+likely)\b|\bthe\s+(?:weakest|riskiest|most\s+fragile|biggest|most\s+questionable)\s+(?:part|assumption|argument|point|link|risk|reason|element)\b|\bwhat\s+(?:would|could)\s+break\s+(?:it|that|this)\b/i;
 const PL_DIAGNOSE =
-  /(?:któr\p{L}*)\s+(?:część|element|składnik|wymiar|czynnik|filar)(?![\p{L}\d]).{0,30}(?:najsłabsz\p{L}*|najsilniejsz\p{L}*|najważniejsz\p{L}*|najbardziej|brakuj\p{L}*)/iu;
+  /(?:któr\p{L}*|co)\s+(?:(?:część|element|składnik|wymiar|czynnik|filar|założeni\p{L}*|argument\p{L}*|ryzyk\p{L}*|krok\p{L}*)(?![\p{L}\d])|z\s+(?:nich|tych|tego))(?![\p{L}\d]).{0,40}(?:najsłabsz\p{L}*|najsilniejsz\p{L}*|najważniejsz\p{L}*|najbardziej|brakuj\p{L}*|najtrwalsz\p{L}*|najtrudniejsz\p{L}*)|najsłabsz\p{L}*\s+(?:część|element|ogniwo|punkt|założeni\p{L}*|argument\p{L}*)/iu;
 
 /* ── DEPTH and CONCEPT forms (never a list of concepts) ───────────────────────────────────── */
 const EN_DEPTH =
@@ -375,6 +403,63 @@ const EN_CAUSAL =
 const PL_CAUSAL =
   /^\s*(?:(?:a|i|więc|ok)[,]?\s+)?(?:jak|dlaczego|czemu|w\s+jaki\s+sposób|co\s+sprawia|jakim\s+mechanizmem)(?![\p{L}\d])(?!\s+(?:mogę|możemy|powinienem|powinnam|powinniśmy|mam|mamy)(?![\p{L}\d])).{2,160}?(?:prowadz\p{L}*|prowadzi\p{L}*|doprowadz\p{L}*|przyczyni\p{L}*|powod\p{L}*|wywoł\p{L}*|tworz\p{L}*|stwarza\p{L}*|rodz\p{L}*|skutkuj\p{L}*|staj\p{L}*\s+się|zamieni\p{L}*|przekształc\p{L}*|wzmacnia\p{L}*|wzmocni\p{L}*|potęguj\p{L}*|pogłębia\p{L}*|nasila\p{L}*|napędza\p{L}*|przyspiesza\p{L}*|zwielokrotni\p{L}*|osłabia\p{L}*|osłabi\p{L}*|podkopuj\p{L}*|niszcz\p{L}*|zniszcz\p{L}*|destabilizuj\p{L}*|eroduj\p{L}*|podważa\p{L}*|utrat\p{L}*|traci\p{L}*|straci\p{L}*|upad\p{L}*|załam\p{L}*|chroni\p{L}*|stabilizuj\p{L}*|kształtuj\p{L}*)(?<!(?:ł|ła|ło|li|ły|łem|łam))(?![\p{L}])|^\s*(?:wyjaśnij|pokaż|opisz|przeanalizuj)\s+(?:jak|dlaczego|w\s+jaki\s+sposób)(?![\p{L}\d])/iu;
 
+/*
+  CTO R4 THIRD PASS — AN IMPERATIVE IS A REQUEST. "Outline…", "Explain…", "Compare…", "Give me…",
+  "Opisz…", "Porównaj…", "Czy możesz wyjaśnić…" ask for work even without a question mark. The
+  request is read as an ACT FAMILY (explain / produce / advise / compare), so a duration or a
+  topic inside it ("a four-day work week", "a 30-year mortgage") is the SUBJECT of the request,
+  never the whole turn. Transformation targets (table, plan, checklist…) are read before this.
+*/
+type RequestAct = 'EXPLAIN' | 'PRODUCE' | 'ADVISE' | 'COMPARE';
+const EN_LEAD = String.raw`^\s*(?:(?:ok(?:ay)?|right|so|and|now|great|good|fine|thanks|alright|also|then)[,.!]?\s+)*(?:please\s+|can\s+you\s+|could\s+you\s+|would\s+you\s+|will\s+you\s+|i\s+(?:want|need|would\s+like|'d\s+like)\s+(?:you\s+)?to\s+|let\s+us\s+|let's\s+)*`;
+const EN_ACTS: ReadonlyArray<readonly [RequestAct, string]> = [
+  ['COMPARE', String.raw`(?:compare|contrast|rank|weigh\s+up|differentiate|distinguish\s+between)`],
+  [
+    'ADVISE',
+    String.raw`(?:suggest|recommend|advise|guide\s+me|coach\s+me|help\s+(?:me|us)\s+(?:decide|choose|think|figure|plan|understand|prepare|work\s+out|weigh|prioriti[sz]e))`,
+  ],
+  [
+    'PRODUCE',
+    String.raw`(?:write|draft|compose|create|design|build|develop|devise|formulate|prepare|produce|generate|come\s+up\s+with|brainstorm|propose)`,
+  ],
+  [
+    'EXPLAIN',
+    String.raw`(?:explain|outline|describe|discuss|analy[sz]e|evaluate|assess|examine|explore|unpack|clarify|define|list|identify|name|summari[sz]e|review|critique|argue|justify|illustrate|interpret|characteri[sz]e|walk\s+(?:me|us)\s+through|talk\s+(?:me|us)\s+through|tell\s+(?:me|us)\s+(?:about|how|why|what|whether)|give\s+(?:me|us)\s+(?:an?\s+|the\s+|some\s+)?(?:overview|explanation|breakdown|rundown|primer|sense|framework|model|account|analysis|history|background)|break\s+down|make\s+the\s+case|set\s+out|spell\s+out|lay\s+out|map\s+out|sketch|think\s+through|reason\s+through|consider|weigh)`,
+  ],
+];
+const PL_LEAD = String.raw`^\s*(?:(?:ok|dobrze|dobra|świetnie|super|dzięki|a|i|teraz|więc|to)[,.!]?\s+)*(?:proszę\s+|czy\s+(?:możesz|mógłbyś|mogłabyś|możecie|mógłby\s+pan|mogłaby\s+pani)\s+(?:mi\s+|nam\s+)?|chcę,?\s+(?:żebyś|abyś)\s+)*`;
+const PL_ACTS: ReadonlyArray<readonly [RequestAct, string]> = [
+  [
+    'COMPARE',
+    String.raw`(?:porównaj|porównać|zestaw|zestawić|uszereguj|uszeregować|odróżnij|rozróżnij)`,
+  ],
+  [
+    'ADVISE',
+    String.raw`(?:doradź|doradzić|poradź|poradzić|poleć|polecić|zasugeruj|zasugerować|pomóż\s+(?:mi\s+|nam\s+)?(?:wybrać|zdecydować|zrozumieć|zaplanować|przemyśleć|przygotować))`,
+  ],
+  [
+    'PRODUCE',
+    String.raw`(?:napisz|napisać|przygotuj|przygotować|stwórz|stworzyć|zaprojektuj|zaprojektować|opracuj|opracować|zaproponuj|zaproponować|wymyśl|wymyślić|sformułuj|sformułować|zredaguj|zredagować)`,
+  ],
+  [
+    'EXPLAIN',
+    String.raw`(?:wyjaśnij|wyjaśnić|wytłumacz|wytłumaczyć|opisz|opisać|omów|omówić|przeanalizuj|przeanalizować|oceń|ocenić|rozważ|rozważyć|przedstaw|przedstawić|scharakteryzuj|wymień|wymienić|wypisz|podaj|podać|zdefiniuj|streść|podsumuj|nakreśl|zarysuj|przybliż|przybliżyć|uzasadnij|zinterpretuj|rozłóż\s+na\s+czynniki)`,
+  ],
+];
+const ACT_RES: Readonly<Record<'en' | 'pl', ReadonlyArray<readonly [RequestAct, RegExp]>>> = {
+  en: EN_ACTS.map(([act, verbs]) => [act, new RegExp(`${EN_LEAD}${verbs}\\b`, 'i')] as const),
+  pl: PL_ACTS.map(
+    ([act, verbs]) => [act, new RegExp(`${PL_LEAD}${verbs}(?![\\p{L}\\d])`, 'iu')] as const,
+  ),
+};
+
+/** The request act an imperative turn performs, or null when it is not an imperative request. */
+export function readRequestAct(question: string, lang: 'en' | 'pl'): RequestAct | null {
+  const text = question.trim();
+  for (const [act, re] of ACT_RES[lang]) if (re.test(text)) return act;
+  return null;
+}
+
 export interface JobContext {
   /** The router's knowledge-requirement reading (null = no governed shape). */
   readonly requirement: string | null;
@@ -387,6 +472,12 @@ export interface JobContext {
   readonly hasPriorWork: boolean;
   /** A public event named (war, election…): current affairs, not concept. */
   readonly publicEvent: boolean;
+  /** CTO R4 third pass — the request year, so a stated year is read as a time ROLE. */
+  readonly requestYear?: number;
+  /** CTO R4 third pass — the reader asks for reporting / coverage itself (an archive request). */
+  readonly reportRequest?: boolean;
+  /** CTO R4 third pass — an inherited Map / story place scopes this turn ("in this country"). */
+  readonly inheritedScope?: boolean;
 }
 
 const KNOWN: Readonly<Record<string, UserJob>> = {
@@ -452,12 +543,13 @@ const reading = (
 export function readUserJob(question: string, language: string, ctx: JobContext): JobReading {
   const lang: 'en' | 'pl' = language === 'pl' ? 'pl' : 'en';
   const text = question.trim();
-  const temporal = readTemporalRoles(text, lang);
+  const temporal = readTemporalRoles(text, lang, ctx.requestYear);
   const planHorizon = temporal.some((t) => t.role === 'PLAN_HORIZON');
   /* a plan's horizon / a trip's length / a deadline is not a request for current evidence */
-  const reportingWindow = temporal.some(
-    (t) => t.role === 'REPORTING_WINDOW' || t.role === 'HISTORICAL_PERIOD',
-  );
+  /* CTO R4 third pass — only a window reaching the present is currentness; a completed
+     historical period is evidence AGAINST current reporting */
+  const reportingWindow = temporal.some((t) => t.role === 'REPORTING_WINDOW');
+  const historicalPeriod = temporal.some((t) => t.role === 'HISTORICAL_PERIOD') && !reportingWindow;
   const fresh = (ctx.fresh && !planHorizon) || reportingWindow;
   const deep = (lang === 'pl' ? PL_DEPTH : EN_DEPTH).test(text);
   const depth: Depth = deep ? 'DEEP' : 'STANDARD';
@@ -552,6 +644,46 @@ export function readUserJob(question: string, language: string, ctx: JobContext)
       temporal,
       depth: 'DEEP',
     });
+
+  /* 3b · CTO R4 third pass — a completed historical period (no window reaching the present, no
+     request for the reporting itself) is historical / reference analysis, never current news */
+  if (
+    historicalPeriod &&
+    !fresh &&
+    ctx.reportRequest !== true &&
+    (ctx.requirement === null ||
+      placeOnlyCurrent ||
+      ctx.requirement === 'STABLE_REFERENCE' ||
+      (ctx.requirement === 'CURRENT_REPORTING' && ctx.requirementReason !== 'a freshness marker'))
+  )
+    return reading(causal || deep ? 'DEEP_CONCEPTUAL_ANALYSIS' : 'EXPLANATION', {
+      reason: 'a completed historical period',
+      temporal,
+      depth: causal || deep ? 'DEEP' : 'STANDARD',
+      ...(causal ? { analysis: 'CAUSAL' as const } : {}),
+    });
+
+  /* 3c · CTO R4 third pass — an imperative request is a request (EN / PL act families) */
+  const act = readRequestAct(text, lang);
+  if (
+    act !== null &&
+    !fresh &&
+    !ctx.namedPlace &&
+    !ctx.publicEvent &&
+    ctx.inheritedScope !== true &&
+    !reference &&
+    (ctx.requirement === null || placeOnlyCurrent)
+  )
+    return reading(
+      act === 'ADVISE'
+        ? 'ADVISORY'
+        : act === 'COMPARE'
+          ? 'COMPARISON'
+          : act === 'PRODUCE'
+            ? 'WRITING'
+            : 'EXPLANATION',
+      { reason: `an imperative request (${act.toLowerCase()})`, temporal, depth },
+    );
 
   /* 4 · the router's existing governed reading */
   if (ctx.requirement !== null) {

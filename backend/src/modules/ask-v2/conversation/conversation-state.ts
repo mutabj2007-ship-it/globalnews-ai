@@ -11,7 +11,7 @@ import {
   type KnowledgeRequirement,
 } from '../../ask-router/knowledge-requirement';
 import { readDecisionSupport } from '../../ask-router/decision-support';
-import { readTemporalRoles, readTransformation } from '../../ask-router/user-job';
+import { readRequestAct, readTemporalRoles, readTransformation } from '../../ask-router/user-job';
 import {
   readBilateralRelationship,
   relationKindsIn,
@@ -471,9 +471,13 @@ function readTurn(question: string, lang: 'en' | 'pl'): TurnFeatures {
     requirement,
     relationship: readBilateralRelationship(question, lang),
     /* CTO R4 — a plan's horizon ("90-day plan") is not a trip length or a conversation constraint */
-    duration: readTemporalRoles(question, lang).some((t) => t.role === 'PLAN_HORIZON')
-      ? null
-      : readDuration(question, lang),
+    duration:
+      readTemporalRoles(question, lang).some((t) => t.role === 'PLAN_HORIZON') ||
+      /* CTO R4 third pass — a duration that MODIFIES a noun ("a four-day work week", "a 30-year
+         mortgage", "czterodniowy tydzień pracy") is the subject, not the reader's time budget */
+      attributiveDuration(question, lang)
+        ? null
+        : readDuration(question, lang),
     interests: readInterests(question, lang),
     options: readOptions(question, lang, isCountry),
     objective: readDecisionSupport(question, lang)?.objective ?? null,
@@ -500,6 +504,41 @@ const PL_QUESTION =
 
 export function isQuestion(text: string, lang: 'en' | 'pl'): boolean {
   return (lang === 'pl' ? PL_QUESTION : EN_QUESTION).test(text.trim());
+}
+
+/*
+  CTO R4 THIRD PASS — ACTION OUTRANKS DURATION. A turn is "only a constraint" when it has the FORM
+  of one: the reader speaking about themselves or their preferences ("I only have two days.",
+  "We prefer nature.", "Only official sources.", "Mam tylko dwa dni.") or a short verbless
+  fragment ("Five days, nature."). An imperative request ("Outline the arguments for a four-day
+  work week.") is a request whose object happens to contain a duration — it is answered, never
+  "noted". The request itself is read by the job reader's act families (user-job.ts).
+*/
+const EN_CONSTRAINT_FORM =
+  /^\s*(?:(?:ok(?:ay)?|right|fine|also|and|but|so|actually|oh)[,.!]?\s+)*(?:i|i'm|i’m|i've|i’ve|i'd|i’d|we|we're|we’re|we've|we’ve|my|our|me|us|only|just|preferably|ideally|no\s+more\s+than|at\s+most|max(?:imum)?|under|within|budget|any|no|without|not)\b/i;
+const PL_CONSTRAINT_FORM =
+  /^\s*(?:(?:ok|dobrze|dobra|a|i|ale|właściwie)[,.!]?\s+)*(?:mam|mamy|chcę|chcemy|wolę|wolimy|preferuj\p{L}*|tylko|jedynie|budżet\p{L}*|nasz\p{L}*|mój|moja|moje|moim|ja|my|interesuj\p{L}*|lubię|lubimy|maksymalnie|najwyżej|bez|dowoln\p{L}*|każde|nie)(?=\s|$|[,.!])/iu;
+const SHORT_FRAGMENT_WORDS = 4;
+
+function hasConstraintForm(text: string, lang: 'en' | 'pl'): boolean {
+  return (
+    (lang === 'pl' ? PL_CONSTRAINT_FORM : EN_CONSTRAINT_FORM).test(text.trim()) ||
+    wordCount(text) <= SHORT_FRAGMENT_WORDS
+  );
+}
+
+/* a duration in attributive position: "four-day work week", "30-year mortgage", "3-month
+   sabbatical"; a trip / stay noun after it keeps it a travel duration ("a 5-day trip") */
+const EN_ATTRIBUTIVE_DURATION =
+  /\b(?:\d{1,3}|[a-z]+)[-\s](?:day|week|month|year|hour|night|minute|decade|century)[-\s](?!(?:[a-z-]+\s+){0,2}(?:trip|trips|holiday|holidays|stay|visit|itinerary|vacation|safari|tour|break|getaway|journey|plan|roadmap|programme|program|schedule|sprint)\b)(?!(?:and|or|in|of|for|to|at|on|with|from|by)\b)[a-z]/i;
+const EN_POSSESSIVE_DURATION = /\b(?:years|days|weeks|months)['’]\s+[a-z]/i;
+const PL_ATTRIBUTIVE_DURATION =
+  /(?:^|\s)\p{L}*(?:dniow|tygodniow|miesięczn|letni|roczn|godzinn)\p{L}*\s+(?!(?:\p{L}+\s+){0,2}(?:wycieczk|podróż|wyjazd|pobyt|urlop|wakacj|plan|harmonogram|program)\p{L}*)\p{L}/iu;
+
+export function attributiveDuration(text: string, lang: 'en' | 'pl'): boolean {
+  return lang === 'pl'
+    ? PL_ATTRIBUTIVE_DURATION.test(text)
+    : EN_ATTRIBUTIVE_DURATION.test(text) || EN_POSSESSIVE_DURATION.test(text);
 }
 
 function isConstraintStatement(f: TurnFeatures): boolean {
@@ -944,7 +983,11 @@ function step(
     f.countries.length === 0 &&
     !isQuestion(question, lang) &&
     /* CTO R4 — an imperative work request ("Turn that into a 90-day plan.") is never merely noted */
-    readTransformation(question, lang) === null;
+    readTransformation(question, lang) === null &&
+    /* CTO R4 third pass — an imperative request is never merely noted, and a constraint has the
+       form of one (the reader about themselves / a short fragment) */
+    readRequestAct(question, lang) === null &&
+    hasConstraintForm(question, lang);
   const from = prev.anchorQuestion ?? earlierNewestFirst[0]?.question ?? question;
 
   const decide = (): {

@@ -1,3 +1,5 @@
+import { resolveCountryByAnyIdentifier } from '@globalnews-ai/shared';
+import { resolvePolishCountry } from '../analysis/query/polish-country-forms.util';
 import { DEMONYM_SOURCE, normalizeAskQuestion } from './normalization/qualified-reading';
 
 /**
@@ -65,7 +67,7 @@ const RELATIONS: ReadonlyArray<readonly [RelationKind, RegExp]> = [
   ],
   [
     'DIPLOMATIC',
-    /\b(?:relations?|relationship|ties|diplomatic|bilateral|agreements?|treaty|mou|cooperation|dispute|tensions?)\b|(?:stosunk\p{L}*|relacj\p{L}*|dwustronn\p{L}*|umow\p{L}*|współprac\p{L}*|spor\p{L}*|napięci\p{L}*)/iu,
+    /\b(?:relations?|relationship|ties|diplomatic|bilateral|agreements?|treaty|treaties|mou|cooperation|dispute|disputes|tensions?|rivals?|rivalry|rivalries|partners?|partnership|allian\w*|allies|allied|reconcil\w*|enmity|friendship|feud\w*|hostilit\w*|normali[sz]\w*|d[ée]tente|rapprochement|antagonism|grievances?|each\s+other|one\s+another|f[ae]ll(?:s|en|ing)?\s+out|clash\w*|quarrel\w*|compet\w*\s+with|cooperat\w*|collaborat\w*|fought|fight(?:s|ing)?\s+(?:over|with)|sided\s+with)\b|(?:kłóc\p{L}*|ściera\p{L}*|walczy\p{L}*\s+z|rywalizuj\p{L}*|współpracuj\p{L}*|pogodzi\p{L}*)|(?:stosunk\p{L}*|relacj\p{L}*|dwustronn\p{L}*|umow\p{L}*|współprac\p{L}*|sp[oó]r\p{L}*|napięci\p{L}*|rywal\p{L}*|partner\p{L}*|sojusz\p{L}*|pojedna\p{L}*|wrogoś\p{L}*|wrog\p{L}*|przyjaźń|przyjaźni|normalizacj\p{L}*|wzajemn\p{L}*|konflikt\p{L}*\s+(?:między|pomiędzy))/iu,
   ],
   [
     'SECURITY',
@@ -78,6 +80,49 @@ const COMPARISON =
   /\b(?:compare|comparison|versus|vs\.?|which\s+is|which\s+has)\b|(?:porównaj|porównani\p{L}*|któr\p{L}*\s+(?:jest|ma))/iu;
 const NAMED_CORRIDOR =
   /\b((?:central|northern|southern|lobito|dar\s+es\s+salaam|mombasa)\s+corridor|rusumo(?:\s+(?:border|osbp|bridge))?|[\p{Lu}][\p{L}-]+\s+(?:one-?stop\s+)?border\s+post)\b/iu;
+
+/*
+  CTO R4 THIRD PASS — COUNTRY IDENTITY DOES NOT DEPEND ON CAPITALISATION. The landed reader reads
+  a lowercase name only after a place preposition and never a lowercase homograph ("japan",
+  "china", "turkey" are also ordinary words). Two names COORDINATED with each other ("japan and
+  south korea", "peru a chile", "france–germany") are unambiguous: the pair itself is the
+  evidence that both are countries. ISO codes ("us", "uk" as words) are never read this way.
+*/
+const EN_PAIR =
+  /(?:^|[^\p{L}])((?:the\s+)?[\p{L}][\p{L}'’.-]*(?:\s+[\p{L}][\p{L}'’.-]*){0,2})\s*(?:\band\b|&|–|-|\/|\bvs\.?\b|\bversus\b)\s*((?:the\s+)?[\p{L}][\p{L}'’.-]*(?:\s+[\p{L}][\p{L}'’.-]*){0,2})/giu;
+const PL_PAIR =
+  /(?:^|[^\p{L}])([\p{L}][\p{L}'’.-]*(?:\s+[\p{L}][\p{L}'’.-]*){0,1})\s*(?:\bi\b|\ba\b|\boraz\b|–|-|\/)\s*([\p{L}][\p{L}'’.-]*(?:\s+[\p{L}][\p{L}'’.-]*){0,1})/giu;
+
+function countryOf(phrase: string, lang: 'en' | 'pl', fromEnd: boolean): string | null {
+  const words = phrase
+    .trim()
+    .replace(/^the\s+/i, '')
+    .split(/\s+/);
+  /* the longest run of words adjacent to the conjunction that names a country */
+  for (let k = Math.min(3, words.length); k >= 1; k -= 1) {
+    const span = (fromEnd ? words.slice(words.length - k) : words.slice(0, k)).join(' ');
+    const cleaned = span.replace(/[’']s$/u, '').replace(/[^\p{L}\s.-]/gu, '');
+    if (cleaned.length < 4) continue;
+    if (lang === 'pl') {
+      const c = resolvePolishCountry(cleaned);
+      if (c !== undefined && c !== null) return c.iso3;
+    }
+    const c = resolveCountryByAnyIdentifier(cleaned);
+    if (c !== undefined && cleaned.toUpperCase() !== c.iso2 && cleaned.toUpperCase() !== c.iso3)
+      return c.iso3;
+  }
+  return null;
+}
+
+/** Two countries coordinated in the text, case-insensitively (ISO3, in the order written). */
+export function coordinatedCountryPair(text: string, lang: 'en' | 'pl'): [string, string] | null {
+  for (const m of text.matchAll(lang === 'pl' ? PL_PAIR : EN_PAIR)) {
+    const a = countryOf(m[1], lang, true);
+    const b = countryOf(m[2], lang, false);
+    if (a !== null && b !== null && a !== b) return [a, b];
+  }
+  return null;
+}
 
 /** The relation kinds whose vocabulary appears in a text (an article title + summary). */
 export function relationKindsIn(text: string): RelationKind[] {
@@ -114,6 +159,12 @@ export function readBilateralRelationship(
         .map((g) => g.value),
     ),
   ];
+  /* CTO R4 third pass — a coordinated pair is read case-insensitively when the landed reader
+     missed one or both names ("japan and south korea") */
+  if (countries.length < 2) {
+    const pair = coordinatedCountryPair(question, language);
+    if (pair !== null) countries.splice(0, countries.length, ...pair);
+  }
   if (countries.length !== 2) return null;
   const relations = RELATIONS.filter(([, re]) => re.test(question)).map(([kind]) => kind);
   const between = BETWEEN.test(question);

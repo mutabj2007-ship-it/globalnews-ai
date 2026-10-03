@@ -103,10 +103,18 @@ describe('F — the four Alpha "today" questions now execute current reporting (
     expect(r.plan.disclosures).toContain('SPECIALIST_INTELLIGENCE_NOT_USED');
   });
 
-  it.each([
-    ['What happened in Poland in 2024?', '2024'],
-    ['What happened in Kenya this week?', 'this week'],
-  ])('control — any other stated period is still a constraint: %s', (question) => {
-    expect(route(question, 'en').plan.terminalState).toBe('BROADENING_OFFERED');
+  it.each([['What happened in Kenya this week?', 'this week']])(
+    'control — any other CURRENT stated period is still a constraint: %s',
+    (question) => {
+      expect(route(question, 'en').plan.terminalState).toBe('BROADENING_OFFERED');
+    },
+  );
+
+  /* CTO R4 THIRD PASS §3 (supersedes the former "2024" control): a COMPLETED past year, asked
+     after it ended, is historical / reference analysis — never current news, never a constraint. */
+  it('a completed past year is historical analysis, not a news constraint: What happened in Poland in 2024?', () => {
+    const r = route('What happened in Poland in 2024?', 'en');
+    expect(r.plan.terminalState).toBe('REFERENCE_BACKGROUND_ONLY');
+    expect(r.job.temporal.map((t) => t.role)).toContain('HISTORICAL_PERIOD');
   });
 });

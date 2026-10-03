@@ -828,14 +828,17 @@ async function evaluateMainConvergence(): Promise<void> {
   }
   {
     const r = ask(textOf(row('MC-071')), 'en');
+    /* CTO R4 THIRD PASS §3 supersedes the former MC-071 criterion (HISTORICAL → broadening
+       offered): a COMPLETED past period is historical / reference analysis — answered by
+       reasoning with no news search, the period read as a HISTORICAL_PERIOD time role. */
     record(
       row('MC-071'),
       pass(
-        r.envelope.time.requirement === 'HISTORICAL' &&
-          r.plan.terminalState === 'BROADENING_OFFERED' &&
-          r.plan.disclosures.includes('CONSTRAINT_NOT_APPLIED'),
+        r.plan.terminalState === 'REFERENCE_BACKGROUND_ONLY' &&
+          r.job.temporal.some((t) => t.role === 'HISTORICAL_PERIOD') &&
+          !r.plan.evidenceRequests.some((e) => e.required && e.evidenceClass === 'NEWS_REPORTING'),
       ),
-      'R2 route (request instant 2026-09-28)',
+      'R2 route (request instant 2026-09-28; CTO R4 third pass §3 historical contract)',
       brief(r),
     );
   }

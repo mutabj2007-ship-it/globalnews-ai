@@ -8,6 +8,7 @@ import {
   hasExplicitTime,
   PL_PUBLIC_EVENT,
   readAdvisory,
+  refersToCurrentYear,
 } from './advisory-requirement';
 import { readDecisionSupport } from './decision-support';
 
@@ -130,9 +131,26 @@ const STABLE_SHAPES: Readonly<Record<'en' | 'pl', readonly RegExp[]>> = {
 const FRESHNESS: Readonly<Record<'en' | 'pl', RegExp>> = {
   /* "current" counts only as a TIME adjective before a state noun ("current price", "the current
      security situation") — never as the electrical quantity ("inrush current"). */
-  en: /\b(?:today|tonight|now|right\s+now|currently|current\s+(?:\w+\s+)?(?:price|prices|rate|rates|level|levels|status|situation|state|regulation|regulations|policy|policies|law|laws|edition|version|government|president|leader|leadership|events?|affairs|conflict|war)|latest|recent|recently|this\s+(?:week|month|year)|yesterday|announced|breaking|new\s+(?:law|policy|policies|rule|rules|regulation|regulations|standard|bill|tariff)|price\s+of|so\s+far|in\s+20\d\d|20\d\d|headlines|news|(?:the\s+)?(?:past|last|previous)\s+(?:few\s+|couple\s+(?:of\s+)?|\d{1,3}\s+|[a-z]+\s+)?(?:days?|weeks?|months?|fortnight))\b/i,
-  pl: /(?:^|[\s,])(?:dzi[śs]|dzisiaj|teraz|obecn\p{L}*|aktualn\p{L}*|najnowsz\p{L}*|ostatni\p{L}*|w\s+tym\s+(?:tygodniu|miesi[ąa]cu|roku)|(?:zesz[łl]\p{L}*|minion\p{L}*)\s+(?:\p{L}+\s+)?(?:dni|tygodni\p{L}*|tydzie[ńn]|miesi[ąa]c\p{L}*|miesi[ęe]cy)|wczoraj|og[łl]osi\p{L}*|og[łl]oszon\p{L}*|wiadomo[śs]\p{L}*|nag[łl][óo]wk\p{L}*|20\d\d)(?=$|[\s,?.!])/iu,
+  en: /\b(?:today|tonight|now|right\s+now|currently|current\s+(?:\w+\s+)?(?:price|prices|rate|rates|level|levels|status|situation|state|regulation|regulations|policy|policies|law|laws|edition|version|government|president|leader|leadership|events?|affairs|conflict|war)|latest|recent|recently|this\s+(?:week|month|year)|yesterday|announced|breaking|new\s+(?:law|policy|policies|rule|rules|regulation|regulations|standard|bill|tariff)|price\s+of|so\s+far|since\s+(?:then|that\s+time|january|february|march|april|may|june|july|august|september|october|november|december|monday|tuesday|wednesday|thursday|friday|saturday|sunday|last\s+\w+|the\s+(?:start|beginning)\s+of\s+(?:the\s+)?(?:year|month|week))|(?:the\s+)?(?:past|last|previous)\s+(?:few\s+|couple\s+(?:of\s+)?|\d{1,3}\s+|[a-z]+\s+)?(?:days?|weeks?|months?|fortnight))\b/i,
+  pl: /(?:^|[\s,])(?:dzi[śs]|dzisiaj|teraz|obecn\p{L}*|aktualn\p{L}*|najnowsz\p{L}*|ostatni\p{L}*|w\s+tym\s+(?:tygodniu|miesi[ąa]cu|roku)|od\s+(?:stycznia|lutego|marca|kwietnia|maja|czerwca|lipca|sierpnia|wrze[śs]nia|pa[źz]dziernika|listopada|grudnia|poniedzia[łl]ku|wtorku|[śs]rody|czwartku|pi[ąa]tku|soboty|niedzieli|pocz[ąa]tku\s+(?:roku|miesi[ąa]ca|tygodnia)|tamtego\s+czasu|tego\s+czasu|tamtej\s+pory|tej\s+pory|zesz[łl]\p{L}*\s+\p{L}+)|(?:zesz[łl]\p{L}*|minion\p{L}*)\s+(?:\p{L}+\s+)?(?:dni|tygodni\p{L}*|tydzie[ńn]|miesi[ąa]c\p{L}*|miesi[ęe]cy)|wczoraj|og[łl]osi\p{L}*|og[łl]oszon\p{L}*)(?=$|[\s,?.!])/iu,
 };
+
+/*
+  CTO R4 THIRD PASS — "NEWS" IS A SUBJECT NOUN UNLESS IT IS THE THING REQUESTED. "How should I
+  judge whether a news outlet is trustworthy?" and "How can news framing affect understanding?"
+  are about news as a subject. Reporting is requested when news / headlines are the OBJECT asked
+  for: "the latest news", "any news about Kenya", "news on the Sudan talks", "in the news",
+  "what is the news" (PL "najnowsze wiadomości", "wiadomości z Polski", "co słychać").
+*/
+const NEWS_REQUEST: Readonly<Record<'en' | 'pl', RegExp>> = {
+  en: /\b(?:the|any|latest|recent|today['’]?s|top|breaking|current|world|global|international|local|national|morning|evening|daily|this\s+week['’]?s)\s+(?:[\p{L}-]+\s+)?(?:news|headlines)\b(?!\s+(?:outlets?|organi[sz]ations?|media|literacy|industry|business(?:es)?|anchors?|framing|sources?|sites?|apps?|products?|consumption|values?|cycle|desk|agenc(?:y|ies)|reporters?|editors?|publishers?|platforms?|ecosystem))|\b(?:news|headlines)\s+(?:about|on|from|regarding|in|for|out\s+of|concerning)\s+(?:the\s+)?\p{Lu}|\bin\s+the\s+(?:news|headlines)\b|^\s*(?:any\s+)?(?:news|headlines)\b(?!\s+(?:outlets?|media|literacy|framing|organi[sz]ations?|industry|sources?))|\bwhat\s+is\s+(?:the\s+)?(?:news|headlines)\b|\b(?:news|headlines)\s+(?:today|this\s+(?:week|morning|evening)|right\s+now)\b/iu,
+  pl: /(?:najnowsz\p{L}*|dzisiejsz\p{L}*|ostatni\p{L}*|aktualn\p{L}*|bieżąc\p{L}*|główn\p{L}*|jakie\s+(?:są\s+)?)\s+(?:\p{L}+\s+)?(?:wiadomoś\p{L}*|nagłówk\p{L}*)|(?:wiadomoś\p{L}*|nagłówk\p{L}*)\s+(?:z|ze|o|na\s+temat|dotycząc\p{L}*)\s+\p{Lu}|(?:wiadomoś\p{L}*|nagłówk\p{L}*)\s+(?:ze\s+świata|z\s+kraju)|^\s*(?:jakieś\s+)?(?:wiadomoś\p{L}*|nagłówk\p{L}*)(?=\s|$|[?,.!])|co\s+słychać/iu,
+};
+
+/** Is news / are headlines the OBJECT requested (a reporting request), not a subject noun? */
+export function requestsNews(text: string, language: string): boolean {
+  return NEWS_REQUEST[language === 'pl' ? 'pl' : 'en'].test(text);
+}
 
 /*
   CTO R4 CLOSEOUT — A WORD FOR A POTENTIALLY CURRENT PHENOMENON IS NOT A REQUEST FOR CURRENT
@@ -223,6 +241,12 @@ export function particularPhenomenon(
   }
   return any && namedPlace;
 }
+
+/* "…what happened there since?" — an adverbial "since" runs to the present (a window, not a year) */
+const SINCE_PRESENT: Readonly<Record<'en' | 'pl', RegExp>> = {
+  en: /\b(?:ever\s+)?since(?:\s+then|\s+that\s+time)?\s*[?.!]?\s*$/i,
+  pl: /(?:od\s+(?:tamtej|tej)\s+pory|od\s+(?:tamtego|tego)\s+czasu)\s*[?.!]?\s*$/iu,
+};
 
 /** State nouns count as freshness only for a particular instance (see STATE_NOUN). */
 function anchoredState(text: string, lang: 'en' | 'pl', place: boolean): boolean {
@@ -383,7 +407,10 @@ export function deriveKnowledgeRequirement(
     assertsFreshness(freshText) ||
     FRESHNESS[lang].test(freshText) ||
     CHANGING[lang].test(freshText) ||
-    anchoredState(freshText, lang, place);
+    SINCE_PRESENT[lang].test(freshText) ||
+    anchoredState(freshText, lang, place) ||
+    NEWS_REQUEST[lang].test(freshText) ||
+    refersToCurrentYear(freshText, lang, requestYear);
   const stableShape = STABLE_SHAPES[lang].some((shape) => shape.test(firstClause(text)));
   /* An EXPLANATORY shape (everything but the bare "what is / what are" opener) that also asserts
      freshness is mixed; "What is the current price of …" is simply current. */
@@ -419,7 +446,7 @@ export function deriveKnowledgeRequirement(
     explanatory &&
     !(lang === 'pl' ? PL_PUBLIC_EVENT : EN_PUBLIC_EVENT).test(text) &&
     !IN_PROGRESS[lang].test(text) &&
-    readAdvisory(text, lang) === null
+    readAdvisory(text, lang, requestYear) === null
   ) {
     return {
       requirement: 'PLACE_REFERENCE',
@@ -447,7 +474,7 @@ export function deriveKnowledgeRequirement(
     "news intelligence product" is not a request for news. Genuine freshness (an explicit time
     marker) still outranks advice: it makes the question MIXED, and the timed part is named.
   */
-  const advisory = readAdvisory(text, lang);
+  const advisory = readAdvisory(text, lang, requestYear);
   if (advisory !== null) {
     return advisory.mode === 'ADVISORY'
       ? { requirement: 'ADVISORY', reason: 'a request for advice / decision support' }
@@ -471,7 +498,7 @@ export function deriveKnowledgeRequirement(
   */
   const clauses = text
     .split(
-      /(?<=[?.!;])\s+|,\s+(?:and|but|while|plus)\s+|,?\s+(?:and|but|plus|i|a|oraz)\s+(?=(?:what|which|who|how|where|when|why|is|are|do|does|did|tell|give|show|update|co|jak|kto|czy|ile|gdzie|dlaczego|powiedz|podaj|pokaż)\b)/iu,
+      /(?<=[?.!;])\s+|,\s+(?:and|but|while|plus)\s+|,?\s+(?:and|but|plus|i|a|oraz)\s+(?=(?:what|which|who|how|where|when|why|is|are|do|does|did|tell|give|show|update|co|jak|jaki|jaka|jakie|jakich|kto|czy|ile|gdzie|dlaczego|powiedz|podaj|pokaż)(?![\p{L}\d]))/iu,
     )
     .map((c) => c.trim())
     .filter((c) => c.length > 0);
@@ -480,7 +507,9 @@ export function deriveKnowledgeRequirement(
     FRESHNESS[lang].test(c) ||
     CHANGING[lang].test(c) ||
     CHANGED[lang].test(c) ||
-    anchoredState(c, lang, false);
+    anchoredState(c, lang, false) ||
+    NEWS_REQUEST[lang].test(c) ||
+    refersToCurrentYear(c, lang, requestYear);
   const timed = clauses.filter(clauseFresh);
   const stableClause = clauses.some(
     (c) =>
@@ -519,7 +548,8 @@ export function genuineFreshness(text: string, language: string, requestYear?: n
   const travel = TRAVEL_FRAME[lang].test(text);
   const freshText = travel ? withoutFuturePeriods(text, lang, requestYear) : text;
   return (
-    hasExplicitTime(freshText, lang) ||
+    hasExplicitTime(freshText, lang, requestYear) ||
+    NEWS_REQUEST[lang].test(freshText) ||
     CHANGING[lang].test(freshText) ||
     assertsFreshness(freshText) ||
     SPECIFIC_EVENT[lang].test(freshText) ||

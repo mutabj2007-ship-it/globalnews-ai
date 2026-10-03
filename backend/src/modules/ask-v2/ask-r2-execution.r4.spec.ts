@@ -459,7 +459,10 @@ describe('R4 closeout §7 — a MIXED answer keeps its stable half when current 
     /* BROADENING_OFFERED: no reporting attempt, one reasoning call for the stable half */
     expect(h.calls.analysis).toHaveLength(0);
     expect(h.calls.background).toHaveLength(1);
-    expect(h.observed[0]).toMatchObject({ providerCallCount: 1, terminalState: 'BROADENING_OFFERED' });
+    expect(h.observed[0]).toMatchObject({
+      providerCallCount: 1,
+      terminalState: 'BROADENING_OFFERED',
+    });
     expect(p.answer).toMatchObject({
       state: 'REFERENCE_BACKGROUND',
       basis: 'PARTIAL_CURRENT_UNAVAILABLE',
@@ -560,5 +563,83 @@ describe('R4 closeout §9 — the job is observable (codes only)', () => {
       jobFreshness: 'CURRENT',
       jobClassifierUsed: false,
     });
+  });
+});
+
+/* ── CTO R4 THIRD PASS ──────────────────────────────────────────────────────────────────────── */
+
+describe('R4 third pass §11 — an IMPERATIVE turn creates the work; the chain resolves against it', () => {
+  it('Outline … → Which assumption is weakest? → Turn that criticism into a checklist for a pilot', async () => {
+    const reply = (input: BackgroundInput): string => {
+      const kind = /kind is most likely ([A-Z_]+)/.exec(input.jobRules ?? '')?.[1] ?? 'SUMMARY';
+      return `Answer.\n<<<ARTIFACT {"kind":"${kind}","label":"${kind.toLowerCase()}","components":["a","b"]} ARTIFACT>>>`;
+    };
+    const turns: Array<[string, string, string | null]> = [
+      ['Outline the arguments for a four-day work week.', 'EXPLANATION', null],
+      ['Which assumption is weakest?', 'DEEP_CONCEPTUAL_ANALYSIS', 'DIAGNOSIS'],
+      ['Turn that criticism into a checklist for a pilot.', 'TRANSFORMATION', 'PLAN'],
+    ];
+    let prior: PriorArtifact | undefined;
+    for (const [i, [q, job, kind]] of turns.entries()) {
+      const h = harness({
+        background: (input) =>
+          i === 0
+            ? 'Arguments.\n<<<ARTIFACT {"kind":"CONCEPTUAL_FRAMEWORK","label":"four-day week arguments","components":["productivity","wellbeing","cost"]} ARTIFACT>>>'
+            : reply(input),
+      });
+      const request: AskRequest = {
+        question: q,
+        language: 'en',
+        intent: 'ask',
+        ...(prior === undefined ? {} : { priorArtifact: prior }),
+      };
+      const plan = await h.adapter.prepare(request);
+      const opId = `op-imp-${i + 1}`;
+      const result = await inRequest(() => h.adapter.execute(request, plan, opId));
+      const p = JSON.parse(result.payloadJson) as Payload;
+      /* the first turn is ANSWERED (never a noted constraint), every turn with zero news */
+      expect(p.answer.basis).not.toBe('CONSTRAINT_NOTED');
+      expect(h.calls.analysis).toHaveLength(0);
+      expect(h.calls.background).toHaveLength(1);
+      expect(p.diagnostics.job.job).toBe(job);
+      if (i > 0) {
+        expect(p.diagnostics.job.discourseReference).toBe('PRIOR_WORK');
+        expect(p.diagnostics.job.artifactUsed?.sourceOperationId).toBe(`op-imp-${i}`);
+      }
+      if (kind !== null) expect(p.artifact?.kind).toBe(kind);
+      const stored = validateArtifact(p.artifact);
+      expect(stored).not.toBeNull();
+      prior = { ...stored!, sourceOperationId: opId };
+    }
+  });
+});
+
+describe('R4 third pass §8–§10 — a historical relationship keeps BOTH countries as scope, zero news', () => {
+  it.each([
+    [
+      'How did relations between France and Germany change after the Second World War?',
+      'en',
+      ['FRA', 'DEU'],
+    ],
+    ['Jak rozwijał się spór Peru–Chile?', 'pl', ['PER', 'CHL']],
+  ] as const)('%s', async (q, lang, countries) => {
+    const h = harness({});
+    const p = (await run(h, q, lang)) as Payload & { relationship?: { countries: string[] } };
+    expect(h.calls.analysis).toHaveLength(0);
+    expect(h.calls.background).toHaveLength(1);
+    expect(p.diagnostics.job.job).toBe('RELATIONSHIP_ANALYSIS');
+    expect([...(p.relationship?.countries ?? [])].sort()).toEqual([...countries].sort());
+  });
+});
+
+describe('R4 third pass §3 — a completed past year is answered as history, never a news search', () => {
+  it.each([
+    ['Why did the financial system fail in 2008?', 'en'],
+    ['Dlaczego w 2008 roku upadł system finansowy?', 'pl'],
+  ] as const)('%s', async (q, lang) => {
+    const h = harness({});
+    await run(h, q, lang);
+    expect(h.calls.analysis).toHaveLength(0);
+    expect(h.calls.background).toHaveLength(1);
   });
 });

@@ -40,7 +40,9 @@ const DEEP_RUBRIC =
   'why those dimensions matter and how they interact; (4) distinctions from neighbouring concepts; ' +
   '(5) an example and a counterexample or boundary case; (6) the tensions or paradoxes inside the ' +
   'concept (for example where strength creates vulnerability, efficiency creates fragility, growth ' +
-  'creates overextension); (7) a compact conceptual model or framework — if you express it as a ' +
+  'creates overextension) — in particular, look for the same condition raising BOTH capability ' +
+  'AND exposure (leverage, visibility, dependence, downside), and say when one overtakes the ' +
+  'other; (7) a compact conceptual model or framework — if you express it as a ' +
   'formula or shorthand, say plainly that it is a conceptual framework you are proposing, not an ' +
   'established scientific equation; (8) practical implications or an application; (9) the ' +
   'assumptions and limits of the analysis. Use short headings. Do not pad, do not repeat a ' +
