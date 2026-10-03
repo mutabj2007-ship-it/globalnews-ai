@@ -5,7 +5,7 @@ import type {
   MultiStoryAction,
   SelectedStoryRef,
 } from '@globalnews-ai/shared';
-import { findCountryByIso3 } from '@globalnews-ai/shared';
+import { findCountryByIso3, type DisplayLocale, type LanguageCode } from '@globalnews-ai/shared';
 import { NewsService } from '../news/news.service';
 import { readCompanionIntent, servesIntent, type CompanionIntent } from './companion-relevance';
 import { withDeadline } from '../compute-controls/compute-scopes';
@@ -39,13 +39,19 @@ import { DECISION_OBJECTIVE_CANDIDATES } from '../ask-router/decision-support';
 import { completionCeilingFor, jobRulesFor } from './job-execution';
 import type { BoundedConversationState } from '../ask-router/semantic-ir/interpret-turn';
 import {
+  boundedEarlierTurns,
   fallbackResolution,
+  parseSemanticFirstResolution,
   parseSemanticResolution,
+  semanticFirstUserMessage,
   semanticInterpreterUserMessage,
+  SEMANTIC_FIRST_INTERPRETER_MAX_TOKENS,
+  SEMANTIC_FIRST_INTERPRETER_SYSTEM,
   SEMANTIC_INTERPRETER_MAX_TOKENS,
   SEMANTIC_INTERPRETER_SYSTEM,
   type SemanticResolution,
 } from '../ask-router/semantic-ir/semantic-interpreter';
+import { isSemanticFirstLanguage } from '../ask-router/semantic-ir/semantic-first';
 import { semanticReaderText } from '../ask-router/semantic-ir/interpret-turn';
 import {
   artifactIdentity,
@@ -178,7 +184,21 @@ const PLAN_VALIDITY_MS = 15 * 60 * 1000;
  * artifact's kind / label, the reader's structured objective, the options they named and the
  * portable subject. Never the transcript; an artifact (model work) is never an objective.
  */
-function boundedStateOf(request: Readonly<AskRequest>): BoundedConversationState | undefined {
+/**
+ * CTO R4 SEVEN-LANGUAGE §6 — retrieval keeps a representable LanguageCode (LANG-UI-7-D1: de / pt are
+ * display locales, not retrieval languages, so they retrieve with the EN strategy); the ANSWER is
+ * always written in the reader's own language — never an intermediate English.
+ */
+function retrievalLanguageOf(language: AskRequest['language']): LanguageCode {
+  return language === 'de' || language === 'pt' ? 'en' : language;
+}
+function answerLanguageOf(language: AskRequest['language']): { answerLanguage?: DisplayLocale } {
+  return retrievalLanguageOf(language) === language ? {} : { answerLanguage: language };
+}
+
+export function boundedStateOf(
+  request: Readonly<AskRequest>,
+): BoundedConversationState | undefined {
   const c = request.conversation;
   const a = request.priorArtifact;
   if (c === undefined && a === undefined) return undefined;
@@ -204,7 +224,7 @@ function boundedStateOf(request: Readonly<AskRequest>): BoundedConversationState
   };
 }
 
-function routeFor(
+export function routeFor(
   request: Readonly<AskRequest>,
   baseDeps: PlannerDeps,
   /** CTO R4 semantic IR — the ONE bounded interpretation's validated resolution (or FALLBACK). */
@@ -1064,7 +1084,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       draft.providerCallCount = 1;
       response = await this.analyze(
         request.question,
-        request.language,
+        retrievalLanguageOf(request.language),
         /* R2B — the SERVER-RESOLVED story (built from the retained row), never client text. */
         request.context?.kind === 'STORY' ? request.context.storyContext : undefined,
         /* ASK R3 CONTINUITY — the landed path routes a follow-up by the PRIOR USER question
@@ -1079,6 +1099,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
           usageSink: (u) => {
             usage = { promptTokens: u.promptTokens, completionTokens: u.completionTokens };
           },
+          ...answerLanguageOf(request.language),
           ...(governed.rules === '' ? {} : { governed }),
           /* BETA-ASK-005 — the router's bounded publication window (server request instant). */
           ...(route.reportingWindow === null
@@ -1422,13 +1443,14 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       draft.providerCallCount = 1;
       response = await this.analyze(
         request.question,
-        request.language,
+        retrievalLanguageOf(request.language),
         undefined,
         /* A selection replaces the conversation context (the landed selection branch). */
         undefined,
         { action: selection.action, stories: [...selection.stories] },
         undefined,
         {
+          ...answerLanguageOf(request.language),
           maxModelAttempts: ASK_MODEL_MAX_ATTEMPTS,
           usageSink: (u) => {
             usage = { promptTokens: u.promptTokens, completionTokens: u.completionTokens };
@@ -1554,24 +1576,35 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     let verdict: SemanticResolution | null = null;
     try {
       const state = boundedStateOf(request);
+      const readerText = semanticReaderText(request.question, request.language);
+      const interpreterState = {
+        ...(state?.artifact === undefined ? {} : { artifact: state.artifact }),
+        objective: state?.objective?.criterion ?? null,
+        ...(state?.choiceSet === undefined ? {} : { choiceSet: state.choiceSet }),
+        portableSubject: state?.portableSubject ?? null,
+      };
+      /* CTO R4 seven-language — FR / DE / ES / PT / AR: the SAME one call, interpreter-first
+         contract, on the ORIGINAL text (never translated), with the reader's own earlier turns */
+      const first = isSemanticFirstLanguage(request.language);
+      const earlier = boundedEarlierTurns(request.readerTurns);
       const raw = await complete({
-        system: SEMANTIC_INTERPRETER_SYSTEM,
-        user: semanticInterpreterUserMessage(
-          route.semantic,
-          semanticReaderText(request.question, request.language),
-          {
-            ...(state?.artifact === undefined ? {} : { artifact: state.artifact }),
-            objective: state?.objective?.criterion ?? null,
-            ...(state?.choiceSet === undefined ? {} : { choiceSet: state.choiceSet }),
-            portableSubject: state?.portableSubject ?? null,
-          },
-        ),
-        maxCompletionTokens: SEMANTIC_INTERPRETER_MAX_TOKENS,
+        system: first ? SEMANTIC_FIRST_INTERPRETER_SYSTEM : SEMANTIC_INTERPRETER_SYSTEM,
+        user: first
+          ? semanticFirstUserMessage(route.semantic, readerText, {
+              ...interpreterState,
+              earlierReaderTurns: request.readerTurns ?? [],
+            })
+          : semanticInterpreterUserMessage(route.semantic, readerText, interpreterState),
+        maxCompletionTokens: first
+          ? SEMANTIC_FIRST_INTERPRETER_MAX_TOKENS
+          : SEMANTIC_INTERPRETER_MAX_TOKENS,
         usageSink: (u) => {
           usage = { promptTokens: u.promptTokens, completionTokens: u.completionTokens };
         },
       });
-      verdict = parseSemanticResolution(raw, route.semantic);
+      verdict = first
+        ? parseSemanticFirstResolution(raw, route.semantic, readerText, earlier)
+        : parseSemanticResolution(raw, route.semantic);
       outcome = 'SUCCESS';
     } catch (error) {
       outcome = /timeout|timed out|deadline/i.test((error as Error)?.message ?? '')

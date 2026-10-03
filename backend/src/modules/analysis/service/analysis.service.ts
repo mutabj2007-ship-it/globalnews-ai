@@ -1,3 +1,4 @@
+import type { DisplayLocale } from '@globalnews-ai/shared';
 import { isSameHeadline } from '../../news/identity/headline-identity.util';
 import { createHash } from 'node:crypto';
 import {
@@ -238,6 +239,12 @@ type PlannedSearchTrace = Omit<AnalysisRetrievalTrace, 'timeWindow' | 'independe
 
 export interface AnalysisExecutionPolicy {
   readonly maxModelAttempts?: number;
+  /**
+   * CTO R4 SEVEN-LANGUAGE §6 — the language the Ask reader asked in, when it is not the retrieval
+   * language (de / pt are display locales without a retrieval LanguageCode). The answer is WRITTEN
+   * in it; retrieval keeps `requestedLanguage`. Part of the cache key. Absent for /analysis.
+   */
+  readonly answerLanguage?: DisplayLocale;
   readonly usageSink?: AnalysisProviderInput['usageSink'];
   /**
    * ASK INTELLIGENCE BINDING LIVE ACCEPTANCE REPAIR R1 — the governed rules (system) and the
@@ -816,7 +823,11 @@ export class AnalysisService {
       executionPolicy?.relationship === undefined
         ? ''
         : `:relationship:${executionPolicy.relationship.countries.join('-')}:${executionPolicy.relationship.relations.join('+')}`;
-    const cacheKey = `${requestedLanguage}:${normalizedQuery.toLowerCase()}${storyAnchorKeySegment}${priorQuestionKeySegment}${selectionKeySegment}${identityKeySegment}${governedKeySegment}${windowKeySegment}${broadKeySegment}${relationshipKeySegment}`;
+    const answerKeySegment =
+      executionPolicy?.answerLanguage === undefined
+        ? ''
+        : `:answer:${executionPolicy.answerLanguage}`;
+    const cacheKey = `${requestedLanguage}${answerKeySegment}:${normalizedQuery.toLowerCase()}${storyAnchorKeySegment}${priorQuestionKeySegment}${selectionKeySegment}${identityKeySegment}${governedKeySegment}${windowKeySegment}${broadKeySegment}${relationshipKeySegment}`;
 
     const cached = this.getCached(cacheKey);
 
@@ -3617,7 +3628,7 @@ export class AnalysisService {
             // OpenAI calls. 'en' (the default) produces a byte-identical
             // prompt to pre-Milestone-#47 behavior — see
             // buildResponseLanguageInstruction()'s own doc comment.
-            responseLanguage: requestedLanguage,
+            responseLanguage: executionPolicy?.answerLanguage ?? requestedLanguage,
             /*
               ASK/SEARCH R1 CLOSURE — the model is told what its evidence IS.
               Retained or degraded evidence must never be written up as live

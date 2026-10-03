@@ -32,6 +32,9 @@ import { explanatoryClauseForm, splitClauses, stableClauseForm } from '../clause
 import { readEvaluationKind } from '../decision-objective';
 import type { QualifiedReading } from '../normalization/qualified-reading';
 import { readCurrentnessMarkers, type CurrentnessMarker } from './currentness';
+import { maskTimeDeterminers } from './time-determiners';
+import { instructionSpans, maskInstructions } from './instruction-frames';
+import { interpretSemanticFirstTurn, isSemanticFirstLanguage } from './semantic-first';
 import { readEntityCandidates } from './entities';
 import { assignRoles, toBilateralRelationship, type RoleAssignment } from './roles';
 import { readChoiceQuestion, readObjectiveState, type ObjectiveState } from './objective-state';
@@ -183,11 +186,20 @@ const CURRENT_REQUIREMENTS = new Set([
 interface ClauseReading {
   readonly clause: IrClause;
   readonly text: string;
+  /** the clause as the TIME readers read it (non-state time determiners masked) */
+  readonly timeText: string;
   readonly kind: 'STABLE' | 'CURRENT' | 'HISTORICAL' | 'OTHER';
   readonly markers: readonly CurrentnessMarker[];
 }
 
-function readClauses(text: string, lang: 'en' | 'pl', year?: number): ClauseReading[] {
+function readClauses(
+  readerText: string,
+  text: string,
+  lang: 'en' | 'pl',
+  year?: number,
+): ClauseReading[] {
+  /* defect 3 — clauses are segmented and time-read on the masked time text (same length); the
+     currentness markers read the reader's own words (they report a masked determiner as WEAK) */
   const parts = splitClauses(text, lang);
   let cursor = 0;
   return parts.map((part, id) => {
@@ -195,7 +207,7 @@ function readClauses(text: string, lang: 'en' | 'pl', year?: number): ClauseRead
     const start = at < 0 ? cursor : at;
     const end = at < 0 ? Math.min(text.length, cursor + part.length) : at + part.length;
     cursor = end;
-    const markers = readCurrentnessMarkers(part, lang);
+    const markers = readCurrentnessMarkers(readerText.slice(start, end), lang);
     const strong = markers.some(PRESENT_STRONG);
     const current = strong || clauseFreshSignal(part, lang, year) || inProgressSignal(part, lang);
     const historical = !current && temporallyPastOnly(part, lang, year);
@@ -218,7 +230,8 @@ function readClauses(text: string, lang: 'en' | 'pl', year?: number): ClauseRead
           ? 'CONTEMPORARY'
           : 'NONE';
     return {
-      text: part,
+      text: readerText.slice(start, end),
+      timeText: part,
       kind,
       markers,
       clause: {
@@ -312,6 +325,10 @@ export function interpretTurn(input: TurnInterpretationInput): {
   readonly ir: SemanticTurnIR;
   readonly decision: RoutingDecision;
 } {
+  /* CTO R4 seven-language — FR / DE / ES / PT / AR enter the IR interpreter-first (semantic-first.ts):
+     the EN / PL readers below are never applied to a language they do not read */
+  if (isSemanticFirstLanguage(input.reading.sourceLanguage))
+    return interpretSemanticFirstTurn(input);
   const { reading, namedPlace } = input;
   const resolution = input.resolution;
   const requestYear =
@@ -321,7 +338,14 @@ export function interpretTurn(input: TurnInterpretationInput): {
   const year = Number.isFinite(requestYear) ? requestYear : undefined;
   const lang: 'en' | 'pl' = reading.sourceLanguage === 'pl' ? 'pl' : 'en';
   /* harmless FORM normalized for the readers; frozen C, storage and display keep the original */
-  const readerText = normalizeTurn(reading.originalQuestion, reading.sourceLanguage).text;
+  const formText = normalizeTurn(reading.originalQuestion, reading.sourceLanguage).text;
+  /* defect 1 (deterministic half) — sentences addressed to the SYSTEM are never read as the
+     reader's question by any reader (masked, same length); the turn escalates (below) */
+  const injected = instructionSpans(formText, lang);
+  const readerText = maskInstructions(formText, injected);
+  /* defect 3 — what the TIME readers read: possessive time determiners before a non-state head
+     ("today's money") are masked, same length; identity / roles / objective read readerText */
+  const timeText = maskTimeDeterminers(readerText, lang);
   const conflicts: IrConflict[] = [];
 
   /* ══ 1 · CANDIDATE SIGNALS ══════════════════════════════════════════════════════════════ */
@@ -331,13 +355,13 @@ export function interpretTurn(input: TurnInterpretationInput): {
       : yearRoles(reading.statedTime.statedPeriod, lang, year);
   const reportRequest = REPORT_REQUEST[lang].test(readerText);
   const ownKnowledge = deriveKnowledgeRequirement(
-    readerText,
+    timeText,
     reading.sourceLanguage,
     namedPlace,
     year,
   );
-  const temporalSemantics = readTemporalSemantics(readerText, reading.sourceLanguage, year);
-  const clauses = readClauses(readerText, lang, year);
+  const temporalSemantics = readTemporalSemantics(timeText, reading.sourceLanguage, year);
+  const clauses = readClauses(readerText, timeText, lang, year);
   const markers = clauses.flatMap((c) => c.markers);
   const strongCurrent = markers.some(PRESENT_STRONG);
   const weakCurrent = !strongCurrent && markers.some((m) => m.strength === 'WEAK');
@@ -351,7 +375,7 @@ export function interpretTurn(input: TurnInterpretationInput): {
   const choiceQuestion =
     evaluationKind !== 'ARTIFACT_COMPONENT_EVALUATION' &&
     !strongCurrent &&
-    !genuineFreshness(readerText, reading.sourceLanguage, year) &&
+    !genuineFreshness(timeText, reading.sourceLanguage, year) &&
     /* per clause: a composed "Comparing A, B and C: so which one is best?" asks in its last clause */
     (readChoiceQuestion(readerText, lang) || clauses.some((c) => readChoiceQuestion(c.text, lang)));
   /* the objective: this turn's own, else the newest the reader stated earlier (bounded state) */
@@ -388,7 +412,7 @@ export function interpretTurn(input: TurnInterpretationInput): {
     governed default is the completed past (never news by accident).
   */
   const pastPresentClause = clauses.some((c) => {
-    const t = readTemporalSemantics(c.text, lang, year);
+    const t = readTemporalSemantics(c.timeText, lang, year);
     const past = t.spans.some((s) => s.role === 'PAST_COMPLETED' || s.role === 'HISTORICAL_PERIOD');
     const present = t.spans.some(
       (s) =>
@@ -415,7 +439,10 @@ export function interpretTurn(input: TurnInterpretationInput): {
     input.priorQuestion === undefined
       ? null
       : deriveKnowledgeRequirement(
-          normalizeTurn(input.priorQuestion, reading.sourceLanguage).text,
+          maskTimeDeterminers(
+            normalizeTurn(input.priorQuestion, reading.sourceLanguage).text,
+            lang,
+          ),
           reading.sourceLanguage,
         ).requirement;
   const continuesKind =
@@ -543,7 +570,7 @@ export function interpretTurn(input: TurnInterpretationInput): {
   const publicEventRaw =
     !pastOnly &&
     particularPhenomenon(
-      readerText,
+      timeText,
       reading.sourceLanguage,
       lang === 'pl' ? PL_PUBLIC_EVENT : EN_PUBLIC_EVENT,
       namedPlace,
@@ -553,7 +580,7 @@ export function interpretTurn(input: TurnInterpretationInput): {
     PAST_CAUSAL_FRAME[lang].test(readerText) &&
     !strongCurrent &&
     reading.statedTime === undefined &&
-    !inProgressSignal(readerText, lang);
+    !inProgressSignal(timeText, lang);
   let publicEvent = publicEventRaw && !temporalHistoryDefault;
   if (pastCausal && publicEventRaw) {
     conflicts.push('TEMPORAL_AMBIGUOUS');
@@ -569,13 +596,13 @@ export function interpretTurn(input: TurnInterpretationInput): {
     with routing consequences, so it escalates. The interpreter decides; if it cannot, the governed
     outcome is a focused clarification — never news by accident, never a timeless assertion.
   */
-  const fsrc = freshnessSources(readerText, reading.sourceLanguage, year);
+  const fsrc = freshnessSources(timeText, reading.sourceLanguage, year);
   const strongFreshnessBasis =
     currentOffice ||
     strongCurrent ||
     fsrc.explicit ||
     reading.statedTime !== undefined ||
-    readTemporalRoles(readerText, lang, year).some((t) => t.role === 'REPORTING_WINDOW') ||
+    readTemporalRoles(timeText, lang, year).some((t) => t.role === 'REPORTING_WINDOW') ||
     temporalSemantics.currentness === 'CURRENT' ||
     temporalSemantics.currentness === 'HISTORICAL_AND_CURRENT' ||
     namedPlace ||
@@ -586,8 +613,8 @@ export function interpretTurn(input: TurnInterpretationInput): {
     input.priorQuestion !== undefined ||
     input.hasResolvedArticleAnchor ||
     reportRequest ||
-    inProgressSignal(readerText, lang) ||
-    RELATION_PRESENT_STATE[lang].test(readerText) ||
+    inProgressSignal(timeText, lang) ||
+    RELATION_PRESENT_STATE[lang].test(timeText) ||
     (knowledge.requirement !== null && CURRENT_REQUIREMENTS.has(knowledge.requirement));
   const freshnessWeak =
     !temporalHistoryDefault &&
@@ -606,7 +633,8 @@ export function interpretTurn(input: TurnInterpretationInput): {
     publicEvent = false;
   }
   /* no interpreter verdict → a focused clarification (governed fallback) */
-  const semanticClarification = freshnessWeak && resolution?.path === 'FALLBACK';
+  const semanticClarification =
+    (freshnessWeak || injected.length > 0) && resolution?.path === 'FALLBACK';
 
   /* the decision family (§18): a choice resolved against the bounded state */
   if (choiceQuestion && !advisoryFamily) {
@@ -632,6 +660,63 @@ export function interpretTurn(input: TurnInterpretationInput): {
     readerText.length <= 120
   )
     conflicts.push('REFERENCE_UNRESOLVED');
+
+  /*
+    CTO R4 SEVEN-LANGUAGE §13 — DEFECT 2: VERDICT AUTHORITY.
+    ROOT CAUSE: each escalated branch consumed the interpreter's currentness verdict on its own, and
+    one did not (a status word about the conversation's own work: "does that recommendation still
+    make sense after recent events?" named TEMPORAL_AMBIGUOUS, escalated, and then ignored the
+    verdict). INVARIANT: an ACCEPTED semantic verdict that current evidence is required is applied
+    on EVERY escalated branch — never a timeless answer after the interpreter said "current". The
+    other component the deterministic reading established is KEPT: advice / a decision / earlier work
+    becomes the mixed form whose current part is named; anything else is current reporting.
+  */
+  const verdictCurrent =
+    resolution?.path === 'SEMANTIC' && resolution.needsCurrentEvidence === true;
+  const currentRequirement =
+    knowledge.requirement !== null &&
+    (knowledge.requirement === 'CURRENT_REPORTING' ||
+      CURRENT_REQUIREMENTS.has(knowledge.requirement));
+  const mixedFamily =
+    knowledge.requirement === 'MIXED_REFERENCE_CURRENT' ||
+    knowledge.requirement === 'MIXED_ADVISORY_CURRENT';
+  /* earlier work re-examined against the present keeps BOTH components (the work and the current
+     evidence) even when a reader already said "current" — never one dropped for the other */
+  if (
+    verdictCurrent &&
+    ((!currentRequirement && !explicitCurrent) || (referencesWork && !mixedFamily))
+  ) {
+    const interpretedCurrent = (resolution?.clauses ?? [])
+      .map((k, i) => (k === 'CURRENT' ? clauses[i]?.text : undefined))
+      .filter((t): t is string => t !== undefined);
+    const parts =
+      currentClauses.length > 0
+        ? currentClauses.map((c) => c.text)
+        : interpretedCurrent.length > 0
+          ? interpretedCurrent
+          : [readerText];
+    if (knowledge.requirement === 'DECISION_SUPPORT')
+      knowledge = { ...knowledge, currentClauses: parts };
+    else if (knowledge.requirement === 'ADVISORY' || (referencesWork && advisoryFamily))
+      knowledge = {
+        requirement: 'MIXED_ADVISORY_CURRENT',
+        reason: 'semantic IR: the interpreter requires current evidence for this advice',
+        currentClauses: parts,
+      };
+    else if (referencesWork)
+      knowledge = {
+        requirement: 'MIXED_REFERENCE_CURRENT',
+        reason: 'semantic IR: earlier work re-examined against current evidence (interpreter)',
+        currentClauses: parts,
+      };
+    else {
+      explicitCurrent = true;
+      knowledge = {
+        requirement: 'CURRENT_REPORTING',
+        reason: 'semantic IR: the interpreter requires current evidence',
+      };
+    }
+  }
 
   const decision = knowledge.requirement === 'DECISION_SUPPORT';
   const placeFreeIntent = [
@@ -670,6 +755,7 @@ export function interpretTurn(input: TurnInterpretationInput): {
     !stableOrComputed &&
     !placeReference &&
     !advisory &&
+    injected.length === 0 &&
     isBroadGlobalHeadlinesQuestion(reading.originalQuestion, reading.sourceLanguage) &&
     input.priorQuestion === undefined &&
     !namedPlace &&
@@ -679,11 +765,11 @@ export function interpretTurn(input: TurnInterpretationInput): {
   /* §11–§14 — the relationship from Stage A identities + Stage B roles (never a venue / object) */
   const relationshipAny = advisory ? null : toBilateralRelationship(roles);
   const fresh =
-    (genuineFreshness(readerText, reading.sourceLanguage, year) &&
+    (genuineFreshness(timeText, reading.sourceLanguage, year) &&
       !temporalHistoryDefault &&
       !notCurrentByInterpreter) ||
     explicitCurrent;
-  const formJob0 = readUserJob(readerText, reading.sourceLanguage, {
+  const formJob0 = readUserJob(timeText, reading.sourceLanguage, {
     requirement: knowledge.requirement,
     requirementReason: knowledge.reason,
     namedPlace,
@@ -723,7 +809,7 @@ export function interpretTurn(input: TurnInterpretationInput): {
     (fresh ||
       currentStated ||
       formJob.temporal.some((t) => t.role === 'REPORTING_WINDOW') ||
-      RELATION_PRESENT_STATE[lang].test(readerText) ||
+      RELATION_PRESENT_STATE[lang].test(timeText) ||
       /* hardening §12 — a CURRENT clause ("…and whether it is still active") makes the relation
          current even when another clause is historical (the turn is then MIXED) */
       (currentClauses.length > 0 && !temporalHistoryDefault && !notCurrentByInterpreter) ||
@@ -755,6 +841,8 @@ export function interpretTurn(input: TurnInterpretationInput): {
     formJob.discourseReference !== 'PRIOR_WORK' &&
     !(formJob.job === 'COMPARISON' && formJob.basis === 'FORM' && !namedPlace);
   const reasoningByForm =
+    /* defect 2 — a FORM reasoning job never outranks an accepted "current" verdict */
+    !verdictCurrent &&
     !otherwiseDecided &&
     !clarificationHolds &&
     formJob.basis === 'FORM' &&
@@ -768,7 +856,10 @@ export function interpretTurn(input: TurnInterpretationInput): {
   const priorCurrent =
     input.priorQuestion !== undefined &&
     (() => {
-      const p = normalizeTurn(input.priorQuestion, reading.sourceLanguage).text;
+      const p = maskTimeDeterminers(
+        normalizeTurn(input.priorQuestion, reading.sourceLanguage).text,
+        lang,
+      );
       const k = deriveKnowledgeRequirement(p, reading.sourceLanguage, false, year);
       return (
         genuineFreshness(p, reading.sourceLanguage, year) ||
@@ -867,6 +958,23 @@ export function interpretTurn(input: TurnInterpretationInput): {
         (input.priorWork?.kind === 'DECISION_CRITERIA' ? input.priorWork.label : null))
       : null;
 
+  /*
+    CTO R4 SEVEN-LANGUAGE §13 — DEFECT 4: A TIME-ANCHORED OBJECTIVE IS A CURRENT PART.
+    ROOT CAUSE: only the turn's own words were time-read. An objective stated earlier ("lowest
+    corporate tax rate right now", "obecnie najniższe ryzyko podróży") was inherited as a bare
+    criterion, so "So which one should I go with?" was weighed from timeless knowledge.
+    INVARIANT: a decision is weighed against its criterion, and the criterion is part of the turn's
+    meaning wherever it was stated: when the criterion is itself time-anchored (STRONG currentness in
+    the reader's own words of it), the decision keeps its reasoning AND names the criterion as the
+    part that needs current sourced evidence (the MIXED_ADVISORY_CURRENT contract).
+  */
+  if (advisory && decision && decisionObjective !== null) {
+    const anchored = readCurrentnessMarkers(decisionObjective, lang).some(PRESENT_STRONG);
+    const named = ('currentClauses' in knowledge ? knowledge.currentClauses : undefined) ?? [];
+    if (anchored && !named.includes(decisionObjective))
+      knowledge = { ...knowledge, currentClauses: [...named, decisionObjective] };
+  }
+
   /* the typed scope: when the IR has two actors and the landed typed place is not one of them
      (a venue city's country, a disputed object), the first actor is the typed place */
   const actorIsos: readonly string[] = relationshipAny?.countries ?? [];
@@ -934,7 +1042,7 @@ export function interpretTurn(input: TurnInterpretationInput): {
     accident (or nothing) decided is named here, and an interpretable one escalates.
   */
   const unresolvedFields: IrMaterialField[] = [];
-  if (unresolvedEligible) unresolvedFields.push('JOB');
+  if (unresolvedEligible || injected.length > 0) unresolvedFields.push('JOB');
   if (freshnessWeak) unresolvedFields.push('FRESHNESS', 'EVIDENCE');
   if (mixedUnresolved) unresolvedFields.push('MIXED');
   if (roles0.rolesIncomplete && resolution?.relation === undefined)

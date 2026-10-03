@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { AnalysisProvider, AnalysisProviderInput } from '../interfaces';
-import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
+import type { NewsArticle } from '@globalnews-ai/shared';
+import type { ResponseLanguage } from '../prompt/build-analysis-prompt.util';
 import { buildEvidenceReferences } from '../prompt/build-analysis-prompt.util';
 
 /**
@@ -52,7 +53,7 @@ const MOCK_STRINGS: Record<
   },
 };
 
-function resolveMockStrings(language: LanguageCode | undefined): (typeof MOCK_STRINGS)['en'] {
+function resolveMockStrings(language: ResponseLanguage | undefined): (typeof MOCK_STRINGS)['en'] {
   return language === 'pl' ? MOCK_STRINGS.pl : MOCK_STRINGS.en;
 }
 

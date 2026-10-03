@@ -1,4 +1,5 @@
 import { plTolerant } from '../pl-tolerant';
+import { maskTimeDeterminers, nonStateTimeDeterminers } from './time-determiners';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -94,45 +95,49 @@ function first(re: RegExp, text: string): string | null {
 export function readCurrentnessMarkers(clause: string, language: string): CurrentnessMarker[] {
   const lang: Lang = language === 'pl' ? 'pl' : 'en';
   const out: CurrentnessMarker[] = [];
+  /* defect 3 — the time readers read the clause with non-state time determiners masked */
+  const time = maskTimeDeterminers(clause, lang);
   const push = (fn: CurrentnessFunction, strength: 'STRONG' | 'WEAK', text: string | null) => {
     if (text !== null) out.push({ fn, strength, text });
   };
   if (lang === 'en') {
-    const explanation = EN_EXPLANATION_FRAME.test(clause);
+    const explanation = EN_EXPLANATION_FRAME.test(time);
     if (!EN_NOT_TIME_CURRENT.test(clause)) {
-      push('CURRENT_STATE', 'STRONG', first(EN_CURRENT_MODIFIER, clause));
+      push('CURRENT_STATE', 'STRONG', first(EN_CURRENT_MODIFIER, time));
       /* hardening — "current" before a head that is not a mutable state ("the current meaning of
          resilience") is not established time: WEAK, so a stable frame escalates instead of
          either silently ignoring it or sending it to news */
       if (!out.some((m) => m.fn === 'CURRENT_STATE'))
-        push('CURRENT_STATE', 'WEAK', first(/\b(?:current|present-day)\s+[\p{L}-]{3,}/iu, clause));
+        push('CURRENT_STATE', 'WEAK', first(/\b(?:current|present-day)\s+[\p{L}-]{3,}/iu, time));
     }
-    push('CURRENT_STATE', 'STRONG', first(EN_CURRENT_STATE_ADVERB, clause));
-    push('STATUS', explanation ? 'WEAK' : 'STRONG', first(EN_STATUS_YET, clause));
+    push('CURRENT_STATE', 'STRONG', first(EN_CURRENT_STATE_ADVERB, time));
+    push('STATUS', explanation ? 'WEAK' : 'STRONG', first(EN_STATUS_YET, time));
     /* "still" in an explanation ("why do people still believe…") is a present-era claim */
-    push('STATUS', explanation ? 'WEAK' : 'STRONG', first(EN_STATUS_STILL, clause));
-    push('SINCE_TO_NOW', 'STRONG', first(EN_SINCE_TO_NOW, clause));
-    push('RECENT', 'STRONG', first(EN_RECENT, clause));
-    push('CONTEMPORARY', 'WEAK', first(EN_CONTEMPORARY, clause));
+    push('STATUS', explanation ? 'WEAK' : 'STRONG', first(EN_STATUS_STILL, time));
+    push('SINCE_TO_NOW', 'STRONG', first(EN_SINCE_TO_NOW, time));
+    push('RECENT', 'STRONG', first(EN_RECENT, time));
+    push('CONTEMPORARY', 'WEAK', first(EN_CONTEMPORARY, time));
     /* "why do banks still use COBOL" — inside an explanation, "still" is a present-era claim */
     if (explanation && !out.some((m) => m.fn === 'STATUS'))
-      push('CONTEMPORARY', 'WEAK', first(/\bstill\b/i, clause));
+      push('CONTEMPORARY', 'WEAK', first(/\bstill\b/i, time));
   } else {
-    const explanation = PL_EXPLANATION_FRAME.test(clause);
-    push('CURRENT_STATE', 'STRONG', first(PL_CURRENT_MODIFIER, clause));
+    const explanation = PL_EXPLANATION_FRAME.test(time);
+    push('CURRENT_STATE', 'STRONG', first(PL_CURRENT_MODIFIER, time));
     if (!out.some((m) => m.fn === 'CURRENT_STATE'))
       push(
         'CURRENT_STATE',
         'WEAK',
         first(plTolerant(/(?:^|\s)(?:obecn|aktualn|współczesn)\p{L}*\s+\p{L}{3,}/iu), clause),
       );
-    push('CURRENT_STATE', 'STRONG', first(PL_CURRENT_STATE_ADVERB, clause));
-    push('STATUS', explanation ? 'WEAK' : 'STRONG', first(PL_STATUS, clause));
-    push('SINCE_TO_NOW', 'STRONG', first(PL_SINCE_TO_NOW, clause));
-    push('RECENT', 'STRONG', first(PL_RECENT, clause));
+    push('CURRENT_STATE', 'STRONG', first(PL_CURRENT_STATE_ADVERB, time));
+    push('STATUS', explanation ? 'WEAK' : 'STRONG', first(PL_STATUS, time));
+    push('SINCE_TO_NOW', 'STRONG', first(PL_SINCE_TO_NOW, time));
+    push('RECENT', 'STRONG', first(PL_RECENT, time));
     if (!out.some((m) => m.fn === 'STATUS'))
-      push('CONTEMPORARY', 'WEAK', first(PL_CONTEMPORARY, clause));
+      push('CONTEMPORARY', 'WEAK', first(PL_CONTEMPORARY, time));
   }
+  /* "today's money", "tomorrow's leaders": a present-era description, never a time adverb */
+  for (const d of nonStateTimeDeterminers(clause, lang)) push('CONTEMPORARY', 'WEAK', d.word);
   return out.sort((a, b) => (a.strength === b.strength ? 0 : a.strength === 'STRONG' ? -1 : 1));
 }
 

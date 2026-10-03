@@ -57,6 +57,7 @@ import { isAnaphoricFollowUp } from '../analysis/anchor/event-anchor.util';
 import { ComputeMeterService } from '../compute-controls/compute-meter.service';
 import { OperationalSwitchService } from '../compute-controls/operational-switch.service';
 import { withComparisonTable } from './comparison-table';
+import { isSemanticFirstLanguage } from '../ask-router/semantic-ir/semantic-first';
 import {
   dayBucket,
   GUEST_EXECUTIONS_ALL_SCOPE,
@@ -142,7 +143,7 @@ function withContinuation(result: ExecutionResult, request: Readonly<AskRequest>
  * the turn carried, overrode, reset and constrained nothing: a plain turn's request stays
  * byte-identical to before.
  */
-function conversationOf(turn: ConversationalTurn | null): Pick<AskRequest, 'conversation'> {
+export function conversationOf(turn: ConversationalTurn | null): Pick<AskRequest, 'conversation'> {
   if (turn === null) return {};
   const t = turn.trace;
   const trivial =
@@ -242,6 +243,25 @@ function clampPreview(question: string): string {
  * guest can only ever reach rows whose guestSessionId is its own. Recent, Saved and bookmarks
  * stay account-only and still take a bare userId.
  */
+/**
+ * CTO R4 seven-language — an interpreter-first turn (FR / DE / ES / PT / AR) carries the reader's
+ * OWN earlier questions in this thread (verbatim, oldest first, at most 3) for the one bounded
+ * interpretation: a stated objective or reference is taken from them as a verbatim span only.
+ * EN / PL keep their deterministic conversation state and carry nothing new.
+ */
+function readerTurnsOf(
+  language: string,
+  earlierNewestFirst: readonly { readonly question: string }[],
+): { readerTurns?: readonly string[] } {
+  if (!isSemanticFirstLanguage(language) || earlierNewestFirst.length === 0) return {};
+  return {
+    readerTurns: earlierNewestFirst
+      .slice(0, 3)
+      .map((t) => t.question)
+      .reverse(),
+  };
+}
+
 @Injectable()
 export class AskV2Service {
   constructor(
@@ -782,10 +802,9 @@ export class AskV2Service {
       composed into the question the one engine answers; otherwise the conversation's place is
       inherited exactly as before (conversation-place.ts).
     */
+    const earlier = surface === undefined ? await this.earlierQuestions(p, threadId) : [];
     const conversational =
-      surface === undefined
-        ? readConversationalTurn(question, input.language, await this.earlierQuestions(p, threadId))
-        : null;
+      surface === undefined ? readConversationalTurn(question, input.language, earlier) : null;
     const composed = conversational?.composition ?? null;
     /* CTO R4 — this conversation's earlier work (a context-bearing turn is about its own context) */
     const priorArtifact =
@@ -816,6 +835,7 @@ export class AskV2Service {
           }),
       ...conversationOf(conversational),
       ...(priorArtifact === undefined ? {} : { priorArtifact }),
+      ...readerTurnsOf(input.language, earlier),
     };
     const owner = ownerOf(p);
     /* R2B — a context-bearing turn appends its SERVER-RESOLVED identity; a context-free turn
@@ -1106,6 +1126,9 @@ export class AskV2Service {
             }),
         ...conversationOf(conversational),
         ...(priorArtifact === undefined ? {} : { priorArtifact }),
+        ...(persisted?.context === undefined || isConversationContext(persisted.context)
+          ? readerTurnsOf(turn.language, earlierTurns)
+          : {}),
       } as AskRequest;
       // Revalidate pending R1 operations too. Stored reuse above never calls the adapter.
       try {

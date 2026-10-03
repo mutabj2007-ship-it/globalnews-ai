@@ -69,6 +69,7 @@ import { type TemporalSemantics } from './temporal-semantics';
 import { interpretTurn, type BoundedConversationState } from './semantic-ir/interpret-turn';
 import type { SemanticResolution } from './semantic-ir/semantic-interpreter';
 import { SEMANTIC_IR_VERSION, type SemanticTurnIR } from './semantic-ir/semantic-turn-ir';
+import { isDisplayLocale } from '@globalnews-ai/shared';
 
 /** The vocabulary frozen C derives axes in (its `DERIVATION_COVERAGE`). */
 export const NORMALIZATION_VOCABULARY = 'en';
@@ -240,7 +241,11 @@ export function missingSeams(route: AskR2Route): readonly string[] {
     return missing;
   }
   if (s.landed === null) missing.push('LANDED_READINGS');
-  else if (s.landed.queryIntent !== 'classifyQueryIntent') missing.push('LANDED_INTENT');
+  else if (
+    s.landed.queryIntent !==
+    (s.normalization === 'SEMANTIC_FIRST' ? 'SEMANTIC_IR' : 'classifyQueryIntent')
+  )
+    missing.push('LANDED_INTENT');
   if (route.outcome.status !== 'NOT_READ') {
     /* The domains the reader's words carry: the reading's, plus a specialist domain the
        reader explicitly NAMED (GATE H S6 — frozen D3a/R1 key such a leg on this axis). */
@@ -493,11 +498,37 @@ export function composeEnvelopeSource(
   };
 }
 
+/**
+ * CTO R4 seven-language — the landed reading of an interpreter-first turn: language-neutral facts
+ * only (an earlier question exists; an article anchor resolved). No EN classifier reads FR–AR text.
+ */
+function semanticFirstLanded(ctx: AskRouteContext): ReturnType<typeof readLandedClassifiers> {
+  const prior = ctx.priorQuestion?.trim() ?? '';
+  return {
+    reading: {
+      queryIntent: 'EXPLANATION',
+      analyticalDomains: [],
+      sourceAttributed: { parsed: false, namedPublisher: null },
+      eventAnchor: { hasEventAnchor: false, aspectCount: 0 },
+      conversationSubject: { hasPriorQuestion: prior.length > 0, focusFromPriorQuestion: [] },
+      questionAsksAboutCoverage: false,
+    },
+    trace: {
+      queryIntent: 'SEMANTIC_IR',
+      analyticalDomains: [],
+      sourceAttributed: 'SEMANTIC_FIRST',
+      eventAnchor: 'SEMANTIC_FIRST',
+      conversationSubject: prior.length > 0 ? 'SEMANTIC_FIRST' : 'NO_PRIOR_QUESTION',
+      questionAsksAboutCoverage: 'SEMANTIC_FIRST',
+    },
+  };
+}
+
 /** A question that was not read has an empty interpretation: frozen C's clarification decides. */
 function unreadIR(language: string): SemanticTurnIR {
   return {
     version: SEMANTIC_IR_VERSION,
-    language: language === 'pl' ? 'pl' : 'en',
+    language: isDisplayLocale(language) ? language : 'en',
     turn: {
       primaryJob: null,
       depth: 'STANDARD',
@@ -611,10 +642,15 @@ export function routeAskR2(
           })),
         }
       : outcome.reading;
-  const landed = readLandedClassifiers(reading.originalQuestion, reading.domains, {
-    ...(ctx.priorQuestion === undefined ? {} : { priorQuestion: ctx.priorQuestion }),
-    hasResolvedArticleAnchor: ctx.hasResolvedArticleAnchor === true,
-  });
+  /* CTO R4 seven-language — an interpreter-first turn (FR / DE / ES / PT / AR) never meets the EN
+     landed classifiers: its landed reading is language-neutral and its intent is the IR's (below) */
+  const semanticFirst = outcome.status === 'SEMANTIC_FIRST';
+  const landed = semanticFirst
+    ? semanticFirstLanded(ctx)
+    : readLandedClassifiers(reading.originalQuestion, reading.domains, {
+        ...(ctx.priorQuestion === undefined ? {} : { priorQuestion: ctx.priorQuestion }),
+        hasResolvedArticleAnchor: ctx.hasResolvedArticleAnchor === true,
+      });
 
   const typed = ctx.questionIsStoryHeadline === true ? undefined : typedGeographyOf(reading);
   const eligibility = decideContextEligibility(reading.subject, {
@@ -623,9 +659,11 @@ export function routeAskR2(
     intentClass: landed.reading.queryIntent,
   });
 
-  const capability = readCapabilityRequests(reading.originalQuestion, reading.sourceLanguage, {
-    hasResolvedArticleAnchor: ctx.hasResolvedArticleAnchor === true,
-  });
+  const capability = semanticFirst
+    ? { source: {}, trace: [] }
+    : readCapabilityRequests(reading.originalQuestion, reading.sourceLanguage, {
+        hasResolvedArticleAnchor: ctx.hasResolvedArticleAnchor === true,
+      });
   /* A specialist the reader explicitly named keys its leg on the domain axis (frozen D3a:
      the requested domain is both read and explicit). Appended, never substituted. */
   const namedDomains = (capability.source.explicitSpecialistDomains ?? []).filter(
@@ -707,9 +745,21 @@ export function routeAskR2(
     ...(ctx.turnIndex === undefined ? {} : { turnIndex: ctx.turnIndex }),
     ...(resolution === undefined ? {} : { resolution }),
   });
+  /* interpreter-first: the landed intent IS the IR's decision (current evidence → a current event) */
+  const composedLanded = semanticFirst
+    ? {
+        ...landedReading,
+        queryIntent: (d.knowledge.requirement !== null &&
+        d.knowledge.requirement !== 'STABLE_REFERENCE' &&
+        d.knowledge.requirement !== 'ADVISORY' &&
+        d.knowledge.requirement !== 'DECISION_SUPPORT'
+          ? 'CURRENT_EVENT'
+          : 'EXPLANATION') as typeof landedReading.queryIntent,
+      }
+    : landedReading;
   const composedSource = composeEnvelopeSource(
     reading,
-    landedReading,
+    composedLanded,
     eligibility,
     ctx,
     capability.source,

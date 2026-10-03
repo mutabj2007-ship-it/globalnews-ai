@@ -70,13 +70,22 @@ import {
   PL_STANCE,
 } from './pl-readings.resources';
 import { readSemanticSubject } from './semantic-subject';
+import { maskTimeDeterminers } from '../semantic-ir/time-determiners';
+import { readLocalizedEntityCandidates } from '../semantic-ir/localized-entities';
+import type { LocalizedLanguage } from '../semantic-ir/localized-country-names';
 
 /* ── 1 · THE THREE LANGUAGE AXES ─────────────────────────────────────────── */
 
-export type LanguageCode = 'en' | 'pl' | 'sw' | 'fr' | 'es' | 'ar' | 'rw';
+export type LanguageCode = 'en' | 'pl' | 'sw' | 'fr' | 'de' | 'es' | 'pt' | 'ar' | 'rw';
 
 /** Languages whose READINGS RESOURCES exist. Not a public-support claim. */
 export const READABLE_LANGUAGES: readonly LanguageCode[] = ['en', 'pl'];
+/**
+ * CTO R4 SEVEN-LANGUAGE RULING (Option 1) — product languages that enter the SemanticTurnIR
+ * INTERPRETER-FIRST: no EN / PL reading resource is applied to them; the boundary reads only what
+ * is language-independent and governed (the declared language, localized canonical geography).
+ */
+export const SEMANTIC_FIRST_LANGUAGES: readonly LanguageCode[] = ['fr', 'de', 'es', 'pt', 'ar'];
 
 export type AskOrigin = 'ASK' | 'MAP' | 'ANALYSIS';
 
@@ -191,6 +200,12 @@ export interface ReadingLoss {
 export type NormalizationOutcome =
   | {
       readonly status: 'QUALIFIED';
+      readonly reading: QualifiedReading;
+      readonly losses: readonly [];
+    }
+  | {
+      /** CTO R4 seven-language — read interpreter-first: only language-independent readings */
+      readonly status: 'SEMANTIC_FIRST';
       readonly reading: QualifiedReading;
       readonly losses: readonly [];
     }
@@ -326,7 +341,8 @@ const EN_STANCE = ['position', 'stance', 'view', 'views', 'policy', 'response', 
   (a town or province, never a country) that sits exactly in the name slot of that frame is
   dropped; "Who is the president of Kenya?" (a country, not the name slot) is untouched.
 */
-const PERSON_FRAME = /^\s*(?:who\s+(?:was|is|were|are)|kim\s+(?:by[łl]|jest|s[ąa]))\s+(.+?)\s*[?.!]*\s*$/iu;
+const PERSON_FRAME =
+  /^\s*(?:who\s+(?:was|is|were|are)|kim\s+(?:by[łl]|jest|s[ąa]))\s+(.+?)\s*[?.!]*\s*$/iu;
 function isPersonFrameTown(
   text: string,
   geo: { readonly precision: string; readonly matchedText?: string },
@@ -395,6 +411,55 @@ function readCategory(
   return undefined;
 }
 
+/* ── 6b · THE INTERPRETER-FIRST READING (FR / DE / ES / PT / AR) ─────────── */
+
+/**
+ * CTO R4 seven-language §2 — what the boundary may read without understanding the language: the
+ * declared language and the localized canonical geography (Stage A, identity only). Every
+ * language-dependent reading (domains, dates, periods, currentness, negation, shape, subject) is
+ * EMPTY by declaration, never guessed: the one bounded interpreter reads the meaning.
+ */
+function semanticFirstReading(req: NormalizationRequest, text: string): QualifiedReading {
+  const geography: ReadingElement<string>[] = [];
+  for (const iso3 of req.originCountries ?? [])
+    geography.push(el(iso3, undefined, 'SUPPLIED_BY_SURFACE', `origin:${req.origin}`));
+  for (const c of readLocalizedEntityCandidates(text, req.sourceLanguage as LocalizedLanguage)) {
+    if ((c.type !== 'COUNTRY' && c.type !== 'TERRITORY') || c.iso3 === null) continue;
+    if (geography.some((g) => g.value === c.iso3 && g.provenance !== 'SUPPLIED_BY_SURFACE'))
+      continue;
+    geography.push(el(c.iso3, c.surface, 'SURFACE_FORM_SET', 'LOCALIZED_STAGE_A'));
+  }
+  const standing = el<CurrentnessReading>(
+    'STANDING',
+    undefined,
+    'LEXICON_WHOLE_TOKEN',
+    'SEMANTIC_FIRST',
+  );
+  return {
+    originalQuestion: req.originalQuestion,
+    sourceLanguage: req.sourceLanguage,
+    normalizationLanguage: req.normalizationLanguage,
+    displayLanguage: req.displayLanguage,
+    entities: [],
+    geography,
+    dates: [],
+    periods: [],
+    numbers: [],
+    negation: [],
+    domains: [],
+    relations: [],
+    currentness: standing,
+    subject: { shape: 'NOT_A_REFERENCE_QUESTION', capitalizedInRawQuery: false },
+    shape: {
+      officeConstruction: false,
+      currencyMarker: false,
+      quantitativeChange: false,
+      institutionalPosition: false,
+    },
+    defeaters: [],
+  };
+}
+
 /* ── 7 · THE BOUNDARY ────────────────────────────────────────────────────── */
 
 export function normalizeAskQuestion(req: NormalizationRequest): NormalizationOutcome {
@@ -402,6 +467,11 @@ export function normalizeAskQuestion(req: NormalizationRequest): NormalizationOu
   const losses: ReadingLoss[] = [];
 
   if (text.length === 0) return { status: 'NOT_READ', failure: 'NO_READABLE_CONTENT', losses: [] };
+  if (SEMANTIC_FIRST_LANGUAGES.includes(req.sourceLanguage)) {
+    if (req.normalizationLanguage !== req.sourceLanguage)
+      return { status: 'NOT_READ', failure: 'LANGUAGE_DECLARATION_CONFLICT', losses: [] };
+    return { status: 'SEMANTIC_FIRST', reading: semanticFirstReading(req, text), losses: [] };
+  }
   if (!READABLE_LANGUAGES.includes(req.sourceLanguage)) {
     return { status: 'NOT_READ', failure: 'LANGUAGE_NOT_READABLE', losses: [] };
   }
@@ -557,7 +627,10 @@ export function normalizeAskQuestion(req: NormalizationRequest): NormalizationOu
     );
   }
 
-  /* dates and periods — L's readings, unchanged */
+  /* dates and periods — L's readings, unchanged. CTO R4 seven-language §13 (defect 3): read on the
+     text with possessive time determiners before a non-state head masked ("today's money" is not
+     a date, a period or a currency marker); same length, so every match keeps its position. */
+  const timeText = maskTimeDeterminers(text, pl ? 'pl' : 'en');
   const dates: ReadingElement<string>[] = [];
   const periods: ReadingElement<string>[] = [];
   if (pl) {
@@ -580,11 +653,11 @@ export function normalizeAskQuestion(req: NormalizationRequest): NormalizationOu
     if (pd) periods.push(el(pd, pd, 'LEXICON_WHOLE_TOKEN', 'PL_PERIOD_HEADS'));
   } else {
     for (const r of EN_DATE) {
-      const m = text.match(r);
+      const m = timeText.match(r);
       if (m) dates.push(el(m[0], m[0], 'LEXICON_WHOLE_TOKEN', 'EN_DATE'));
     }
     for (const r of EN_PERIOD) {
-      const m = text.match(r);
+      const m = timeText.match(r);
       if (m) periods.push(el(m[0], m[0], 'LEXICON_WHOLE_TOKEN', 'EN_PERIOD'));
     }
   }
@@ -609,7 +682,7 @@ export function normalizeAskQuestion(req: NormalizationRequest): NormalizationOu
   }
 
   /* currentness */
-  const curTok = pl ? hasToken(toks, PL_CURRENT) : text.match(EN_CURRENT)?.[0];
+  const curTok = pl ? hasToken(toks, PL_CURRENT) : timeText.match(EN_CURRENT)?.[0];
   const firstPeriod = periods[0];
   const firstDate = dates[0];
   const currentness: ReadingElement<CurrentnessReading> = firstPeriod
@@ -648,7 +721,7 @@ export function normalizeAskQuestion(req: NormalizationRequest): NormalizationOu
   }
 
   const firstDomain = domains[0];
-  const statedTime = readStatedTime(text, pl);
+  const statedTime = readStatedTime(timeText, pl);
 
   /* GATE H — Main MC-052: one token, one reading. A place the resolver found INSIDE a span
      already read as a date or stated period ("August" in "August 2026") is dropped. */

@@ -1,3 +1,4 @@
+import type { DisplayLocale } from '@globalnews-ai/shared';
 import type {
   AnalysisDevelopmentBreadth,
   EvidenceFreshnessFact,
@@ -771,7 +772,7 @@ export function buildAnalysisMessages(
   articles: NewsArticle[],
   maxChars: number,
   relationalContext?: RelationalPromptContext,
-  responseLanguage: LanguageCode = 'en',
+  responseLanguage: ResponseLanguage = 'en',
   repairDirective?: string,
   developmentBreadth?: AnalysisDevelopmentBreadth,
   comparisonCoverage?: ComparisonCountryCoverage[],
@@ -856,7 +857,14 @@ export function buildAnalysisMessages(
  * and none is added, preserving byte-for-byte prior prompt behavior
  * for every English request.
  */
-export function buildResponseLanguageInstruction(language: LanguageCode): string {
+/**
+ * CTO R4 SEVEN-LANGUAGE §6 — the language an answer is WRITTEN in: a representable LanguageCode or a
+ * contracted DisplayLocale (de / pt are display locales, not retrieval LanguageCodes — LANG-UI-7-D1
+ * keeps LanguageCode unwidened). Never an intermediate English: the instruction names the reader's.
+ */
+export type ResponseLanguage = LanguageCode | DisplayLocale;
+
+export function buildResponseLanguageInstruction(language: ResponseLanguage): string {
   if (language === 'en') return '';
 
   const languageName = RESPONSE_LANGUAGE_NAMES[language];
@@ -864,12 +872,14 @@ export function buildResponseLanguageInstruction(language: LanguageCode): string
   return `\n\nRespond in ${languageName}. All prose fields (headline, summary, claim text, agreement/difference descriptions, uncertainty text, explanations, entity labels, etc.) must be written in ${languageName}. Do NOT translate, alter, or localize: article IDs, evidenceId values, citation identifiers, or any enum/machine-readable field value (e.g. direction, sufficiency, confidence level tokens) — those must remain exactly as specified by the schema.`;
 }
 
-const RESPONSE_LANGUAGE_NAMES: Record<LanguageCode, string> = {
+const RESPONSE_LANGUAGE_NAMES: Record<ResponseLanguage, string> = {
   en: 'English',
   pl: 'Polish',
   sw: 'Swahili',
   fr: 'French',
+  de: 'German',
   es: 'Spanish',
+  pt: 'Portuguese',
   ar: 'Arabic',
   rw: 'Kinyarwanda',
 };
@@ -1250,8 +1260,7 @@ export function buildAnalysisJsonSchema(
               type: 'number',
               minimum: 0,
               maximum: 100,
-              description:
-                'Integer 0-100, where 100 is maximum confidence. NOT a 0-1 probability.',
+              description: 'Integer 0-100, where 100 is maximum confidence. NOT a 0-1 probability.',
             },
             explanation: { type: 'string' },
           },
@@ -1387,8 +1396,7 @@ export function describeNewestEvidence(newestEvidence?: EvidenceFreshnessFact): 
 const SELECTION_ACTION_INSTRUCTIONS: Readonly<Record<SelectionPromptContext['action'], string>> = {
   COMPARE:
     'COMPARE the selected stories: state what they agree on (agreements) and where they differ (differences), each point cited to the stories that support it.',
-  SUMMARIZE:
-    'SUMMARIZE the selected stories only. Do not add anything they do not report.',
+  SUMMARIZE: 'SUMMARIZE the selected stories only. Do not add anything they do not report.',
   ASK_SELECTED:
     "ANSWER the reader's question using ONLY the selected stories as evidence. If they do not answer it, say so plainly.",
   EXPLAIN_DISAGREEMENTS:
@@ -1414,7 +1422,7 @@ export function buildConversationSubjectInstruction(subject?: ConversationSubjec
   const lines = [
     '',
     '',
-    'CONVERSATION SUBJECT (from the reader\'s own previous question, not from any previous answer):',
+    "CONVERSATION SUBJECT (from the reader's own previous question, not from any previous answer):",
     `- The question is a follow-up about: "${subject.subject}". Read "this", "it" and similar words in the question as referring to that subject. The evidence was retrieved for that subject.`,
     '- Answer the question exactly as the reader asked it. Nothing from an earlier answer is supplied, and nothing may be assumed from one.',
   ];

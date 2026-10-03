@@ -7,10 +7,18 @@ import {
   type ResolvedAskContext,
 } from './context/resolved-ask-context';
 import type { PriorArtifact } from './conversation/conversation-artifact';
+import { DISPLAY_LOCALES, type DisplayLocale } from '@globalnews-ai/shared';
 
 export const SAND_CHARGING_ENABLED = false as const;
 export const ASK_EXECUTION_PORT = Symbol('ASK_EXECUTION_PORT');
-export type Language = 'en' | 'pl';
+/**
+ * CTO R4 SEVEN-LANGUAGE RULING §1 — the Ask request accepts the seven product languages (the
+ * contracted DisplayLocale set). The language never changes thread semantics and never selects
+ * another engine: EN / PL are read deterministically first; FR / DE / ES / PT / AR enter the same
+ * SemanticTurnIR interpreter-first. The question text is preserved exactly as written.
+ */
+export type Language = DisplayLocale;
+export const ASK_LANGUAGES: readonly Language[] = DISPLAY_LOCALES;
 export type Intent = 'ask' | 'deep-analysis' | 'research-report';
 export type ComputeClass =
   'STORED' | 'CONTEXTUAL' | 'FRESH_BOUNDED' | 'DEEP_ANALYSIS' | 'RESEARCH_REPORT';
@@ -49,6 +57,13 @@ export interface AskRequest {
    * evidence, scope or a preference. Absent when the thread holds none.
    */
   priorArtifact?: PriorArtifact;
+  /**
+   * CTO R4 seven-language — for an interpreter-first turn (FR / DE / ES / PT / AR) only: the
+   * reader's OWN earlier questions in this owner-verified thread (verbatim, newest last, at most 3),
+   * from which the one bounded interpretation may take a stated objective or a reference — as a
+   * verbatim span, never as model text. Never client input; absent for EN / PL.
+   */
+  readerTurns?: readonly string[];
   conversation?: {
     readonly officialSourcesOnly: boolean;
     /** The turn only stated a preference / constraint ("Only official sources.") — no job. */
@@ -245,6 +260,15 @@ export function safeReturnPath(path?: string): string | null {
   }
   return path;
 }
+const RETURN_LABEL: Readonly<Record<Language, string>> = {
+  en: 'Back',
+  pl: 'Wróć',
+  fr: 'Retour',
+  de: 'Zurück',
+  es: 'Volver',
+  pt: 'Voltar',
+  ar: 'رجوع',
+};
 export function returnLabel(language: Language): string {
-  return language === 'pl' ? 'Wróć' : 'Back';
+  return RETURN_LABEL[language] ?? RETURN_LABEL.en;
 }

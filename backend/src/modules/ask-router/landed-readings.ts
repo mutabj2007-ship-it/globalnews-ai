@@ -44,12 +44,14 @@ export interface LandedReadingInputs {
 
 /** Provenance for each of the six readings — IC-8. */
 export interface LandedReadingTrace {
-  readonly queryIntent: 'classifyQueryIntent';
+  /** SEMANTIC_IR: an interpreter-first turn (CTO R4 seven-language) — the intent is the IR's */
+  readonly queryIntent: 'classifyQueryIntent' | 'SEMANTIC_IR';
   readonly analyticalDomains: readonly string[];
-  readonly sourceAttributed: 'detectSourceAttributedIntent';
-  readonly eventAnchor: 'deriveEventTopic+detectEventAspects';
-  readonly conversationSubject: 'deriveConversationSubject' | 'NO_PRIOR_QUESTION';
-  readonly questionAsksAboutCoverage: 'asksAboutCoverage';
+  readonly sourceAttributed: 'detectSourceAttributedIntent' | 'SEMANTIC_FIRST';
+  readonly eventAnchor: 'deriveEventTopic+detectEventAspects' | 'SEMANTIC_FIRST';
+  readonly conversationSubject:
+    'deriveConversationSubject' | 'NO_PRIOR_QUESTION' | 'SEMANTIC_FIRST';
+  readonly questionAsksAboutCoverage: 'asksAboutCoverage' | 'SEMANTIC_FIRST';
 }
 
 export interface LandedReadings {

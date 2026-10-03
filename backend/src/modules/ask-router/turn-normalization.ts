@@ -59,6 +59,9 @@ const PL_DISCOURSE_NOW =
 
 export function normalizeTurn(question: string, language: string): NormalizedTurn {
   const applied: NormalizedTurn['applied'][number][] = [];
+  /* CTO R4 seven-language — an interpreter-first language (FR / DE / ES / PT / AR) is read by the
+     one bounded interpreter on the ORIGINAL text: no form normalization at all (trim only) */
+  if (language !== 'en' && language !== 'pl') return { text: question.trim(), applied };
   let text = question;
   const quotes = text
     .replace(/[‘’‛′]/g, "'")

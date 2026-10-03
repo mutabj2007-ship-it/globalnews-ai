@@ -1,4 +1,4 @@
-import { findCountryByIso3 } from '@globalnews-ai/shared';
+import { DISPLAY_LOCALES, findCountryByIso3, type DisplayLocale } from '@globalnews-ai/shared';
 import type { RelationKind } from '../bilateral-relationship';
 import {
   TRANSFORMATIONS,
@@ -120,7 +120,8 @@ export interface IrReferences {
 
 export interface SemanticTurnIR {
   readonly version: typeof SEMANTIC_IR_VERSION;
-  readonly language: 'en' | 'pl';
+  /** CTO R4 seven-language — the declared product language (never inferred, never translated) */
+  readonly language: DisplayLocale;
   readonly turn: {
     readonly primaryJob: UserJob | null;
     readonly depth: Depth;
@@ -248,7 +249,7 @@ export function completenessOf(
 export function validateSemanticTurnIR(ir: SemanticTurnIR, text: string): string[] {
   const v: string[] = [];
   if (ir.version !== SEMANTIC_IR_VERSION) v.push('VERSION');
-  if (ir.language !== 'en' && ir.language !== 'pl') v.push('LANGUAGE');
+  if (!(DISPLAY_LOCALES as readonly string[]).includes(ir.language)) v.push('LANGUAGE');
   const t = ir.turn;
   if (t.primaryJob !== null && !(USER_JOBS as readonly string[]).includes(t.primaryJob))
     v.push('JOB_VOCABULARY');
@@ -266,7 +267,11 @@ export function validateSemanticTurnIR(ir: SemanticTurnIR, text: string): string
   if (
     t.freshness === 'MIXED' &&
     ir.clauses.length < 2 &&
-    t.temporalRole !== 'HISTORICAL_AND_CURRENT'
+    t.temporalRole !== 'HISTORICAL_AND_CURRENT' &&
+    /* defect 4 — a decision whose criterion is time-anchored: the criterion is the current part */
+    ir.objective === null &&
+    /* defect 2 — earlier work re-examined against the present: the work is the other component */
+    (ir.references.artifact === null || ir.references.target === 'NONE')
   )
     v.push('MIXED_WITHOUT_TWO_COMPONENTS');
   for (const c of ir.clauses)

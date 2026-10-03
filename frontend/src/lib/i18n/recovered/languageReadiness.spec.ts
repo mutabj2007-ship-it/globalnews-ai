@@ -64,7 +64,10 @@ const matrix = Object.fromEntries(
 /* Code facts, read from the source so the matrix cannot drift from the system. */
 const backend = (...p: string[]) =>
   readFileSync(join(__dirname, '..', '..', '..', '..', '..', 'backend', 'src', ...p), 'utf8');
-const askDtoLanguages = /@IsIn\(\[([^\]]*)\]\)/.exec(backend('modules', 'ask-v2', 'ask-v2.dto.ts'))?.[1] ?? '';
+/* CTO R4 SEVEN-LANGUAGE RULING — the Ask REQUEST contract accepts the seven display locales; EN / PL
+   are read deterministically, FR / DE / ES / PT / AR interpreter-first. The UI offer is unchanged. */
+const askDto = backend('modules', 'ask-v2', 'ask-v2.dto.ts');
+const askContract = backend('modules', 'ask-v2', 'ask-compute.contract.ts');
 const knowledgeLanguages = /language !== 'en' && language !== 'pl'/.test(
   backend('modules', 'ask-router', 'knowledge-requirement.ts'),
 );
@@ -89,8 +92,10 @@ describe('§11 — recovered catalogues are measured, never trusted, and never w
     expect(matrix.rw.covered).toBe(0);
   });
 
-  it('Ask itself understands and answers only English and Polish today (code fact)', () => {
-    expect(askDtoLanguages.replace(/\s/g, '')).toBe("'en','pl'");
+  it('the Ask request contract accepts the seven display locales; deterministic readers stay EN/PL (code fact)', () => {
+    expect(askDto).toMatch(/@IsIn\(ASK_LANGUAGES as readonly string\[\]\)/);
+    expect(askContract).toMatch(/export type Language = DisplayLocale;/);
+    expect(askContract).toMatch(/export const ASK_LANGUAGES: readonly Language\[\] = DISPLAY_LOCALES;/);
     expect(knowledgeLanguages).toBe(true);
   });
 
@@ -104,7 +109,12 @@ describe('§11 — recovered catalogues are measured, never trusted, and never w
         .filter(([, n]) => n.covered < n.total)
         .map(([ns, n]) => `${ns} ${n.covered}/${n.total}`)
         .join('; ');
-      const askReady = lang === 'pl' ? 'YES (EN/PL governed)' : 'NO — Ask DTO accepts en/pl only';
+      const askReady =
+        lang === 'pl'
+          ? 'YES (EN/PL governed)'
+          : lang === 'sw' || lang === 'rw'
+            ? 'NO — not a display locale'
+            : 'BACKEND ONLY — interpreter-first (not selectable in the UI)';
       return `| ${lang} | ${pct(c)} | ${askReady} | ${lang === 'pl' ? 'YES' : 'NOT VERIFIED'} | ${lang === 'pl' ? 'YES' : 'NOT EVALUATED'} | ${nsGaps || '—'} |`;
     });
     writeFileSync(

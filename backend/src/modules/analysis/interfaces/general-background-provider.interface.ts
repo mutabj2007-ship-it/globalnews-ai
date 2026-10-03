@@ -1,4 +1,5 @@
-import type { AnalysisFailureReason, LanguageCode } from '@globalnews-ai/shared';
+import type { ResponseLanguage } from '../prompt/build-analysis-prompt.util';
+import type { AnalysisFailureReason } from '@globalnews-ai/shared';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -26,7 +27,7 @@ import type { AnalysisFailureReason, LanguageCode } from '@globalnews-ai/shared'
  */
 export interface GeneralBackgroundInput {
   readonly question: string;
-  readonly responseLanguage: LanguageCode;
+  readonly responseLanguage: ResponseLanguage;
   /** Ask R2 Gate E ceiling (ASK_MODEL_MAX_ATTEMPTS = 1 today). Never raised here. */
   readonly maxModelAttempts?: number;
   readonly signal?: AbortSignal;

@@ -11,18 +11,18 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import type { Intent, Language } from './ask-compute.contract';
+import { ASK_LANGUAGES, type Intent, type Language } from './ask-compute.contract';
 import { AskTurnContextDto } from './context/ask-turn-context.dto';
 
 export class CreateThreadDto {
   @IsString() @Length(1, 128) idempotencyKey!: string;
-  @IsIn(['en', 'pl']) language!: Language;
+  @IsIn(ASK_LANGUAGES as readonly string[]) language!: Language;
   @IsOptional() @IsString() @Length(1, 500) returnPath?: string;
 }
 export class QuoteTurnDto {
   @IsString() @Length(1, 128) idempotencyKey!: string;
   @IsString() @Length(2, 1000) question!: string;
-  @IsIn(['en', 'pl']) language!: Language;
+  @IsIn(ASK_LANGUAGES as readonly string[]) language!: Language;
   @IsIn(['ask', 'deep-analysis', 'research-report']) intent!: Intent;
   /**
    * UNIFIED INTELLIGENCE BINDING R2B — ONE optional context reference (STORY or GEOGRAPHY).

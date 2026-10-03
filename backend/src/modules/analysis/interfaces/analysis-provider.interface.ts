@@ -1,10 +1,10 @@
+import type { ResponseLanguage } from '../prompt/build-analysis-prompt.util';
 import type {
   AnalysisEvidenceState,
   ComparisonCountryCoverage,
   ConversationSubjectAnchor,
   EventAnchor,
   EventEvidenceRelation,
-  LanguageCode,
   NewsArticle,
 } from '@globalnews-ai/shared';
 
@@ -82,7 +82,7 @@ export interface AnalysisProviderInput {
    * unmodified prompt behavior — so every pre-Milestone-#47 caller
    * that never sets this field is completely unaffected.
    */
-  responseLanguage?: LanguageCode;
+  responseLanguage?: ResponseLanguage;
 
   /**
    * EXECUTIVE-BRIEF-STRUCTURAL-COMPLIANCE-RECOVERY-1 — THE AUTHORITATIVE
