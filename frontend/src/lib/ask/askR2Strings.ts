@@ -423,6 +423,14 @@ const EN: AskR2Strings = {
       INSTITUTIONAL: 'regional institutions',
       DIPLOMATIC: 'relations',
       SECURITY: 'security',
+      /* CTO R4 fourth pass — relation families beyond commerce */
+      WAR: 'war',
+      TERRITORIAL_DISPUTE: 'territorial dispute',
+      ALLIANCE: 'alliance',
+      COMPETITION: 'rivalry',
+      POLICY_COORDINATION: 'policy coordination',
+      ECONOMIC: 'economic ties',
+      HISTORICAL_RELATION: 'history',
     },
     decisionObjectiveMissing: 'Best for what objective? The answer depends on it.',
     objectives: {
@@ -712,6 +720,13 @@ const PL: AskR2Strings = {
       INSTITUTIONAL: 'instytucje regionalne',
       DIPLOMATIC: 'stosunki',
       SECURITY: 'bezpieczeństwo',
+      WAR: 'wojna',
+      TERRITORIAL_DISPUTE: 'spór terytorialny',
+      ALLIANCE: 'sojusz',
+      COMPETITION: 'rywalizacja',
+      POLICY_COORDINATION: 'koordynacja polityki',
+      ECONOMIC: 'więzi gospodarcze',
+      HISTORICAL_RELATION: 'historia',
     },
     decisionObjectiveMissing: 'Najlepsza pod jakim względem? Od tego zależy odpowiedź.',
     objectives: {

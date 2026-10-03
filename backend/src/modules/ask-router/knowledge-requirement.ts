@@ -11,6 +11,8 @@ import {
   refersToCurrentYear,
 } from './advisory-requirement';
 import { readDecisionSupport } from './decision-support';
+import { foldPl, plTolerant } from './pl-tolerant';
+import { temporallyCurrent, temporallyPastOnly } from './temporal-semantics';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -109,6 +111,15 @@ const STABLE_SHAPES: Readonly<Record<'en' | 'pl', readonly RegExp[]>> = {
     /^what\s+does\s+.+\s+mean\b/i,
     /* R3 — the past as explanation ("How did the Meiji restoration begin?") */
     /^how\s+did\b/i,
+    /* CTO R4 fourth pass — the stable SEMANTIC forms (difference, similarity, mechanism, cause,
+       implication), not a mirror of interrogatives */
+    /^how\s+(?:is|are|was|were)\s+.{2,80}?\s+(?:different|similar)\s+(?:from|to)\b/i,
+    /^what\s+(?:distinguishes|separates|explains|drives|determines|links|connects|unites)\b/i,
+    /^what\s+do\s+.{2,80}?\s+have\s+in\s+common\b/i,
+    /^where\s+(?:does|do)\s+.{2,60}?\s+come\s+from\b/i,
+    /^what\s+(?:are|is)\s+the\s+(?:consequences?|effects?|implications?|impacts?|causes?|roots?|origins?|similarit(?:y|ies)|mechanisms?|drivers?)\s+of\b/i,
+    /^what\s+(?:does|would|could)\s+.{2,80}?\s+mean\s+for\b/i,
+    /^what\s+(?:impact|effect|role)\s+(?:does|do|can|could|did)\b/i,
   ],
   pl: [
     /^(?:czym\s+(?:jest|s[ąa])|co\s+to\s+(?:jest|s[ąa]|za))\b/iu,
@@ -121,7 +132,16 @@ const STABLE_SHAPES: Readonly<Record<'en' | 'pl', readonly RegExp[]>> = {
     /^na\s+czym\s+polega\b/iu,
     /^co\s+powoduje\b/iu,
     /^jak\s+dosz[łl]o\b/iu,
-  ],
+    /* CTO R4 fourth pass — the stable SEMANTIC forms in Polish (difference, similarity,
+       mechanism, cause, implication), with or without diacritics (plTolerant) */
+    /^czym\s+(?:się\s+)?różni\p{L}*/iu,
+    /^co\s+(?:odróżnia|różni|łączy|wyróżnia)(?![\p{L}])/iu,
+    /^jaka\s+jest\s+różnica(?![\p{L}])/iu,
+    /^(?:jakie|jaki|jaka)\s+(?:są\s+|jest\s+|ma\s+|mają\s+)?(?:różnic\p{L}*|podobieństw\p{L}*|skutk\p{L}*|konsekwencj\p{L}*|przyczyn\p{L}*|źródł\p{L}*|mechanizm\p{L}*|wpływ\p{L}*|znaczeni\p{L}*|rol\p{L}*)(?![\p{L}])/iu,
+    /^(?:z\s+czego\s+wynika|skąd\s+(?:się\s+)?(?:bierze|biorą|wziął|wzięła|wzięło|wzięli)|co\s+jest\s+przyczyną|w\s+czym\s+(?:tkwi|leży)|na\s+czym\s+opiera\s+się)(?![\p{L}])/iu,
+    /^co\s+(?:oznacza|znaczy)\s+.{2,80}?\s+dla(?![\p{L}])/iu,
+    /^czym\s+się\s+charakteryzuj\p{L}*/iu,
+  ].map(plTolerant),
 };
 
 /**
@@ -132,7 +152,9 @@ const FRESHNESS: Readonly<Record<'en' | 'pl', RegExp>> = {
   /* "current" counts only as a TIME adjective before a state noun ("current price", "the current
      security situation") — never as the electrical quantity ("inrush current"). */
   en: /\b(?:today|tonight|now|right\s+now|currently|current\s+(?:\w+\s+)?(?:price|prices|rate|rates|level|levels|status|situation|state|regulation|regulations|policy|policies|law|laws|edition|version|government|president|leader|leadership|events?|affairs|conflict|war)|latest|recent|recently|this\s+(?:week|month|year)|yesterday|announced|breaking|new\s+(?:law|policy|policies|rule|rules|regulation|regulations|standard|bill|tariff)|price\s+of|so\s+far|since\s+(?:then|that\s+time|january|february|march|april|may|june|july|august|september|october|november|december|monday|tuesday|wednesday|thursday|friday|saturday|sunday|last\s+\w+|the\s+(?:start|beginning)\s+of\s+(?:the\s+)?(?:year|month|week))|(?:the\s+)?(?:past|last|previous)\s+(?:few\s+|couple\s+(?:of\s+)?|\d{1,3}\s+|[a-z]+\s+)?(?:days?|weeks?|months?|fortnight))\b/i,
-  pl: /(?:^|[\s,])(?:dzi[śs]|dzisiaj|teraz|obecn\p{L}*|aktualn\p{L}*|najnowsz\p{L}*|ostatni\p{L}*|w\s+tym\s+(?:tygodniu|miesi[ąa]cu|roku)|od\s+(?:stycznia|lutego|marca|kwietnia|maja|czerwca|lipca|sierpnia|wrze[śs]nia|pa[źz]dziernika|listopada|grudnia|poniedzia[łl]ku|wtorku|[śs]rody|czwartku|pi[ąa]tku|soboty|niedzieli|pocz[ąa]tku\s+(?:roku|miesi[ąa]ca|tygodnia)|tamtego\s+czasu|tego\s+czasu|tamtej\s+pory|tej\s+pory|zesz[łl]\p{L}*\s+\p{L}+)|(?:zesz[łl]\p{L}*|minion\p{L}*)\s+(?:\p{L}+\s+)?(?:dni|tygodni\p{L}*|tydzie[ńn]|miesi[ąa]c\p{L}*|miesi[ęe]cy)|wczoraj|og[łl]osi\p{L}*|og[łl]oszon\p{L}*)(?=$|[\s,?.!])/iu,
+  pl: plTolerant(
+    /(?:^|[\s,])(?:dzi[śs]|dzisiaj|teraz|obecn\p{L}*|aktualn\p{L}*|najnowsz\p{L}*|ostatni\p{L}*|w\s+tym\s+(?:tygodniu|miesi[ąa]cu|roku)|od\s+(?:stycznia|lutego|marca|kwietnia|maja|czerwca|lipca|sierpnia|wrze[śs]nia|pa[źz]dziernika|listopada|grudnia|poniedzia[łl]ku|wtorku|[śs]rody|czwartku|pi[ąa]tku|soboty|niedzieli|pocz[ąa]tku\s+(?:roku|miesi[ąa]ca|tygodnia)|tamtego\s+czasu|tego\s+czasu|tamtej\s+pory|tej\s+pory|zesz[łl]\p{L}*\s+\p{L}+)|(?:zesz[łl]\p{L}*|minion\p{L}*)\s+(?:\p{L}+\s+)?(?:dni|tygodni\p{L}*|tydzie[ńn]|miesi[ąa]c\p{L}*|miesi[ęe]cy)|wczoraj|og[łl]osi\p{L}*|og[łl]oszon\p{L}*)(?=$|[\s,?.!])/iu,
+  ),
 };
 
 /*
@@ -144,7 +166,9 @@ const FRESHNESS: Readonly<Record<'en' | 'pl', RegExp>> = {
 */
 const NEWS_REQUEST: Readonly<Record<'en' | 'pl', RegExp>> = {
   en: /\b(?:the|any|latest|recent|today['’]?s|top|breaking|current|world|global|international|local|national|morning|evening|daily|this\s+week['’]?s)\s+(?:[\p{L}-]+\s+)?(?:news|headlines)\b(?!\s+(?:outlets?|organi[sz]ations?|media|literacy|industry|business(?:es)?|anchors?|framing|sources?|sites?|apps?|products?|consumption|values?|cycle|desk|agenc(?:y|ies)|reporters?|editors?|publishers?|platforms?|ecosystem))|\b(?:news|headlines)\s+(?:about|on|from|regarding|in|for|out\s+of|concerning)\s+(?:the\s+)?\p{Lu}|\bin\s+the\s+(?:news|headlines)\b|^\s*(?:any\s+)?(?:news|headlines)\b(?!\s+(?:outlets?|media|literacy|framing|organi[sz]ations?|industry|sources?))|\bwhat\s+is\s+(?:the\s+)?(?:news|headlines)\b|\b(?:news|headlines)\s+(?:today|this\s+(?:week|morning|evening)|right\s+now)\b/iu,
-  pl: /(?:najnowsz\p{L}*|dzisiejsz\p{L}*|ostatni\p{L}*|aktualn\p{L}*|bieżąc\p{L}*|główn\p{L}*|jakie\s+(?:są\s+)?)\s+(?:\p{L}+\s+)?(?:wiadomoś\p{L}*|nagłówk\p{L}*)|(?:wiadomoś\p{L}*|nagłówk\p{L}*)\s+(?:z|ze|o|na\s+temat|dotycząc\p{L}*)\s+\p{Lu}|(?:wiadomoś\p{L}*|nagłówk\p{L}*)\s+(?:ze\s+świata|z\s+kraju)|^\s*(?:jakieś\s+)?(?:wiadomoś\p{L}*|nagłówk\p{L}*)(?=\s|$|[?,.!])|co\s+słychać/iu,
+  pl: plTolerant(
+    /(?:najnowsz\p{L}*|dzisiejsz\p{L}*|ostatni\p{L}*|aktualn\p{L}*|bieżąc\p{L}*|główn\p{L}*|jakie\s+(?:są\s+)?)\s+(?:\p{L}+\s+)?(?:wiadomoś\p{L}*|nagłówk\p{L}*)|(?:wiadomoś\p{L}*|nagłówk\p{L}*)\s+(?:z|ze|o|na\s+temat|dotycząc\p{L}*)\s+\p{Lu}|(?:wiadomoś\p{L}*|nagłówk\p{L}*)\s+(?:ze\s+świata|z\s+kraju)|^\s*(?:jakieś\s+)?(?:wiadomoś\p{L}*|nagłówk\p{L}*)(?=\s|$|[?,.!])|co\s+słychać/iu,
+  ),
 };
 
 /** Is news / are headlines the OBJECT requested (a reporting request), not a subject noun? */
@@ -207,10 +231,13 @@ function properModifierBefore(textBefore: string, lang: 'en' | 'pl'): boolean {
   }
   return false;
 }
+const PL_ANCHOR_BEFORE_FOLDED = new RegExp(foldPl(PL_ANCHOR_BEFORE.source), PL_ANCHOR_BEFORE.flags);
 const ANCHOR_AFTER: Readonly<Record<'en' | 'pl', RegExp>> = {
   en: /^\s+(?:in|of|on|around|at|over|between)\s+(?:the\s+)?\p{Lu}/u,
   pl: /^\s+(?:w|we|na|wokół|między|nad)\s+\p{Lu}/u,
 };
+
+const PL_ANCHOR_AFTER_FOLDED = new RegExp(foldPl(ANCHOR_AFTER.pl.source), ANCHOR_AFTER.pl.flags);
 
 /**
  * Does the text name a PARTICULAR instance of a phenomenon (a state or a public event)? A named
@@ -218,39 +245,70 @@ const ANCHOR_AFTER: Readonly<Record<'en' | 'pl', RegExp>> = {
  * present-state question form. Generic and indefinite uses are subject matter, not currentness.
  */
 export function particularPhenomenon(
-  text: string,
+  originalText: string,
   language: string,
   nouns: RegExp,
   namedPlace = false,
+  /* CTO R4 fourth pass — so a completed dated event is read as history */
+  requestYear?: number,
 ): boolean {
   const lang: 'en' | 'pl' = language === 'pl' ? 'pl' : 'en';
+  /* Polish is matched diacritic-folded (positions stay aligned with the original) */
+  const text = lang === 'pl' ? foldPl(originalText) : originalText;
   const global = new RegExp(
-    nouns.source,
+    lang === 'pl' ? foldPl(nouns.source) : nouns.source,
     nouns.flags.includes('g') ? nouns.flags : `${nouns.flags}g`,
   );
+  const anchorBefore = lang === 'pl' ? PL_ANCHOR_BEFORE_FOLDED : EN_ANCHOR_BEFORE;
+  const anchorAfter = lang === 'pl' ? PL_ANCHOR_AFTER_FOLDED : ANCHOR_AFTER.en;
   let any = false;
   for (const m of text.matchAll(global)) {
     any = true;
     const lead = m[0].length - m[0].trimStart().length;
     const start = (m.index ?? 0) + lead;
+    /* CTO R4 fourth pass — a DATED, COMPLETED instance ("the 1997 Asian financial crisis") is
+       history: its temporal anchor outranks the particular-event rule */
+    if (temporallyPastOnly(clauseAround(originalText, start), lang, requestYear)) continue;
     const before = text.slice(Math.max(0, start - 80), start);
     const after = text.slice(start + m[0].trimStart().length, start + m[0].length + 60);
-    if ((lang === 'pl' ? PL_ANCHOR_BEFORE : EN_ANCHOR_BEFORE).test(before)) return true;
+    if (anchorBefore.test(before)) return true;
     if (properModifierBefore(text.slice(0, start), lang)) return true;
-    if (ANCHOR_AFTER[lang].test(after)) return true;
+    if (anchorAfter.test(after)) return true;
   }
-  return any && namedPlace;
+  return any && namedPlace && !temporallyPastOnly(originalText, lang, requestYear);
+}
+
+/** The clause around a position (between clause punctuation / a coordinating "and"). */
+function clauseAround(text: string, at: number): string {
+  const head = text.slice(0, at);
+  const from =
+    Math.max(
+      head.lastIndexOf('.'),
+      head.lastIndexOf('?'),
+      head.lastIndexOf('!'),
+      head.lastIndexOf(';'),
+      head.lastIndexOf(', and'),
+      head.lastIndexOf(', a '),
+    ) + 1;
+  const tail = text.slice(at);
+  const stop = tail.search(/[.?!;]|,\s+(?:and|but|while|a|i)\s/u);
+  return text.slice(from, stop < 0 ? text.length : at + stop);
 }
 
 /* "…what happened there since?" — an adverbial "since" runs to the present (a window, not a year) */
 const SINCE_PRESENT: Readonly<Record<'en' | 'pl', RegExp>> = {
   en: /\b(?:ever\s+)?since(?:\s+then|\s+that\s+time)?\s*[?.!]?\s*$/i,
-  pl: /(?:od\s+(?:tamtej|tej)\s+pory|od\s+(?:tamtego|tego)\s+czasu)\s*[?.!]?\s*$/iu,
+  pl: plTolerant(/(?:od\s+(?:tamtej|tej)\s+pory|od\s+(?:tamtego|tego)\s+czasu)\s*[?.!]?\s*$/iu),
 };
 
 /** State nouns count as freshness only for a particular instance (see STATE_NOUN). */
-function anchoredState(text: string, lang: 'en' | 'pl', place: boolean): boolean {
-  return particularPhenomenon(text, lang, STATE_NOUN[lang], place);
+function anchoredState(
+  text: string,
+  lang: 'en' | 'pl',
+  place: boolean,
+  requestYear?: number,
+): boolean {
+  return particularPhenomenon(text, lang, STATE_NOUN[lang], place, requestYear);
 }
 
 /**
@@ -260,7 +318,9 @@ function anchoredState(text: string, lang: 'en' | 'pl', place: boolean): boolean
  */
 const CHANGING: Readonly<Record<'en' | 'pl', RegExp>> = {
   en: /\b(?:is|are|was|were|has\s+been|have\s+been|keeps?)\b[^.?!]{0,40}?\b(?:rising|falling|increasing|decreasing|surging|soaring|dropping|plunging|climbing|slumping|happening|going\s+on|changing|collapsing|escalating|developing|evolving|growing|shrinking|progressing|worsening|improving)\b/i,
-  pl: /(?:ro[śs]nie|rosn[ąa]|spada(?:j[ąa])?|rozwija(?:j[ąa])?\s+si[ęe]|zmienia(?:j[ąa])?\s+si[ęe]|pogarsza\s+si[ęe]|poprawia\s+si[ęe]|dzieje\s+si[ęe])/iu,
+  pl: plTolerant(
+    /(?:ro[śs]nie|rosn[ąa]|spada(?:j[ąa])?|rozwija(?:j[ąa])?\s+si[ęe]|zmienia(?:j[ąa])?\s+si[ęe]|pogarsza\s+si[ęe]|poprawia\s+si[ęe]|dzieje\s+si[ęe])/iu,
+  ),
 };
 
 /** R3 — something asked about as in progress ("What is driving…", "Why are … rising") is current. */
@@ -290,7 +350,9 @@ const COMPUTE_CUE =
 */
 const HISTORY_FRAME: Readonly<Record<'en' | 'pl', RegExp>> = {
   en: /^(?:when\s+(?:did|was|were)|who\s+(?:was|were|founded|ruled|colonized|colonised)|what\s+(?:caused|led\s+to|was\s+the\s+cause)|why\s+did|how\s+did)\b|\b(?:history\s+of|historical(?:ly)?|independence|colonial|pre-?colonial|ancient)\b/i,
-  pl: /^(?:kiedy\s+(?:\p{L}+\s+)?(?:by[łl]\p{L}*|wst[ąa]pi\p{L}*|uzyska\p{L}*)|kto\s+(?:by[łl]\p{L}*|za[łl]o[żz]y[łl]\p{L}*)|co\s+spowodowa[łl]\p{L}*|dlaczego\s+dosz[łl]o)|(?:histori\p{L}*|niepodleg[łl]o[śs]\p{L}*|kolonial\p{L}*|staro[żz]ytn\p{L}*)/iu,
+  pl: plTolerant(
+    /^(?:kiedy\s+(?:\p{L}+\s+)?(?:by[łl]\p{L}*|wst[ąa]pi\p{L}*|uzyska\p{L}*)|kto\s+(?:by[łl]\p{L}*|za[łl]o[żz]y[łl]\p{L}*)|co\s+spowodowa[łl]\p{L}*|dlaczego\s+dosz[łl]o)|(?:histori\p{L}*|niepodleg[łl]o[śs]\p{L}*|kolonial\p{L}*|staro[żz]ytn\p{L}*)/iu,
+  ),
 };
 export const TRAVEL_FRAME: Readonly<Record<'en' | 'pl', RegExp>> = {
   en: /\b(?:visit(?:ing)?|travel(?:l?ing)?\s+(?:to|in|around)|trip\s+to|holiday\s+in|vacation\s+in|safari|itinerary|pack\s+for|before\s+(?:going|travelling|traveling|my\s+trip)|tourist(?:s)?\s+(?:attractions|sites)|things\s+to\s+(?:do|see)|on\s+(?:a|my|our)\s+(?:[\w-]+\s+){0,2}(?:trip|holiday|vacation|honeymoon))\b/i,
@@ -347,7 +409,9 @@ const HISTORICAL_IDENTITY: Readonly<Record<'en' | 'pl', RegExp>> = {
 /** A request for background / context: the stable half of a MIXED question. */
 const BACKGROUND_REQUEST: Readonly<Record<'en' | 'pl', RegExp>> = {
   en: /^(?:(?:please\s+)?(?:give|tell|show)\s+me|provide|share)\s+(?:some\s+|the\s+|a\s+|an\s+)?(?:brief\s+|short\s+|quick\s+)?(?:background|context|overview|history|primer|explanation)\b|^(?:background|context)\s+(?:on|of|to)\b/i,
-  pl: /^(?:przedstaw|podaj|daj|opowiedz)\s+(?:mi\s+)?(?:kr[óo]tko\s+)?(?:t[łl]o|kontekst|zarys|histori\p{L}*)|^(?:t[łl]o|kontekst)\b/iu,
+  pl: plTolerant(
+    /^(?:przedstaw|podaj|daj|opowiedz)\s+(?:mi\s+)?(?:kr[óo]tko\s+)?(?:t[łl]o|kontekst|zarys|histori\p{L}*)|^(?:t[łl]o|kontekst)\b/iu,
+  ),
 };
 
 function firstClause(text: string): string {
@@ -408,7 +472,8 @@ export function deriveKnowledgeRequirement(
     FRESHNESS[lang].test(freshText) ||
     CHANGING[lang].test(freshText) ||
     SINCE_PRESENT[lang].test(freshText) ||
-    anchoredState(freshText, lang, place) ||
+    anchoredState(freshText, lang, place, requestYear) ||
+    temporallyCurrent(freshText, lang, requestYear) ||
     NEWS_REQUEST[lang].test(freshText) ||
     refersToCurrentYear(freshText, lang, requestYear);
   const stableShape = STABLE_SHAPES[lang].some((shape) => shape.test(firstClause(text)));
@@ -498,7 +563,7 @@ export function deriveKnowledgeRequirement(
   */
   const clauses = text
     .split(
-      /(?<=[?.!;])\s+|,\s+(?:and|but|while|plus)\s+|,?\s+(?:and|but|plus|i|a|oraz)\s+(?=(?:what|which|who|how|where|when|why|is|are|do|does|did|tell|give|show|update|co|jak|jaki|jaka|jakie|jakich|kto|czy|ile|gdzie|dlaczego|powiedz|podaj|pokaż)(?![\p{L}\d]))/iu,
+      /(?<=[?.!;])\s+|,\s+(?:and|but|while|plus)\s+|,?\s+(?:and|but|plus|i|a|oraz)\s+(?=(?:what|which|who|how|where|when|why|is|are|do|does|did|tell|give|show|update|co|jak|jaki|jaka|jakie|jakich|kto|czy|ile|gdzie|dlaczego|powiedz|podaj|pokaż|pokaz|czym|skąd|skad)(?![\p{L}\d]))/iu,
     )
     .map((c) => c.trim())
     .filter((c) => c.length > 0);
@@ -507,7 +572,8 @@ export function deriveKnowledgeRequirement(
     FRESHNESS[lang].test(c) ||
     CHANGING[lang].test(c) ||
     CHANGED[lang].test(c) ||
-    anchoredState(c, lang, false) ||
+    anchoredState(c, lang, false, requestYear) ||
+    temporallyCurrent(c, lang, requestYear) ||
     NEWS_REQUEST[lang].test(c) ||
     refersToCurrentYear(c, lang, requestYear);
   const timed = clauses.filter(clauseFresh);
@@ -549,6 +615,7 @@ export function genuineFreshness(text: string, language: string, requestYear?: n
   const freshText = travel ? withoutFuturePeriods(text, lang, requestYear) : text;
   return (
     hasExplicitTime(freshText, lang, requestYear) ||
+    temporallyCurrent(freshText, lang, requestYear) ||
     NEWS_REQUEST[lang].test(freshText) ||
     CHANGING[lang].test(freshText) ||
     assertsFreshness(freshText) ||
@@ -563,7 +630,7 @@ export function genuineFreshness(text: string, language: string, requestYear?: n
 */
 const CHANGED: Readonly<Record<'en' | 'pl', RegExp>> = {
   en: /\b(?:has|have|had)\s+(?:[\p{L}'’-]+\s+){0,4}?changed\b|\bwhat(?:'s|’s|\s+is)\s+new\b/iu,
-  pl: /(?:zmienił\p{L}*|zmieniło)\s+si[ęe]|co\s+(?:si[ęe]\s+)?zmieniło|co\s+nowego/iu,
+  pl: plTolerant(/(?:zmienił\p{L}*|zmieniło)\s+si[ęe]|co\s+(?:si[ęe]\s+)?zmieniło|co\s+nowego/iu),
 };
 
 /*

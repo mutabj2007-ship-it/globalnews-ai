@@ -1,3 +1,5 @@
+import { restoreCountryPossessives } from './country-morphology';
+
 /**
  * ════════════════════════════════════════════════════════════════════════════
  * CTO R4 THIRD PASS — BOUNDED FORM NORMALIZATION BEFORE JOB / CURRENTNESS READING
@@ -23,7 +25,9 @@ export interface NormalizedTurn {
   /** The text the R4 job / currentness readers read. */
   readonly text: string;
   /** Which harmless rewrites were applied (diagnostics; codes only). */
-  readonly applied: readonly ('QUOTES' | 'CONTRACTION' | 'DISCOURSE_NOW' | 'WHITESPACE')[];
+  readonly applied: readonly (
+    'QUOTES' | 'CONTRACTION' | 'POSSESSIVE' | 'DISCOURSE_NOW' | 'WHITESPACE'
+  )[];
 }
 
 /* Unambiguous English contractions, with or without the apostrophe. "its" / "were" / "well" /
@@ -67,6 +71,10 @@ export function normalizeTurn(question: string, language: string): NormalizedTur
     for (const [re, to] of EN_CONTRACTIONS) contracted = contracted.replace(re, to);
     if (contracted !== text) applied.push('CONTRACTION');
     text = contracted;
+    /* CTO R4 fourth pass — an omitted apostrophe on a COUNTRY possessive ("brazils election") */
+    const possessive = restoreCountryPossessives(text);
+    if (possessive !== text) applied.push('POSSESSIVE');
+    text = possessive;
     const discourse = text.replace(
       EN_DISCOURSE_NOW,
       (_m, lead: string, pre: string) => `${lead}${pre}`,

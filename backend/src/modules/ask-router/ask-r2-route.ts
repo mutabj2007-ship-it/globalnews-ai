@@ -36,6 +36,7 @@
  * recorded in the delivery as the seam it would have been (FS-2), not made.
  */
 
+import { plTolerant } from './pl-tolerant';
 import { reportingWindowFor, type ReportingWindow } from './reporting-window';
 import {
   deriveKnowledgeRequirement,
@@ -74,6 +75,7 @@ import { readBilateralRelationship, type BilateralRelationship } from './bilater
 import { readUserJob, REASONING_JOBS, type JobReading, type UserJob } from './user-job';
 import { EN_PUBLIC_EVENT, PL_PUBLIC_EVENT, yearRoles } from './advisory-requirement';
 import { normalizeTurn } from './turn-normalization';
+import { readTemporalSemantics, type TemporalSemantics } from './temporal-semantics';
 
 /** The vocabulary frozen C derives axes in (its `DERIVATION_COVERAGE`). */
 export const NORMALIZATION_VOCABULARY = 'en';
@@ -187,6 +189,8 @@ export interface AskR2Route {
    * bounded semantic classifier; it never means news.
    */
   readonly job: JobReading;
+  /** CTO R4 fourth pass — the temporal interpretation of the reader's words (roles + currentness). */
+  readonly temporalSemantics?: TemporalSemantics;
   readonly outcome: NormalizationOutcome;
   readonly source: EnvelopeSource;
   readonly envelope: AskQuestionEnvelope;
@@ -467,23 +471,31 @@ export function composeEnvelopeSource(
 /* CTO R4 third pass — the reader asks for the REPORTING itself (an archive / coverage request) */
 const REPORT_REQUEST: Readonly<Record<'en' | 'pl', RegExp>> = {
   en: /\b(?:report(?:ed|ing|s)?|coverage|covered|news|headlines|articles?|press|newspapers?|journalists?|media\s+(?:said|reported|coverage))\b/i,
-  pl: /(?:relacj\p{L}*\s+medi\p{L}*|doniesie\p{L}*|doniesi\p{L}*|artykuł\p{L}*|pras\p{L}*|nagłówk\p{L}*|wiadomoś\p{L}*|dziennikar\p{L}*|media\s+(?:pisały|podawały))/iu,
+  pl: plTolerant(
+    /(?:relacj\p{L}*\s+medi\p{L}*|doniesie\p{L}*|doniesi\p{L}*|artykuł\p{L}*|pras\p{L}*|nagłówk\p{L}*|wiadomoś\p{L}*|dziennikar\p{L}*|media\s+(?:pisały|podawały))/iu,
+  ),
 };
 /* an earlier turn ABOUT reported items ("Compare the selected stories", "the latest articles"): the
    conversation's subject is current reporting, so a follow-up about it carries that evidence */
 const PRIOR_REPORTED_SUBJECT: Readonly<Record<'en' | 'pl', RegExp>> = {
   en: /\b(?:stor(?:y|ies)|articles?|reports?|reporting|coverage|headlines?|news)\b/i,
-  pl: /(?:artykuł\p{L}*|wiadomoś\p{L}*|doniesie\p{L}*|nagłówk\p{L}*|relacj\p{L}*\s+(?:medi|pras)\p{L}*)/iu,
+  pl: plTolerant(
+    /(?:artykuł\p{L}*|wiadomoś\p{L}*|doniesie\p{L}*|nagłówk\p{L}*|relacj\p{L}*\s+(?:medi|pras)\p{L}*)/iu,
+  ),
 };
 /* a relationship asked about in its present state */
 const RELATION_PRESENT_STATE: Readonly<Record<'en' | 'pl', RegExp>> = {
   en: /^\s*(?:how|what)\s+(?:is|are)\s+(?:the\s+)?(?:relations?|relationship|ties|trade|border)\b|\b(?:currently|these\s+days|at\s+the\s+moment|at\s+present|nowadays|today|right\s+now|this\s+(?:week|month|year))\b|\b(?:how|what)\s+is\s+(?:it|things)\s+(?:going|like)\b/i,
-  pl: /^\s*(?:jak\s+(?:wygląda|wyglądają)|jaki\s+jest|jakie\s+są)(?![\p{L}])|(?:obecn\p{L}*|teraz|dziś|dzisiaj|aktualn\p{L}*|w\s+tym\s+(?:tygodniu|miesiącu|roku))(?![\p{L}])/iu,
+  pl: plTolerant(
+    /^\s*(?:jak\s+(?:wygląda|wyglądają)|jaki\s+jest|jakie\s+są)(?![\p{L}])|(?:obecn\p{L}*|teraz|dziś|dzisiaj|aktualn\p{L}*|w\s+tym\s+(?:tygodniu|miesiącu|roku))(?![\p{L}])/iu,
+  ),
 };
 /* a relationship asked about in its past: past forms, history, completed periods */
 const RELATION_PAST: Readonly<Record<'en' | 'pl', RegExp>> = {
   en: /\b(?:did|was|were|had|have\s+(?:had|been)|has\s+(?:had|been)|historically|history|historical|went|became|used\s+to|go\s+from|went\s+from|origins?|roots|over\s+the\s+(?:centuries|decades|years)|centur(?:y|ies)|decades)\b|\b(?:after|before|since|during)\s+(?:the\s+)?(?:[\p{L}]+\s+){0,3}(?:war|wars|independence|revolution|treaty|partition|colonial\s+era)\b/iu,
-  pl: /(?:histori\p{L}*|w\s+przeszłości|skąd\s+wzi\p{L}*|(?:^|\s)\p{L}{3,}(?:ł|ła|ło|li|ły)(?![\p{L}])|na\s+przestrzeni|wiek\p{L}*|stuleci\p{L}*|(?:po|przed|w\s+czasie)\s+(?:\p{L}+\s+){0,2}wojn\p{L}*)/iu,
+  pl: plTolerant(
+    /(?:histori\p{L}*|w\s+przeszłości|skąd\s+wzi\p{L}*|(?:^|\s)\p{L}{3,}(?:ł|ła|ło|li|ły)(?![\p{L}])|na\s+przestrzeni|wiek\p{L}*|stuleci\p{L}*|(?:po|przed|w\s+czasie)\s+(?:\p{L}+\s+){0,2}wojn\p{L}*)/iu,
+  ),
 };
 
 export function routeAskR2(
@@ -801,9 +813,10 @@ export function routeAskR2(
     ? null
     : readBilateralRelationship(readerText, reading.sourceLanguage);
   /* a completed historical period in the text (a dated past event is not current affairs) */
-  const textYears = yearRoles(readerText, lang2, year);
-  const pastOnly =
-    textYears.historical.length > 0 && !textYears.current && textYears.future.length === 0;
+  /* CTO R4 fourth pass — the temporal interpretation layer (temporal-semantics.ts): a completed
+     dated event / historical period is history, resolved BEFORE the particular-event rule */
+  const temporalSemantics = readTemporalSemantics(readerText, reading.sourceLanguage, year);
+  const pastOnly = temporalSemantics.currentness === 'HISTORICAL';
   /* CTO R4 CLOSEOUT — a public-event noun is current affairs only for a PARTICULAR event (a named
      place, "the war", "this election", "obecny kryzys"); "how can a war reshape an economy" and
      "w czasie kryzysu" are conceptual subjects (knowledge-requirement.ts particularPhenomenon). */
@@ -814,6 +827,7 @@ export function routeAskR2(
       reading.sourceLanguage,
       reading.sourceLanguage === 'pl' ? PL_PUBLIC_EVENT : EN_PUBLIC_EVENT,
       namedPlace,
+      year,
     );
   const fresh = genuineFreshness(readerText, reading.sourceLanguage, year);
   const formJob = readUserJob(readerText, reading.sourceLanguage, {
@@ -1073,6 +1087,7 @@ export function routeAskR2(
     /* R3 §14 / CTO R4 third pass — the two-country scope, current, historical or conceptual */
     relationship: relationshipAny,
     job,
+    temporalSemantics,
     outcome,
     source,
     envelope,

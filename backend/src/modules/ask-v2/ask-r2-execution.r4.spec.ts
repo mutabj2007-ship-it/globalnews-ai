@@ -643,3 +643,36 @@ describe('R4 third pass §3 — a completed past year is answered as history, ne
     expect(h.calls.background).toHaveLength(1);
   });
 });
+
+/* ── CTO R4 FOURTH PASS ─────────────────────────────────────────────────────────────────────── */
+
+describe('R4 fourth pass §10 — MIXED keeps its stable half in Polish written without diacritics', () => {
+  it('czym sie rozni …, a jak dzis … → stable half answered when retrieval fails', async () => {
+    const h = harness({
+      analysis: async () => {
+        throw new Error('GNews unavailable');
+      },
+    });
+    const p = await run(
+      h,
+      'czym sie rozni obligacja od akcji, a jak dzis zachowuje sie WIG20?',
+      'pl',
+    );
+    expect(h.calls.background).toHaveLength(1);
+    expect(p.answer.state).toBe('REFERENCE_BACKGROUND');
+    expect(p.answer.basis).toMatch(/^PARTIAL_CURRENT_/);
+  });
+});
+
+describe('R4 fourth pass §12 — present / recent language reaches the evidence path', () => {
+  it.each([
+    ['Have Turkey and Greece been cooperating more lately?', 'en'],
+    ['What is the situation in Haiti at present?', 'en'],
+  ] as const)('%s → the news pipeline is called, never reasoning only', async (q, lang) => {
+    const h = harness({});
+    const request: AskRequest = { question: q, language: lang, intent: 'ask' };
+    const plan = await h.adapter.prepare(request);
+    await inRequest(() => h.adapter.execute(request, plan, 'op')).catch(() => undefined);
+    expect(h.calls.analysis.length).toBeGreaterThan(0);
+  });
+});

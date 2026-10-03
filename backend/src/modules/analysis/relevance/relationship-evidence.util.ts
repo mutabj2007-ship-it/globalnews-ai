@@ -27,7 +27,13 @@ export interface RelationshipScope {
 }
 
 /** Relations that ANY two-sided report speaks to (a general or diplomatic question). */
-const BROAD: ReadonlySet<RelationKind> = new Set(['GENERAL', 'DIPLOMATIC']);
+/* CTO R4 fourth pass — the historical / competitive framings are not narrower evidence classes */
+const BROAD: ReadonlySet<RelationKind> = new Set([
+  'GENERAL',
+  'DIPLOMATIC',
+  'HISTORICAL_RELATION',
+  'COMPETITION',
+]);
 
 function mentions(article: Pick<NewsArticle, 'title' | 'summary'>, country: CountryMeta): boolean {
   if (scoreCountryRelevance(article, country).isRelevant) return true;

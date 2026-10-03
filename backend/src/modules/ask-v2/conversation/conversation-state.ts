@@ -1,3 +1,4 @@
+import { plTolerant } from '../../ask-router/pl-tolerant';
 import {
   findCountryByIso3,
   getLocalizedCountryName,
@@ -201,8 +202,9 @@ const NUMBER_WORDS: Readonly<Record<string, number>> = {
 };
 const EN_DURATION =
   /\b(\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|fourteen)[\s-]+(day|days|night|nights|week|weeks)\b|\b(a|one)\s+(week|weekend|fortnight)\b/i;
-const PL_DURATION =
-  /(?:^|\s)(\d{1,2}|dwa|dwóch|trzy|cztery|pięć|sześć|siedem|osiem|dziewięć|dziesięć)\s+(dni|dzień|tygodni\p{L}*|tydzień)(?=$|[\s,.?!])|(?:^|\s)(weekend|tydzień)(?=$|[\s,.?!])/iu;
+const PL_DURATION = plTolerant(
+  /(?:^|\s)(\d{1,2}|dwa|dwóch|trzy|cztery|pięć|sześć|siedem|osiem|dziewięć|dziesięć)\s+(dni|dzień|tygodni\p{L}*|tydzień)(?=$|[\s,.?!])|(?:^|\s)(weekend|tydzień)(?=$|[\s,.?!])/iu,
+);
 
 export function readDuration(text: string, lang: 'en' | 'pl'): string | null {
   if (lang === 'pl') {
@@ -275,8 +277,9 @@ const INTERESTS: ReadonlyArray<readonly [RegExp, string, string]> = [
 ];
 const EN_PREFERENCE_VERB =
   /\b(?:prefer|preferring|like|love|enjoy|into|interested\s+in|focus\s+on|care\s+(?:most\s+)?about|want\s+(?:to\s+see|to\s+do|some)|mostly|mainly|especially)\b/i;
-const PL_PREFERENCE_VERB =
-  /(?:wol\p{L}*|lubi\p{L}*|kocham|interesuj\p{L}*|zależy\s+mi\s+na|chc\p{L}*\s+zobaczy\p{L}*|głównie|szczególnie)/iu;
+const PL_PREFERENCE_VERB = plTolerant(
+  /(?:wol\p{L}*|lubi\p{L}*|kocham|interesuj\p{L}*|zależy\s+mi\s+na|chc\p{L}*\s+zobaczy\p{L}*|głównie|szczególnie)/iu,
+);
 
 export function readInterests(text: string, lang: 'en' | 'pl'): string[] {
   const verb = (lang === 'pl' ? PL_PREFERENCE_VERB : EN_PREFERENCE_VERB).test(text);
@@ -286,10 +289,11 @@ export function readInterests(text: string, lang: 'en' | 'pl'): string[] {
 
 const EN_OFFICIAL_ONLY =
   /\b(?:only|just|solely|exclusively)\s+(?:use\s+|from\s+|with\s+)?official\s+sources?\b|\bofficial\s+sources?\s+only\b|\bnothing\s+but\s+official\s+sources?\b/i;
-const PL_OFFICIAL_ONLY =
-  /(?:tylko|wyłącznie|jedynie)\s+(?:z\s+)?oficjaln\p{L}*\s+źród\p{L}*|oficjaln\p{L}*\s+źród\p{L}*\s+(?:tylko|wyłącznie)/iu;
+const PL_OFFICIAL_ONLY = plTolerant(
+  /(?:tylko|wyłącznie|jedynie)\s+(?:z\s+)?oficjaln\p{L}*\s+źród\p{L}*|oficjaln\p{L}*\s+źród\p{L}*\s+(?:tylko|wyłącznie)/iu,
+);
 const EN_ANY_SOURCES = /\b(?:any\s+sources?|all\s+sources|not\s+only\s+official)\b/i;
-const PL_ANY_SOURCES = /(?:dowoln\p{L}*\s+źród\p{L}*|wszystki\p{L}*\s+źród\p{L}*)/iu;
+const PL_ANY_SOURCES = plTolerant(/(?:dowoln\p{L}*\s+źród\p{L}*|wszystki\p{L}*\s+źród\p{L}*)/iu);
 
 export function readOfficialOnly(text: string, lang: 'en' | 'pl'): boolean | null {
   if ((lang === 'pl' ? PL_OFFICIAL_ONLY : EN_OFFICIAL_ONLY).test(text)) return true;
@@ -299,8 +303,9 @@ export function readOfficialOnly(text: string, lang: 'en' | 'pl'): boolean | nul
 
 const EN_PRIORITIES =
   /\b(?:i|we)\s+care\s+more\s+about\s+(.{2,60}?)\s+than\s+(?:about\s+)?(.{2,60}?)[.?!]*$|\bweight\s+(.{2,40}?)\s+more(?:\s+heavily)?\b|\bprioriti[sz]e\s+(.{2,40}?)(?:\s+over\s+(.{2,40}?))?[.?!]*$/i;
-const PL_PRIORITIES =
-  /(?:bardziej\s+zależy\s+mi\s+na\s+(.{2,60}?)\s+niż\s+(?:na\s+)?(.{2,60}?)[.?!]*$|daj\s+większ\p{L}*\s+wag\p{L}*\s+(.{2,40}?)[.?!]*$)/iu;
+const PL_PRIORITIES = plTolerant(
+  /(?:bardziej\s+zależy\s+mi\s+na\s+(.{2,60}?)\s+niż\s+(?:na\s+)?(.{2,60}?)[.?!]*$|daj\s+większ\p{L}*\s+wag\p{L}*\s+(.{2,40}?)[.?!]*$)/iu,
+);
 
 export function readPriorities(text: string, lang: 'en' | 'pl'): string | null {
   const m = (lang === 'pl' ? PL_PRIORITIES : EN_PRIORITIES).exec(text.trim());
@@ -436,7 +441,7 @@ interface TurnFeatures {
 }
 
 const EN_TIME_ONLY = /^\s*(?:and\s+)?(?:what|how)\s+about\s+|^\s*and\s+|^\s*(?:same\s+for)\s+/i;
-const PL_TIME_ONLY = /^\s*(?:a\s+)?(?:co\s+z|jak\s+z)?\s*/iu;
+const PL_TIME_ONLY = plTolerant(/^\s*(?:a\s+)?(?:co\s+z|jak\s+z)?\s*/iu);
 
 function statedPeriodOf(question: string, lang: 'en' | 'pl'): string | null {
   const outcome = normalizeAskQuestion({
@@ -499,8 +504,9 @@ function readTurn(question: string, lang: 'en' | 'pl'): TurnFeatures {
 */
 const EN_QUESTION =
   /\?|^\s*(?:what|which|how|why|where|when|who|whom|whose|is|are|can|could|should|do|does|did|will|would|tell|give|list|show|suggest|recommend|explain|describe|compare)\b/i;
-const PL_QUESTION =
-  /\?|^\s*(?:jak\p{L}*|co|gdzie|kiedy|dlaczego|czemu|czy|któr\p{L}*|ile|kto|podaj|wymień|pokaż|poleć|doradź|wyjaśnij|opisz|porównaj)(?=\s|$)/iu;
+const PL_QUESTION = plTolerant(
+  /\?|^\s*(?:jak\p{L}*|co|gdzie|kiedy|dlaczego|czemu|czy|któr\p{L}*|ile|kto|podaj|wymień|pokaż|poleć|doradź|wyjaśnij|opisz|porównaj)(?=\s|$)/iu,
+);
 
 export function isQuestion(text: string, lang: 'en' | 'pl'): boolean {
   return (lang === 'pl' ? PL_QUESTION : EN_QUESTION).test(text.trim());
@@ -516,8 +522,9 @@ export function isQuestion(text: string, lang: 'en' | 'pl'): boolean {
 */
 const EN_CONSTRAINT_FORM =
   /^\s*(?:(?:ok(?:ay)?|right|fine|also|and|but|so|actually|oh)[,.!]?\s+)*(?:i|i'm|i’m|i've|i’ve|i'd|i’d|we|we're|we’re|we've|we’ve|my|our|me|us|only|just|preferably|ideally|no\s+more\s+than|at\s+most|max(?:imum)?|under|within|budget|any|no|without|not)\b/i;
-const PL_CONSTRAINT_FORM =
-  /^\s*(?:(?:ok|dobrze|dobra|a|i|ale|właściwie)[,.!]?\s+)*(?:mam|mamy|chcę|chcemy|wolę|wolimy|preferuj\p{L}*|tylko|jedynie|budżet\p{L}*|nasz\p{L}*|mój|moja|moje|moim|ja|my|interesuj\p{L}*|lubię|lubimy|maksymalnie|najwyżej|bez|dowoln\p{L}*|każde|nie)(?=\s|$|[,.!])/iu;
+const PL_CONSTRAINT_FORM = plTolerant(
+  /^\s*(?:(?:ok|dobrze|dobra|a|i|ale|właściwie)[,.!]?\s+)*(?:mam|mamy|chcę|chcemy|wolę|wolimy|preferuj\p{L}*|tylko|jedynie|budżet\p{L}*|nasz\p{L}*|mój|moja|moje|moim|ja|my|interesuj\p{L}*|lubię|lubimy|maksymalnie|najwyżej|bez|dowoln\p{L}*|każde|nie)(?=\s|$|[,.!])/iu,
+);
 const SHORT_FRAGMENT_WORDS = 4;
 
 function hasConstraintForm(text: string, lang: 'en' | 'pl'): boolean {
@@ -532,8 +539,9 @@ function hasConstraintForm(text: string, lang: 'en' | 'pl'): boolean {
 const EN_ATTRIBUTIVE_DURATION =
   /\b(?:\d{1,3}|[a-z]+)[-\s](?:day|week|month|year|hour|night|minute|decade|century)[-\s](?!(?:[a-z-]+\s+){0,2}(?:trip|trips|holiday|holidays|stay|visit|itinerary|vacation|safari|tour|break|getaway|journey|plan|roadmap|programme|program|schedule|sprint)\b)(?!(?:and|or|in|of|for|to|at|on|with|from|by)\b)[a-z]/i;
 const EN_POSSESSIVE_DURATION = /\b(?:years|days|weeks|months)['’]\s+[a-z]/i;
-const PL_ATTRIBUTIVE_DURATION =
-  /(?:^|\s)\p{L}*(?:dniow|tygodniow|miesięczn|letni|roczn|godzinn)\p{L}*\s+(?!(?:\p{L}+\s+){0,2}(?:wycieczk|podróż|wyjazd|pobyt|urlop|wakacj|plan|harmonogram|program)\p{L}*)\p{L}/iu;
+const PL_ATTRIBUTIVE_DURATION = plTolerant(
+  /(?:^|\s)\p{L}*(?:dniow|tygodniow|miesięczn|letni|roczn|godzinn)\p{L}*\s+(?!(?:\p{L}+\s+){0,2}(?:wycieczk|podróż|wyjazd|pobyt|urlop|wakacj|plan|harmonogram|program)\p{L}*)\p{L}/iu,
+);
 
 export function attributiveDuration(text: string, lang: 'en' | 'pl'): boolean {
   return lang === 'pl'
@@ -562,16 +570,19 @@ function isConstraintStatement(f: TurnFeatures): boolean {
 */
 const EN_REFERS_BACK =
   /\b(?:instead|the\s+same|same\s+(?:trip|plan|one|for)|either|both|which\s+(?:one|is|are|of\s+them)|the\s+(?:other|former|latter)|the\s+(?:first|second)\s+(?:one|option|place|park|choice|plan)|those|these|them|compare|cheaper|more\s+expensive|better|closer|easier|re-?evaluate|what\s+else|anything\s+else)\b/i;
-const PL_REFERS_BACK =
-  /(?:zamiast|to\s+samo|tak\s+samo|oba|obie|obydwa|któr\p{L}*\s+(?:z\s+nich|jest|są)|porówn\p{L}*|tańsz\p{L}*|lepsz\p{L}*|bliżej|łatwiej|oceń\s+ponownie|co\s+jeszcze)/iu;
+const PL_REFERS_BACK = plTolerant(
+  /(?:zamiast|to\s+samo|tak\s+samo|oba|obie|obydwa|któr\p{L}*\s+(?:z\s+nich|jest|są)|porówn\p{L}*|tańsz\p{L}*|lepsz\p{L}*|bliżej|łatwiej|oceń\s+ponownie|co\s+jeszcze)/iu,
+);
 const EN_TRIP_VOCAB =
   /\b(?:cost|costs|price|prices|budget|cheap|expensive|afford\w*|days?|nights?|itinerary|route|hotels?|lodges?|stay|accommodation|camp(?:ing|s)?|visas?|weather|season|rainy|dry|best\s+time|when\s+to\s+go|get(?:ting)?\s+there|fly|flights?|drive|transport|permits?|safe|safety|pack|parks?|trek(?:king)?|hik(?:e|ing)|tours?|guides?|book(?:ing)?|travel\s+notices?)\b/i;
-const PL_TRIP_VOCAB =
-  /(?:koszt\p{L}*|cen\p{L}*|budżet\p{L}*|tani\p{L}*|drog\p{L}*|dni|noc\p{L}*|plan\s+podróży|tras\p{L}*|hotel\p{L}*|nocleg\p{L}*|wiz\p{L}*|pogod\p{L}*|sezon\p{L}*|kiedy\s+jechać|lot\p{L}*|transport\p{L}*|pozwoleni\p{L}*|bezpiecz\p{L}*|spakować|park\p{L}*|wędrów\p{L}*|wycieczk\p{L}*|przewodnik\p{L}*|rezerwac\p{L}*)/iu;
+const PL_TRIP_VOCAB = plTolerant(
+  /(?:koszt\p{L}*|cen\p{L}*|budżet\p{L}*|tani\p{L}*|drog\p{L}*|dni|noc\p{L}*|plan\s+podróży|tras\p{L}*|hotel\p{L}*|nocleg\p{L}*|wiz\p{L}*|pogod\p{L}*|sezon\p{L}*|kiedy\s+jechać|lot\p{L}*|transport\p{L}*|pozwoleni\p{L}*|bezpiecz\p{L}*|spakować|park\p{L}*|wędrów\p{L}*|wycieczk\p{L}*|przewodnik\p{L}*|rezerwac\p{L}*)/iu,
+);
 const EN_DECISION_VOCAB =
   /\b(?:criteria|criterion|trade-?offs?|weigh\w*|priorit\w*|objective|goal|risks?|growth|market\s+size|demand|costs?|returns?|conclusion|recommend\w*|evidence\s+(?:is\s+)?missing|what\s+would\s+change)\b/i;
-const PL_DECISION_VOCAB =
-  /(?:kryteri\p{L}*|kompromis\p{L}*|priorytet\p{L}*|cel\p{L}*|ryzyk\p{L}*|wzrost\p{L}*|wielkość\s+rynku|popyt\p{L}*|koszt\p{L}*|wniosek|wniosk\p{L}*|rekomend\p{L}*)/iu;
+const PL_DECISION_VOCAB = plTolerant(
+  /(?:kryteri\p{L}*|kompromis\p{L}*|priorytet\p{L}*|cel\p{L}*|ryzyk\p{L}*|wzrost\p{L}*|wielkość\s+rynku|popyt\p{L}*|koszt\p{L}*|wniosek|wniosk\p{L}*|rekomend\p{L}*)/iu,
+);
 
 function pointsBackInto(job: UserJob, question: string, f: TurnFeatures): boolean {
   const lang = f.lang;
@@ -759,8 +770,9 @@ function applyTurn(
 /* ── composition: the question the one engine answers ─────────────────────────────────────── */
 const EN_GENERIC_CURRENT =
   /^\s*(?:is\s+there\s+)?(?:anything|what(?:'s|\s+is)?)\s+(?:current|new|recent|happening|going\s+on)\b|\b(?:anything|what)\b.*\bshould\s+i\s+know\b.*\b(?:now|currently|current|right\s+now|today)\b|\bshould\s+i\s+know\b.*\b(?:now|current(?:ly)?)\b|^\s*(?:is\s+there\s+)?anything\s+current\b/i;
-const PL_GENERIC_CURRENT =
-  /(?:czy\s+jest\s+coś|coś)\s+(?:aktualn\p{L}*|nowego|bieżąc\p{L}*)|co\s+(?:aktualnie|teraz|obecnie)\s+powinienem\s+wiedzieć/iu;
+const PL_GENERIC_CURRENT = plTolerant(
+  /(?:czy\s+jest\s+coś|coś)\s+(?:aktualn\p{L}*|nowego|bieżąc\p{L}*)|co\s+(?:aktualnie|teraz|obecnie)\s+powinienem\s+wiedzieć/iu,
+);
 const COMPARE = /\bcompar|porówn/iu;
 const RE_EVALUATE = /^\s*re-?evaluate\b|^\s*oceń\s+ponownie\b/iu;
 

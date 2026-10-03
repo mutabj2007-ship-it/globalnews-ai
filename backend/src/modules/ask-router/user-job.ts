@@ -1,4 +1,5 @@
 import { yearRoles } from './advisory-requirement';
+import { plTolerant, PlTolerantRegExp } from './pl-tolerant';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -199,19 +200,25 @@ const PL_PLAN_HORIZON: readonly RegExp[] = [
   /(\d{1,3}|\p{L}+)[-\s]?(dniowy|dniowego|dniowym|tygodniowy|miesięczny)\s+(?:plan\p{L}*|harmonogram\p{L}*|program\p{L}*)/iu,
 ];
 const EN_TRIP = /\b(?:trip|holiday|vacation|visit|itinerary|safari|stay|travel(?:ling|ing)?)\b/i;
-const PL_TRIP = /(?:podróż\p{L}*|wycieczk\p{L}*|wakacj\p{L}*|pobyt\p{L}*|zwiedz\p{L}*|safari)/iu;
+const PL_TRIP = plTolerant(
+  /(?:podróż\p{L}*|wycieczk\p{L}*|wakacj\p{L}*|pobyt\p{L}*|zwiedz\p{L}*|safari)/iu,
+);
 const EN_DURATION = /\b(\d{1,3}|[a-z]+)[-\s](day|days|night|nights|week|weeks)\b/i;
-const PL_DURATION = /(?:^|\s)(\d{1,3}|\p{L}+)\s+(dni|dzień|tygodni|tydzień)(?=$|[\s,.?!])/iu;
+const PL_DURATION = plTolerant(
+  /(?:^|\s)(\d{1,3}|\p{L}+)\s+(dni|dzień|tygodni|tydzień)(?=$|[\s,.?!])/iu,
+);
 const EN_REPORTING =
   /\b(?:last|past|previous|recent)\s+(\d{1,3}|[a-z]+)\s+(days|weeks|months)\b|\b(\d{1,3}|[a-z]+)\s+(days|weeks|months)\s+ago\b|\b(?:yesterday|today|this\s+(?:week|month|quarter|year)|last\s+(?:week|month|quarter|year))\b|\b(?:the\s+)?(?:past|last|previous)\s+(?:few\s+|couple\s+(?:of\s+)?)?(?:days|weeks|months|week|month|fortnight)\b/i;
-const PL_REPORTING =
-  /(?:ostatni\p{L}*|minion\p{L}*)\s+(\d{1,3}|\p{L}+)\s+(dni|tygodni|miesięcy)|(\d{1,3}|\p{L}+)\s+(dni|tygodni|miesięcy)\s+temu|(?:^|\s)(?:wczoraj|dziś|dzisiaj|w\s+tym\s+(?:tygodniu|miesiącu|roku))(?=$|[\s,.?!])|w\s+(?:ostatni\p{L}*|zeszł\p{L}*|minion\p{L}*)\s+(?:tygodni\p{L}*|miesiąc\p{L}*|miesiącu|dniach)|(?:ostatni|zeszły|miniony)\s+(?:tydzień|miesiąc)/iu;
+const PL_REPORTING = plTolerant(
+  /(?:ostatni\p{L}*|minion\p{L}*)\s+(\d{1,3}|\p{L}+)\s+(dni|tygodni|miesięcy)|(\d{1,3}|\p{L}+)\s+(dni|tygodni|miesięcy)\s+temu|(?:^|\s)(?:wczoraj|dziś|dzisiaj|w\s+tym\s+(?:tygodniu|miesiącu|roku))(?=$|[\s,.?!])|w\s+(?:ostatni\p{L}*|zeszł\p{L}*|minion\p{L}*)\s+(?:tygodni\p{L}*|miesiąc\p{L}*|miesiącu|dniach)|(?:ostatni|zeszły|miniony)\s+(?:tydzień|miesiąc)/iu,
+);
 const EN_DEADLINE =
   /\b(?:by|before|within)\s+(?:the\s+end\s+of\s+)?(\d{1,3}\s+(?:days|weeks|months)|(?:next\s+)?(?:week|month|quarter|year)|q[1-4]|\d{4})\b/i;
 const EN_FUTURE =
   /\b(?:next|coming|upcoming)\s+(?:week|month|quarter|year|summer|winter|spring|autumn|fall)\b|\bin\s+(\d{1,3}|[a-z]+)\s+(days|weeks|months|years)(?:'?\s*time)?\b/i;
-const PL_FUTURE =
-  /(?:przyszł\p{L}*|następn\p{L}*|nadchodząc\p{L}*)\s+(?:rok\p{L}*|roku|miesiąc\p{L}*|tydzień|tygodni\p{L}*|lat\p{L}*)|za\s+(\d{1,3}|\p{L}+)\s+(dni|tygodni|miesięcy|lat)/iu;
+const PL_FUTURE = plTolerant(
+  /(?:przyszł\p{L}*|następn\p{L}*|nadchodząc\p{L}*)\s+(?:rok\p{L}*|roku|miesiąc\p{L}*|tydzień|tygodni\p{L}*|lat\p{L}*)|za\s+(\d{1,3}|\p{L}+)\s+(dni|tygodni|miesięcy|lat)/iu,
+);
 const EN_HISTORICAL = /\b(?:in|during|since)\s+(?:the\s+)?(1[5-9]\d{2}|20[0-2]\d)s?\b/i;
 
 export function readTemporalRoles(
@@ -284,8 +291,9 @@ export function readTemporalRoles(
 */
 const EN_WORK_OPENER =
   /^\s*(?:(?:ok(?:ay)?|now|great|good|fine|thanks|right|perfect)[,.!]?\s+)*(?:please\s+|now\s+|then\s+|can\s+you\s+|could\s+you\s+|would\s+you\s+|i\s+(?:want|need|['’]d\s+like)\s+(?:you\s+to\s+)?|let['’]?s\s+)*(?:turn|convert|make|put|lay(?:\s+out)?|set\s+out|spell\s+out|write(?:\s+up)?|give\s+me|draft|create|build|format|present|rewrite|reformat|recast|re-?frame|organi[sz]e|structure|break|list|outline|sketch|map\s+out|draw\s+up|produce|prepare|show(?:\s+me)?|summari[sz]e|sum\s+up|condense|shorten|recap|boil|distil+|compare|rank|translate|reduce|transform|package|capture)\b/i;
-const PL_WORK_OPENER =
-  /^\s*(?:(?:ok|dobrze|dobra|świetnie|super|dzięki|dziękuję|teraz)[,.!]?\s+)*(?:proszę\s+|teraz\s+|to\s+|czy\s+(?:możesz|mógłbyś|mogłabyś|mógłbyś\s+mi|możesz\s+mi)\s+|chcę\s+|chciał\p{L}*\s+(?:bym|abym)\s+)*(?:zrób|zróbmy|zrobić|przekształć|przekształcić|zamień|zamienić|ujmij|ująć|przerób|przerobić|przedstaw|przedstawić|pokaż|pokazać|rozpisz|rozpisać|przygotuj|przygotować|stwórz|stworzyć|ułóż|ułożyć|napisz|napisać|zaplanuj|zaplanować|podsumuj|podsumować|streść|streścić|skróć|skrócić|wypisz|wypisać|wymień|zestaw|zestawić|porównaj|porównać|nakreśl|sformułuj|zbierz|rozbij|rozbić|uporządkuj|opracuj|opracować|podaj|daj|przetłumacz|uszereguj|zamknij)(?![\p{L}\d])/iu;
+const PL_WORK_OPENER = plTolerant(
+  /^\s*(?:(?:ok|dobrze|dobra|świetnie|super|dzięki|dziękuję|teraz)[,.!]?\s+)*(?:proszę\s+|teraz\s+|to\s+|czy\s+(?:możesz|mógłbyś|mogłabyś|mógłbyś\s+mi|możesz\s+mi)\s+|chcę\s+|chciał\p{L}*\s+(?:bym|abym)\s+)*(?:zrób|zróbmy|zrobić|przekształć|przekształcić|zamień|zamienić|ujmij|ująć|przerób|przerobić|przedstaw|przedstawić|pokaż|pokazać|rozpisz|rozpisać|przygotuj|przygotować|stwórz|stworzyć|ułóż|ułożyć|napisz|napisać|zaplanuj|zaplanować|podsumuj|podsumować|streść|streścić|skróć|skrócić|wypisz|wypisać|wymień|zestaw|zestawić|porównaj|porównać|nakreśl|sformułuj|zbierz|rozbij|rozbić|uporządkuj|opracuj|opracować|podaj|daj|przetłumacz|uszereguj|zamknij)(?![\p{L}\d])/iu,
+);
 /* target families, most specific first */
 const EN_TARGETS: ReadonlyArray<readonly [TransformationKind, RegExp]> = [
   ['TABLE', /\b(?:table|matrix|grid|spreadsheet)\b/i],
@@ -304,23 +312,31 @@ const EN_TARGETS: ReadonlyArray<readonly [TransformationKind, RegExp]> = [
   ['COMPARISON', /\b(?:comparison|side[-\s]by[-\s]side|versus|vs\.?)\b/i],
 ];
 const PL_TARGETS: ReadonlyArray<readonly [TransformationKind, RegExp]> = [
-  ['TABLE', /(?:tabel\p{L}*|zestawieni\p{L}*|macierz\p{L}*|arkusz\p{L}*)/iu],
+  ['TABLE', plTolerant(/(?:tabel\p{L}*|zestawieni\p{L}*|macierz\p{L}*|arkusz\p{L}*)/iu)],
   [
     'CHECKLIST',
     /(?:list\p{L}*\s+kontroln\p{L}*|checklist\p{L}*|list\p{L}*\s+(?:zadań|rzeczy\s+do\s+zrobienia))/iu,
   ],
-  ['SCENARIOS', /(?:scenariusz\p{L}*|najlepsz\p{L}*\s+(?:i|oraz)\s+najgorsz\p{L}*)/iu],
+  ['SCENARIOS', plTolerant(/(?:scenariusz\p{L}*|najlepsz\p{L}*\s+(?:i|oraz)\s+najgorsz\p{L}*)/iu)],
   [
     'BRIEFING',
     /(?:briefing\p{L}*|notatk\p{L}*|memo|brief(?![\p{L}])|informacj\p{L}*\s+dla\s+zarządu)/iu,
   ],
-  ['PLAN', /(?:(?<![\p{L}])plan\p{L}*|harmonogram\p{L}*|map\p{L}*\s+drogow\p{L}*|program\p{L}*)/iu],
-  ['ACTION_STEPS', /(?:krok\p{L}*|działa\p{L}*\s+do\s+podjęcia|zadani\p{L}*\s+do\s+wykonania)/iu],
+  [
+    'PLAN',
+    plTolerant(
+      /(?:(?<![\p{L}])plan\p{L}*|harmonogram\p{L}*|map\p{L}*\s+drogow\p{L}*|program\p{L}*)/iu,
+    ),
+  ],
+  [
+    'ACTION_STEPS',
+    plTolerant(/(?:krok\p{L}*|działa\p{L}*\s+do\s+podjęcia|zadani\p{L}*\s+do\s+wykonania)/iu),
+  ],
   [
     'SUMMARY',
     /(?:podsumowani\p{L}*|streszczeni\p{L}*|punkt\p{L}*|skrót\p{L}*|(?:kilku|paru|jednym|dwóch|trzech)\s+zdani\p{L}*)/iu,
   ],
-  ['COMPARISON', /(?:porównani\p{L}*)/iu],
+  ['COMPARISON', plTolerant(/(?:porównani\p{L}*)/iu)],
 ];
 /* verbs that carry their own kind when no target family is named */
 const EN_SELF_KIND: ReadonlyArray<readonly [TransformationKind, RegExp]> = [
@@ -354,7 +370,7 @@ const PL_SELF_KIND: ReadonlyArray<readonly [TransformationKind, RegExp]> = [
     'EXPLAIN_MORE',
     /^\s*(?:proszę\s+)?(?:wyjaśnij|rozwiń|pogłęb)(?![\p{L}\d]).{0,30}?(?:to|bardziej|głębiej|szerzej)(?![\p{L}\d])/iu,
   ],
-  ['PLAN', /^\s*(?:proszę\s+)?zaplanuj(?![\p{L}\d])/iu],
+  ['PLAN', plTolerant(/^\s*(?:proszę\s+)?zaplanuj(?![\p{L}\d])/iu)],
   [
     'FIRST_STEP',
     /^\s*(?:co|od\s+czego)\s+(?:powinniśmy|powinienem|powinnam|mamy)\s+(?:zrobić|zacząć)\s+(?:najpierw|na\s+początku)/iu,
@@ -364,32 +380,38 @@ const PL_SELF_KIND: ReadonlyArray<readonly [TransformationKind, RegExp]> = [
 /* ── REFERENCES TO WORK ALREADY DONE IN THIS CONVERSATION ───────────────────────────────────── */
 const EN_REFERENCE =
   /\b(?:that|this|these|those|the\s+same)\s+(?:idea|ideas|framework|frameworks|concept|model|analysis|diagnosis|plan|conclusion|conclusions|recommendation|recommendations|advice|answer|point|points|list|comparison|approach|argument|arguments|definition|reason|reasons|assumption|assumptions|criticism|criticisms|critique|criteria|criterion|steps|step|options|option|factors|factor|risks|risk|claims|claim|scenarios|scenario|signals|levers|principles|pillars|dimensions|lessons|trade-?offs|pros|cons|asymmetry|dynamic|mechanism|logic|reasoning|explanation|summary|checklist|table|strategy|model)\b|\b(?:which|what)\s+of\s+(?:those|these|them|the\s+(?:above|ones|options|arguments|reasons|factors|steps|points))\b|\bthe\s+(?:weakest|strongest|biggest|riskiest|most\s+(?:important|fragile|critical|questionable|robust)|least\s+(?:robust|convincing|important)|best|worst|first|last|main|key)\s+(?:part|assumption|argument|point|factor|risk|reason|step|option|element|dimension|one|link|lever|pillar|claim|criterion)\b|\b(?:which|what)\s+(?:part|component|dimension|element|factor|pillar|piece|one|assumption|argument|reason|risk|step|option|claim|criterion|lever|link|point)s?\b|\b(?:apply|use|test)\s+(?:that|this|it)\b|^\s*(?:why|how\s+so|in\s+what\s+way)\s*\??\s*$|\b(?:about|on|with|into|of)\s+(?:it|that|this|them)\s*[?.!]?\s*$|^\s*(?:turn|convert|make|put|summari[sz]e|compare|explain|expand|elaborate)\s+(?:that|this|it|them|those|these)\b/i;
-const PL_REFERENCE =
-  /(?:t[ęa]|to|ten|tę|tego|tej|tym|te|tych|tymi)\s+(?:ide\p{L}*|ram\p{L}*|koncepcj\p{L}*|model\p{L}*|analiz\p{L}*|diagnoz\p{L}*|plan\p{L}*|wnios\p{L}*|rekomendacj\p{L}*|rad\p{L}*|odpowied\p{L}*|list\p{L}*|porównani\p{L}*|argument\p{L}*|powod\p{L}*|powód|założeni\p{L}*|krytyk\p{L}*|kryteri\p{L}*|krok\p{L}*|opcj\p{L}*|czynnik\p{L}*|ryzyk\p{L}*|scenariusz\p{L}*|sygnał\p{L}*|zasad\p{L}*|lekcj\p{L}*|mechanizm\p{L}*|strategi\p{L}*|źród\p{L}*|rzecz\p{L}*|punkt\p{L}*)|(?:któr\p{L}*|co)\s+z\s+(?:nich|tych|tego|tej|powyższ\p{L}*)|najsłabsz\p{L}*\s+(?:część|element|ogniwo|punkt|założeni\p{L}*|argument\p{L}*|stron\p{L}*)|(?:któr\p{L}*|jak\p{L}*)\s+(?:część|element|składnik|wymiar|czynnik|filar|założeni\p{L}*|argument\p{L}*|ryzyk\p{L}*|krok\p{L}*|punkt\p{L}*|opcj\p{L}*)|(?:zastosuj|użyj|sprawdź)\s+(?:to|tę|ten|je)|^\s*(?:dlaczego|czemu)\s*\??\s*$|(?:z\s+tym|o\s+tym|w\s+tym|do\s+tego)\s*[?.!]?\s*$|(?:z\s+tym|z\s+tego|o\s+tym)\s+(?:zrobić|zrobimy|robić|począć)\s*[?.!]?\s*$|^\s*(?:przekształć|zamień|podsumuj|porównaj|wyjaśnij|rozwiń)\s+(?:to|tę|ten|je|te)(?![\p{L}\d])/iu;
+const PL_REFERENCE = plTolerant(
+  /(?:t[ęa]|to|ten|tę|tego|tej|tym|te|tych|tymi)\s+(?:ide\p{L}*|ram\p{L}*|koncepcj\p{L}*|model\p{L}*|analiz\p{L}*|diagnoz\p{L}*|plan\p{L}*|wnios\p{L}*|rekomendacj\p{L}*|rad\p{L}*|odpowied\p{L}*|list\p{L}*|porównani\p{L}*|argument\p{L}*|powod\p{L}*|powód|założeni\p{L}*|krytyk\p{L}*|kryteri\p{L}*|krok\p{L}*|opcj\p{L}*|czynnik\p{L}*|ryzyk\p{L}*|scenariusz\p{L}*|sygnał\p{L}*|zasad\p{L}*|lekcj\p{L}*|mechanizm\p{L}*|strategi\p{L}*|źród\p{L}*|rzecz\p{L}*|punkt\p{L}*)|(?:któr\p{L}*|co)\s+z\s+(?:nich|tych|tego|tej|powyższ\p{L}*)|najsłabsz\p{L}*\s+(?:część|element|ogniwo|punkt|założeni\p{L}*|argument\p{L}*|stron\p{L}*)|(?:któr\p{L}*|jak\p{L}*)\s+(?:część|element|składnik|wymiar|czynnik|filar|założeni\p{L}*|argument\p{L}*|ryzyk\p{L}*|krok\p{L}*|punkt\p{L}*|opcj\p{L}*)|(?:zastosuj|użyj|sprawdź)\s+(?:to|tę|ten|je)|^\s*(?:dlaczego|czemu)\s*\??\s*$|(?:z\s+tym|o\s+tym|w\s+tym|do\s+tego)\s*[?.!]?\s*$|(?:z\s+tym|z\s+tego|o\s+tym)\s+(?:zrobić|zrobimy|robić|począć)\s*[?.!]?\s*$|^\s*(?:przekształć|zamień|podsumuj|porównaj|wyjaśnij|rozwiń)\s+(?:to|tę|ten|je|te)(?![\p{L}\d])/iu,
+);
 /* a short follow-up that points back with a pronoun or at "your" earlier answer (read only when the
    conversation holds earlier work, and never over a named place, a public event or a fresh ask) */
 const EN_ANAPHORA =
   /\b(?:it|that|those|them|these|this)\b(?!\s+(?:country|countries|year|week|month|morning|time|city|government)\b)|\byour\s+(?:comparison|reasoning|framework|analysis|answer|list|criteria|plan|advice|points?|model|argument)\b|\byou\s+(?:gave|laid\s+out|said|suggested|proposed|listed|mentioned|described)\b/i;
-const PL_ANAPHORA =
-  /(?:^|[\s,])(?:to|tego|tym|te|tych|tej|ten|tę|je|nich|niego)(?=$|[\s,.?!])|co\s+(?:napisał\p{L}*|zaproponował\p{L}*|powiedział\p{L}*|wymienił\p{L}*)|(?:twoj\p{L}*|twoich|twoim)\s+(?:porównani|rozumowani|ram|analiz|odpowied|list|kryteri|plan|rad|model)\p{L}*/iu;
+const PL_ANAPHORA = plTolerant(
+  /(?:^|[\s,])(?:to|tego|tym|te|tych|tej|ten|tę|je|nich|niego)(?=$|[\s,.?!])|co\s+(?:napisał\p{L}*|zaproponował\p{L}*|powiedział\p{L}*|wymienił\p{L}*)|(?:twoj\p{L}*|twoich|twoim)\s+(?:porównani|rozumowani|ram|analiz|odpowied|list|kryteri|plan|rad|model)\p{L}*/iu,
+);
 const EN_APPLY =
   /\b(?:apply|applying|use|using|test|testing)\s+(?:that|this|the|it|those|these)\b[^?.!]{0,40}?\b(?:to|on|against|for)\s+([\p{L}][\p{L}\d .&'-]{1,60}?)(?=[?.!,]|$|\s+(?:are|is|and|—|-)\s)/iu;
-const PL_APPLY =
-  /(?:zastosuj|użyj|sprawdź|odnieś)\s+(?:to|tę|ten|je|t\p{L}+)(?![\p{L}\d])[^?.!]{0,40}?(?<![\p{L}\d])(?:do|na|wobec|dla)\s+([\p{L}][\p{L}\d .&'-]{1,60}?)(?=[?.!,]|$)/iu;
+const PL_APPLY = plTolerant(
+  /(?:zastosuj|użyj|sprawdź|odnieś)\s+(?:to|tę|ten|je|t\p{L}+)(?![\p{L}\d])[^?.!]{0,40}?(?<![\p{L}\d])(?:do|na|wobec|dla)\s+([\p{L}][\p{L}\d .&'-]{1,60}?)(?=[?.!,]|$)/iu,
+);
 const EN_DIAGNOSE =
   /\b(?:which|what)\s+(?:(?:part|component|dimension|element|factor|pillar|piece|one|assumption|argument|reason|risk|step|link|lever)s?|of\s+(?:those|these|them|the\s+\w+))\b.{0,40}\b(?:weakest|strongest|most\s+important|matters?\s+most|least|biggest|riskiest|most\s+fragile|missing|hardest|most\s+durable|lasting|most\s+likely)\b|\bthe\s+(?:weakest|riskiest|most\s+fragile|biggest|most\s+questionable)\s+(?:part|assumption|argument|point|link|risk|reason|element)\b|\bwhat\s+(?:would|could)\s+break\s+(?:it|that|this)\b/i;
-const PL_DIAGNOSE =
-  /(?:któr\p{L}*|co)\s+(?:(?:część|element|składnik|wymiar|czynnik|filar|założeni\p{L}*|argument\p{L}*|ryzyk\p{L}*|krok\p{L}*)(?![\p{L}\d])|z\s+(?:nich|tych|tego))(?![\p{L}\d]).{0,40}(?:najsłabsz\p{L}*|najsilniejsz\p{L}*|najważniejsz\p{L}*|najbardziej|brakuj\p{L}*|najtrwalsz\p{L}*|najtrudniejsz\p{L}*)|najsłabsz\p{L}*\s+(?:część|element|ogniwo|punkt|założeni\p{L}*|argument\p{L}*)/iu;
+const PL_DIAGNOSE = plTolerant(
+  /(?:któr\p{L}*|co)\s+(?:(?:część|element|składnik|wymiar|czynnik|filar|założeni\p{L}*|argument\p{L}*|ryzyk\p{L}*|krok\p{L}*)(?![\p{L}\d])|z\s+(?:nich|tych|tego))(?![\p{L}\d]).{0,40}(?:najsłabsz\p{L}*|najsilniejsz\p{L}*|najważniejsz\p{L}*|najbardziej|brakuj\p{L}*|najtrwalsz\p{L}*|najtrudniejsz\p{L}*)|najsłabsz\p{L}*\s+(?:część|element|ogniwo|punkt|założeni\p{L}*|argument\p{L}*)/iu,
+);
 
 /* ── DEPTH and CONCEPT forms (never a list of concepts) ───────────────────────────────────── */
 const EN_DEPTH =
   /\b(?:deeply|in\s+depth|in-depth|deeper|deep\s+(?:analysis|dive|explanation)|at\s+a\s+deeper\s+level|really\s+mean|actually\s+mean|beyond\s+the\s+(?:textbook|obvious|dictionary)|conceptually|fundamentally|thoroughly|rigorously)\b/i;
-const PL_DEPTH =
-  /(?:głęboko|głębiej|głębsz\p{L}*|dogłębn\p{L}*|naprawdę\s+(?:oznacza|znaczy|jest)|w\s+istocie|koncepcyjn\p{L}*|fundamentaln\p{L}*|wnikliw\p{L}*|szczegółow\p{L}*\s+analiz\p{L}*)/iu;
+const PL_DEPTH = plTolerant(
+  /(?:głęboko|głębiej|głębsz\p{L}*|dogłębn\p{L}*|naprawdę\s+(?:oznacza|znaczy|jest)|w\s+istocie|koncepcyjn\p{L}*|fundamentaln\p{L}*|wnikliw\p{L}*|szczegółow\p{L}*\s+analiz\p{L}*)/iu,
+);
 const EN_CONCEPT =
   /^\s*(?:please\s+)?(?:define|explain|describe|analy[sz]e|unpack|clarify|interpret)\b|\bwhat\s+(?:does|do)\s+.{2,80}?\s+(?:really\s+|actually\s+)?mean\b|\bwhat\s+(?:is|are)\s+.{2,80}?\s+(?:really|actually)\b|\b(?:meaning|nature|essence|definition|anatomy)\s+of\b|\bwhat\s+(?:is|are)\s+the\s+(?:difference|relationship)\s+between\b/i;
-const PL_CONCEPT =
-  /^\s*(?:proszę\s+)?(?:zdefiniuj|wyjaśnij|opisz|przeanalizuj|wytłumacz|zinterpretuj)(?![\p{L}\d])|co\s+(?:naprawdę\s+|właściwie\s+)?(?:oznacza|znaczy)(?![\p{L}\d])|czym\s+(?:naprawdę\s+|właściwie\s+)?(?:jest|są)(?![\p{L}\d])|(?:znaczenie|natura|istota|definicja)\s+\p{L}+/iu;
+const PL_CONCEPT = plTolerant(
+  /^\s*(?:proszę\s+)?(?:zdefiniuj|wyjaśnij|opisz|przeanalizuj|wytłumacz|zinterpretuj)(?![\p{L}\d])|co\s+(?:naprawdę\s+|właściwie\s+)?(?:oznacza|znaczy)(?![\p{L}\d])|czym\s+(?:naprawdę\s+|właściwie\s+)?(?:jest|są)(?![\p{L}\d])|(?:znaczenie|natura|istota|definicja)\s+\p{L}+/iu,
+);
 /*
   CTO R4 CLOSEOUT — A CAUSAL / MECHANISM QUESTION ("how can success create the conditions for
   failure", "why can efficiency make a system fragile", "how does leverage magnify losses",
@@ -400,8 +422,9 @@ const PL_CONCEPT =
 */
 const EN_CAUSAL =
   /^\s*(?:(?:so|and|but|ok(?:ay)?)[,]?\s+)?(?:how|why|in\s+what\s+ways?|what\s+mechanisms?|by\s+what\s+mechanisms?)\s+(?!(?:was|were|did|had|has|have|is|are|am)\b)(?:(?:can|could|does|do|might|would|may|will|should|must)\s+)?(?!(?:i|we|you|my|our|me|us)\b).{2,160}?\b(?:lead(?:s|ing)?\s+to|led\s+to|contribut\w*|caus\w*|result(?:s|ing|ed)?\s+in|produc\w*|creat\w*|generat\w*|trigger\w*|driv\w*|breed\w*|give\s+rise|turn\w*\s+(?:[\p{L}'’-]+\s+){0,6}?into|turn\w*|becom\w*|end\s+up|mak\w*\s+(?:[\p{L}'’-]+\s+){0,4}?(?:more|less|fragile|vulnerable|weak|weaker|strong|stronger|unstable|brittle|rigid|resilient|complacent)|render\w*|transform\w*|reshap\w*|shap\w*|amplif\w*|magnif\w*|multipl\w*|compound\w*|reinforc\w*|accelerat\w*|escalat\w*|spiral\w*|snowball\w*|cascad\w*|spread\w*|weaken\w*|undermin\w*|erod\w*|destroy\w*|damag\w*|hollow\w*|destabili[sz]\w*|collaps\w*|fail\w*|backfir\w*|los(?:e|es|ing)|declin\w*|fragili[sz]\w*|sabotag\w*|unravel\w*|crumbl\w*|break\s+down|strengthen\w*|protect\w*|stabili[sz]\w*|sustain\w*|insulat\w*)\b|^\s*what\s+makes\s+.{2,80}?\s+(?:fragile|vulnerable|resilient|stable|unstable|brittle|robust|durable|collapse|fail|succeed|last|backfire)\b|^\s*(?:indicate|show|explain|describe|analy[sz]e)\s+(?:how|why)\b/iu;
-const PL_CAUSAL =
-  /^\s*(?:(?:a|i|więc|ok)[,]?\s+)?(?:jak|dlaczego|czemu|w\s+jaki\s+sposób|co\s+sprawia|jakim\s+mechanizmem)(?![\p{L}\d])(?!\s+(?:mogę|możemy|powinienem|powinnam|powinniśmy|mam|mamy)(?![\p{L}\d])).{2,160}?(?:prowadz\p{L}*|prowadzi\p{L}*|doprowadz\p{L}*|przyczyni\p{L}*|powod\p{L}*|wywoł\p{L}*|tworz\p{L}*|stwarza\p{L}*|rodz\p{L}*|skutkuj\p{L}*|staj\p{L}*\s+się|zamieni\p{L}*|przekształc\p{L}*|wzmacnia\p{L}*|wzmocni\p{L}*|potęguj\p{L}*|pogłębia\p{L}*|nasila\p{L}*|napędza\p{L}*|przyspiesza\p{L}*|zwielokrotni\p{L}*|osłabia\p{L}*|osłabi\p{L}*|podkopuj\p{L}*|niszcz\p{L}*|zniszcz\p{L}*|destabilizuj\p{L}*|eroduj\p{L}*|podważa\p{L}*|utrat\p{L}*|traci\p{L}*|straci\p{L}*|upad\p{L}*|załam\p{L}*|chroni\p{L}*|stabilizuj\p{L}*|kształtuj\p{L}*)(?<!(?:ł|ła|ło|li|ły|łem|łam))(?![\p{L}])|^\s*(?:wyjaśnij|pokaż|opisz|przeanalizuj)\s+(?:jak|dlaczego|w\s+jaki\s+sposób)(?![\p{L}\d])/iu;
+const PL_CAUSAL = plTolerant(
+  /^\s*(?:(?:a|i|więc|ok)[,]?\s+)?(?:jak|dlaczego|czemu|w\s+jaki\s+sposób|co\s+sprawia|jakim\s+mechanizmem)(?![\p{L}\d])(?!\s+(?:mogę|możemy|powinienem|powinnam|powinniśmy|mam|mamy)(?![\p{L}\d])).{2,160}?(?:prowadz\p{L}*|prowadzi\p{L}*|doprowadz\p{L}*|przyczyni\p{L}*|powod\p{L}*|wywoł\p{L}*|tworz\p{L}*|stwarza\p{L}*|rodz\p{L}*|skutkuj\p{L}*|staj\p{L}*\s+się|zamieni\p{L}*|przekształc\p{L}*|wzmacnia\p{L}*|wzmocni\p{L}*|potęguj\p{L}*|pogłębia\p{L}*|nasila\p{L}*|napędza\p{L}*|przyspiesza\p{L}*|zwielokrotni\p{L}*|osłabia\p{L}*|osłabi\p{L}*|podkopuj\p{L}*|niszcz\p{L}*|zniszcz\p{L}*|destabilizuj\p{L}*|eroduj\p{L}*|podważa\p{L}*|utrat\p{L}*|traci\p{L}*|straci\p{L}*|upad\p{L}*|załam\p{L}*|chroni\p{L}*|stabilizuj\p{L}*|kształtuj\p{L}*)(?<!(?:ł|ła|ło|li|ły|łem|łam))(?![\p{L}])|^\s*(?:wyjaśnij|pokaż|opisz|przeanalizuj)\s+(?:jak|dlaczego|w\s+jaki\s+sposób)(?![\p{L}\d])/iu,
+);
 
 /*
   CTO R4 THIRD PASS — AN IMPERATIVE IS A REQUEST. "Outline…", "Explain…", "Compare…", "Give me…",

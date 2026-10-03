@@ -1,3 +1,4 @@
+import { plTolerant } from './pl-tolerant';
 /**
  * ════════════════════════════════════════════════════════════════════════════
  * CTO P0 — GENERAL ADVISORY / DECISION-SUPPORT ROUTING
@@ -76,12 +77,15 @@ const PL_DECISION_FRAMES: readonly RegExp[] = [
   /(?:^|\s)pomóż\s+(?:mi|nam)\s+(?:\p{L}+)/iu,
   /^\s*(?:proszę\s+)?(?:napisz|przygotuj|zaplanuj|stwórz|rozpisz|sporządź)\s+(?:mi\s+|nam\s+)?\p{L}+/iu,
 ];
-const PL_PLANNING_SUBJECTS =
-  /(?:model\p{L}*\s+biznesow\p{L}*|monetyz\p{L}*|strategi\p{L}*\s+cenow\p{L}*|subskrypc\p{L}*|segment\p{L}*\s+klient\p{L}*|klient\p{L}*\s+docelow\p{L}*|utrzyma\p{L}*\s+klient\p{L}*|retencj\p{L}*|plan\p{L}*\s+biznesow\p{L}*|plan\p{L}*\s+marketingow\p{L}*|harmonogram\p{L}*\s+produkt\p{L}*|propozycj\p{L}*\s+wartości)/iu;
-const PL_OWN_VENTURE =
-  /(?:^|\s)(?:moj\p{L}*|nasz\p{L}*|mój)\s+(?:firm\p{L}*|biznes\p{L}*|produkt\p{L}*|usług\p{L}*|klient\p{L}*|zesp\p{L}*|startup\p{L}*|platform\p{L}*)/iu;
-const PL_INTERROGATIVE =
-  /\?|^\s*(?:jak|co|kto|który|która|które|czy|porównaj|doradź|poradź)(?=\s)/iu;
+const PL_PLANNING_SUBJECTS = plTolerant(
+  /(?:model\p{L}*\s+biznesow\p{L}*|monetyz\p{L}*|strategi\p{L}*\s+cenow\p{L}*|subskrypc\p{L}*|segment\p{L}*\s+klient\p{L}*|klient\p{L}*\s+docelow\p{L}*|utrzyma\p{L}*\s+klient\p{L}*|retencj\p{L}*|plan\p{L}*\s+biznesow\p{L}*|plan\p{L}*\s+marketingow\p{L}*|harmonogram\p{L}*\s+produkt\p{L}*|propozycj\p{L}*\s+wartości)/iu,
+);
+const PL_OWN_VENTURE = plTolerant(
+  /(?:^|\s)(?:moj\p{L}*|nasz\p{L}*|mój)\s+(?:firm\p{L}*|biznes\p{L}*|produkt\p{L}*|usług\p{L}*|klient\p{L}*|zesp\p{L}*|startup\p{L}*|platform\p{L}*)/iu,
+);
+const PL_INTERROGATIVE = plTolerant(
+  /\?|^\s*(?:jak|co|kto|który|która|które|czy|porównaj|doradź|poradź)(?=\s)/iu,
+);
 
 /*
   A PUBLIC EVENT as the subject: "How should I think about the war in Sudan?" borrows a decision
@@ -91,14 +95,16 @@ const PL_INTERROGATIVE =
 */
 export const EN_PUBLIC_EVENT =
   /\b(?:wars?|conflicts?|fighting|invasion|ceasefire|coup|elections?|referendum|protests?|unrest|riots?|crisis|crises|attacks?|sanctions|genocide|famine|outbreak|epidemic|pandemic|earthquake|floods?|hurricane|cyclone)\b/i;
-export const PL_PUBLIC_EVENT =
-  /(?:^|\s)(?:wojn\p{L}*|konflikt\p{L}*|walk[aiię]|walkach|inwazj\p{L}*|zawieszeni\p{L}*\s+broni|zamach\p{L}*|wybor(?:y|ów|ach|ami|cz\p{L}*)|referend\p{L}*|protest\p{L}*|zamieszk\p{L}*|kryzys\p{L}*|atak\p{L}*|sankcj\p{L}*|ludobójstw\p{L}*|głód|epidemi\p{L}*|pandemi\p{L}*|trzęsieni\p{L}*\s+ziemi|powodzi\p{L}*|powódź)/iu;
+export const PL_PUBLIC_EVENT = plTolerant(
+  /(?:^|\s)(?:wojn\p{L}*|konflikt\p{L}*|walk[aiię]|walkach|inwazj\p{L}*|zawieszeni\p{L}*\s+broni|zamach\p{L}*|wybor(?:y|ów|ach|ami|cz\p{L}*)|referend\p{L}*|protest\p{L}*|zamieszk\p{L}*|kryzys\p{L}*|atak\p{L}*|sankcj\p{L}*|ludobójstw\p{L}*|głód|epidemi\p{L}*|pandemi\p{L}*|trzęsieni\p{L}*\s+ziemi|powodzi\p{L}*|powódź)/iu,
+);
 
 /* ── genuine freshness: an explicit time marker, never a topic noun ───────────────────────── */
 const EN_EXPLICIT_TIME =
   /\b(?:today|today's|tonight|right\s+now|now|currently|current\s+(?:market|prices?|pricing|rates?|state|situation|data|figures|events|news|status)|latest|most\s+recent|recent(?:ly)?|this\s+(?:week|month|year|quarter)|yesterday|as\s+of|at\s+the\s+moment|at\s+present|so\s+far\s+this)\b/i;
-const PL_EXPLICIT_TIME =
-  /(?:^|\s)(?:dziś|dzisiaj|dzisiejsz\p{L}*|teraz|obecnie|aktualn\p{L}*|najnowsz\p{L}*|ostatnio|w\s+tym\s+(?:tygodniu|miesiącu|roku|kwartale)|wczoraj)(?=\s|$|[?,.!])/iu;
+const PL_EXPLICIT_TIME = plTolerant(
+  /(?:^|\s)(?:dziś|dzisiaj|dzisiejsz\p{L}*|teraz|obecnie|aktualn\p{L}*|najnowsz\p{L}*|ostatnio|w\s+tym\s+(?:tygodniu|miesiącu|roku|kwartale)|wczoraj)(?=\s|$|[?,.!])/iu,
+);
 
 /*
   CTO R4 THIRD PASS — A YEAR IS A TIME ROLE, NOT A FRESHNESS TOKEN. A stated year asks for current
@@ -112,7 +118,9 @@ const SINCE_YEAR: Readonly<Record<'en' | 'pl', RegExp>> = {
   /* "since 2008" runs to now; "from 2008" only with "onwards / on / to now / to the present" —
      "lessons from the 1918 pandemic" is an ORIGIN, not a window */
   en: /\bsince\s+(?:the\s+)?(?:early\s+|late\s+|mid-?)?(?:1[5-9]\d{2}|20\d{2})(?:s|'s)?\b(?!\s*(?:to|until|till|through|-|and)\s*(?:the\s+)?(?:1[5-9]\d{2}|20\d{2}))|\bfrom\s+(?:the\s+)?(?:1[5-9]\d{2}|20\d{2})(?:s|'s)?\s+(?:onwards?|on\b|to\s+(?:now|today|the\s+present|date))/i,
-  pl: /(?:^|\s)(?:od|począwszy\s+od)\s+(?:roku\s+|lat\s+)?(?:1[5-9]\d{2}|20\d{2})(?![\d])(?!\s*(?:do|-|i)\s*(?:roku\s+)?(?:1[5-9]\d{2}|20\d{2}))/iu,
+  pl: plTolerant(
+    /(?:^|\s)(?:od|począwszy\s+od)\s+(?:roku\s+|lat\s+)?(?:1[5-9]\d{2}|20\d{2})(?![\d])(?!\s*(?:do|-|i)\s*(?:roku\s+)?(?:1[5-9]\d{2}|20\d{2}))/iu,
+  ),
 };
 
 /** Does a stated year reach the present (current / future year, or "since YEAR")? */
