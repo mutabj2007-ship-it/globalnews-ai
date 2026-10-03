@@ -180,9 +180,6 @@ const EUROPE_SOUTH = [
   'PRT',
   'SMR',
   'SRB',
-  /* TRUST R1 — Kosovo (user-assigned XKX) has no M49 code; it is placed here GEOGRAPHICALLY so
-     Europe-scoped questions reach it. This is not an M49 assignment and implies no status. */
-  'XKX',
   'SVN',
   'ESP',
   'VAT',
@@ -331,6 +328,46 @@ export const M49_CONTINENT_DIVERGENCE: readonly {
     countriesTableRegion: 'Europe',
     reason:
       'M49 assigns Cyprus to Western Asia on geographic grounds; the product country table assigns it to Europe on institutional grounds (EU member state). Both are defensible; the M49 list is kept M49-accurate.',
+  },
+];
+
+/**
+ * TRUST R1 — registry places OUTSIDE the sovereign M49 partitions: no M49 code at all (user-assigned
+ * identifiers), or an M49 dependent territory the sovereign-only member sets exclude. They are never
+ * written into an M49 list (that would make the list claim something M49 does not say); the
+ * partition test subtracts them, exactly as it subtracts declared divergences.
+ */
+export const OUTSIDE_M49_PARTITIONS: readonly {
+  readonly iso3: string;
+  readonly kind: 'NO_M49_CODE' | 'M49_DEPENDENT_TERRITORY';
+  readonly countriesTableRegion: string;
+  readonly reason: string;
+}[] = [
+  {
+    iso3: 'XKX',
+    kind: 'NO_M49_CODE',
+    countriesTableRegion: 'Europe',
+    reason:
+      'Kosovo: no UN M49 code; XK/XKX are user-assigned identifiers, so no M49 subregion can be cited.',
+  },
+  {
+    iso3: 'QNC',
+    kind: 'NO_M49_CODE',
+    countriesTableRegion: 'Europe',
+    reason: 'Northern Cyprus: a special map area with no M49 code and a user-assigned identifier.',
+  },
+  {
+    iso3: 'QSO',
+    kind: 'NO_M49_CODE',
+    countriesTableRegion: 'Africa',
+    reason: 'Somaliland: a special map area with no M49 code and a user-assigned identifier.',
+  },
+  {
+    iso3: 'ATF',
+    kind: 'M49_DEPENDENT_TERRITORY',
+    countriesTableRegion: 'Africa',
+    reason:
+      'French Southern Territories: M49 publishes it under Eastern Africa as a dependent territory; these member sets carry sovereign states only (22 published / 18 sovereign).',
   },
 ];
 

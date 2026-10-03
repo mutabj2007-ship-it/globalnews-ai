@@ -2,6 +2,7 @@ import { COUNTRIES } from '@globalnews-ai/shared';
 import {
   allSupranationalRegions,
   M49_CONTINENT_DIVERGENCE,
+  OUTSIDE_M49_PARTITIONS,
   membersOf,
   regionExtent,
   supranationalById,
@@ -56,9 +57,13 @@ describe('2 · the M49 continental partitions are complete and disjoint', () => 
    * divergences this file declares. Anything NOT declared still fails.
    */
   const continent = (region: string): string[] => {
-    const leaving = new Set(
-      M49_CONTINENT_DIVERGENCE.filter((d) => d.countriesTableRegion === region).map((d) => d.iso3),
-    );
+    const leaving = new Set([
+      ...M49_CONTINENT_DIVERGENCE.filter((d) => d.countriesTableRegion === region).map(
+        (d) => d.iso3,
+      ),
+      /* TRUST R1 — places with no M49 code are declared, never forced into an M49 list. */
+      ...OUTSIDE_M49_PARTITIONS.filter((d) => d.countriesTableRegion === region).map((d) => d.iso3),
+    ]);
     const arriving = M49_CONTINENT_DIVERGENCE.filter((d) =>
       d.m49Subregion.endsWith(region === 'Asia' ? 'Asia' : region),
     ).map((d) => d.iso3);

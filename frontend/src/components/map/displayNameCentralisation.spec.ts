@@ -117,7 +117,7 @@ describe('KEN · AFRICA is localised too', () => {
   });
 
   it('an unrecognised grouping shows the raw value rather than nothing', () => {
-    expect(continentDisplayName('Antarctica', pl.map.spatial.card.continents)).toBe('Antarctica');
+    expect(continentDisplayName('Zealandia', pl.map.spatial.card.continents)).toBe('Zealandia') /* TRUST R1: Antarctica is now a real grouping */;
   });
 
   it('EVERY grouping the registry actually emits has copy in both languages', () => {

@@ -653,11 +653,18 @@ describe('country relevance — M66.14B prepared-text optimization preserves sem
     /* TRUST R1 — plus the explicitly included territories, each typed and attached to its state. */
     expect(TERRITORIES.map((t) => [t.iso3, t.status, t.partOf ?? null, t.codeSource ?? 'ISO'])).toEqual([
       ['GRL', 'AUTONOMOUS_TERRITORY', 'DNK', 'ISO'],
-      /* CTO map ruling: neutral status, no partOf inferred, Kosovo codes user-assigned (non-ISO). */
+      /* CTO map rulings: neutral status, no partOf inferred, user-assigned codes marked non-ISO. */
       ['ESH', 'DISPUTED_TERRITORY', null, 'ISO'],
       ['XKX', 'CONTESTED_STATUS', null, 'USER_ASSIGNED'],
+      ['FLK', 'TERRITORY', null, 'ISO'],
+      ['ATF', 'TERRITORY', null, 'ISO'],
+      ['PRI', 'TERRITORY', null, 'ISO'],
+      ['NCL', 'TERRITORY', null, 'ISO'],
+      ['ATA', 'AREA', null, 'ISO'],
+      ['QNC', 'SPECIAL_MAP_AREA', null, 'USER_ASSIGNED'],
+      ['QSO', 'SPECIAL_MAP_AREA', null, 'USER_ASSIGNED'],
     ]);
-    expect(COUNTRIES).toHaveLength(199);
+    expect(COUNTRIES).toHaveLength(206);
   });
 
   /*

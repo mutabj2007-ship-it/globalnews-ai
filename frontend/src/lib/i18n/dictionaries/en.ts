@@ -1699,6 +1699,7 @@ export const en = {
           Asia: 'Asia',
           Africa: 'Africa',
           Oceania: 'Oceania',
+          Antarctica: 'Antarctica',
         },
         levels: {
           EXACT: 'Exact location',

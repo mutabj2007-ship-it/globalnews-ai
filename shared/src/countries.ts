@@ -26,7 +26,13 @@ export interface CountryMeta {
    * TRUST R1 — present only for a NON-SOVEREIGN place included in the registry (e.g. Greenland).
    * Absent means a sovereign state (or the UN observers already listed).
    */
-  status?: 'AUTONOMOUS_TERRITORY' | 'DISPUTED_TERRITORY' | 'CONTESTED_STATUS';
+  status?:
+    | 'AUTONOMOUS_TERRITORY'
+    | 'DISPUTED_TERRITORY'
+    | 'CONTESTED_STATUS'
+    | 'TERRITORY'
+    | 'AREA'
+    | 'SPECIAL_MAP_AREA';
   /** TRUST R1 — the ISO3 of the state a territory belongs to. Never a substitute scope. */
   partOf?: string;
   /**
@@ -329,6 +335,55 @@ export const COUNTRIES: CountryMeta[] = [
     status: 'CONTESTED_STATUS',
     codeSource: 'USER_ASSIGNED',
   },
+  /*
+   * TRUST R1 — CTO checkpoint 2 map ruling. Ordinary country/area/territory entries with their
+   * canonical ISO 3166-1 codes (alpha-2 checked against CLDR region data by
+   * country-registry-completeness.spec). Being listed is not a claim that any of them is a
+   * sovereign state; no partOf is asserted.
+   */
+  {
+    iso2: 'FK',
+    iso3: 'FLK',
+    isoNumeric: '238',
+    name: 'Falkland Islands (Malvinas)',
+    region: 'Americas',
+    status: 'TERRITORY',
+  },
+  {
+    iso2: 'TF',
+    iso3: 'ATF',
+    isoNumeric: '260',
+    name: 'French Southern and Antarctic Territories',
+    region: 'Africa',
+    status: 'TERRITORY',
+  },
+  { iso2: 'PR', iso3: 'PRI', isoNumeric: '630', name: 'Puerto Rico', region: 'Americas', status: 'TERRITORY' },
+  { iso2: 'NC', iso3: 'NCL', isoNumeric: '540', name: 'New Caledonia', region: 'Oceania', status: 'TERRITORY' },
+  { iso2: 'AQ', iso3: 'ATA', isoNumeric: '010', name: 'Antarctica', region: 'Antarctica', status: 'AREA' },
+  /*
+   * SPECIAL MAP AREAS — rendered areas the map draws, with NO ISO 3166-1 or M49 code. Their codes
+   * come from the ISO 3166-1 USER-ASSIGNED ranges (QM–QZ / QMA–QZZ) and are never advertised as
+   * ISO-assigned; the application decides no sovereignty. A question scoped to one of them stays
+   * scoped to that area: it is never silently widened to Cyprus or Somalia.
+   */
+  {
+    iso2: 'QN',
+    iso3: 'QNC',
+    isoNumeric: 'X-NCYP',
+    name: 'Northern Cyprus',
+    region: 'Europe',
+    status: 'SPECIAL_MAP_AREA',
+    codeSource: 'USER_ASSIGNED',
+  },
+  {
+    iso2: 'QS',
+    iso3: 'QSO',
+    isoNumeric: 'X-SOML',
+    name: 'Somaliland',
+    region: 'Africa',
+    status: 'SPECIAL_MAP_AREA',
+    codeSource: 'USER_ASSIGNED',
+  },
 ];
 
 /** TRUST R1 — the sovereign-state catalogue (196): every entry without a territory status. */
@@ -409,6 +464,18 @@ const COUNTRY_ALIASES: Record<string, string> = {
   grønland: 'GRL',
   gronland: 'GRL',
   'kalaallit nunaat': 'GRL',
+  /* TRUST R1 — CTO checkpoint 2 map ruling. */
+  'falkland islands': 'FLK',
+  falklands: 'FLK',
+  malvinas: 'FLK',
+  'islas malvinas': 'FLK',
+  'french southern territories': 'ATF',
+  'french southern and antarctic lands': 'ATF',
+  'new caledonia': 'NCL',
+  'nouvelle-calédonie': 'NCL',
+  'nouvelle caledonie': 'NCL',
+  'northern cyprus': 'QNC',
+  'north cyprus': 'QNC',
   'republic of the congo': 'COG',
   /* ASK PUBLIC BETA RETRIEVAL REPAIR R1 — the French form, so French COG reporting names COG. */
   'république du congo': 'COG',

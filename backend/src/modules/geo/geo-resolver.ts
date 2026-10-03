@@ -1349,6 +1349,25 @@ export function resolveGeography(rawText: string, options: GeoResolveOptions = {
       if (!corroborated) cityMatch = undefined;
     }
   }
+  /*
+   * TRUST R1 — A CITY INSIDE A NAMED COUNTRY'S OWN NAME IS NOT A SEPARATE PLACE.
+   * "New Caledonia" resolved to Caledonia, Wisconsin: the city run "caledonia" sits inside the
+   * country run "new caledonia", and the rule above only fires when the city text is itself a
+   * country. The same containment rule the country scan applies ("Guinea" inside "Papua New
+   * Guinea"), applied across tiers — unless the city is corroborated by that same country.
+   */
+  if (cityMatch) {
+    const cityText = ` ${cityMatch.text} `;
+    const cityEntries = cityMatch.entries;
+    const insideCountryName = scan.countries.some(
+      (country) =>
+        ` ${country.name
+          .toLowerCase()
+          .replace(/[^\p{L}\p{N}]+/gu, ' ')
+          .trim()} `.includes(cityText) && !cityEntries.some((city) => city.cc === country.iso2),
+    );
+    if (insideCountryName) cityMatch = undefined;
+  }
   const regionMatch =
     scan.regions.length > 0
       ? { entries: scan.regions, text: scan.regionText ?? '', words: 0 }

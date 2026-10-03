@@ -1,6 +1,6 @@
 import { COUNTRIES } from '@globalnews-ai/shared';
 import { allCities, allRegions, countryExtent } from './geo-gazetteer';
-import { allSupranationalRegions } from './supranational-membership';
+import { allSupranationalRegions, OUTSIDE_M49_PARTITIONS } from './supranational-membership';
 import { resolveGeography } from './geo-resolver';
 
 /**
@@ -70,10 +70,8 @@ const NON_SOVEREIGN_TERRITORIES: Readonly<Record<string, string>> = {
   MQ: 'Martinique — overseas department of France',
   MS: 'Montserrat — British Overseas Territory',
   PM: 'Saint Pierre and Miquelon — French overseas collectivity',
-  PR: 'Puerto Rico — US commonwealth',
   RE: 'Réunion — overseas department of France',
   SH: 'Saint Helena, Ascension and Tristan da Cunha — British Overseas Territory',
-  TF: 'French Southern and Antarctic Lands — French overseas territory',
   TK: 'Tokelau — dependent territory of New Zealand',
   UM: 'United States Minor Outlying Islands — US insular areas',
   VI: 'United States Virgin Islands — unincorporated US territory',
@@ -179,6 +177,8 @@ describe('2 · M49 completeness is checked against the gazetteer, not against it
       const country = registered.get(cc);
       // Non-sovereign codes have no COUNTRIES row by design and are not M49 members.
       if (!country || country.region !== 'Africa') continue;
+      /* TRUST R1 — declared places outside the sovereign M49 partitions (OUTSIDE_M49_PARTITIONS). */
+      if (OUTSIDE_M49_PARTITIONS.some((d) => d.iso3 === country.iso3)) continue;
 
       const homes = placed.get(country.iso3) ?? [];
       if (homes.length !== 1) gaps.push(`${country.iso3} (${country.name}) -> ${homes.length}`);
@@ -252,5 +252,55 @@ describe('TRUST R1 — CTO map ruling: Western Sahara and Kosovo, neutral and se
     expect(kosovo?.partOf).toBeUndefined();
     expect(resolveGeography('What is happening in Kosovo?').place?.country.iso3).toBe('XKX');
     expect(resolveGeography('What is happening in Serbia?').place?.country.iso3).toBe('SRB');
+  });
+});
+
+describe('TRUST R1 — CTO checkpoint 2: remaining map shapes', () => {
+  const cldr = new Intl.DisplayNames(['en'], { type: 'region' });
+  /* ISO 3166-1 user-assigned alpha-2 ranges: AA, QM–QZ, XA–XZ, ZZ. */
+  const userAssigned2 = /^(?:AA|Q[M-Z]|X[A-Z]|ZZ)$/;
+  /* …and alpha-3: AAA–AAZ, QMA–QZZ, XAA–XZZ, ZZA–ZZZ. */
+  const userAssigned3 = /^(?:AA[A-Z]|Q[M-Z][A-Z]|X[A-Z][A-Z]|ZZ[A-Z])$/;
+
+  it.each([
+    ['FK', 'FLK', '238'],
+    ['TF', 'ATF', '260'],
+    ['PR', 'PRI', '630'],
+    ['NC', 'NCL', '540'],
+    ['AQ', 'ATA', '010'],
+  ])('%s/%s/%s is an ISO entry whose alpha-2 is a real CLDR region', (iso2, iso3, numeric) => {
+    const entry = COUNTRIES.find((c) => c.iso3 === iso3);
+    expect(entry).toMatchObject({ iso2, isoNumeric: numeric });
+    expect(entry?.codeSource).toBeUndefined();
+    expect(cldr.of(iso2)).not.toBe(iso2);
+  });
+
+  it('user-assigned identifiers are always marked, and always in the ISO user-assigned ranges', () => {
+    for (const entry of COUNTRIES.filter((c) => c.codeSource === 'USER_ASSIGNED')) {
+      expect(`${entry.iso2} ${userAssigned2.test(entry.iso2)}`).toBe(`${entry.iso2} true`);
+      expect(`${entry.iso3} ${userAssigned3.test(entry.iso3)}`).toBe(`${entry.iso3} true`);
+      expect(entry.isoNumeric).toMatch(/^X-/); // a join key, never an ISO numeric code
+    }
+    /* …and no entry WITHOUT the mark uses a user-assigned code. */
+    for (const entry of COUNTRIES.filter((c) => c.codeSource === undefined)) {
+      expect(`${entry.iso3} ${userAssigned3.test(entry.iso3)}`).toBe(`${entry.iso3} false`);
+    }
+  });
+
+  it.each([
+    ['What is happening in Northern Cyprus?', 'QNC'],
+    ['What is happening in Cyprus?', 'CYP'],
+    ['What is happening in Somaliland?', 'QSO'],
+    ['What is happening in Somalia?', 'SOM'],
+    ['news about the Malvinas', 'FLK'],
+    ['New Caledonia referendum', 'NCL'],
+    ['research stations in Antarctica', 'ATA'],
+    ['What is happening in Puerto Rico?', 'PRI'],
+  ])('"%s" keeps its own scope (%s) — never widened to a neighbour', (question, iso3) => {
+    expect(resolveGeography(question).place?.country.iso3).toBe(iso3);
+  });
+
+  it('a city inside a named country name is not a separate place (Caledonia, WI stays reachable)', () => {
+    expect(resolveGeography('Caledonia Wisconsin flooding').place?.country.iso3).toBe('USA');
   });
 });

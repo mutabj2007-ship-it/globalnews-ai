@@ -1319,6 +1319,7 @@ export const pl: Dictionary = {
           Asia: 'Azja',
           Africa: 'Afryka',
           Oceania: 'Oceania',
+          Antarctica: 'Antarktyda',
         },
         levels: {
           EXACT: 'Dok\u0142adna lokalizacja',
