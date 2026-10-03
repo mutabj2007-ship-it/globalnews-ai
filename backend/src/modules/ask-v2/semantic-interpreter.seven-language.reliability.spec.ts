@@ -57,9 +57,16 @@ interface Item {
   family: string;
   language: Language;
   turn: string;
-  state: { artifact?: { kind: string; label: string }; priorReaderTurns?: string[] };
+  state: {
+    artifact?: { kind: string; label: string };
+    priorReaderTurns?: string[];
+    /* the EN / PL reliability set's bounded state (structured, the reader's words) */
+    objective?: string;
+    choiceSet?: string[];
+    portableSubject?: string;
+  };
   expect: {
-    needsCurrentEvidence: boolean;
+    needsCurrentEvidence: boolean | 'either';
     mixed: boolean;
     jobs: string[];
     countries?: string[];
@@ -240,6 +247,29 @@ live(
         language: item.language,
         intent: 'ask',
         ...conversationOf(conversational),
+        ...(item.state.objective === undefined &&
+        item.state.choiceSet === undefined &&
+        item.state.portableSubject === undefined
+          ? {}
+          : {
+              conversation: {
+                officialSourcesOnly: false,
+                constraintOnly: false,
+                trace: {
+                  job: 'UNKNOWN',
+                  ownJob: 'UNKNOWN',
+                  carried: [],
+                  overridden: [],
+                  reset: false,
+                  composed: null,
+                  subject: item.state.portableSubject ?? null,
+                },
+                ...(item.state.objective === undefined
+                  ? {}
+                  : { objective: { text: item.state.objective, sourceTurn: 0, inherited: true } }),
+                ...(item.state.choiceSet === undefined ? {} : { choiceSet: item.state.choiceSet }),
+              },
+            }),
         ...(item.state.artifact === undefined
           ? {}
           : {
@@ -327,22 +357,37 @@ live(
     }
 
     const tupleOf = (r: AskR2Route) => ({
-      freshness: r.semantic.turn.freshness,
       job: r.job.job ?? null,
+      freshness: r.semantic.turn.freshness,
+      evidence: r.semantic.turn.evidence,
+      newsPlanned: plansNews(r) && r.semanticClarification !== true,
       actors: [...(r.relationship?.countries ?? [])].sort().join('+') || null,
+      relationship: r.relationship === null ? null : (r.relationship.relations[0] ?? null),
+      objective: r.decisionObjective,
       reference: r.semantic.references.target,
       clarification: r.semanticClarification === true,
     });
 
     const rows: Array<Record<string, unknown>> = [];
     const stability: Array<Record<string, unknown>> = [];
+    const repeatFamilies = process.env.SEVEN_REPEAT_FAMILIES?.split(',').filter(Boolean);
     const repeatIds = new Set(
-      SF.flatMap((lang) =>
-        REPEAT_FAMILIES.map(
-          (f) => set.items.find((i) => i.language === lang && i.family === f)?.id,
-        ).filter((x): x is string => x !== undefined),
-      ),
+      repeatFamilies !== undefined
+        ? repeatFamilies.flatMap((fam) =>
+            set.items
+              .filter((i) => i.family === fam)
+              .slice(0, 2)
+              .map((i) => i.id),
+          )
+        : SF.flatMap((lang) =>
+            REPEAT_FAMILIES.map(
+              (f) => set.items.find((i) => i.language === lang && i.family === f)?.id,
+            ).filter((x): x is string => x !== undefined),
+          ),
     );
+    /* SEVEN_REPEAT_IDS — named items always in the repeat subset (CTO run-3 §5: the rate-hike family) */
+    for (const id of process.env.SEVEN_REPEAT_IDS?.split(',').filter(Boolean) ?? [])
+      repeatIds.add(id);
     const items = [
       ...set.items,
       ...(set.primeMoment ?? []).map((p) => ({ ...p, family: 'prime_moment' })),
@@ -378,9 +423,17 @@ live(
             (s) => JSON.parse(s) as string,
           )
         : [];
+      const letters = (x: string) =>
+        x
+          .normalize('NFC')
+          .toLowerCase()
+          .replace(/[^\p{L}\p{N}]+/gu, '');
+      const letterSources = [readerText, ...earlier].map(letters);
       const factualProse =
         jsonOk &&
-        strings.some((s) => s.length > 48 && !verbatimSources.some((src) => src.includes(fold(s))));
+        strings.some(
+          (s) => s.length > 48 && !letterSources.some((src) => src.includes(letters(s))),
+        );
       const schemaOk =
         jsonOk &&
         typeof parsed!.job === 'string' &&
@@ -408,7 +461,26 @@ live(
           : undefined;
       const inventedObjective =
         typeof rawObjective === 'string' &&
-        !verbatimSources.some((src) => src.includes(fold(rawObjective)));
+        !verbatimSources.some((src) => src.includes(fold(rawObjective))) &&
+        !letterSources.some((src) => src.includes(letters(rawObjective)));
+      /* the MODEL's own cross-field contradictions (rejected / dropped by validation, reported) */
+      const rawRole = jsonOk ? parsed!.temporalRole : undefined;
+      const rawParts =
+        jsonOk && Array.isArray(parsed!.parts)
+          ? (parsed!.parts as Array<Record<string, unknown>>)
+          : [];
+      const rawContradiction =
+        schemaOk &&
+        ((first &&
+          typeof rawRole === 'string' &&
+          ['CURRENT_STATE', 'RECENT', 'SINCE_PAST_TO_PRESENT', 'HISTORICAL_AND_CURRENT'].includes(
+            rawRole,
+          ) !== (parsed!.needsCurrentEvidence as boolean)) ||
+          (parsed!.job === 'MIXED' && parsed!.needsCurrentEvidence !== true) ||
+          (rawParts.length >= 2 &&
+            rawParts.some((p) => p?.kind === 'CURRENT') !==
+              (parsed!.needsCurrentEvidence as boolean)) ||
+          (rel !== null && rel.object != null && rel.object === rel.venue));
       const called = run !== null;
       const usable = run?.source === 'SEMANTIC';
       const rejected = called && !usable;
@@ -429,7 +501,8 @@ live(
       const checks: Record<string, boolean> = {};
       if (!clarify) {
         const current = final.semantic.turn.freshness !== 'NONE';
-        checks.currentness = current === e.needsCurrentEvidence;
+        if (e.needsCurrentEvidence !== 'either')
+          checks.currentness = current === e.needsCurrentEvidence;
         if (e.mixed)
           checks.mixed =
             final.knowledgeRequirement === 'MIXED_REFERENCE_CURRENT' ||
@@ -467,7 +540,8 @@ live(
         ]),
       ].sort();
       const expectedCountries = [...new Set(e.countries ?? [])].sort();
-      checks.countries = named.join(',') === expectedCountries.join(',');
+      if (e.countries !== undefined)
+        checks.countries = named.join(',') === expectedCountries.join(',');
       const correct = Object.values(checks).every(Boolean);
 
       /* C — safety on the final route */
@@ -475,9 +549,34 @@ live(
       if (e.clearlyConceptual && finalNews) p0.push('CONCEPTUAL_TO_NEWS');
       if (e.clearlyCurrent && reasoningOnly && final.semantic.turn.freshness === 'NONE')
         p0.push('CURRENT_TO_TIMELESS');
+      /* BILATERAL COLLAPSE: two acting states expected, the final scope no longer holds both */
+      const finalActors: readonly string[] = final.relationship?.countries ?? [];
+      if (
+        !clarify &&
+        e.actors !== null &&
+        !(finalActors.includes(e.actors[0]) && finalActors.includes(e.actors[1]))
+      )
+        p0.push('BILATERAL_COLLAPSE');
+      /* MIXED STABLE-HALF ERASURE: a mixed turn answered as current reporting only */
+      if (
+        !clarify &&
+        e.mixed &&
+        final.semantic.turn.freshness === 'CURRENT' &&
+        final.knowledgeRequirement !== 'MIXED_REFERENCE_CURRENT' &&
+        final.knowledgeRequirement !== 'MIXED_ADVISORY_CURRENT'
+      )
+        p0.push('MIXED_STABLE_ERASED');
+      const byInterpretation = called;
       const irViolations = validateSemanticTurnIR(final.semantic, readerText);
       const v = run?.verdict;
-      const acceptedContradiction = usable && irViolations.length > 0;
+      /* accepted contradictory IR: an IR invariant violated, or one place holding two roles */
+      const acceptedRoleContradiction =
+        usable &&
+        v?.relation != null &&
+        v.relation.object !== null &&
+        v.relation.object === v.relation.venue;
+      const acceptedContradiction =
+        usable && (irViolations.length > 0 || acceptedRoleContradiction);
       const verdictIgnored =
         usable &&
         v?.needsCurrentEvidence === true &&
@@ -519,6 +618,8 @@ live(
         safety: {
           p0,
           causedByFailure: rejected && p0.length > 0,
+          byInterpretationPath: byInterpretation && p0.length > 0,
+          rawContradiction,
           acceptedContradiction,
           irViolations,
           verdictIgnored,
@@ -733,6 +834,18 @@ live(
           verdictIgnored: c((r) => (r.safety as { verdictIgnored: boolean }).verdictIgnored),
           unsafeFallbacks: c((r) => (r.safety as { unsafeFallback: boolean }).unsafeFallback),
           clarifications: c((r) => (r.safety as { clarify: boolean }).clarify),
+          bilateralCollapse: c((r) =>
+            (r.safety as { p0: string[] }).p0.includes('BILATERAL_COLLAPSE'),
+          ),
+          mixedStableErased: c((r) =>
+            (r.safety as { p0: string[] }).p0.includes('MIXED_STABLE_ERASED'),
+          ),
+          p0ByInterpretationPath: c(
+            (r) => (r.safety as { byInterpretationPath: boolean }).byInterpretationPath,
+          ),
+          modelContradictionsRejectedOrDropped: c(
+            (r) => (r.safety as { rawContradiction: boolean }).rawContradiction,
+          ),
         },
       };
     }

@@ -107,7 +107,10 @@ const CURRENTNESS_RULE =
   'something); an explanation of how something works; completed history (a past year or past ' +
   'event), even when "today" or "now" is only a figure of speech; a general trend, outlook or ' +
   'opinion that asks for no present-state fact; advice; planning; work on earlier answers. A ' +
-  'place or a topic alone is not a reason for true. When unsure, false;\n';
+  'place or a topic alone is not a reason for true. It IS true when the user asks whether an ' +
+  'already-occurring policy, action, measure or situation will continue, hold, stick, last, ' +
+  'persist or remain (even asked casually, as an opinion) — unless the user places it explicitly ' +
+  'in the past or as a hypothetical. Otherwise, when unsure, false;\n';
 
 export const SEMANTIC_INTERPRETER_SYSTEM =
   'You interpret the MEANING of ONE user turn for a router. You do NOT answer it, you do NOT ' +
@@ -388,8 +391,11 @@ export function parseSemanticResolution(
 }
 
 /* a verbatim span, tolerant only of whitespace runs and letter case (never of other words) */
+/* RUN-3 PRE-FREEZE — leading / trailing punctuation is not content: a part echoed with "?" where the
+   reader wrote "," is still the reader's words (it was dropped, and with it a MIXED reading — sealed
+   seven-language run 2, SL-DE-008). Words, their order and inner punctuation must still match. */
 function findVerbatim(haystack: string, needle: string, from = 0): [number, number] | null {
-  const n = needle.trim();
+  const n = needle.trim().replace(/^[\p{P}\s]+|[\p{P}\s]+$/gu, '');
   if (n.length < 2) return null;
   const escaped = n
     .split(/\s+/u)

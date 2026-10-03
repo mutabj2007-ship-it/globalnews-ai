@@ -8,6 +8,7 @@ import {
   type SemanticResolution,
 } from './semantic-interpreter';
 import { maskTimeDeterminers, nonStateTimeDeterminers } from './time-determiners';
+import { readPersistenceQuestion } from './persistence';
 import type { BoundedConversationState } from './interpret-turn';
 
 /**
@@ -221,5 +222,54 @@ describe('the era carve-out — "nowadays" phrases keep their governed present-e
     ['Dlaczego w dzisiejszych czasach młodzi ludzie tak często zmieniają pracę?', 'pl'],
   ])('%s', (q, lang) => {
     expect(maskTimeDeterminers(q, lang)).toBe(q);
+  });
+});
+
+describe('CTO RUN-3 §5 — whether a present mutable policy / action will hold is a current question', () => {
+  it.each<[string, 'en' | 'pl']>([
+    ['do you think the ECB rate cut will stick through winter?', 'en'],
+    ["Is Turkey's new tariff on Chinese EVs going to last?", 'en'],
+    ['will the ceasefire in Sudan actually hold', 'en'],
+    ['Czy ta podwyżka stóp procentowych się utrzyma?', 'pl'],
+    ['Myślisz, że rozejm przetrwa do wiosny?', 'pl'],
+  ])('governed current form, fast path, not downgradable: %s', (q, lang) => {
+    const r = route(q, lang);
+    expect(news(r)).toBe(true);
+    expect(r.semantic.turn.freshness).not.toBe('NONE');
+    expect(r.semantic.resolution.needsSemanticResolution).toBe(false);
+    /* even an accepted "not current" verdict cannot downgrade the form */
+    const downgraded = route(q, lang, {
+      semanticResolution: {
+        path: 'SEMANTIC',
+        job: 'ADVISORY',
+        needsCurrentEvidence: false,
+        depth: 'STANDARD',
+        transformation: null,
+        confidence: 'HIGH',
+        relation: null,
+        reference: 'NONE',
+      },
+    });
+    expect(downgraded.semantic.turn.freshness).not.toBe('NONE');
+  });
+  it.each<[string, 'en' | 'pl']>([
+    ['Will the universe keep expanding forever?', 'en'],
+    ['Did the 2015 nuclear deal last?', 'en'],
+    ['If the export ban were introduced, would it stick?', 'en'],
+    ['Does first love last?', 'en'],
+    ['Czy porozumienie z 1998 roku przetrwało?', 'pl'],
+  ])('not the form (no present mutable state, past, or hypothetical): %s', (q, lang) => {
+    expect(route(q, lang).job.reason).not.toBe('semantic IR: explicit currentness');
+  });
+});
+
+describe('CTO RUN-3 §5 — a GENERIC policy question is conceptual, never the persistence form', () => {
+  it.each<[string, 'en' | 'pl']>([
+    ['Give me a framework for judging whether a trade deal is likely to hold.', 'en'],
+    ['In general, what signs tell you a currency peg is going to survive?', 'en'],
+    ['Will a tariff ever stick without enforcement?', 'en'],
+    ['Ogólnie: po czym poznać, że rozejm się utrzyma?', 'pl'],
+  ])('%s', (q, lang) => {
+    expect(readPersistenceQuestion(q, lang)).toBeNull();
   });
 });

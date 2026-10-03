@@ -34,6 +34,7 @@ import type { QualifiedReading } from '../normalization/qualified-reading';
 import { readCurrentnessMarkers, type CurrentnessMarker } from './currentness';
 import { maskTimeDeterminers } from './time-determiners';
 import { instructionSpans, maskInstructions } from './instruction-frames';
+import { readPersistenceQuestion } from './persistence';
 import { interpretSemanticFirstTurn, isSemanticFirstLanguage } from './semantic-first';
 import { readEntityCandidates } from './entities';
 import { assignRoles, toBilateralRelationship, type RoleAssignment } from './roles';
@@ -526,6 +527,12 @@ export function interpretTurn(input: TurnInterpretationInput): {
   const currentOffice =
     reading.shape.officeConstruction === true ||
     readInstitutionalStatusQuestion(reading.originalQuestion) !== null;
+  /* CTO RUN-3 §5 — whether a present, mutable policy / action will hold / stick / last is a governed
+     current FORM (persistence.ts): never historical-defaulted, never downgraded by the interpreter */
+  const persistence =
+    !temporalHistoryDefault &&
+    !historicalOverride &&
+    clauses.some((c) => readPersistenceQuestion(c.timeText, lang) !== null);
 
   /* §8 EXPLICIT CURRENTNESS OUTRANKS QUESTION SHAPE (and so does a current office / status) */
   const shapeSaysStable =
@@ -535,15 +542,17 @@ export function interpretTurn(input: TurnInterpretationInput): {
     (knowledge.requirement === 'CURRENT_REPORTING' && knowledge.reason === 'a named place');
   let explicitCurrent = false;
   if (
-    (strongCurrent || currentOffice) &&
+    (strongCurrent || currentOffice || persistence) &&
     !referencesWork &&
     !temporalHistoryDefault &&
     !pastPresentClause &&
     (shapeSaysStable || shapeSaysNothing)
   ) {
     /* a governed current office / status is a FORM, not a conflict; a bare marker vs a shape is */
-    if (shapeSaysStable && !currentOffice) conflicts.push('STABLE_SHAPE_WITH_CURRENT_MARKER');
-    const confirmed = resolution?.needsCurrentEvidence ?? true;
+    if (shapeSaysStable && !currentOffice && !persistence)
+      conflicts.push('STABLE_SHAPE_WITH_CURRENT_MARKER');
+    /* the persistence form is not the interpreter's to downgrade */
+    const confirmed = persistence ? true : (resolution?.needsCurrentEvidence ?? true);
     if (confirmed) {
       explicitCurrent = true;
       knowledge = { requirement: 'CURRENT_REPORTING', reason: 'semantic IR: explicit currentness' };
@@ -599,6 +608,7 @@ export function interpretTurn(input: TurnInterpretationInput): {
   const fsrc = freshnessSources(timeText, reading.sourceLanguage, year);
   const strongFreshnessBasis =
     currentOffice ||
+    persistence ||
     strongCurrent ||
     fsrc.explicit ||
     reading.statedTime !== undefined ||

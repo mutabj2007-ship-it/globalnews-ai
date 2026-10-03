@@ -175,7 +175,10 @@ export function interpretSemanticFirstTurn(input: TurnInterpretationInput): {
   const mixed =
     needs &&
     (semantic?.job === 'MIXED' ||
-      (kinds.includes('CURRENT') && (kinds.includes('STABLE') || kinds.includes('HISTORICAL'))) ||
+      /* a CURRENT part beside ANY other part (stable, historical or an unclassified ask such as
+         advice) keeps BOTH components — a current part never erases the other half (the EN / PL
+         mixedUnresolved invariant) */
+      (kinds.includes('CURRENT') && kinds.some((k) => k !== 'CURRENT')) ||
       role === 'HISTORICAL_AND_CURRENT');
   const currentParts =
     segments !== undefined && segments.some((s) => s.kind === 'CURRENT')

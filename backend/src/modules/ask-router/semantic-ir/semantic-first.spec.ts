@@ -368,3 +368,54 @@ describe('interpreter contract — one place never holds two roles', () => {
     expect(r?.relation).toMatchObject({ venue: 'CITY:CH:Geneva', object: null });
   });
 });
+
+describe('run-3 pre-freeze — parts tolerate end punctuation; a CURRENT part never erases another part', () => {
+  it('a part echoed with "?" for "," is still the reader’s words, and MIXED survives', () => {
+    const q = 'Wie funktioniert der Bundesrat, und was wird dort diese Woche beschlossen?';
+    const ir = route(q, 'de').semantic;
+    const v = parseSemanticFirstResolution(
+      JSON.stringify({
+        job: 'EXPLANATION',
+        needsCurrentEvidence: true,
+        temporalRole: 'CURRENT_STATE',
+        depth: 'STANDARD',
+        transformation: null,
+        confidence: 'HIGH',
+        parts: [
+          { text: 'Wie funktioniert der Bundesrat?', kind: 'STABLE' },
+          { text: 'und was wird dort diese Woche beschlossen?', kind: 'CURRENT' },
+        ],
+        relation: null,
+        reference: 'NONE',
+        objective: null,
+      }),
+      ir,
+      q,
+    );
+    expect(v?.segments).toHaveLength(2);
+    const r = route(q, 'de', v!);
+    expect(r.knowledgeRequirement).toBe('MIXED_REFERENCE_CURRENT');
+  });
+  it('a CURRENT part beside an unclassified (OTHER) ask keeps both components', () => {
+    const q = 'Est-ce prudent d’aller au Niger en ce moment, et quels vaccins faut-il ?';
+    const cut = q.indexOf(', et');
+    const r = route(q, 'fr', {
+      path: 'SEMANTIC',
+      job: 'CURRENT_REPORTING',
+      needsCurrentEvidence: true,
+      depth: 'STANDARD',
+      transformation: null,
+      confidence: 'HIGH',
+      temporalRole: 'CURRENT_STATE',
+      segments: [
+        { start: 0, end: cut, kind: 'CURRENT' },
+        { start: cut + 2, end: q.length, kind: 'OTHER' },
+      ],
+      relation: null,
+      reference: 'NONE',
+      objective: null,
+    });
+    expect(r.knowledgeRequirement).toBe('MIXED_REFERENCE_CURRENT');
+    expect(r.semantic.turn.freshness).toBe('MIXED');
+  });
+});
