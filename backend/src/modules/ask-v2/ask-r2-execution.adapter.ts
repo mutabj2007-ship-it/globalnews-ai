@@ -1326,8 +1326,11 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       };
     try {
       const articles = await withDeadline(
+        /* The retained-country relation (ArticleCountry) is keyed by ISO3, as every other
+           reader passes it (country news, My Intelligence, security). Found live on Alpha:
+           ISO2 matched nothing, so every mixed answer said "none retained" untruthfully. */
         this.news.findRetainedByCountry(
-          country.iso2,
+          country.iso3,
           RECENT_REPORTING_LIMIT,
           RECENT_REPORTING_DAYS * 24 * 60,
         ),

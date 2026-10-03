@@ -2553,7 +2553,8 @@ describe('TRUST R1 — mixed answer: place background + retained recent reportin
       windowDays: 14,
       items: [1, 2].map((n) => ({ title: `Report ${n}`, url: `https://example.test/${n}`, sourceName: 'Example', publishedAt: RECENT })),
     });
-    expect(asked).toEqual([['TZ', 5, 14 * 24 * 60]]);
+    /* ISO3: ArticleCountry's key (an ISO2 read matched nothing on live Alpha) */
+    expect(asked).toEqual([['TZA', 5, 14 * 24 * 60]]);
     expect(calls.analysis).toEqual([]);
     expect(calls.background).toHaveLength(1);
   });
