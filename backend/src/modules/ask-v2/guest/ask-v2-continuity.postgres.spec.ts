@@ -453,18 +453,40 @@ live(
       expect((await service.guestAllowance(g.id)).committed).toBe(1);
     });
 
-    it('ELLIPSIS stays honest: "And what about Uganda?" after a subject still asks (no silent place-only answer)', async () => {
+    /* CTO checkpoint 5 §5 (MC-070 UPDATED, cross-country-continuation.ts) — a continuation whose
+       earlier subject is portable carries it to the new place, and says so; never a place-only
+       answer. Without a portable subject it still asks. */
+    it('ELLIPSIS carries the subject: "And what about Uganda?" after Kenya\'s economy is answered as Uganda\'s economy, disclosed', async () => {
       const g = await newGuest();
       await asGuest(g.id, () =>
         service.submit(guestPrincipal(g.id), g.threadId, q("What has changed in Kenya's economy?")),
       );
+      const op = await asGuest(g.id, () =>
+        service.submit(guestPrincipal(g.id), g.threadId, q('And what about Uganda?')),
+      );
+      expect(answerOf(op)).not.toBe('CLARIFICATION_REQUIRED');
+      expect(
+        (op.result?.payload as { continuation?: Record<string, string> }).continuation,
+      ).toEqual({
+        readerQuestion: 'And what about Uganda?',
+        answeredAs: "What has changed in Uganda's economy?",
+        fromQuestion: "What has changed in Kenya's economy?",
+      });
+    });
+
+    it('ELLIPSIS stays honest: "And what about Uganda?" with no portable subject still asks, at no compute', async () => {
+      const g = await newGuest();
+      await asGuest(g.id, () =>
+        service.submit(guestPrincipal(g.id), g.threadId, q('Who was Napoleon?')),
+      );
       const calls = modelInputs.length;
+      const committed = (await service.guestAllowance(g.id)).committed;
       const op = await asGuest(g.id, () =>
         service.submit(guestPrincipal(g.id), g.threadId, q('And what about Uganda?')),
       );
       expect(answerOf(op)).toBe('CLARIFICATION_REQUIRED');
       expect(modelInputs.length).toBe(calls);
-      expect((await service.guestAllowance(g.id)).committed).toBe(1);
+      expect((await service.guestAllowance(g.id)).committed).toBe(committed);
     });
   },
 );
