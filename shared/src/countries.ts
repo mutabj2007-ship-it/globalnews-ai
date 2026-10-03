@@ -405,6 +405,81 @@ export const TERRITORIES: readonly CountryMeta[] = COUNTRIES.filter((c) => c.sta
  * searchCountriesByName below.
  */
 const COUNTRY_ALIASES: Record<string, string> = {
+  /*
+   * ════════════════════════════════════════════════════════════════════════
+   * STAGE-A R4 — OFFICIAL NAMES THE TABLE DID NOT HOLD
+   * ════════════════════════════════════════════════════════════════════════
+   *
+   * MEASURED AT 752d8b7, each resolving to NO COUNTRY AT ALL (and in one case
+   * to a Brazilian settlement) because the only governed spelling was the
+   * older English exonym:
+   *
+   *   "Cabo Verde"        -> BRA / city "Cabo"      (no CPV)
+   *   "Türkiye"           -> NO_PLACE_EVIDENCE
+   *   "Timor-Leste"       -> NO_PLACE_EVIDENCE
+   *   "Côte d'Ivoire"     -> NO_PLACE_EVIDENCE
+   *   "Viet Nam"          -> NO_PLACE_EVIDENCE
+   *   "Republic of Korea" -> NO_PLACE_EVIDENCE
+   *   "Lao PDR"           -> NO_PLACE_EVIDENCE
+   *
+   * EVERY KEY HERE IS THE NAME THE STATE ITSELF USES AT THE UN, or the form the
+   * humanitarian sources write. Cabo Verde and Türkiye are the names those two
+   * governments formally registered (2013 and 2022); Côte d'Ivoire, Timor-Leste,
+   * Viet Nam, Lao PDR and the two Korean forms are the UN member-state
+   * spellings; "occupied Palestinian territory" is OCHA's and ReliefWeb's own
+   * designation, so a ReliefWeb record naming it must resolve.
+   *
+   * THEY ARE ADDED BECAUSE THEY ARE UNAMBIGUOUS, NOT BECAUSE THEY ARE COMMON.
+   * Each is a multi-word or diacritic form with exactly one referent on earth.
+   *
+   * WHAT WAS MEASURED AND DELIBERATELY REFUSED. "CAR" for the Central African
+   * Republic was measured failing here too and is NOT added: this table's own
+   * contract warns that keys are identifiers, not prose tokens, and a key of
+   * "car" would claim a country every time an article mentioned a vehicle. The
+   * ambiguous acronym stays out; the unambiguous full name already resolves.
+   */
+  'cabo verde': 'CPV',
+  turkiye: 'TUR',
+  /* Direct API callers do not fold diacritics; the geo scan does. Both resolve. */
+  'türkiye': 'TUR',
+  'timor leste': 'TLS',
+  "cote d'ivoire": 'CIV',
+  /* Folding turns the apostrophe into a space, so the scan asks for this form. */
+  'cote d ivoire': 'CIV',
+  'cote divoire': 'CIV',
+  'viet nam': 'VNM',
+  'republic of korea': 'KOR',
+  "democratic people's republic of korea": 'PRK',
+  'democratic peoples republic of korea': 'PRK',
+  dprk: 'PRK',
+  'lao pdr': 'LAO',
+  "lao people's democratic republic": 'LAO',
+  'occupied palestinian territory': 'PSE',
+  'syrian arab republic': 'SYR',
+  /*
+   * ── THE TWO CANONICAL NAMES NO FOLDED TEXT COULD EVER MATCH ──────────────
+   *
+   * MEASURED over all 206 entries: folding each canonical `name` and asking
+   * this resolver for it back succeeds 204 times and fails exactly twice,
+   * because folding removes the punctuation those two names carry:
+   *
+   *   GNB "Guinea-Bissau"               -> "guinea bissau"               NONE
+   *   FLK "Falkland Islands (Malvinas)" -> "falkland islands malvinas"   NONE
+   *
+   * The geo scan only ever asks in folded form, so both countries were
+   * unreachable from prose by their own governed names. "Guinea-Bissau"
+   * resolved instead to Bissau the CITY by population dominance.
+   *
+   * THE FALKLANDS KEY ASSERTS NOTHING THIS TABLE DOES NOT ALREADY ASSERT, and
+   * it is deliberately the ONLY one added. Both designations are already keyed
+   * here separately under the checkpoint-2 map ruling; what was missing is the
+   * single run a reader produces by writing the canonical name out in full,
+   * which folds the parentheses away into one four-token string. Adding the
+   * whole-name form makes the table's own name reachable and takes no position
+   * the table has not already taken.
+   */
+  'guinea bissau': 'GNB',
+  'falkland islands malvinas': 'FLK',
   usa: 'USA',
   us: 'USA',
   'united states': 'USA',

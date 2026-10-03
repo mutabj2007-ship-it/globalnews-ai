@@ -86,11 +86,29 @@ describe('1 · country resolution across language directions', () => {
    * them in Arabic — not because Arabic is hard, but because the country index
    * holds ONE surface form per country and it is the English one.
    */
+  /*
+   * ── R4_PARALLEL STAGE-A · WHY THE "BEFORE" COLUMN MOVED ──────────────────
+   *
+   * fr 108->110, es 114->117, pl 93->94, sw 119->121, ar unchanged at 0.
+   *
+   * THE BEFORE COLUMN IS A MEASUREMENT OF THE ENGLISH-ONLY TABLE, not a
+   * guarantee. Stage-A entity coverage added the official names several states
+   * use themselves - "Cabo Verde", "Timor-Leste", "Côte d'Ivoire", "Viet Nam",
+   * "Guinea-Bissau" - and those ARE the Portuguese, French and Spanish surfaces
+   * for those countries. So the no-evidence-language path now resolves eight
+   * more rows than when these figures were taken, and the old literals are
+   * obsolete measurements rather than violated guarantees.
+   *
+   * NOTHING BELOW IS WEAKENED. The two assertions that carry this test's
+   * meaning - that the evidence language reaches the floor, and that it still
+   * beats the no-language path - are untouched, and both still hold at the new
+   * baseline. Had the WITH-language figure fallen, they would have failed.
+   */
   it.each([
-    ['fr', 108, 165],
-    ['es', 114, 160],
-    ['pl', 93, 170],
-    ['sw', 119, 165],
+    ['fr', 110, 165],
+    ['es', 117, 160],
+    ['pl', 94, 170],
+    ['sw', 121, 165],
     ['ar', 0, 180],
   ])(
     '%s — was %i exact without the evidence language; is at least %i with it',

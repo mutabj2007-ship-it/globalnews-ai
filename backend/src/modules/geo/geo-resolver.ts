@@ -15,6 +15,7 @@ import {
   segmentStarts,
   tokenCasing,
 } from './geo-normalize.util';
+import { fragmentVerdict } from './stage-a-proper-run-guard';
 import { localizedCountriesNamedIn } from './language/localized-country-surface';
 import {
   admin2For,
@@ -573,6 +574,15 @@ interface PlaceScan {
   readonly regions: readonly GazetteerRegion[];
   readonly regionText?: string;
   readonly countries: readonly CountryMeta[];
+  /*
+   * EVERY RUN THIS SCAN RESOLVED, folded, longest-first as the scan saw them.
+   *
+   * Carried so a later tier can tell a FRAGMENT of a governed name from a name
+   * in its own right - "Cabo" inside the governed province run "cabo delgado".
+   * Only runs that actually matched a region or a country are recorded: a run
+   * that merely appeared is not evidence of anything.
+   */
+  readonly governedRuns: readonly string[];
 }
 
 /**
@@ -727,6 +737,7 @@ function scanRegionsAndCountries(
   const regions: GazetteerRegion[] = [];
   const countries = new Map<string, CountryMeta>();
   let regionText: string | undefined;
+  const governedRuns: string[] = [];
 
   for (const run of runs) {
     let overlaps = false;
@@ -757,6 +768,7 @@ function scanRegionsAndCountries(
 
       if (sovereign) {
         countries.set(sovereign.iso3, sovereign);
+        governedRuns.push(run.text);
         take();
         continue;
       }
@@ -777,6 +789,7 @@ function scanRegionsAndCountries(
         for (const region of matched) if (!regions.includes(region)) regions.push(region);
 
         regionText ??= run.text;
+        governedRuns.push(run.text);
         take();
         continue;
       }
@@ -800,6 +813,7 @@ function scanRegionsAndCountries(
 
     if (country) {
       countries.set(country.iso3, country);
+      governedRuns.push(run.text);
       take();
     }
   }
@@ -828,7 +842,7 @@ function scanRegionsAndCountries(
     if (country) countries.set(country.iso3, country);
   }
 
-  return { regions, regionText, countries: [...countries.values()] };
+  return { regions, regionText, countries: [...countries.values()], governedRuns };
 }
 
 interface Match<T> {
@@ -1389,8 +1403,51 @@ export function resolveGeography(rawText: string, options: GeoResolveOptions = {
     );
     if (insideCountryName) cityMatch = undefined;
   }
-  const regionMatch =
+
+  /*
+   * STAGE-A R4 — A MATCH CONTAINED BY A LONGER GOVERNED RUN IS A FRAGMENT.
+   *
+   * MEASURED AT 752d8b7: "Cabo Delgado" -> BRA / Pernambuco / city "Cabo", and
+   * "Czech Republic" -> USA / city "Republic". Longest-first consumption tries
+   * the full run, finds no CITY of that name, falls back to one word, and
+   * matches a settlement on another continent - while the scan above has
+   * ALREADY resolved the full run to a governed province or country.
+   *
+   * The rule below is the containment rule immediately above it, asked of the
+   * runs the scan matched rather than of canonical country names only. That is
+   * what lets it reach REGIONS and ALIASES, which "Cabo Delgado" and "Czech
+   * Republic" respectively need and which name containment cannot see.
+   *
+   * Applied in BOTH MODES, for the reason Rule 2 is: the city tier returns
+   * before any other tier is consulted, so a headline reaching it is answered
+   * by the fragment with no later opportunity to correct.
+   *
+   * It REFUSES rather than substitutes; the region and country tiers then
+   * answer from their own evidence, or the place stays unresolved.
+   */
+  if (cityMatch) {
+    const fragment = fragmentVerdict(cityMatch.text, scan.governedRuns);
+
+    if (!fragment.admitted) cityMatch = undefined;
+  }
+  /*
+   * THE SAME RULE ON THE REGION TIER, FOR THE SAME REASON.
+   *
+   * MEASURED: "Congo-Brazzaville" -> city/region Brazzaville rather than the
+   * COUNTRY it names. The hyphenated form is a governed country alias, and the
+   * scan resolves it as one - then the region tier answers with the capital's
+   * province, reporting a SUBDIVISION where the text named a sovereign state.
+   *
+   * A region whose run is strictly contained by a governed run is a fragment of
+   * that longer name exactly as a city is. Refusing it lets the country the
+   * scan already resolved be the answer, at the precision the text supports.
+   */
+  const regionFragment =
     scan.regions.length > 0
+      ? fragmentVerdict(scan.regionText ?? '', scan.governedRuns)
+      : undefined;
+  const regionMatch =
+    scan.regions.length > 0 && regionFragment?.admitted !== false
       ? { entries: scan.regions, text: scan.regionText ?? '', words: 0 }
       : undefined;
 

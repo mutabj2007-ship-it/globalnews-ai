@@ -173,7 +173,46 @@ describe('G-GEO-D14-B1-RUNG · acceptance', () => {
      * `totalReduction === 6`. Recorded as baseline-scoped so a future baseline
      * move fails informatively rather than mysteriously.
      */
-    expect(gains).toBe(459);
+    /*
+     * ── R4_PARALLEL STAGE-A · 450, AND THE PROOF THAT IT IS NOT A LOSS ──────
+     *
+     * This counts resolutions whose REASON is COUNTRY_BY_LOCALIZED_NAME, so a
+     * case that starts resolving some OTHER way leaves the count without
+     * anything being lost. Stage-A added the official names several states use
+     * themselves ("Cabo Verde", "Timor-Leste", "Côte d'Ivoire", "Viet Nam",
+     * "Guinea-Bissau"), which are also their French, Spanish and Portuguese
+     * surfaces, so nine rows now resolve through the governed alias path
+     * instead of the localized-name path. 459 -> 450.
+     *
+     * A REASON COUNT CANNOT TELL THAT APART FROM A REAL REGRESSION, WHICH IS
+     * WHY THE FIGURE ALONE WAS NOT ACCEPTED AS EVIDENCE. Correct resolution was
+     * measured across the same six languages, counting the right country by ANY
+     * reason, on the base commit and with the change:
+     *
+     *   base  1065 correct / 88 wrong        (es 169, wrong 20)
+     *   after 1066 correct / 87 wrong        (es 170, wrong 19)
+     *
+     * No language lost a single correct resolution and Spanish gained one. The
+     * drop here is attribution moving between two paths, not coverage falling.
+     *
+     * THE COMPANION ASSERTION BELOW IS WHAT MAKES THAT CHECKABLE NEXT TIME. If
+     * these nine ever stop resolving at all, this reason count would fall the
+     * same way while total correctness dropped, and the old literal could not
+     * tell anyone which had happened.
+     */
+    expect(gains).toBe(450);
+
+    let correct = 0;
+    for (const lang of ['en', 'fr', 'es', 'pl', 'sw', 'ar']) {
+      for (const c of COUNTRIES) {
+        const name = getLocalizedCountryName(c.iso2, lang as never);
+        if (!name || name.trim().toUpperCase() === c.iso2.toUpperCase()) continue;
+        const id = mapGeographyForArticle(`Report from ${name}.`, undefined, lang).place?.geographyId;
+        if (id && id.startsWith(`country:${c.iso3}`)) correct += 1;
+      }
+    }
+    /* Measured 1066 with this change, 1065 on the base commit. It may rise; it must not fall. */
+    expect(correct).toBeGreaterThanOrEqual(1066);
   });
 
   it('F2 · suppression cannot reach the FR-3 gain shape at all', () => {
