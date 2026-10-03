@@ -583,3 +583,61 @@ describe('ASK TECHNICAL / SCIENTIFIC REASONING R1 — a deterministic computed a
     expect(v.badgeText).toBe('OBLICZENIE');
   });
 });
+
+describe('CONVERSATIONAL INTELLIGENCE JOURNEY R3 — the two zero-compute asks', () => {
+  const objective = (lang: 'en' | 'pl') =>
+    askR2View(
+      payload('CLARIFICATION_REQUIRED', {
+        answer: {
+          state: 'CLARIFICATION_REQUIRED',
+          basis: 'DECISION_OBJECTIVE_MISSING',
+          missingRoles: [],
+          candidates: ['investment', 'logistics', 'market size', 'growth'],
+        },
+        analysis: null,
+      }),
+      lang === 'en' ? EN : PL,
+      lang,
+      (iso3) => `PLACE:${iso3}`,
+      lang === 'en' ? 'Which economy is best?' : 'Która gospodarka jest najlepsza?',
+    );
+
+  it('EN: "best for what?" asks the objective and offers objectives (never places) as staged drafts', () => {
+    const v = objective('en');
+    expect(v.clarification.lead).toBe('Best for what objective? The answer depends on it.');
+    expect(v.clarification.candidates).toEqual([
+      'investment',
+      'logistics',
+      'market size',
+      'growth',
+    ]);
+    expect(v.clarification.choices[1]).toEqual({
+      label: 'logistics',
+      question: 'Which economy is best — for logistics?',
+    });
+    expect(v.freshness).toBe(EN.freshness.nothingRan);
+  });
+
+  it('PL: the same, in Polish', () => {
+    const v = objective('pl');
+    expect(v.clarification.lead).toBe('Najlepsza pod jakim względem? Od tego zależy odpowiedź.');
+    expect(v.clarification.choices[0].question).toBe(
+      'Która gospodarka jest najlepsza — pod kątem: inwestycje?',
+    );
+  });
+
+  it('a noted constraint says so and asks what to know next — no choice list', () => {
+    const v = askR2View(
+      payload('CLARIFICATION_REQUIRED', {
+        answer: { state: 'CLARIFICATION_REQUIRED', basis: 'CONSTRAINT_NOTED', missingRoles: [] },
+        analysis: null,
+      }),
+      EN,
+      'en',
+    );
+    expect(v.clarification.lead).toBe(
+      "Noted — I'll keep that for the rest of this conversation. What would you like to know?",
+    );
+    expect(v.clarification.candidates).toEqual([]);
+  });
+});

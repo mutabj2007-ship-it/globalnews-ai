@@ -125,9 +125,31 @@ describe('CTO checkpoint 5 §5 — a composed cross-country continuation is disc
 describe('CTO P0 — advice is labelled as general guidance, never as current sourced research', () => {
   it('a guidance answer shows the guidance note, and a mixed one lists what needs current evidence', () => {
     const turn = code(read('AskR2TurnView.tsx'));
-    expect(turn).toContain('payload.guidance != null ? s.guidanceNoteTitle : s.referenceNoteTitle');
+    /* R3 — advice and decision support each carry their own label; a partial answer (the stable
+       part of a mixed question) keeps the plain model-background label */
+    expect(turn).toContain("guidanceKind === 'DECISION_SUPPORT'");
+    expect(turn).toContain('s.r3.decisionNoteTitle');
+    expect(turn).toContain('s.guidanceNoteTitle');
+    expect(turn).toContain('s.referenceNoteTitle');
     expect(turn).toContain('data-ask="guidance-current-gap"');
     expect(turn).toContain('payload.guidance.currentEvidenceNeeded.map(');
+  });
+
+  it('R3 §6 a partial answer says the current part could not be verified, in plain words (EN / PL)', () => {
+    const turn = code(read('AskR2TurnView.tsx'));
+    expect(turn).toContain('s.r3.partialCurrent[payload.guidance.currentPart]');
+    const strings = read('../../lib/ask/askR2Strings.ts');
+    expect(strings).toContain('The current part could not be verified right now.');
+    expect(strings).toContain('Bieżącej części nie udało się teraz zweryfikować.');
+  });
+
+  it('R3 §14 a relationship answer names both sides; §12 "best for what?" offers objectives', () => {
+    const turn = code(read('AskR2TurnView.tsx'));
+    expect(turn).toContain('data-ask="relationship"');
+    expect(turn).toContain('view.clarification.lead ?? s.whichOne');
+    const view = read('../../lib/ask/askR2View.ts');
+    expect(view).toContain("basis === 'DECISION_OBJECTIVE_MISSING'");
+    expect(view).toContain("basis === 'CONSTRAINT_NOTED'");
   });
 
   it('the EN and PL guidance copy says it is not current sourced research', () => {

@@ -132,6 +132,8 @@ export function AskR2TurnView({
   /* PUBLIC BETA HARDENING R1A — a deterministic computation's calculation card IS its answer:
      no second, empty Answer container is drawn beneath it. */
   const computedAnswer = view.badge === 'calc' && payload.computation != null;
+  /* R3 — which kind of guidance labels this answer (§28 human labels) */
+  const guidanceKind = payload.guidance?.kind ?? null;
 
   return (
     <article data-ask-turn data-ask="turn" data-ask-state={view.badge} className={TURN}>
@@ -140,7 +142,24 @@ export function AskR2TurnView({
       {/* CTO checkpoint 5 §5 — "And in Kenya?" answered as the earlier question for Kenya: said, never hidden. */}
       {payload.continuation != null && (
         <p data-ask="continuation" className="-mt-1 mb-3 text-[13px] leading-[1.5] text-[#9fb4cc]">
-          {s.continuationAnsweredAs}: “{payload.continuation.answeredAs}” · {s.continuationNote}
+          {s.continuationAnsweredAs}: “{payload.continuation.answeredAs}” ·{' '}
+          {payload.continuation.kind === 'JOB_CONTEXT'
+            ? s.r3.continuationJobNote
+            : s.continuationNote}
+        </p>
+      )}
+      {/* R3 §14 — a relationship question is scoped to BOTH sides, said in plain words */}
+      {payload.relationship != null && payload.relationship.countries.length === 2 && (
+        <p data-ask="relationship" className="-mt-1 mb-3 text-[13px] leading-[1.5] text-[#9fb4cc]">
+          {s.r3.relationshipScope(
+            localisedCountryName(payload.relationship.countries[0], locale) ??
+              payload.relationship.countries[0],
+            localisedCountryName(payload.relationship.countries[1], locale) ??
+              payload.relationship.countries[1],
+            payload.relationship.relations
+              .map((r) => s.r3.relations[r])
+              .filter((r): r is string => r !== undefined),
+          )}
         </p>
       )}
 
@@ -286,7 +305,10 @@ export function AskR2TurnView({
         >
           {view.clarification.candidates.length > 0 ? (
             <>
-              <p className="text-[19px] font-bold leading-[1.2] md:text-[22px]">{s.whichOne}</p>
+              <p className="text-[19px] font-bold leading-[1.2] md:text-[22px]">
+                {/* R3 §12 — "best for what?" asks its own question above the objectives */}
+                {view.clarification.lead ?? s.whichOne}
+              </p>
               <ul data-ask="clarification-candidates" className="flex flex-col gap-2">
                 {view.clarification.candidates.map((name, i) => {
                   const choice = view.clarification.choices[i];
@@ -426,17 +448,37 @@ export function AskR2TurnView({
             >
               {/* CTO P0 — advice is labelled as general guidance, never as current sourced research */}
               <p className="font-bold text-[#d3dbe5]">
-                {payload.guidance != null ? s.guidanceNoteTitle : s.referenceNoteTitle}
+                {guidanceKind === 'DECISION_SUPPORT'
+                  ? s.r3.decisionNoteTitle
+                  : guidanceKind !== null && guidanceKind !== 'MIXED_REFERENCE_CURRENT'
+                    ? s.guidanceNoteTitle
+                    : s.referenceNoteTitle}
               </p>
-              <p>{payload.guidance != null ? s.guidanceNoteBody : s.referenceNoteBody}</p>
+              <p>
+                {guidanceKind === 'DECISION_SUPPORT'
+                  ? s.r3.decisionNoteBody
+                  : guidanceKind !== null && guidanceKind !== 'MIXED_REFERENCE_CURRENT'
+                    ? s.guidanceNoteBody
+                    : s.referenceNoteBody}
+              </p>
+              {payload.guidance?.objective != null && (
+                <p data-ask="decision-objective">
+                  {s.r3.decisionObjective}: {payload.guidance.objective}
+                </p>
+              )}
             </div>
           )}
           {payload.guidance != null && payload.guidance.currentEvidenceNeeded.length > 0 && (
             <div
               data-ask="guidance-current-gap"
+              data-ask-partial={payload.guidance.currentPart ?? undefined}
               className="rounded-[8px] border border-[#5a4a2a] bg-[#17130c] px-3 py-2.5 text-[13px] leading-[1.45] text-[#c9b27a]"
             >
-              <p className="font-bold">{s.guidanceCurrentGap}</p>
+              <p className="font-bold">
+                {payload.guidance.currentPart != null
+                  ? s.r3.partialCurrent[payload.guidance.currentPart]
+                  : s.guidanceCurrentGap}
+              </p>
               <ul className="list-disc ps-5">
                 {payload.guidance.currentEvidenceNeeded.map((clause) => (
                   <li key={clause}>{clause}</li>

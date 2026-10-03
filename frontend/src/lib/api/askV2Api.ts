@@ -189,13 +189,27 @@ export interface AskR2Payload {
    * current sourced research); a mixed question lists the parts that need current evidence.
    */
   readonly guidance?: {
-    readonly kind: 'ADVISORY' | 'MIXED_ADVISORY_CURRENT';
+    /* R3 — DECISION_SUPPORT (weighed against an objective) and MIXED_REFERENCE_CURRENT (a
+       partial answer: the stable part answered, the current part not verified) */
+    readonly kind:
+      'ADVISORY' | 'MIXED_ADVISORY_CURRENT' | 'DECISION_SUPPORT' | 'MIXED_REFERENCE_CURRENT';
     readonly currentEvidenceNeeded: readonly string[];
+    readonly objective?: string;
+    readonly currentPart?: 'UNAVAILABLE' | 'NO_EVIDENCE';
   };
   readonly continuation?: {
     readonly readerQuestion: string;
     readonly answeredAs: string;
     readonly fromQuestion: string;
+    /** R3 — the place was carried (CROSS_COUNTRY) or the reader's trip / decision (JOB_CONTEXT). */
+    readonly kind?: 'CROSS_COUNTRY' | 'JOB_CONTEXT';
+  };
+  /** R3 §14 — the two-sided scope of a relationship question. */
+  readonly relationship?: {
+    readonly countries: readonly string[];
+    readonly relations: readonly string[];
+    readonly domain: string;
+    readonly corridor: string | null;
   };
 }
 

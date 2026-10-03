@@ -369,13 +369,19 @@ export function askR2View(
             : null;
 
   /* ALPHA VISUAL ACCEPTANCE REPAIR R1 (F) — every clarification asks something. */
+  /* R3 §12 — "best for what?" offers objectives, never places; §23 a noted constraint offers none */
+  const objectiveAsk = basis === 'DECISION_OBJECTIVE_MISSING';
   const candidates =
-    basis === 'NO_PRIOR_SUBJECT'
+    basis === 'NO_PRIOR_SUBJECT' || basis === 'CONSTRAINT_NOTED'
       ? []
-      : (payload.answer.candidates ?? []).map((iso3) => placeName(iso3));
+      : objectiveAsk
+        ? (payload.answer.candidates ?? []).map((o) => s.r3.objectives[o] ?? o)
+        : (payload.answer.candidates ?? []).map((iso3) => placeName(iso3));
   let lead: string | null = null;
   let suggestion: string | null = null;
   if (basis === 'NO_PRIOR_SUBJECT') lead = s.noPriorSubject;
+  else if (basis === 'CONSTRAINT_NOTED') lead = s.r3.constraintNoted;
+  else if (objectiveAsk) lead = s.r3.decisionObjectiveMissing;
   else if (badge === 'clar' && candidates.length === 0) {
     if (basis === 'PLAN_BROADENING_OFFERED') {
       /* The reader's own words the plan could not apply, once each. */
@@ -400,7 +406,10 @@ export function askR2View(
   const choices =
     trimmed.length === 0
       ? []
-      : candidates.map((label) => ({ label, question: `${trimmed} (${label})?` }));
+      : candidates.map((label) => ({
+          label,
+          question: objectiveAsk ? s.r3.choiceFor(trimmed, label) : `${trimmed} (${label})?`,
+        }));
 
   return {
     badge,

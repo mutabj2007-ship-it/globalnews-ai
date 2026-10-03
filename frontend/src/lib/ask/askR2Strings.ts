@@ -139,6 +139,25 @@ export interface AskR2Strings {
   /** CTO checkpoint 5 §5 — a composed cross-country continuation, disclosed. */
   readonly continuationAnsweredAs: string;
   readonly continuationNote: string;
+  /**
+   * CONVERSATIONAL INTELLIGENCE JOURNEY R3 — human labels (§28) for: a turn answered inside the
+   * reader's trip / decision / relationship; decision support; a partial answer whose current part
+   * could not be verified (§6); a two-sided relationship scope (§14); the two zero-compute asks
+   * ("best for what?", a noted constraint).
+   */
+  readonly r3: {
+    readonly continuationJobNote: string;
+    readonly decisionNoteTitle: string;
+    readonly decisionNoteBody: string;
+    readonly decisionObjective: string;
+    readonly partialCurrent: Readonly<Record<'UNAVAILABLE' | 'NO_EVIDENCE', string>>;
+    readonly relationshipScope: (a: string, b: string, relations: readonly string[]) => string;
+    readonly relations: Readonly<Record<string, string>>;
+    readonly decisionObjectiveMissing: string;
+    readonly objectives: Readonly<Record<string, string>>;
+    readonly choiceFor: (question: string, objective: string) => string;
+    readonly constraintNoted: string;
+  };
   /** ALPHA ENABLEMENT R1 (MC-070) — a continuation (“And Kenya?”) with nothing to continue; the place stays a chip. */
   readonly noPriorSubject: string;
   /**
@@ -359,6 +378,41 @@ const EN: AskR2Strings = {
   expiredNote: 'This saved answer has expired · shown as it was, not re-checked',
   continuationAnsweredAs: 'Answered as',
   continuationNote: 'continuing your earlier question for the new place',
+  r3: {
+    continuationJobNote: 'continuing what you are working on in this conversation',
+    decisionNoteTitle: 'Decision support · general reasoning',
+    decisionNoteBody:
+      'The options are weighed against your objective under stated assumptions. This is reasoning, not current sourced data: no figure here is a verified current fact.',
+    decisionObjective: 'Objective',
+    partialCurrent: {
+      UNAVAILABLE:
+        'The current part could not be verified right now. The general explanation above still stands.',
+      NO_EVIDENCE:
+        'No current reporting was found for this part. The general explanation above still stands.',
+    },
+    relationshipScope: (a, b, relations) =>
+      `Between ${a} and ${b}${relations.length > 0 ? ` · ${relations.join(', ')}` : ''}`,
+    relations: {
+      BORDER: 'border',
+      CORRIDOR: 'corridor',
+      TRADE: 'trade',
+      TRANSPORT: 'transport',
+      ENERGY: 'energy',
+      INSTITUTIONAL: 'regional institutions',
+      DIPLOMATIC: 'relations',
+      SECURITY: 'security',
+    },
+    decisionObjectiveMissing: 'Best for what objective? The answer depends on it.',
+    objectives: {
+      investment: 'investment',
+      logistics: 'logistics',
+      'market size': 'market size',
+      growth: 'growth',
+    },
+    choiceFor: (question, objective) => `${question} — for ${objective}?`,
+    constraintNoted:
+      "Noted — I'll keep that for the rest of this conversation. What would you like to know?",
+  },
   /* TRUST R1 (checkpoint 5, live Alpha) — "And in Kenya?" asks back even when the thread HAS an
      earlier question (MC-070: a bare place is never combined with the earlier topic). Saying
      "there's no earlier question" was untrue there; this wording is true in both cases. */
@@ -420,7 +474,8 @@ const EN: AskR2Strings = {
   unified: {
     contextUnavailable:
       "The story, place or record this question was about couldn't be found, so nothing was run. Your question is kept below.",
-    askUnavailable: 'Ask is unavailable right now, so nothing was run. Your question is kept below.',
+    askUnavailable:
+      'Ask is unavailable right now, so nothing was run. Your question is kept below.',
     newTopic: 'New topic',
     newTopicStarted: 'New topic — earlier questions are not carried into it.',
   },
@@ -549,7 +604,8 @@ const PL: AskR2Strings = {
   unavailable: 'Zapytaj AI jest teraz niedostępne. Nic nie zostało uruchomione.',
   privacyLink: 'Prywatność',
   cookiesLink: 'Pliki cookie',
-  retryKept: 'Brak odpowiedzi — Twoje pytanie nadal jest w polu. Naciśnij Zapytaj, aby spróbować ponownie.',
+  retryKept:
+    'Brak odpowiedzi — Twoje pytanie nadal jest w polu. Naciśnij Zapytaj, aby spróbować ponownie.',
   newAnswerBelow: 'Nowa odpowiedź poniżej',
   budgetRefused:
     'Wykorzystano dzisiejszy limit Zapytaj AI, więc nic nie uruchomiono ani nie naliczono. Pytania, na które odpowiadają zachowane zapisy, nadal działają.',
@@ -600,6 +656,40 @@ const PL: AskR2Strings = {
   expiredNote: 'Ta zapisana odpowiedź wygasła · pokazana bez ponownego sprawdzenia',
   continuationAnsweredAs: 'Odpowiedź na pytanie',
   continuationNote: 'kontynuacja Twojego wcześniejszego pytania dla nowego miejsca',
+  r3: {
+    continuationJobNote: 'kontynuacja tego, nad czym pracujesz w tej rozmowie',
+    decisionNoteTitle: 'Wsparcie decyzji · ogólne rozumowanie',
+    decisionNoteBody:
+      'Opcje są ważone względem Twojego celu przy jawnych założeniach. To rozumowanie, a nie bieżące dane ze źródeł: żadna liczba tutaj nie jest zweryfikowanym bieżącym faktem.',
+    decisionObjective: 'Cel',
+    partialCurrent: {
+      UNAVAILABLE:
+        'Bieżącej części nie udało się teraz zweryfikować. Ogólne wyjaśnienie powyżej pozostaje aktualne.',
+      NO_EVIDENCE:
+        'Nie znaleziono bieżących doniesień dla tej części. Ogólne wyjaśnienie powyżej pozostaje aktualne.',
+    },
+    relationshipScope: (a, b, relations) =>
+      `Między: ${a} i ${b}${relations.length > 0 ? ` · ${relations.join(', ')}` : ''}`,
+    relations: {
+      BORDER: 'granica',
+      CORRIDOR: 'korytarz',
+      TRADE: 'handel',
+      TRANSPORT: 'transport',
+      ENERGY: 'energia',
+      INSTITUTIONAL: 'instytucje regionalne',
+      DIPLOMATIC: 'stosunki',
+      SECURITY: 'bezpieczeństwo',
+    },
+    decisionObjectiveMissing: 'Najlepsza pod jakim względem? Od tego zależy odpowiedź.',
+    objectives: {
+      investment: 'inwestycje',
+      logistics: 'logistyka',
+      'market size': 'wielkość rynku',
+      growth: 'wzrost',
+    },
+    choiceFor: (question, objective) => `${question} — pod kątem: ${objective}?`,
+    constraintNoted: 'Zanotowane — zachowam to do końca tej rozmowy. Co chcesz wiedzieć?',
+  },
   noPriorSubject:
     'Co chcesz wiedzieć o tym miejscu? Wcześniejsze pytanie nie przechodzi samo na nowe miejsce.',
   clarify: {
@@ -666,7 +756,8 @@ const PL: AskR2Strings = {
   unified: {
     contextUnavailable:
       'Nie udało się odnaleźć artykułu, miejsca ani rekordu, którego dotyczy pytanie, więc nic nie uruchomiono. Twoje pytanie czeka poniżej.',
-    askUnavailable: 'Zapytaj jest teraz niedostępne, więc nic nie uruchomiono. Twoje pytanie czeka poniżej.',
+    askUnavailable:
+      'Zapytaj jest teraz niedostępne, więc nic nie uruchomiono. Twoje pytanie czeka poniżej.',
     newTopic: 'Nowy temat',
     newTopicStarted: 'Nowy temat — wcześniejsze pytania nie są w nim kontynuowane.',
   },
