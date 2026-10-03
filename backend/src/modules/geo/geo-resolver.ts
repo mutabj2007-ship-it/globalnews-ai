@@ -117,6 +117,24 @@ const SUBDIVISION_QUALIFIERS: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * TRUST R1 §14 — AN EXPLICIT ENTITY TYPE OUTRANKS THE SUBDIVISION READING.
+ *
+ * The mirror of G3. "What is happening in Georgia the country?" names the entity type in
+ * the reader's own words, yet the scan matched Georgia the US state first (the region tier
+ * runs before the country tier). Generic contract: <name> + "(the) country" / "(the) nation",
+ * or "the country of <name>", reads the SOVEREIGN country where one exists. Bare "Georgia"
+ * and "Georgia State" / "the state of Georgia" are untouched (G3 keeps the subdivision).
+ */
+const COUNTRY_TYPE_NOUNS: ReadonlySet<string> = new Set(['country', 'nation']);
+
+function namesCountryType(tokens: readonly string[], start: number, words: number): boolean {
+  const end = start + words;
+  const after = tokens[end] === 'the' ? tokens[end + 1] : tokens[end];
+  if (after !== undefined && COUNTRY_TYPE_NOUNS.has(after)) return true;
+  return tokens[start - 1] === 'of' && COUNTRY_TYPE_NOUNS.has(tokens[start - 2] ?? '');
+}
+
+/**
  * A SINGLE-TOKEN place name shorter than this needs corroborating context.
  *
  * MEASURED: 270 settlements in this gazetteer have names of three characters or
@@ -169,15 +187,7 @@ export const POPULATION_DOMINANCE_RATIO = 10;
  * controlled supranational gazetteer, still empty), NONE (evidence layer).
  */
 export type GeoPrecision =
-  | 'EXACT'
-  | 'CITY'
-  | 'SECTOR'
-  | 'DISTRICT'
-  | 'PROVINCE'
-  | 'COUNTRY'
-  | 'REGION'
-  | 'UNKNOWN'
-  | 'NONE';
+  'EXACT' | 'CITY' | 'SECTOR' | 'DISTRICT' | 'PROVINCE' | 'COUNTRY' | 'REGION' | 'UNKNOWN' | 'NONE';
 
 export type GeoProvenance = 'STATED' | 'INTERPRETED' | 'CONTESTED';
 
@@ -740,6 +750,17 @@ function scanRegionsAndCountries(
     const take = (): void => {
       for (let i = run.start; i < run.start + run.words; i += 1) consumed[i] = true;
     };
+
+    /* TRUST R1 §14 — the reader named the entity type: the sovereign country, not a subdivision. */
+    if (namesCountryType(tokens, run.start, run.words)) {
+      const sovereign = resolveCountryRun(run.text);
+
+      if (sovereign) {
+        countries.set(sovereign.iso3, sovereign);
+        take();
+        continue;
+      }
+    }
 
     if (run.words <= maxRegionWords) {
       /*
@@ -1462,6 +1483,8 @@ export function resolveGeography(rawText: string, options: GeoResolveOptions = {
       const before = tokens[start - 1];
 
       if (before !== undefined && GEOGRAPHIC_PREPOSITIONS.has(before)) return true;
+      /* TRUST R1 §14 — the reader named the entity type ("Georgia the country"). */
+      if (namesCountryType(tokens, start, words.length)) return true;
       if (before === 'the' && GEOGRAPHIC_PREPOSITIONS.has(tokens[start - 2] ?? '')) {
         return true;
       }

@@ -55,6 +55,8 @@ export type KnowledgeRequirement =
 export interface KnowledgeRequirementReading {
   readonly requirement: KnowledgeRequirement | null;
   readonly reason: string;
+  /** TRUST R1 §14 — which PLACE_REFERENCE frame matched (travel preparation or the past). */
+  readonly frame?: 'TRAVEL' | 'HISTORY';
 }
 
 /**
@@ -139,6 +141,53 @@ const TRAVEL_FRAME: Readonly<Record<'en' | 'pl', RegExp>> = {
   pl: /(?:odwiedzi\p{L}*|podr[óo][żz]\p{L}*\s+do|wycieczk\p{L}*|wakacj\p{L}*\s+w|zwiedz\p{L}*|safari|spakowa\p{L}*|przed\s+wyjazdem|atrakcj\p{L}*\s+turystyczn\p{L}*)/iu,
 };
 
+/*
+  TRUST R1 §14 — A FUTURE PERIOD INSIDE A TRAVEL REQUEST IS THE TRIP'S TIMING, NOT A NEWS WINDOW.
+  "Going on holiday in Tanzania next year, any tips?" states WHEN the reader travels; it never
+  asks what was reported next year. Within a TRAVEL frame these spans are set aside before the
+  freshness test, and the router keeps the question on the place-background path. Only
+  forward-pointing spans: "this year", "now", "latest" and every past period still mean current
+  reporting ("Is it safe to travel to Kenya now?" stays news). A bare year counts only when it is
+  after the request year, so "Kenya in 2025" is never treated as a future trip.
+*/
+const FUTURE_PERIOD: Readonly<Record<'en' | 'pl', RegExp>> = {
+  en: /\b(?:(?:next|coming|upcoming|following)\s+(?:year|month|week|weekend|summer|winter|spring|autumn|fall|season|holidays?|christmas|easter)|this\s+coming\s+(?:year|month|week|weekend|summer|winter|spring|autumn|fall)|in\s+(?:a\s+few|a\s+couple\s+of|\d{1,2}|two|three|four|five|six)\s+(?:days|weeks|months|years)(?:'?\s*time)?)\b/gi,
+  pl: /(?:w\s+)?(?:przysz[łl]\p{L}*|nast[ęe]pn\p{L}*|nadchodz[ąa]c\p{L}*)\s+(?:rok\p{L}*|roku|miesi[ąa]c\p{L}*|tydzie\p{L}*|tygodni\p{L}*|lat\p{L}*|wakacj\p{L}*|weekend\p{L}*|zim\p{L}*|wiosn\p{L}*|jesie\p{L}*|sezon\p{L}*)|za\s+(?:\d{1,2}|kilka|dwa|trzy|par[ęe])\s+(?:dni|tygodni|miesi[ęe]cy|lat)/giu,
+};
+const YEAR_SPAN = /(?:(?:in|w)\s+)?\b(20\d\d)\b(?:\s+roku)?/giu;
+
+/** The question with every forward-pointing period removed (for a travel-frame freshness test). */
+export function withoutFuturePeriods(
+  text: string,
+  lang: 'en' | 'pl',
+  requestYear?: number,
+): string {
+  const stripped = text.replace(FUTURE_PERIOD[lang], ' ');
+  return requestYear === undefined
+    ? stripped
+    : stripped.replace(YEAR_SPAN, (span, year: string) =>
+        Number(year) > requestYear ? ' ' : span,
+      );
+}
+
+/** Is this stated period (the reader's own span) entirely forward-pointing? */
+export function isFuturePeriod(span: string, language: string, requestYear?: number): boolean {
+  if (language !== 'en' && language !== 'pl') return false;
+  return span.trim().length > 0 && withoutFuturePeriods(span, language, requestYear).trim() === '';
+}
+
+/*
+  TRUST R1 §14 — A HISTORICAL ENTITY ASKED ABOUT IN THE PAST TENSE IS BACKGROUND. "What was the
+  Ottoman Empire?" / "What were the Crusades?" / "Czym było Imperium Osmańskie?": an identity
+  question in the past tense whose whole remainder is a proper name. A FORM, never a list of
+  entities; a common-noun remainder ("What was the outcome of the election?") is untouched, and
+  any freshness marker ("… in the news today") keeps the current path.
+*/
+const HISTORICAL_IDENTITY: Readonly<Record<'en' | 'pl', RegExp>> = {
+  en: /^[Ww]hat\s+(?:was|were)\s+(?:[Tt]he\s+|[Aa]n?\s+)?\p{Lu}[\p{L}'’.-]*(?:\s+(?:(?:of|and|de|the)\s+)*\p{Lu}[\p{L}'’.-]*)*\s*\??$/u,
+  pl: /^(?:[Cc]zym|[Cc]o\s+to)\s+by[łl](?:a|o|y)?\s+\p{Lu}[\p{L}'’.-]*(?:\s+[\p{L}'’.-]+){0,4}\s*\??$/u,
+};
+
 function firstClause(text: string): string {
   const first = text.split(/(?<=[.?!])\s+/)[0] ?? text;
   return first.trim();
@@ -149,6 +198,8 @@ export function deriveKnowledgeRequirement(
   language: string,
   /** The router's reading: did the reader NAME a place (its words are in the question)? */
   namedPlace = false,
+  /** TRUST R1 §14 — the request year, so a stated year can be read as a future trip. */
+  requestYear?: number,
 ): KnowledgeRequirementReading {
   const text = question.trim();
   if ((language !== 'en' && language !== 'pl') || text.length === 0) {
@@ -181,7 +232,14 @@ export function deriveKnowledgeRequirement(
 
   /* PR #72 — the governed freshness reading (event participles; "new" qualifying a changeable
      instrument) is the same authority the landed classifier uses; never a second copy. */
-  const fresh = assertsFreshness(text) || FRESHNESS[lang].test(text) || CHANGING[lang].test(text);
+  const travel = TRAVEL_FRAME[lang].test(text);
+  /* TRUST R1 §14 — inside a travel request a forward-pointing period is the trip's timing. */
+  const freshText = travel ? withoutFuturePeriods(text, lang, requestYear) : text;
+  const fresh =
+    assertsFreshness(freshText) ||
+    FRESHNESS[lang].test(freshText) ||
+    CHANGING[lang].test(freshText);
+  const historicalIdentity = HISTORICAL_IDENTITY[lang].test(text);
   const place =
     namedPlace ||
     resolvePrimaryCountry({ title: text, summary: '' }) !== undefined ||
@@ -198,13 +256,19 @@ export function deriveKnowledgeRequirement(
     !fresh &&
     (HISTORY_FRAME[lang].test(firstClause(text)) ||
       HISTORY_FRAME[lang].test(text) ||
-      TRAVEL_FRAME[lang].test(text))
+      historicalIdentity ||
+      travel)
   ) {
     return {
       requirement: 'PLACE_REFERENCE',
-      reason: TRAVEL_FRAME[lang].test(text)
-        ? 'travel preparation for a named place'
-        : 'history of a named place',
+      reason: travel ? 'travel preparation for a named place' : 'history of a named place',
+      frame: travel ? 'TRAVEL' : 'HISTORY',
+    };
+  }
+  if (!place && !fresh && historicalIdentity) {
+    return {
+      requirement: 'STABLE_REFERENCE',
+      reason: 'a historical entity asked about in the past tense',
     };
   }
   if (explanatory && fresh) {

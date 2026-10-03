@@ -37,7 +37,11 @@
  */
 
 import { reportingWindowFor, type ReportingWindow } from './reporting-window';
-import { deriveKnowledgeRequirement, type KnowledgeRequirement } from './knowledge-requirement';
+import {
+  deriveKnowledgeRequirement,
+  isFuturePeriod,
+  type KnowledgeRequirement,
+} from './knowledge-requirement';
 import { buildEnvelope, type EnvelopeSource } from './frozen-c/src/envelope';
 import { plan as frozenPlan, type PlannerDeps } from './frozen-c/src/planner';
 import { route as frozenRoute } from './frozen-c/src/index';
@@ -326,6 +330,13 @@ function withoutTime(source: EnvelopeSource): EnvelopeSource {
   return rest;
 }
 
+/** TRUST R1 §14 — the composed source without the reader's stated period (a trip's timing). */
+function withoutStatedPeriod(source: EnvelopeSource): EnvelopeSource {
+  const { statedPeriod: _period, ...rest } = source;
+  void _period;
+  return rest;
+}
+
 export function topicCarriedByDomain(reading: QualifiedReading): boolean {
   const category = reading.readerCategory?.value;
   const domain = category === undefined ? undefined : CATEGORY_DOMAIN[category];
@@ -550,10 +561,13 @@ export function routeAskR2(
       /* no matched text: conservatively a place the reader named */
       (g.matchedText === undefined || questionFolded.includes(fold(g.matchedText))),
   );
+  const requestYear =
+    ctx.requestInstant === undefined ? undefined : new Date(ctx.requestInstant).getUTCFullYear();
   const ownKnowledge = deriveKnowledgeRequirement(
     reading.originalQuestion,
     reading.sourceLanguage,
     namedPlace,
+    Number.isFinite(requestYear) ? requestYear : undefined,
   );
   /* TRUST & CONVERSATIONAL EXPERIENCE R1 — a follow-up continues the KIND of question it follows:
      "Compare it with Kenya" after a Tanzania safari question is still travel preparation. Only
@@ -612,7 +626,13 @@ export function routeAskR2(
   const placeReference =
     !stableOrComputed &&
     knowledge.requirement === 'PLACE_REFERENCE' &&
-    reading.statedTime === undefined &&
+    /* TRUST R1 §14 — a forward-pointing period in a TRAVEL request is the trip's timing, never a
+       reporting window ("Going to Tanzania next year, any tips?"). Any other stated period keeps
+       the existing path. */
+    (reading.statedTime === undefined ||
+      ('frame' in knowledge &&
+        knowledge.frame === 'TRAVEL' &&
+        isFuturePeriod(reading.statedTime.statedPeriod, reading.sourceLanguage, requestYear))) &&
     ctx.hasResolvedArticleAnchor !== true &&
     capability.source.personalRequested !== true;
   const broadHeadlines =
@@ -643,7 +663,9 @@ export function routeAskR2(
       }
     : placeReference
       ? {
-          ...withoutTopic(withoutTime(composedSource)),
+          /* a stated period that passed the gate above is the trip's timing (TRUST R1 §14), no
+             reporting constraint for frozen C; readerStatedPeriod still carries the words. */
+          ...withoutStatedPeriod(withoutTopic(withoutTime(composedSource))),
           reading: {
             ...composedSource.reading,
             queryIntent: 'ENTITY_BACKGROUND',

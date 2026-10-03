@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { foldPlaceName } from './geo-normalize.util';
+import { POLISH_SETTLEMENT_CASE_FORMS } from './language/polish-settlement-case-forms';
 
 /**
  * GEOGRAPHY — THE GAZETTEER, LOADED ONCE AND INDEXED.
@@ -236,6 +237,17 @@ function buildIndexes(): void {
   for (const exonym of data.exonyms) {
     exonymIndex.set(exonym.x, exonym);
     maxExonymWords = Math.max(maxExonymWords, exonym.x.split(' ').length);
+  }
+
+  /*
+   * TRUST R1 §14 — curated Polish case forms (language/polish-settlement-case-forms.ts), merged
+   * into the SAME alias index. A form that is already a settlement name or an artifact exonym is
+   * never indexed (an alias must not shadow a real place), and a row whose canonical settlement
+   * is missing points nowhere and resolves nothing (the spec asserts there are none).
+   */
+  for (const form of POLISH_SETTLEMENT_CASE_FORMS) {
+    if (cityIndex.has(form.x) || exonymIndex.has(form.x)) continue;
+    exonymIndex.set(form.x, form);
   }
 
   admin2Index = new Map();
