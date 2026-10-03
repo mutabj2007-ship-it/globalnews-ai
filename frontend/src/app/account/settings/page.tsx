@@ -1,6 +1,8 @@
 import { cookies } from 'next/headers';
 import { AccountSettingsBody } from '@/components/account/AccountSettingsBody';
 import { AskNavProvider, AskNavShell } from '@/components/ask-nav/AskNavShell';
+import { AskThemedSurface } from '@/components/ask-nav/AskThemedSurface';
+import { THEME_COOKIE_NAME, parseThemePreference } from '@/lib/theme/theme';
 import { AskContinuityHeader } from '@/components/ask-nav/AskContinuityHeader';
 import { AskClearedBoundary } from '@/components/ask-nav/AskClearedBoundary';
 import { standaloneAskRoot } from '@/lib/ask/standaloneRoot';
@@ -23,12 +25,14 @@ export default function AccountSettingsPage(): JSX.Element {
   if (!standaloneAskRoot()) return <AccountSettingsBody language="en" chrome="platform" />;
   const locale = cookies().get(LANGUAGE_COOKIE_NAME)?.value === 'pl' ? 'pl' : 'en';
   return (
-    <AskNavProvider>
-      <AskNavShell language={locale} />
-      <AskContinuityHeader locale={locale} surface="settings" />
-      <AskClearedBoundary>
-        <AccountSettingsBody language={locale} chrome="standalone" />
-      </AskClearedBoundary>
-    </AskNavProvider>
+    <AskThemedSurface theme={parseThemePreference(cookies().get(THEME_COOKIE_NAME)?.value)}>
+      <AskNavProvider>
+        <AskNavShell language={locale} />
+        <AskContinuityHeader locale={locale} surface="settings" />
+        <AskClearedBoundary>
+          <AccountSettingsBody language={locale} chrome="standalone" />
+        </AskClearedBoundary>
+      </AskNavProvider>
+    </AskThemedSurface>
   );
 }

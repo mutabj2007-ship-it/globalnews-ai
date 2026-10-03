@@ -6,6 +6,8 @@ import { getDictionary } from '@/lib/i18n/dictionaries';
 import { buildPageMetadata } from '@/lib/seo/metadata';
 import { SupportScreen } from '@/components/support/SupportScreen';
 import { AskNavProvider, AskNavShell } from '@/components/ask-nav/AskNavShell';
+import { AskThemedSurface } from '@/components/ask-nav/AskThemedSurface';
+import { THEME_COOKIE_NAME, parseThemePreference } from '@/lib/theme/theme';
 import { AskContinuityHeader } from '@/components/ask-nav/AskContinuityHeader';
 import { AskClearedBoundary } from '@/components/ask-nav/AskClearedBoundary';
 import { standaloneAskRoot } from '@/lib/ask/standaloneRoot';
@@ -80,13 +82,15 @@ export default function SupportPage(): JSX.Element {
   */
   if (standaloneAskRoot()) {
     return (
-      <AskNavProvider>
-        <AskNavShell language={language} />
-        <AskContinuityHeader locale={language} surface="help" />
-        <AskClearedBoundary>
-          <SupportScreen t={resolveSupportDictionary()} language={language} chrome="standalone" />
-        </AskClearedBoundary>
-      </AskNavProvider>
+      <AskThemedSurface theme={parseThemePreference(cookies().get(THEME_COOKIE_NAME)?.value)}>
+        <AskNavProvider>
+          <AskNavShell language={language} />
+          <AskContinuityHeader locale={language} surface="help" />
+          <AskClearedBoundary>
+            <SupportScreen t={resolveSupportDictionary()} language={language} chrome="standalone" />
+          </AskClearedBoundary>
+        </AskNavProvider>
+      </AskThemedSurface>
     );
   }
   return <SupportScreen t={resolveSupportDictionary()} language={language} />;

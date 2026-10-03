@@ -1,6 +1,8 @@
 import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
 import { AskNavProvider, AskNavShell } from '@/components/ask-nav/AskNavShell';
+import { AskThemedSurface } from '@/components/ask-nav/AskThemedSurface';
+import { THEME_COOKIE_NAME, parseThemePreference } from '@/lib/theme/theme';
 import { AskContinuityHeader } from '@/components/ask-nav/AskContinuityHeader';
 import { AskClearedBoundary } from '@/components/ask-nav/AskClearedBoundary';
 import { SavedClient } from '@/components/ask/SavedClient';
@@ -30,12 +32,14 @@ export default function SavedPage(): JSX.Element {
   const locale = cookies().get(LANGUAGE_COOKIE_NAME)?.value === 'pl' ? 'pl' : 'en';
 
   return (
-    <AskNavProvider>
-      <AskNavShell language={locale} />
-      <AskContinuityHeader locale={locale} surface="saved" />
-      <AskClearedBoundary>
-        <SavedClient locale={locale} />
-      </AskClearedBoundary>
-    </AskNavProvider>
+    <AskThemedSurface theme={parseThemePreference(cookies().get(THEME_COOKIE_NAME)?.value)}>
+      <AskNavProvider>
+        <AskNavShell language={locale} />
+        <AskContinuityHeader locale={locale} surface="saved" />
+        <AskClearedBoundary>
+          <SavedClient locale={locale} />
+        </AskClearedBoundary>
+      </AskNavProvider>
+    </AskThemedSurface>
   );
 }

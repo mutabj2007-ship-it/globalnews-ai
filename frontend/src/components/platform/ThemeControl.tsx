@@ -1,6 +1,15 @@
 'use client';
 
-import { useEffect, useId, useRef, useState, type JSX, type ReactNode } from 'react';
+import {
+  createContext,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type CSSProperties,
+  type JSX,
+  type ReactNode,
+} from 'react';
 import { Clock, Monitor, Moon, Sun } from 'lucide-react';
 import type { LanguageCode } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
@@ -12,25 +21,39 @@ import { setThemePreference, useThemePreference, useThemeSchedule } from '@/lib/
  * the first frame is already right (System resolves in CSS through prefers-color-scheme);
  * afterwards it follows the reader's choice. Presentation only.
  */
+/**
+ * TRUST R1 — the server-read preference of the nearest theme scope, so a control rendered inside
+ * a scope (e.g. the Standalone AskNavShell on Recent / Saved / Settings / Help) can offer the
+ * switch without each page threading a prop. Null outside any scope: no control is offered.
+ */
+export const ThemeScopeContext = createContext<ThemePreference | null>(null);
+
 export function ThemeScope({
   initial,
   children,
   className,
+  style,
   ...rest
 }: {
   readonly initial: ThemePreference;
   readonly children: ReactNode;
   readonly className?: string;
+  readonly style?: CSSProperties;
 } & Record<`data-${string}`, string>): JSX.Element {
   const preference = useThemePreference(initial);
   return (
-    <div {...rest} data-gna-theme={preference} className={className}>
-      {children}
+    <div {...rest} data-gna-theme={preference} className={className} style={style}>
+      <ThemeScopeContext.Provider value={initial}>{children}</ThemeScopeContext.Provider>
     </div>
   );
 }
 
-const ICONS: Record<ThemePreference, typeof Sun> = { light: Sun, dark: Moon, system: Monitor, scheduled: Clock };
+const ICONS: Record<ThemePreference, typeof Sun> = {
+  light: Sun,
+  dark: Moon,
+  system: Monitor,
+  scheduled: Clock,
+};
 
 /**
  * Light · Dark · System. A 44 px button opens a small radio group (native radios: arrow
@@ -99,7 +122,9 @@ export function ThemeControl({
           data-theme-menu=""
           className="fixed inset-x-3 top-[60px] z-[70] w-auto sm:absolute sm:inset-x-auto sm:right-0 sm:top-[52px] sm:w-[220px] rounded-[12px] border border-[var(--gt-line)] bg-[var(--gt-card)] p-2 text-[var(--gt-ink)] shadow-[0_18px_40px_-18px_rgba(0,0,0,0.55)]"
         >
-          <legend className="px-2 pb-1 pt-1 font-mono text-[10.5px] font-semibold uppercase tracking-[0.12em] text-[var(--gt-ink3)]">{t.label}</legend>
+          <legend className="px-2 pb-1 pt-1 font-mono text-[10.5px] font-semibold uppercase tracking-[0.12em] text-[var(--gt-ink3)]">
+            {t.label}
+          </legend>
           {THEME_PREFERENCES.map((option, index) => {
             const OptionIcon = ICONS[option];
             return (
@@ -120,8 +145,16 @@ export function ThemeControl({
                 <OptionIcon aria-hidden="true" className="h-4 w-4 text-[var(--gt-ink2)]" />
                 <span className="flex flex-col">
                   <span>{t[option]}</span>
-                  {option === 'system' && <span className="text-[11.5px] font-normal text-[var(--gt-ink2)]">{t.systemNote}</span>}
-                  {option === 'scheduled' && <span className="text-[11.5px] font-normal text-[var(--gt-ink2)]">{t.scheduledNote}</span>}
+                  {option === 'system' && (
+                    <span className="text-[11.5px] font-normal text-[var(--gt-ink2)]">
+                      {t.systemNote}
+                    </span>
+                  )}
+                  {option === 'scheduled' && (
+                    <span className="text-[11.5px] font-normal text-[var(--gt-ink2)]">
+                      {t.scheduledNote}
+                    </span>
+                  )}
                 </span>
               </label>
             );
@@ -129,7 +162,10 @@ export function ThemeControl({
           {preference === 'scheduled' && (
             <div className="mt-1 grid grid-cols-2 gap-2 px-2 pb-1" data-theme-schedule="">
               {(['lightFrom', 'darkFrom'] as const).map((edge) => (
-                <label key={edge} className="flex flex-col gap-1 text-[11.5px] font-semibold text-[var(--gt-ink2)]">
+                <label
+                  key={edge}
+                  className="flex flex-col gap-1 text-[11.5px] font-semibold text-[var(--gt-ink2)]"
+                >
                   {t[edge]}
                   <input
                     type="time"

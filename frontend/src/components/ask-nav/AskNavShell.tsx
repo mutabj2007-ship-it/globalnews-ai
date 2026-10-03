@@ -22,7 +22,7 @@ import {
 import { useAccount } from '@/lib/hooks/useAccount';
 import { persistLanguageSelection } from '@/lib/i18n/languages';
 import { LanguageSelector } from '@/components/search/LanguageSelector';
-import { ThemeControl } from '@/components/platform/ThemeControl';
+import { ThemeControl, ThemeScopeContext } from '@/components/platform/ThemeControl';
 import type { ThemePreference } from '@/lib/theme/theme';
 import {
   askNavStringsFor,
@@ -216,6 +216,9 @@ export function AskNavShell({
   readonly theme?: ThemePreference;
 }): JSX.Element {
   const { open, setOpen, clearAndGo, clear } = useAskNav();
+  /* TRUST R1 — the page passes its server-read theme, or the nearest theme scope supplies it. */
+  const scopeTheme = useContext(ThemeScopeContext);
+  const controlTheme = theme ?? scopeTheme ?? undefined;
   const pathname = usePathname();
   const router = useRouter();
   /* THE ONE SESSION READ. See this file's header. */
@@ -434,8 +437,12 @@ export function AskNavShell({
                 variant="desktop"
               />
             )}
-            {theme !== undefined && (
-              <ThemeControl language={language as LanguageCode} initial={theme} tone="surface" />
+            {controlTheme !== undefined && (
+              <ThemeControl
+                language={language as LanguageCode}
+                initial={controlTheme}
+                tone="surface"
+              />
             )}
             {accountSlot}
             {/*
@@ -539,9 +546,13 @@ export function AskNavShell({
                 />
               </div>
             )}
-            {theme !== undefined && (
+            {controlTheme !== undefined && (
               <div className="flex min-h-[52px] items-center" data-ask-nav="theme">
-                <ThemeControl language={language as LanguageCode} initial={theme} tone="surface" />
+                <ThemeControl
+                  language={language as LanguageCode}
+                  initial={controlTheme}
+                  tone="surface"
+                />
               </div>
             )}
             {!isLoading && signInEntry !== undefined && (
