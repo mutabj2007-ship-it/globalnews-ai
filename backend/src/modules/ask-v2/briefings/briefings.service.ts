@@ -8,6 +8,7 @@ import {
 import { ALL_ISO3_CODES } from '@globalnews-ai/shared';
 import { PrismaService } from '../../../database/prisma.service';
 import { Prisma } from '../../../generated/prisma/client';
+import { StoryIdentityService } from '../../stories/story-identity.service';
 import { briefingSnapshotOf } from './briefing-snapshot';
 
 type Tx = Prisma.TransactionClient;
@@ -36,7 +37,45 @@ export interface BriefingScopeInput {
  */
 @Injectable()
 export class BriefingsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly stories: StoryIdentityService,
+  ) {}
+
+  /*
+    R2 · ITEM 3 (CTO checkpoint 3 ruling §9, option B) — THE PILOT'S "FOLLOW" IS THE EXPLICIT
+    STORY SUBJECT, NOT COUNTRY FOLLOW. A briefing scoped to a canonical story records, per version,
+    the story's material-evidence version (Story.briefVersion — the same counter Stage-B Story
+    Alerts dedup on). A later rise of that counter is the material update: the briefing reports
+    it, the reader's Story Alert (if they set one) lists what joined, and "Ask about this update"
+    produces the turn that becomes the next version. Read-only use of StoryIdentityService; no
+    second alert engine, no CountryFollow read or write.
+  */
+  private async storySubject(tx: Tx | PrismaService, storyId: string | undefined) {
+    if (storyId === undefined) return null;
+    const story = await this.stories.describe(storyId, tx);
+    if (!story) throw new UnprocessableEntityException({ code: 'BRIEFING_SCOPE_UNKNOWN_STORY' });
+    return { kind: 'STORY' as const, storyId: story.storyId, briefVersion: story.briefVersion };
+  }
+
+  /** The material update since a version was taken (story subjects only). */
+  private async updateOf(scope: unknown, latestBlocks: unknown) {
+    const storyId = (scope as { storyId?: unknown } | null)?.storyId;
+    const recorded = (latestBlocks as { subject?: { briefVersion?: unknown } } | null)?.subject
+      ?.briefVersion;
+    if (typeof storyId !== 'string' || typeof recorded !== 'number') return null;
+    const story = await this.stories.describe(storyId);
+    if (!story)
+      return { kind: 'STORY_MATERIAL_UPDATE' as const, available: false, storyGone: true };
+    return {
+      kind: 'STORY_MATERIAL_UPDATE' as const,
+      available: story.briefVersion > recorded,
+      recordedBriefVersion: recorded,
+      currentBriefVersion: story.briefVersion,
+      updatedAt: story.briefUpdatedAt,
+      storyId: story.storyId,
+    };
+  }
 
   private user(userId: string): void {
     if (!userId) throw new UnauthorizedException();
@@ -98,6 +137,7 @@ export class BriefingsService {
         userId,
         input.turnId,
       );
+      const subject = await this.storySubject(tx, input.storyId);
       const title = (input.title?.trim() || turn.question.trim()).slice(0, BRIEFING_TITLE_MAX);
       const briefing = await tx.briefing.create({
         data: {
@@ -108,7 +148,7 @@ export class BriefingsService {
             question: turn.question,
             language: turn.language,
             ...(countryCode === undefined ? {} : { countryCode }),
-            ...(input.storyId === undefined ? {} : { storyId: input.storyId }),
+            ...(subject === null ? {} : { storyId: subject.storyId }),
           },
           versions: {
             create: {
@@ -116,7 +156,7 @@ export class BriefingsService {
               asOf: new Date(snapshot.asOf),
               windowFrom: null,
               windowTo: new Date(snapshot.asOf),
-              blocks: snapshot.blocks as unknown as Prisma.InputJsonValue,
+              blocks: { ...snapshot.blocks, subject } as unknown as Prisma.InputJsonValue,
               evidenceRefs: snapshot.evidenceRefs as unknown as Prisma.InputJsonValue,
               evidenceRevision,
               coverageGaps: snapshot.coverageGaps as unknown as Prisma.InputJsonValue,
@@ -138,6 +178,7 @@ export class BriefingsService {
         where: { id: briefingId, userId },
         select: {
           id: true,
+          scope: true,
           versions: {
             orderBy: { version: 'desc' },
             take: 1,
@@ -146,6 +187,11 @@ export class BriefingsService {
         },
       });
       if (!briefing) throw new NotFoundException();
+      const storyId = (briefing.scope as { storyId?: unknown } | null)?.storyId;
+      const subject = await this.storySubject(
+        tx,
+        typeof storyId === 'string' ? storyId : undefined,
+      );
       const latest = briefing.versions[0];
       const next = (latest?.version ?? 0) + 1;
       if (next > BRIEFING_VERSION_LIMIT)
@@ -159,7 +205,7 @@ export class BriefingsService {
           /* the monitoring window: since the previous version was taken */
           windowFrom: latest?.asOf ?? null,
           windowTo: new Date(snapshot.asOf),
-          blocks: snapshot.blocks as unknown as Prisma.InputJsonValue,
+          blocks: { ...snapshot.blocks, subject } as unknown as Prisma.InputJsonValue,
           evidenceRefs: snapshot.evidenceRefs as unknown as Prisma.InputJsonValue,
           evidenceRevision,
           coverageGaps: snapshot.coverageGaps as unknown as Prisma.InputJsonValue,
@@ -208,12 +254,24 @@ export class BriefingsService {
         updatedAt: true,
         versions: {
           orderBy: { version: 'asc' },
-          select: { version: true, asOf: true, windowFrom: true, windowTo: true, createdAt: true },
+          select: {
+            version: true,
+            asOf: true,
+            windowFrom: true,
+            windowTo: true,
+            createdAt: true,
+            blocks: true,
+          },
         },
       },
     });
     if (!row) throw new NotFoundException();
-    return row;
+    const latest = row.versions[row.versions.length - 1];
+    return {
+      ...row,
+      versions: row.versions.map(({ blocks: _blocks, ...v }) => v),
+      update: await this.updateOf(row.scope, latest?.blocks ?? null),
+    };
   }
 
   /** One stored version, exactly as saved; no AI, no retrieval. */
