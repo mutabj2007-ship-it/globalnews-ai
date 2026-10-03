@@ -122,6 +122,7 @@ live('cross-country continuation — live PostgreSQL through AskV2Service', () =
     expect(executed[executed.length - 1].continuation).toEqual({
       readerQuestion: 'And in Kenya?',
       fromQuestion: "How is Madagascar's economy doing?",
+      kind: 'CROSS_COUNTRY',
     });
     const turns = await db.askTurn.findMany({
       where: { threadId: t },
@@ -135,6 +136,7 @@ live('cross-country continuation — live PostgreSQL through AskV2Service', () =
       readerQuestion: 'And in Kenya?',
       answeredAs: "How is Kenya's economy doing?",
       fromQuestion: "How is Madagascar's economy doing?",
+      kind: 'CROSS_COUNTRY',
     });
   });
 

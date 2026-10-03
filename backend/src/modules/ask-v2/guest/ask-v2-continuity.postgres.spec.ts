@@ -471,6 +471,7 @@ live(
         readerQuestion: 'And what about Uganda?',
         answeredAs: "What has changed in Uganda's economy?",
         fromQuestion: "What has changed in Kenya's economy?",
+        kind: 'CROSS_COUNTRY',
       });
     });
 

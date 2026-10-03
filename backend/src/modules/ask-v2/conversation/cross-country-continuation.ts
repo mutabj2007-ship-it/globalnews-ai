@@ -53,7 +53,10 @@ const EN_TIME =
 const PL_TIME =
   /\s+(dzisiaj|dziś|wczoraj|w\s+tym\s+tygodniu|w\s+zeszłym\s+tygodniu|w\s+ostatnim\s+tygodniu|w\s+tym\s+miesiącu)\s*([?!.…]*)\s*$/iu;
 
-function splitTime(question: string, lang: 'en' | 'pl'): { rest: string; period: string | null } {
+export function splitTime(
+  question: string,
+  lang: 'en' | 'pl',
+): { rest: string; period: string | null } {
   const m = (lang === 'pl' ? PL_TIME : EN_TIME).exec(question);
   if (!m) return { rest: question, period: null };
   return { rest: question.slice(0, m.index) + (m[2] ?? '?'), period: m[1] };
@@ -61,7 +64,7 @@ function splitTime(question: string, lang: 'en' | 'pl'): { rest: string; period:
 
 /* ── Polish case forms (generated FORWARD from the curated nominative; fail closed) ───────── */
 type PlCase = 'nom' | 'gen' | 'loc';
-function plCases(nominative: string): Record<PlCase, string> | null {
+export function plCases(nominative: string): Record<PlCase, string> | null {
   if (/\s/.test(nominative)) return null;
   const n = nominative;
   if (/a$/i.test(n)) {
@@ -130,7 +133,7 @@ function retarget(
 }
 
 /** Attach the place to a short placeless follow-up: "And the economy?" → "And the economy in Kenya?". */
-function attach(text: string, to: CountryMeta, lang: 'en' | 'pl'): string | null {
+export function attach(text: string, to: CountryMeta, lang: 'en' | 'pl'): string | null {
   const trimmed = text.trim().replace(/[?!.…\s]+$/u, '');
   if (lang === 'en') return `${trimmed} in ${to.name}?`;
   const nom = getLocalizedCountryName(to.iso2, 'pl');
@@ -139,7 +142,7 @@ function attach(text: string, to: CountryMeta, lang: 'en' | 'pl'): string | null
 }
 
 /** Remove the earlier stated period ("this week") before applying the reader's new one. */
-function withNewPeriod(text: string, lang: 'en' | 'pl', period: string | null): string {
+export function withNewPeriod(text: string, lang: 'en' | 'pl', period: string | null): string {
   if (period === null) return text;
   const outcome = normalizeAskQuestion({
     originalQuestion: text,

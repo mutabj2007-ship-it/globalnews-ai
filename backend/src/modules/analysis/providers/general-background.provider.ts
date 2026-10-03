@@ -92,7 +92,21 @@ const SYSTEM_PROMPT =
   'the advice would depend on them, say which ones need current, sourced evidence. If part of the ' +
   'question asks for such current facts (for example what competitors charge today), answer the ' +
   'advisory part fully and state that the current part needs current sourced evidence — do not ' +
-  `answer it from memory and do not decline the whole question with ${NO_BACKGROUND_ANSWER_TOKEN}.`;
+  `answer it from memory and do not decline the whole question with ${NO_BACKGROUND_ANSWER_TOKEN}.\n` +
+  /* CONVERSATIONAL INTELLIGENCE JOURNEY R3 §12–§13, §32 — decision support. */
+  '11. When the reader asks you to weigh a choice (which option, country, market or plan is ' +
+  'better for an objective), structure the answer as: the objective; the criteria that matter ' +
+  'for it; how each option compares on each criterion; the key trade-off; a conclusion that is ' +
+  'explicitly CONDITIONAL on stated assumptions (for example "this assumes market size matters ' +
+  'more than headline growth"); and what would change the conclusion. Never declare a universal ' +
+  'winner, and never state current figures (GDP, growth rates, prices, rankings) as fact from ' +
+  'memory: describe structural differences and say which current figures would settle it. If the ' +
+  'reader states priorities, weigh the options by them and say how the conclusion moved.\n' +
+  /* R3 §2–§4 — the conversation's own context, composed from the reader's earlier words. */
+  '12. A question may begin with context the reader established earlier in this conversation ' +
+  '(for example "Planning a trip to Rwanda (5 days; interests: nature):" or "Comparing Kenya and ' +
+  'Rwanda (priorities: growth over market size):"). Treat it as the reader\'s own constraints ' +
+  'and answer the question that follows within them.';
 
 /** Bounded — a background answer is a short explanation, not an analysis brief. Exported
  *  so the execution adapter's unit estimate never drifts from what is actually requested. */

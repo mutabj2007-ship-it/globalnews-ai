@@ -2768,3 +2768,227 @@ describe('CTO P0 — advisory / decision support executes through the background
     expect(payload.guidance).toBeUndefined();
   });
 });
+
+describe('CONVERSATIONAL INTELLIGENCE JOURNEY R3 — decision support, constraints, partial answers, relationships', () => {
+  type P = {
+    aiExecuted: boolean;
+    answer: { state: string; basis?: string; candidates?: string[]; missingRoles?: string[] };
+    analysis: unknown;
+    background: { text: string } | null;
+    guidance?: {
+      kind: string;
+      currentEvidenceNeeded: string[];
+      objective?: string;
+      currentPart?: string;
+    };
+    relationship?: { countries: string[]; relations: string[]; domain: string };
+  };
+  const NOTHING_SPENT = {
+    analysis: [],
+    background: [],
+    reserve: [],
+    settle: [],
+    permit: [],
+    record: [],
+  };
+  const trace = (job: string) => ({
+    job,
+    ownJob: job,
+    carried: [],
+    overridden: [],
+    reset: false,
+    composed: null,
+  });
+  const run = async (adapter: AskR2ExecutionAdapter, r: AskRequest) => {
+    const plan = await adapter.prepare(r);
+    return JSON.parse((await inRequest(() => adapter.execute(r, plan, 'op-r3'))).payloadJson) as P;
+  };
+
+  it('§12 / §24 "Which economy is best?" — best for what? asked at ZERO compute, objectives offered', async () => {
+    const { adapter, calls } = harness({});
+    const payload = await run(adapter, req('Which economy is best?'));
+    expect(calls).toEqual(NOTHING_SPENT);
+    expect(payload.answer).toMatchObject({
+      state: 'CLARIFICATION_REQUIRED',
+      basis: 'DECISION_OBJECTIVE_MISSING',
+      candidates: ['investment', 'logistics', 'market size', 'growth'],
+    });
+    expect(payload.aiExecuted).toBe(false);
+  });
+
+  it('§12 a decision with an objective — one reasoning call, NO news call, labelled guidance with the objective', async () => {
+    const { adapter, calls } = harness({
+      analysis: async () => {
+        throw new Error('news must not be called');
+      },
+    });
+    const payload = await run(
+      adapter,
+      req('Which is better for a logistics expansion, Kenya or Rwanda?'),
+    );
+    expect(calls.analysis).toEqual([]);
+    expect(calls.background).toHaveLength(1);
+    expect(calls.reserve).toHaveLength(1);
+    expect(payload.answer.state).toBe('REFERENCE_BACKGROUND');
+    expect(payload.guidance).toMatchObject({
+      kind: 'DECISION_SUPPORT',
+      objective: 'logistics expansion',
+    });
+  });
+
+  it('a political choice is never decision support (§32)', async () => {
+    const { adapter } = harness({});
+    const payload = await run(adapter, req('Which party is best for the economy of Kenya?'));
+    expect(payload.guidance).toBeUndefined();
+  });
+
+  it('§23 a constraint-only turn ("Only official sources.") is NOTED at zero compute', async () => {
+    const { adapter, calls } = harness({});
+    const payload = await run(adapter, {
+      ...req('Only official sources.'),
+      conversation: { officialSourcesOnly: true, constraintOnly: true, trace: trace('UNKNOWN') },
+    });
+    expect(calls).toEqual(NOTHING_SPENT);
+    expect(payload.answer).toMatchObject({
+      state: 'CLARIFICATION_REQUIRED',
+      basis: 'CONSTRAINT_NOTED',
+    });
+  });
+
+  it('§23 under "official sources only" a news question is told the truth (no news call); advice is still answered', async () => {
+    const news = harness({});
+    const current = await run(news.adapter, {
+      ...req('What is happening in Kenya today?'),
+      conversation: {
+        officialSourcesOnly: true,
+        constraintOnly: false,
+        trace: trace('CURRENT_REPORTING'),
+      },
+    });
+    expect(news.calls).toEqual(NOTHING_SPENT);
+    expect(current.answer).toMatchObject({
+      state: 'CAPABILITY_UNAVAILABLE',
+      basis: 'OFFICIAL_SOURCE_UNAVAILABLE',
+      missingRoles: ['OFFICIAL'],
+    });
+    const advice = harness({});
+    const guided = await run(advice.adapter, {
+      ...req('How should I price a subscription product?'),
+      conversation: { officialSourcesOnly: true, constraintOnly: false, trace: trace('ADVISORY') },
+    });
+    expect(advice.calls.background).toHaveLength(1);
+    expect(guided.guidance?.kind).toBe('ADVISORY');
+  });
+
+  it('the constraint changes the plan revision; the diagnostics trace alone never does', async () => {
+    const { adapter } = harness({});
+    const q = 'What is happening in Kenya today?';
+    const plain = await adapter.prepare(req(q));
+    const official = await adapter.prepare({
+      ...req(q),
+      conversation: { officialSourcesOnly: true, constraintOnly: false, trace: trace('X') },
+    });
+    expect(official.revision).not.toBe(plain.revision);
+    const traced = await adapter.prepare({
+      ...req(q),
+      conversation: { officialSourcesOnly: false, constraintOnly: false, trace: trace('Y') },
+    });
+    expect(traced.revision).toBe(plain.revision);
+  });
+
+  describe('§6–§7 partial answers survive a provider failure (MIXED_REFERENCE_CURRENT)', () => {
+    const Q = 'Why do volcanoes erupt, and what is the latest news about the eruption in Iceland?';
+
+    it('the question is a mixed stable + current reading, its current clause named', () => {
+      const route = routeAskR2(
+        {
+          originalQuestion: Q,
+          sourceLanguage: 'en',
+          normalizationLanguage: 'en',
+          displayLanguage: 'en',
+          origin: 'ASK',
+        },
+        { requestInstant: '2026-10-03T07:00:00Z' },
+        {
+          specialistRegistry: landedSpecialistRegistryPort({
+            registeredDomains: () => ['CONFLICT'],
+          } as never),
+        },
+      );
+      expect(route.knowledgeRequirement).toBe('MIXED_REFERENCE_CURRENT');
+      expect(route.currentEvidenceNeeded.join(' ')).toContain('latest news');
+    });
+
+    it('reporting provider FAILS → stable part answered by background, current part named UNAVAILABLE', async () => {
+      const { adapter, calls } = harness({
+        analysis: async () => {
+          throw new Error('GDELT timeout');
+        },
+      });
+      const payload = await run(adapter, req(Q));
+      expect(calls.analysis).toHaveLength(1);
+      expect(calls.background).toHaveLength(1);
+      expect(payload.answer).toMatchObject({
+        state: 'REFERENCE_BACKGROUND',
+        basis: 'PARTIAL_CURRENT_UNAVAILABLE',
+        missingRoles: ['REPORTING'],
+      });
+      expect(payload.background?.text).toBe('General background answer.');
+      expect(payload.guidance).toMatchObject({
+        kind: 'MIXED_REFERENCE_CURRENT',
+        currentPart: 'UNAVAILABLE',
+      });
+      expect(payload.guidance?.currentEvidenceNeeded.join(' ')).toContain('latest news');
+      expect(countsAsGuestAnswer(payload as never)).toBe(true);
+    });
+
+    it('reporting finds NOTHING → the same partial answer, named NO_EVIDENCE (never INSUFFICIENT for the whole)', async () => {
+      const { adapter, calls } = harness({
+        analysis: async () => ({ analysis: null, articles: [], retrievalContext: {} as never }),
+      });
+      const payload = await run(adapter, req(Q));
+      expect(calls.background).toHaveLength(1);
+      expect(payload.answer).toMatchObject({
+        state: 'REFERENCE_BACKGROUND',
+        basis: 'PARTIAL_CURRENT_NO_EVIDENCE',
+      });
+    });
+
+    it('a purely current question has nothing stable to salvage: the existing failure stands', async () => {
+      const { adapter, calls } = harness({
+        analysis: async () => {
+          throw new Error('GDELT timeout');
+        },
+      });
+      const q = 'What is the latest news about the eruption in Iceland?';
+      const plan = await adapter.prepare(req(q));
+      expect(await refusal(inRequest(() => adapter.execute(req(q), plan, 'op-r3')))).toMatch(
+        /^MODEL_/,
+      );
+      expect(calls.background).toEqual([]);
+    });
+  });
+
+  it('§14 / PO-02 a bilateral question keeps BOTH sides and asks the analysis path for relationship evidence only', async () => {
+    const { adapter, calls } = harness({});
+    const payload = await run(
+      adapter,
+      req('What is happening commercially between Rwanda and Tanzania at the border?'),
+    );
+    const policy = calls.analysis[0]?.[6] as {
+      relationship?: { countries: string[]; relations: string[] };
+    };
+    expect(policy.relationship).toEqual({
+      countries: ['RWA', 'TZA'],
+      relations: ['BORDER', 'TRADE'],
+    });
+    expect(payload.relationship).toMatchObject({ countries: ['RWA', 'TZA'], domain: 'COMMERCIAL' });
+  });
+
+  it('a plain comparison of two countries is not a relationship', async () => {
+    const { adapter, calls } = harness({});
+    await run(adapter, req('Compare the economies of Rwanda and Tanzania this year'));
+    const policy = calls.analysis[0]?.[6] as { relationship?: unknown } | undefined;
+    expect(policy?.relationship).toBeUndefined();
+  });
+});

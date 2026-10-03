@@ -68,6 +68,7 @@ import { detectAmbiguousCountryMention } from '../analysis/anchor/event-anchor.u
 import { readInstitutionalStatusQuestion } from '../news/relevance/governed-institutions';
 import { retainedCycleCovers } from '../ask-intelligence/contributor-selection';
 import { isBroadGlobalHeadlinesQuestion } from '../analysis/query/broad-global-headlines.util';
+import { readBilateralRelationship, type BilateralRelationship } from './bilateral-relationship';
 
 /** The vocabulary frozen C derives axes in (its `DERIVATION_COVERAGE`). */
 export const NORMALIZATION_VOCABULARY = 'en';
@@ -124,7 +125,7 @@ export interface SeamTrace {
    * when this says so; any undeclared loss of domains is still a missing seam.
    */
   readonly knowledgeDecoupling?:
-    'STABLE_REFERENCE' | 'COMPUTATION' | 'PLACE_REFERENCE' | 'ADVISORY' | null;
+    'STABLE_REFERENCE' | 'COMPUTATION' | 'PLACE_REFERENCE' | 'ADVISORY' | 'DECISION_SUPPORT' | null;
 }
 
 export interface AskR2Route {
@@ -151,6 +152,13 @@ export interface AskR2Route {
   readonly readerStatedPeriod: string | null;
   /** CTO P0 — for MIXED_ADVISORY_CURRENT, the reader's time-anchored clauses that need current sourced evidence. */
   readonly currentEvidenceNeeded: readonly string[];
+  /** R3 §12 — for DECISION_SUPPORT: the reader's objective, null when none was stated. */
+  readonly decisionObjective: string | null;
+  /**
+   * R3 §14 / PO-02 — a question about what happens BETWEEN two named countries
+   * (bilateral-relationship.ts): both sides, the relation and its domain. Null otherwise.
+   */
+  readonly relationship: BilateralRelationship | null;
   readonly outcome: NormalizationOutcome;
   readonly source: EnvelopeSource;
   readonly envelope: AskQuestionEnvelope;
@@ -457,6 +465,8 @@ export function routeAskR2(
       reportingWindow: null,
       readerStatedPeriod: null,
       currentEvidenceNeeded: [],
+      decisionObjective: null,
+      relationship: null,
       outcome,
       source,
       envelope: routed.envelope,
@@ -591,6 +601,8 @@ export function routeAskR2(
         priorKnowledge === 'ADVISORY' && continuesKind
         ? { requirement: 'ADVISORY' as const, reason: 'continues an advisory question' }
         : ownKnowledge;
+  /* R3 §12 — a decision is answered on the advisory path (reasoning, no news call). */
+  const decision = knowledge.requirement === 'DECISION_SUPPORT';
   /* The landed classifier stays authoritative: a place-bearing or anchored reading (one country,
      several, a comparison with members, an article anchor) and an ELIGIBLE inherited context are
      never re-read as stable reference. */
@@ -655,7 +667,9 @@ export function routeAskR2(
   const advisory =
     !stableOrComputed &&
     !placeReference &&
-    (knowledge.requirement === 'ADVISORY' || knowledge.requirement === 'MIXED_ADVISORY_CURRENT') &&
+    (knowledge.requirement === 'ADVISORY' ||
+      knowledge.requirement === 'MIXED_ADVISORY_CURRENT' ||
+      decision) &&
     ctx.hasResolvedArticleAnchor !== true &&
     capability.source.personalRequested !== true;
   const broadHeadlines =
@@ -742,6 +756,13 @@ export function routeAskR2(
     readerStatedPeriod: reading.statedTime?.statedPeriod ?? null,
     currentEvidenceNeeded:
       ('currentClauses' in knowledge ? knowledge.currentClauses : undefined) ?? [],
+    decisionObjective:
+      advisory && decision && 'objective' in knowledge ? (knowledge.objective ?? null) : null,
+    /* R3 §14 — only a question that still needs reporting carries the relationship scope */
+    relationship:
+      advisory || placeReference || stableOrComputed
+        ? null
+        : readBilateralRelationship(reading.originalQuestion, reading.sourceLanguage),
     outcome,
     source,
     envelope,
@@ -768,7 +789,9 @@ export function routeAskR2(
         : placeReference
           ? 'PLACE_REFERENCE'
           : advisory
-            ? 'ADVISORY'
+            ? decision
+              ? 'DECISION_SUPPORT'
+              : 'ADVISORY'
             : null,
     },
   };

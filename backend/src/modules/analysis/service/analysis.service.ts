@@ -224,6 +224,10 @@ import {
 } from '../validation/validate-analysis-result';
 import { asksAboutCoverage } from '../query/coverage-question.util';
 import type { AnalysisProviderInput } from '../interfaces';
+import {
+  evidencesRelationship,
+  type RelationshipScope,
+} from '../relevance/relationship-evidence.util';
 
 /** ASK R2 INTEGRATION R1 · GATE E — see `analyzeNews(…, executionPolicy)`. */
 /** ASK TRUTHFUL RETRIEVAL R2A — the runner's part of the retrieval trace. */
@@ -259,6 +263,12 @@ export interface AnalysisExecutionPolicy {
    * search for the words "global news". Part of the cache key.
    */
   readonly broadHeadlines?: boolean;
+  /**
+   * CONVERSATIONAL INTELLIGENCE JOURNEY R3 §14 / PO-02 — the Ask router read a question about what
+   * happens BETWEEN two countries (bilateral-relationship.ts). The per-side reports are admitted only
+   * when they evidence the relationship itself (relationship-evidence.util.ts). Part of the cache key.
+   */
+  readonly relationship?: RelationshipScope;
 }
 import { officeGeographyCountryCode } from '../context-producers/office-geography.producer';
 import {
@@ -801,7 +811,12 @@ export class AnalysisService {
             .slice(0, 16)}`;
     /* PUBLIC BETA HARDENING R1B — a headlines answer is never served to, or from, a topic search. */
     const broadKeySegment = executionPolicy?.broadHeadlines === true ? ':broad-headlines' : '';
-    const cacheKey = `${requestedLanguage}:${normalizedQuery.toLowerCase()}${storyAnchorKeySegment}${priorQuestionKeySegment}${selectionKeySegment}${identityKeySegment}${governedKeySegment}${windowKeySegment}${broadKeySegment}`;
+    /* R3 §14 — a relationship answer is never served to, or from, a two-country news answer. */
+    const relationshipKeySegment =
+      executionPolicy?.relationship === undefined
+        ? ''
+        : `:relationship:${executionPolicy.relationship.countries.join('-')}:${executionPolicy.relationship.relations.join('+')}`;
+    const cacheKey = `${requestedLanguage}:${normalizedQuery.toLowerCase()}${storyAnchorKeySegment}${priorQuestionKeySegment}${selectionKeySegment}${identityKeySegment}${governedKeySegment}${windowKeySegment}${broadKeySegment}${relationshipKeySegment}`;
 
     const cached = this.getCached(cacheKey);
 
@@ -2479,8 +2494,38 @@ export class AnalysisService {
               requestedLanguage,
             );
 
-            articles = perSide.articles;
-            retrievalContext = perSide.retrievalContext;
+            /*
+             * R3 §14 / PO-02 — a question about what happens BETWEEN the two sides admits only
+             * reports that evidence the relationship (both sides, and the named relation).
+             * One-sided reporting is rejected and counted, never shown; zero admitted is zero.
+             */
+            const relationship = executionPolicy?.relationship;
+            const relationshipSides =
+              relationship !== undefined &&
+              classification.sides.length === 2 &&
+              classification.sides.every((side) => relationship.countries.includes(side.iso3));
+            if (relationship !== undefined && relationshipSides) {
+              const admitted = perSide.articles.filter((article) =>
+                evidencesRelationship(article, relationship),
+              );
+              articles = admitted;
+              retrievalContext = {
+                ...perSide.retrievalContext,
+                articlesRetrieved: admitted.length,
+                ...(admitted.length === 0 && perSide.articles.length > 0
+                  ? { outcome: 'NO_RELEVANT_EVIDENCE' as const }
+                  : {}),
+                relationshipEvidence: {
+                  countries: [...relationship.countries],
+                  relations: [...relationship.relations],
+                  admitted: admitted.length,
+                  rejected: perSide.articles.length - admitted.length,
+                },
+              };
+            } else {
+              articles = perSide.articles;
+              retrievalContext = perSide.retrievalContext;
+            }
           } else if (institutionalStatus !== null) {
             /*
              * ASK CURRENT REPORTING FINAL CLOSURE R1 (M2) — AN INSTITUTIONAL CURRENT-STATUS

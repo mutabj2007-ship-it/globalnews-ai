@@ -28,7 +28,32 @@ export interface AskRequest {
    * the engine answers, and this records the reader's own words and the earlier question it came
    * from (disclosed on the answer). Absent for every other turn.
    */
-  continuation?: { readonly readerQuestion: string; readonly fromQuestion: string };
+  continuation?: {
+    readonly readerQuestion: string;
+    readonly fromQuestion: string;
+    /** R3 — CROSS_COUNTRY ("And in Kenya?") or JOB_CONTEXT (the trip / decision / relationship
+     *  the reader is working on). Absent means CROSS_COUNTRY (checkpoint 5 payloads). */
+    readonly kind?: 'CROSS_COUNTRY' | 'JOB_CONTEXT';
+  };
+  /**
+   * CONVERSATIONAL INTELLIGENCE JOURNEY R3 — the governed conversation state of a context-free
+   * turn (conversation/conversation-state.ts), derived by the service from the reader's OWN earlier
+   * questions in this owner-verified thread. Never client input. `officialSourcesOnly` and
+   * `constraintOnly` change what is executed (and so the plan revision); `trace` is diagnostics.
+   */
+  conversation?: {
+    readonly officialSourcesOnly: boolean;
+    /** The turn only stated a preference / constraint ("Only official sources.") — no job. */
+    readonly constraintOnly: boolean;
+    readonly trace: {
+      readonly job: string;
+      readonly ownJob: string;
+      readonly carried: readonly string[];
+      readonly overridden: readonly string[];
+      readonly reset: boolean;
+      readonly composed: string | null;
+    };
+  };
 }
 
 /** Produced by a CTO-owned, local/read-only planner. No provider call in prepare.

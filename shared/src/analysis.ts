@@ -1002,6 +1002,18 @@ export interface AnalysisRetrievalContext {
   requestedScope?: RequestedRegionScope;
   comparisonCoverage?: import('./comparison-coverage').ComparisonCountryCoverage[];
   /**
+   * CONVERSATIONAL INTELLIGENCE JOURNEY R3 §14 / PO-02 — a question about what happens BETWEEN two
+   * countries: only reports that evidence the relationship itself (both sides, and the relation —
+   * border, corridor, trade… — when one was named) were admitted. One-sided reporting about either
+   * country is not evidence for the relationship and is counted here as rejected, never shown.
+   */
+  relationshipEvidence?: {
+    readonly countries: readonly string[];
+    readonly relations: readonly string[];
+    readonly admitted: number;
+    readonly rejected: number;
+  };
+  /**
    * CTO CHECKPOINT 5 §6 — a FOCUSED domain question about a country ("And the economy?" in a
    * Madagascar conversation): the requested domains, how many retrieved reports showed one of
    * them in their own text, whether the bounded supplemental search was needed, and — when no

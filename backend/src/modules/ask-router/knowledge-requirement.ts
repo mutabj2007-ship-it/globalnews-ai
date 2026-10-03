@@ -4,6 +4,7 @@ import { deriveEventFrame } from '../analysis/query/event-frame.util';
 import { solveComputation } from '../ask-v2/computation/deterministic-computation';
 import { assertsFreshness } from '../analysis/query/query-intent.util';
 import { readAdvisory } from './advisory-requirement';
+import { readDecisionSupport } from './decision-support';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -59,7 +60,14 @@ export type KnowledgeRequirement =
   | 'ADVISORY'
   /** CTO P0 — advice plus an explicitly time-anchored part: the advice is answered, the current
    *  part is named as needing current sourced evidence (never the whole answer INSUFFICIENT). */
-  | 'MIXED_ADVISORY_CURRENT';
+  | 'MIXED_ADVISORY_CURRENT'
+  /**
+   * CONVERSATIONAL INTELLIGENCE JOURNEY R3 §12 — a choice weighed against the reader's objective
+   * (decision-support.ts): reasoning over criteria and trade-offs, conditional on stated
+   * assumptions, never a fake universal winner and never current figures from memory. With no
+   * objective, the reader is asked "best for what?" at zero compute.
+   */
+  | 'DECISION_SUPPORT';
 
 export interface KnowledgeRequirementReading {
   readonly requirement: KnowledgeRequirement | null;
@@ -68,6 +76,8 @@ export interface KnowledgeRequirementReading {
   readonly frame?: 'TRAVEL' | 'HISTORY';
   /** CTO P0 — for MIXED_ADVISORY_CURRENT, the time-anchored clauses that need current evidence. */
   readonly currentClauses?: readonly string[];
+  /** R3 §12 — for DECISION_SUPPORT, the reader's objective (null: not stated). */
+  readonly objective?: string | null;
 }
 
 /**
@@ -276,6 +286,20 @@ export function deriveKnowledgeRequirement(
       frame: travel ? 'TRAVEL' : 'HISTORY',
     };
   }
+  /* R3 §12 — a non-political choice weighed against an objective. Read before the general
+     advisory cue (it is the more specific form) and before the news-oriented freshness rules. */
+  const decision = readDecisionSupport(text, lang);
+  if (decision !== null) {
+    return {
+      requirement: 'DECISION_SUPPORT',
+      reason:
+        decision.objective === null
+          ? 'a decision with no stated objective'
+          : "a decision weighed against the reader's objective",
+      objective: decision.objective,
+      currentClauses: decision.currentClauses,
+    };
+  }
   /*
     CTO P0 — advice / decision support. Read BEFORE the news-oriented freshness rules below: their
     topic nouns ("news", "situation", "status") are not time, and an advisory question about a
@@ -299,9 +323,21 @@ export function deriveKnowledgeRequirement(
     };
   }
   if (explanatory && fresh) {
+    /* R3 §6 — the clauses that carry the freshness: named on a partial answer if they fail */
+    const timed = text
+      .split(
+        /(?<=[?.!;])\s+|,\s+(?:and|but|while|plus)\s+|\s+(?:and|but|i|a)\s+(?=(?:what|which|who|how|where|when|is|are|do|does|did|co|jak|kto|czy|ile)\b)/iu,
+      )
+      .map((c) => c.trim())
+      .filter(
+        (c) =>
+          c.length > 0 &&
+          (assertsFreshness(c) || FRESHNESS[lang].test(c) || CHANGING[lang].test(c)),
+      );
     return {
       requirement: 'MIXED_REFERENCE_CURRENT',
       reason: 'a stable shape that also asserts freshness',
+      currentClauses: timed.length > 0 ? timed : [text],
     };
   }
   if (fresh || place) {

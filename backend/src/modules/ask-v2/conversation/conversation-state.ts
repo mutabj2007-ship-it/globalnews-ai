@@ -1,0 +1,936 @@
+import { findCountryByIso3, getLocalizedCountryName } from '@globalnews-ai/shared';
+import { readContinuationEllipsis } from '../../analysis/anchor/continuation-ellipsis.util';
+import {
+  deriveKnowledgeRequirement,
+  TRAVEL_FRAME,
+  type KnowledgeRequirement,
+} from '../../ask-router/knowledge-requirement';
+import { readDecisionSupport } from '../../ask-router/decision-support';
+import {
+  readBilateralRelationship,
+  relationKindsIn,
+  type BilateralRelationship,
+} from '../../ask-router/bilateral-relationship';
+import { normalizeAskQuestion } from '../../ask-router/normalization/qualified-reading';
+import {
+  attach,
+  composeCrossCountryContinuation,
+  plCases,
+  splitTime,
+  withNewPeriod,
+} from './cross-country-continuation';
+import { typedCountriesOf } from './conversation-place';
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * CONVERSATIONAL INTELLIGENCE JOURNEY R3 — THE GOVERNED CONVERSATION STATE (§2–§4, §23)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * "Which places can I visit in Rwanda?" → "I have five days and prefer nature." → "What about
+ * Nyungwe instead?" → "Which is cheaper?" was answered turn by turn as Rwanda NEWS: each short
+ * turn named no place and no job, so the router read it as a current-events question about the
+ * inherited country. The reader's JOB (travel planning), constraints (five days, nature) and the
+ * options under discussion (Nyungwe, Volcanoes) existed only in the reader's head.
+ *
+ * This module makes that state EXPLICIT, derived deterministically from the reader's OWN earlier
+ * questions in this owner-verified thread — never from an AI answer, never from another thread,
+ * no model call, no I/O. It is folded turn by turn, oldest first, with the R3 §3 precedence:
+ *
+ *   1 current explicit instruction        (a preference / constraint stated now replaces the old)
+ *   2 current explicit place / time       (a new country replaces the old one; options drop)
+ *   3 current explicit job                (a self-contained new job resets job-scoped context)
+ *   4 portable prior subject              (job, place, objective, comparison set)
+ *   5 portable prior preferences          (duration, interests, priorities, official-only)
+ *   6 story / Map / briefing context      (a surface context turn is never composed here)
+ *   7 defaults
+ *
+ * PORTABLE, NOT COPIED (§4): only semantic context travels — the job, a place, a duration, an
+ * interest, an objective, an official-sources constraint. Never a story id, an article anchor, a
+ * source claim, or an answer. Options (Nyungwe, Volcanoes) are scoped to their place and are
+ * dropped when the place changes. A self-contained question with a different job ("Who was
+ * Napoleon?") resets the job-scoped context; thread-level constraints (official sources only)
+ * survive until the reader changes them (§23).
+ *
+ * The state is USED in exactly one way: when the current turn continues a TRAVEL_PLANNING or a
+ * DECISION_SUPPORT job that the router cannot read from the turn alone, the turn is composed into
+ * the question the one engine answers (the same seam as the cross-country continuation), and the
+ * composition is DISCLOSED on the answer ("Answered as …"). Every other turn is untouched. The
+ * state itself is recorded for diagnostics (§42) on the answer payload.
+ */
+
+export type UserJob =
+  | 'TRAVEL_PLANNING'
+  | 'PLACE_BACKGROUND'
+  | 'ADVISORY'
+  | 'DECISION_SUPPORT'
+  | 'STABLE_REFERENCE'
+  | 'CURRENT_REPORTING'
+  | 'COMPARISON'
+  | 'RELATIONSHIP'
+  | 'COMPUTATION'
+  | 'UNKNOWN';
+
+export interface ConversationState {
+  readonly job: UserJob;
+  readonly language: 'en' | 'pl';
+  /** The conversation's place(s), ISO3, in the order the reader named them. */
+  readonly geography: readonly string[];
+  /** Places compared within the job (Rwanda → "And in Kenya?" keeps both for "compare"). */
+  readonly comparisonSet: readonly string[];
+  /** Options under discussion inside the place (Nyungwe, Volcanoes) — scoped to the place. */
+  readonly options: readonly string[];
+  readonly duration: string | null;
+  readonly interests: readonly string[];
+  readonly decisionObjective: string | null;
+  /** A stated weighting ("growth over market size"). */
+  readonly priorities: string | null;
+  /** §23 — a thread-level evidence constraint, until the reader changes it. */
+  readonly officialSourcesOnly: boolean;
+  /** §14 — the relationship a RELATIONSHIP job is about (both sides, relation, corridor). */
+  readonly relationship: BilateralRelationship | null;
+  /** The latest short placeless follow-up that carried a subject ("And the economy?"). */
+  readonly topicFollowUp: string | null;
+  /** The latest period the reader stated in a follow-up ("What about yesterday?"). */
+  readonly period: string | null;
+  /** The reader's own earlier question that established the job. */
+  readonly anchorQuestion: string | null;
+}
+
+export type StateField =
+  | 'job'
+  | 'geography'
+  | 'comparisonSet'
+  | 'options'
+  | 'duration'
+  | 'interests'
+  | 'decisionObjective'
+  | 'priorities'
+  | 'officialSourcesOnly'
+  | 'relationship'
+  | 'topic'
+  | 'period';
+
+/** §42 — what this turn inherited, what it overrode, and whether it started a new job. */
+export interface TurnStateTrace {
+  readonly job: UserJob;
+  readonly ownJob: UserJob;
+  readonly carried: readonly StateField[];
+  readonly overridden: readonly StateField[];
+  readonly reset: boolean;
+  readonly composed: 'CROSS_COUNTRY' | 'JOB_CONTEXT' | null;
+}
+
+export interface ConversationalComposition {
+  readonly effectiveQuestion: string;
+  readonly fromQuestion: string;
+  readonly kind: 'CROSS_COUNTRY' | 'JOB_CONTEXT';
+}
+
+export interface ConversationalTurn {
+  readonly composition: ConversationalComposition | null;
+  /** The state AFTER this turn — what the next turn will inherit. */
+  readonly state: ConversationState;
+  /** The turn only stated a preference / constraint and composed nothing (no job to serve). */
+  readonly constraintOnly: boolean;
+  readonly trace: TurnStateTrace;
+}
+
+export interface EarlierTurnText {
+  readonly question: string;
+  readonly language: string;
+}
+
+/** A follow-up is short; a long question is self-contained (matches conversation-place). */
+export const MAX_FOLLOW_UP_WORDS = 16;
+/** How far back the state is folded (the anchor lookback). */
+export const STATE_LOOKBACK = 10;
+
+const EMPTY = (language: 'en' | 'pl'): ConversationState => ({
+  job: 'UNKNOWN',
+  language,
+  geography: [],
+  comparisonSet: [],
+  options: [],
+  duration: null,
+  interests: [],
+  decisionObjective: null,
+  priorities: null,
+  officialSourcesOnly: false,
+  relationship: null,
+  topicFollowUp: null,
+  period: null,
+  anchorQuestion: null,
+});
+
+/* ── the reader's own explicit constraints (§23) ─────────────────────────────────────────── */
+const NUMBER_WORDS: Readonly<Record<string, number>> = {
+  one: 1,
+  two: 2,
+  three: 3,
+  four: 4,
+  five: 5,
+  six: 6,
+  seven: 7,
+  eight: 8,
+  nine: 9,
+  ten: 10,
+  fourteen: 14,
+  jeden: 1,
+  dwa: 2,
+  dwóch: 2,
+  trzy: 3,
+  cztery: 4,
+  pięć: 5,
+  sześć: 6,
+  siedem: 7,
+  osiem: 8,
+  dziewięć: 9,
+  dziesięć: 10,
+};
+const EN_DURATION =
+  /\b(\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|fourteen)[\s-]+(day|days|night|nights|week|weeks)\b|\b(a|one)\s+(week|weekend|fortnight)\b/i;
+const PL_DURATION =
+  /(?:^|\s)(\d{1,2}|dwa|dwóch|trzy|cztery|pięć|sześć|siedem|osiem|dziewięć|dziesięć)\s+(dni|dzień|tygodni\p{L}*|tydzień)(?=$|[\s,.?!])|(?:^|\s)(weekend|tydzień)(?=$|[\s,.?!])/iu;
+
+export function readDuration(text: string, lang: 'en' | 'pl'): string | null {
+  if (lang === 'pl') {
+    const m = PL_DURATION.exec(text);
+    if (!m) return null;
+    if (m[3]) return m[3].toLowerCase() === 'weekend' ? 'weekend' : '7 dni';
+    const n = /^\d+$/.test(m[1]) ? Number(m[1]) : (NUMBER_WORDS[m[1].toLowerCase()] ?? null);
+    if (n === null) return null;
+    return /^tydz|^tygodn/i.test(m[2]) ? `${n * 7} dni` : `${n} dni`;
+  }
+  const m = EN_DURATION.exec(text);
+  if (!m) return null;
+  if (m[4]) {
+    const unit = m[4].toLowerCase();
+    return unit === 'weekend' ? 'a weekend' : unit === 'fortnight' ? '14 days' : '7 days';
+  }
+  const n = /^\d+$/.test(m[1]) ? Number(m[1]) : (NUMBER_WORDS[m[1].toLowerCase()] ?? null);
+  if (n === null) return null;
+  const unit = m[2].toLowerCase();
+  if (unit.startsWith('week')) return `${n * 7} days`;
+  if (unit.startsWith('night')) return `${n} nights`;
+  return `${n} days`;
+}
+
+/* interests: a closed vocabulary, EN → PL display */
+const INTERESTS: ReadonlyArray<readonly [RegExp, string, string]> = [
+  [
+    /\b(?:nature|natural\s+scenery|landscapes?)\b|(?:przyrod\p{L}*|natur\p{L}*|krajobraz\p{L}*)/iu,
+    'nature',
+    'przyroda',
+  ],
+  [
+    /\b(?:wildlife|animals|safaris?|game\s+drives?)\b|(?:zwierz\p{L}*|dzik\p{L}*\s+przyrod\p{L}*)/iu,
+    'wildlife',
+    'dzika przyroda',
+  ],
+  [
+    /\b(?:hiking|trekking|walks?|walking)\b|(?:wędrów\p{L}*|trekking\p{L}*|piesz\p{L}*)/iu,
+    'hiking',
+    'wędrówki',
+  ],
+  [
+    /\b(?:primates?|gorillas?|chimpanzees?|chimps)\b|(?:goryl\p{L}*|szympans\p{L}*|naczeln\p{L}*)/iu,
+    'primates',
+    'naczelne',
+  ],
+  [
+    /\b(?:birds?|birding|birdwatching)\b|(?:ptak\p{L}*|ptasi\p{L}*)/iu,
+    'birdwatching',
+    'obserwacja ptaków',
+  ],
+  [/\b(?:beach|beaches|coast|seaside)\b|(?:plaż\p{L}*|wybrzeż\p{L}*)/iu, 'beaches', 'plaże'],
+  [
+    /\b(?:culture|cultural|museums?|heritage)\b|(?:kultur\p{L}*|muze\p{L}*|dziedzictw\p{L}*)/iu,
+    'culture',
+    'kultura',
+  ],
+  [/\b(?:food|cuisine)\b|(?:jedzeni\p{L}*|kuchni\p{L}*)/iu, 'food', 'kuchnia'],
+  [/\b(?:adventure|adventurous)\b|(?:przygod\p{L}*)/iu, 'adventure', 'przygoda'],
+  [
+    /\b(?:relax(?:ing|ation)?|rest|quiet)\b|(?:odpoczyn\p{L}*|relaks\p{L}*)/iu,
+    'relaxation',
+    'odpoczynek',
+  ],
+  [
+    /\b(?:budget|cheap|affordable|low[-\s]cost)\b|(?:budżet\p{L}*|tani\p{L}*)/iu,
+    'budget',
+    'budżet',
+  ],
+];
+const EN_PREFERENCE_VERB =
+  /\b(?:prefer|preferring|like|love|enjoy|into|interested\s+in|focus\s+on|care\s+(?:most\s+)?about|want\s+(?:to\s+see|to\s+do|some)|mostly|mainly|especially)\b/i;
+const PL_PREFERENCE_VERB =
+  /(?:wol\p{L}*|lubi\p{L}*|kocham|interesuj\p{L}*|zależy\s+mi\s+na|chc\p{L}*\s+zobaczy\p{L}*|głównie|szczególnie)/iu;
+
+export function readInterests(text: string, lang: 'en' | 'pl'): string[] {
+  const verb = (lang === 'pl' ? PL_PREFERENCE_VERB : EN_PREFERENCE_VERB).test(text);
+  if (!verb) return [];
+  return INTERESTS.filter(([re]) => re.test(text)).map(([, en, pl]) => (lang === 'pl' ? pl : en));
+}
+
+const EN_OFFICIAL_ONLY =
+  /\b(?:only|just|solely|exclusively)\s+(?:use\s+|from\s+|with\s+)?official\s+sources?\b|\bofficial\s+sources?\s+only\b|\bnothing\s+but\s+official\s+sources?\b/i;
+const PL_OFFICIAL_ONLY =
+  /(?:tylko|wyłącznie|jedynie)\s+(?:z\s+)?oficjaln\p{L}*\s+źród\p{L}*|oficjaln\p{L}*\s+źród\p{L}*\s+(?:tylko|wyłącznie)/iu;
+const EN_ANY_SOURCES = /\b(?:any\s+sources?|all\s+sources|not\s+only\s+official)\b/i;
+const PL_ANY_SOURCES = /(?:dowoln\p{L}*\s+źród\p{L}*|wszystki\p{L}*\s+źród\p{L}*)/iu;
+
+export function readOfficialOnly(text: string, lang: 'en' | 'pl'): boolean | null {
+  if ((lang === 'pl' ? PL_OFFICIAL_ONLY : EN_OFFICIAL_ONLY).test(text)) return true;
+  if ((lang === 'pl' ? PL_ANY_SOURCES : EN_ANY_SOURCES).test(text)) return false;
+  return null;
+}
+
+const EN_PRIORITIES =
+  /\b(?:i|we)\s+care\s+more\s+about\s+(.{2,60}?)\s+than\s+(?:about\s+)?(.{2,60}?)[.?!]*$|\bweight\s+(.{2,40}?)\s+more(?:\s+heavily)?\b|\bprioriti[sz]e\s+(.{2,40}?)(?:\s+over\s+(.{2,40}?))?[.?!]*$/i;
+const PL_PRIORITIES =
+  /(?:bardziej\s+zależy\s+mi\s+na\s+(.{2,60}?)\s+niż\s+(?:na\s+)?(.{2,60}?)[.?!]*$|daj\s+większ\p{L}*\s+wag\p{L}*\s+(.{2,40}?)[.?!]*$)/iu;
+
+export function readPriorities(text: string, lang: 'en' | 'pl'): string | null {
+  const m = (lang === 'pl' ? PL_PRIORITIES : EN_PRIORITIES).exec(text.trim());
+  if (!m) return null;
+  /* "current market size" is a weighting of a criterion, not a request for today's figure */
+  const clean = (s: string | undefined) =>
+    (s ?? '')
+      .trim()
+      .replace(/[.?!]+$/, '')
+      .replace(/\b(?:current|present|today's)\s+/giu, '')
+      .replace(/(?:^|\s)(?:obecn\p{L}*|aktualn\p{L}*)\s+/giu, ' ')
+      .trim();
+  if (lang === 'pl') {
+    if (m[1]) return `${clean(m[1])} ponad ${clean(m[2])}`;
+    return `większa waga: ${clean(m[3])}`;
+  }
+  if (m[1]) return `${clean(m[1])} over ${clean(m[2])}`;
+  if (m[3]) return `more weight on ${clean(m[3])}`;
+  return m[5] ? `${clean(m[4])} over ${clean(m[5])}` : `priority on ${clean(m[4])}`;
+}
+
+/* ── options under discussion inside a place (proper names that are not countries) ───────── */
+const EN_OPTION_FRAMES: readonly RegExp[] = [
+  /\bwhat\s+about\s+(.+?)\s+instead\b/i,
+  /\bhow\s+about\s+(.+?)\s+instead\b/i,
+  /\b(?:instead|rather)\s+(?:of\s+)?(?:go\s+to\s+|visit\s+)?(.+?)[?.!]*$/i,
+  /\bcompare\s+(.+?)\s+(?:and|with|vs\.?|versus)\s+(.+?)[?.!]*$/i,
+  /\b(?:between|either)\s+(.+?)\s+(?:and|or)\s+(.+?)[?.!]*$/i,
+  /\b(?:what\s+about|how\s+about|and)\s+(.+?)[?.!]*$/i,
+  /\b(?:visit|see|go\s+to)\s+(.+?)\s+or\s+(.+?)[?.!]*$/i,
+];
+const PL_OPTION_FRAMES: readonly RegExp[] = [
+  /(?:a\s+co\s+z|a\s+może|co\s+z)\s+(.+?)\s+zamiast\b/iu,
+  /(?:porównaj|porównanie)\s+(.+?)\s+(?:i|z|oraz|vs\.?)\s+(.+?)[?.!]*$/iu,
+  /(?:między|pomiędzy)\s+(.+?)\s+(?:a|i)\s+(.+?)[?.!]*$/iu,
+  /(?:a\s+co\s+z|a\s+może)\s+(.+?)[?.!]*$/iu,
+];
+const OPTION_STOP =
+  /^(?:it|them|this|that|these|those|both|the\s+two|either|one|ones|there|here|instead|the\s+same|same|trip|itinerary|plan|option|options|tego|tym|nich|obu|obydwu)$/i;
+
+/** A proper-name option: capitalised words ("Nyungwe", "Volcanoes National Park"). */
+function optionName(raw: string): string | null {
+  const text = raw
+    .trim()
+    .replace(/^(?:the|a|an)\s+/i, '')
+    .replace(/[?.!,;:]+$/, '')
+    .trim();
+  if (text.length < 3 || text.split(/\s+/).length > 4 || OPTION_STOP.test(text)) return null;
+  if (!/^\p{Lu}/u.test(text)) return null;
+  return text;
+}
+
+export function readOptions(
+  text: string,
+  lang: 'en' | 'pl',
+  isCountry: (s: string) => boolean,
+): string[] {
+  for (const re of lang === 'pl' ? PL_OPTION_FRAMES : EN_OPTION_FRAMES) {
+    const m = re.exec(text.trim());
+    if (!m) continue;
+    const names = m
+      .slice(1)
+      .filter((g): g is string => g !== undefined)
+      .map(optionName)
+      .filter((n): n is string => n !== null && !isCountry(n));
+    if (names.length > 0) return [...new Set(names)];
+  }
+  return [];
+}
+
+/* ── the reader's job (the axis the router already reads, named as a job) ─────────────────── */
+function jobOf(
+  question: string,
+  lang: 'en' | 'pl',
+  countries: readonly string[],
+): { job: UserJob; requirement: KnowledgeRequirement | null } {
+  if (readBilateralRelationship(question, lang) !== null)
+    return { job: 'RELATIONSHIP', requirement: null };
+  const reading = deriveKnowledgeRequirement(question, lang, countries.length > 0);
+  const decision = readDecisionSupport(question, lang);
+  if (decision !== null) return { job: 'DECISION_SUPPORT', requirement: reading.requirement };
+  switch (reading.requirement) {
+    case 'PLACE_REFERENCE':
+      return {
+        job: reading.frame === 'TRAVEL' ? 'TRAVEL_PLANNING' : 'PLACE_BACKGROUND',
+        requirement: reading.requirement,
+      };
+    case 'ADVISORY':
+    case 'MIXED_ADVISORY_CURRENT':
+      return { job: 'ADVISORY', requirement: reading.requirement };
+    case 'STABLE_REFERENCE':
+      return { job: 'STABLE_REFERENCE', requirement: reading.requirement };
+    case 'COMPUTATION':
+      return { job: 'COMPUTATION', requirement: reading.requirement };
+    case 'CURRENT_REPORTING':
+    case 'EVENT_DISCOVERY':
+    case 'OFFICIAL_REFERENCE':
+    case 'MIXED_REFERENCE_CURRENT':
+      /* a named place alone is not a job: "Which places in Rwanda…" reads as a place */
+      if (reading.reason === 'a named place' && TRAVEL_FRAME[lang].test(question))
+        return { job: 'TRAVEL_PLANNING', requirement: reading.requirement };
+      if (countries.length >= 2 && /\bcompar|porówn/iu.test(question))
+        return { job: 'COMPARISON', requirement: reading.requirement };
+      return { job: 'CURRENT_REPORTING', requirement: reading.requirement };
+    default:
+      return { job: 'UNKNOWN', requirement: null };
+  }
+}
+
+const wordCount = (q: string) => q.trim().split(/\s+/u).filter(Boolean).length;
+const asLang = (l: string): 'en' | 'pl' | null => (l === 'en' || l === 'pl' ? l : null);
+
+interface TurnFeatures {
+  readonly lang: 'en' | 'pl';
+  readonly countries: readonly string[];
+  readonly ellipsisTo: string | null;
+  readonly job: UserJob;
+  readonly requirement: KnowledgeRequirement | null;
+  readonly relationship: BilateralRelationship | null;
+  readonly duration: string | null;
+  readonly interests: readonly string[];
+  readonly options: readonly string[];
+  readonly objective: string | null;
+  readonly priorities: string | null;
+  readonly officialOnly: boolean | null;
+  /** The period the reader stated in this turn ("yesterday"), as written. */
+  readonly statedPeriod: string | null;
+  /** The turn is ONLY a time shift ("What about yesterday?"). */
+  readonly timeOnly: boolean;
+  readonly words: number;
+}
+
+const EN_TIME_ONLY = /^\s*(?:and\s+)?(?:what|how)\s+about\s+|^\s*and\s+|^\s*(?:same\s+for)\s+/i;
+const PL_TIME_ONLY = /^\s*(?:a\s+)?(?:co\s+z|jak\s+z)?\s*/iu;
+
+function statedPeriodOf(question: string, lang: 'en' | 'pl'): string | null {
+  const outcome = normalizeAskQuestion({
+    originalQuestion: question,
+    sourceLanguage: lang,
+    normalizationLanguage: lang,
+    displayLanguage: lang,
+    origin: 'ASK',
+  });
+  return outcome.status === 'NOT_READ' ? null : (outcome.reading.statedTime?.statedPeriod ?? null);
+}
+
+function readTurn(question: string, lang: 'en' | 'pl'): TurnFeatures {
+  const typed = (typedCountriesOf(question, lang) ?? []).filter((c) => c !== 'CONTESTED');
+  const ellipsis = readContinuationEllipsis(splitTime(question.trim(), lang).rest);
+  const ellipsisTo =
+    ellipsis !== null && ellipsis.candidates.length === 1 ? ellipsis.candidates[0] : null;
+  const { job, requirement } = jobOf(question, lang, typed);
+  const isCountry = (s: string) => (typedCountriesOf(s, lang) ?? []).length > 0;
+  const statedPeriod = statedPeriodOf(question, lang);
+  const rest =
+    statedPeriod === null
+      ? question
+      : question
+          .replace(statedPeriod, ' ')
+          .replace(lang === 'pl' ? PL_TIME_ONLY : EN_TIME_ONLY, '');
+  return {
+    lang,
+    countries: typed,
+    ellipsisTo,
+    job,
+    requirement,
+    relationship: readBilateralRelationship(question, lang),
+    duration: readDuration(question, lang),
+    interests: readInterests(question, lang),
+    options: readOptions(question, lang, isCountry),
+    objective: readDecisionSupport(question, lang)?.objective ?? null,
+    priorities: readPriorities(question, lang),
+    officialOnly: readOfficialOnly(question, lang),
+    statedPeriod,
+    timeOnly: statedPeriod !== null && rest.replace(/[?!.…\s]+/gu, '').length === 0,
+    words: wordCount(question),
+  };
+}
+
+/** A turn that states only constraints/preferences ("I have five days and prefer nature."). */
+function isConstraintStatement(f: TurnFeatures): boolean {
+  return (
+    f.job === 'UNKNOWN' &&
+    (f.duration !== null ||
+      f.interests.length > 0 ||
+      f.priorities !== null ||
+      f.officialOnly !== null)
+  );
+}
+
+/*
+  §4 — A JOB-LESS TURN CONTINUES A TRIP / DECISION / RELATIONSHIP ONLY IF IT POINTS BACK INTO IT.
+  "What caused the First World War and how did it end?" is short and names no place, yet it is a
+  new subject: carrying "Planning a trip to Rwanda" onto it would be inappropriate context carry.
+  A job-less turn continues such a job only when it states a constraint, names an option, refers
+  back to what is under discussion (instead, the same, both, which one, cheaper…), or uses the
+  job's own vocabulary (a trip's cost, season, permits; a decision's criteria; a relation's goods).
+  A bare "it" is not a reference back: a self-contained question uses it for its own subject.
+*/
+const EN_REFERS_BACK =
+  /\b(?:instead|the\s+same|same\s+(?:trip|plan|one|for)|either|both|which\s+(?:one|is|are|of\s+them)|the\s+(?:other|former|latter)|the\s+(?:first|second)\s+(?:one|option|place|park|choice|plan)|those|these|them|compare|cheaper|more\s+expensive|better|closer|easier|re-?evaluate|what\s+else|anything\s+else)\b/i;
+const PL_REFERS_BACK =
+  /(?:zamiast|to\s+samo|tak\s+samo|oba|obie|obydwa|któr\p{L}*\s+(?:z\s+nich|jest|są)|porówn\p{L}*|tańsz\p{L}*|lepsz\p{L}*|bliżej|łatwiej|oceń\s+ponownie|co\s+jeszcze)/iu;
+const EN_TRIP_VOCAB =
+  /\b(?:cost|costs|price|prices|budget|cheap|expensive|afford\w*|days?|nights?|itinerary|route|hotels?|lodges?|stay|accommodation|camp(?:ing|s)?|visas?|weather|season|rainy|dry|best\s+time|when\s+to\s+go|get(?:ting)?\s+there|fly|flights?|drive|transport|permits?|safe|safety|pack|parks?|trek(?:king)?|hik(?:e|ing)|tours?|guides?|book(?:ing)?|travel\s+notices?)\b/i;
+const PL_TRIP_VOCAB =
+  /(?:koszt\p{L}*|cen\p{L}*|budżet\p{L}*|tani\p{L}*|drog\p{L}*|dni|noc\p{L}*|plan\s+podróży|tras\p{L}*|hotel\p{L}*|nocleg\p{L}*|wiz\p{L}*|pogod\p{L}*|sezon\p{L}*|kiedy\s+jechać|lot\p{L}*|transport\p{L}*|pozwoleni\p{L}*|bezpiecz\p{L}*|spakować|park\p{L}*|wędrów\p{L}*|wycieczk\p{L}*|przewodnik\p{L}*|rezerwac\p{L}*)/iu;
+const EN_DECISION_VOCAB =
+  /\b(?:criteria|criterion|trade-?offs?|weigh\w*|priorit\w*|objective|goal|risks?|growth|market\s+size|demand|costs?|returns?|conclusion|recommend\w*|evidence\s+(?:is\s+)?missing|what\s+would\s+change)\b/i;
+const PL_DECISION_VOCAB =
+  /(?:kryteri\p{L}*|kompromis\p{L}*|priorytet\p{L}*|cel\p{L}*|ryzyk\p{L}*|wzrost\p{L}*|wielkość\s+rynku|popyt\p{L}*|koszt\p{L}*|wniosek|wniosk\p{L}*|rekomend\p{L}*)/iu;
+
+function pointsBackInto(job: UserJob, question: string, f: TurnFeatures): boolean {
+  const lang = f.lang;
+  if (isConstraintStatement(f) || f.options.length > 0 || f.ellipsisTo !== null || f.timeOnly)
+    return true;
+  if ((lang === 'pl' ? PL_REFERS_BACK : EN_REFERS_BACK).test(question)) return true;
+  if ((lang === 'pl' ? PL_GENERIC_CURRENT : EN_GENERIC_CURRENT).test(question)) return true;
+  switch (job) {
+    case 'TRAVEL_PLANNING':
+      return (lang === 'pl' ? PL_TRIP_VOCAB : EN_TRIP_VOCAB).test(question);
+    case 'DECISION_SUPPORT':
+    case 'COMPARISON':
+      return (lang === 'pl' ? PL_DECISION_VOCAB : EN_DECISION_VOCAB).test(question);
+    case 'RELATIONSHIP':
+      return relationKindsIn(question).length > 0;
+    default:
+      /* current reporting / background / advice: the existing short-follow-up reading */
+      return true;
+  }
+}
+
+/** Jobs that a short, job-less turn may continue. */
+const CONTINUABLE: ReadonlySet<UserJob> = new Set([
+  'TRAVEL_PLANNING',
+  'DECISION_SUPPORT',
+  'COMPARISON',
+  'ADVISORY',
+  'PLACE_BACKGROUND',
+  'CURRENT_REPORTING',
+  'RELATIONSHIP',
+]);
+
+/**
+ * Fold one turn into the state (§3 precedence). Returns the new state and its trace. The
+ * composition decision is made by the caller from the PREVIOUS state and the turn's features.
+ */
+function applyTurn(
+  prev: ConversationState,
+  question: string,
+  f: TurnFeatures,
+): { state: ConversationState; trace: Omit<TurnStateTrace, 'composed'> } {
+  const carried: StateField[] = [];
+  const overridden: StateField[] = [];
+  const isFollowUp =
+    f.words <= MAX_FOLLOW_UP_WORDS &&
+    CONTINUABLE.has(prev.job) &&
+    ((f.job === 'UNKNOWN' && pointsBackInto(prev.job, question, f)) ||
+      f.job === prev.job ||
+      /* a short decision question inside a comparison / travel job continues it */
+      (f.job === 'DECISION_SUPPORT' &&
+        (prev.job === 'COMPARISON' || prev.job === 'TRAVEL_PLANNING')) ||
+      /* "And in Kenya?" — an ellipsis is a continuation of whatever job is open */
+      f.ellipsisTo !== null ||
+      /* "What about yesterday?" — a time shift continues the open job */
+      f.timeOnly ||
+      /* a short place-free current reading inside a trip / relationship ("anything current?") */
+      ((prev.job === 'TRAVEL_PLANNING' || prev.job === 'RELATIONSHIP') &&
+        f.job === 'CURRENT_REPORTING' &&
+        f.countries.length === 0));
+
+  /* thread-level evidence constraint (§23): survives a new job, changed only explicitly */
+  const officialSourcesOnly = f.officialOnly ?? prev.officialSourcesOnly;
+  if (f.officialOnly !== null && f.officialOnly !== prev.officialSourcesOnly)
+    overridden.push('officialSourcesOnly');
+  else if (prev.officialSourcesOnly) carried.push('officialSourcesOnly');
+
+  if (!isFollowUp) {
+    /* a new, self-contained job: job-scoped context resets (§4) */
+    const reset = prev.job !== 'UNKNOWN';
+    return {
+      state: {
+        ...EMPTY(f.lang),
+        job: f.job,
+        geography: f.countries,
+        comparisonSet: f.countries.length >= 2 ? f.countries : [],
+        options: f.options,
+        duration: f.duration,
+        interests: f.interests,
+        decisionObjective: f.objective,
+        priorities: f.priorities,
+        officialSourcesOnly,
+        relationship: f.relationship,
+        period: f.statedPeriod,
+        anchorQuestion: question,
+      },
+      trace: { job: f.job, ownJob: f.job, carried, overridden, reset },
+    };
+  }
+
+  /* 1–2 · explicit place: a new single country replaces the place; options were scoped to it */
+  const newPlace =
+    f.ellipsisTo ??
+    (f.countries.length === 1 && !prev.geography.includes(f.countries[0]) ? f.countries[0] : null);
+  let geography = prev.geography;
+  let comparisonSet = prev.comparisonSet;
+  let options = prev.options;
+  let relationship = prev.relationship;
+  if (f.relationship !== null) {
+    relationship = f.relationship;
+    geography = [...f.relationship.countries];
+    if (prev.relationship !== null) overridden.push('relationship');
+  } else if (f.countries.length >= 2) {
+    geography = f.countries;
+    comparisonSet = f.countries;
+    overridden.push('geography', 'comparisonSet');
+  } else if (newPlace !== null) {
+    geography = [newPlace];
+    comparisonSet = [...new Set([...prev.comparisonSet, ...prev.geography, newPlace])];
+    options = [];
+    /* a new place leaves the two-sided relationship: it no longer describes this question */
+    relationship = null;
+    overridden.push('geography');
+    if (prev.options.length > 0) overridden.push('options');
+  } else if (prev.geography.length > 0) carried.push('geography');
+  if (relationship !== null && f.relationship === null && newPlace === null)
+    carried.push('relationship');
+  if (f.options.length > 0) {
+    /* "What about Nyungwe instead?" replaces; "Compare Nyungwe and Volcanoes" sets both */
+    options = f.options.length >= 2 ? f.options : [...new Set([...f.options, ...options])];
+    if (prev.options.length > 0) overridden.push('options');
+  } else if (options.length > 0 && newPlace === null) carried.push('options');
+
+  const pick = <T>(own: T | null, old: T, field: StateField): T => {
+    if (own !== null && own !== old) {
+      if (old !== null) overridden.push(field);
+      return own;
+    }
+    if (old !== null) carried.push(field);
+    return old;
+  };
+  const duration = pick(f.duration, prev.duration, 'duration');
+  const decisionObjective = pick(f.objective, prev.decisionObjective, 'decisionObjective');
+  const priorities = pick(f.priorities, prev.priorities, 'priorities');
+  const period = pick(f.statedPeriod, prev.period, 'period');
+  let interests = prev.interests;
+  if (f.interests.length > 0) {
+    interests = f.interests;
+    if (prev.interests.length > 0) overridden.push('interests');
+  } else if (prev.interests.length > 0) carried.push('interests');
+  /* the subject of a short placeless follow-up ("And the economy?") — a time shift keeps it */
+  const ownTopic =
+    f.job === 'UNKNOWN' &&
+    !f.timeOnly &&
+    f.ellipsisTo === null &&
+    f.countries.length === 0 &&
+    !isConstraintStatement(f)
+      ? question
+      : null;
+  const topicFollowUp = pick(ownTopic, prev.topicFollowUp, 'topic');
+
+  const job: UserJob =
+    f.job === 'DECISION_SUPPORT' && prev.job === 'COMPARISON' ? 'DECISION_SUPPORT' : prev.job;
+  carried.unshift('job');
+  if (comparisonSet.length > 0 && !overridden.includes('comparisonSet'))
+    carried.push('comparisonSet');
+  return {
+    state: {
+      job,
+      language: f.lang,
+      geography,
+      comparisonSet,
+      options,
+      duration,
+      interests,
+      decisionObjective,
+      priorities,
+      officialSourcesOnly,
+      relationship,
+      topicFollowUp,
+      period,
+      anchorQuestion: prev.anchorQuestion,
+    },
+    trace: { job, ownJob: f.job, carried, overridden, reset: false },
+  };
+}
+
+/* ── composition: the question the one engine answers ─────────────────────────────────────── */
+const EN_GENERIC_CURRENT =
+  /^\s*(?:is\s+there\s+)?(?:anything|what(?:'s|\s+is)?)\s+(?:current|new|recent|happening|going\s+on)\b|\b(?:anything|what)\b.*\bshould\s+i\s+know\b.*\b(?:now|currently|current|right\s+now|today)\b|\bshould\s+i\s+know\b.*\b(?:now|current(?:ly)?)\b|^\s*(?:is\s+there\s+)?anything\s+current\b/i;
+const PL_GENERIC_CURRENT =
+  /(?:czy\s+jest\s+coś|coś)\s+(?:aktualn\p{L}*|nowego|bieżąc\p{L}*)|co\s+(?:aktualnie|teraz|obecnie)\s+powinienem\s+wiedzieć/iu;
+const COMPARE = /\bcompar|porówn/iu;
+const RE_EVALUATE = /^\s*re-?evaluate\b|^\s*oceń\s+ponownie\b/iu;
+
+function placeName(
+  iso3: string,
+  lang: 'en' | 'pl',
+  grammaticalCase: 'nom' | 'gen' | 'loc',
+): string | null {
+  const country = findCountryByIso3(iso3);
+  if (country === undefined) return null;
+  if (lang === 'en') return country.name;
+  const nom = getLocalizedCountryName(country.iso2, 'pl');
+  if (!nom) return null;
+  if (grammaticalCase === 'nom') return nom;
+  const cases = plCases(nom);
+  return cases ? cases[grammaticalCase] : null;
+}
+
+function listJoin(items: readonly string[], lang: 'en' | 'pl', conj: 'and' | 'or'): string {
+  if (items.length <= 1) return items.join('');
+  const word = lang === 'pl' ? (conj === 'and' ? 'i' : 'czy') : conj;
+  return `${items.slice(0, -1).join(', ')} ${word} ${items[items.length - 1]}`;
+}
+
+function constraintsText(state: ConversationState, lang: 'en' | 'pl'): string {
+  const parts: string[] = [];
+  if (state.duration !== null) parts.push(state.duration);
+  if (state.interests.length > 0)
+    parts.push(`${lang === 'pl' ? 'zainteresowania' : 'interests'}: ${state.interests.join(', ')}`);
+  return parts.length === 0 ? '' : ` (${parts.join('; ')})`;
+}
+
+const stripEnd = (s: string) => s.replace(/[?.!…\s]+$/u, '');
+
+/** The travel composition: "Planning a trip to Rwanda (5 days; interests: nature): …". */
+function composeTravel(
+  question: string,
+  state: ConversationState,
+  f: TurnFeatures,
+  prevOptions: readonly string[],
+): string | null {
+  const lang = f.lang;
+  const places = state.geography;
+  if (places.length === 0) return null;
+  /* "Compare the same five-day nature trip" after a place change compares the places */
+  const comparing =
+    COMPARE.test(question) && f.options.length === 0 && state.comparisonSet.length >= 2;
+  const members = comparing ? state.comparisonSet : places;
+  const names = members.map((iso3) => placeName(iso3, lang, lang === 'pl' ? 'gen' : 'nom'));
+  if (names.some((n) => n === null)) return null;
+  const where = listJoin(names as string[], lang, 'and');
+  let body = question.trim();
+  if ((lang === 'pl' ? PL_GENERIC_CURRENT : EN_GENERIC_CURRENT).test(body)) {
+    /* a generic "anything current?" in a trip is a request for TRAVEL notices (§8), never a
+       country news digest; the rewrite is disclosed on the answer */
+    body =
+      lang === 'pl'
+        ? 'jakie aktualne komunikaty dla podróżnych powinienem znać?'
+        : 'what current travel notices should I know about?';
+  } else if (f.ellipsisTo !== null) {
+    /* "And in Kenya?" inside a trip: the same trip, the new place */
+    body =
+      lang === 'pl'
+        ? 'jakie miejsca warto odwiedzić i jak zaplanować pobyt?'
+        : 'which places should I visit, and how would I plan it?';
+  } else if (isConstraintStatement(f) && !COMPARE.test(body)) {
+    body =
+      lang === 'pl'
+        ? `${stripEnd(body)} — jak najlepiej to zaplanować?`
+        : `${stripEnd(body)} — how should I plan it?`;
+  } else if (
+    f.options.length === 0 &&
+    prevOptions.length >= 2 &&
+    /\b(?:which|what)\b.*\b(?:cheaper|better|closer|easier|best|more|less|quicker|nicer)\b|(?:któr\p{L}*|co)\s.*(?:tańsz|lepsz|bliżej|łatwiej|najlepsz)/iu.test(
+      body,
+    )
+  ) {
+    /* "Which is cheaper?" — the options under discussion are its members */
+    body = `${stripEnd(body)} — ${listJoin(prevOptions, lang, 'or')}?`;
+  }
+  const frame =
+    lang === 'pl'
+      ? `Planuję podróż do ${where}${constraintsText(state, lang)}`
+      : `Planning a trip to ${where}${constraintsText(state, lang)}`;
+  return `${frame}: ${body}`;
+}
+
+/** Decision support over a carried comparison set: "Comparing Kenya and Rwanda: … for X?". */
+function composeDecision(
+  question: string,
+  state: ConversationState,
+  f: TurnFeatures,
+): string | null {
+  const lang = f.lang;
+  const set = state.comparisonSet.length >= 2 ? state.comparisonSet : [];
+  if (set.length < 2 || f.countries.length > 0) return null;
+  const names = set.map((iso3) => placeName(iso3, lang, 'nom'));
+  if (names.some((n) => n === null)) return null;
+  const members = listJoin(names as string[], lang, 'and');
+  const objective = state.decisionObjective;
+  const weighting =
+    state.priorities === null
+      ? ''
+      : lang === 'pl'
+        ? ` (priorytety: ${state.priorities})`
+        : ` (priorities: ${state.priorities})`;
+  const frame =
+    lang === 'pl' ? `Porównanie: ${members}${weighting}` : `Comparing ${members}${weighting}`;
+  let body = question.trim();
+  if ((f.priorities !== null && f.job === 'UNKNOWN') || RE_EVALUATE.test(body)) {
+    /* a stated weighting, or "Re-evaluate.": the same decision, re-weighed (§13) */
+    body =
+      lang === 'pl'
+        ? `która opcja jest najlepsza${objective === null ? '' : ` dla: ${objective}`} przy tych priorytetach?`
+        : `which is the strongest choice${objective === null ? '' : ` for ${objective}`}, given these priorities?`;
+  } else if (f.objective === null && objective !== null) {
+    /* the objective the reader already stated carries to a new decision question */
+    body =
+      lang === 'pl'
+        ? `${stripEnd(body)} — dla: ${objective}?`
+        : `${stripEnd(body)} — for ${objective}?`;
+  }
+  return `${frame}: ${body}`;
+}
+
+/** The relationship composition: "Between Rwanda and Tanzania (border, trade): …" (EN only). */
+function composeRelationship(
+  question: string,
+  state: ConversationState,
+  f: TurnFeatures,
+): string | null {
+  const rel = state.relationship;
+  /* Polish needs the instrumental ("między Rwandą a Tanzanią"), not generated here: fail closed */
+  if (rel === null || f.lang !== 'en' || f.countries.length > 0 || f.relationship !== null)
+    return null;
+  const a = placeName(rel.countries[0], 'en', 'nom');
+  const b = placeName(rel.countries[1], 'en', 'nom');
+  if (a === null || b === null) return null;
+  const relations = rel.relations.filter((r) => r !== 'GENERAL').map((r) => r.toLowerCase());
+  const detail = [rel.corridor, ...relations].filter((x): x is string => x !== null);
+  return `Between ${a} and ${b}${detail.length > 0 ? ` (${detail.join(', ')})` : ''}: ${question.trim()}`;
+}
+
+/** "And in Kenya?" after "And the economy?" / "What about yesterday?" — the carried subject. */
+function composeCarriedTopic(
+  question: string,
+  prev: ConversationState,
+  f: TurnFeatures,
+): string | null {
+  if (f.ellipsisTo === null || prev.topicFollowUp === null) return null;
+  const to = findCountryByIso3(f.ellipsisTo);
+  if (to === undefined || prev.geography.includes(to.iso3)) return null;
+  const based = attach(prev.topicFollowUp, to, f.lang);
+  if (based === null) return null;
+  const own = splitTime(question.trim(), f.lang).period;
+  return withNewPeriod(based, f.lang, own ?? prev.period);
+}
+
+/**
+ * Fold the reader's earlier questions (newest first, EXCLUDING this turn) and decide this turn.
+ * `hasOwnContext`: the turn carries a story / module / selection context — never composed.
+ */
+export function readConversationalTurn(
+  question: string,
+  language: string,
+  earlierNewestFirst: readonly EarlierTurnText[],
+  options: { readonly hasOwnContext?: boolean } = {},
+): ConversationalTurn | null {
+  const lang = asLang(language);
+  if (lang === null) return null;
+  /* fold oldest → newest, same-language turns only (a switch of language is a new reading) */
+  const earlier = earlierNewestFirst
+    .slice(0, STATE_LOOKBACK)
+    .filter((t) => t.language === lang)
+    .reverse();
+  let state = EMPTY(lang);
+  for (const turn of earlier)
+    state = applyTurn(state, turn.question, readTurn(turn.question, lang)).state;
+
+  const f = readTurn(question, lang);
+  const applied = applyTurn(state, question, f);
+  const trace = (composed: TurnStateTrace['composed']): TurnStateTrace => ({
+    ...applied.trace,
+    composed,
+  });
+  const none: ConversationalTurn = {
+    composition: null,
+    state: applied.state,
+    trace: trace(null),
+    constraintOnly: isConstraintStatement(f) && f.countries.length === 0,
+  };
+  if (options.hasOwnContext === true) return none;
+  const from = state.anchorQuestion ?? earlierNewestFirst[0]?.question ?? question;
+  const job = (composed: string | null, next = applied.state): ConversationalTurn | null =>
+    composed === null
+      ? null
+      : {
+          composition: { effectiveQuestion: composed, fromQuestion: from, kind: 'JOB_CONTEXT' },
+          state: next,
+          constraintOnly: false,
+          trace: { ...trace('JOB_CONTEXT'), job: next.job },
+        };
+
+  const continues = !applied.trace.reset && applied.trace.carried.includes('job');
+  if (continues) {
+    /* TRAVEL_PLANNING — short follow-ups the router cannot read alone */
+    if (applied.state.job === 'TRAVEL_PLANNING') {
+      const t = job(composeTravel(question, applied.state, f, state.options));
+      if (t !== null) return t;
+    }
+    /* DECISION_SUPPORT over a comparison the reader already made (§12–§13) */
+    if (
+      (applied.state.job === 'DECISION_SUPPORT' || applied.state.job === 'COMPARISON') &&
+      (f.job === 'DECISION_SUPPORT' || f.priorities !== null || RE_EVALUATE.test(question))
+    ) {
+      const t = job(composeDecision(question, applied.state, f), {
+        ...applied.state,
+        job: 'DECISION_SUPPORT',
+      });
+      if (t !== null) return t;
+    }
+    /* RELATIONSHIP — the bilateral scope carries ("What goods are affected?") (§14) */
+    if (applied.state.job === 'RELATIONSHIP') {
+      const t = job(composeRelationship(question, applied.state, f));
+      if (t !== null) return t;
+    }
+  }
+  /* CTO checkpoint 5 §5 — the existing cross-country continuation, unchanged */
+  const cross = composeCrossCountryContinuation(question, lang, earlierNewestFirst);
+  if (cross !== null)
+    return {
+      composition: {
+        effectiveQuestion: cross.effectiveQuestion,
+        fromQuestion: cross.fromQuestion,
+        kind: 'CROSS_COUNTRY',
+      },
+      state: applied.state,
+      trace: trace('CROSS_COUNTRY'),
+      constraintOnly: false,
+    };
+  /* R3 §3 / PO-06 — a carried subject from a placeless follow-up chain, to the new place */
+  if (continues && applied.state.job === 'CURRENT_REPORTING') {
+    const carried = composeCarriedTopic(question, state, f);
+    if (carried !== null)
+      return {
+        composition: { effectiveQuestion: carried, fromQuestion: from, kind: 'CROSS_COUNTRY' },
+        state: applied.state,
+        trace: trace('CROSS_COUNTRY'),
+        constraintOnly: false,
+      };
+  }
+  return none;
+}

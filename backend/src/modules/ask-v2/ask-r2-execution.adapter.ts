@@ -35,6 +35,7 @@ import {
   type AskR2Route,
   type AskRouteContext,
 } from '../ask-router/ask-r2-route';
+import { DECISION_OBJECTIVE_CANDIDATES } from '../ask-router/decision-support';
 import {
   answerStateBeforeExecution,
   deriveAnswerState,
@@ -403,6 +404,9 @@ export function planRevision(
     /* UNIFIED INTELLIGENCE BINDING R2B — the canonical context identity, pinned EXPLICITLY (not
        left to whatever the route happens to reflect). Omitted when absent: byte-identical. */
     ...(request.context === undefined ? [] : [contextIdentityToken(request.context)]),
+    /* R3 §23 — the conversation's constraints change what is executed. Omitted when absent. */
+    ...(request.conversation?.officialSourcesOnly === true ? ['conversation:official-only'] : []),
+    ...(request.conversation?.constraintOnly === true ? ['conversation:constraint-only'] : []),
   ]);
 }
 
@@ -653,6 +657,47 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       });
     }
 
+    /*
+      CONVERSATIONAL INTELLIGENCE JOURNEY R3 — two answers that need no model, decided on the
+      service's own conversation reading and the route before anything is spent:
+        · §23 a turn that only states a preference or constraint ("Only official sources.",
+          "I prefer nature.") with no job to serve is NOTED: the conversation carries it and the
+          reader is asked what they want to know. Zero AI, no provider, no meter.
+        · §12 / §24 a decision with no objective ("Which economy is best?") is answered with the
+          question it depends on — best for what? — with the usual objectives offered.
+    */
+    if (request.conversation?.constraintOnly === true && request.continuation === undefined) {
+      return this.result(
+        plan,
+        route,
+        operationId,
+        this.observeAnswer(
+          { state: 'CLARIFICATION_REQUIRED', basis: 'CONSTRAINT_NOTED', missingRoles: [] },
+          draft,
+        ),
+        null,
+        false,
+      );
+    }
+    if (route.knowledgeRequirement === 'DECISION_SUPPORT' && route.decisionObjective === null) {
+      return this.result(
+        plan,
+        route,
+        operationId,
+        this.observeAnswer(
+          {
+            state: 'CLARIFICATION_REQUIRED',
+            basis: 'DECISION_OBJECTIVE_MISSING',
+            missingRoles: [],
+            candidates: [...DECISION_OBJECTIVE_CANDIDATES],
+          },
+          draft,
+        ),
+        null,
+        false,
+      );
+    }
+
     /* 2 · a terminal that needs no model answers with ZERO AI. */
     const early = answerStateBeforeExecution(route.plan);
     if (early !== null && early.state !== 'REFERENCE_BACKGROUND') {
@@ -720,6 +765,32 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     }
     if (deterministicGovernedSelection(route, selectContributors(route)) !== null) {
       return this.executeGovernedRecord(plan, route, operationId, draft, request.context);
+    }
+    /*
+      R3 §23 — "Only official sources." holds for the conversation. Governed official records
+      were answered above; news reporting is not an official source, so a turn that would need it
+      is told so (zero AI) instead of silently answered from news. Background / advisory answers
+      cite nothing and stay labelled as general guidance.
+    */
+    if (
+      request.conversation?.officialSourcesOnly === true &&
+      requiredRolesOf(route.plan).includes('REPORTING')
+    ) {
+      return this.result(
+        plan,
+        route,
+        operationId,
+        this.observeAnswer(
+          {
+            state: 'CAPABILITY_UNAVAILABLE',
+            basis: 'OFFICIAL_SOURCE_UNAVAILABLE',
+            missingRoles: ['OFFICIAL'],
+          },
+          draft,
+        ),
+        null,
+        false,
+      );
     }
 
     /*
@@ -838,6 +909,15 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
           /* PUBLIC BETA HARDENING R1B — an open-ended world-headlines request is retrieved as
              headlines. A plain Ask only: deep / report work keeps its own path. */
           ...(route.broadHeadlines && request.intent === 'ask' ? { broadHeadlines: true } : {}),
+          /* R3 §14 / PO-02 — only reports about the relationship itself are evidence for it. */
+          ...(route.relationship === null
+            ? {}
+            : {
+                relationship: {
+                  countries: [...route.relationship.countries],
+                  relations: [...route.relationship.relations],
+                },
+              }),
         },
       );
       /* The landed path's no-evidence answer (0 articles, "no AI call was made") is not a
@@ -870,6 +950,27 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
          landed no-evidence answer, which is not a provider failure and must never be
          counted as one. */
       draft.breakerOutcome = noEvidence ? 'REFUSAL' : outcome;
+    }
+    /*
+      CONVERSATIONAL INTELLIGENCE JOURNEY R3 §6–§7 — PARTIAL ANSWERS SURVIVE. A question with a
+      STABLE explanatory part and a current part (MIXED_REFERENCE_CURRENT: "Explain how central
+      banks set rates, and what did the NBP decide this week?") lost its whole answer when the
+      reporting provider failed or found nothing. Provider availability decides only the evidence
+      class that needs it: the stable part is answered by the background provider (one bounded
+      call, behind every control) and the current part is NAMED as not verified right now.
+    */
+    if (
+      route.knowledgeRequirement === 'MIXED_REFERENCE_CURRENT' &&
+      (noEvidence || outcome !== 'SUCCESS' || response === null)
+    ) {
+      return this.executeBackground(
+        request,
+        plan,
+        route,
+        operationId,
+        draft,
+        noEvidence ? 'NO_EVIDENCE' : 'UNAVAILABLE',
+      );
     }
     if ((outcome !== 'SUCCESS' && !noEvidence) || response === null) {
       throw new AskExecutionRefused(`MODEL_${outcome}`);
@@ -1182,6 +1283,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     route: AskR2Route,
     operationId: string,
     draft: AskObservationDraft,
+    /** R3 §6 — the reporting part of a mixed question failed (UNAVAILABLE) or found nothing. */
+    partialCurrent?: 'UNAVAILABLE' | 'NO_EVIDENCE',
   ): Promise<ExecutionResult> {
     /* 3 · controls, in order, each failing closed — identical to the reporting path. */
     draft.askR2Enabled = await this.switches.isEnabled('ASK_R2_ENABLED');
@@ -1233,8 +1336,9 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
        mirrors the reporting path's `noEvidence` in shape and in meter/breaker treatment. */
     let declined = false;
     try {
-      /* Counted before it is made, as on the Reporting path: attempts are what an operator needs. */
-      draft.providerCallCount = 1;
+      /* Counted before it is made, as on the Reporting path: attempts are what an operator needs.
+         A partial answer (R3 §6) already made the reporting attempt: this is the second call. */
+      draft.providerCallCount = partialCurrent === undefined ? 1 : 2;
       const out = await this.background.answerBackground({
         question: request.question,
         responseLanguage: request.language,
@@ -1285,7 +1389,16 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
        CAPABILITY_UNAVAILABLE / missingRoles: ['REFERENCE'] state — never a fabricated
        background answer, and never a silent pretend-success. */
     this.observeContributions(contributions, draft);
-    const answer = deriveAnswerState(route.plan, { items: {}, producedAnswer: !declined });
+    /* R3 §6 — a partial answer is the supported STABLE part (non-citable background) with the
+       reporting role it still lacks named; a decline is the same truthful unavailability. */
+    const answer: AnswerDecision =
+      partialCurrent !== undefined && !declined
+        ? {
+            state: 'REFERENCE_BACKGROUND',
+            basis: `PARTIAL_CURRENT_${partialCurrent}`,
+            missingRoles: ['REPORTING'],
+          }
+        : deriveAnswerState(route.plan, { items: {}, producedAnswer: !declined });
     /* The model WAS invoked on a decline (it answered with the decline token), so the
        invocation is counted; `aiExecuted` means an answer was produced, as on Reporting. */
     draft.aiExecuted = !declined;
@@ -1308,6 +1421,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       contributions,
       null,
       await this.recentReportingFor(route),
+      partialCurrent ?? null,
     );
   }
 
@@ -1530,6 +1644,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     computation: ComputationResult | null = null,
     /** TRUST R1 — retained recent reporting listed beside a place-background answer. */
     recentReporting: RecentReporting | null = null,
+    /** R3 §6 — the current part of a mixed question could not be verified (it is named). */
+    partialCurrent: 'UNAVAILABLE' | 'NO_EVIDENCE' | null = null,
   ): ExecutionResult {
     this.logger.log(
       `ask-r2 operation=${operationId} class=${route.plan.questionClass} terminal=${route.plan.terminalState} ` +
@@ -1573,16 +1689,31 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         /* CTO P0 — advice is GENERAL GUIDANCE from model reasoning, never current sourced research;
            a mixed question names the part that needs current sourced evidence. */
         ...(route.knowledgeRequirement === 'ADVISORY' ||
-        route.knowledgeRequirement === 'MIXED_ADVISORY_CURRENT'
+        route.knowledgeRequirement === 'MIXED_ADVISORY_CURRENT' ||
+        (route.knowledgeRequirement === 'DECISION_SUPPORT' && route.decisionObjective !== null)
           ? {
               guidance: {
                 kind: route.knowledgeRequirement,
                 currentEvidenceNeeded: route.currentEvidenceNeeded,
+                /* R3 §12 — the objective the decision was weighed against */
+                ...(route.decisionObjective === null ? {} : { objective: route.decisionObjective }),
               },
             }
           : {}),
+        /* R3 §14 — the two-sided scope of a relationship question (both countries, the relation) */
+        ...(route.relationship === null ? {} : { relationship: route.relationship }),
         ...(computation === null ? {} : { computation }),
         ...(recentReporting === null ? {} : { recentReporting }),
+        /* R3 §6 — the stable part was answered; the current part is named, never filled in */
+        ...(partialCurrent === null
+          ? {}
+          : {
+              guidance: {
+                kind: 'MIXED_REFERENCE_CURRENT',
+                currentEvidenceNeeded: route.currentEvidenceNeeded,
+                currentPart: partialCurrent,
+              },
+            }),
         verification,
         intelligence:
           intelligence.considered.length === 0
