@@ -199,7 +199,8 @@ export function AskFrameScreen({
   }, [setGuestNotice]);
   /* "Open full analysis": ONE display-only read of the stored operation. No AI, no provider. */
   useEffect(() => {
-    if (operationId === null || remembered.current.has(operationId)) return;
+    if (operationId === null) return;
+    if (remembered.current.has(operationId)) return; // DEFECT F: already on screen
     /* GATE H (H-T12 / H-G4) — an operation arrival is a READ. It revokes any pending
        analysis grant, so no later arrival can spend a grant this navigation did not make. */
     revokeAnalysisConsent();
