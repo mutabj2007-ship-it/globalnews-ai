@@ -5,7 +5,7 @@ import { AskCompactResult } from '@/components/ask/AskCompactResult';
 import { AskIntelligenceBasis } from './AskIntelligenceBasis';
 import { askGovernedConversation } from '@/lib/ask/askGovernedConversation';
 import { askR2Strings, type AskR2Locale } from '@/lib/ask/askR2Strings';
-import { askR2View, type AskR2View } from '@/lib/ask/askR2View';
+import { askR2View, failedTurnCopy, type AskR2View } from '@/lib/ask/askR2View';
 import { openFullAnalysisHref, type AskR2Turn } from '@/lib/ask/useAskR2Conversation';
 import { localisedCountryName } from '@/lib/map/geography/displayName';
 import { AskTurnSave } from './AskTurnSave';
@@ -105,10 +105,11 @@ export function AskR2TurnView({
         <p
           role="alert"
           data-ask="unavailable"
+          data-ask-failure={turn.failure === 'NETWORK' ? 'network' : undefined}
           className={`rounded-[12px] p-3.5 text-[15px] leading-[1.55] md:p-5 ${CARD_CLASS.unavailable}`}
         >
-          {/* LIVE ACCEPTANCE REPAIR R1 — a spent daily budget is named as such (live G3–G9). */}
-          {turn.failure?.startsWith('BUDGET_') ? s.budgetRefused : s.unavailable}
+          {/* LIVE ACCEPTANCE REPAIR R1 (budget) + R3 L-3 (a dropped connection is not an outage) */}
+          {failedTurnCopy(turn.failure, s)}
         </p>
       </article>
     );

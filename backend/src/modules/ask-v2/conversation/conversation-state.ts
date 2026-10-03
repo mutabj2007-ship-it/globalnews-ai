@@ -1,4 +1,9 @@
-import { findCountryByIso3, getLocalizedCountryName } from '@globalnews-ai/shared';
+import {
+  findCountryByIso3,
+  getLocalizedCountryName,
+  resolveCountryByAnyIdentifier,
+} from '@globalnews-ai/shared';
+import { resolvePolishCountry } from '../../analysis/query/polish-country-forms.util';
 import { readContinuationEllipsis } from '../../analysis/anchor/continuation-ellipsis.util';
 import {
   deriveKnowledgeRequirement,
@@ -16,6 +21,7 @@ import {
   attach,
   composeCrossCountryContinuation,
   plCases,
+  retarget,
   splitTime,
   withNewPeriod,
 } from './cross-country-continuation';
@@ -94,6 +100,8 @@ export interface ConversationState {
   readonly period: string | null;
   /** The reader's own earlier question that established the job. */
   readonly anchorQuestion: string | null;
+  /** L-2 — the question this conversation currently means, built only from the reader's words. */
+  readonly portableSubject: string | null;
 }
 
 export type StateField =
@@ -118,6 +126,8 @@ export interface TurnStateTrace {
   readonly overridden: readonly StateField[];
   readonly reset: boolean;
   readonly composed: 'CROSS_COUNTRY' | 'JOB_CONTEXT' | null;
+  /** L-2 — the portable subject after this turn (diagnostics). */
+  readonly subject?: string | null;
 }
 
 export interface ConversationalComposition {
@@ -160,6 +170,7 @@ const EMPTY = (language: 'en' | 'pl'): ConversationState => ({
   topicFollowUp: null,
   period: null,
   anchorQuestion: null,
+  portableSubject: null,
 });
 
 /* ── the reader's own explicit constraints (§23) ─────────────────────────────────────────── */
@@ -696,6 +707,7 @@ function applyTurn(
       topicFollowUp,
       period,
       anchorQuestion: prev.anchorQuestion,
+      portableSubject: prev.portableSubject,
     },
     trace: { job, ownJob: f.job, carried, overridden, reset: false },
   };
@@ -864,9 +876,194 @@ function composeCarriedTopic(
   return withNewPeriod(based, f.lang, own ?? prev.period);
 }
 
+/*
+  CTO R3 LIVE DEFECT L-2 — ONE REDUCER FOR REPLAY AND THE LIVE TURN.
+
+  Live Alpha 8f44abd: "What is happening with Madagascar's economy?" → "And in Kenya?" was composed
+  as "What is happening with Kenya's economy?", but the NEXT turn rebuilt state from the reader's
+  raw questions: "And in Kenya?" carries no topic of its own, so "What about yesterday?" kept Kenya +
+  yesterday and lost the economy (general Kenya reporting).
+
+  `step` is now the ONE reducer. Every earlier turn is replayed through it exactly as it was
+  interpreted when it was asked (composition included), and it maintains the PORTABLE SUBJECT: the
+  deterministic question the turn meant, built only from the reader's own words (an earlier
+  subject + a new explicit place / time) — never from an AI answer.
+
+    a time-only turn ("What about yesterday?")  → the portable subject with the new period
+    a new single place ("And in Tanzania?")     → the portable subject retargeted to it; its stated
+                                                  period carries (the existing time rule)
+    a self-contained new question               → a new subject (no stale carry)
+    a constraint-only turn                       → the subject is unchanged
+*/
+/*
+  A turn that names its OWN subject — a proper name that is not a country ("Who was Napoleon?") —
+  is self-contained: it never inherits the conversation's subject or place as part of its meaning.
+*/
+function namesOwnSubject(question: string, lang: 'en' | 'pl'): boolean {
+  const words = question.trim().split(/\s+/u).slice(1);
+  return words.some((w) => {
+    const token = w.replace(/^[^\p{L}]+|[^\p{L}'’-]+$/gu, '');
+    if (!/^\p{Lu}\p{Ll}/u.test(token)) return false;
+    /* exact country identifiers only (a gazetteer town such as Napoleon, Ohio is not a country) */
+    return (
+      resolveCountryByAnyIdentifier(token) === undefined &&
+      resolvePolishCountry(token) === undefined
+    );
+  });
+}
+
+function placelessSubject(question: string, prev: ConversationState, f: TurnFeatures): string {
+  /* "And the economy?" in a Madagascar conversation means the economy in Madagascar */
+  if (
+    f.countries.length > 0 ||
+    prev.geography.length !== 1 ||
+    f.words > MAX_FOLLOW_UP_WORDS ||
+    namesOwnSubject(question, f.lang)
+  )
+    return question;
+  const place = findCountryByIso3(prev.geography[0]);
+  return (place === undefined ? null : attach(question, place, f.lang)) ?? question;
+}
+
+function step(
+  prev: ConversationState,
+  question: string,
+  lang: 'en' | 'pl',
+  earlierNewestFirst: readonly EarlierTurnText[],
+  hasOwnContext: boolean,
+): ConversationalTurn {
+  const f = readTurn(question, lang);
+  const applied = applyTurn(prev, question, f);
+  const continues = !applied.trace.reset && applied.trace.carried.includes('job');
+  const constraintOnly =
+    isConstraintStatement(f) && f.countries.length === 0 && !isQuestion(question, lang);
+  const from = prev.anchorQuestion ?? earlierNewestFirst[0]?.question ?? question;
+
+  const decide = (): {
+    composition: ConversationalComposition | null;
+    job: UserJob;
+  } => {
+    if (hasOwnContext) return { composition: null, job: applied.state.job };
+    const jobContext = (composed: string | null, job: UserJob = applied.state.job) =>
+      composed === null
+        ? null
+        : {
+            composition: {
+              effectiveQuestion: composed,
+              fromQuestion: from,
+              kind: 'JOB_CONTEXT' as const,
+            },
+            job,
+          };
+    if (continues) {
+      /* TRAVEL_PLANNING — short follow-ups the router cannot read alone */
+      if (applied.state.job === 'TRAVEL_PLANNING') {
+        const t = jobContext(composeTravel(question, applied.state, f, prev.options));
+        if (t !== null) return t;
+      }
+      /* DECISION_SUPPORT over a comparison the reader already made (§12–§13) */
+      if (
+        (applied.state.job === 'DECISION_SUPPORT' || applied.state.job === 'COMPARISON') &&
+        (f.job === 'DECISION_SUPPORT' || f.priorities !== null || RE_EVALUATE.test(question))
+      ) {
+        const t = jobContext(composeDecision(question, applied.state, f), 'DECISION_SUPPORT');
+        if (t !== null) return t;
+      }
+      /* RELATIONSHIP — the bilateral scope carries ("What goods are affected?") (§14) */
+      if (applied.state.job === 'RELATIONSHIP') {
+        const t = jobContext(composeRelationship(question, applied.state, f));
+        if (t !== null) return t;
+      }
+      /* L-2 — a time shift keeps the portable subject and applies the new period */
+      if (f.timeOnly && prev.portableSubject !== null && f.statedPeriod !== null) {
+        return {
+          composition: {
+            effectiveQuestion: withNewPeriod(prev.portableSubject, lang, f.statedPeriod),
+            fromQuestion: from,
+            kind: 'JOB_CONTEXT',
+          },
+          job: applied.state.job,
+        };
+      }
+      /* L-2 — a new single place takes the portable subject with it (its period carries) */
+      if (
+        f.ellipsisTo !== null &&
+        prev.portableSubject !== null &&
+        prev.geography.length === 1 &&
+        prev.geography[0] !== f.ellipsisTo
+      ) {
+        const fromPlace = findCountryByIso3(prev.geography[0]);
+        const toPlace = findCountryByIso3(f.ellipsisTo);
+        const moved =
+          fromPlace === undefined || toPlace === undefined
+            ? null
+            : retarget(prev.portableSubject, fromPlace, toPlace, lang);
+        if (moved !== null) {
+          const own = splitTime(question.trim(), lang).period;
+          return {
+            composition: {
+              effectiveQuestion: own === null ? moved : withNewPeriod(moved, lang, own),
+              fromQuestion: from,
+              kind: 'CROSS_COUNTRY',
+            },
+            job: applied.state.job,
+          };
+        }
+      }
+    }
+    /* CTO checkpoint 5 §5 — the existing cross-country continuation */
+    const cross = composeCrossCountryContinuation(question, lang, earlierNewestFirst);
+    if (cross !== null)
+      return {
+        composition: {
+          effectiveQuestion: cross.effectiveQuestion,
+          fromQuestion: cross.fromQuestion,
+          kind: 'CROSS_COUNTRY',
+        },
+        job: applied.state.job,
+      };
+    /* R3 §3 / PO-06 — a carried subject from a placeless follow-up chain, to the new place */
+    if (continues && applied.state.job === 'CURRENT_REPORTING') {
+      const carried = composeCarriedTopic(question, prev, f);
+      if (carried !== null)
+        return {
+          composition: { effectiveQuestion: carried, fromQuestion: from, kind: 'CROSS_COUNTRY' },
+          job: applied.state.job,
+        };
+    }
+    return { composition: null, job: applied.state.job };
+  };
+
+  const { composition, job } = decide();
+  const portableSubject = constraintOnly
+    ? prev.portableSubject
+    : composition !== null
+      ? composition.effectiveQuestion
+      : !continues
+        ? question
+        : f.timeOnly
+          ? prev.portableSubject
+          : applied.state.job === 'CURRENT_REPORTING'
+            ? placelessSubject(question, prev, f)
+            : question;
+  const state: ConversationState = { ...applied.state, job, portableSubject };
+  return {
+    composition,
+    state,
+    constraintOnly: composition === null && constraintOnly,
+    trace: {
+      ...applied.trace,
+      job,
+      composed: composition?.kind ?? null,
+      subject: portableSubject,
+    },
+  };
+}
+
 /**
- * Fold the reader's earlier questions (newest first, EXCLUDING this turn) and decide this turn.
- * `hasOwnContext`: the turn carries a story / module / selection context — never composed.
+ * Fold the reader's earlier questions (newest first, EXCLUDING this turn) through the same reducer
+ * that interprets this turn, then decide this turn. `hasOwnContext`: the turn carries a story /
+ * module / selection context — never composed.
  */
 export function readConversationalTurn(
   question: string,
@@ -876,87 +1073,10 @@ export function readConversationalTurn(
 ): ConversationalTurn | null {
   const lang = asLang(language);
   if (lang === null) return null;
-  /* fold oldest → newest, same-language turns only (a switch of language is a new reading) */
-  const earlier = earlierNewestFirst
-    .slice(0, STATE_LOOKBACK)
-    .filter((t) => t.language === lang)
-    .reverse();
+  /* same-language turns only (a switch of language is a new reading), newest first */
+  const window = earlierNewestFirst.slice(0, STATE_LOOKBACK).filter((t) => t.language === lang);
   let state = EMPTY(lang);
-  for (const turn of earlier)
-    state = applyTurn(state, turn.question, readTurn(turn.question, lang)).state;
-
-  const f = readTurn(question, lang);
-  const applied = applyTurn(state, question, f);
-  const trace = (composed: TurnStateTrace['composed']): TurnStateTrace => ({
-    ...applied.trace,
-    composed,
-  });
-  const none: ConversationalTurn = {
-    composition: null,
-    state: applied.state,
-    trace: trace(null),
-    constraintOnly:
-      isConstraintStatement(f) && f.countries.length === 0 && !isQuestion(question, lang),
-  };
-  if (options.hasOwnContext === true) return none;
-  const from = state.anchorQuestion ?? earlierNewestFirst[0]?.question ?? question;
-  const job = (composed: string | null, next = applied.state): ConversationalTurn | null =>
-    composed === null
-      ? null
-      : {
-          composition: { effectiveQuestion: composed, fromQuestion: from, kind: 'JOB_CONTEXT' },
-          state: next,
-          constraintOnly: false,
-          trace: { ...trace('JOB_CONTEXT'), job: next.job },
-        };
-
-  const continues = !applied.trace.reset && applied.trace.carried.includes('job');
-  if (continues) {
-    /* TRAVEL_PLANNING — short follow-ups the router cannot read alone */
-    if (applied.state.job === 'TRAVEL_PLANNING') {
-      const t = job(composeTravel(question, applied.state, f, state.options));
-      if (t !== null) return t;
-    }
-    /* DECISION_SUPPORT over a comparison the reader already made (§12–§13) */
-    if (
-      (applied.state.job === 'DECISION_SUPPORT' || applied.state.job === 'COMPARISON') &&
-      (f.job === 'DECISION_SUPPORT' || f.priorities !== null || RE_EVALUATE.test(question))
-    ) {
-      const t = job(composeDecision(question, applied.state, f), {
-        ...applied.state,
-        job: 'DECISION_SUPPORT',
-      });
-      if (t !== null) return t;
-    }
-    /* RELATIONSHIP — the bilateral scope carries ("What goods are affected?") (§14) */
-    if (applied.state.job === 'RELATIONSHIP') {
-      const t = job(composeRelationship(question, applied.state, f));
-      if (t !== null) return t;
-    }
-  }
-  /* CTO checkpoint 5 §5 — the existing cross-country continuation, unchanged */
-  const cross = composeCrossCountryContinuation(question, lang, earlierNewestFirst);
-  if (cross !== null)
-    return {
-      composition: {
-        effectiveQuestion: cross.effectiveQuestion,
-        fromQuestion: cross.fromQuestion,
-        kind: 'CROSS_COUNTRY',
-      },
-      state: applied.state,
-      trace: trace('CROSS_COUNTRY'),
-      constraintOnly: false,
-    };
-  /* R3 §3 / PO-06 — a carried subject from a placeless follow-up chain, to the new place */
-  if (continues && applied.state.job === 'CURRENT_REPORTING') {
-    const carried = composeCarriedTopic(question, state, f);
-    if (carried !== null)
-      return {
-        composition: { effectiveQuestion: carried, fromQuestion: from, kind: 'CROSS_COUNTRY' },
-        state: applied.state,
-        trace: trace('CROSS_COUNTRY'),
-        constraintOnly: false,
-      };
-  }
-  return none;
+  for (let i = window.length - 1; i >= 0; i--)
+    state = step(state, window[i].question, lang, window.slice(i + 1), false).state;
+  return step(state, question, lang, window, options.hasOwnContext === true);
 }

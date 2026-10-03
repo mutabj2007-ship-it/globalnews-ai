@@ -43,7 +43,7 @@ import {
 } from '../ask-router/answer-state';
 import { readContinuationEllipsis } from '../analysis/anchor/continuation-ellipsis.util';
 import { landedSpecialistRegistryPort } from '../ask-router/specialist-registry.port';
-import { planChips, type PlanChips } from '../ask-router/plan-chips';
+import { planChips, withRelationshipScope, type PlanChips } from '../ask-router/plan-chips';
 import type { PlannerDeps } from '../ask-router/frozen-c/src/planner';
 import type { RoutingPlan, VerificationOutcome } from '../ask-router/frozen-c/src/ports';
 import {
@@ -1673,9 +1673,13 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
               : null,
         },
         /* D25 05: chips from the effective server plan only, in the order asked. */
-        chips: truthfulInheritedChips(
-          planChips(route.envelope, route.plan, placeSpansOf(route), route.reportingWindow),
-          analysis,
+        chips: withRelationshipScope(
+          truthfulInheritedChips(
+            planChips(route.envelope, route.plan, placeSpansOf(route), route.reportingWindow),
+            analysis,
+          ),
+          /* R3 L-4 — a relationship answer is scoped to both sides, from the route's authority */
+          route.relationship,
         ),
         answer,
         /* When the answer was decided — the freshness line's time when no analysis ran. */

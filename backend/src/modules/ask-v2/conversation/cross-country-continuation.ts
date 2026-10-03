@@ -93,7 +93,7 @@ function occurrences(text: string, surface: string): RegExpMatchArray[] {
 }
 
 /** Replace the ONE written form of `from` in `text` with `to` (same case in Polish). */
-function retarget(
+export function retarget(
   text: string,
   from: CountryMeta,
   to: CountryMeta,

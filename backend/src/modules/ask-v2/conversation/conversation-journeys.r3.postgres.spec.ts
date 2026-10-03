@@ -197,6 +197,26 @@ live('R3 conversation journeys — live PostgreSQL through AskV2Service', () => 
     expect(last.context).toMatchObject({ kind: 'GEOGRAPHY', countryIso3: 'MDG' });
   });
 
+  it('L-2 the live chain: quote and execute both answer "yesterday" as Kenya economy + yesterday', async () => {
+    const t = await thread();
+    await ask(t, "What is happening with Madagascar's economy?");
+    await ask(t, 'And in Kenya?');
+    const start = executed.length;
+    await ask(t, 'What about yesterday?');
+    const handed = executed[start];
+    expect(handed.question).toBe("What is happening with Kenya's economy yesterday?");
+    expect(prepared[prepared.length - 1].question).toBe(handed.question);
+    expect(handed.context).toBeUndefined();
+    expect(handed.conversation?.trace).toMatchObject({
+      composed: 'JOB_CONTEXT',
+      subject: "What is happening with Kenya's economy yesterday?",
+    });
+    await ask(t, 'And in Tanzania?');
+    expect(executed[executed.length - 1].question).toBe(
+      "What is happening with Tanzania's economy yesterday?",
+    );
+  });
+
   it('§4 a self-contained question in a trip is NOT composed into the trip', async () => {
     const t = await thread();
     await ask(t, 'Which places can I visit in Rwanda?');

@@ -145,8 +145,17 @@ export function formatUtc(iso: string | undefined, locale: AskR2Locale): string 
   return `${d.getUTCDate()} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()}, ${hh}:${mm} UTC`;
 }
 
-function chipLabel(chip: AskPlanChip, placeName: (iso3: string) => string): string {
+function chipLabel(
+  chip: AskPlanChip,
+  placeName: (iso3: string) => string,
+  s?: AskR2Strings,
+): string {
   if (chip.kind === 'GEOGRAPHY') return placeName(chip.value);
+  /* R3 L-4 — the relation of a relationship scope ("Border", "Trade"), localised */
+  if (chip.kind === 'TOPIC' && chip.source === 'RELATIONSHIP' && s !== undefined) {
+    const label = s.r3.relations[chip.value] ?? chip.value.toLowerCase();
+    return label.charAt(0).toLocaleUpperCase() + label.slice(1);
+  }
   if (chip.kind === 'TOPIC' || chip.kind === 'TIME' || chip.kind === 'SOURCE') {
     /* The reader's own words, capitalised the way D25 shows them ("This week"). */
     return chip.value.charAt(0).toUpperCase() + chip.value.slice(1);
@@ -259,6 +268,19 @@ function governedGapText(payload: AskR2Payload, s: AskR2Strings): string {
   return s.governedGap.unreadable;
 }
 
+/**
+ * CTO R3 LIVE DEFECT L-3 — what a turn with NO stored answer says. Each failure keeps its own truth:
+ *   NETWORK   the request never reached Ask — a dropped connection establishes nothing about the
+ *             service, so the service is never called unavailable (live Alpha 8f44abd, journey F);
+ *   BUDGET_*  a spent daily budget is named as such (LIVE ACCEPTANCE REPAIR R1);
+ *   anything else (a typed UNAVAILABLE, a server failure code) keeps the existing copy.
+ */
+export function failedTurnCopy(failure: string | undefined, s: AskR2Strings): string {
+  if (failure === 'NETWORK') return s.r3.networkFailed;
+  if (failure?.startsWith('BUDGET_')) return s.budgetRefused;
+  return s.unavailable;
+}
+
 export function askR2View(
   payload: AskR2Payload,
   s: AskR2Strings,
@@ -340,7 +362,7 @@ export function askR2View(
       ? dedupeChips(
           c.chips.map((chip) => ({
             kind: chip.kind,
-            label: chipLabel(chip, placeName),
+            label: chipLabel(chip, placeName, s),
             kept: !chip.applied,
           })),
         )

@@ -1554,6 +1554,63 @@ export class AnalysisService {
               : {}),
             selection: selectionResolution.outcome,
           };
+        } else if (executionPolicy?.relationship !== undefined) {
+          /*
+           * CTO R3 LIVE DEFECT L-1 — THE ROUTER'S RELATIONSHIP SCOPE IS AUTHORITATIVE.
+           *
+           * Live Alpha 8f44abd: "What is happening at the border linking Rwanda and Tanzania
+           * regarding commercial services?" — the router read RWA + TZA + border/trade, but this
+           * service re-parsed the prose, its classifier found no sides, detectLocation() found
+           * Rwanda, and the question took the single-country branch. The relationship filter only
+           * existed on the classifier's multi-side branch, so a lower layer silently downgraded
+           * the router's scope.
+           *
+           * Now the policy drives retrieval, ahead of every prose-derived branch: the two governed
+           * country records → ONE per-side retrieval each (retrievePerSideEvidence, unchanged
+           * gates, no blended query, no widened threshold) → evidencesRelationship() → only
+           * reports about the relationship are admitted. One-sided reporting is never admitted
+           * because the other side produced nothing. An unresolvable member fails CLOSED: no
+           * provider call, a disclosed scope gap. The classifier's reading stays diagnostic.
+           */
+          const relationship = executionPolicy.relationship;
+          const members = relationship.countries.map((code) => resolveCountryByAnyIdentifier(code));
+          const unresolved = relationship.countries.filter((_, i) => members[i] === undefined);
+          if (unresolved.length > 0 || members.length !== 2) {
+            articles = [];
+            retrievalContext = {
+              ...NON_RETRIEVABLE_QUERY_CONTEXT,
+              relationshipEvidence: {
+                countries: [...relationship.countries],
+                relations: [...relationship.relations],
+                admitted: 0,
+                rejected: 0,
+                unresolvedCountries: unresolved,
+              },
+            };
+          } else {
+            const perSide = await this.retrievePerSideEvidence(
+              members as CountryMeta[],
+              requestedLanguage,
+            );
+            const admitted = perSide.articles.filter((article) =>
+              evidencesRelationship(article, relationship),
+            );
+            articles = admitted;
+            retrievalContext = {
+              ...perSide.retrievalContext,
+              articlesRetrieved: admitted.length,
+              ...(admitted.length === 0 && perSide.articles.length > 0
+                ? { outcome: 'NO_RELEVANT_EVIDENCE' as const }
+                : {}),
+              relationshipEvidence: {
+                countries: [...relationship.countries],
+                relations: [...relationship.relations],
+                admitted: admitted.length,
+                rejected: perSide.articles.length - admitted.length,
+                classifierSides: classification.sides.map((side) => side.iso3),
+              },
+            };
+          }
         } else if (preExecutionClarification !== undefined) {
           /* Asked, not searched: no provider request, no retained read, no model call. */
           articles = [];
@@ -2494,38 +2551,9 @@ export class AnalysisService {
               requestedLanguage,
             );
 
-            /*
-             * R3 §14 / PO-02 — a question about what happens BETWEEN the two sides admits only
-             * reports that evidence the relationship (both sides, and the named relation).
-             * One-sided reporting is rejected and counted, never shown; zero admitted is zero.
-             */
-            const relationship = executionPolicy?.relationship;
-            const relationshipSides =
-              relationship !== undefined &&
-              classification.sides.length === 2 &&
-              classification.sides.every((side) => relationship.countries.includes(side.iso3));
-            if (relationship !== undefined && relationshipSides) {
-              const admitted = perSide.articles.filter((article) =>
-                evidencesRelationship(article, relationship),
-              );
-              articles = admitted;
-              retrievalContext = {
-                ...perSide.retrievalContext,
-                articlesRetrieved: admitted.length,
-                ...(admitted.length === 0 && perSide.articles.length > 0
-                  ? { outcome: 'NO_RELEVANT_EVIDENCE' as const }
-                  : {}),
-                relationshipEvidence: {
-                  countries: [...relationship.countries],
-                  relations: [...relationship.relations],
-                  admitted: admitted.length,
-                  rejected: perSide.articles.length - admitted.length,
-                },
-              };
-            } else {
-              articles = perSide.articles;
-              retrievalContext = perSide.retrievalContext;
-            }
+            /* R3 L-1 — a relationship never reaches here: the router's scope branch above owns it. */
+            articles = perSide.articles;
+            retrievalContext = perSide.retrievalContext;
           } else if (institutionalStatus !== null) {
             /*
              * ASK CURRENT REPORTING FINAL CLOSURE R1 (M2) — AN INSTITUTIONAL CURRENT-STATUS

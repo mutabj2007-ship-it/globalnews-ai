@@ -52,6 +52,8 @@ export interface AskRequest {
       readonly overridden: readonly string[];
       readonly reset: boolean;
       readonly composed: string | null;
+      /** L-2 — the portable subject after this turn (built only from the reader's words). */
+      readonly subject?: string | null;
     };
   };
 }

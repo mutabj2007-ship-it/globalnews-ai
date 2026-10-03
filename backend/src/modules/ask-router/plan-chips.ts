@@ -143,3 +143,40 @@ export function planChips(
   if (chips.length === 0) return { kind: 'NONE' };
   return { kind: 'SCOPED', chips: chips.sort((a, b) => a.at - b.at).map((c) => c.chip) };
 }
+
+/**
+ * CTO R3 LIVE DEFECT L-4 — A RELATIONSHIP-SCOPED ANSWER SHOWS BOTH SIDES, FROM ONE AUTHORITY.
+ *
+ * Frozen C's envelope carries one typed geography, so "the border linking Rwanda and Tanzania"
+ * displayed "Scope: Rwanda" beside "Between Rwanda and Tanzania". When the route carries a
+ * relationship, its scope chips are EXACTLY the relationship members (in the order named, no
+ * duplicates, no other geography — an inherited Map/story place never becomes a third side),
+ * followed by the relation itself (source RELATIONSHIP; labelled and localised by the client).
+ * Every other chip (time, domain…) is kept as planned. Pure; a non-relationship route is untouched.
+ */
+export function withRelationshipScope(
+  chips: PlanChips,
+  relationship: {
+    readonly countries: readonly string[];
+    readonly relations: readonly string[];
+  } | null,
+): PlanChips {
+  if (relationship === null) return chips;
+  const members = [...new Set(relationship.countries)];
+  const others = chips.kind === 'SCOPED' ? chips.chips.filter((c) => c.kind !== 'GEOGRAPHY') : [];
+  return {
+    kind: 'SCOPED',
+    chips: [
+      ...members.map((iso3) => ({
+        kind: 'GEOGRAPHY' as const,
+        value: iso3,
+        source: 'RELATIONSHIP',
+        applied: true,
+      })),
+      ...relationship.relations
+        .filter((r) => r !== 'GENERAL')
+        .map((r) => ({ kind: 'TOPIC' as const, value: r, source: 'RELATIONSHIP', applied: true })),
+      ...others,
+    ],
+  };
+}

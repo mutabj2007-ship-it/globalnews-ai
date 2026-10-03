@@ -1,7 +1,7 @@
 import type { AskR2Payload, AskAnswerState } from '@/lib/api/askV2Api';
 import { askR2PayloadOf } from '@/lib/api/askV2Api';
 import { askR2Strings } from './askR2Strings';
-import { askR2View, formatUtc } from './askR2View';
+import { askR2View, failedTurnCopy, formatUtc } from './askR2View';
 
 /**
  * ASK R2 CONSOLIDATED INTEGRATION R1 · GATE G — D25 02 engine-state matrix and 05 chip rules,
@@ -639,5 +639,101 @@ describe('CONVERSATIONAL INTELLIGENCE JOURNEY R3 — the two zero-compute asks',
       "Noted — I'll keep that for the rest of this conversation. What would you like to know?",
     );
     expect(v.clarification.candidates).toEqual([]);
+  });
+});
+
+describe('CTO R3 LIVE DEFECT L-3 — a failed turn says only what is true', () => {
+  it.each([
+    [
+      'NETWORK',
+      'en',
+      'The connection failed before Ask could start. Nothing was run. Your question is still available to retry.',
+    ],
+    [
+      'NETWORK',
+      'pl',
+      'Połączenie przerwało się, zanim Zapytaj zdążyło zacząć. Nic nie zostało uruchomione. Możesz ponowić to pytanie.',
+    ],
+    ['UNAVAILABLE', 'en', 'Ask is unavailable right now. Nothing was run.'],
+    ['BUDGET_REFUSED:account-day', 'en', EN.budgetRefused],
+    ['SIGNED_OUT', 'en', 'Ask is unavailable right now. Nothing was run.'],
+    ['ASK_CONTEXT_UNAVAILABLE', 'en', 'Ask is unavailable right now. Nothing was run.'],
+    ['EXECUTION_FAILED', 'en', 'Ask is unavailable right now. Nothing was run.'],
+    [undefined, 'en', 'Ask is unavailable right now. Nothing was run.'],
+  ] as const)('%s (%s)', (failure, lang, copy) => {
+    expect(failedTurnCopy(failure, lang === 'en' ? EN : PL)).toBe(copy);
+  });
+
+  it('a dropped connection never claims the service is unavailable (EN / PL)', () => {
+    expect(failedTurnCopy('NETWORK', EN)).not.toMatch(/unavailable/i);
+    expect(failedTurnCopy('NETWORK', PL)).not.toMatch(/niedostępn/i);
+  });
+});
+
+describe('CTO R3 LIVE DEFECT L-4 — a relationship scope shows both sides and the relation, localised', () => {
+  const relationshipChips = (countries: string[], relations: string[]) =>
+    payload('CURRENT_REPORTING', {
+      chips: {
+        kind: 'SCOPED',
+        chips: [
+          ...countries.map((value) => ({
+            kind: 'GEOGRAPHY' as const,
+            value,
+            source: 'RELATIONSHIP',
+            applied: true,
+          })),
+          ...relations.map((value) => ({
+            kind: 'TOPIC' as const,
+            value,
+            source: 'RELATIONSHIP',
+            applied: true,
+          })),
+        ],
+      },
+    });
+  const en: Record<string, string> = {
+    RWA: 'Rwanda',
+    TZA: 'Tanzania',
+    KEN: 'Kenya',
+    UGA: 'Uganda',
+  };
+  const pl: Record<string, string> = {
+    RWA: 'Rwanda',
+    TZA: 'Tanzania',
+    KEN: 'Kenia',
+    UGA: 'Uganda',
+  };
+
+  it('EN: Rwanda · Tanzania · Border · Trade', () => {
+    const v = askR2View(
+      relationshipChips(['RWA', 'TZA'], ['BORDER', 'TRADE']),
+      EN,
+      'en',
+      (c) => en[c] ?? c,
+    );
+    expect(v.chips.items.map((i) => i.label)).toEqual(['Rwanda', 'Tanzania', 'Border', 'Trade']);
+  });
+
+  it('PL: Kenia · Uganda · Handel (localised names and relation)', () => {
+    const v = askR2View(relationshipChips(['KEN', 'UGA'], ['TRADE']), PL, 'pl', (c) => pl[c] ?? c);
+    expect(v.chips.items.map((i) => i.label)).toEqual(['Kenia', 'Uganda', 'Handel']);
+  });
+
+  it('a one-country, non-relationship answer is unchanged (a reader TOPIC word stays the reader’s word)', () => {
+    const v = askR2View(
+      payload('CURRENT_REPORTING', {
+        chips: {
+          kind: 'SCOPED',
+          chips: [
+            { kind: 'GEOGRAPHY', value: 'RWA', source: 'TYPED_GEOGRAPHY', applied: true },
+            { kind: 'TOPIC', value: 'border', source: 'READER_CATEGORY', applied: false },
+          ],
+        },
+      }),
+      EN,
+      'en',
+      (c) => en[c] ?? c,
+    );
+    expect(v.chips.items.map((i) => i.label)).toEqual(['Rwanda', 'Border']);
   });
 });

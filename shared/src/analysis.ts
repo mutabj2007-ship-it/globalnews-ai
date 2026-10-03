@@ -1012,6 +1012,10 @@ export interface AnalysisRetrievalContext {
     readonly relations: readonly string[];
     readonly admitted: number;
     readonly rejected: number;
+    /** R3 L-1 — relationship members that could not be resolved: a disclosed scope gap. */
+    readonly unresolvedCountries?: readonly string[];
+    /** R3 L-1 — what the prose classifier saw (diagnostic only; it never vetoes the scope). */
+    readonly classifierSides?: readonly string[];
   };
   /**
    * CTO CHECKPOINT 5 §6 — a FOCUSED domain question about a country ("And the economy?" in a

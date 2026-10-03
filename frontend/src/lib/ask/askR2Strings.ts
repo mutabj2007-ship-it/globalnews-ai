@@ -157,6 +157,8 @@ export interface AskR2Strings {
     readonly objectives: Readonly<Record<string, string>>;
     readonly choiceFor: (question: string, objective: string) => string;
     readonly constraintNoted: string;
+    /** L-3 — a send that never reached Ask (dropped connection): nothing about the service is claimed. */
+    readonly networkFailed: string;
   };
   /** ALPHA ENABLEMENT R1 (MC-070) — a continuation (“And Kenya?”) with nothing to continue; the place stays a chip. */
   readonly noPriorSubject: string;
@@ -412,6 +414,8 @@ const EN: AskR2Strings = {
     choiceFor: (question, objective) => `${question} — for ${objective}?`,
     constraintNoted:
       "Noted — I'll keep that for the rest of this conversation. What would you like to know?",
+    networkFailed:
+      'The connection failed before Ask could start. Nothing was run. Your question is still available to retry.',
   },
   /* TRUST R1 (checkpoint 5, live Alpha) — "And in Kenya?" asks back even when the thread HAS an
      earlier question (MC-070: a bare place is never combined with the earlier topic). Saying
@@ -689,6 +693,8 @@ const PL: AskR2Strings = {
     },
     choiceFor: (question, objective) => `${question} — pod kątem: ${objective}?`,
     constraintNoted: 'Zanotowane — zachowam to do końca tej rozmowy. Co chcesz wiedzieć?',
+    networkFailed:
+      'Połączenie przerwało się, zanim Zapytaj zdążyło zacząć. Nic nie zostało uruchomione. Możesz ponowić to pytanie.',
   },
   noPriorSubject:
     'Co chcesz wiedzieć o tym miejscu? Wcześniejsze pytanie nie przechodzi samo na nowe miejsce.',
