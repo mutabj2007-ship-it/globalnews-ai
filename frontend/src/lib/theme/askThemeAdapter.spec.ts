@@ -53,6 +53,12 @@ export const EMBEDDED_ASK_SOURCES = [
   'components/ask-nav/AskClearedBoundary.tsx',
   'components/ui/AdaptiveTextarea.tsx',
   'components/search/LanguageSelector.tsx',
+  /* TRUST R1 §16 — /privacy and /cookies under AskThemedSurface (with their NavBar and Footer). */
+  'app/privacy/page.tsx',
+  'app/cookies/page.tsx',
+  'components/privacy/PreferenceStorageControl.tsx',
+  'components/navigation/NavBar.tsx',
+  'components/layout/Footer.tsx',
 ];
 
 const colours = flattenColours(

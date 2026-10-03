@@ -1,6 +1,8 @@
 import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
 import { NavBar } from '@/components/navigation/NavBar';
+import { AskThemedSurface } from '@/components/ask-nav/AskThemedSurface';
+import { THEME_COOKIE_NAME, parseThemePreference } from '@/lib/theme/theme';
 import { Footer } from '@/components/layout/Footer';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
@@ -46,35 +48,39 @@ export default async function PrivacyPage(): Promise<JSX.Element> {
   const t = getDictionary(language).privacyPage;
 
   return (
-    <div className="flex min-h-screen flex-col bg-void">
-      <NavBar language={language} />
-      <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-10 sm:py-14">
-        <h1 className="text-2xl font-semibold text-ink-primary sm:text-3xl">{t.title}</h1>
-        <p className="mt-2 font-mono text-xs text-ink-tertiary">
-          {t.lastUpdatedLabel}: {t.lastUpdatedDate}
-        </p>
-        <p className="mt-4 text-sm leading-relaxed text-ink-secondary">{t.intro}</p>
+    /* TRUST R1 §16 — the legal pages take the same theme as the Standalone surfaces (read from the
+       theme cookie on the server; changing it touches no network and no Ask). Wording unchanged. */
+    <AskThemedSurface theme={parseThemePreference(cookies().get(THEME_COOKIE_NAME)?.value)}>
+      <div className="flex min-h-screen flex-col bg-void">
+        <NavBar language={language} />
+        <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-10 sm:py-14">
+          <h1 className="text-2xl font-semibold text-ink-primary sm:text-3xl">{t.title}</h1>
+          <p className="mt-2 font-mono text-xs text-ink-tertiary">
+            {t.lastUpdatedLabel}: {t.lastUpdatedDate}
+          </p>
+          <p className="mt-4 text-sm leading-relaxed text-ink-secondary">{t.intro}</p>
 
-        <div className="mt-8 flex flex-col gap-8">
-          {t.sections.map((section) => (
-            <section key={section.heading}>
-              <h2 className="text-lg font-semibold text-ink-primary">{section.heading}</h2>
-              <p className="mt-2 text-sm leading-relaxed text-ink-secondary">{section.body}</p>
-            </section>
-          ))}
-        </div>
-        {/* TRUST R1 §12 — the detailed Cookies & similar technologies notice and settings. */}
-        <p className="mt-8 text-sm">
-          <a
-            href="/cookies"
-            data-privacy="cookies-link"
-            className="text-signal underline-offset-2 hover:underline"
-          >
-            {COOKIES_PAGE[language === 'pl' ? 'pl' : 'en'].title}
-          </a>
-        </p>
-      </main>
-      <Footer language={language} />
-    </div>
+          <div className="mt-8 flex flex-col gap-8">
+            {t.sections.map((section) => (
+              <section key={section.heading}>
+                <h2 className="text-lg font-semibold text-ink-primary">{section.heading}</h2>
+                <p className="mt-2 text-sm leading-relaxed text-ink-secondary">{section.body}</p>
+              </section>
+            ))}
+          </div>
+          {/* TRUST R1 §12 — the detailed Cookies & similar technologies notice and settings. */}
+          <p className="mt-8 text-sm">
+            <a
+              href="/cookies"
+              data-privacy="cookies-link"
+              className="text-signal underline-offset-2 hover:underline"
+            >
+              {COOKIES_PAGE[language === 'pl' ? 'pl' : 'en'].title}
+            </a>
+          </p>
+        </main>
+        <Footer language={language} />
+      </div>
+    </AskThemedSurface>
   );
 }
