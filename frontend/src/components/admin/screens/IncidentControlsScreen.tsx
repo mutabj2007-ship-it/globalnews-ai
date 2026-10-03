@@ -90,7 +90,9 @@ function IncidentControlsPanels(): JSX.Element {
 
   /* The compute switch is the primary control; everything else is advanced. */
   const primary = data?.switches.find((row) => row.labelKey === 'pauseNewAiAnswers') ?? null;
-  const advanced = (data?.switches ?? []).filter((row) => row.labelKey !== 'pauseNewAiAnswers');
+  const advanced = (data?.switches ?? []).filter((row) => row.labelKey === 'stopAskR2Execution');
+  /* TRUST R1 (CTO checkpoint 4 §7) — the guest switch is its own control with its own copy. */
+  const guest = data?.switches.find((row) => row.labelKey === 'guestTrial') ?? null;
 
   const controlProps = {
     mayOperate,
@@ -155,6 +157,8 @@ function IncidentControlsPanels(): JSX.Element {
                 </div>
               </details>
             ) : null}
+
+            {guest ? <SwitchControl row={guest} {...controlProps} /> : null}
 
             <HistoryPanel history={data.history} />
 
@@ -231,10 +235,12 @@ function SwitchControl({
   onReason: (value: string) => void;
   onCancel: () => void;
   onApply: () => void;
-}): JSX.Element {
+}): JSX.Element | null {
   const { t } = useAdminContext();
   const screen = t.screens.incidentControls;
   const copy = screen.controls[row.labelKey];
+  /* A label this build has no copy for is not rendered with another control's words. */
+  if (copy === undefined) return null;
   const isPending = pending?.name === row.name;
   const blocked = row.blockedReason !== null;
   const operable = mayOperate && !blocked;

@@ -661,6 +661,17 @@ export const adminEn = {
           reverse: 'To reverse this, use the same control. It will read “Allow Ask R2 execution”.',
           note: 'Its visible effect is the same as pausing new AI answers. Prefer that control unless you specifically need to stop the R2 executor.',
         },
+        guestTrial: {
+          name: 'Guest questions (first visit, no sign-in)',
+          system: 'ASK_GUEST_TRIAL_ENABLED',
+          pause: 'Turn off guest questions',
+          resume: 'Allow guest questions',
+          consequence:
+            'Affects only first-visit guest Ask: readers who have not signed in and use the free guest questions. Signed-in Ask is not stopped and keeps answering. Saved guest conversations stay readable until they expire.',
+          whenToUse:
+            'Both halves must agree for guests to be served: the deployment variable ASK_GUEST_TRIAL_ENABLED must be the literal value true, and this switch must be on. Changing it here writes the audited switch row (your name and reason are recorded); it cannot change the deployment variable. Effective, requested and deployment are shown separately above.',
+          reverse: 'To reverse this, use the same control. It will read “Allow guest questions”.',
+        },
       },
       confirm: {
         heading: 'Confirm this change',

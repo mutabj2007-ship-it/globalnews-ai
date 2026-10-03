@@ -25,6 +25,22 @@ export type AdminOperationsEnvironment =
       reason: EnvironmentUnconfirmedReason;
     };
 
+/**
+ * Each landed switch has its OWN operator identity. TRUST R1 (CTO checkpoint 4 §7): the guest
+ * switch had no key of its own and was rendered with the Ask R2 wording ("Stop Ask R2
+ * execution") — a control that does something else must never borrow another's copy.
+ */
+export type AdminOperationsLabelKey = 'pauseNewAiAnswers' | 'stopAskR2Execution' | 'guestTrial';
+
+/** Exhaustive: adding a switch without a label is a compile error, never a silent reuse. */
+export const ADMIN_SWITCH_LABEL_KEYS: Readonly<
+  Record<OperationalSwitchName, AdminOperationsLabelKey>
+> = {
+  ASK_PUBLIC_COMPUTE_ENABLED: 'pauseNewAiAnswers',
+  ASK_R2_ENABLED: 'stopAskR2Execution',
+  ASK_GUEST_TRIAL_ENABLED: 'guestTrial',
+};
+
 /** Why a control is not operable right now. `null` means it is operable. */
 export type AdminOperationsBlockedReason =
   'ENVIRONMENT_UNCONFIRMED' | 'STORE_UNREADABLE' | 'DEPLOYMENT_VALUE_NOT_TRUE';
@@ -32,7 +48,7 @@ export type AdminOperationsBlockedReason =
 export interface AdminOperationsSwitch {
   name: OperationalSwitchName;
   /** Plain-language identity for the operator; the screen translates from this key. */
-  labelKey: 'pauseNewAiAnswers' | 'stopAskR2Execution';
+  labelKey: AdminOperationsLabelKey;
   /**
    * What the executor actually does right now. `effective = deployment literal
    * 'true' AND the stored row says enabled` — both keys, exactly as landed.

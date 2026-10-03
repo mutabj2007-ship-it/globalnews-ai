@@ -30,8 +30,10 @@ export type AdminOperationsEnvironment =
 export type AdminOperationsBlockedReason =
   'ENVIRONMENT_UNCONFIRMED' | 'STORE_UNREADABLE' | 'DEPLOYMENT_VALUE_NOT_TRUE';
 
-export type AdminOperationsSwitchName = 'ASK_PUBLIC_COMPUTE_ENABLED' | 'ASK_R2_ENABLED';
-export type AdminOperationsLabelKey = 'pauseNewAiAnswers' | 'stopAskR2Execution';
+/* TRUST R1 (CTO checkpoint 4 §7) — the guest switch is modelled explicitly, with its own label. */
+export type AdminOperationsSwitchName =
+  'ASK_PUBLIC_COMPUTE_ENABLED' | 'ASK_R2_ENABLED' | 'ASK_GUEST_TRIAL_ENABLED';
+export type AdminOperationsLabelKey = 'pauseNewAiAnswers' | 'stopAskR2Execution' | 'guestTrial';
 
 export interface AdminOperationsChange {
   name: string;

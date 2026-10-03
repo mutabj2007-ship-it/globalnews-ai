@@ -45,9 +45,27 @@ describe('ADMIN OPERATIONS R1 — client mirror matches the backend contract', (
   });
 
   it('every label key the client renders exists in the backend union', () => {
-    ['pauseNewAiAnswers', 'stopAskR2Execution'].forEach((key) =>
+    ['pauseNewAiAnswers', 'stopAskR2Execution', 'guestTrial'].forEach((key) =>
       expect(contract).toContain(`'${key}'`),
     );
+  });
+
+  /* TRUST R1 (CTO checkpoint 4 §7) — every landed switch is modelled by the client, by name. */
+  it('the client models every landed switch name the backend can return', () => {
+    const switches = readFileSync(
+      join(
+        __dirname,
+        '../../../../backend/src/modules/compute-controls/operational-switch.service.ts',
+      ),
+      'utf8',
+    );
+    const landed = switches
+      .match(/export const OPERATIONAL_SWITCHES = \[([^\]]*)\]/)![1]
+      .match(/'[A-Z_]+'/g)!;
+    const types = readFileSync(join(__dirname, 'adminOperationsTypes.ts'), 'utf8');
+    const union = types.match(/export type AdminOperationsSwitchName =([^;]*);/)![1];
+    for (const name of landed) expect(union).toContain(name);
+    expect(contract).toContain("ASK_GUEST_TRIAL_ENABLED: 'guestTrial'");
   });
 
   it('the client paths match the routes the controller declares', () => {

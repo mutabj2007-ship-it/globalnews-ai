@@ -8,6 +8,7 @@ import {
 } from '../../compute-controls/operational-switch.service';
 import {
   ADMIN_OPERATIONS_HISTORY_LIMIT,
+  ADMIN_SWITCH_LABEL_KEYS,
   ADMIN_OPERATIONS_REASON_MAX,
   ADMIN_OPERATIONS_REASON_MIN,
   type AdminOperationsChange,
@@ -54,7 +55,7 @@ export class AdminOperationsService {
   ) {}
 
   private labelKeyFor(name: OperationalSwitchName): AdminOperationsSwitch['labelKey'] {
-    return name === 'ASK_PUBLIC_COMPUTE_ENABLED' ? 'pauseNewAiAnswers' : 'stopAskR2Execution';
+    return ADMIN_SWITCH_LABEL_KEYS[name];
   }
 
   /** Why this control cannot be operated right now — `null` when it can. */

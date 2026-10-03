@@ -245,3 +245,38 @@ describe('ADMIN OPERATIONS R1 — M-B, the change history on a phone', () => {
     expect(history).toContain('emptyBody={screen.history.empty}');
   });
 });
+
+/* TRUST R1 (CTO checkpoint 4 §7) — the guest switch was rendered with the Ask R2 wording. */
+describe('ADMIN OPERATIONS — the guest-trial control has its own identity', () => {
+  const en = adminEn.screens.incidentControls;
+  const pl = adminPl.screens.incidentControls;
+
+  it('has its own copy, never the Stop Ask R2 execution wording', () => {
+    const copy = en.controls.guestTrial;
+    expect(copy.system).toBe('ASK_GUEST_TRIAL_ENABLED');
+    expect(copy.name.toLowerCase()).toContain('guest');
+    for (const text of [copy.name, copy.pause, copy.resume, copy.consequence, copy.whenToUse])
+      expect(text).not.toMatch(/Ask R2|R2 execution/i);
+    expect(pl.controls.guestTrial.system).toBe('ASK_GUEST_TRIAL_ENABLED');
+  });
+
+  it('explains scope, the two keys and the audit — and keeps the states separate', () => {
+    const copy = en.controls.guestTrial;
+    expect(copy.consequence.toLowerCase()).toContain('first-visit guest ask');
+    expect(copy.consequence.toLowerCase()).toContain('signed-in ask is not stopped');
+    expect(copy.whenToUse).toContain('literal value true');
+    expect(copy.whenToUse.toLowerCase()).toContain('audited switch row');
+    expect(copy.whenToUse.toLowerCase()).toContain('effective, requested and deployment');
+    expect(copy.reverse.toLowerCase()).toContain('same control');
+  });
+
+  it('is selected by its own label, rendered as its own control, and never via the advanced R2 group', () => {
+    expect(SOURCE).toContain("row.labelKey === 'guestTrial'");
+    expect(SOURCE).toContain("row.labelKey === 'stopAskR2Execution'");
+    expect(SOURCE).not.toContain("row.labelKey !== 'pauseNewAiAnswers'");
+  });
+
+  it('a label with no copy in this build renders nothing rather than borrowing another control', () => {
+    expect(SOURCE).toContain('if (copy === undefined) return null;');
+  });
+});

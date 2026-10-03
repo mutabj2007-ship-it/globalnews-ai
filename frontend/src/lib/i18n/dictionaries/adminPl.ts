@@ -646,6 +646,18 @@ export const adminPl: AdminDictionary = {
             'Aby cofnąć, użyj tego samego sterowania. Pojawi się napis „Zezwól na wykonywanie Ask R2”.',
           note: 'Widoczny skutek jest taki sam jak wstrzymanie nowych odpowiedzi AI. Wybierz tamto sterowanie, chyba że chcesz zatrzymać właśnie wykonawcę R2.',
         },
+        guestTrial: {
+          name: 'Pytania gości (pierwsza wizyta, bez logowania)',
+          system: 'ASK_GUEST_TRIAL_ENABLED',
+          pause: 'Wyłącz pytania gości',
+          resume: 'Zezwól na pytania gości',
+          consequence:
+            'Dotyczy wyłącznie Ask gości przy pierwszej wizycie: czytelników, którzy się nie zalogowali i korzystają z bezpłatnych pytań. Ask dla zalogowanych nie jest zatrzymywany i nadal odpowiada. Zapisane rozmowy gości pozostają czytelne do czasu wygaśnięcia.',
+          whenToUse:
+            'Goście są obsługiwani tylko wtedy, gdy obie połowy się zgadzają: zmienna wdrożenia ASK_GUEST_TRIAL_ENABLED musi mieć dosłowną wartość true, a ten przełącznik musi być włączony. Zmiana tutaj zapisuje audytowany wiersz przełącznika (z Twoim imieniem i powodem); nie zmienia zmiennej wdrożenia. Stan efektywny, żądany i wdrożenia są pokazane osobno powyżej.',
+          reverse:
+            'Aby cofnąć, użyj tego samego sterowania. Pojawi się napis „Zezwól na pytania gości”.',
+        },
       },
       confirm: {
         heading: 'Potwierdź zmianę',
