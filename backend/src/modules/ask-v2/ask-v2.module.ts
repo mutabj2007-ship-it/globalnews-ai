@@ -21,7 +21,6 @@ import { GuestMaintenanceService } from './guest/guest-maintenance.service';
 import { AskContextResolver } from './context/ask-context.resolver';
 import { BriefingsController, BriefingsEnabledGuard } from './briefings/briefings.controller';
 import { BriefingsService } from './briefings/briefings.service';
-import { StoryIdentityService } from '../stories/story-identity.service';
 
 /*
   ASK R2 CONSOLIDATED INTEGRATION R1 · GATE E — ASK_EXECUTION_PORT is bound to the Ask R2
@@ -59,8 +58,6 @@ import { StoryIdentityService } from '../stories/story-identity.service';
     GuestMaintenanceService,
     AskContextResolver,
     BriefingsService,
-    /* read-only canonical story identity for briefing subjects (same as StoryObservationModule) */
-    StoryIdentityService,
     BriefingsEnabledGuard,
     { provide: ASK_EXECUTION_PORT, useExisting: AskR2ExecutionAdapter },
   ],

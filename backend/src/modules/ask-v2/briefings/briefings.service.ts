@@ -8,7 +8,7 @@ import {
 import { ALL_ISO3_CODES } from '@globalnews-ai/shared';
 import { PrismaService } from '../../../database/prisma.service';
 import { Prisma } from '../../../generated/prisma/client';
-import { StoryIdentityService } from '../../stories/story-identity.service';
+import { readStoryMaterialVersion } from '../../stories/story-relation.read';
 import { briefingSnapshotOf } from './briefing-snapshot';
 
 type Tx = Prisma.TransactionClient;
@@ -37,10 +37,7 @@ export interface BriefingScopeInput {
  */
 @Injectable()
 export class BriefingsService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly stories: StoryIdentityService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   /*
     R2 · ITEM 3 (CTO checkpoint 3 ruling §9, option B) — THE PILOT'S "FOLLOW" IS THE EXPLICIT
@@ -48,12 +45,12 @@ export class BriefingsService {
     the story's material-evidence version (Story.briefVersion — the same counter Stage-B Story
     Alerts dedup on). A later rise of that counter is the material update: the briefing reports
     it, the reader's Story Alert (if they set one) lists what joined, and "Ask about this update"
-    produces the turn that becomes the next version. Read-only use of StoryIdentityService; no
+    produces the turn that becomes the next version. Read-only identity read (stories/story-relation.read, as Compare does); no
     second alert engine, no CountryFollow read or write.
   */
   private async storySubject(tx: Tx | PrismaService, storyId: string | undefined) {
     if (storyId === undefined) return null;
-    const story = await this.stories.describe(storyId, tx);
+    const story = await readStoryMaterialVersion(this.prisma, storyId, tx);
     if (!story) throw new UnprocessableEntityException({ code: 'BRIEFING_SCOPE_UNKNOWN_STORY' });
     return { kind: 'STORY' as const, storyId: story.storyId, briefVersion: story.briefVersion };
   }
@@ -64,7 +61,7 @@ export class BriefingsService {
     const recorded = (latestBlocks as { subject?: { briefVersion?: unknown } } | null)?.subject
       ?.briefVersion;
     if (typeof storyId !== 'string' || typeof recorded !== 'number') return null;
-    const story = await this.stories.describe(storyId);
+    const story = await readStoryMaterialVersion(this.prisma, storyId);
     if (!story)
       return { kind: 'STORY_MATERIAL_UPDATE' as const, available: false, storyGone: true };
     return {
@@ -89,7 +86,13 @@ export class BriefingsService {
         });
       } catch (error) {
         const code = (error as { code?: string })?.code;
-        if (attempt >= 7 || !['P2034', 'P2002'].includes(code ?? '')) throw error;
+        /* the pg driver adapter reports a serialization failure as a TransactionWriteConflict
+           DriverAdapterError rather than P2034; it is the same retryable conflict */
+        const conflict =
+          ['P2034', 'P2002'].includes(code ?? '') ||
+          (error as { cause?: { kind?: string } })?.cause?.kind === 'TransactionWriteConflict' ||
+          /TransactionWriteConflict/.test(String((error as Error)?.message ?? ''));
+        if (attempt >= 7 || !conflict) throw error;
       }
     }
   }

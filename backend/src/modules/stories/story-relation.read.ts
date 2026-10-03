@@ -43,3 +43,25 @@ export async function readStoryRelations(prisma: PrismaService, articleRefs: rea
   }
   return { storyIds, relations };
 }
+
+/**
+ * R2 · BRIEFING SUBJECT — the canonical story's material-evidence version, read from stored
+ * identity only (merge-aware). The second and last identity fact the Ask side may read: no
+ * content, no members, no reader rows. Null when the story does not exist.
+ */
+export interface StoryMaterialVersion {
+  readonly storyId: string;
+  readonly briefVersion: number;
+  readonly briefUpdatedAt: Date | null;
+}
+
+export async function readStoryMaterialVersion(
+  prisma: PrismaService,
+  storyId: string,
+  db?: Parameters<StoryIdentityService['describe']>[1],
+): Promise<StoryMaterialVersion | null> {
+  const story = await new StoryIdentityService(prisma).describe(storyId, db ?? prisma);
+  return story === null
+    ? null
+    : { storyId: story.storyId, briefVersion: story.briefVersion, briefUpdatedAt: story.briefUpdatedAt };
+}

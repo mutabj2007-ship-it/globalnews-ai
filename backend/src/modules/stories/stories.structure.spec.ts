@@ -46,11 +46,18 @@ describe('Discussion is never Ask evidence (structural)', () => {
     expect(offenders.map(rel)).toEqual([]);
   });
 
-  it('the only news→stories edge is Compare’s read-only identity relation', () => {
+  /* R2 · briefing subject (CTO checkpoint 3 §9/§10): briefings read the story's material-evidence
+     version through the SAME read-only identity reader Compare uses — and nothing else. */
+  it('the only Ask/news→stories edges are read-only identity reads (Compare relation, briefing subject)', () => {
     const edges = evidenceFiles.filter((f) => /from '[^']*stories\//.test(strip(readFileSync(f, 'utf8'))));
-    expect(edges.map(rel)).toEqual(['modules/news/compare/story-compare.controller.ts']);
-    const code = strip(readFileSync(edges[0], 'utf8'));
-    expect(code.match(/from '[^']*stories\/[^']*'/g)).toEqual(["from '../../stories/story-relation.read'"]);
+    expect(edges.map(rel).sort()).toEqual([
+      'modules/ask-v2/briefings/briefings.service.ts',
+      'modules/news/compare/story-compare.controller.ts',
+    ]);
+    for (const edge of edges) {
+      const code = strip(readFileSync(edge, 'utf8'));
+      expect(code.match(/from '[^']*stories\/[^']*'/g)).toEqual(["from '../../stories/story-relation.read'"]);
+    }
   });
 
   it('the relation reader touches identity only', () => {
