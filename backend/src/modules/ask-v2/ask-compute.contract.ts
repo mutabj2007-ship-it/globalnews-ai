@@ -6,6 +6,7 @@ import {
   sameContextIdentity,
   type ResolvedAskContext,
 } from './context/resolved-ask-context';
+import type { PriorArtifact } from './conversation/conversation-artifact';
 
 export const SAND_CHARGING_ENABLED = false as const;
 export const ASK_EXECUTION_PORT = Symbol('ASK_EXECUTION_PORT');
@@ -41,6 +42,13 @@ export interface AskRequest {
    * questions in this owner-verified thread. Never client input. `officialSourcesOnly` and
    * `constraintOnly` change what is executed (and so the plan revision); `trace` is diagnostics.
    */
+  /**
+   * CTO R4 — this conversation's most recent earlier WORK (a validated ConversationArtifact the
+   * assistant's own reasoning produced on an earlier turn), read by the service from durable
+   * stored answers in this owner-verified thread. Memory for resolving references; never
+   * evidence, scope or a preference. Absent when the thread holds none.
+   */
+  priorArtifact?: PriorArtifact;
   conversation?: {
     readonly officialSourcesOnly: boolean;
     /** The turn only stated a preference / constraint ("Only official sources.") — no job. */

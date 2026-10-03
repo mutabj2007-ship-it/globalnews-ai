@@ -451,16 +451,24 @@ export function AskR2TurnView({
               <p className="font-bold text-[#d3dbe5]">
                 {guidanceKind === 'DECISION_SUPPORT'
                   ? s.r3.decisionNoteTitle
-                  : guidanceKind !== null && guidanceKind !== 'MIXED_REFERENCE_CURRENT'
-                    ? s.guidanceNoteTitle
-                    : s.referenceNoteTitle}
+                  : guidanceKind === 'CONCEPTUAL_ANALYSIS'
+                    ? s.r4.conceptualNoteTitle
+                    : guidanceKind === 'CONVERSATION_WORK'
+                      ? s.r4.workNoteTitle
+                      : guidanceKind !== null && guidanceKind !== 'MIXED_REFERENCE_CURRENT'
+                        ? s.guidanceNoteTitle
+                        : s.referenceNoteTitle}
               </p>
               <p>
                 {guidanceKind === 'DECISION_SUPPORT'
                   ? s.r3.decisionNoteBody
-                  : guidanceKind !== null && guidanceKind !== 'MIXED_REFERENCE_CURRENT'
-                    ? s.guidanceNoteBody
-                    : s.referenceNoteBody}
+                  : guidanceKind === 'CONCEPTUAL_ANALYSIS'
+                    ? s.r4.conceptualNoteBody
+                    : guidanceKind === 'CONVERSATION_WORK'
+                      ? s.r4.workNoteBody
+                      : guidanceKind !== null && guidanceKind !== 'MIXED_REFERENCE_CURRENT'
+                        ? s.guidanceNoteBody
+                        : s.referenceNoteBody}
               </p>
               {payload.guidance?.objective != null && (
                 <p data-ask="decision-objective">

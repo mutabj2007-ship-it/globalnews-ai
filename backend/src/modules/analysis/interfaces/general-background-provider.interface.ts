@@ -46,6 +46,28 @@ export interface GeneralBackgroundInput {
    * Untrusted reader text: it travels as delimited data in the USER message, never as rules.
    */
   readonly priorQuestion?: string;
+  /**
+   * CTO R4 — trusted job rules composed by the Ask executor (the depth rubric for a deep conceptual
+   * answer, the shape of a requested transformation, the artifact instruction). Appended to the
+   * SYSTEM prompt. Absent → the system prompt is byte-identical to before.
+   */
+  readonly jobRules?: string;
+  /**
+   * CTO R4 — this conversation's earlier work (a validated ConversationArtifact) as delimited DATA in
+   * the USER message: memory for resolving "that idea" / "which part", never evidence.
+   */
+  readonly priorWork?: string;
+  /** CTO R4 — the completion ceiling for this answer (a deep analysis or a plan needs more room). */
+  readonly maxCompletionTokens?: number;
+}
+
+/** CTO R4 — one bounded structured completion (the semantic job classifier). */
+export interface StructuredCompletionInput {
+  readonly system: string;
+  readonly user: string;
+  readonly maxCompletionTokens: number;
+  readonly signal?: AbortSignal;
+  readonly usageSink?: (usage: { promptTokens: number; completionTokens: number }) => void;
 }
 
 export interface GeneralBackgroundOutput {
@@ -75,4 +97,10 @@ export interface GeneralBackgroundProvider {
   readonly displayName: string;
   readonly isMock: boolean;
   answerBackground(input: GeneralBackgroundInput): Promise<GeneralBackgroundOutput>;
+  /**
+   * CTO R4 — a single JSON-object completion for a closed classification schema. Optional: a
+   * provider without it means "no semantic classifier available" (the caller falls back to
+   * stable reasoning, never to news). Returns the raw JSON text; the caller validates it.
+   */
+  completeStructured?(input: StructuredCompletionInput): Promise<string>;
 }

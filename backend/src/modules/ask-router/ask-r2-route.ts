@@ -39,6 +39,7 @@
 import { reportingWindowFor, type ReportingWindow } from './reporting-window';
 import {
   deriveKnowledgeRequirement,
+  genuineFreshness,
   isFuturePeriod,
   type KnowledgeRequirement,
 } from './knowledge-requirement';
@@ -69,6 +70,8 @@ import { readInstitutionalStatusQuestion } from '../news/relevance/governed-inst
 import { retainedCycleCovers } from '../ask-intelligence/contributor-selection';
 import { isBroadGlobalHeadlinesQuestion } from '../analysis/query/broad-global-headlines.util';
 import { readBilateralRelationship, type BilateralRelationship } from './bilateral-relationship';
+import { readUserJob, REASONING_JOBS, type JobReading, type UserJob } from './user-job';
+import { EN_PUBLIC_EVENT, PL_PUBLIC_EVENT } from './advisory-requirement';
 
 /** The vocabulary frozen C derives axes in (its `DERIVATION_COVERAGE`). */
 export const NORMALIZATION_VOCABULARY = 'en';
@@ -95,6 +98,17 @@ export interface AskRouteContext {
    * route never reads a clock; with no instant, a stated absolute period is never HISTORICAL.
    */
   readonly requestInstant?: string;
+  /**
+   * CTO R4 — the conversation holds work this assistant already produced (a ConversationArtifact
+   * from an earlier answer in this owner-verified thread). Its presence lets "that idea", "which
+   * part", "turn that into…" resolve to it. Conversation memory, never evidence or scope.
+   */
+  readonly priorWork?: { readonly kind: string; readonly label: string };
+  /**
+   * CTO R4 — the bounded semantic classifier's verdict for an UNRESOLVED question (set only by the
+   * executor, after every control): current evidence is required, so the reporting plan applies.
+   */
+  readonly semanticJob?: { readonly job: UserJob; readonly needsCurrentEvidence: boolean };
 }
 
 /** IC-8: what fed what, recorded on every route so a missing seam is observable. */
@@ -125,7 +139,13 @@ export interface SeamTrace {
    * when this says so; any undeclared loss of domains is still a missing seam.
    */
   readonly knowledgeDecoupling?:
-    'STABLE_REFERENCE' | 'COMPUTATION' | 'PLACE_REFERENCE' | 'ADVISORY' | 'DECISION_SUPPORT' | null;
+    | 'STABLE_REFERENCE'
+    | 'COMPUTATION'
+    | 'PLACE_REFERENCE'
+    | 'ADVISORY'
+    | 'DECISION_SUPPORT'
+    | 'REASONING'
+    | null;
 }
 
 export interface AskR2Route {
@@ -159,6 +179,12 @@ export interface AskR2Route {
    * (bilateral-relationship.ts): both sides, the relation and its domain. Null otherwise.
    */
   readonly relationship: BilateralRelationship | null;
+  /**
+   * CTO R4 — the governed user-job reading (user-job.ts): what work the reader asked for, on its
+   * own axis from whether current evidence is required. UNRESOLVED is decided at execution by the
+   * bounded semantic classifier; it never means news.
+   */
+  readonly job: JobReading;
   readonly outcome: NormalizationOutcome;
   readonly source: EnvelopeSource;
   readonly envelope: AskQuestionEnvelope;
@@ -467,6 +493,19 @@ export function routeAskR2(
       currentEvidenceNeeded: [],
       decisionObjective: null,
       relationship: null,
+      job: {
+        job: null,
+        freshness: 'NONE',
+        evidence: 'NONE',
+        depth: 'STANDARD',
+        transformation: null,
+        discourseReference: 'NONE',
+        temporal: [],
+        source: 'UNRESOLVED',
+        confidence: 'LOW',
+        reason: 'question not read',
+        basis: 'NONE',
+      },
       outcome,
       source,
       envelope: routed.envelope,
@@ -684,6 +723,123 @@ export function routeAskR2(
       (ctx.mapContextCountry !== undefined || ctx.storyAnchorCountry !== undefined)
     ) &&
     capability.source.personalRequested !== true;
+  /*
+    CTO R4 — THE GOVERNED USER JOB (user-job.ts), on its own axis from freshness. Two changes to
+    what frozen C is handed, nothing else:
+      · a REASONING job (deep conceptual analysis, explanation, planning, a transformation of
+        earlier work, decision support…) that needs no current evidence is answered by reasoning —
+        the same background composition advice already receives (a named place stays the subject);
+      · an UNRESOLVED question (no governed form, no place, no period, no event, no inherited Map /
+        story scope) is no longer defaulted to news: it is planned as reasoning and the executor's
+        bounded semantic classifier decides, behind every control. Its verdict "current evidence
+        is required" comes back as ctx.semanticJob and restores the reporting plan below.
+    Never for a relationship, an article anchor, a personal-library question, broad headlines, or
+    any path already decided above.
+  */
+  const relationshipRead =
+    advisory || placeReference || stableOrComputed
+      ? null
+      : readBilateralRelationship(reading.originalQuestion, reading.sourceLanguage);
+  const publicEvent = (reading.sourceLanguage === 'pl' ? PL_PUBLIC_EVENT : EN_PUBLIC_EVENT).test(
+    reading.originalQuestion,
+  );
+  const fresh = genuineFreshness(
+    reading.originalQuestion,
+    reading.sourceLanguage,
+    Number.isFinite(requestYear) ? requestYear : undefined,
+  );
+  const formJob = readUserJob(reading.originalQuestion, reading.sourceLanguage, {
+    requirement: knowledge.requirement,
+    requirementReason: knowledge.reason,
+    namedPlace,
+    statedPeriod: reading.statedTime !== undefined,
+    fresh,
+    hasPriorWork: ctx.priorWork !== undefined,
+    publicEvent,
+  });
+  const inheritedScope =
+    eligibility.decision === 'ELIGIBLE' &&
+    (ctx.mapContextCountry !== undefined || ctx.storyAnchorCountry !== undefined);
+  /* paths decided above, and scopes that are never re-read as reasoning */
+  const otherwiseDecided =
+    stableOrComputed ||
+    placeReference ||
+    advisory ||
+    broadHeadlines ||
+    relationshipRead !== null ||
+    ctx.hasResolvedArticleAnchor === true ||
+    capability.source.personalRequested === true;
+  /* frozen C's own clarification stays the authority, except for an explicit operation on this
+     conversation's earlier work */
+  const clarificationHolds =
+    landedReading.queryIntent === 'CLARIFICATION_REQUIRED' &&
+    formJob.discourseReference !== 'PRIOR_WORK';
+  /* 1 · an R4 governed form that needs no current evidence */
+  const reasoningByForm =
+    !otherwiseDecided &&
+    !clarificationHolds &&
+    formJob.basis === 'FORM' &&
+    formJob.job !== null &&
+    REASONING_JOBS.has(formJob.job) &&
+    formJob.freshness === 'NONE';
+  /*
+    2 · UNRESOLVED — no governed form, and nothing (time, event, inherited scope, a follow-up's
+    prior subject) says this is current reporting. A place alone is scope, not freshness. The
+    frozen plan is kept for routing; the executor asks the bounded semantic classifier BEFORE any
+    news provider is spent, and falls back to reasoning — never to news — if it cannot.
+  */
+  const timeAnchored = formJob.temporal.some(
+    (t) => t.role !== 'PLAN_HORIZON' && t.role !== 'TRIP_DURATION',
+  );
+  const unresolvedEligible =
+    !otherwiseDecided &&
+    !clarificationHolds &&
+    !reasoningByForm &&
+    (knowledge.requirement === null ||
+      (knowledge.requirement === 'CURRENT_REPORTING' && knowledge.reason === 'a named place')) &&
+    !fresh &&
+    reading.statedTime === undefined &&
+    !timeAnchored &&
+    !publicEvent &&
+    !inheritedScope &&
+    ctx.priorQuestion === undefined;
+  /* 3 · the executor's semantic verdict for an UNRESOLVED question */
+  const reasoningBySemantics =
+    unresolvedEligible && ctx.semanticJob !== undefined && !ctx.semanticJob.needsCurrentEvidence;
+  const reasoning = reasoningByForm || reasoningBySemantics;
+  const job: JobReading = reasoningBySemantics
+    ? {
+        ...formJob,
+        job: ctx.semanticJob!.job,
+        source: 'SEMANTIC',
+        confidence: 'MEDIUM',
+        reason: 'resolved by the bounded semantic classifier',
+      }
+    : unresolvedEligible && ctx.semanticJob !== undefined
+      ? {
+          ...formJob,
+          job: ctx.semanticJob.job,
+          freshness: 'CURRENT',
+          evidence: 'CURRENT_REPORTING',
+          source: 'SEMANTIC',
+          confidence: 'MEDIUM',
+          reason: 'the semantic classifier requires current evidence',
+        }
+      : unresolvedEligible
+        ? { ...formJob, job: null, source: 'UNRESOLVED', confidence: 'LOW' }
+        : formJob.source === 'UNRESOLVED'
+          ? {
+              ...formJob,
+              job: 'CURRENT_REPORTING',
+              freshness: 'CURRENT',
+              evidence: 'CURRENT_REPORTING',
+              source: 'DETERMINISTIC',
+              basis: 'KNOWLEDGE',
+              confidence: 'MEDIUM',
+              reason:
+                'scoped as current reporting by its time, event, inherited scope or prior subject',
+            }
+          : formJob;
   const {
     temporalRequirement: _time,
     topicTerms: _topic,
@@ -710,7 +866,7 @@ export function routeAskR2(
             analyticalDomains: [],
           },
         }
-      : advisory
+      : advisory || reasoning
         ? namedPlace
           ? {
               ...withoutStatedPeriod(withoutTopic(withoutTime(composedSource))),
@@ -759,10 +915,8 @@ export function routeAskR2(
     decisionObjective:
       advisory && decision && 'objective' in knowledge ? (knowledge.objective ?? null) : null,
     /* R3 §14 — only a question that still needs reporting carries the relationship scope */
-    relationship:
-      advisory || placeReference || stableOrComputed
-        ? null
-        : readBilateralRelationship(reading.originalQuestion, reading.sourceLanguage),
+    relationship: relationshipRead,
+    job,
     outcome,
     source,
     envelope,
@@ -792,7 +946,9 @@ export function routeAskR2(
             ? decision
               ? 'DECISION_SUPPORT'
               : 'ADVISORY'
-            : null,
+            : reasoning
+              ? 'REASONING'
+              : null,
     },
   };
 }

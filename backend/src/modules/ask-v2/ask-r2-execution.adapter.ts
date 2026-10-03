@@ -37,6 +37,22 @@ import {
 } from '../ask-router/ask-r2-route';
 import { DECISION_OBJECTIVE_CANDIDATES } from '../ask-router/decision-support';
 import {
+  completionCeilingFor,
+  FALLBACK_SEMANTIC_JOB,
+  JOB_CLASSIFIER_MAX_TOKENS,
+  JOB_CLASSIFIER_SYSTEM,
+  jobClassifierUserMessage,
+  jobRulesFor,
+  parseSemanticJob,
+  type SemanticJob,
+} from './job-execution';
+import {
+  artifactIdentity,
+  artifactPromptBlock,
+  splitArtifact,
+  type ConversationArtifact,
+} from './conversation/conversation-artifact';
+import {
   answerStateBeforeExecution,
   deriveAnswerState,
   requiredRolesOf,
@@ -156,7 +172,12 @@ const PLAN_VALIDITY_MS = 15 * 60 * 1000;
  * verified account identity (frozen B7: a personal question is IDENTITY_REQUIRED without
  * one) are server-held facts of THIS request, never read from the question or the client.
  */
-function routeFor(request: Readonly<AskRequest>, baseDeps: PlannerDeps): AskR2Route {
+function routeFor(
+  request: Readonly<AskRequest>,
+  baseDeps: PlannerDeps,
+  /** CTO R4 — the bounded semantic classifier's verdict for an UNRESOLVED question. */
+  semanticJob?: SemanticJob,
+): AskR2Route {
   const who = askRequestContext.getStore();
   /*
     ASK TECHNICAL / SCIENTIFIC REASONING CONVERGENCE R1 — COMPUTATION is a bound capability for
@@ -185,6 +206,18 @@ function routeFor(request: Readonly<AskRequest>, baseDeps: PlannerDeps): AskR2Ro
       /* UNIFIED INTELLIGENCE BINDING R2B — THIS turn's server-resolved context, through the
          landed seams only (frozen C and its eligibility rules are untouched). */
       ...routeContextOf(request.context, request.question),
+      /* CTO R4 — this conversation's earlier work (memory, never scope or evidence) */
+      ...(request.priorArtifact === undefined
+        ? {}
+        : { priorWork: { kind: request.priorArtifact.kind, label: request.priorArtifact.label } }),
+      ...(semanticJob === undefined
+        ? {}
+        : {
+            semanticJob: {
+              job: semanticJob.job,
+              needsCurrentEvidence: semanticJob.needsCurrentEvidence,
+            },
+          }),
     },
     deps,
   );
@@ -407,6 +440,10 @@ export function planRevision(
     /* R3 §23 — the conversation's constraints change what is executed. Omitted when absent. */
     ...(request.conversation?.officialSourcesOnly === true ? ['conversation:official-only'] : []),
     ...(request.conversation?.constraintOnly === true ? ['conversation:constraint-only'] : []),
+    /* CTO R4 — the answer builds on this conversation's earlier work. Omitted when absent. */
+    ...(request.priorArtifact === undefined
+      ? []
+      : [`artifact:${artifactIdentity(request.priorArtifact)}`]),
   ]);
 }
 
@@ -425,10 +462,29 @@ export function estimateUnits(
  * articles are ever sent (that is the whole point), so this is deliberately far smaller
  * than `estimateUnits`: the system prompt plus the question, and a small bounded output.
  */
-export function estimateBackgroundUnits(questionChars: number, outputWeight: number): number {
+export function estimateBackgroundUnits(
+  questionChars: number,
+  outputWeight: number,
+  /** CTO R4 — a deep analysis or a plan reserves for its larger ceiling. */
+  maxCompletionTokens: number = GENERAL_BACKGROUND_MAX_COMPLETION_TOKENS,
+): number {
   const SYSTEM_PROMPT_CHAR_ESTIMATE = 1600;
   const promptChars = SYSTEM_PROMPT_CHAR_ESTIMATE + questionChars;
-  return Math.ceil(promptChars / 4) + outputWeight * GENERAL_BACKGROUND_MAX_COMPLETION_TOKENS;
+  return Math.ceil(promptChars / 4) + outputWeight * maxCompletionTokens;
+}
+
+/** CTO R4 — the semantic job classifier: a short prompt and a tiny JSON answer. */
+export function estimateClassifierUnits(questionChars: number, outputWeight: number): number {
+  return Math.ceil((1200 + questionChars) / 4) + outputWeight * JOB_CLASSIFIER_MAX_TOKENS;
+}
+
+/** CTO R4 — the outcome of the bounded semantic classification of an UNRESOLVED question. */
+interface ClassifierRun {
+  readonly verdict: SemanticJob;
+  /** model calls it made (0 when no classifier is available) */
+  readonly calls: number;
+  /** SEMANTIC: the classifier decided; FALLBACK: none available / it failed → reasoning, never news */
+  readonly source: 'SEMANTIC' | 'FALLBACK';
 }
 
 @Injectable()
@@ -638,7 +694,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     operationId: string,
     draft: AskObservationDraft,
   ): Promise<ExecutionResult> {
-    const route = routeFor(request, this.deps);
+    let route = routeFor(request, this.deps);
     this.observeRoute(route, draft);
     const priorQuestion = askRequestContext.getStore()?.priorQuestion ?? null;
     if (planRevision(request, route, priorQuestion) !== plan.revision) {
@@ -827,6 +883,29 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         null,
         false,
       );
+    }
+
+    /*
+      CTO R4 — UNKNOWN NEVER MEANS NEWS. An UNRESOLVED question (no governed form; nothing about it
+      asks for current evidence) is classified by the bounded semantic classifier BEFORE any news
+      provider is spent, behind the same controls. Reasoning → the background provider answers;
+      current evidence → the reporting path below; no classifier / a failure → reasoning, never
+      news. The plan revision was checked on the deterministic route above.
+    */
+    if (route.job.source === 'UNRESOLVED') {
+      const semantic = await this.classifyUnresolved(request, draft);
+      const resolved = routeFor(request, this.deps, semantic.verdict);
+      if (resolved.plan.terminalState === 'REFERENCE_BACKGROUND_ONLY')
+        return this.executeBackground(
+          request,
+          plan,
+          resolved,
+          operationId,
+          draft,
+          undefined,
+          semantic,
+        );
+      route = resolved;
     }
 
     /* 3 · controls, in order, each failing closed. */
@@ -1277,6 +1356,81 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     );
   }
 
+  /**
+   * CTO R4 — classify an UNRESOLVED question with ONE bounded structured completion (closed schema,
+   * temperature 0, a tiny ceiling) behind the same switches, breaker and meter as every model call.
+   * It never answers, searches or states a fact. No classifier, an open breaker, a failure or a
+   * malformed verdict all FALL BACK to stable reasoning — never to news.
+   */
+  private async classifyUnresolved(
+    request: Readonly<AskRequest>,
+    draft: AskObservationDraft,
+  ): Promise<ClassifierRun> {
+    const fallback: ClassifierRun = {
+      verdict: FALLBACK_SEMANTIC_JOB,
+      calls: 0,
+      source: 'FALLBACK',
+    };
+    const complete = this.background.completeStructured?.bind(this.background);
+    if (complete === undefined) return fallback;
+    draft.askR2Enabled = await this.switches.isEnabled('ASK_R2_ENABLED');
+    if (!draft.askR2Enabled) throw new AskExecutionRefused('ASK_R2_DISABLED');
+    draft.askPublicComputeEnabled = await this.switches.isEnabled('ASK_PUBLIC_COMPUTE_ENABLED');
+    if (!draft.askPublicComputeEnabled)
+      throw new AskExecutionRefused('ASK_PUBLIC_COMPUTE_DISABLED');
+    const who = askRequestContext.getStore();
+    if (who === undefined) throw new AskExecutionRefused('ASK_REQUEST_CONTEXT_MISSING');
+    const provider = this.background.id;
+    const permit = await this.breaker.permit(provider);
+    /* the reasoning answer would meet the same open breaker and refuse there, truthfully */
+    if (!permit.allowed) return fallback;
+    const guest = await this.resolveGuestComputeScope(who);
+    const reservation = await this.meter.reserve({
+      accountId: who.accountId,
+      ipScope: who.ipScope,
+      ...(guest === undefined ? {} : { guest }),
+      provider,
+      estimatedUnits: estimateClassifierUnits(
+        request.question.length,
+        this.meter.config.outputWeight,
+      ),
+    });
+    if (!reservation.admitted) {
+      await this.breaker.record(provider, 'REFUSAL', permit.trial);
+      throw new AskExecutionRefused(`BUDGET_${reservation.kind}:${reservation.control}`);
+    }
+    let usage: { promptTokens: number; completionTokens: number } | null = null;
+    let outcome: BreakerOutcome = 'FAILURE';
+    let verdict: SemanticJob | null = null;
+    try {
+      const raw = await complete({
+        system: JOB_CLASSIFIER_SYSTEM,
+        user: jobClassifierUserMessage(request.question, request.language, request.priorArtifact),
+        maxCompletionTokens: JOB_CLASSIFIER_MAX_TOKENS,
+        usageSink: (u) => {
+          usage = { promptTokens: u.promptTokens, completionTokens: u.completionTokens };
+        },
+      });
+      verdict = parseSemanticJob(raw);
+      outcome = 'SUCCESS';
+    } catch (error) {
+      outcome = /timeout|timed out|deadline/i.test((error as Error)?.message ?? '')
+        ? 'TIMEOUT'
+        : 'FAILURE';
+    } finally {
+      const used = usage as { promptTokens: number; completionTokens: number } | null;
+      await this.meter.settle(
+        reservation.reservationId,
+        used === null
+          ? null
+          : used.promptTokens + this.meter.config.outputWeight * used.completionTokens,
+        outcome,
+      );
+      await this.breaker.record(provider, outcome, permit.trial);
+    }
+    return verdict === null ? { ...fallback, calls: 1 } : { verdict, calls: 1, source: 'SEMANTIC' };
+  }
+
   private async executeBackground(
     request: Readonly<AskRequest>,
     plan: Readonly<AskPlan>,
@@ -1285,7 +1439,13 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     draft: AskObservationDraft,
     /** R3 §6 — the reporting part of a mixed question failed (UNAVAILABLE) or found nothing. */
     partialCurrent?: 'UNAVAILABLE' | 'NO_EVIDENCE',
+    /** CTO R4 — the semantic classification that preceded this answer (UNRESOLVED questions). */
+    semantic?: ClassifierRun,
   ): Promise<ExecutionResult> {
+    /* CTO R4 — the job's rules, the conversation's earlier work and the answer's ceiling */
+    const ceiling = completionCeilingFor(route.job);
+    const horizon = route.job.temporal.find((t) => t.role === 'PLAN_HORIZON')?.days;
+    const jobRules = jobRulesFor(route.job, request.priorArtifact !== undefined, horizon);
     /* 3 · controls, in order, each failing closed — identical to the reporting path. */
     draft.askR2Enabled = await this.switches.isEnabled('ASK_R2_ENABLED');
     if (!draft.askR2Enabled) throw new AskExecutionRefused('ASK_R2_DISABLED');
@@ -1314,6 +1474,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       estimatedUnits: estimateBackgroundUnits(
         request.question.length,
         this.meter.config.outputWeight,
+        ceiling,
       ),
     });
     if (!reservation.admitted) {
@@ -1335,6 +1496,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
        governed outcome (frozen C's own freshness/safety boundary), never a provider fault:
        mirrors the reporting path's `noEvidence` in shape and in meter/breaker treatment. */
     let declined = false;
+    let artifact: ConversationArtifact | null = null;
     try {
       /* Counted before it is made, as on the Reporting path: attempts are what an operator needs.
          A partial answer (R3 §6) already made the reporting attempt: this is the second call. */
@@ -1349,8 +1511,22 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         ...(governed.rules === '' ? {} : { governed }),
         /* TRUST & CONVERSATIONAL EXPERIENCE R1 — a follow-up keeps the reader's own prior question. */
         ...(who.priorQuestion ? { priorQuestion: who.priorQuestion } : {}),
+        /* CTO R4 — trusted job rules; the earlier work as delimited data; the job's ceiling */
+        ...(jobRules === '' ? {} : { jobRules }),
+        ...(request.priorArtifact === undefined
+          ? {}
+          : { priorWork: artifactPromptBlock(request.priorArtifact) }),
+        ...(ceiling === GENERAL_BACKGROUND_MAX_COMPLETION_TOKENS
+          ? {}
+          : { maxCompletionTokens: ceiling }),
       });
-      text = out.text;
+      /* CTO R4 — the artifact comes back in the SAME call; it is split off before the reader sees it */
+      if (out.text === null) text = null;
+      else {
+        const split = splitArtifact(out.text);
+        text = split.text;
+        artifact = split.artifact;
+      }
       declined = text === null;
       outcome = declined ? 'REFUSAL' : 'SUCCESS';
     } catch (error) {
@@ -1402,7 +1578,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     /* The model WAS invoked on a decline (it answered with the decline token), so the
        invocation is counted; `aiExecuted` means an answer was produced, as on Reporting. */
     draft.aiExecuted = !declined;
-    draft.modelInvocationCount = 1;
+    /* CTO R4 — the semantic classifier, when it ran, is a model invocation of this Ask too */
+    draft.modelInvocationCount = 1 + (semantic?.calls ?? 0);
     draft.evidenceRolesObtained = [];
     const measured = usage as { promptTokens: number; completionTokens: number } | null;
     if (measured !== null) {
@@ -1422,6 +1599,11 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       null,
       await this.recentReportingFor(route),
       partialCurrent ?? null,
+      {
+        artifact: declined ? null : artifact,
+        artifactUsed: request.priorArtifact ?? null,
+        classifier: semantic ?? null,
+      },
     );
   }
 
@@ -1646,6 +1828,13 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     recentReporting: RecentReporting | null = null,
     /** R3 §6 — the current part of a mixed question could not be verified (it is named). */
     partialCurrent: 'UNAVAILABLE' | 'NO_EVIDENCE' | null = null,
+    /** CTO R4 — conversation memory produced / used by this answer and the classifier run. */
+    r4: {
+      readonly artifact: ConversationArtifact | null;
+      readonly artifactUsed:
+        (ConversationArtifact & { readonly sourceOperationId?: string }) | null;
+      readonly classifier: ClassifierRun | null;
+    } | null = null,
   ): ExecutionResult {
     this.logger.log(
       `ask-r2 operation=${operationId} class=${route.plan.questionClass} terminal=${route.plan.terminalState} ` +
@@ -1706,6 +1895,53 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
           : {}),
         /* R3 §14 — the two-sided scope of a relationship question (both countries, the relation) */
         ...(route.relationship === null ? {} : { relationship: route.relationship }),
+        /* CTO R4 — conceptual / conversational work done by reasoning is labelled as such (zero
+           sources is normal here, never INSUFFICIENT) */
+        ...(backgroundText !== null &&
+        partialCurrent === null &&
+        route.knowledgeRequirement !== 'ADVISORY' &&
+        route.knowledgeRequirement !== 'MIXED_ADVISORY_CURRENT' &&
+        route.knowledgeRequirement !== 'DECISION_SUPPORT' &&
+        route.job.basis !== 'KNOWLEDGE' &&
+        route.job.job !== null
+          ? {
+              guidance: {
+                kind:
+                  route.job.job === 'PLANNING' || route.job.job === 'TRANSFORMATION'
+                    ? 'CONVERSATION_WORK'
+                    : 'CONCEPTUAL_ANALYSIS',
+                currentEvidenceNeeded: [],
+              },
+            }
+          : {}),
+        /* CTO R4 — this answer's conversation memory (model reasoning; never evidence) */
+        ...(r4?.artifact == null ? {} : { artifact: r4.artifact }),
+        /* CTO R4 §21 — the job diagnostics (CTO / Admin; not rendered to readers) */
+        diagnostics: {
+          job: {
+            job: route.job.job,
+            source: r4?.classifier?.source ?? route.job.source,
+            basis: route.job.basis,
+            depth: route.job.depth,
+            freshness: route.job.freshness,
+            evidence: route.job.evidence,
+            transformation: route.job.transformation,
+            discourseReference: route.job.discourseReference,
+            temporal: route.job.temporal,
+            reason: route.job.reason,
+            classifierCalls: r4?.classifier?.calls ?? 0,
+            artifactUsed:
+              r4?.artifactUsed == null
+                ? null
+                : {
+                    kind: r4.artifactUsed.kind,
+                    label: r4.artifactUsed.label,
+                    sourceOperationId: r4.artifactUsed.sourceOperationId ?? null,
+                  },
+            artifactProduced:
+              r4?.artifact == null ? null : { kind: r4.artifact.kind, label: r4.artifact.label },
+          },
+        },
         ...(computation === null ? {} : { computation }),
         ...(recentReporting === null ? {} : { recentReporting }),
         /* R3 §6 — the stable part was answered; the current part is named, never filled in */

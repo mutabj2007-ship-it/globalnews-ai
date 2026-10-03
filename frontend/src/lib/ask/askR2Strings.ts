@@ -160,6 +160,17 @@ export interface AskR2Strings {
     /** L-3 — a send that never reached Ask (dropped connection): nothing about the service is claimed. */
     readonly networkFailed: string;
   };
+  /**
+   * CTO R4 — conceptual analysis and conversation work (a plan, a table…) answered by model
+   * reasoning: zero sources is normal here, never a failure. `builtOn` names the earlier work used.
+   */
+  readonly r4: {
+    readonly conceptualNoteTitle: string;
+    readonly conceptualNoteBody: string;
+    readonly workNoteTitle: string;
+    readonly workNoteBody: string;
+    readonly framework: string;
+  };
   /** ALPHA ENABLEMENT R1 (MC-070) — a continuation (“And Kenya?”) with nothing to continue; the place stays a chip. */
   readonly noPriorSubject: string;
   /**
@@ -380,6 +391,15 @@ const EN: AskR2Strings = {
   expiredNote: 'This saved answer has expired · shown as it was, not re-checked',
   continuationAnsweredAs: 'Answered as',
   continuationNote: 'continuing your earlier question for the new place',
+  r4: {
+    conceptualNoteTitle: 'Conceptual analysis · model reasoning',
+    conceptualNoteBody:
+      'An analysis built by reasoning, not a report of current events. No sources were needed, and nothing here is presented as a verified current fact.',
+    workNoteTitle: 'Conversation work · model reasoning',
+    workNoteBody:
+      'Built from the earlier answers in this conversation. It is reasoning, not current sourced data: check any figure before you rely on it.',
+    framework: 'Framework',
+  },
   r3: {
     continuationJobNote: 'continuing what you are working on in this conversation',
     decisionNoteTitle: 'Decision support · general reasoning',
@@ -660,6 +680,15 @@ const PL: AskR2Strings = {
   expiredNote: 'Ta zapisana odpowiedź wygasła · pokazana bez ponownego sprawdzenia',
   continuationAnsweredAs: 'Odpowiedź na pytanie',
   continuationNote: 'kontynuacja Twojego wcześniejszego pytania dla nowego miejsca',
+  r4: {
+    conceptualNoteTitle: 'Analiza koncepcyjna · rozumowanie modelu',
+    conceptualNoteBody:
+      'Analiza zbudowana przez rozumowanie, a nie relacja z bieżących wydarzeń. Źródła nie były potrzebne i nic tutaj nie jest przedstawiane jako zweryfikowany bieżący fakt.',
+    workNoteTitle: 'Praca w rozmowie · rozumowanie modelu',
+    workNoteBody:
+      'Zbudowane na wcześniejszych odpowiedziach w tej rozmowie. To rozumowanie, a nie bieżące dane ze źródeł: sprawdź każdą liczbę, zanim na niej polegasz.',
+    framework: 'Ramy',
+  },
   r3: {
     continuationJobNote: 'kontynuacja tego, nad czym pracujesz w tej rozmowie',
     decisionNoteTitle: 'Wsparcie decyzji · ogólne rozumowanie',

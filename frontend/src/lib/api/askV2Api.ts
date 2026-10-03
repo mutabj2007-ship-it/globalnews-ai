@@ -192,7 +192,13 @@ export interface AskR2Payload {
     /* R3 — DECISION_SUPPORT (weighed against an objective) and MIXED_REFERENCE_CURRENT (a
        partial answer: the stable part answered, the current part not verified) */
     readonly kind:
-      'ADVISORY' | 'MIXED_ADVISORY_CURRENT' | 'DECISION_SUPPORT' | 'MIXED_REFERENCE_CURRENT';
+      | 'ADVISORY'
+      | 'MIXED_ADVISORY_CURRENT'
+      | 'DECISION_SUPPORT'
+      | 'MIXED_REFERENCE_CURRENT'
+      /* CTO R4 — conceptual analysis / work on this conversation (plan, table…) by model reasoning */
+      | 'CONCEPTUAL_ANALYSIS'
+      | 'CONVERSATION_WORK';
     readonly currentEvidenceNeeded: readonly string[];
     readonly objective?: string;
     readonly currentPart?: 'UNAVAILABLE' | 'NO_EVIDENCE';
@@ -203,6 +209,17 @@ export interface AskR2Payload {
     readonly fromQuestion: string;
     /** R3 — the place was carried (CROSS_COUNTRY) or the reader's trip / decision (JOB_CONTEXT). */
     readonly kind?: 'CROSS_COUNTRY' | 'JOB_CONTEXT';
+  };
+  /**
+   * CTO R4 — the reusable structure this answer established (a framework, diagnosis, plan…): the
+   * conversation's memory for "that idea" / "which part". Model reasoning; never a source.
+   */
+  readonly artifact?: {
+    readonly kind: string;
+    readonly label: string;
+    readonly components: readonly string[];
+    readonly provenance: 'MODEL_REASONING';
+    readonly citable: false;
   };
   /** R3 §14 — the two-sided scope of a relationship question. */
   readonly relationship?: {

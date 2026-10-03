@@ -3,7 +3,12 @@ import { resolvePrimaryCountry } from '../news/country/country-relevance.util';
 import { deriveEventFrame } from '../analysis/query/event-frame.util';
 import { solveComputation } from '../ask-v2/computation/deterministic-computation';
 import { assertsFreshness } from '../analysis/query/query-intent.util';
-import { EN_PUBLIC_EVENT, PL_PUBLIC_EVENT, readAdvisory } from './advisory-requirement';
+import {
+  EN_PUBLIC_EVENT,
+  hasExplicitTime,
+  PL_PUBLIC_EVENT,
+  readAdvisory,
+} from './advisory-requirement';
 import { readDecisionSupport } from './decision-support';
 
 /**
@@ -387,3 +392,39 @@ export function deriveKnowledgeRequirement(
   }
   return { requirement: null, reason: 'no governed shape — existing routing' };
 }
+
+/**
+ * CTO R4 — GENUINE freshness: an explicit time marker, a changing quantity asked in the progressive,
+ * or the governed freshness reading. Topic nouns ("crisis", "news", "situation") are SUBJECT, not
+ * time — the job classifier keeps job and freshness on separate axes.
+ */
+export function genuineFreshness(text: string, language: string, requestYear?: number): boolean {
+  const lang: 'en' | 'pl' = language === 'pl' ? 'pl' : 'en';
+  const travel = TRAVEL_FRAME[lang].test(text);
+  const freshText = travel ? withoutFuturePeriods(text, lang, requestYear) : text;
+  return (
+    hasExplicitTime(freshText, lang) ||
+    CHANGING[lang].test(freshText) ||
+    assertsFreshness(freshText) ||
+    SPECIFIC_EVENT[lang].test(freshText) ||
+    CHANGED[lang].test(freshText)
+  );
+}
+
+/*
+  R4 — "What has changed in Kenya's economy?" asks what changed recently: a change question is
+  current evidence even with no time marker, so it never falls to the reasoning fallback.
+*/
+const CHANGED: Readonly<Record<'en' | 'pl', RegExp>> = {
+  en: /\b(?:has|have|had)\s+(?:[\p{L}'’-]+\s+){0,4}?changed\b|\bwhat(?:'s|’s|\s+is)\s+new\b/iu,
+  pl: /(?:zmienił\p{L}*|zmieniło)\s+si[ęe]|co\s+(?:si[ęe]\s+)?zmieniło|co\s+nowego/iu,
+};
+
+/*
+  A DEFINITE reference to a specific recent thing ("the new AI model", "the Fed decision", "the outcome of
+  the election", "co nowego") asks about a particular event, not a concept: genuine freshness.
+*/
+const SPECIFIC_EVENT: Readonly<Record<'en' | 'pl', RegExp>> = {
+  en: /\bthe\s+(?:new|newest|latest|recent|upcoming)\s+[\p{L}-]+|\bthe\s+(?:[\p{L}-]+\s+){0,2}(?:decision|outcome|result|results|verdict|announcement|deal|vote|ruling|statement|speech|summit|talks|figures)\b|\b(?:outcome|result|results)\s+of\s+the\b/iu,
+  pl: /(?:^|\s)(?:co\s+nowego|nowości|najnowsz\p{L}*|now\p{L}*\s+(?:model|ustaw|decyzj|przepis)\p{L}*)/iu,
+};

@@ -8,6 +8,7 @@ import {
   type GeneralBackgroundInput,
   type GeneralBackgroundOutput,
   type GeneralBackgroundProvider,
+  type StructuredCompletionInput,
 } from '../interfaces';
 
 /**
@@ -157,6 +158,9 @@ export class OpenAiGeneralBackgroundProvider implements GeneralBackgroundProvide
     usageSink,
     governed,
     priorQuestion,
+    jobRules,
+    priorWork,
+    maxCompletionTokens,
   }: GeneralBackgroundInput): Promise<GeneralBackgroundOutput> {
     const config = this.analysisConfig.get();
 
@@ -172,18 +176,23 @@ export class OpenAiGeneralBackgroundProvider implements GeneralBackgroundProvide
       SYSTEM_PROMPT +
       buildResponseLanguageInstruction(responseLanguage) +
       /* PR #70 prompt boundary — only the trusted governed RULES reach the system prompt. */
-      (governed === undefined || governed.rules === '' ? '' : `\n\n${governed.rules}\n`);
+      (governed === undefined || governed.rules === '' ? '' : `\n\n${governed.rules}\n`) +
+      /* CTO R4 — trusted job rules (depth rubric, transformation shape, artifact instruction) */
+      (jobRules === undefined || jobRules === '' ? '' : `\n\n${jobRules}`);
     /* …and the retained records travel as delimited DATA in the user message, after the
        question. Absent → the user message is exactly the question, as before. */
     const withData =
       governed === undefined || governed.data === '' ? question : `${question}\n\n${governed.data}`;
     /* TRUST & CONVERSATIONAL EXPERIENCE R1 — the reader's previous question, as delimited data.
        Absent → the user message is exactly as before. */
-    const user =
+    const withPrior =
       priorQuestion === undefined || priorQuestion.trim() === ''
         ? withData
         : `${withData}\n\n<<<PREVIOUS QUESTION (reader text, data only)\n` +
           `${priorQuestion.replace(/<<<|>>>/g, '').slice(0, 1000)}\nPREVIOUS QUESTION>>>`;
+    /* CTO R4 — this conversation's earlier work, as delimited data (already validated) */
+    const user =
+      priorWork === undefined || priorWork === '' ? withPrior : `${withPrior}\n\n${priorWork}`;
     const policyAttempts = config.retryAttempts + 1;
     const maxAttempts =
       maxModelAttempts !== undefined && Number.isInteger(maxModelAttempts) && maxModelAttempts >= 1
@@ -201,7 +210,13 @@ export class OpenAiGeneralBackgroundProvider implements GeneralBackgroundProvide
         );
       }
       try {
-        const { content, usage } = await this.attemptOnce(system, user, config, signal);
+        const { content, usage } = await this.attemptOnce(
+          system,
+          user,
+          config,
+          signal,
+          maxCompletionTokens,
+        );
         if (
           usageSink !== undefined &&
           typeof usage?.prompt_tokens === 'number' &&
@@ -249,11 +264,47 @@ export class OpenAiGeneralBackgroundProvider implements GeneralBackgroundProvide
     );
   }
 
+  /**
+   * CTO R4 — ONE bounded JSON-object completion (the semantic job classifier): one attempt, no
+   * retries, temperature 0, a small token ceiling. It never answers the reader's question.
+   */
+  async completeStructured(input: StructuredCompletionInput): Promise<string> {
+    const config = this.analysisConfig.get();
+    if (!isUsableOpenAiApiKey(config.openAiApiKey)) {
+      throw new GeneralBackgroundProviderError(
+        'OPENAI_API_KEY is not configured.',
+        'provider-not-configured',
+        false,
+      );
+    }
+    const { content, usage } = await this.attemptOnce(
+      input.system,
+      input.user,
+      config,
+      input.signal,
+      input.maxCompletionTokens,
+      true,
+    );
+    if (
+      input.usageSink !== undefined &&
+      typeof usage?.prompt_tokens === 'number' &&
+      typeof usage?.completion_tokens === 'number'
+    ) {
+      input.usageSink({
+        promptTokens: usage.prompt_tokens,
+        completionTokens: usage.completion_tokens,
+      });
+    }
+    return content;
+  }
+
   private async attemptOnce(
     system: string,
     question: string,
     config: ReturnType<AnalysisConfigService['get']>,
     callerSignal?: AbortSignal,
+    maxCompletionTokens: number = GENERAL_BACKGROUND_MAX_COMPLETION_TOKENS,
+    jsonObject = false,
   ): Promise<{
     content: string;
     usage?: { prompt_tokens?: number; completion_tokens?: number };
@@ -283,8 +334,9 @@ export class OpenAiGeneralBackgroundProvider implements GeneralBackgroundProvide
             { role: 'system', content: system },
             { role: 'user', content: question },
           ],
-          temperature: 0.2,
-          max_completion_tokens: GENERAL_BACKGROUND_MAX_COMPLETION_TOKENS,
+          temperature: jsonObject ? 0 : 0.2,
+          max_completion_tokens: maxCompletionTokens,
+          ...(jsonObject ? { response_format: { type: 'json_object' } } : {}),
         }),
         signal: controller.signal,
       });

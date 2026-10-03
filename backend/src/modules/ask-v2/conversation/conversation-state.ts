@@ -11,6 +11,7 @@ import {
   type KnowledgeRequirement,
 } from '../../ask-router/knowledge-requirement';
 import { readDecisionSupport } from '../../ask-router/decision-support';
+import { readTemporalRoles, readTransformation } from '../../ask-router/user-job';
 import {
   readBilateralRelationship,
   relationKindsIn,
@@ -469,7 +470,10 @@ function readTurn(question: string, lang: 'en' | 'pl'): TurnFeatures {
     job,
     requirement,
     relationship: readBilateralRelationship(question, lang),
-    duration: readDuration(question, lang),
+    /* CTO R4 — a plan's horizon ("90-day plan") is not a trip length or a conversation constraint */
+    duration: readTemporalRoles(question, lang).some((t) => t.role === 'PLAN_HORIZON')
+      ? null
+      : readDuration(question, lang),
     interests: readInterests(question, lang),
     options: readOptions(question, lang, isCountry),
     objective: readDecisionSupport(question, lang)?.objective ?? null,
@@ -936,7 +940,11 @@ function step(
   const applied = applyTurn(prev, question, f);
   const continues = !applied.trace.reset && applied.trace.carried.includes('job');
   const constraintOnly =
-    isConstraintStatement(f) && f.countries.length === 0 && !isQuestion(question, lang);
+    isConstraintStatement(f) &&
+    f.countries.length === 0 &&
+    !isQuestion(question, lang) &&
+    /* CTO R4 — an imperative work request ("Turn that into a 90-day plan.") is never merely noted */
+    readTransformation(question, lang) === null;
   const from = prev.anchorQuestion ?? earlierNewestFirst[0]?.question ?? question;
 
   const decide = (): {

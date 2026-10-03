@@ -51,6 +51,7 @@ import { askRequestContext } from './ask-request-context';
 import { isReusableStoredPayload } from './stored-result-reuse';
 import { inheritedConversationCountry, PLACE_LOOKBACK } from './conversation/conversation-place';
 import { readConversationalTurn, type ConversationalTurn } from './conversation/conversation-state';
+import { validateArtifact, type PriorArtifact } from './conversation/conversation-artifact';
 import { isSubjectFollowUp } from '../analysis/anchor/conversation-subject.util';
 import { isAnaphoricFollowUp } from '../analysis/anchor/event-anchor.util';
 import { ComputeMeterService } from '../compute-controls/compute-meter.service';
@@ -160,6 +161,40 @@ function conversationOf(turn: ConversationalTurn | null): Pick<AskRequest, 'conv
           trace: t,
         },
       };
+}
+
+/** CTO R4 — how far back the conversation's earlier WORK is looked for (the most recent wins). */
+const ARTIFACT_LOOKBACK = 3;
+
+/**
+ * CTO R4 — the most recent earlier work in this owner-verified thread: a validated
+ * ConversationArtifact read from a durable stored answer (never regenerated, never client input).
+ * `beforeSequence` limits it to turns before the one being executed, so quote and execute agree.
+ */
+async function priorArtifactIn(
+  tx: Tx,
+  threadId: string,
+  beforeSequence?: number,
+): Promise<PriorArtifact | undefined> {
+  const turns = await tx.askTurn.findMany({
+    where: {
+      threadId,
+      ...(beforeSequence === undefined ? {} : { sequence: { lt: beforeSequence } }),
+    },
+    orderBy: { sequence: 'desc' },
+    take: ARTIFACT_LOOKBACK,
+    select: {
+      operationId: true,
+      operation: { select: { storedResult: { select: { payload: true } } } },
+    },
+  });
+  for (const t of turns) {
+    const payload = t.operation?.storedResult?.payload as
+      Record<string, unknown> | null | undefined;
+    const artifact = validateArtifact(payload?.artifact);
+    if (artifact !== null) return { ...artifact, sourceOperationId: t.operationId };
+  }
+  return undefined;
 }
 
 /** A context the service itself inherited from the conversation (never a surface's). */
@@ -732,6 +767,14 @@ export class AskV2Service {
         ? readConversationalTurn(question, input.language, await this.earlierQuestions(p, threadId))
         : null;
     const composed = conversational?.composition ?? null;
+    /* CTO R4 — this conversation's earlier work (a context-bearing turn is about its own context) */
+    const priorArtifact =
+      surface === undefined
+        ? await this.atomic(async (tx) => {
+            await this.thread(tx, p, threadId);
+            return priorArtifactIn(tx, threadId);
+          })
+        : undefined;
     const context =
       surface ??
       (composed === null
@@ -752,6 +795,7 @@ export class AskV2Service {
             },
           }),
       ...conversationOf(conversational),
+      ...(priorArtifact === undefined ? {} : { priorArtifact }),
     };
     const owner = ownerOf(p);
     /* R2B — a context-bearing turn appends its SERVER-RESOLVED identity; a context-free turn
@@ -1021,6 +1065,11 @@ export class AskV2Service {
           : null;
       const composed =
         persisted?.context === undefined ? (conversational?.composition ?? null) : null;
+      /* CTO R4 — the same earlier work the quote read: only turns before this one */
+      const priorArtifact =
+        persisted?.context === undefined || isConversationContext(persisted.context)
+          ? await priorArtifactIn(tx, turn.threadId, turn.sequence)
+          : undefined;
       const request = {
         question: composed?.effectiveQuestion ?? turn.question,
         language: turn.language,
@@ -1036,6 +1085,7 @@ export class AskV2Service {
               },
             }),
         ...conversationOf(conversational),
+        ...(priorArtifact === undefined ? {} : { priorArtifact }),
       } as AskRequest;
       // Revalidate pending R1 operations too. Stored reuse above never calls the adapter.
       try {
