@@ -141,8 +141,64 @@ export interface SemanticTurnIR {
     readonly path: 'DETERMINISTIC' | 'SEMANTIC' | 'FALLBACK';
     readonly needsSemanticResolution: boolean;
     readonly conflicts: readonly IrConflict[];
+    /**
+     * HARDENING §2 — how complete the DETERMINISTIC interpretation is (before any interpreter):
+     *   COMPLETE     every routing-material field is established by structure
+     *   PARTIAL      no reader disagrees, but a routing-material field is not established
+     *   AMBIGUOUS    the words admit two readings (a time anchor + a present marker, a weak
+     *                present-era claim, a reference with no target)
+     *   CONFLICTING  readers disagree (stable shape vs explicit present; roles)
+     *   UNRESOLVED   no governed form and no currentness evidence: the job itself is unknown
+     * "No reader matched" never equals COMPLETE.
+     */
+    readonly completeness: IrCompleteness;
+    /** the routing-material fields the deterministic interpretation could not establish */
+    readonly unresolvedFields: readonly IrMaterialField[];
   };
 }
+
+export type IrCompleteness = 'COMPLETE' | 'PARTIAL' | 'AMBIGUOUS' | 'CONFLICTING' | 'UNRESOLVED';
+export const IR_COMPLETENESS: readonly IrCompleteness[] = [
+  'COMPLETE',
+  'PARTIAL',
+  'AMBIGUOUS',
+  'CONFLICTING',
+  'UNRESOLVED',
+];
+export type IrMaterialField =
+  | 'JOB'
+  | 'FRESHNESS'
+  | 'EVIDENCE'
+  | 'ACTOR_ROLES'
+  | 'RELATIONSHIP'
+  | 'MIXED'
+  | 'PRIOR_WORK_REFERENCE'
+  | 'DECISION_OBJECTIVE';
+export const IR_MATERIAL_FIELDS: readonly IrMaterialField[] = [
+  'JOB',
+  'FRESHNESS',
+  'EVIDENCE',
+  'ACTOR_ROLES',
+  'RELATIONSHIP',
+  'MIXED',
+  'PRIOR_WORK_REFERENCE',
+  'DECISION_OBJECTIVE',
+];
+/**
+ * Fields the ONE bounded interpreter can establish from the turn and the bounded state. The
+ * decision objective cannot be: it comes only from the reader's own words, which the interpreter
+ * never receives beyond the bounded state — when it is missing, the governed outcome is the
+ * focused "best for what?" clarification, at zero compute.
+ */
+export const INTERPRETABLE_FIELDS: ReadonlySet<IrMaterialField> = new Set([
+  'JOB',
+  'FRESHNESS',
+  'EVIDENCE',
+  'ACTOR_ROLES',
+  'RELATIONSHIP',
+  'MIXED',
+  'PRIOR_WORK_REFERENCE',
+]);
 
 const FRESHNESS: readonly IrFreshness[] = ['NONE', 'CURRENT', 'MIXED'];
 const EVIDENCE: readonly IrEvidence[] = ['NONE', 'CURRENT_REPORTING', 'OFFICIAL', 'DETERMINISTIC'];
@@ -157,6 +213,33 @@ const ROLES: readonly IrEntityRole[] = [
   'COMPARISON_MEMBER',
   'SCOPE',
 ];
+
+/** Does a deterministic interpretation need the ONE bounded semantic call? */
+export function shouldEscalate(
+  conflicts: readonly IrConflict[],
+  unresolvedFields: readonly IrMaterialField[],
+): boolean {
+  return conflicts.length > 0 || unresolvedFields.some((f) => INTERPRETABLE_FIELDS.has(f));
+}
+
+/** The completeness of a deterministic interpretation, from its conflicts and gaps. */
+export function completenessOf(
+  conflicts: readonly IrConflict[],
+  unresolvedFields: readonly IrMaterialField[],
+): IrCompleteness {
+  if (conflicts.includes('JOB_UNRESOLVED')) return 'UNRESOLVED';
+  if (
+    conflicts.some(
+      (c) =>
+        c === 'STABLE_SHAPE_WITH_CURRENT_MARKER' ||
+        c === 'GEO_ROLES_UNRESOLVED' ||
+        c === 'RELATION_ROLES_UNCLEAR',
+    )
+  )
+    return 'CONFLICTING';
+  if (conflicts.length > 0) return 'AMBIGUOUS';
+  return unresolvedFields.length > 0 ? 'PARTIAL' : 'COMPLETE';
+}
 
 /**
  * Validate an IR against its closed schema and its invariants. Returns every violation (empty =
@@ -200,9 +283,13 @@ export function validateSemanticTurnIR(ir: SemanticTurnIR, text: string): string
       (e.iso3 === null || findCountryByIso3(e.iso3) === undefined)
     )
       v.push(`ENTITY_IDENTITY:${e.id}`);
-    /* §12 — a city is never an actor */
+    /* §12 — a city is never an actor; an unresolved PLACE candidate never either (§9) */
     if (e.type === 'CITY' && (e.role === 'ACTOR' || e.role === 'COUNTERPART'))
       v.push(`CITY_AS_ACTOR:${e.id}`);
+    if (e.type === 'PLACE' && (e.role === 'ACTOR' || e.role === 'COUNTERPART'))
+      v.push(`UNRESOLVED_PLACE_AS_ACTOR:${e.id}`);
+    if (e.type === 'PLACE' && (e.iso3 !== null || e.parentIso3 !== null))
+      v.push(`UNRESOLVED_PLACE_WITH_IDENTITY:${e.id}`);
   }
   for (const r of ir.relationships) {
     if (!ids.has(r.actorA) || !ids.has(r.actorB)) v.push('RELATION_ACTOR_UNKNOWN');
@@ -210,6 +297,7 @@ export function validateSemanticTurnIR(ir: SemanticTurnIR, text: string): string
     const a = ir.entities.find((e) => e.id === r.actorA);
     const b = ir.entities.find((e) => e.id === r.actorB);
     if (a?.type === 'CITY' || b?.type === 'CITY') v.push('RELATION_CITY_ACTOR');
+    if (a?.type === 'PLACE' || b?.type === 'PLACE') v.push('RELATION_UNRESOLVED_PLACE_ACTOR');
     if (r.object !== null && (r.object === r.actorA || r.object === r.actorB))
       v.push('OBJECT_REPLACES_ACTOR');
     if (r.venue !== null && (r.venue === r.actorA || r.venue === r.actorB))
@@ -217,12 +305,28 @@ export function validateSemanticTurnIR(ir: SemanticTurnIR, text: string): string
   }
   for (const c of ir.resolution.conflicts)
     if (!IR_CONFLICTS.includes(c)) v.push(`CONFLICT_VOCABULARY:${c}`);
-  /* a conflict needs the bounded interpreter only while the IR is still deterministic */
+  /* HARDENING §3 — the bounded interpreter is needed, while the IR is still deterministic, for a
+     conflict OR for an interpretable routing-material field left unestablished */
+  const escalate = shouldEscalate(ir.resolution.conflicts, ir.resolution.unresolvedFields);
   if (
-    ir.resolution.needsSemanticResolution !==
-    (ir.resolution.path === 'DETERMINISTIC' && ir.resolution.conflicts.length > 0)
+    ir.resolution.needsSemanticResolution !== (ir.resolution.path === 'DETERMINISTIC' && escalate)
   )
     v.push('RESOLUTION_FLAG');
+  if (!IR_COMPLETENESS.includes(ir.resolution.completeness)) v.push('COMPLETENESS_VOCABULARY');
+  for (const f of ir.resolution.unresolvedFields)
+    if (!IR_MATERIAL_FIELDS.includes(f)) v.push(`FIELD_VOCABULARY:${f}`);
+  /* COMPLETE means nothing is unresolved and nothing conflicts — never "no reader matched" */
+  if (
+    ir.resolution.completeness === 'COMPLETE' &&
+    (ir.resolution.conflicts.length > 0 || ir.resolution.unresolvedFields.length > 0)
+  )
+    v.push('COMPLETE_WITH_GAPS');
+  if (
+    ir.resolution.completeness !== 'COMPLETE' &&
+    ir.resolution.conflicts.length === 0 &&
+    ir.resolution.unresolvedFields.length === 0
+  )
+    v.push('INCOMPLETE_WITHOUT_REASON');
   if (
     ir.objective !== null &&
     (ir.objective.criterion.trim().length === 0 || ir.objective.sourceTurn < 0)

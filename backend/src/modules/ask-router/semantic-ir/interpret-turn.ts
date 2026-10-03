@@ -3,6 +3,7 @@ import {
   clauseFreshSignal,
   clauseStableShapeSignal,
   deriveKnowledgeRequirement,
+  freshnessSources,
   genuineFreshness,
   inProgressSignal,
   isFuturePeriod,
@@ -10,8 +11,10 @@ import {
   type KnowledgeRequirementReading,
 } from '../knowledge-requirement';
 import { isBroadGlobalHeadlinesQuestion } from '../../analysis/query/broad-global-headlines.util';
+import { readInstitutionalStatusQuestion } from '../../news/relevance/governed-institutions';
 import type { BilateralRelationship } from '../bilateral-relationship';
 import {
+  readTemporalRoles,
   readUserJob,
   referencesPriorWork,
   REASONING_JOBS,
@@ -33,11 +36,14 @@ import { readEntityCandidates } from './entities';
 import { assignRoles, toBilateralRelationship, type RoleAssignment } from './roles';
 import { readChoiceQuestion, readObjectiveState, type ObjectiveState } from './objective-state';
 import {
+  completenessOf,
   SEMANTIC_IR_VERSION,
+  shouldEscalate,
   type IrClause,
   type IrConflict,
   type IrEvidence,
   type IrFreshness,
+  type IrMaterialField,
   type IrReferences,
   type IrTemporalRole,
   type SemanticTurnIR,
@@ -116,6 +122,11 @@ export interface RoutingDecision {
   readonly temporalSemantics: TemporalSemantics;
   /** when the IR has a relationship whose actors the landed typed geography missed */
   readonly typedGeographyOverride: string | null;
+  /**
+   * HARDENING §5 — the interpretation was required but no valid verdict exists, and the safe
+   * outcome is not stable reasoning: ask the reader one focused question (zero compute).
+   */
+  readonly semanticClarification: boolean;
 }
 
 /* CTO R4 third pass — the reader asks for the REPORTING itself (an archive / coverage request) */
@@ -155,6 +166,13 @@ const PAST_CAUSAL_FRAME: Readonly<Record<'en' | 'pl', RegExp>> = {
 };
 
 const PRESENT_STRONG = (m: CurrentnessMarker) => m.strength === 'STRONG';
+/* a clause that asks something (an unclassified QUESTION is routing-material; a modifier is not) */
+const INTERROGATIVE_START: Readonly<Record<'en' | 'pl', RegExp>> = {
+  en: /^(?:what|which|who|whom|whose|how|why|where|when|whether|is|are|was|were|do|does|did|can|could|will|would|should|has|have|had)\b|\?\s*$/i,
+  pl: plTolerant(
+    /^(?:czy|co|jak\p{L}*|kto|kiedy|gdzie|dlaczego|czemu|któr\p{L}*|ile|po\s+co)(?![\p{L}])|\?\s*$/iu,
+  ),
+};
 const CURRENT_REQUIREMENTS = new Set([
   'EVENT_DISCOVERY',
   'OFFICIAL_REFERENCE',
@@ -252,8 +270,9 @@ function resolvedRoles(roles: RoleAssignment, r: SemanticResolution | undefined)
   const byId = new Map(roles.entities.map((e) => [e.id, e]));
   const a = byId.get(r.relation.actorA);
   const b = byId.get(r.relation.actorB);
-  if (a === undefined || b === undefined || a.type === 'CITY' || b.type === 'CITY' || a.id === b.id)
-    return roles;
+  /* the deterministic entity constraints cannot be overridden: only resolved states act */
+  const canAct = (e: { type: string }) => e.type === 'COUNTRY' || e.type === 'TERRITORY';
+  if (a === undefined || b === undefined || !canAct(a) || !canAct(b) || a.id === b.id) return roles;
   return {
     ...roles,
     entities: roles.entities.map((e) =>
@@ -282,6 +301,7 @@ function resolvedRoles(roles: RoleAssignment, r: SemanticResolution | undefined)
       basis: 'SEMANTIC',
     },
     conflicts: [],
+    rolesIncomplete: false,
   };
 }
 
@@ -361,17 +381,35 @@ export function interpretTurn(input: TurnInterpretationInput): {
     input.priorQuestion !== undefined;
 
   /* ══ 2 · RESOLUTION (one place, fixed precedence) ═══════════════════════════════════════ */
+  /*
+    HARDENING §12 — ONE clause holding BOTH a completed past anchor and a present marker, with no
+    since-to-now / comparison structure joining them ("Tell me what happened in 1997 today"), is
+    AMBIGUOUS: token precedence must not decide it. The interpreter decides; without it the
+    governed default is the completed past (never news by accident).
+  */
+  const pastPresentClause = clauses.some((c) => {
+    const t = readTemporalSemantics(c.text, lang, year);
+    const past = t.spans.some((s) => s.role === 'PAST_COMPLETED' || s.role === 'HISTORICAL_PERIOD');
+    const present = t.spans.some(
+      (s) =>
+        s.role === 'CURRENT_STATE' || s.role === 'RECENT_PERIOD' || s.role === 'REPORTING_WINDOW',
+    );
+    return past && present && t.currentness === 'CURRENT';
+  });
+  if (pastPresentClause) conflicts.push('TEMPORAL_AMBIGUOUS');
+  const temporalHistoryDefault = pastPresentClause && resolution?.needsCurrentEvidence !== true;
   const historicalOverride =
-    statedYears !== null &&
-    statedYears.historical.length > 0 &&
-    !statedYears.current &&
-    statedYears.future.length === 0 &&
-    !reportRequest &&
-    !(
-      ownKnowledge.requirement === 'CURRENT_REPORTING' &&
-      ownKnowledge.reason === 'a freshness marker'
-    ) &&
-    ownKnowledge.requirement !== 'MIXED_REFERENCE_CURRENT';
+    (statedYears !== null &&
+      statedYears.historical.length > 0 &&
+      !statedYears.current &&
+      statedYears.future.length === 0 &&
+      !reportRequest &&
+      !(
+        ownKnowledge.requirement === 'CURRENT_REPORTING' &&
+        ownKnowledge.reason === 'a freshness marker'
+      ) &&
+      ownKnowledge.requirement !== 'MIXED_REFERENCE_CURRENT') ||
+    temporalHistoryDefault;
   /* a follow-up continues the KIND of question it follows (place background / advice) */
   const priorKnowledge =
     input.priorQuestion === undefined
@@ -423,16 +461,61 @@ export function interpretTurn(input: TurnInterpretationInput): {
       reason: 'semantic IR: a stable / historical component plus a current component',
       currentClauses: currentClauses.map((c) => c.text),
     };
+  /*
+    HARDENING §3 — a CURRENT clause next to an interrogative clause that NO reader could classify:
+    whether the turn is MIXED is not established. The interpreter decides; without it the governed
+    default keeps BOTH components (MIXED), so a current failure can never erase the other half.
+  */
+  const mixedUnresolved =
+    clauses.length >= 2 &&
+    currentClauses.length > 0 &&
+    stableOrHistoricalClauses.length === 0 &&
+    clauses.some((c) => c.kind === 'OTHER' && INTERROGATIVE_START[lang].test(c.text)) &&
+    !advisoryFamily &&
+    !referencesWork &&
+    knowledge.requirement !== 'MIXED_REFERENCE_CURRENT' &&
+    knowledge.requirement !== 'COMPUTATION';
+  if (mixedUnresolved && resolution?.path === 'FALLBACK')
+    knowledge = {
+      requirement: 'MIXED_REFERENCE_CURRENT',
+      reason:
+        'semantic IR (governed fallback): an unclassified component kept beside the current one',
+      currentClauses: currentClauses.map((c) => c.text),
+    };
+  /* the completed past is the default reading of an ambiguous past + present clause */
+  if (
+    temporalHistoryDefault &&
+    (knowledge.requirement === null || knowledge.requirement === 'CURRENT_REPORTING')
+  )
+    knowledge = {
+      requirement: namedPlace ? 'PLACE_REFERENCE' : 'STABLE_REFERENCE',
+      reason: 'semantic IR: a completed past anchor (the present marker is ambiguous)',
+      frame: 'HISTORY',
+    };
 
-  /* §8 EXPLICIT CURRENTNESS OUTRANKS QUESTION SHAPE */
+  /* HARDENING §11 — a current OFFICE ("the president of Turkey") or a governed institution's
+     current STATUS ("the NBP policy rate") is current by nature: governed evidence the IR owns,
+     never a second routing authority in the envelope composition */
+  const currentOffice =
+    reading.shape.officeConstruction === true ||
+    readInstitutionalStatusQuestion(reading.originalQuestion) !== null;
+
+  /* §8 EXPLICIT CURRENTNESS OUTRANKS QUESTION SHAPE (and so does a current office / status) */
   const shapeSaysStable =
     knowledge.requirement === 'STABLE_REFERENCE' || knowledge.requirement === 'PLACE_REFERENCE';
   const shapeSaysNothing =
     knowledge.requirement === null ||
     (knowledge.requirement === 'CURRENT_REPORTING' && knowledge.reason === 'a named place');
   let explicitCurrent = false;
-  if (strongCurrent && !referencesWork && (shapeSaysStable || shapeSaysNothing)) {
-    if (shapeSaysStable) conflicts.push('STABLE_SHAPE_WITH_CURRENT_MARKER');
+  if (
+    (strongCurrent || currentOffice) &&
+    !referencesWork &&
+    !temporalHistoryDefault &&
+    !pastPresentClause &&
+    (shapeSaysStable || shapeSaysNothing)
+  ) {
+    /* a governed current office / status is a FORM, not a conflict; a bare marker vs a shape is */
+    if (shapeSaysStable && !currentOffice) conflicts.push('STABLE_SHAPE_WITH_CURRENT_MARKER');
     const confirmed = resolution?.needsCurrentEvidence ?? true;
     if (confirmed) {
       explicitCurrent = true;
@@ -471,11 +554,59 @@ export function interpretTurn(input: TurnInterpretationInput): {
     !strongCurrent &&
     reading.statedTime === undefined &&
     !inProgressSignal(readerText, lang);
-  let publicEvent = publicEventRaw;
+  let publicEvent = publicEventRaw && !temporalHistoryDefault;
   if (pastCausal && publicEventRaw) {
     conflicts.push('TEMPORAL_AMBIGUOUS');
     publicEvent = resolution?.needsCurrentEvidence === true;
   }
+
+  /*
+    HARDENING §2–§4 — FRESHNESS ON A LEXICAL BASIS ONLY. The turn would be routed to current
+    reporting, but the ONLY thing that says "current" is a definite reference to a particular event
+    or state ("the outcome", "the deal", "the situation", "the war") — no time, no status / present
+    marker, no place, no inherited scope, no earlier subject, no article, no request for news, no
+    progressive, no governed current form. That is not established freshness: an unfamiliar form
+    with routing consequences, so it escalates. The interpreter decides; if it cannot, the governed
+    outcome is a focused clarification — never news by accident, never a timeless assertion.
+  */
+  const fsrc = freshnessSources(readerText, reading.sourceLanguage, year);
+  const strongFreshnessBasis =
+    currentOffice ||
+    strongCurrent ||
+    fsrc.explicit ||
+    reading.statedTime !== undefined ||
+    readTemporalRoles(readerText, lang, year).some((t) => t.role === 'REPORTING_WINDOW') ||
+    temporalSemantics.currentness === 'CURRENT' ||
+    temporalSemantics.currentness === 'HISTORICAL_AND_CURRENT' ||
+    namedPlace ||
+    /* a place Stage A resolved (an alias the landed reader missed: "eastern DRC") locates the
+       instance — "the situation in eastern DRC" is a particular, current situation */
+    candidates.length > 0 ||
+    (input.eligibleInheritedScope && input.mapOrStoryContext) ||
+    input.priorQuestion !== undefined ||
+    input.hasResolvedArticleAnchor ||
+    reportRequest ||
+    inProgressSignal(readerText, lang) ||
+    RELATION_PRESENT_STATE[lang].test(readerText) ||
+    (knowledge.requirement !== null && CURRENT_REQUIREMENTS.has(knowledge.requirement));
+  const freshnessWeak =
+    !temporalHistoryDefault &&
+    !referencesWork &&
+    !strongFreshnessBasis &&
+    (fsrc.lexicalEventOnly || publicEventRaw) &&
+    (knowledge.requirement === null || knowledge.requirement === 'CURRENT_REPORTING');
+  /* the interpreter said: not current → a stable reading (the place, when one is named) */
+  const notCurrentByInterpreter =
+    freshnessWeak && resolution?.path === 'SEMANTIC' && resolution.needsCurrentEvidence === false;
+  if (notCurrentByInterpreter) {
+    knowledge = {
+      requirement: namedPlace ? 'PLACE_REFERENCE' : 'STABLE_REFERENCE',
+      reason: 'semantic IR: the bounded interpreter found no current-state request',
+    };
+    publicEvent = false;
+  }
+  /* no interpreter verdict → a focused clarification (governed fallback) */
+  const semanticClarification = freshnessWeak && resolution?.path === 'FALLBACK';
 
   /* the decision family (§18): a choice resolved against the bounded state */
   if (choiceQuestion && !advisoryFamily) {
@@ -547,7 +678,11 @@ export function interpretTurn(input: TurnInterpretationInput): {
 
   /* §11–§14 — the relationship from Stage A identities + Stage B roles (never a venue / object) */
   const relationshipAny = advisory ? null : toBilateralRelationship(roles);
-  const fresh = genuineFreshness(readerText, reading.sourceLanguage, year) || explicitCurrent;
+  const fresh =
+    (genuineFreshness(readerText, reading.sourceLanguage, year) &&
+      !temporalHistoryDefault &&
+      !notCurrentByInterpreter) ||
+    explicitCurrent;
   const formJob0 = readUserJob(readerText, reading.sourceLanguage, {
     requirement: knowledge.requirement,
     requirementReason: knowledge.reason,
@@ -588,7 +723,12 @@ export function interpretTurn(input: TurnInterpretationInput): {
     (fresh ||
       currentStated ||
       formJob.temporal.some((t) => t.role === 'REPORTING_WINDOW') ||
-      RELATION_PRESENT_STATE[lang].test(readerText));
+      RELATION_PRESENT_STATE[lang].test(readerText) ||
+      /* hardening §12 — a CURRENT clause ("…and whether it is still active") makes the relation
+         current even when another clause is historical (the turn is then MIXED) */
+      (currentClauses.length > 0 && !temporalHistoryDefault && !notCurrentByInterpreter) ||
+      /* an escalated turn: the interpreter's currentness verdict decides */
+      (resolution?.path === 'SEMANTIC' && resolution.needsCurrentEvidence === true));
   const relationshipReasoning =
     relationshipAny !== null &&
     !relationCurrent &&
@@ -644,6 +784,7 @@ export function interpretTurn(input: TurnInterpretationInput): {
     (knowledge.requirement === 'CURRENT_REPORTING' && knowledge.reason !== 'a named place') ||
     (knowledge.requirement !== null && CURRENT_REQUIREMENTS.has(knowledge.requirement));
   const currentnessEvidence: string[] = [
+    ...(currentOffice ? ['CURRENT_OFFICE_OR_STATUS'] : []),
     ...(fresh ? ['EXPLICIT_TIME_OR_CHANGE'] : []),
     ...(explicitCurrent ? ['EXPLICIT_CURRENTNESS_MARKER'] : []),
     ...(currentStated ? ['STATED_CURRENT_PERIOD'] : []),
@@ -738,8 +879,13 @@ export function interpretTurn(input: TurnInterpretationInput): {
       : null;
 
   /* ══ 3 · THE IR ══════════════════════════════════════════════════════════════════════════ */
+  /* an unresolved job the interpreter found CURRENT is planned as current reporting */
   const willPlanNews =
-    !stableOrComputed && !placeReference && !advisory && !reasoning && !unresolvedEligible;
+    !stableOrComputed &&
+    !placeReference &&
+    !advisory &&
+    !reasoning &&
+    !(unresolvedEligible && semanticJob?.needsCurrentEvidence !== true);
   /* advice / a decision with a time-anchored part keeps BOTH components (the current part is named
      as needing current sourced evidence) */
   const mixed =
@@ -747,13 +893,15 @@ export function interpretTurn(input: TurnInterpretationInput): {
     knowledge.requirement === 'MIXED_ADVISORY_CURRENT' ||
     (advisory &&
       (('currentClauses' in knowledge ? knowledge.currentClauses : undefined)?.length ?? 0) > 0);
-  const freshness: IrFreshness = mixed
-    ? 'MIXED'
-    : willPlanNews && job.freshness !== 'NONE'
-      ? 'CURRENT'
-      : willPlanNews && (governedCurrent || currentnessEvidence.length > 0)
+  const freshness: IrFreshness = semanticClarification
+    ? 'NONE'
+    : mixed
+      ? 'MIXED'
+      : willPlanNews && job.freshness !== 'NONE'
         ? 'CURRENT'
-        : 'NONE';
+        : willPlanNews && (governedCurrent || currentnessEvidence.length > 0)
+          ? 'CURRENT'
+          : 'NONE';
   const evidence: IrEvidence =
     freshness === 'NONE'
       ? job.evidence === 'DETERMINISTIC'
@@ -780,6 +928,22 @@ export function interpretTurn(input: TurnInterpretationInput): {
     confidence: conflicts.includes('REFERENCE_UNRESOLVED') ? 'LOW' : 'HIGH',
   };
   const uniqueConflicts = [...new Set(conflicts)];
+  /*
+    HARDENING §2–§3 — the routing-material fields the deterministic reading did NOT establish.
+    "No reader matched" is never COMPLETE: a field with routing consequences that only a lexical
+    accident (or nothing) decided is named here, and an interpretable one escalates.
+  */
+  const unresolvedFields: IrMaterialField[] = [];
+  if (unresolvedEligible) unresolvedFields.push('JOB');
+  if (freshnessWeak) unresolvedFields.push('FRESHNESS', 'EVIDENCE');
+  if (mixedUnresolved) unresolvedFields.push('MIXED');
+  if (roles0.rolesIncomplete && resolution?.relation === undefined)
+    unresolvedFields.push('ACTOR_ROLES', 'RELATIONSHIP');
+  if (uniqueConflicts.includes('REFERENCE_UNRESOLVED'))
+    unresolvedFields.push('PRIOR_WORK_REFERENCE');
+  if (advisory && decision && decisionObjective === null)
+    unresolvedFields.push('DECISION_OBJECTIVE');
+  const completeness = completenessOf(uniqueConflicts, unresolvedFields);
   const path: SemanticTurnIR['resolution']['path'] =
     resolution === undefined ? 'DETERMINISTIC' : resolution.path;
   const irRelationship =
@@ -834,8 +998,11 @@ export function interpretTurn(input: TurnInterpretationInput): {
     objective,
     resolution: {
       path,
-      needsSemanticResolution: path === 'DETERMINISTIC' && uniqueConflicts.length > 0,
+      needsSemanticResolution:
+        path === 'DETERMINISTIC' && shouldEscalate(uniqueConflicts, unresolvedFields),
       conflicts: uniqueConflicts,
+      completeness,
+      unresolvedFields,
     },
   };
 
@@ -858,6 +1025,7 @@ export function interpretTurn(input: TurnInterpretationInput): {
         ('currentClauses' in knowledge ? knowledge.currentClauses : undefined) ?? [],
       temporalSemantics,
       typedGeographyOverride,
+      semanticClarification,
     },
   };
 }

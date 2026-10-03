@@ -969,7 +969,7 @@ function composeCarriedTopic(
   A turn that names its OWN subject — a proper name that is not a country ("Who was Napoleon?") —
   is self-contained: it never inherits the conversation's subject or place as part of its meaning.
 */
-function namesOwnSubject(question: string, lang: 'en' | 'pl'): boolean {
+function namesOwnSubject(question: string): boolean {
   const words = question.trim().split(/\s+/u).slice(1);
   return words.some((w) => {
     const token = w.replace(/^[^\p{L}]+|[^\p{L}'’-]+$/gu, '');
@@ -988,7 +988,7 @@ function placelessSubject(question: string, prev: ConversationState, f: TurnFeat
     f.countries.length > 0 ||
     prev.geography.length !== 1 ||
     f.words > MAX_FOLLOW_UP_WORDS ||
-    namesOwnSubject(question, f.lang)
+    namesOwnSubject(question)
   )
     return question;
   const place = findCountryByIso3(prev.geography[0]);

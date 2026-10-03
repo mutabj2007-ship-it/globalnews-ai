@@ -31,7 +31,8 @@ import { ALL_ISO3_CODES } from '@globalnews-ai/shared';
 /** The observation shape this build writes. A later shape gets a later version. */
 /* /2 — CTO R4 closeout: the governed user-job codes (jobKind … jobArtifactProducedKind). */
 /* /3 — CTO R4 semantic IR: the turn's interpretation codes (semanticPath … interpreter tokens). */
-export const ASK_OBSERVATION_SCHEMA = 'ask-observation/3' as const;
+/* /4 — CTO R4 semantic-IR hardening: completeness + unresolved routing-material fields. */
+export const ASK_OBSERVATION_SCHEMA = 'ask-observation/4' as const;
 
 /*
   CTO R4 CLOSEOUT — THE GOVERNED USER JOB, AS CODES. Closed vocabularies, copied here on purpose
@@ -145,6 +146,23 @@ export const OBSERVED_SEMANTIC_REFERENCES: ReadonlySet<string> = new Set([
   'ARTIFACT_COMPONENT',
   'CHOICE_SET',
   'PORTABLE_SUBJECT',
+]);
+export const OBSERVED_SEMANTIC_COMPLETENESS: ReadonlySet<string> = new Set([
+  'COMPLETE',
+  'PARTIAL',
+  'AMBIGUOUS',
+  'CONFLICTING',
+  'UNRESOLVED',
+]);
+export const OBSERVED_SEMANTIC_FIELDS: ReadonlySet<string> = new Set([
+  'JOB',
+  'FRESHNESS',
+  'EVIDENCE',
+  'ACTOR_ROLES',
+  'RELATIONSHIP',
+  'MIXED',
+  'PRIOR_WORK_REFERENCE',
+  'DECISION_OBJECTIVE',
 ]);
 /** A governed place code: ISO3, REGION:<KEY>, or CITY:<ISO2> (never a name). */
 export const OBSERVED_PLACE_CODE = /^(?:[A-Z]{3}|REGION:[A-Z_]{2,40}|CITY:[A-Z]{2})$/;
@@ -367,6 +385,9 @@ export interface AskObservationInput {
   readonly semanticReferenceKind: string | null;
   readonly semanticInterpreterPromptTokens: number | null;
   readonly semanticInterpreterCompletionTokens: number | null;
+  /* hardening — the deterministic completeness and the unestablished routing-material fields */
+  readonly semanticCompleteness: string | null;
+  readonly semanticUnresolvedFields: readonly string[];
 }
 
 /**
@@ -453,6 +474,8 @@ export function newAskObservationDraft(
     semanticReferenceKind: null,
     semanticInterpreterPromptTokens: null,
     semanticInterpreterCompletionTokens: null,
+    semanticCompleteness: null,
+    semanticUnresolvedFields: [],
   };
 }
 

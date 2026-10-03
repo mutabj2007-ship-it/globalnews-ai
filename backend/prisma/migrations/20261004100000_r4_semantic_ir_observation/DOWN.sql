@@ -13,5 +13,7 @@ ALTER TABLE "AskObservation" DROP COLUMN IF EXISTS "semanticObjectiveSourceTurn"
 ALTER TABLE "AskObservation" DROP COLUMN IF EXISTS "semanticReferenceKind";
 ALTER TABLE "AskObservation" DROP COLUMN IF EXISTS "semanticInterpreterPromptTokens";
 ALTER TABLE "AskObservation" DROP COLUMN IF EXISTS "semanticInterpreterCompletionTokens";
+ALTER TABLE "AskObservation" DROP COLUMN IF EXISTS "semanticCompleteness";
+ALTER TABLE "AskObservation" DROP COLUMN IF EXISTS "semanticUnresolvedFields";
 DELETE FROM "_prisma_migrations" WHERE migration_name = '20261004100000_r4_semantic_ir_observation';
 COMMIT;

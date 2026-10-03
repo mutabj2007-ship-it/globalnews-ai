@@ -638,6 +638,34 @@ export function clauseStableShapeSignal(clause: string, language: string): boole
     STABLE_SHAPES[lang].some((shape) => shape.test(clause)) || BACKGROUND_REQUEST[lang].test(clause)
   );
 }
+/**
+ * CTO R4 semantic-IR hardening — WHICH kind of freshness a text carries: an explicit time / news
+ * request / change / progressive (`explicit`), or only a definite reference to a particular event
+ * or state ("the outcome", "the deal", "the situation") with nothing else (`lexicalEventOnly`).
+ * The second is not enough to route to current reporting without interpretation.
+ */
+export function freshnessSources(
+  text: string,
+  language: string,
+  requestYear?: number,
+): { readonly explicit: boolean; readonly lexicalEventOnly: boolean } {
+  const lang: 'en' | 'pl' = language === 'pl' ? 'pl' : 'en';
+  const travel = TRAVEL_FRAME[lang].test(text);
+  const t = travel ? withoutFuturePeriods(text, lang, requestYear) : text;
+  const explicit =
+    hasExplicitTime(t, lang, requestYear) ||
+    temporallyCurrent(t, lang, requestYear) ||
+    NEWS_REQUEST[lang].test(t) ||
+    CHANGING[lang].test(t) ||
+    CHANGED[lang].test(t) ||
+    assertsFreshness(t) ||
+    FRESHNESS[lang].test(t) ||
+    SINCE_PRESENT[lang].test(t) ||
+    refersToCurrentYear(t, lang, requestYear);
+  const lexical = SPECIFIC_EVENT[lang].test(t) || anchoredState(t, lang, false, requestYear);
+  return { explicit, lexicalEventOnly: lexical && !explicit };
+}
+
 /** Does the text ask about something IN PROGRESS ("Why are prices rising")? */
 export function inProgressSignal(text: string, language: string): boolean {
   const lang: 'en' | 'pl' = language === 'pl' ? 'pl' : 'en';

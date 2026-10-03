@@ -66,9 +66,23 @@ export interface RoleAssignment {
   readonly entities: readonly RoledEntity[];
   readonly relationship: RelationStructure | null;
   readonly conflicts: readonly RoleConflict[];
+  /**
+   * HARDENING §3 — two states joined in one clause by words no reader knows ("Japan rebuked
+   * China") and no recoverable structure: whether they are actors of a relation is NOT
+   * established (routing-material: the relationship / per-side evidence depends on it).
+   */
+  readonly rolesIncomplete: boolean;
 }
 
 type Lang = 'en' | 'pl';
+
+/* function words only between two states: no unknown predicate there */
+const FUNCTION_GAP: Readonly<Record<Lang, RegExp>> = {
+  en: /^\s*(?:(?:to|from|in|of|for|with|via|and|or|than|vs\.?|versus|the|a|an|at|on|into|between|by|as|like|nor|both|either|neither|plus|over|about|across|through|against|toward|towards|after|before|since|during)\s+)*$/i,
+  pl: /^\s*(?:(?:i|a|z|ze|do|w|we|na|oraz|lub|albo|czy|od|przez|dla|niż|jak|po|o|nad|pod|między|pomiędzy|wobec)\s+)*$/iu,
+};
+const COMPARATIVE_GAP =
+  /\b\p{L}+er\s+than\b|\b(?:more|less)\s+\p{L}+\s+than\b|(?:^|\s)(?:niż|bardziej|mniej)(?![\p{L}])/iu;
 
 const COORDINATOR = /^\s*(?:,\s*)?(?:and|&|-|\/|vs\.?|versus|i|a|oraz)\s*(?:the\s+)?$/iu;
 const BETWEEN_BEFORE = plTolerant(
@@ -232,7 +246,7 @@ export function assignRoles(
       return { ...c, role: c.id === structure.a.id ? 'ACTOR' : 'COUNTERPART' };
     const before = text.slice(Math.max(0, c.start - 40), c.start);
     const byPreposition = OBJECT_ROLE.find(([, re]) => re.test(before))?.[0];
-    if (c.type === 'CITY') {
+    if (c.type === 'CITY' || c.type === 'PLACE') {
       const venue =
         byPreposition === 'VENUE' ||
         (VENUE_IN.test(before) && (eventKinds.length > 0 || structure !== null));
@@ -263,7 +277,23 @@ export function assignRoles(
 
   const object = roled.find((e) => e.role === 'DISPUTED_OBJECT')?.id ?? null;
   const venue = roled.find((e) => e.role === 'VENUE')?.id ?? null;
+  const rolesIncomplete =
+    structure === null &&
+    !COMPARISON.test(text) &&
+    states.some((a, i) => {
+      const b = states[i + 1];
+      if (b === undefined || a.iso3 === b.iso3) return false;
+      const gap = text.slice(a.end, b.start);
+      return (
+        gap.length <= 60 &&
+        /^[\s\p{L}'’-]+$/u.test(gap) &&
+        !FUNCTION_GAP[lang].test(gap) &&
+        !COMPARATIVE_GAP.test(gap) &&
+        !COORDINATOR.test(gap)
+      );
+    });
   return {
+    rolesIncomplete,
     entities: roled,
     relationship:
       structure === null

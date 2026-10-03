@@ -210,6 +210,12 @@ export interface AskR2Route {
    * to make the one bounded semantic call before any provider.
    */
   readonly semantic: SemanticTurnIR;
+  /**
+   * HARDENING §5 — interpretation was required, no valid verdict exists (interpreter unavailable,
+   * breaker open, malformed / invalid answer) and stable reasoning is not clearly safe: the
+   * governed outcome is a focused clarification, never a confident route.
+   */
+  readonly semanticClarification?: boolean;
   readonly outcome: NormalizationOutcome;
   readonly source: EnvelopeSource;
   readonly envelope: AskQuestionEnvelope;
@@ -512,7 +518,14 @@ function unreadIR(language: string): SemanticTurnIR {
       confidence: 'LOW',
     },
     objective: null,
-    resolution: { path: 'DETERMINISTIC', needsSemanticResolution: false, conflicts: [] },
+    resolution: {
+      path: 'DETERMINISTIC',
+      needsSemanticResolution: false,
+      conflicts: [],
+      /* not read: frozen C's own clarification decides; nothing to interpret */
+      completeness: 'COMPLETE',
+      unresolvedFields: [],
+    },
   };
 }
 
@@ -725,7 +738,7 @@ export function routeAskR2(
   void _time;
   void _topic;
   void _code;
-  const source: EnvelopeSource =
+  let source: EnvelopeSource =
     stableOrComputed && !relationshipReasoning
       ? {
           ...(historicalOverride
@@ -768,6 +781,23 @@ export function routeAskR2(
             : composedSource;
 
   /* Axes derived in the normalization vocabulary; language axis restored to the truth. */
+  /*
+    HARDENING §11 — THE IR IS THE ONLY CURRENTNESS AUTHORITY. The envelope producers (the office /
+    institution status readers) never request current status on their own: when the final IR
+    establishes no freshness, the request is removed before frozen C plans.
+  */
+  const irNotCurrent =
+    semantic.turn.freshness === 'NONE' && !semantic.resolution.needsSemanticResolution;
+  if (irNotCurrent && source.currentStatusRequested === true) {
+    const {
+      currentStatusRequested: _requested,
+      currentStatusTerms: _terms,
+      ...rest
+    } = source as EnvelopeSource & { currentStatusTerms?: readonly string[] };
+    void _requested;
+    void _terms;
+    source = rest as EnvelopeSource;
+  }
   const derived = buildEnvelope({ ...source, questionLanguage: NORMALIZATION_VOCABULARY });
   const envelope: AskQuestionEnvelope = {
     ...derived,
@@ -798,6 +828,7 @@ export function routeAskR2(
     job,
     temporalSemantics,
     semantic,
+    semanticClarification: d.semanticClarification,
     outcome,
     source,
     envelope,

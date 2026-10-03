@@ -32,7 +32,8 @@ import { foldPl } from '../pl-tolerant';
  * after "the" ("the us"), or before a state noun ("us officials"). "tell us why" is never a
  * country. Stage B (roles.ts) may never change an identity resolved here. Pure.
  */
-export type EntityType = 'COUNTRY' | 'TERRITORY' | 'REGION' | 'CITY';
+/** PLACE: a place candidate the gazetteer could not resolve — unresolved, never an actor */
+export type EntityType = 'COUNTRY' | 'TERRITORY' | 'REGION' | 'CITY' | 'PLACE';
 export type EntityBasis =
   | 'NAME'
   | 'ALIAS'
@@ -40,7 +41,8 @@ export type EntityBasis =
   | 'LOWERCASE_IN_CONTEXT'
   | 'COMBINED_ADJECTIVE'
   | 'GAZETTEER_CITY'
-  | 'GOVERNED_REGION';
+  | 'GOVERNED_REGION'
+  | 'UNRESOLVED_PLACE';
 
 export interface EntityCandidate {
   /** canonical id: COUNTRY:ISO3 · TERRITORY:ISO3 · REGION:KEY · CITY:ISO2:Name */
@@ -341,6 +343,11 @@ function cityOf(
 
 const VENUE_PREP =
   /(?:\b(?:hosted\s+(?:in|by)|held\s+in|brokered\s+in|signed\s+in|met\s+in|talks\s+in|summit\s+in|meeting\s+in|negotiations\s+in|agreed\s+in|concluded\s+in)\s+(?:the\s+)?)$/i;
+const PL_VENUE_PREP =
+  /(?:(?:rozmow|szczyt|spotkani|negocjacj|konferencj|podpisan|zawart)\p{L}*\s+(?:\p{L}+\s+){0,4}?(?:w|we)\s+)$/iu;
+/* capitalised words after a venue preposition that are not places (a month, a weekday, a year word) */
+const NOT_A_PLACE =
+  /^(?:January|February|March|April|May|June|July|August|September|October|November|December|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Styczniu|Lutym|Marcu|Kwietniu|Maju|Czerwcu|Lipcu|Sierpniu|Wrześniu|Październiku|Listopadzie|Grudniu|English|Polish|Secret|Private|Public|Person|Parliament|Congress)$/;
 
 /** STAGE A — every place the reader wrote, with canonical identity, type and span. */
 export function readEntityCandidates(text: string, language: string): EntityCandidate[] {
@@ -442,8 +449,25 @@ export function readEntityCandidates(text: string, language: string): EntityCand
       const before = text.slice(Math.max(0, first.start - 40), first.start);
       const prep = lang === 'pl' ? PL_PLACE_PREP.test(before) : EN_PLACE_PREP.test(before);
       if (!prep) continue;
-      const city = cityOf(surface, lang, VENUE_PREP.test(before));
-      if (city === null) continue;
+      const venueContext = lang === 'pl' ? PL_VENUE_PREP.test(before) : VENUE_PREP.test(before);
+      const city = cityOf(surface, lang, venueContext);
+      if (city === null) {
+        /* hardening §9 — an UNKNOWN place where an event happened ("talks held in Zarvana") is
+           an unresolved PLACE candidate: never a country, never an actor, no invented identity */
+        if (k === 1 && venueContext && isCapitalised(surface) && !NOT_A_PLACE.test(surface))
+          taken.push({
+            id: `PLACE:${first.start}`,
+            type: 'PLACE',
+            iso3: null,
+            parentIso3: null,
+            surface,
+            start: first.start,
+            end: last.end,
+            basis: 'UNRESOLVED_PLACE',
+            needsContext: false,
+          });
+        continue;
+      }
       const parent = city.iso2 === '' ? null : (findCountryByIso2(city.iso2)?.iso3 ?? null);
       taken.push({
         id: `CITY:${city.iso2 || 'XX'}:${city.name}`,

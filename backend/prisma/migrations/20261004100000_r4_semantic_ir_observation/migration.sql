@@ -14,3 +14,5 @@ ALTER TABLE "AskObservation" ADD COLUMN "semanticObjectiveSourceTurn" INTEGER;
 ALTER TABLE "AskObservation" ADD COLUMN "semanticReferenceKind" TEXT;
 ALTER TABLE "AskObservation" ADD COLUMN "semanticInterpreterPromptTokens" INTEGER;
 ALTER TABLE "AskObservation" ADD COLUMN "semanticInterpreterCompletionTokens" INTEGER;
+ALTER TABLE "AskObservation" ADD COLUMN "semanticCompleteness" TEXT;
+ALTER TABLE "AskObservation" ADD COLUMN "semanticUnresolvedFields" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];

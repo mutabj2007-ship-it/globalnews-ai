@@ -784,16 +784,36 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       const early0 = answerStateBeforeExecution(route.plan);
       if (early0 === null || early0.state === 'REFERENCE_BACKGROUND') {
         semanticRun = await this.interpretSemantics(request, route, draft);
-        const conflicts = route.semantic.resolution.conflicts;
+        const deterministic = route.semantic.resolution;
         route = routeFor(request, this.deps, semanticRun.verdict);
         /* what is executed is the resolved route; the job source says who decided it */
         this.observeRoute(route, draft);
         draft.jobClassifierUsed = semanticRun.calls > 0;
-        /* §20 — the conflict reasons that required the interpreter, and its measured usage */
-        draft.semanticConflicts = [...conflicts];
+        /* §20 — WHY the interpreter was required (the deterministic reading), and its usage */
+        draft.semanticConflicts = [...deterministic.conflicts];
+        draft.semanticCompleteness = deterministic.completeness;
+        draft.semanticUnresolvedFields = [...deterministic.unresolvedFields];
         draft.semanticInterpreterPromptTokens = semanticRun.tokens?.promptTokens ?? null;
         draft.semanticInterpreterCompletionTokens = semanticRun.tokens?.completionTokens ?? null;
       }
+    }
+    /*
+      HARDENING §5 — interpretation was REQUIRED and no valid verdict exists, and stable reasoning
+      is not clearly safe: one focused clarification, zero compute — never a confident route, never
+      ambiguous → current news because classification failed.
+    */
+    if (route.semanticClarification === true) {
+      return this.result(
+        plan,
+        route,
+        operationId,
+        this.observeAnswer(
+          { state: 'CLARIFICATION_REQUIRED', basis: 'INTERPRETATION_UNRESOLVED', missingRoles: [] },
+          draft,
+        ),
+        null,
+        false,
+      );
     }
 
     if (route.knowledgeRequirement === 'DECISION_SUPPORT' && route.decisionObjective === null) {
@@ -1285,6 +1305,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     };
     const rel = ir.relationships[0];
     draft.semanticPath = ir.resolution.path;
+    draft.semanticCompleteness = ir.resolution.completeness;
+    draft.semanticUnresolvedFields = [...ir.resolution.unresolvedFields];
     draft.semanticConflicts = [...ir.resolution.conflicts];
     draft.semanticClauseCount = ir.clauses.length;
     draft.semanticFreshness = ir.turn.freshness;

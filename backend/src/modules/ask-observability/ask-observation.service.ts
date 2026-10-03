@@ -9,7 +9,9 @@ import {
   governedCode,
   governedCodes,
   OBSERVED_PLACE_CODE,
+  OBSERVED_SEMANTIC_COMPLETENESS,
   OBSERVED_SEMANTIC_CONFLICTS,
+  OBSERVED_SEMANTIC_FIELDS,
   OBSERVED_SEMANTIC_EVIDENCE,
   OBSERVED_SEMANTIC_FRESHNESS,
   OBSERVED_SEMANTIC_PATHS,
@@ -174,6 +176,14 @@ export class AskObservationService {
             semanticInterpreterPromptTokens: boundedCount(
               input.semanticInterpreterPromptTokens,
               1_000_000,
+            ),
+            semanticCompleteness: governedCode(
+              input.semanticCompleteness,
+              OBSERVED_SEMANTIC_COMPLETENESS,
+            ),
+            semanticUnresolvedFields: governedCodes(
+              input.semanticUnresolvedFields,
+              OBSERVED_SEMANTIC_FIELDS,
             ),
             semanticInterpreterCompletionTokens: boundedCount(
               input.semanticInterpreterCompletionTokens,

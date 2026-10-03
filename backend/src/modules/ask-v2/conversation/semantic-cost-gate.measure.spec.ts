@@ -43,6 +43,8 @@ run('R4 semantic IR cost gate — fast path vs one bounded interpretation', () =
     outputTokens: [] as number[],
   };
   const conflictHistogram: Record<string, number> = {};
+  const completenessHistogram: Record<string, number> = {};
+  const unresolvedFieldHistogram: Record<string, number> = {};
   for (const path of SETS!.split(',')) {
     const set = JSON.parse(readFileSync(path, 'utf8').replace(/^﻿/, '')) as { items: Item[] };
     const s = { turns: 0, fast: 0, semantic: 0, classifierAnyway: 0 };
@@ -79,6 +81,10 @@ run('R4 semantic IR cost gate — fast path vs one bounded interpretation', () =
         );
         s.turns++;
         const ir = r.semantic;
+        completenessHistogram[ir.resolution.completeness] =
+          (completenessHistogram[ir.resolution.completeness] ?? 0) + 1;
+        for (const f of ir.resolution.unresolvedFields)
+          unresolvedFieldHistogram[f] = (unresolvedFieldHistogram[f] ?? 0) + 1;
         if (ir.resolution.needsSemanticResolution) {
           s.semantic++;
           if (ir.resolution.conflicts.includes('JOB_UNRESOLVED')) s.classifierAnyway++;
@@ -165,6 +171,8 @@ run('R4 semantic IR cost gate — fast path vs one bounded interpretation', () =
           },
         },
         conflictHistogram,
+        completenessHistogram,
+        unresolvedFieldHistogram,
       },
       null,
       2,

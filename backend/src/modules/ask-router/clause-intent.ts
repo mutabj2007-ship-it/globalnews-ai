@@ -33,7 +33,7 @@ export interface ClauseIntent {
 type Lang = 'en' | 'pl';
 
 const INTERROGATIVE_EN =
-  'what|which|who|whom|how|where|when|why|is|are|was|were|has|have|had|do|does|did|can|could|will|would|should|tell|give|show|update|explain';
+  'what|which|who|whom|whether|how|where|when|why|is|are|was|were|has|have|had|do|does|did|can|could|will|would|should|tell|give|show|update|explain';
 const INTERROGATIVE_PL =
   'co|jak|jaki|jaka|jakie|jakich|kto|czy|ile|gdzie|kiedy|dlaczego|czemu|powiedz|podaj|pokaż|pokaz|czym|skąd|skad|wyjaśnij|wyjasnij';
 

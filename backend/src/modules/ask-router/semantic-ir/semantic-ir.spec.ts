@@ -51,6 +51,8 @@ describe('the eight reference interpretations (CTO §24)', () => {
       path: 'DETERMINISTIC',
       needsSemanticResolution: false,
       conflicts: [],
+      completeness: 'COMPLETE',
+      unresolvedFields: [],
     });
   });
   it('2 · current factual — fast path, CURRENT, the place is scope', () => {

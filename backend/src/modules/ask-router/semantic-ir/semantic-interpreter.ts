@@ -62,10 +62,14 @@ export const SEMANTIC_INTERPRETER_SYSTEM =
   'You interpret the MEANING of ONE user turn for a router. You do NOT answer it, you do NOT ' +
   'search, you add no facts, names or text. Return ONLY one JSON object with these keys:\n' +
   `"job": one of ${USER_JOBS.join(', ')};\n` +
-  '"needsCurrentEvidence": true only if answering responsibly requires CURRENT reporting or ' +
-  'current official data (a present state, recent events, latest figures, current office-holders ' +
-  'or rules). A concept, an explanation, completed history, advice, planning or work on earlier ' +
-  'answers is false. A place or topic alone is not a reason for true;\n' +
+  '"needsCurrentEvidence": true ONLY if the user asks what the state of affairs is NOW and ' +
+  'answering responsibly requires current reporting or current official data (a present state, ' +
+  'recent events, latest figures, current office-holders or rules). It is false for: a concept or ' +
+  'a definition, even when it contains the word "current" (the current meaning / definition of ' +
+  'something); an explanation of how something works; completed history (a past year or past ' +
+  'event), even when "today" or "now" is only a figure of speech; a general trend, outlook or ' +
+  'opinion that asks for no present-state fact; advice; planning; work on earlier answers. A ' +
+  'place or a topic alone is not a reason for true. When unsure, false;\n' +
   '"depth": "DEEP" or "STANDARD";\n' +
   `"transformation": one of ${TRANSFORMATIONS.join(', ')}, or null;\n` +
   '"confidence": "HIGH", "MEDIUM" or "LOW";\n' +
@@ -156,6 +160,13 @@ export function parseSemanticResolution(
     )
       out.clauses = kinds as InterpretedClauseKind[];
   }
+  /*
+    HARDENING §5 — the closed fields must AGREE: a clause marked CURRENT with no current evidence,
+    or current evidence with no CURRENT clause, is a self-contradicting answer. It is invalid as a
+    whole (the governed fallback applies) — never half-trusted.
+  */
+  if (out.clauses !== undefined && out.clauses.includes('CURRENT') !== out.needsCurrentEvidence)
+    return null;
   /* relation: only ids the composition resolved; a city never an actor; no self-relation */
   if (v.relation === null) out.relation = null;
   else if (v.relation !== undefined && typeof v.relation === 'object') {
@@ -175,8 +186,9 @@ export function parseSemanticResolution(
       a !== undefined &&
       b !== undefined &&
       a.id !== b.id &&
-      a.type !== 'CITY' &&
-      b.type !== 'CITY' &&
+      /* only a resolved state can act: never a city, a region or an unresolved place */
+      (a.type === 'COUNTRY' || a.type === 'TERRITORY') &&
+      (b.type === 'COUNTRY' || b.type === 'TERRITORY') &&
       object !== undefined &&
       venue !== undefined &&
       object !== a.id &&

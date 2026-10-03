@@ -71,13 +71,14 @@ live('R1 — the Ask observation store on PostgreSQL', () => {
       const columns = await columnsOf('AskObservation');
       /* 53 + the nine CTO R4 closeout job-code columns (all nullable) + the thirteen CTO R4
          semantic-IR code columns (20261004100000, additive) */
-      expect(columns.size).toBe(75);
+      expect(columns.size).toBe(77);
       [
         'semanticPath',
         'semanticFreshness',
         'semanticEvidence',
         'semanticRelation',
         'semanticReferenceKind',
+        'semanticCompleteness',
       ].forEach((c) => {
         expect(columns.get(c)).toMatchObject({ data_type: 'text', is_nullable: 'YES' });
       });
@@ -86,6 +87,7 @@ live('R1 — the Ask observation store on PostgreSQL', () => {
         'semanticActorCodes',
         'semanticVenueCodes',
         'semanticObjectCodes',
+        'semanticUnresolvedFields',
       ].forEach((c) => {
         expect(columns.get(c)).toMatchObject({ data_type: 'ARRAY', is_nullable: 'NO' });
       });
@@ -339,7 +341,7 @@ live('R1 — the Ask observation store on PostgreSQL', () => {
       ).toBe(true);
       const row = await db.askObservation.findUnique({ where: { operationId: id } });
       expect(row).toMatchObject({
-        schemaVersion: 'ask-observation/3',
+        schemaVersion: 'ask-observation/4',
         jobKind: 'DEEP_CONCEPTUAL_ANALYSIS',
         jobSource: 'DETERMINISTIC',
         jobDepth: 'DEEP',

@@ -99,8 +99,14 @@ export function readCurrentnessMarkers(clause: string, language: string): Curren
   };
   if (lang === 'en') {
     const explanation = EN_EXPLANATION_FRAME.test(clause);
-    if (!EN_NOT_TIME_CURRENT.test(clause))
+    if (!EN_NOT_TIME_CURRENT.test(clause)) {
       push('CURRENT_STATE', 'STRONG', first(EN_CURRENT_MODIFIER, clause));
+      /* hardening — "current" before a head that is not a mutable state ("the current meaning of
+         resilience") is not established time: WEAK, so a stable frame escalates instead of
+         either silently ignoring it or sending it to news */
+      if (!out.some((m) => m.fn === 'CURRENT_STATE'))
+        push('CURRENT_STATE', 'WEAK', first(/\b(?:current|present-day)\s+[\p{L}-]{3,}/iu, clause));
+    }
     push('CURRENT_STATE', 'STRONG', first(EN_CURRENT_STATE_ADVERB, clause));
     push('STATUS', explanation ? 'WEAK' : 'STRONG', first(EN_STATUS_YET, clause));
     /* "still" in an explanation ("why do people still believe…") is a present-era claim */
@@ -114,6 +120,12 @@ export function readCurrentnessMarkers(clause: string, language: string): Curren
   } else {
     const explanation = PL_EXPLANATION_FRAME.test(clause);
     push('CURRENT_STATE', 'STRONG', first(PL_CURRENT_MODIFIER, clause));
+    if (!out.some((m) => m.fn === 'CURRENT_STATE'))
+      push(
+        'CURRENT_STATE',
+        'WEAK',
+        first(plTolerant(/(?:^|\s)(?:obecn|aktualn|współczesn)\p{L}*\s+\p{L}{3,}/iu), clause),
+      );
     push('CURRENT_STATE', 'STRONG', first(PL_CURRENT_STATE_ADVERB, clause));
     push('STATUS', explanation ? 'WEAK' : 'STRONG', first(PL_STATUS, clause));
     push('SINCE_TO_NOW', 'STRONG', first(PL_SINCE_TO_NOW, clause));

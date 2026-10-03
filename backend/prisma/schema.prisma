@@ -2022,6 +2022,10 @@ model AskObservation {
   /// The bounded interpreter's measured usage, when it ran and the provider reported it.
   semanticInterpreterPromptTokens     Int?
   semanticInterpreterCompletionTokens Int?
+  /// HARDENING — the deterministic interpretation's completeness (COMPLETE / PARTIAL / AMBIGUOUS /
+  /// CONFLICTING / UNRESOLVED) and the routing-material fields it left unestablished (codes).
+  semanticCompleteness                String?
+  semanticUnresolvedFields            String[] @default([])
 
   @@index([occurredAt])
   @@index([questionClass, occurredAt])
