@@ -185,6 +185,12 @@ function hueOf(h: { h: number; s: number; l: number }): Hue {
   return 'blue';
 }
 
+/** A text colour that reads as white on a fill (lightness above 0.9, any hue). */
+function isNearWhite(value: string | null): boolean {
+  const c = value === null ? null : parseColour(value);
+  return c !== null && hsl(c).l > 0.9;
+}
+
 /** The LIGHT token a dark-palette colour utility takes. */
 export function lightTokenFor(u: ColourUtility): string | null {
   if (u.value === null) return null;
@@ -321,6 +327,10 @@ function rule(
   /* White text on an action fill stays white: the fill becomes the light action colour. */
   if (u.prop === 'text' && token === 'var(--gt-ink)')
     target += keepWhiteOn.map((c) => `:not(.${escapeClass(c)})`).join('');
+  /* TRUST R1 §16 — near-white text on an element that paints its OWN gradient fill (the
+     NavBar Sign In button) keeps its colour: gradient stops are not remapped, so recolouring
+     only the text would put blue on blue. */
+  if (u.prop === 'text' && isNearWhite(u.value)) target += `:not([class*='bg-gradient-to-'])`;
   const selector = scopes.map((scope) => `${scope} ${target}, ${scope}${target}`).join(', ');
   let css = `${selector} { ${declaration(u, token)} }`;
   const screen = u.variants.find((v) => SCREENS[v] !== undefined);
