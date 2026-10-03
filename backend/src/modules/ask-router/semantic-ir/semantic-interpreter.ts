@@ -196,24 +196,62 @@ const bound = (s: string, n: number): string => s.replace(/<<<|>>>/g, ' ').slice
 
 /* defect 1, layer 2 — the schema's own keys (as assignments) and closed values, neutralized with a
    same-length mask so every span still indexes the reader text */
-const SCHEMA_VALUES = new Set<string>([
-  ...USER_JOBS,
-  ...TRANSFORMATIONS,
-  ...REFERENCE_TARGETS,
-  ...TEMPORAL_ROLES,
-  ...RELATION_KINDS,
-  'STABLE',
-  'CURRENT',
-  'HISTORICAL',
-]);
+/*
+  E1-R4-1 / E1-R4-6 (security review of 752d8b7) — the mask must cover the CLASS, not the spelling
+  observed: the value set is DERIVED from the schemas (every closed value incl. depth / confidence /
+  clause kinds), compared CASE-FOLDED; a multi-word value is caught with "_", "-" or spaces in any
+  case ("current_reporting", "Current Reporting" in caps, "CURRENT-REPORTING"); single-word values
+  are masked only when written in capitals (an ordinary lowercase word such as "current" or "other"
+  is the reader's language); compound key names are masked even bare ("needscurrentevidence"), short
+  key names ("job", "depth") only as an assignment. Same length always — every span stays valid.
+*/
+const CLAUSE_KINDS = ['STABLE', 'CURRENT', 'HISTORICAL', 'OTHER'] as const;
+const SCHEMA_VALUES = new Set<string>(
+  [
+    ...USER_JOBS,
+    ...TRANSFORMATIONS,
+    ...REFERENCE_TARGETS,
+    ...TEMPORAL_ROLES,
+    ...RELATION_KINDS,
+    ...CLAUSE_KINDS,
+    'DEEP',
+    'STANDARD',
+    'HIGH',
+    'MEDIUM',
+    'LOW',
+  ].map((v) => v.toLowerCase()),
+);
 const SCHEMA_KEY_ASSIGNMENT =
-  /\b(?:needsCurrentEvidence|job|depth|transformation|confidence|clauses|parts|relation|reference|temporalRole|objective)\b\s*["']?\s*[:=]/giu;
+  /\b(?:needsCurrentEvidence|job|depth|transformation|confidence|clauses|parts|relation|reference|temporalRole|objective|actorA|actorB|venue)\b\s*["']?\s*[:=]/giu;
+const SCHEMA_KEY_BARE =
+  /\b(?:needs[\s_-]*current[\s_-]*evidence|temporal[\s_-]*role|actor[\s_-]*[ab])\b/giu;
+/* a multi-word closed value in any case and separator */
+const MULTI_WORD_VALUE = /\b[a-z]+(?:[\s_-]+[a-z]+)+\b/giu;
 export function neutralizeSchemaTokens(text: string): string {
   const mask = (m: string) => '_'.repeat(m.length);
-  /* closed values first: a masked key would otherwise remove the word boundary before them */
-  return text
-    .replace(/\b[A-Z][A-Z_]{3,}\b/g, (m) => (SCHEMA_VALUES.has(m) ? mask(m) : m))
-    .replace(SCHEMA_KEY_ASSIGNMENT, mask);
+  const canonical = (m: string) => m.toLowerCase().replace(/[\s-]+/g, '_');
+  return (
+    text
+      /* multi-word values: "_" / "-" separated in any case; space-separated only in capitals */
+      .replace(MULTI_WORD_VALUE, (m) => {
+        let out = m;
+        const words = m.split(/[\s_-]+/);
+        for (let n = Math.min(words.length, 4); n >= 2; n--)
+          for (let i = 0; i + n <= words.length; i++) {
+            const piece = words.slice(i, i + n);
+            if (!SCHEMA_VALUES.has(piece.join('_').toLowerCase())) continue;
+            /* judged on the matched value itself: "_" / "-" joined in any case, or all capitals */
+            out = out.replace(new RegExp(piece.join('[\\s_-]+'), 'gi'), (x) =>
+              /[_-]/.test(x) || x === x.toUpperCase() ? mask(x) : x,
+            );
+          }
+        return out;
+      })
+      /* single-word values in capitals ("CURRENT", "DEEP") */
+      .replace(/\b[A-Z][A-Z_]{2,}\b/g, (m) => (SCHEMA_VALUES.has(canonical(m)) ? mask(m) : m))
+      .replace(SCHEMA_KEY_BARE, mask)
+      .replace(SCHEMA_KEY_ASSIGNMENT, mask)
+  );
 }
 
 /** The user message: the turn as DATA, its clauses, its candidate entities, the conflicts, and
@@ -293,10 +331,14 @@ function parseCore(v: Record<string, unknown>): MutableResolution | null {
     v.job === 'CURRENT_REPORTING' ||
     v.job === 'OFFICIAL_CURRENT_REFERENCE' ||
     v.job === 'CHANGE_ANALYSIS';
+  /* E1-R4-1 — a job label that needs current evidence while the model's own boolean says it does
+     not is a CONTRADICTION (invalid as a whole), never a silent upgrade: a biased label alone can no
+     longer reach the news provider */
+  if (evidenceJob && v.needsCurrentEvidence !== true) return null;
   return {
     path: 'SEMANTIC',
     job: v.job as UserJob,
-    needsCurrentEvidence: v.needsCurrentEvidence || evidenceJob,
+    needsCurrentEvidence: v.needsCurrentEvidence,
     depth: v.depth === 'DEEP' ? 'DEEP' : 'STANDARD',
     transformation:
       typeof v.transformation === 'string' &&
@@ -368,7 +410,9 @@ export function parseSemanticResolution(
   if (v === null) return null;
   const out = parseCore(v);
   if (out === null) return null;
-  /* clauses: exactly one valid kind per segmented clause, in order */
+  /* clauses: exactly one valid kind per segmented clause, in order. E1-R4-2 — the agreement check
+     below may not be escaped by omission: when the composition segmented clauses, a missing,
+     mis-sized or out-of-vocabulary `clauses` field makes the whole answer invalid */
   if (Array.isArray(v.clauses) && v.clauses.length === ir.clauses.length) {
     const kinds = v.clauses.map((c) =>
       c !== null && typeof c === 'object' ? (c as Record<string, unknown>).kind : undefined,
@@ -378,6 +422,7 @@ export function parseSemanticResolution(
     )
       out.clauses = kinds as InterpretedClauseKind[];
   }
+  if (ir.clauses.length > 0 && out.clauses === undefined) return null;
   /*
     HARDENING §5 — the closed fields must AGREE: a clause marked CURRENT with no current evidence,
     or current evidence with no CURRENT clause, is a self-contradicting answer. It is invalid as a

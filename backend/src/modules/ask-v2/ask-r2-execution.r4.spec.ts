@@ -288,6 +288,8 @@ describe('R4 — the bounded semantic classifier (UNRESOLVED questions only)', (
           depth: 'DEEP',
           transformation: null,
           confidence: 'HIGH',
+          /* E1-R4-2 — the contract requires one kind per segmented clause */
+          clauses: [{ id: 0, kind: 'STABLE' }],
         }),
     });
     const p = await run(h, Q);
@@ -542,6 +544,8 @@ describe('R4 closeout §9 — the job is observable (codes only)', () => {
           depth: 'STANDARD',
           transformation: null,
           confidence: 'HIGH',
+          /* E1-R4-2 — the contract requires one kind per segmented clause */
+          clauses: [{ id: 0, kind: 'STABLE' }],
         }),
     });
     await run(h, 'Are we approaching our prime moment?');

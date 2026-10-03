@@ -525,8 +525,21 @@ export function estimateBackgroundUnits(
 }
 
 /** CTO R4 semantic IR — the one bounded interpretation: a short prompt and a small JSON answer. */
-export function estimateClassifierUnits(questionChars: number, outputWeight: number): number {
-  return Math.ceil((2400 + questionChars) / 4) + outputWeight * SEMANTIC_INTERPRETER_MAX_TOKENS;
+export function estimateClassifierUnits(
+  questionChars: number,
+  outputWeight: number,
+  /* E1-R4-4 — the interpreter-first call has its own (larger) prompt and ceiling */
+  semanticFirst = false,
+  /* E1-R4-4 — non-Latin scripts (Arabic) tokenize at ~2 chars / token, not 4 */
+  nonLatinChars = 0,
+): number {
+  const promptChars = (semanticFirst ? 3600 : 2400) + (questionChars - nonLatinChars);
+  return (
+    Math.ceil(promptChars / 4) +
+    Math.ceil(nonLatinChars / 2) +
+    outputWeight *
+      (semanticFirst ? SEMANTIC_FIRST_INTERPRETER_MAX_TOKENS : SEMANTIC_INTERPRETER_MAX_TOKENS)
+  );
 }
 
 /** CTO R4 semantic IR — the outcome of the ONE bounded semantic interpretation of a turn. */
@@ -1565,6 +1578,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       estimatedUnits: estimateClassifierUnits(
         request.question.length,
         this.meter.config.outputWeight,
+        isSemanticFirstLanguage(request.language),
+        (request.question.match(/[^\u0000-\u024F\s]/gu) ?? []).length,
       ),
     });
     if (!reservation.admitted) {
