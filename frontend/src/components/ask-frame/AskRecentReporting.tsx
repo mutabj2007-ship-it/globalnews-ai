@@ -1,4 +1,4 @@
-import type { AskRecentReporting as RecentReporting } from '@/lib/api/askV2Api';
+import type { AskCompanionTopic, AskRecentReporting as RecentReporting } from '@/lib/api/askV2Api';
 import type { AskR2Locale } from '@/lib/ask/askR2Strings';
 import { safeExternalHref } from '@globalnews-ai/shared';
 import { localisedCountryName } from '@/lib/map/geography/displayName';
@@ -10,11 +10,16 @@ import { localisedCountryName } from '@/lib/map/geography/displayName';
  * RETAINED about the same place in the last two weeks: dated headlines with their publishers,
  * listed — not analysed, not summarised, and not used in the background answer above. Its absence
  * is stated, never hidden. Zero AI; the links open the publishers.
+ *
+ * CTO P0 · Defect E — the items now serve the question's TASK (travel notices for a travel
+ * question…), so the block is titled by that task. An answer stored before the task rule has no
+ * topic and keeps its original title.
  */
 const T: Record<
   AskR2Locale,
   {
     title: (place: string, days: number) => string;
+    topic: Record<AskCompanionTopic, (place: string, days: number) => string>;
     note: string;
     none: string;
     unavailable: string;
@@ -22,12 +27,31 @@ const T: Record<
 > = {
   en: {
     title: (place, days) => `Recent reporting about ${place} (last ${days} days)`,
+    topic: {
+      TRAVEL: (place, days) => `Current travel notices · ${place} (last ${days} days)`,
+      ECONOMY: (place, days) => `Recent economic reporting · ${place} (last ${days} days)`,
+      SECURITY: (place, days) => `Recent security reporting · ${place} (last ${days} days)`,
+      BUSINESS: (place, days) =>
+        `Recent business and trade reporting · ${place} (last ${days} days)`,
+      SCIENCE: (place, days) => `Recent science reporting · ${place} (last ${days} days)`,
+    },
     note: 'Listed, not analysed: the answer above is general background and does not use these reports.',
     none: 'No recent reporting about this place is held right now. That is not evidence that nothing is happening.',
     unavailable: 'Recent reporting could not be checked just now.',
   },
   pl: {
     title: (place, days) => `Najnowsze doniesienia: ${place} (ostatnie ${days} dni)`,
+    topic: {
+      TRAVEL: (place, days) =>
+        `Bieżące komunikaty dla podróżnych · ${place} (ostatnie ${days} dni)`,
+      ECONOMY: (place, days) =>
+        `Najnowsze doniesienia gospodarcze · ${place} (ostatnie ${days} dni)`,
+      SECURITY: (place, days) =>
+        `Najnowsze doniesienia o bezpieczeństwie · ${place} (ostatnie ${days} dni)`,
+      BUSINESS: (place, days) =>
+        `Najnowsze doniesienia o biznesie i handlu · ${place} (ostatnie ${days} dni)`,
+      SCIENCE: (place, days) => `Najnowsze doniesienia naukowe · ${place} (ostatnie ${days} dni)`,
+    },
     note: 'Lista bez analizy: powyższa odpowiedź to ogólne tło i nie korzysta z tych doniesień.',
     none: 'Nie mamy teraz najnowszych doniesień o tym miejscu. To nie dowód, że nic się nie dzieje.',
     unavailable: 'Nie udało się teraz sprawdzić najnowszych doniesień.',
@@ -55,16 +79,19 @@ export function AskRecentReporting({
 }): JSX.Element {
   const t = T[locale];
   const place = localisedCountryName(reporting.country, locale) ?? reporting.country;
+  const title = (reporting.topic === undefined ? t.title : t.topic[reporting.topic])(
+    place,
+    reporting.windowDays,
+  );
   return (
     <section
       data-ask="recent-reporting"
       data-ask-recent-status={reporting.status}
-      aria-label={t.title(place, reporting.windowDays)}
+      data-ask-recent-topic={reporting.topic}
+      aria-label={title}
       className="mt-4 rounded-[12px] border border-[#1d4a73] bg-[#04162b] p-3.5 md:p-4"
     >
-      <h3 className="text-[14px] font-bold text-[#cfe2f2]">
-        {t.title(place, reporting.windowDays)}
-      </h3>
+      <h3 className="text-[14px] font-bold text-[#cfe2f2]">{title}</h3>
       <p className="mt-1 font-mono text-[11.5px] leading-[1.4] text-[#8fa6c0]">{t.note}</p>
       {reporting.status === 'LISTED' ? (
         <ul className="mt-3 flex flex-col gap-2">

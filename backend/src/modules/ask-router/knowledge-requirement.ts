@@ -147,7 +147,7 @@ const HISTORY_FRAME: Readonly<Record<'en' | 'pl', RegExp>> = {
   en: /^(?:when\s+(?:did|was|were)|who\s+(?:was|were|founded|ruled|colonized|colonised)|what\s+(?:caused|led\s+to|was\s+the\s+cause)|why\s+did|how\s+did)\b|\b(?:history\s+of|historical(?:ly)?|independence|colonial|pre-?colonial|ancient)\b/i,
   pl: /^(?:kiedy\s+(?:\p{L}+\s+)?(?:by[łl]\p{L}*|wst[ąa]pi\p{L}*|uzyska\p{L}*)|kto\s+(?:by[łl]\p{L}*|za[łl]o[żz]y[łl]\p{L}*)|co\s+spowodowa[łl]\p{L}*|dlaczego\s+dosz[łl]o)|(?:histori\p{L}*|niepodleg[łl]o[śs]\p{L}*|kolonial\p{L}*|staro[żz]ytn\p{L}*)/iu,
 };
-const TRAVEL_FRAME: Readonly<Record<'en' | 'pl', RegExp>> = {
+export const TRAVEL_FRAME: Readonly<Record<'en' | 'pl', RegExp>> = {
   en: /\b(?:visit(?:ing)?|travel(?:l?ing)?\s+(?:to|in|around)|trip\s+to|holiday\s+in|vacation\s+in|safari|itinerary|pack\s+for|before\s+(?:going|travelling|traveling|my\s+trip)|tourist(?:s)?\s+(?:attractions|sites)|things\s+to\s+(?:do|see))\b/i,
   pl: /(?:odwiedzi\p{L}*|podr[óo][żz]\p{L}*\s+do|wycieczk\p{L}*|wakacj\p{L}*\s+w|zwiedz\p{L}*|safari|spakowa\p{L}*|przed\s+wyjazdem|atrakcj\p{L}*\s+turystyczn\p{L}*)/iu,
 };

@@ -136,3 +136,15 @@ describe('CTO P0 — advice is labelled as general guidance, never as current so
     expect(strings).toContain('nie bieżąca analiza źródeł');
   });
 });
+
+describe('CTO P0 · Defect E — the companion block is titled by the reader’s task', () => {
+  it('a travel answer reads "Current travel notices" (EN) / "Bieżące komunikaty dla podróżnych" (PL); older answers keep the generic title', () => {
+    const view = read('AskRecentReporting.tsx');
+    expect(view).toContain('Current travel notices');
+    expect(view).toContain('Bieżące komunikaty dla podróżnych');
+    expect(code(view)).toContain(
+      'reporting.topic === undefined ? t.title : t.topic[reporting.topic]',
+    );
+    expect(code(view)).toContain('data-ask-recent-topic={reporting.topic}');
+  });
+});

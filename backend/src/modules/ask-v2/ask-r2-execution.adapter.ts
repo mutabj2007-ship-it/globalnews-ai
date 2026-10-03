@@ -7,6 +7,7 @@ import type {
 } from '@globalnews-ai/shared';
 import { findCountryByIso3 } from '@globalnews-ai/shared';
 import { NewsService } from '../news/news.service';
+import { readCompanionIntent, servesIntent, type CompanionIntent } from './companion-relevance';
 import { withDeadline } from '../compute-controls/compute-scopes';
 import { AnalysisService } from '../analysis/service/analysis.service';
 import { AnalysisConfigService } from '../analysis/config/analysis-config.service';
@@ -126,6 +127,8 @@ export const ASK_R2_PAYLOAD_SCHEMA = 'ask-r2-result/1';
 /** TRUST R1 — retained reporting listed beside a place-background answer (listed, not analysed). */
 export interface RecentReporting {
   readonly country: string;
+  /** CTO P0 · Defect E — the reader's task the listed items serve (labels the block). */
+  readonly topic?: CompanionIntent;
   readonly status: 'LISTED' | 'NONE_RETAINED' | 'UNAVAILABLE';
   readonly windowDays: number;
   readonly items: readonly {
@@ -136,6 +139,8 @@ export interface RecentReporting {
   }[];
 }
 const RECENT_REPORTING_LIMIT = 5;
+/** CTO P0 · Defect E — retained candidates read to find up to 5 TASK-relevant items (DB only). */
+const COMPANION_CANDIDATE_POOL = 30;
 const RECENT_REPORTING_DAYS = 14;
 const RECENT_REPORTING_DEADLINE_MS = 2500;
 /** A publication time this far ahead of the server clock is tolerated (provider clock skew). */
@@ -1315,6 +1320,19 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
    */
   private async recentReportingFor(route: AskR2Route): Promise<RecentReporting | null> {
     if (route.knowledgeRequirement !== 'PLACE_REFERENCE') return null;
+    /*
+      CTO P0 · DEFECT E — companion reporting must serve the reader's TASK (companion-relevance.ts):
+      no task that current material serves (a history question) → no block; an item qualifies only
+      if its OWN text shows the task (travel notices for a travel question, economic reporting for
+      an economy question…), never by country + recency alone. Zero qualifying → no block, never
+      padding. A failed read for a task-relevant question is still SAID (UNAVAILABLE, §13). The
+      background answer is unchanged either way. Deterministic: no model, no provider call.
+    */
+    const intent = readCompanionIntent(
+      route.envelope.rawQuestion,
+      route.envelope.language.questionLanguage ?? 'en',
+    );
+    if (intent === null) return null;
     const iso3 = route.envelope.geography.candidates.find(
       (c) => c.source === 'TYPED_GEOGRAPHY' || c.source === 'ENTITY_GEOGRAPHY',
     )?.value;
@@ -1323,6 +1341,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     if (this.news === undefined)
       return {
         country: country.iso3,
+        topic: intent,
         status: 'UNAVAILABLE',
         windowDays: RECENT_REPORTING_DAYS,
         items: [],
@@ -1334,7 +1353,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
            ISO2 matched nothing, so every mixed answer said "none retained" untruthfully. */
         this.news.findRetainedByCountry(
           country.iso3,
-          RECENT_REPORTING_LIMIT,
+          COMPANION_CANDIDATE_POOL,
           RECENT_REPORTING_DAYS * 24 * 60,
         ),
         RECENT_REPORTING_DEADLINE_MS,
@@ -1352,7 +1371,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
           a.countryCode === country.iso2 &&
           Number.isFinite(t) &&
           t >= oldest &&
-          t <= now + RECENT_REPORTING_CLOCK_SKEW_MS
+          t <= now + RECENT_REPORTING_CLOCK_SKEW_MS &&
+          servesIntent(a, intent)
         );
       });
       const items = recent.slice(0, RECENT_REPORTING_LIMIT).map((a) => ({
@@ -1361,15 +1381,19 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         sourceName: a.sourceName,
         publishedAt: a.publishedAt,
       }));
+      if (items.length === 0) return null;
       return {
         country: country.iso3,
-        status: items.length === 0 ? 'NONE_RETAINED' : 'LISTED',
+        topic: intent,
+        status: 'LISTED',
         windowDays: RECENT_REPORTING_DAYS,
         items,
       };
     } catch {
+      /* a task-relevant question whose check failed is TOLD so (§13) — absence is not claimed */
       return {
         country: country.iso3,
+        topic: intent,
         status: 'UNAVAILABLE',
         windowDays: RECENT_REPORTING_DAYS,
         items: [],

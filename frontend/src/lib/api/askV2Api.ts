@@ -97,7 +97,10 @@ export type AskPlanChips =
 
 /** The `ask-r2-result/1` display artifact the execution adapter stores. */
 /** TRUST R1 — see AskRecentReporting component. */
+export type AskCompanionTopic = 'TRAVEL' | 'ECONOMY' | 'SECURITY' | 'BUSINESS' | 'SCIENCE';
 export interface AskRecentReporting {
+  /** CTO P0 · Defect E — the reader's task the listed items serve; absent on older answers. */
+  readonly topic?: AskCompanionTopic;
   readonly country: string;
   readonly status: 'LISTED' | 'NONE_RETAINED' | 'UNAVAILABLE';
   readonly windowDays: number;

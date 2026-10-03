@@ -2536,9 +2536,10 @@ describe('PUBLIC BETA HARDENING R1B — broad global headlines are routed as hea
 describe('TRUST R1 — mixed answer: place background + retained recent reporting (listed, not analysed)', () => {
   const TRAVEL = 'I want to visit Tanzania especially Safari national park, I want to know some information before going there';
   const RECENT = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
-  const article = (n: number, over: Record<string, unknown> = {}) => ({ id: `a${n}`, title: `Report ${n}`, url: `https://example.test/${n}`, sourceName: 'Example', publishedAt: RECENT, countryCode: 'TZ', ...over });
+  /* CTO P0 · Defect E — fixtures carry travel-relevant titles: a title alone never qualified before, it must now */
+  const article = (n: number, over: Record<string, unknown> = {}) => ({ id: `a${n}`, title: `Park road closure ${n}`, url: `https://example.test/${n}`, sourceName: 'Example', publishedAt: RECENT, countryCode: 'TZ', ...over });
 
-  it('a travel question gets background PLUS dated retained reports — one model call, no analysis call', async () => {
+  it('a travel question gets background PLUS dated task-relevant retained reports — one model call, no analysis call', async () => {
     const asked: unknown[] = [];
     const { adapter, calls } = harness({
       background: async () => ({ text: 'General background.' }),
@@ -2549,26 +2550,27 @@ describe('TRUST R1 — mixed answer: place background + retained recent reportin
     expect(payload.background).toEqual({ text: 'General background.' });
     expect(payload.recentReporting).toEqual({
       country: 'TZA',
+      topic: 'TRAVEL',
       status: 'LISTED',
       windowDays: 14,
-      items: [1, 2].map((n) => ({ title: `Report ${n}`, url: `https://example.test/${n}`, sourceName: 'Example', publishedAt: RECENT })),
+      items: [1, 2].map((n) => ({ title: `Park road closure ${n}`, url: `https://example.test/${n}`, sourceName: 'Example', publishedAt: RECENT })),
     });
-    /* ISO3: ArticleCountry's key (an ISO2 read matched nothing on live Alpha) */
-    expect(asked).toEqual([['TZA', 5, 14 * 24 * 60]]);
+    /* ISO3: ArticleCountry's key; a candidate pool is read so the TASK filter can still list up to 5 */
+    expect(asked).toEqual([['TZA', 30, 14 * 24 * 60]]);
     expect(calls.analysis).toEqual([]);
     expect(calls.background).toHaveLength(1);
   });
 
-  it('no retained reporting is SAID, and a failed read is SAID — never silently dropped', async () => {
-    for (const [news, status] of [
-      [{ findRetainedByCountry: async () => [] }, 'NONE_RETAINED'],
+  it('nothing task-relevant retained → NO block (never padding); a failed read is SAID', async () => {
+    for (const [news, expected] of [
+      [{ findRetainedByCountry: async () => [] }, undefined],
       [{ findRetainedByCountry: async () => { throw new Error('db down'); } }, 'UNAVAILABLE'],
     ] as const) {
       const { adapter } = harness({ background: async () => ({ text: 'bg' }), news: news as never });
       const plan = await adapter.prepare(req(TRAVEL));
       const payload = JSON.parse((await inRequest(() => adapter.execute(req(TRAVEL), plan, 'op-1'))).payloadJson);
-      expect(payload.recentReporting.status).toBe(status);
-      expect(payload.recentReporting.items).toEqual([]);
+      if (expected === undefined) expect(payload).not.toHaveProperty('recentReporting');
+      else expect(payload.recentReporting).toMatchObject({ status: expected, topic: 'TRAVEL', items: [] });
       /* §13 — a failed or empty read never erases the valid background answer */
       expect(payload.background).toEqual({ text: 'bg' });
     }
@@ -2581,10 +2583,10 @@ describe('TRUST R1 — mixed answer: place background + retained recent reportin
     });
     const plan = await adapter.prepare(req(TRAVEL));
     const payload = JSON.parse((await inRequest(() => adapter.execute(req(TRAVEL), plan, 'op-1'))).payloadJson);
-    expect(payload.recentReporting.items.map((i: { title: string }) => i.title)).toEqual(['Report 1']);
+    expect(payload.recentReporting.items.map((i: { title: string }) => i.title)).toEqual(['Park road closure 1']);
   });
 
-  it('§13 — a stale, future-dated or undated report is never presented as recent', async () => {
+  it('§13 — a stale, future-dated or undated report is never presented as recent (and none left → no block)', async () => {
     const day = 24 * 60 * 60 * 1000;
     const { adapter } = harness({
       background: async () => ({ text: 'bg' }),
@@ -2598,14 +2600,14 @@ describe('TRUST R1 — mixed answer: place background + retained recent reportin
     });
     const plan = await adapter.prepare(req(TRAVEL));
     const payload = JSON.parse((await inRequest(() => adapter.execute(req(TRAVEL), plan, 'op-1'))).payloadJson);
-    expect(payload.recentReporting).toMatchObject({ status: 'NONE_RETAINED', items: [] });
+    expect(payload).not.toHaveProperty('recentReporting');
   });
 
   it('§13 — listed reports are never handed to the model: the background is not presented as corroborated by them', async () => {
     const seen: string[] = [];
     const { adapter, calls } = harness({
       background: async (...args: unknown[]) => (seen.push(JSON.stringify(args)), { text: 'General background.' }),
-      news: { findRetainedByCountry: async () => [article(1, { title: 'UNIQUE-REPORT-HEADLINE' })] },
+      news: { findRetainedByCountry: async () => [article(1, { title: 'UNIQUE-REPORT-HEADLINE national park closed' })] },
     });
     const plan = await adapter.prepare(req(TRAVEL));
     const payload = JSON.parse((await inRequest(() => adapter.execute(req(TRAVEL), plan, 'op-1'))).payloadJson);
@@ -2620,6 +2622,83 @@ describe('TRUST R1 — mixed answer: place background + retained recent reportin
     const plan = await adapter.prepare(req('How does photosynthesis work?'));
     const payload = JSON.parse((await inRequest(() => adapter.execute(req('How does photosynthesis work?'), plan, 'op-1'))).payloadJson);
     expect(payload).not.toHaveProperty('recentReporting');
+  });
+});
+
+describe('CTO P0 · Defect E — companion reporting must serve the reader’s task (live op e317c951)', () => {
+  const RWANDA = 'Which places can i visit in RWanda? list them and elaborate why.';
+  const RECENT = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
+  const rw = (title: string, summary?: string) => ({ id: title, title, summary, url: `https://example.test/${encodeURIComponent(title)}`, sourceName: 'Example', publishedAt: RECENT, countryCode: 'RW' });
+  /* the four items actually listed on live Alpha for e317c951 (BEFORE evidence) */
+  const LIVE_BEFORE = [
+    rw('Researchers in Rwanda turn plastic waste into sisal-reinforced tiles; strongest sample reached 41.66 MPa with 0.225% water absorption'),
+    rw("EU accused of hypocrisy after bloc copies Britain's Rwanda scheme despite labelling it 'extreme'"),
+    rw('Man charged over Rwanda genocide in first for U.K.'),
+    rw('Rwanda genocide charges brought against London man accused of slaughtering mum and baby son'),
+  ];
+  const run = async (q: string, items: unknown[], lg: 'en' | 'pl' = 'en') => {
+    const reads: unknown[] = [];
+    const { adapter, calls } = harness({
+      background: async () => ({ text: 'Volcanoes National Park, Nyungwe, Akagera, Lake Kivu, Kigali…' }),
+      news: { findRetainedByCountry: async (...a) => (reads.push(a), items as never) },
+    });
+    const plan = await adapter.prepare(req(q, lg));
+    const payload = JSON.parse((await inRequest(() => adapter.execute(req(q, lg), plan, 'op-1'))).payloadJson);
+    return { payload, calls, reads };
+  };
+
+  it('AFTER: the live question with the four live items renders NO companion block; the background answer is unchanged', async () => {
+    const { payload, calls, reads } = await run(RWANDA, LIVE_BEFORE);
+    expect(payload).not.toHaveProperty('recentReporting');
+    expect(payload.background).toEqual({ text: 'Volcanoes National Park, Nyungwe, Akagera, Lake Kivu, Kigali…' });
+    expect(payload.answer.state).toBe('REFERENCE_BACKGROUND');
+    /* zero extra compute: exactly ONE model call (the background), no analysis call, ONE DB read */
+    expect(calls.background).toHaveLength(1);
+    expect(calls.analysis).toEqual([]);
+    expect(calls.reserve).toHaveLength(1);
+    expect(reads).toHaveLength(1);
+  });
+
+  it.each([
+    ['genocide prosecution', 'Man charged over Rwanda genocide in first for U.K.'],
+    ['asylum / deportation scheme', 'UK deportation flights to Rwanda resume under new asylum deal'],
+    ['materials science', 'Researchers in Rwanda turn plastic waste into sisal-reinforced tiles'],
+    ['domestic politics', 'Rwanda parliament approves cabinet reshuffle'],
+    ['sport', 'Rwanda beat Kenya in World Cup qualifier'],
+  ])('negative — %s is not a travel notice', async (_k, title) => {
+    const { payload } = await run(RWANDA, [rw(title)]);
+    expect(payload).not.toHaveProperty('recentReporting');
+  });
+
+  it.each([
+    ['park closure', 'Volcanoes National Park closes gorilla trekking for two weeks'],
+    ['road / transport disruption', 'Landslide blocks Kigali–Musanze road, travellers advised to delay trips'],
+    ['visitor requirement', 'Rwanda changes visa on arrival rules for visitors from October'],
+    ['destination security notice', 'Travel advisory issued for Rwanda–DRC border areas after clashes'],
+    ['flights', 'RwandAir suspends flights to Lagos'],
+  ])('positive — %s is listed, labelled as travel', async (_k, title) => {
+    const { payload } = await run(RWANDA, [rw(title)]);
+    expect(payload.recentReporting).toMatchObject({ status: 'LISTED', topic: 'TRAVEL', country: 'RWA' });
+    expect(payload.recentReporting.items.map((i: { title: string }) => i.title)).toEqual([title]);
+  });
+
+  it('mixed pool: only the task-relevant item survives, ahead of more recent irrelevant ones', async () => {
+    const { payload } = await run(RWANDA, [...LIVE_BEFORE, rw('Nyungwe Forest canopy walk reopens to tourists')]);
+    expect(payload.recentReporting.items.map((i: { title: string }) => i.title)).toEqual(['Nyungwe Forest canopy walk reopens to tourists']);
+  });
+
+  it('country + recency alone never qualifies: a history question gets no block and no read at all', async () => {
+    const { payload, reads } = await run('What is the history of Rwanda?', [rw('Volcanoes National Park closes')]);
+    expect(payload).not.toHaveProperty('recentReporting');
+    expect(reads).toEqual([]);
+  });
+
+  it('PL parity: a Polish travel question is filtered the same way and labelled TRAVEL', async () => {
+    const q = 'Jakie miejsca warto odwiedzić w Rwandzie?';
+    const none = await run(q, LIVE_BEFORE, 'pl');
+    expect(none.payload).not.toHaveProperty('recentReporting');
+    const some = await run(q, [rw('Park Narodowy Wulkanów zamknięty dla turystów')], 'pl');
+    expect(some.payload.recentReporting).toMatchObject({ status: 'LISTED', topic: 'TRAVEL' });
   });
 });
 
