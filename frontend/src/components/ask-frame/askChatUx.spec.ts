@@ -88,3 +88,17 @@ describe('TRUST R1 — mixed answer: recent reporting is listed, labelled and lo
     expect(turn).toMatch(/payload\.analysis === null && payload\.recentReporting != null/);
   });
 });
+
+describe('TRUST R1 (checkpoint 5) — reading position while an answer is pending', () => {
+  it('scrolling away from the end stops following, so an arriving answer does not yank the reader', () => {
+    const screen = code(read('AskFrameScreen.tsx'));
+    /* the scroll handler clears the follow-on-send flag whenever the reader leaves the end */
+    expect(screen).toMatch(
+      /if \(atEnd\.current\) setNewBelow\(false\);\s*else followNext\.current = false;/,
+    );
+    /* and an arrival while not following shows the new-answer affordance instead of scrolling */
+    expect(screen).toMatch(
+      /if \(atEnd\.current \|\| followNext\.current\) \{[\s\S]*?\} else \{\s*setNewBelow\(true\);/,
+    );
+  });
+});

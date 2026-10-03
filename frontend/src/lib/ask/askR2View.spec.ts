@@ -307,11 +307,12 @@ describe('ALPHA ENABLEMENT R1 — MC-070: a continuation with nothing to continu
       (iso3) => (lang === 'en' ? names : plNames)[iso3] ?? iso3,
     );
 
-  it('EN: says there is no earlier question and asks what to know about this place — no choice list', () => {
+  it('EN: asks what to know about this place and never claims there is no earlier question — no choice list', () => {
     const v = noPrior('en');
     expect(v.clarification.lead).toBe(
-      "There's no earlier question to continue. What would you like to know about this place?",
+      "What would you like to know about this place? An earlier question isn't carried over to a new place on its own.",
     );
+    expect(v.clarification.lead).not.toMatch(/no earlier question/i);
     expect(v.clarification.candidates).toEqual([]);
     expect(v.freshness).toBe(EN.freshness.nothingRan);
     expect(v.handoffs).toEqual({ openFull: false, runDeeper: false });
@@ -321,7 +322,7 @@ describe('ALPHA ENABLEMENT R1 — MC-070: a continuation with nothing to continu
   it('PL: the same, in Polish', () => {
     const v = noPrior('pl');
     expect(v.clarification.lead).toBe(
-      'Nie ma wcześniejszego pytania do kontynuowania. Co chcesz wiedzieć o tym miejscu?',
+      'Co chcesz wiedzieć o tym miejscu? Wcześniejsze pytanie nie przechodzi samo na nowe miejsce.',
     );
     expect(v.freshness).toBe(PL.freshness.nothingRan);
   });

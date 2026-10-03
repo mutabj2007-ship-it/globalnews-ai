@@ -414,6 +414,9 @@ export function AskFrameScreen({
           const node = event.currentTarget;
           atEnd.current = node.scrollHeight - node.scrollTop - node.clientHeight < 120;
           if (atEnd.current) setNewBelow(false);
+          /* TRUST R1 (checkpoint 5, live Alpha) — the reader scrolled away while their answer was
+             pending: stop following, so its arrival shows "new answer" instead of yanking them. */
+          else followNext.current = false;
         }}
       >
         <div className={styles.grid}>
