@@ -69,6 +69,17 @@ const PL_OWN_VENTURE =
 const PL_INTERROGATIVE =
   /\?|^\s*(?:jak|co|kto|który|która|które|czy|porównaj|doradź|poradź)(?=\s)/iu;
 
+/*
+  A PUBLIC EVENT as the subject: "How should I think about the war in Sudan?" borrows a decision
+  frame but asks about current affairs, not the reader's own decision. A decision frame alone is
+  then not advisory — only together with a planning subject or the reader's own venture ("How
+  should our company adapt its pricing to the sanctions?").
+*/
+const EN_PUBLIC_EVENT =
+  /\b(?:wars?|conflicts?|fighting|invasion|ceasefire|coup|elections?|referendum|protests?|unrest|riots?|crisis|crises|attacks?|sanctions|genocide|famine|outbreak|epidemic|pandemic|earthquake|floods?|hurricane|cyclone)\b/i;
+const PL_PUBLIC_EVENT =
+  /(?:^|\s)(?:wojn\p{L}*|konflikt\p{L}*|walk[aiię]|walkach|inwazj\p{L}*|zawieszeni\p{L}*\s+broni|zamach\p{L}*|wybor(?:y|ów|ach|ami|cz\p{L}*)|referend\p{L}*|protest\p{L}*|zamieszk\p{L}*|kryzys\p{L}*|atak\p{L}*|sankcj\p{L}*|ludobójstw\p{L}*|głód|epidemi\p{L}*|pandemi\p{L}*|trzęsieni\p{L}*\s+ziemi|powodzi\p{L}*|powódź)/iu;
+
 /* ── genuine freshness: an explicit time marker, never a topic noun ───────────────────────── */
 const EN_EXPLICIT_TIME =
   /\b(?:today|today's|tonight|right\s+now|now|currently|current\s+(?:market|prices?|pricing|rates?|state|situation|data|figures|events|news|status)|latest|most\s+recent|recent(?:ly)?|this\s+(?:week|month|year|quarter)|yesterday|as\s+of|at\s+the\s+moment|at\s+present|so\s+far\s+this|in\s+(?:19|20)\d{2}|(?:19|20)\d{2})\b/i;
@@ -110,12 +121,15 @@ export function readAdvisory(question: string, language: string): AdvisoryReadin
   const decisionFrame = frames.some((frame) => frame.test(text));
   const planningSubject = subjects.test(text);
   const ownVenture = own.test(text);
+  const publicEvent = (lang === 'pl' ? PL_PUBLIC_EVENT : EN_PUBLIC_EVENT).test(text);
   /*
     A cue is either an explicit request for advice / a decision, or a professional-planning
     subject asked about as a question. "Strategy" alone is NOT a planning subject ("What is
     Russia's strategy?" is current affairs); a decision frame about one's own venture is.
   */
-  const advisory = decisionFrame || (interrogative && (planningSubject || ownVenture));
+  const advisory =
+    (decisionFrame && (!publicEvent || planningSubject || ownVenture)) ||
+    (interrogative && (planningSubject || ownVenture));
   if (!advisory) return null;
 
   const timed = clauses(text).filter((clause) => hasExplicitTime(clause, lang));

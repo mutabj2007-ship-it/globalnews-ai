@@ -113,6 +113,8 @@ describe('negative controls — genuine freshness, current facts and news stay o
     'What did the IMF recommend for Kenya today?',
     'What is going on in Madagascar?',
     'How should the government respond to the strike?',
+    'How should I think about the war in Sudan?',
+    'Should we worry about the election crisis in Mali?',
     'Latest news about subscription price rises',
   ])('%s → not advisory', (q) => {
     const r = route(q);
@@ -137,5 +139,22 @@ describe('negative controls — genuine freshness, current facts and news stay o
 
   it('reported speech is not a request for advice', () => {
     expect(readAdvisory('What did the central bank recommend yesterday?', 'en')).toBeNull();
+  });
+});
+
+describe('a public event as the subject is current affairs, unless it is about the reader’s own venture', () => {
+  it('a decision frame about a war, election or crisis alone is not advice (EN + PL)', () => {
+    expect(readAdvisory('How should I think about the war in Sudan?', 'en')).toBeNull();
+    expect(readAdvisory('Jak powinienem rozumieć wojnę w Sudanie?', 'pl')).toBeNull();
+  });
+
+  it('the same event inside the reader’s own planning stays advisory', () => {
+    expect(
+      readAdvisory('How should our company adapt its pricing model to the sanctions?', 'en')?.mode,
+    ).toBe('ADVISORY');
+  });
+
+  it('a Polish "choice" (wyboru) is not an election', () => {
+    expect(readAdvisory('Co polecasz do wyboru na start?', 'pl')?.mode).toBe('ADVISORY');
   });
 });
