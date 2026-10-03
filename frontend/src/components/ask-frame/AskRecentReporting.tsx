@@ -1,5 +1,6 @@
 import type { AskRecentReporting as RecentReporting } from '@/lib/api/askV2Api';
 import type { AskR2Locale } from '@/lib/ask/askR2Strings';
+import { safeExternalHref } from '@globalnews-ai/shared';
 import { localisedCountryName } from '@/lib/map/geography/displayName';
 
 /**
@@ -70,7 +71,7 @@ export function AskRecentReporting({
           {reporting.items.map((item) => (
             <li key={item.url} className="text-[14px] leading-[1.45]">
               <a
-                href={item.url}
+                href={safeExternalHref(item.url)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-semibold text-[#93cdf5] underline-offset-2 hover:underline"

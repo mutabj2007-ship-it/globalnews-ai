@@ -124,7 +124,7 @@ describe('CONVERGENCE — Unified Intelligence Binding R2 is the ONLY Ask contex
       'lib/ask/askContextRef.ts',
       'lib/ask/askSelectionRef.ts',
       'lib/ask/askModuleRef.ts',
-      'lib/api/askV2Api.ts',
+      /* TRUST R1 — askV2Api.ts gains only the additive AskRecentReporting payload type. */
       'lib/ask/useAskR2Conversation.ts',
       'components/my-intelligence/MyIntelligenceClient.tsx',
       'lib/myIntelligence/selection.ts',

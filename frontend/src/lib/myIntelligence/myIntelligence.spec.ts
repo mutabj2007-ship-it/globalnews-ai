@@ -205,7 +205,8 @@ describe('zero-compute matrix', () => {
     });
     expect(hooks.selection.canRun('SUMMARIZE')).toBe(true);
     expect(hooks.selection.canRun('ASK_SELECTED')).toBe(true);
-    expect(hooks.selection.canRun('WHAT_CHANGED')).toBe(true);
+    /* TRUST R1 — WHAT_CHANGED needs two reports (aligned to the frozen planner). */
+    expect(hooks.selection.canRun('WHAT_CHANGED')).toBe(false);
     expect(hooks.selection.canRun('COMPARE')).toBe(false);
     expect(hooks.selection.canRun('EXPLAIN_DISAGREEMENTS')).toBe(false);
     expect(hooks.selection.canRun('CREATE_BRIEFING')).toBe(false);
