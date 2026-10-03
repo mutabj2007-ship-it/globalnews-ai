@@ -121,6 +121,8 @@ model User {
   storedAskResults  StoredResult[]
   computeOperations ComputeOperation[]
   askBookmarks      AskBookmark[]
+  /// R2 · D1 — durable, user-owned briefings (cascade like every account-owned relation).
+  briefings         Briefing[]
 
   identities UserIdentity[]
   sessions   Session[]
@@ -1581,6 +1583,66 @@ model AskBookmark {
   /// idempotent rather than a counter.
   @@unique([userId, turnId])
   @@index([userId, createdAt])
+}
+
+/// ════════════════════════════════════════════════════════════════════════════
+/// R2 · D1 (CTO checkpoint 3 ruling §10) — DURABLE BRIEFINGS. ADDITIVE.
+/// ════════════════════════════════════════════════════════════════════════════
+///
+/// A briefing is a DIFFERENT artifact from both neighbours above, and neither of
+/// their rules changes: StoredResult stays an expiring display artifact, and
+/// AskBookmark stays a link (never a copy). A briefing is the reader's own saved
+/// document: a stable identity (Briefing) plus immutable snapshots
+/// (BriefingVersion).
+///
+/// WHAT A VERSION HOLDS: our own validated, structured output (answer blocks,
+/// computed values, comparison rows), the evidence REFERENCES needed to check it
+/// (article id, publisher host, link, headline, publication time), the evidence
+/// revision, the monitoring / as-of window and the coverage gaps. Never a
+/// source's full text. Reopening a version reads this row; no AI runs.
+///
+/// PRIVATE: every read and write is scoped by `userId`. Deleting the account
+/// cascades; the reader can delete a briefing (its versions cascade). Share and
+/// export do not exist. A later version never rewrites an earlier one; a reader
+/// of an older version is told that a newer one exists.
+model Briefing {
+  id        String            @id @default(uuid())
+  userId    String
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  /// The governed scope the briefing follows: { kind, countryCode?, storyId?, language }.
+  scope     Json
+  /// ACTIVE | ARCHIVED (CHECK in the migration).
+  status    String            @default("ACTIVE")
+  createdAt DateTime          @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime          @updatedAt @db.Timestamptz(6)
+  versions  BriefingVersion[]
+
+  @@index([userId, updatedAt])
+}
+
+model BriefingVersion {
+  id               String    @id @default(uuid())
+  briefingId       String
+  briefing         Briefing  @relation(fields: [briefingId], references: [id], onDelete: Cascade)
+  /// 1, 2, 3 … per briefing; UNIQUE (briefingId, version).
+  version          Int
+  /// When the evidence was read, and the window it was monitored over.
+  asOf             DateTime  @db.Timestamptz(6)
+  windowFrom       DateTime? @db.Timestamptz(6)
+  windowTo         DateTime? @db.Timestamptz(6)
+  /// Validated answer blocks (prose answer, key facts, comparison table) — our output only.
+  blocks           Json
+  /// Evidence references only: [{ id, host, url, title, publishedAt }] — never full text.
+  evidenceRefs     Json
+  evidenceRevision String
+  /// What the evidence did not cover (named gaps), copied from the validated result.
+  coverageGaps     Json
+  /// The Ask turn the snapshot was taken from (a plain id: the turn may later expire).
+  sourceTurnId     String?
+  createdAt        DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@unique([briefingId, version])
 }
 
 model StoredResult {

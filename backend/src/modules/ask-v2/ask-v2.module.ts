@@ -19,6 +19,8 @@ import { AskV2GuestController } from './guest/ask-v2-guest.controller';
 import { GuestFirstWriteGuard, GuestWriteGuard, RequireGuestGuard } from './guest/guest.guards';
 import { GuestMaintenanceService } from './guest/guest-maintenance.service';
 import { AskContextResolver } from './context/ask-context.resolver';
+import { BriefingsController, BriefingsEnabledGuard } from './briefings/briefings.controller';
+import { BriefingsService } from './briefings/briefings.service';
 
 /*
   ASK R2 CONSOLIDATED INTEGRATION R1 · GATE E — ASK_EXECUTION_PORT is bound to the Ask R2
@@ -42,7 +44,8 @@ import { AskContextResolver } from './context/ask-context.resolver';
     AskIntelligenceModule,
     GuestCoreModule,
   ],
-  controllers: [AskV2Controller, AskV2GuestController],
+  /* R2 · D1 — durable briefings (ASK_BRIEFINGS_ENABLED, default off). */
+  controllers: [AskV2Controller, AskV2GuestController, BriefingsController],
   providers: [
     AskV2Service,
     AskV2EnabledGuard,
@@ -54,6 +57,8 @@ import { AskContextResolver } from './context/ask-context.resolver';
     GuestFirstWriteGuard,
     GuestMaintenanceService,
     AskContextResolver,
+    BriefingsService,
+    BriefingsEnabledGuard,
     { provide: ASK_EXECUTION_PORT, useExisting: AskR2ExecutionAdapter },
   ],
   exports: [AskV2Service],
