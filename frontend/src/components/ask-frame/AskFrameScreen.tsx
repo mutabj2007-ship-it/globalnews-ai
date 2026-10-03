@@ -453,7 +453,13 @@ export function AskFrameScreen({
             )}
             {!compareContext && !moduleContext && context && (
               <div data-ask="context" className={styles.contextChip}>
-                <span className="truncate">{context.title}</span>
+                <span className="truncate">
+                  {/* TRUST R1 — a country-only context (Map → Ask) names its place; it had an empty title. */}
+                  {context.title ||
+                    (context.countryCode
+                      ? (localisedCountryName(context.countryCode, r2Locale) ?? context.countryCode)
+                      : '')}
+                </span>
                 <button
                   type="button"
                   className="inline-flex min-h-11 min-w-11 items-center justify-center"
