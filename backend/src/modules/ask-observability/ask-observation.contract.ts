@@ -29,7 +29,69 @@ import { ALL_ISO3_CODES } from '@globalnews-ai/shared';
  */
 
 /** The observation shape this build writes. A later shape gets a later version. */
-export const ASK_OBSERVATION_SCHEMA = 'ask-observation/1' as const;
+/* /2 — CTO R4 closeout: the governed user-job codes (jobKind … jobArtifactProducedKind). */
+export const ASK_OBSERVATION_SCHEMA = 'ask-observation/2' as const;
+
+/*
+  CTO R4 CLOSEOUT — THE GOVERNED USER JOB, AS CODES. Closed vocabularies, copied here on purpose
+  (this module reaches no router or Ask file); askObservation.job.spec.ts proves they equal the
+  router's and the artifact's own lists. A value outside them is DROPPED (stored as null) by the
+  writer, so no free text can arrive in these columns even if a producer emits it.
+*/
+export const OBSERVED_JOB_KINDS: ReadonlySet<string> = new Set([
+  'EXPLANATION',
+  'DEEP_CONCEPTUAL_ANALYSIS',
+  'ADVISORY',
+  'DECISION_SUPPORT',
+  'PLANNING',
+  'TRANSFORMATION',
+  'COMPARISON',
+  'PLACE_BACKGROUND',
+  'CURRENT_REPORTING',
+  'OFFICIAL_CURRENT_REFERENCE',
+  'CHANGE_ANALYSIS',
+  'RELATIONSHIP_ANALYSIS',
+  'COMPUTATION',
+  'WRITING',
+  'MIXED',
+  /* no job could be read (an UNRESOLVED route the classifier never decided) */
+  'UNRESOLVED',
+]);
+export const OBSERVED_JOB_SOURCES: ReadonlySet<string> = new Set([
+  'DETERMINISTIC',
+  'SEMANTIC',
+  'FALLBACK',
+  'UNRESOLVED',
+]);
+export const OBSERVED_JOB_DEPTHS: ReadonlySet<string> = new Set(['STANDARD', 'DEEP']);
+export const OBSERVED_JOB_FRESHNESS: ReadonlySet<string> = new Set(['NONE', 'PARTIAL', 'CURRENT']);
+export const OBSERVED_TRANSFORMATIONS: ReadonlySet<string> = new Set([
+  'PLAN',
+  'TABLE',
+  'CHECKLIST',
+  'SUMMARY',
+  'SCENARIOS',
+  'COMPARISON',
+  'EXPLAIN_MORE',
+  'FIRST_STEP',
+  'BRIEFING',
+  'ACTION_STEPS',
+]);
+export const OBSERVED_DISCOURSE_REFERENCES: ReadonlySet<string> = new Set(['NONE', 'PRIOR_WORK']);
+export const OBSERVED_ARTIFACT_KINDS: ReadonlySet<string> = new Set([
+  'CONCEPTUAL_FRAMEWORK',
+  'DIAGNOSIS',
+  'COMPARISON',
+  'DECISION_CRITERIA',
+  'RECOMMENDATION',
+  'PLAN',
+  'SUMMARY',
+]);
+
+/** A code from its closed vocabulary, or null. */
+export function governedCode(value: string | null, vocabulary: ReadonlySet<string>): string | null {
+  return value !== null && vocabulary.has(value) ? value : null;
+}
 
 /**
  * THE ROUTE PATHS THE VOCABULARY DECLARES, AND THE ONE THAT HAS AN EMITTER.
@@ -207,6 +269,17 @@ export interface AskObservationInput {
 
   readonly askR2Enabled: boolean | null;
   readonly askPublicComputeEnabled: boolean | null;
+
+  /* CTO R4 closeout — the governed user job (codes; null = no job reading for this Ask) */
+  readonly jobKind: string | null;
+  readonly jobSource: string | null;
+  readonly jobDepth: string | null;
+  readonly jobFreshness: string | null;
+  readonly jobClassifierUsed: boolean | null;
+  readonly jobTransformation: string | null;
+  readonly jobDiscourseReference: string | null;
+  readonly jobArtifactUsedKind: string | null;
+  readonly jobArtifactProducedKind: string | null;
 }
 
 /**
@@ -271,6 +344,15 @@ export function newAskObservationDraft(
     identityState: 'ANONYMOUS',
     askR2Enabled: null,
     askPublicComputeEnabled: null,
+    jobKind: null,
+    jobSource: null,
+    jobDepth: null,
+    jobFreshness: null,
+    jobClassifierUsed: null,
+    jobTransformation: null,
+    jobDiscourseReference: null,
+    jobArtifactUsedKind: null,
+    jobArtifactProducedKind: null,
   };
 }
 

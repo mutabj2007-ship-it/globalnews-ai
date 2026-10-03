@@ -130,9 +130,104 @@ const STABLE_SHAPES: Readonly<Record<'en' | 'pl', readonly RegExp[]>> = {
 const FRESHNESS: Readonly<Record<'en' | 'pl', RegExp>> = {
   /* "current" counts only as a TIME adjective before a state noun ("current price", "the current
      security situation") — never as the electrical quantity ("inrush current"). */
-  en: /\b(?:today|tonight|now|right\s+now|currently|current\s+(?:\w+\s+)?(?:price|prices|rate|rates|level|levels|status|situation|state|regulation|regulations|policy|policies|law|laws|edition|version|government|president|leader|leadership|events?|affairs|conflict|war)|latest|recent|recently|this\s+(?:week|month|year)|yesterday|announced|breaking|new\s+(?:law|policy|policies|rule|rules|regulation|regulations|standard|bill|tariff)|price\s+of|so\s+far|in\s+20\d\d|20\d\d|situation|status|developments?|crisis|outlook|tensions|negotiations|headlines|news)\b/i,
-  pl: /(?:^|[\s,])(?:dzi[śs]|dzisiaj|teraz|obecn\p{L}*|aktualn\p{L}*|najnowsz\p{L}*|ostatni\p{L}*|w\s+tym\s+(?:tygodniu|miesi[ąa]cu|roku)|wczoraj|og[łl]osi\p{L}*|og[łl]oszon\p{L}*|sytuacj\p{L}*|stan\p{L}*|kurs\p{L}*|cen[aeyę]|kryzys\p{L}*|wiadomo[śs]\p{L}*|nag[łl][óo]wk\p{L}*|20\d\d)(?=$|[\s,?.!])/iu,
+  en: /\b(?:today|tonight|now|right\s+now|currently|current\s+(?:\w+\s+)?(?:price|prices|rate|rates|level|levels|status|situation|state|regulation|regulations|policy|policies|law|laws|edition|version|government|president|leader|leadership|events?|affairs|conflict|war)|latest|recent|recently|this\s+(?:week|month|year)|yesterday|announced|breaking|new\s+(?:law|policy|policies|rule|rules|regulation|regulations|standard|bill|tariff)|price\s+of|so\s+far|in\s+20\d\d|20\d\d|headlines|news|(?:the\s+)?(?:past|last|previous)\s+(?:few\s+|couple\s+(?:of\s+)?|\d{1,3}\s+|[a-z]+\s+)?(?:days?|weeks?|months?|fortnight))\b/i,
+  pl: /(?:^|[\s,])(?:dzi[śs]|dzisiaj|teraz|obecn\p{L}*|aktualn\p{L}*|najnowsz\p{L}*|ostatni\p{L}*|w\s+tym\s+(?:tygodniu|miesi[ąa]cu|roku)|(?:zesz[łl]\p{L}*|minion\p{L}*)\s+(?:\p{L}+\s+)?(?:dni|tygodni\p{L}*|tydzie[ńn]|miesi[ąa]c\p{L}*|miesi[ęe]cy)|wczoraj|og[łl]osi\p{L}*|og[łl]oszon\p{L}*|wiadomo[śs]\p{L}*|nag[łl][óo]wk\p{L}*|20\d\d)(?=$|[\s,?.!])/iu,
 };
+
+/*
+  CTO R4 CLOSEOUT — A WORD FOR A POTENTIALLY CURRENT PHENOMENON IS NOT A REQUEST FOR CURRENT
+  REPORTING. State nouns ("situation", "status", "crisis", "tensions"…; PL "sytuacja", "stan",
+  "kryzys", "kurs", "ceny") and public-event nouns ("war", "election"…) are SUBJECT MATTER. They
+  count as currentness only when they refer to a PARTICULAR instance:
+    · a named place in the question ("the crisis in Lebanon", "kryzys w Argentynie");
+    · a definite / demonstrative / possessive determiner or a time adjective close before it
+      ("the situation", "this war", "Argentina's currency crisis", "the ongoing talks",
+       PL "ten kryzys", "obecna sytuacja", "trwająca wojna");
+    · a proper-noun modifier ("the Eurozone crisis");
+    · a request for the present state ("what is the situation", PL "jaka jest sytuacja",
+      "jak wygląda sytuacja").
+  A generic use ("into a big crisis", "how can a war reshape an economy", "w czasie kryzysu")
+  is a conceptual subject, never time. The noun list names phenomena; the decision is the FORM.
+*/
+const STATE_NOUN: Readonly<Record<'en' | 'pl', RegExp>> = {
+  en: /\b(?:situation|status|developments?|crisis|crises|outlook|tensions|negotiations)\b/giu,
+  pl: /(?:^|[\s,])(?:sytuacj\p{L}*|stan|stanu|stanie|kurs\p{L}*|cen[aeyę]|kryzys\p{L}*)(?=$|[\s,?.!])/giu,
+};
+const EN_ANCHOR_BEFORE =
+  /(?:^|[\s(])(?:the|this|that|these|those|its|their|our|your|current|ongoing|recent|latest|present|unfolding|today['’]s)\s+(?:(?!(?:a|an|of|in|into|during|to|for|from|and|or|by)\s)[\p{L}-]+\s+){0,2}$/iu;
+const PL_ANCHOR_BEFORE =
+  /(?:^|\s)(?:ten|ta|to|tego|tej|tym|tę|obecn\p{L}*|aktualn\p{L}*|trwając\p{L}*|bieżąc\p{L}*|ostatni\p{L}*|najnowsz\p{L}*|obecnie|(?:jaki|jaka|jakie)\s+(?:jest|są|był\p{L}*)|jak\s+wygląda(?:ją)?)\s+(?:\p{L}+\s+){0,1}$/iu;
+/* words that end a noun's modifier run: a proper modifier must sit inside the noun phrase */
+const MODIFIER_STOP: Readonly<Record<'en' | 'pl', RegExp>> = {
+  en: /^(?:a|an|of|in|into|during|to|for|from|and|or|by|do|does|did|can|could|is|are|was|were|how|why|what|when|will|would|may|might)$/i,
+  pl: /^(?:w|we|na|do|z|ze|i|oraz|o|od|dla|po|przy|przez|jak|dlaczego|czy|co|może|mogą|jest|są)$/i,
+};
+
+/**
+ * A PROPER modifier inside the noun phrase ("the Eurozone crisis", "Argentina's currency crisis",
+ * "Brexit negotiations"): a capitalised word that is NOT the first word of its sentence (that is
+ * capitalised by grammar) or a possessive, within the two words before the noun, with no function
+ * word in between.
+ */
+function properModifierBefore(textBefore: string, lang: 'en' | 'pl'): boolean {
+  const sentence = textBefore.slice(
+    Math.max(
+      textBefore.lastIndexOf('.'),
+      textBefore.lastIndexOf('?'),
+      textBefore.lastIndexOf('!'),
+    ) + 1,
+  );
+  const tokens = sentence
+    .trim()
+    .split(/\s+/)
+    .filter((t) => t.length > 0);
+  for (let i = tokens.length - 1; i >= Math.max(0, tokens.length - 2); i--) {
+    const token = tokens[i].replace(/^[("“„'‘]+|[)"”'’,;:]+$/gu, '');
+    if (MODIFIER_STOP[lang].test(token)) return false;
+    if (/['’]s$/u.test(tokens[i])) return true;
+    if (i > 0 && /^\p{Lu}/u.test(token)) return true;
+  }
+  return false;
+}
+const ANCHOR_AFTER: Readonly<Record<'en' | 'pl', RegExp>> = {
+  en: /^\s+(?:in|of|on|around|at|over|between)\s+(?:the\s+)?\p{Lu}/u,
+  pl: /^\s+(?:w|we|na|wokół|między|nad)\s+\p{Lu}/u,
+};
+
+/**
+ * Does the text name a PARTICULAR instance of a phenomenon (a state or a public event)? A named
+ * place, a determiner / time adjective / proper modifier before it, a proper noun after it, or a
+ * present-state question form. Generic and indefinite uses are subject matter, not currentness.
+ */
+export function particularPhenomenon(
+  text: string,
+  language: string,
+  nouns: RegExp,
+  namedPlace = false,
+): boolean {
+  const lang: 'en' | 'pl' = language === 'pl' ? 'pl' : 'en';
+  const global = new RegExp(
+    nouns.source,
+    nouns.flags.includes('g') ? nouns.flags : `${nouns.flags}g`,
+  );
+  let any = false;
+  for (const m of text.matchAll(global)) {
+    any = true;
+    const lead = m[0].length - m[0].trimStart().length;
+    const start = (m.index ?? 0) + lead;
+    const before = text.slice(Math.max(0, start - 80), start);
+    const after = text.slice(start + m[0].trimStart().length, start + m[0].length + 60);
+    if ((lang === 'pl' ? PL_ANCHOR_BEFORE : EN_ANCHOR_BEFORE).test(before)) return true;
+    if (properModifierBefore(text.slice(0, start), lang)) return true;
+    if (ANCHOR_AFTER[lang].test(after)) return true;
+  }
+  return any && namedPlace;
+}
+
+/** State nouns count as freshness only for a particular instance (see STATE_NOUN). */
+function anchoredState(text: string, lang: 'en' | 'pl', place: boolean): boolean {
+  return particularPhenomenon(text, lang, STATE_NOUN[lang], place);
+}
 
 /**
  * A changing quantity asked in the progressive is news ("Why is the dollar falling?", "How is
@@ -225,6 +320,12 @@ const HISTORICAL_IDENTITY: Readonly<Record<'en' | 'pl', RegExp>> = {
   pl: /^(?:[Cc]zym|[Cc]o\s+to)\s+by[łl](?:a|o|y)?\s+\p{Lu}[\p{L}'’.-]*(?:\s+[\p{L}'’.-]+){0,4}\s*\??$/u,
 };
 
+/** A request for background / context: the stable half of a MIXED question. */
+const BACKGROUND_REQUEST: Readonly<Record<'en' | 'pl', RegExp>> = {
+  en: /^(?:(?:please\s+)?(?:give|tell|show)\s+me|provide|share)\s+(?:some\s+|the\s+|a\s+|an\s+)?(?:brief\s+|short\s+|quick\s+)?(?:background|context|overview|history|primer|explanation)\b|^(?:background|context)\s+(?:on|of|to)\b/i,
+  pl: /^(?:przedstaw|podaj|daj|opowiedz)\s+(?:mi\s+)?(?:kr[óo]tko\s+)?(?:t[łl]o|kontekst|zarys|histori\p{L}*)|^(?:t[łl]o|kontekst)\b/iu,
+};
+
 function firstClause(text: string): string {
   const first = text.split(/(?<=[.?!])\s+/)[0] ?? text;
   return first.trim();
@@ -272,15 +373,17 @@ export function deriveKnowledgeRequirement(
   const travel = TRAVEL_FRAME[lang].test(text);
   /* TRUST R1 §14 — inside a travel request a forward-pointing period is the trip's timing. */
   const freshText = travel ? withoutFuturePeriods(text, lang, requestYear) : text;
-  const fresh =
-    assertsFreshness(freshText) ||
-    FRESHNESS[lang].test(freshText) ||
-    CHANGING[lang].test(freshText);
   const historicalIdentity = HISTORICAL_IDENTITY[lang].test(text);
   const place =
     namedPlace ||
     resolvePrimaryCountry({ title: text, summary: '' }) !== undefined ||
     resolveCountriesByDemonym(text).length > 0;
+  /* CTO R4 CLOSEOUT — a state noun is freshness only for a particular instance (STATE_NOUN) */
+  const fresh =
+    assertsFreshness(freshText) ||
+    FRESHNESS[lang].test(freshText) ||
+    CHANGING[lang].test(freshText) ||
+    anchoredState(freshText, lang, place);
   const stableShape = STABLE_SHAPES[lang].some((shape) => shape.test(firstClause(text)));
   /* An EXPLANATORY shape (everything but the bare "what is / what are" opener) that also asserts
      freshness is mixed; "What is the current price of …" is simply current. */
@@ -360,21 +463,34 @@ export function deriveKnowledgeRequirement(
       reason: 'a historical entity asked about in the past tense',
     };
   }
-  if (explanatory && fresh) {
-    /* R3 §6 — the clauses that carry the freshness: named on a partial answer if they fail */
-    const timed = text
-      .split(
-        /(?<=[?.!;])\s+|,\s+(?:and|but|while|plus)\s+|\s+(?:and|but|i|a)\s+(?=(?:what|which|who|how|where|when|is|are|do|does|did|co|jak|kto|czy|ile)\b)/iu,
-      )
-      .map((c) => c.trim())
-      .filter(
-        (c) =>
-          c.length > 0 &&
-          (assertsFreshness(c) || FRESHNESS[lang].test(c) || CHANGING[lang].test(c)),
-      );
+  /*
+    R3 §6 / CTO R4 CLOSEOUT §7 — MIXED is read per CLAUSE: a stable request ("What is a debt
+    ceiling", "Explain why currency pegs can be fragile", "Give me the background on…") joined to
+    a current one ("…and what happened to X this week?") keeps BOTH halves, so a failed current
+    retrieval never erases the stable answer. The current clauses are named on a partial answer.
+  */
+  const clauses = text
+    .split(
+      /(?<=[?.!;])\s+|,\s+(?:and|but|while|plus)\s+|,?\s+(?:and|but|plus|i|a|oraz)\s+(?=(?:what|which|who|how|where|when|why|is|are|do|does|did|tell|give|show|update|co|jak|kto|czy|ile|gdzie|dlaczego|powiedz|podaj|pokaż)\b)/iu,
+    )
+    .map((c) => c.trim())
+    .filter((c) => c.length > 0);
+  const clauseFresh = (c: string): boolean =>
+    assertsFreshness(c) ||
+    FRESHNESS[lang].test(c) ||
+    CHANGING[lang].test(c) ||
+    CHANGED[lang].test(c) ||
+    anchoredState(c, lang, false);
+  const timed = clauses.filter(clauseFresh);
+  const stableClause = clauses.some(
+    (c) =>
+      !clauseFresh(c) &&
+      (STABLE_SHAPES[lang].some((shape) => shape.test(c)) || BACKGROUND_REQUEST[lang].test(c)),
+  );
+  if ((explanatory && fresh) || (stableClause && timed.length > 0)) {
     return {
       requirement: 'MIXED_REFERENCE_CURRENT',
-      reason: 'a stable shape that also asserts freshness',
+      reason: 'a stable part plus a current part',
       currentClauses: timed.length > 0 ? timed : [text],
     };
   }

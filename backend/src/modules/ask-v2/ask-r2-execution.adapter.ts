@@ -696,6 +696,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
   ): Promise<ExecutionResult> {
     let route = routeFor(request, this.deps);
     this.observeRoute(route, draft);
+    /* CTO R4 closeout — the KIND of earlier work this Ask received (never its content) */
+    draft.jobArtifactUsedKind = request.priorArtifact?.kind ?? null;
     const priorQuestion = askRequestContext.getStore()?.priorQuestion ?? null;
     if (planRevision(request, route, priorQuestion) !== plan.revision) {
       throw new AskExecutionRefused('ASK_PLAN_REVISION_MISMATCH');
@@ -752,6 +754,19 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         null,
         false,
       );
+    }
+
+    /*
+      CTO R4 CLOSEOUT §7 — A MIXED QUESTION NEVER COLLAPSES. When frozen C can only OFFER to broaden
+      the current part (BROADENING_OFFERED: its constraint cannot be transported), the stable part is
+      still answered by reasoning and the current part is named as not verified — the same partial
+      answer a failed retrieval gets. No reporting attempt was made, so none is counted.
+    */
+    if (
+      route.knowledgeRequirement === 'MIXED_REFERENCE_CURRENT' &&
+      route.plan.terminalState === 'BROADENING_OFFERED'
+    ) {
+      return this.executeBackground(request, plan, route, operationId, draft, 'UNAVAILABLE');
     }
 
     /* 2 · a terminal that needs no model answers with ZERO AI. */
@@ -895,6 +910,10 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     if (route.job.source === 'UNRESOLVED') {
       const semantic = await this.classifyUnresolved(request, draft);
       const resolved = routeFor(request, this.deps, semantic.verdict);
+      /* what is executed is the resolved route; the job source says who decided it */
+      this.observeRoute(resolved, draft);
+      draft.jobSource = semantic.source;
+      draft.jobClassifierUsed = semantic.calls > 0;
       if (resolved.plan.terminalState === 'REFERENCE_BACKGROUND_ONLY')
         return this.executeBackground(
           request,
@@ -1177,6 +1196,14 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     draft.domains = [...envelope.domains.domains];
     draft.topicPresent = envelope.topic.readerTerms.length > 0;
     draft.temporalRequirement = envelope.time.requirement;
+    /* CTO R4 closeout — the governed user job, as codes (the writer drops anything else) */
+    draft.jobKind = route.job.job ?? 'UNRESOLVED';
+    draft.jobSource = route.job.source;
+    draft.jobDepth = route.job.depth;
+    draft.jobFreshness = route.job.freshness;
+    draft.jobTransformation = route.job.transformation;
+    draft.jobDiscourseReference = route.job.discourseReference;
+    if (draft.jobClassifierUsed === null) draft.jobClassifierUsed = false;
     draft.statedPeriodPresent = envelope.time.statedPeriod !== null;
     draft.evidenceRolesRequested = requiredRolesOf(plan);
     draft.identityState = envelope.identity.state;
@@ -1500,7 +1527,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     try {
       /* Counted before it is made, as on the Reporting path: attempts are what an operator needs.
          A partial answer (R3 §6) already made the reporting attempt: this is the second call. */
-      draft.providerCallCount = partialCurrent === undefined ? 1 : 2;
+      draft.providerCallCount = partialCurrent === undefined ? 1 : draft.providerCallCount + 1;
       const out = await this.background.answerBackground({
         question: request.question,
         responseLanguage: request.language,
@@ -1526,6 +1553,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         const split = splitArtifact(out.text);
         text = split.text;
         artifact = split.artifact;
+        draft.jobArtifactProducedKind = artifact?.kind ?? null;
       }
       declined = text === null;
       outcome = declined ? 'REFUSAL' : 'SUCCESS';

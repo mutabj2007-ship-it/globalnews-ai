@@ -242,6 +242,17 @@ describe('R1 — the observation schema has no column a question could occupy', 
         'terminalState',
         'tokensMeasured',
         'topicPresent',
+        /* CTO R4 closeout — the governed user job as CODES from closed vocabularies (the writer
+           drops anything else); never model prose, never an artifact's label or components. */
+        'jobArtifactProducedKind',
+        'jobArtifactUsedKind',
+        'jobClassifierUsed',
+        'jobDepth',
+        'jobDiscourseReference',
+        'jobFreshness',
+        'jobKind',
+        'jobSource',
+        'jobTransformation',
       ].sort(),
     );
   });

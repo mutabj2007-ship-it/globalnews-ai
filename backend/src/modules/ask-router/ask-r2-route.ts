@@ -41,6 +41,7 @@ import {
   deriveKnowledgeRequirement,
   genuineFreshness,
   isFuturePeriod,
+  particularPhenomenon,
   type KnowledgeRequirement,
 } from './knowledge-requirement';
 import { buildEnvelope, type EnvelopeSource } from './frozen-c/src/envelope';
@@ -740,8 +741,14 @@ export function routeAskR2(
     advisory || placeReference || stableOrComputed
       ? null
       : readBilateralRelationship(reading.originalQuestion, reading.sourceLanguage);
-  const publicEvent = (reading.sourceLanguage === 'pl' ? PL_PUBLIC_EVENT : EN_PUBLIC_EVENT).test(
+  /* CTO R4 CLOSEOUT — a public-event noun is current affairs only for a PARTICULAR event (a named
+     place, "the war", "this election", "obecny kryzys"); "how can a war reshape an economy" and
+     "w czasie kryzysu" are conceptual subjects (knowledge-requirement.ts particularPhenomenon). */
+  const publicEvent = particularPhenomenon(
     reading.originalQuestion,
+    reading.sourceLanguage,
+    reading.sourceLanguage === 'pl' ? PL_PUBLIC_EVENT : EN_PUBLIC_EVENT,
+    namedPlace,
   );
   const fresh = genuineFreshness(
     reading.originalQuestion,

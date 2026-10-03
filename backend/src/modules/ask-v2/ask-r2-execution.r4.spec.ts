@@ -1,7 +1,7 @@
 import type { AskRequest } from './ask-compute.contract';
 import { AskR2ExecutionAdapter } from './ask-r2-execution.adapter';
 import { askRequestContext } from './ask-request-context';
-import type { PriorArtifact } from './conversation/conversation-artifact';
+import { validateArtifact, type PriorArtifact } from './conversation/conversation-artifact';
 
 /**
  * CTO R4 — DEEP CONVERSATIONAL INTELLIGENCE through the execution adapter, every dependency faked
@@ -22,6 +22,8 @@ function harness(opts: {
   /** absent = the provider has no structured classifier */
   classify?: (user: string) => Promise<string>;
   breakerAllowed?: boolean;
+  /** the news pipeline's behaviour (default: no articles) */
+  analysis?: () => Promise<unknown>;
 }) {
   const calls = {
     analysis: [] as unknown[],
@@ -34,6 +36,7 @@ function harness(opts: {
   const analysisService = {
     analyzeNews: jest.fn(async (...args: unknown[]) => {
       calls.analysis.push(args);
+      if (opts.analysis !== undefined) return opts.analysis();
       return { analysis: {} as never, articles: [], retrievalContext: {} as never };
     }),
   };
@@ -168,7 +171,7 @@ const PRIME: PriorArtifact = {
 };
 
 describe('R4 — Prime Moment journey through the adapter: zero news, one reasoning call per turn', () => {
-  it('T1 (live wording) — deep rubric, artifact produced in the SAME call and hidden from the reader', async () => {
+  it('T1 (live wording) — a causal question gets the CAUSAL rubric; artifact produced in the SAME call and hidden from the reader', async () => {
     const h = harness({ background: () => `## Definition\nA prime moment is…\n${FRAMEWORK_LINE}` });
     const p = await run(
       h,
@@ -177,9 +180,11 @@ describe('R4 — Prime Moment journey through the adapter: zero news, one reason
     expect(h.calls.analysis).toHaveLength(0);
     expect(h.calls.background).toHaveLength(1);
     expect(h.calls.classify).toHaveLength(0);
+    expect(h.calls.background[0].jobRules).toMatch(/CAUSAL ANALYSIS: the reader asked how or why/);
     expect(h.calls.background[0].jobRules).toMatch(
-      /DEPTH: the reader asked for deep conceptual analysis/,
+      /amplification — the feedback loops or thresholds/,
     );
+    expect(h.calls.background[0].jobRules).toMatch(/kind is most likely CONCEPTUAL_FRAMEWORK/);
     expect(h.calls.background[0].jobRules).toMatch(
       /conceptual framework you are proposing, not an established scientific equation/,
     );
@@ -336,5 +341,224 @@ describe('R4 — negative controls stay on the evidence path', () => {
     expect(h.calls.classify).toHaveLength(0);
     expect(h.calls.background).toHaveLength(0);
     expect(h.calls.analysis.length > 0).toBe(executes);
+  });
+});
+
+/* ── CTO R4 FINAL CLOSEOUT ──────────────────────────────────────────────────────────────────── */
+
+describe('R4 closeout §8 — the Prime Moment artifact chain in ONE thread (framework → diagnosis → recommendation → plan)', () => {
+  /* the model's reply per turn: it hands back the kind the job rules name as most likely */
+  const reply = (input: BackgroundInput): string => {
+    const kind = /kind is most likely ([A-Z_]+)/.exec(input.jobRules ?? '')?.[1] ?? 'SUMMARY';
+    const label = `${kind.toLowerCase()} for turn`;
+    return `Answer.\n<<<ARTIFACT {"kind":"${kind}","label":"${label}","components":["a","b","c"]} ARTIFACT>>>`;
+  };
+  const EN: Array<[string, string, string]> = [
+    [
+      'Define deeply what is "Prime moment" of something or someone. I need deeper analysis.',
+      'DEEP_CONCEPTUAL_ANALYSIS',
+      'CONCEPTUAL_FRAMEWORK',
+    ],
+    [
+      'Apply that idea to GlobalNewsAI. Are we approaching our prime moment?',
+      'DECISION_SUPPORT',
+      'DIAGNOSIS',
+    ],
+    ['Which part is weakest?', 'DEEP_CONCEPTUAL_ANALYSIS', 'DIAGNOSIS'],
+    ['What should we do about it?', 'ADVISORY', 'RECOMMENDATION'],
+    ['Turn that into a 90-day plan.', 'PLANNING', 'PLAN'],
+  ];
+  const PL: Array<[string, string, string]> = [
+    [
+      'Wyjaśnij dogłębnie, czym jest „moment szczytowy” czegoś lub kogoś.',
+      'DEEP_CONCEPTUAL_ANALYSIS',
+      'CONCEPTUAL_FRAMEWORK',
+    ],
+    ['Zastosuj tę ideę do GlobalNewsAI.', 'DECISION_SUPPORT', 'DIAGNOSIS'],
+    ['Która część jest najsłabsza?', 'DEEP_CONCEPTUAL_ANALYSIS', 'DIAGNOSIS'],
+    ['Co powinniśmy z tym zrobić?', 'ADVISORY', 'RECOMMENDATION'],
+    ['Przekształć to w plan na 90 dni.', 'PLANNING', 'PLAN'],
+  ];
+
+  it.each([
+    ['en', EN],
+    ['pl', PL],
+  ] as const)(
+    '%s — every turn: zero news, the previous artifact received with its source turn, its own artifact produced; never evidence',
+    async (lang, turns) => {
+      let prior: PriorArtifact | undefined;
+      const chain: string[] = [];
+      for (const [i, [q, job, kind]] of turns.entries()) {
+        const h = harness({ background: reply });
+        const request: AskRequest = {
+          question: q,
+          language: lang,
+          intent: 'ask',
+          ...(prior === undefined ? {} : { priorArtifact: prior }),
+        };
+        const plan = await h.adapter.prepare(request);
+        const opId = `op-turn-${i + 1}`;
+        const result = await inRequest(() => h.adapter.execute(request, plan, opId));
+        const p = JSON.parse(result.payloadJson) as Payload & {
+          analysis?: unknown;
+          recentReporting?: unknown;
+        };
+        /* zero news, one reasoning call */
+        expect(h.calls.analysis).toHaveLength(0);
+        expect(h.calls.background).toHaveLength(1);
+        expect(p.diagnostics.job.job).toBe(job);
+        /* the previous turn's artifact arrived, with its source turn */
+        if (prior !== undefined) {
+          expect(p.diagnostics.job.artifactUsed).toEqual({
+            kind: prior.kind,
+            label: prior.label,
+            sourceOperationId: `op-turn-${i}`,
+          });
+          expect(h.calls.background[0].priorWork).toMatch(/NOT evidence/);
+        }
+        /* this turn's own artifact: kind, bounded content, model reasoning, never citable */
+        expect(p.artifact).toMatchObject({ kind, provenance: 'MODEL_REASONING', citable: false });
+        expect(p.artifact!.components.length).toBeLessThanOrEqual(8);
+        /* never evidence: no sources, no reporting, no evidence role obtained */
+        expect(p.analysis ?? null).toBeNull();
+        expect(p.recentReporting ?? null).toBeNull();
+        expect(h.observed[0]).toMatchObject({
+          evidenceRolesObtained: [],
+          reportingItemCount: 0,
+          jobArtifactProducedKind: kind,
+        });
+        chain.push(kind);
+        /* what the service does on the next turn: validate the stored artifact, attach its source */
+        const stored = validateArtifact(p.artifact);
+        expect(stored).not.toBeNull();
+        prior = { ...stored!, sourceOperationId: opId };
+      }
+      expect(chain).toEqual([
+        'CONCEPTUAL_FRAMEWORK',
+        'DIAGNOSIS',
+        'DIAGNOSIS',
+        'RECOMMENDATION',
+        'PLAN',
+      ]);
+    },
+  );
+});
+
+describe('R4 closeout §7 — a MIXED answer keeps its stable half when current retrieval fails', () => {
+  const Q =
+    "Explain why currency pegs can be fragile and tell me what happened to Argentina's exchange rate this week.";
+  it('frozen C can only OFFER to broaden the current part → the stable causal explanation is still answered, the current part named UNAVAILABLE (never a bare broadening ask)', async () => {
+    const h = harness({
+      analysis: async () => {
+        throw new Error('GNews rate limited');
+      },
+    });
+    const p = (await run(h, Q)) as Payload & {
+      guidance?: { kind: string; currentPart?: string; currentEvidenceNeeded: string[] };
+    };
+    /* BROADENING_OFFERED: no reporting attempt, one reasoning call for the stable half */
+    expect(h.calls.analysis).toHaveLength(0);
+    expect(h.calls.background).toHaveLength(1);
+    expect(h.observed[0]).toMatchObject({ providerCallCount: 1, terminalState: 'BROADENING_OFFERED' });
+    expect(p.answer).toMatchObject({
+      state: 'REFERENCE_BACKGROUND',
+      basis: 'PARTIAL_CURRENT_UNAVAILABLE',
+    });
+    expect(p.background?.text).toBe('Reasoned answer.');
+    expect(p.guidance).toMatchObject({
+      kind: 'MIXED_REFERENCE_CURRENT',
+      currentPart: 'UNAVAILABLE',
+    });
+    expect(p.guidance!.currentEvidenceNeeded.join(' ')).toMatch(/this week/);
+  });
+  it('PL — the same survival', async () => {
+    const h = harness({
+      analysis: async () => {
+        throw new Error('timeout');
+      },
+    });
+    const p = await run(
+      h,
+      'Czym jest Trybunał Konstytucyjny i jak wygląda obecnie spór polityczny wokół niego?',
+      'pl',
+    );
+    expect(h.calls.background).toHaveLength(1);
+    expect(p.answer).toMatchObject({
+      state: 'REFERENCE_BACKGROUND',
+      basis: 'PARTIAL_CURRENT_UNAVAILABLE',
+    });
+  });
+});
+
+describe('R4 closeout §1/§5 — the R4-G1 questions through the adapter: causal rubric, zero news', () => {
+  it.each([
+    ['How does a currency peg turn a small shock into a big crisis?', 'en'],
+    [
+      'Jak nadmierna centralizacja władzy może prowadzić do gorszych decyzji w czasie kryzysu?',
+      'pl',
+    ],
+  ] as const)('%s', async (q, lang) => {
+    const h = harness({});
+    const p = await run(h, q, lang);
+    expect(h.calls.analysis).toHaveLength(0);
+    expect(h.calls.classify).toHaveLength(0);
+    expect(h.calls.background[0].jobRules).toMatch(/CAUSAL ANALYSIS/);
+    expect(p.guidance?.kind).toBe('CONCEPTUAL_ANALYSIS');
+  });
+});
+
+describe('R4 closeout §9 — the job is observable (codes only)', () => {
+  it('a deterministic deep turn on earlier work', async () => {
+    const h = harness({
+      background: () =>
+        'Diagnosis.\n<<<ARTIFACT {"kind":"DIAGNOSIS","label":"weakest","components":["x"]} ARTIFACT>>>',
+    });
+    await run(h, 'Which part is weakest?', 'en', PRIME);
+    expect(h.observed[0]).toMatchObject({
+      jobKind: 'DEEP_CONCEPTUAL_ANALYSIS',
+      jobSource: 'DETERMINISTIC',
+      jobDepth: 'DEEP',
+      jobFreshness: 'NONE',
+      jobClassifierUsed: false,
+      jobTransformation: null,
+      jobDiscourseReference: 'PRIOR_WORK',
+      jobArtifactUsedKind: 'CONCEPTUAL_FRAMEWORK',
+      jobArtifactProducedKind: 'DIAGNOSIS',
+    });
+    /* never the artifact's content or the model's prose */
+    expect(JSON.stringify(h.observed[0])).not.toMatch(/weakest|Diagnosis\.|Prime moment/);
+  });
+  it('an UNRESOLVED turn decided by the classifier records that the classifier was used', async () => {
+    const h = harness({
+      classify: async () =>
+        JSON.stringify({
+          job: 'DECISION_SUPPORT',
+          needsCurrentEvidence: false,
+          depth: 'STANDARD',
+          transformation: null,
+          confidence: 'HIGH',
+        }),
+    });
+    await run(h, 'Are we approaching our prime moment?');
+    expect(h.observed[0]).toMatchObject({
+      jobKind: 'DECISION_SUPPORT',
+      jobSource: 'SEMANTIC',
+      jobClassifierUsed: true,
+    });
+  });
+  it('a current-reporting turn records the evidence job and no classifier', async () => {
+    const h = harness({});
+    const request: AskRequest = {
+      question: 'What happened in Kenya 90 days ago?',
+      language: 'en',
+      intent: 'ask',
+    };
+    const plan = await h.adapter.prepare(request);
+    await inRequest(() => h.adapter.execute(request, plan, 'op')).catch(() => undefined);
+    expect(h.observed[0]).toMatchObject({
+      jobKind: 'CURRENT_REPORTING',
+      jobFreshness: 'CURRENT',
+      jobClassifierUsed: false,
+    });
   });
 });

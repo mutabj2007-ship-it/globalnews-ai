@@ -69,7 +69,25 @@ const TRANSFORM_RULES: Readonly<Record<TransformationKind, string>> = {
     'TASK: go deeper on the earlier point: the mechanism behind it, a concrete example, and a limit.',
   FIRST_STEP:
     'TASK: name the single first step to take, why it comes first, and what it unlocks next.',
+  BRIEFING:
+    'TASK: turn the earlier work into a short briefing for a decision-maker: the bottom line ' +
+    'first, then the key reasoning, the main risks and the decision or action asked of them. No new ' +
+    'claims; mark assumptions.',
+  ACTION_STEPS:
+    'TASK: turn the earlier work into a numbered sequence of concrete action steps, each with ' +
+    'what to do, who does it (a role) and how to know it is done, ordered by dependency.',
 };
+
+/* CTO R4 closeout — causal analysis is first-class: reasoning through the mechanism. */
+const CAUSAL_RUBRIC =
+  'CAUSAL ANALYSIS: the reader asked how or why one condition produces another. Reason through, ' +
+  'as far as the question warrants: (1) the cause, stated precisely; (2) the mechanism, step by ' +
+  'step — how the cause operates; (3) amplification — the feedback loops or thresholds that let ' +
+  'a small cause have a large effect; (4) boundary conditions — when it does and does not happen; ' +
+  '(5) a counterexample; (6) implications. If you express the dynamic as a formula or shorthand, ' +
+  'say plainly that it is a conceptual framework you are proposing, not an established scientific ' +
+  'equation. Use general illustrations, not current events, and do not cite sources or claim ' +
+  'current facts.';
 
 const PRIOR_WORK_RULE =
   'EARLIER WORK: an EARLIER WORK block may follow the question. It is your own earlier model ' +
@@ -102,6 +120,25 @@ export function leavesArtifact(job: JobReading): boolean {
   return job.job !== null && !EVIDENCE_JOBS.has(job.job);
 }
 
+/**
+ * CTO R4 closeout — the artifact kind this job's answer most likely establishes, so a
+ * conversation forms a chain (framework → diagnosis → recommendation → plan). A hint, never a
+ * requirement: the model omits the artifact when the answer establishes no reusable structure.
+ */
+export function expectedArtifactKind(job: JobReading): ConversationArtifact['kind'] | null {
+  if (job.job === 'PLANNING' || job.transformation === 'PLAN') return 'PLAN';
+  if (job.transformation === 'CHECKLIST' || job.transformation === 'ACTION_STEPS') return 'PLAN';
+  if (job.transformation === 'SUMMARY' || job.transformation === 'BRIEFING') return 'SUMMARY';
+  if (job.transformation === 'TABLE' || job.transformation === 'COMPARISON') return 'COMPARISON';
+  if (job.job === 'COMPARISON') return 'COMPARISON';
+  if (job.job === 'ADVISORY') return 'RECOMMENDATION';
+  if (job.job === 'DECISION_SUPPORT')
+    return job.discourseReference === 'PRIOR_WORK' ? 'DIAGNOSIS' : 'DECISION_CRITERIA';
+  if (job.job === 'DEEP_CONCEPTUAL_ANALYSIS')
+    return job.discourseReference === 'PRIOR_WORK' ? 'DIAGNOSIS' : 'CONCEPTUAL_FRAMEWORK';
+  return null;
+}
+
 /** The trusted job rules for one reasoning call (system prompt). Empty → byte-identical prompt. */
 export function jobRulesFor(
   job: JobReading,
@@ -109,7 +146,8 @@ export function jobRulesFor(
   planHorizonDays?: number,
 ): string {
   const rules: string[] = [];
-  if (job.depth === 'DEEP' || job.job === 'DEEP_CONCEPTUAL_ANALYSIS') rules.push(DEEP_RUBRIC);
+  if (job.depth === 'DEEP' || job.job === 'DEEP_CONCEPTUAL_ANALYSIS')
+    rules.push(job.analysis === 'CAUSAL' ? CAUSAL_RUBRIC : DEEP_RUBRIC);
   if (job.transformation !== null) {
     rules.push(TRANSFORM_RULES[job.transformation]);
   } else if (job.job === 'PLANNING') {
@@ -121,7 +159,14 @@ export function jobRulesFor(
         'news period and not a constraint on the conversation.',
     );
   if (hasPriorWork) rules.push(PRIOR_WORK_RULE);
-  if (leavesArtifact(job)) rules.push(ARTIFACT_RULE);
+  if (leavesArtifact(job)) {
+    const kind = expectedArtifactKind(job);
+    rules.push(
+      kind === null
+        ? ARTIFACT_RULE
+        : `${ARTIFACT_RULE} For this answer the kind is most likely ${kind}.`,
+    );
+  }
   return rules.length === 0
     ? ''
     : `R4 JOB RULES (trusted)\n${rules.map((r, i) => `${i + 1}. ${r}`).join('\n')}`;
@@ -146,7 +191,9 @@ export const JOB_CLASSIFIER_SYSTEM =
   'current official data (what is happening now, recent events, latest figures, current ' +
   'office-holders, current prices or rules). A concept, an explanation, history, advice, planning, ' +
   'a transformation of earlier work or a thought experiment is false. A place or a topic alone is ' +
-  'NOT a reason for true;\n' +
+  'NOT a reason for true, and neither is a word naming a phenomenon (a crisis, a war, inflation, ' +
+  'an election) asked about in general: a how / why question about a general mechanism is false. ' +
+  'It is true only for a particular, present instance;\n' +
   '"depth": "DEEP" if the user asks for deep, conceptual, beyond-the-obvious analysis, else ' +
   '"STANDARD";\n' +
   `"transformation": one of ${TRANSFORMATIONS.join(', ')}, or null;\n` +

@@ -6,6 +6,14 @@ import {
   ASK_OBSERVATION_SCHEMA,
   ASK_OBSERVATION_STORE_DEADLINE_MS,
   accessBucketStart,
+  governedCode,
+  OBSERVED_ARTIFACT_KINDS,
+  OBSERVED_DISCOURSE_REFERENCES,
+  OBSERVED_JOB_DEPTHS,
+  OBSERVED_JOB_FRESHNESS,
+  OBSERVED_JOB_KINDS,
+  OBSERVED_JOB_SOURCES,
+  OBSERVED_TRANSFORMATIONS,
   sanitizeGeographyCodes,
   type AskAccessEvent,
   type AskObservationInput,
@@ -117,6 +125,23 @@ export class AskObservationService {
 
             askR2Enabled: input.askR2Enabled,
             askPublicComputeEnabled: input.askPublicComputeEnabled,
+
+            /* CTO R4 closeout — codes from closed vocabularies only; anything else is null */
+            jobKind: governedCode(input.jobKind, OBSERVED_JOB_KINDS),
+            jobSource: governedCode(input.jobSource, OBSERVED_JOB_SOURCES),
+            jobDepth: governedCode(input.jobDepth, OBSERVED_JOB_DEPTHS),
+            jobFreshness: governedCode(input.jobFreshness, OBSERVED_JOB_FRESHNESS),
+            jobClassifierUsed: input.jobClassifierUsed,
+            jobTransformation: governedCode(input.jobTransformation, OBSERVED_TRANSFORMATIONS),
+            jobDiscourseReference: governedCode(
+              input.jobDiscourseReference,
+              OBSERVED_DISCOURSE_REFERENCES,
+            ),
+            jobArtifactUsedKind: governedCode(input.jobArtifactUsedKind, OBSERVED_ARTIFACT_KINDS),
+            jobArtifactProducedKind: governedCode(
+              input.jobArtifactProducedKind,
+              OBSERVED_ARTIFACT_KINDS,
+            ),
           },
         }),
         ASK_OBSERVATION_STORE_DEADLINE_MS,

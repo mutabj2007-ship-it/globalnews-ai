@@ -52,6 +52,9 @@ export const TRANSFORMATIONS = [
   'COMPARISON',
   'EXPLAIN_MORE',
   'FIRST_STEP',
+  /* CTO R4 closeout — a briefing / memo, and concrete action steps */
+  'BRIEFING',
+  'ACTION_STEPS',
 ] as const;
 export type TransformationKind = (typeof TRANSFORMATIONS)[number];
 export type DiscourseReference = 'NONE' | 'PRIOR_WORK';
@@ -87,6 +90,9 @@ export interface JobReading {
   /** FORM: an R4 governed form decided it (depth, causal concept, work request, prior work).
    *  KNOWLEDGE: the router's existing knowledge requirement, mapped. NONE: nothing governed. */
   readonly basis: 'FORM' | 'KNOWLEDGE' | 'NONE';
+  /** CTO R4 closeout — a causal / mechanism question (cause → mechanism → amplification →
+   *  boundary conditions → counterexample → implications). Absent otherwise. */
+  readonly analysis?: 'CAUSAL';
 }
 
 /** Jobs answered by reasoning (the background provider) when no current evidence is needed. */
@@ -240,28 +246,64 @@ export function readTemporalRoles(question: string, lang: 'en' | 'pl'): Temporal
 }
 
 /* ── WORK REQUESTS: commands are requests without a question mark ─────────────────────────── */
-const EN_TRANSFORM: ReadonlyArray<readonly [TransformationKind, RegExp]> = [
+/*
+  CTO R4 CLOSEOUT — a work request is read as two FAMILIES, never as a list of sentences:
+    an IMPERATIVE OPENER (make / turn / put / lay out / convert / draft / break … — PL zrób /
+    ujmij / przerób / przekształć / rozpisz …, including "can you …" / "czy możesz …"), and
+    a TARGET FORM (table, checklist, plan, summary, briefing, comparison, scenarios, action
+    steps). The first target family found decides the kind (the more specific forms first).
+  A few verbs imply their own kind (summarise → SUMMARY; compare / rank those → COMPARISON).
+*/
+const EN_WORK_OPENER =
+  /^\s*(?:(?:ok(?:ay)?|now|great|good|fine|thanks|right|perfect)[,.!]?\s+)*(?:please\s+|now\s+|then\s+|can\s+you\s+|could\s+you\s+|would\s+you\s+|i\s+(?:want|need|['’]d\s+like)\s+(?:you\s+to\s+)?|let['’]?s\s+)*(?:turn|convert|make|put|lay(?:\s+out)?|set\s+out|spell\s+out|write(?:\s+up)?|give\s+me|draft|create|build|format|present|rewrite|reformat|recast|re-?frame|organi[sz]e|structure|break|list|outline|sketch|map\s+out|draw\s+up|produce|prepare|show(?:\s+me)?|summari[sz]e|sum\s+up|condense|shorten|recap|boil|distil+|compare|rank|translate|reduce|transform|package|capture)\b/i;
+const PL_WORK_OPENER =
+  /^\s*(?:(?:ok|dobrze|dobra|świetnie|super|dzięki|dziękuję|teraz)[,.!]?\s+)*(?:proszę\s+|teraz\s+|to\s+|czy\s+(?:możesz|mógłbyś|mogłabyś|mógłbyś\s+mi|możesz\s+mi)\s+|chcę\s+|chciał\p{L}*\s+(?:bym|abym)\s+)*(?:zrób|zróbmy|zrobić|przekształć|przekształcić|zamień|zamienić|ujmij|ująć|przerób|przerobić|przedstaw|przedstawić|pokaż|pokazać|rozpisz|rozpisać|przygotuj|przygotować|stwórz|stworzyć|ułóż|ułożyć|napisz|napisać|zaplanuj|zaplanować|podsumuj|podsumować|streść|streścić|skróć|skrócić|wypisz|wypisać|wymień|zestaw|zestawić|porównaj|porównać|nakreśl|sformułuj|zbierz|rozbij|rozbić|uporządkuj|opracuj|opracować|podaj|daj|przetłumacz|uszereguj|zamknij)(?![\p{L}\d])/iu;
+/* target families, most specific first */
+const EN_TARGETS: ReadonlyArray<readonly [TransformationKind, RegExp]> = [
+  ['TABLE', /\b(?:table|matrix|grid|spreadsheet)\b/i],
+  ['CHECKLIST', /\b(?:check-?\s?lists?|to-?do\s+lists?|tick-?lists?)\b/i],
+  ['SCENARIOS', /\b(?:scenarios?|best[-\s]case|worst[-\s]case|base[-\s]case)\b/i],
   [
-    'PLAN',
-    /^\s*(?:please\s+|now\s+|can\s+you\s+|could\s+you\s+)?(?:turn|convert|make|translate|break|build|draft|write|create|put|give\s+me|outline|sketch|lay\s+out|map\s+out)\b.{0,60}?\b(?:(?:action|implementation)\s+)?(?:plan|roadmap|programme|program|timeline|schedule|sprint)\b/i,
+    'BRIEFING',
+    /\b(?:briefing|brief|memo|one-?pager|executive\s+summary|board\s+note|note\s+for)\b/i,
   ],
-  [
-    'TABLE',
-    /^\s*(?:please\s+)?(?:put|turn|convert|make|show|lay|give\s+me)\b.{0,40}?\b(?:table|matrix|grid)\b/i,
-  ],
-  [
-    'CHECKLIST',
-    /^\s*(?:please\s+)?(?:turn|convert|make|build|create|give\s+me|put)\b.{0,40}?\bchecklist\b/i,
-  ],
+  ['PLAN', /\b(?:plan|plans|roadmap|programme|program|timeline|schedule|sprint)\b/i],
+  ['ACTION_STEPS', /\b(?:steps|action\s+items|actions|to-?dos|next\s+moves)\b/i],
   [
     'SUMMARY',
-    /^\s*(?:please\s+)?(?:summari[sz]e|sum\s+up|condense|shorten|recap|give\s+me\s+(?:a\s+)?(?:summary|recap|tl;?dr))\b/i,
+    /\b(?:summary|recap|tl;?dr|bullets?|bullet[-\s]points|key\s+points|nutshell|short\s+version|sentences?|paragraph)\b/i,
+  ],
+  ['COMPARISON', /\b(?:comparison|side[-\s]by[-\s]side|versus|vs\.?)\b/i],
+];
+const PL_TARGETS: ReadonlyArray<readonly [TransformationKind, RegExp]> = [
+  ['TABLE', /(?:tabel\p{L}*|zestawieni\p{L}*|macierz\p{L}*|arkusz\p{L}*)/iu],
+  [
+    'CHECKLIST',
+    /(?:list\p{L}*\s+kontroln\p{L}*|checklist\p{L}*|list\p{L}*\s+(?:zadań|rzeczy\s+do\s+zrobienia))/iu,
+  ],
+  ['SCENARIOS', /(?:scenariusz\p{L}*|najlepsz\p{L}*\s+(?:i|oraz)\s+najgorsz\p{L}*)/iu],
+  [
+    'BRIEFING',
+    /(?:briefing\p{L}*|notatk\p{L}*|memo|brief(?![\p{L}])|informacj\p{L}*\s+dla\s+zarządu)/iu,
+  ],
+  ['PLAN', /(?:(?<![\p{L}])plan\p{L}*|harmonogram\p{L}*|map\p{L}*\s+drogow\p{L}*|program\p{L}*)/iu],
+  ['ACTION_STEPS', /(?:krok\p{L}*|działa\p{L}*\s+do\s+podjęcia|zadani\p{L}*\s+do\s+wykonania)/iu],
+  [
+    'SUMMARY',
+    /(?:podsumowani\p{L}*|streszczeni\p{L}*|punkt\p{L}*|skrót\p{L}*|(?:kilku|paru|jednym|dwóch|trzech)\s+zdani\p{L}*)/iu,
+  ],
+  ['COMPARISON', /(?:porównani\p{L}*)/iu],
+];
+/* verbs that carry their own kind when no target family is named */
+const EN_SELF_KIND: ReadonlyArray<readonly [TransformationKind, RegExp]> = [
+  [
+    'SUMMARY',
+    /^\s*(?:(?:ok(?:ay)?|now|great|thanks)[,.!]?\s+)*(?:please\s+|can\s+you\s+|could\s+you\s+)*(?:summari[sz]e|sum\s+up|condense|shorten|recap|boil\s+(?:it|that|this)\s+down|distil+|give\s+me\s+(?:a\s+)?(?:summary|recap|tl;?dr))\b/i,
   ],
   [
-    'SCENARIOS',
-    /^\s*(?:please\s+)?(?:give|show|outline|sketch|describe|build|draft)\b.{0,30}?\bscenarios?\b/i,
+    'COMPARISON',
+    /^\s*(?:please\s+)?(?:compare|rank)\s+(?:those|these|them|the\s+two|both|that|this|the\s+options)\b/i,
   ],
-  ['COMPARISON', /^\s*(?:please\s+)?compare\s+(?:those|these|them|the\s+two|both|that|this)\b/i],
   [
     'EXPLAIN_MORE',
     /^\s*(?:please\s+)?(?:explain|elaborate|expand|go\s+deeper|dig\s+deeper|unpack)\b.{0,30}?\b(?:that|this|it|more|further|deeper|on\s+that)\b/i,
@@ -271,29 +313,20 @@ const EN_TRANSFORM: ReadonlyArray<readonly [TransformationKind, RegExp]> = [
     /^\s*what\s+(?:should|do|must)\s+(?:i|we)\s+do\s+first\b|^\s*where\s+(?:should|do)\s+(?:i|we)\s+start\b/i,
   ],
 ];
-const PL_TRANSFORM: ReadonlyArray<readonly [TransformationKind, RegExp]> = [
+const PL_SELF_KIND: ReadonlyArray<readonly [TransformationKind, RegExp]> = [
   [
-    'PLAN',
-    /^\s*(?:proszę\s+)?(?:przekształć|zamień|zrób|rozpisz|przygotuj|stwórz|ułóż|napisz|zaplanuj)(?![\p{L}\d]).{0,60}?(?:plan\p{L}*|harmonogram\p{L}*|program\p{L}*|map\p{L}*\s+drogow\p{L}*)/iu,
+    'SUMMARY',
+    /^\s*(?:proszę\s+|czy\s+możesz\s+)?(?:podsumuj|podsumować|streść|streścić|skróć|skrócić)(?![\p{L}\d])/iu,
   ],
   [
-    'TABLE',
-    /^\s*(?:proszę\s+)?(?:przekształć|zamień|zrób|ułóż|przedstaw|pokaż)(?![\p{L}\d]).{0,40}?(?:tabel\p{L}*|zestawieni\p{L}*)/iu,
+    'COMPARISON',
+    /^\s*(?:proszę\s+)?(?:porównaj|uszereguj)\s+(?:te|je|oba|obie|to|tamte|opcje)(?![\p{L}\d])/iu,
   ],
-  [
-    'CHECKLIST',
-    /^\s*(?:proszę\s+)?(?:przekształć|zamień|zrób|stwórz|przygotuj)(?![\p{L}\d]).{0,40}?(?:list\p{L}*\s+kontroln\p{L}*|checklist\p{L}*)/iu,
-  ],
-  ['SUMMARY', /^\s*(?:proszę\s+)?(?:podsumuj|streść|skróć)(?![\p{L}\d])/iu],
-  [
-    'SCENARIOS',
-    /^\s*(?:proszę\s+)?(?:podaj|przedstaw|opisz|nakreśl)(?![\p{L}\d]).{0,30}?scenariusz\p{L}*/iu,
-  ],
-  ['COMPARISON', /^\s*(?:proszę\s+)?porównaj\s+(?:te|je|oba|obie|to|tamte)(?![\p{L}\d])/iu],
   [
     'EXPLAIN_MORE',
     /^\s*(?:proszę\s+)?(?:wyjaśnij|rozwiń|pogłęb)(?![\p{L}\d]).{0,30}?(?:to|bardziej|głębiej|szerzej)(?![\p{L}\d])/iu,
   ],
+  ['PLAN', /^\s*(?:proszę\s+)?zaplanuj(?![\p{L}\d])/iu],
   [
     'FIRST_STEP',
     /^\s*(?:co|od\s+czego)\s+(?:powinniśmy|powinienem|powinnam|mamy)\s+(?:zrobić|zacząć)\s+(?:najpierw|na\s+początku)/iu,
@@ -329,11 +362,18 @@ const EN_CONCEPT =
   /^\s*(?:please\s+)?(?:define|explain|describe|analy[sz]e|unpack|clarify|interpret)\b|\bwhat\s+(?:does|do)\s+.{2,80}?\s+(?:really\s+|actually\s+)?mean\b|\bwhat\s+(?:is|are)\s+.{2,80}?\s+(?:really|actually)\b|\b(?:meaning|nature|essence|definition|anatomy)\s+of\b|\bwhat\s+(?:is|are)\s+the\s+(?:difference|relationship)\s+between\b/i;
 const PL_CONCEPT =
   /^\s*(?:proszę\s+)?(?:zdefiniuj|wyjaśnij|opisz|przeanalizuj|wytłumacz|zinterpretuj)(?![\p{L}\d])|co\s+(?:naprawdę\s+|właściwie\s+)?(?:oznacza|znaczy)(?![\p{L}\d])|czym\s+(?:naprawdę\s+|właściwie\s+)?(?:jest|są)(?![\p{L}\d])|(?:znaczenie|natura|istota|definicja)\s+\p{L}+/iu;
-/* a causal question about how one condition produces another ("how can success lead to failure") */
+/*
+  CTO R4 CLOSEOUT — A CAUSAL / MECHANISM QUESTION ("how can success create the conditions for
+  failure", "why can efficiency make a system fragile", "how does leverage magnify losses",
+  "jak nadmierna X może prowadzić do Y"). A how / why opener (not about the reader's own action:
+  "how can I / we …" is advice) followed by a verb from a CAUSAL FAMILY: cause / produce,
+  transform / become, amplify / reinforce, weaken / erode / collapse, strengthen / protect. The
+  families are verbs of causation — the subject (crisis, peg, war, success) is never read.
+*/
 const EN_CAUSAL =
-  /\b(?:how|why|in\s+what\s+ways?)\s+(?:can|could|does|do|did|might|would|may|is|are)\b.{2,120}?\b(?:lead|leads|leading|contribute|contributes|cause|causes|result|results|turn|turns|become|becomes|end\s+up|backfire|undermine|destroy|losing|lose|collapse|decline|fail)\b|^\s*(?:indicate|show|explain|describe)\s+(?:how|why)\b/i;
+  /^\s*(?:(?:so|and|but|ok(?:ay)?)[,]?\s+)?(?:how|why|in\s+what\s+ways?|what\s+mechanisms?|by\s+what\s+mechanisms?)\s+(?!(?:was|were|did|had|has|have|is|are|am)\b)(?:(?:can|could|does|do|might|would|may|will|should|must)\s+)?(?!(?:i|we|you|my|our|me|us)\b).{2,160}?\b(?:lead(?:s|ing)?\s+to|led\s+to|contribut\w*|caus\w*|result(?:s|ing|ed)?\s+in|produc\w*|creat\w*|generat\w*|trigger\w*|driv\w*|breed\w*|give\s+rise|turn\w*\s+(?:[\p{L}'’-]+\s+){0,6}?into|turn\w*|becom\w*|end\s+up|mak\w*\s+(?:[\p{L}'’-]+\s+){0,4}?(?:more|less|fragile|vulnerable|weak|weaker|strong|stronger|unstable|brittle|rigid|resilient|complacent)|render\w*|transform\w*|reshap\w*|shap\w*|amplif\w*|magnif\w*|multipl\w*|compound\w*|reinforc\w*|accelerat\w*|escalat\w*|spiral\w*|snowball\w*|cascad\w*|spread\w*|weaken\w*|undermin\w*|erod\w*|destroy\w*|damag\w*|hollow\w*|destabili[sz]\w*|collaps\w*|fail\w*|backfir\w*|los(?:e|es|ing)|declin\w*|fragili[sz]\w*|sabotag\w*|unravel\w*|crumbl\w*|break\s+down|strengthen\w*|protect\w*|stabili[sz]\w*|sustain\w*|insulat\w*)\b|^\s*what\s+makes\s+.{2,80}?\s+(?:fragile|vulnerable|resilient|stable|unstable|brittle|robust|durable|collapse|fail|succeed|last|backfire)\b|^\s*(?:indicate|show|explain|describe|analy[sz]e)\s+(?:how|why)\b/iu;
 const PL_CAUSAL =
-  /(?:jak|dlaczego|w\s+jaki\s+sposób)\s+.{2,120}?(?:prowadzi\p{L}*|doprowadz\p{L}*|przyczyni\p{L}*|powod\p{L}*|skutkuj\p{L}*|staj\p{L}*\s+się|zamieni\p{L}*|utrat\p{L}*|straci\p{L}*|upad\p{L}*)/iu;
+  /^\s*(?:(?:a|i|więc|ok)[,]?\s+)?(?:jak|dlaczego|czemu|w\s+jaki\s+sposób|co\s+sprawia|jakim\s+mechanizmem)(?![\p{L}\d])(?!\s+(?:mogę|możemy|powinienem|powinnam|powinniśmy|mam|mamy)(?![\p{L}\d])).{2,160}?(?:prowadz\p{L}*|prowadzi\p{L}*|doprowadz\p{L}*|przyczyni\p{L}*|powod\p{L}*|wywoł\p{L}*|tworz\p{L}*|stwarza\p{L}*|rodz\p{L}*|skutkuj\p{L}*|staj\p{L}*\s+się|zamieni\p{L}*|przekształc\p{L}*|wzmacnia\p{L}*|wzmocni\p{L}*|potęguj\p{L}*|pogłębia\p{L}*|nasila\p{L}*|napędza\p{L}*|przyspiesza\p{L}*|zwielokrotni\p{L}*|osłabia\p{L}*|osłabi\p{L}*|podkopuj\p{L}*|niszcz\p{L}*|zniszcz\p{L}*|destabilizuj\p{L}*|eroduj\p{L}*|podważa\p{L}*|utrat\p{L}*|traci\p{L}*|straci\p{L}*|upad\p{L}*|załam\p{L}*|chroni\p{L}*|stabilizuj\p{L}*|kształtuj\p{L}*)(?<!(?:ł|ła|ło|li|ły|łem|łam))(?![\p{L}])|^\s*(?:wyjaśnij|pokaż|opisz|przeanalizuj)\s+(?:jak|dlaczego|w\s+jaki\s+sposób)(?![\p{L}\d])/iu;
 
 export interface JobContext {
   /** The router's knowledge-requirement reading (null = no governed shape). */
@@ -363,8 +403,19 @@ const KNOWN: Readonly<Record<string, UserJob>> = {
 };
 
 export function readTransformation(question: string, lang: 'en' | 'pl'): TransformationKind | null {
-  for (const [kind, re] of lang === 'pl' ? PL_TRANSFORM : EN_TRANSFORM)
-    if (re.test(question)) return kind;
+  const text = question.trim();
+  for (const [kind, re] of lang === 'pl' ? PL_SELF_KIND : EN_SELF_KIND)
+    if (re.test(text)) {
+      /* a self-kind verb that ALSO names a target family ("summarise that in a table") → the target */
+      if (kind === 'SUMMARY' || kind === 'COMPARISON') {
+        const target = (lang === 'pl' ? PL_TARGETS : EN_TARGETS).find(([, t]) => t.test(text));
+        if (target !== undefined && target[0] !== 'SUMMARY' && target[0] !== 'COMPARISON')
+          return target[0];
+      }
+      return kind;
+    }
+  if (!(lang === 'pl' ? PL_WORK_OPENER : EN_WORK_OPENER).test(text)) return null;
+  for (const [kind, re] of lang === 'pl' ? PL_TARGETS : EN_TARGETS) if (re.test(text)) return kind;
   return null;
 }
 export function referencesPriorWork(question: string, lang: 'en' | 'pl'): boolean {
@@ -459,8 +510,18 @@ export function readUserJob(question: string, language: string, ctx: JobContext)
     });
   }
 
-  /* 2 · an imperative work request is a request, even without prior work (a plan, a table…) */
-  if (transformation !== null && !fresh && !ctx.namedPlace && !reference)
+  /* 2 · an imperative work request is a request, even without prior work (a plan, a table…). A
+     summary / briefing / comparison of a TOPIC with nothing earlier to work on is left to the
+     semantic classifier (it may be a request for current reporting on that topic). */
+  if (
+    transformation !== null &&
+    !fresh &&
+    !ctx.namedPlace &&
+    !reference &&
+    !(['SUMMARY', 'BRIEFING', 'COMPARISON', 'EXPLAIN_MORE'] as const).includes(
+      transformation as 'SUMMARY' | 'BRIEFING' | 'COMPARISON' | 'EXPLAIN_MORE',
+    )
+  )
     return reading(transformation === 'PLAN' ? 'PLANNING' : 'TRANSFORMATION', {
       reason: 'an imperative work request',
       transformation,
@@ -483,6 +544,7 @@ export function readUserJob(question: string, language: string, ctx: JobContext)
       reason: deep ? 'asks for conceptual depth' : 'a causal concept question',
       temporal,
       depth: 'DEEP',
+      ...(causal ? { analysis: 'CAUSAL' as const } : {}),
     });
   if (conceptualCandidate && !ctx.namedPlace && deep)
     return reading('DEEP_CONCEPTUAL_ANALYSIS', {

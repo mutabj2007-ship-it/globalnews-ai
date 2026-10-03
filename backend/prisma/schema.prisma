@@ -1980,6 +1980,25 @@ model AskObservation {
   askR2Enabled            Boolean?
   askPublicComputeEnabled Boolean?
 
+  /// CTO R4 CLOSEOUT — THE GOVERNED USER JOB, as CODES from closed vocabularies (user-job.ts,
+  /// conversation-artifact.ts). The writer drops any value outside them. Never model prose, never
+  /// an artifact's label or components. Null = the route never produced a job reading (unrouted).
+  jobKind                 String?
+  /// DETERMINISTIC / SEMANTIC / FALLBACK / UNRESOLVED.
+  jobSource               String?
+  /// STANDARD / DEEP.
+  jobDepth                String?
+  /// NONE / PARTIAL / CURRENT.
+  jobFreshness            String?
+  /// Whether the bounded semantic classifier was called for this Ask.
+  jobClassifierUsed       Boolean?
+  jobTransformation       String?
+  /// NONE / PRIOR_WORK.
+  jobDiscourseReference   String?
+  /// The KIND of earlier conversation work this answer received / produced (never its content).
+  jobArtifactUsedKind     String?
+  jobArtifactProducedKind String?
+
   @@index([occurredAt])
   @@index([questionClass, occurredAt])
   @@index([answerState, occurredAt])

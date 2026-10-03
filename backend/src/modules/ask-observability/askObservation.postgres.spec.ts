@@ -69,7 +69,24 @@ live('R1 — the Ask observation store on PostgreSQL', () => {
 
     it('AskObservation exists with every declared column', async () => {
       const columns = await columnsOf('AskObservation');
-      expect(columns.size).toBe(53);
+      /* 53 + the nine CTO R4 closeout job-code columns (all nullable) */
+      expect(columns.size).toBe(62);
+      [
+        'jobKind',
+        'jobSource',
+        'jobDepth',
+        'jobFreshness',
+        'jobTransformation',
+        'jobDiscourseReference',
+        'jobArtifactUsedKind',
+        'jobArtifactProducedKind',
+      ].forEach((c) => {
+        expect(columns.get(c)).toMatchObject({ data_type: 'text', is_nullable: 'YES' });
+      });
+      expect(columns.get('jobClassifierUsed')).toMatchObject({
+        data_type: 'boolean',
+        is_nullable: 'YES',
+      });
 
       /* The three that carry the privacy contract's shape. */
       expect(columns.get('operationId')?.is_nullable).toBe('NO');
@@ -273,6 +290,41 @@ live('R1 — the Ask observation store on PostgreSQL', () => {
       expect(
         await db.askAccessCounter.findMany({ where: { bucketStart: { gte: cutoff } } }),
       ).not.toEqual([]);
+    });
+  });
+  describe('CTO R4 closeout — the governed job is stored as codes, and only codes', () => {
+    it('round-trips the job codes; free text in a code column is dropped to null', async () => {
+      const id = randomUUID();
+      expect(
+        await service.record(
+          input(id, {
+            jobKind: 'DEEP_CONCEPTUAL_ANALYSIS',
+            jobSource: 'DETERMINISTIC',
+            jobDepth: 'DEEP',
+            jobFreshness: 'NONE',
+            jobClassifierUsed: false,
+            jobTransformation: null,
+            jobDiscourseReference: 'PRIOR_WORK',
+            jobArtifactUsedKind: 'CONCEPTUAL_FRAMEWORK',
+            /* a producer bug emitting a label instead of a kind */
+            jobArtifactProducedKind: 'Prime moment framework',
+          }),
+        ),
+      ).toBe(true);
+      const row = await db.askObservation.findUnique({ where: { operationId: id } });
+      expect(row).toMatchObject({
+        schemaVersion: 'ask-observation/2',
+        jobKind: 'DEEP_CONCEPTUAL_ANALYSIS',
+        jobSource: 'DETERMINISTIC',
+        jobDepth: 'DEEP',
+        jobFreshness: 'NONE',
+        jobClassifierUsed: false,
+        jobTransformation: null,
+        jobDiscourseReference: 'PRIOR_WORK',
+        jobArtifactUsedKind: 'CONCEPTUAL_FRAMEWORK',
+        jobArtifactProducedKind: null,
+      });
+      await db.askObservation.deleteMany({ where: { operationId: id } });
     });
   });
 });

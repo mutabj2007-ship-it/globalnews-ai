@@ -168,6 +168,50 @@ live('R4 ConversationArtifact memory — live PostgreSQL through AskV2Service', 
     expect(t5.executed.priorArtifact).toEqual(t5.quoted.priorArtifact);
   });
 
+  it('CTO R4 closeout §8 — CONCEPTUAL_FRAMEWORK → DIAGNOSIS → RECOMMENDATION → PLAN chain in one thread, each turn receiving the previous turn’s artifact with its source turn', async () => {
+    const t = await thread();
+    const kinds = ['CONCEPTUAL_FRAMEWORK', 'DIAGNOSIS', 'RECOMMENDATION', 'PLAN'] as const;
+    /* own wording: a question already answered for this owner would be served from its stored
+       result (correct reuse) and carry that result's artifact */
+    const questions = [
+      'Explain in depth what a peak moment of an organisation is.',
+      'Which dimension of that is most fragile for a 12-person startup?',
+      'So what would you recommend we do about that?',
+      'Make that into a 90-day plan.',
+    ];
+    const ops: string[] = [];
+    for (const [i, q] of questions.entries()) {
+      nextArtifact = { ...FRAMEWORK, kind: kinds[i], label: `${kinds[i]} label` };
+      const turn = await ask(t, q);
+      if (i === 0) expect(turn.quoted.priorArtifact).toBeUndefined();
+      else {
+        const expected = {
+          ...FRAMEWORK,
+          kind: kinds[i - 1],
+          label: `${kinds[i - 1]} label`,
+          sourceOperationId: ops[i - 1],
+        };
+        expect(turn.quoted.priorArtifact).toEqual(expected);
+        expect(turn.executed.priorArtifact).toEqual(expected);
+      }
+      ops.push(turn.operationId);
+    }
+    /* every stored artifact keeps its kind, bounded content, MODEL_REASONING and citable=false */
+    for (const [i, id] of ops.entries()) {
+      const op = await db.computeOperation.findUnique({
+        where: { id },
+        select: { storedResult: { select: { payload: true } } },
+      });
+      const stored = (op?.storedResult?.payload as { artifact?: Record<string, unknown> }).artifact;
+      expect(stored).toMatchObject({
+        kind: kinds[i],
+        provenance: 'MODEL_REASONING',
+        citable: false,
+      });
+      expect((stored!.components as unknown[]).length).toBeLessThanOrEqual(8);
+    }
+  });
+
   it('a malformed or evidence-claiming artifact in a stored payload is never trusted', async () => {
     const t = await thread();
     nextArtifact = {
