@@ -191,6 +191,7 @@ import {
 } from '../query/derive-generic-news-query.util';
 import { requestsDates, retrievalSubjectOf } from '../query/response-directives.util';
 import {
+  hasEconomicTopicEvidence,
   resolveCountryEconomyQuery,
   scoreCountryEconomyRelevance,
 } from '../../news/relevance/country-economy-relevance.util';
@@ -2179,6 +2180,78 @@ export class AnalysisService {
                 ];
               }
             }
+          } else if (requestedDomains.length === 1 && requestedDomains[0].domain === 'economic') {
+            /*
+              CTO CHECKPOINT 5 §6 — AN ECONOMY QUESTION KEEPS ITS DOMAIN.
+
+              Live Alpha: "And the economy?" in a Madagascar conversation applied the ECONOMIC
+              domain chip, yet this branch fetched the generic country feed and passed politics,
+              lemur travel, albinism and football to the model, which then answered mostly about
+              politics. The domain stopped at classification.
+
+              For an economy-only question the evidence must be economic in its OWN text, read by
+              the governed hasEconomicTopicEvidence (the reader country-economy relevance already
+              uses: the deterministic 'business' classification or a reviewed economic form).
+              Political reporting stays when it is ALSO economic; generic same-country reporting
+              does not fill the answer. If the country pool has none, M63's own bounded
+              supplemental search runs once (no retry; a provider failure is no evidence). If there
+              is still none, nothing off-domain is admitted: the answer is the honest no-evidence
+              state, and the gap is disclosed.
+
+              ONLY THE ECONOMIC DOMAIN, ON PURPOSE. The other domains have only the thin keyword
+              lists of detectArticleDomains ("security" lacks "army" and "clashes"), which would
+              drop plainly relevant reports — measured by the R2B Rwanda security fixture. Gating
+              them needs a governed reader like the economic one first; until then they keep the
+              existing behaviour.
+            */
+            const domains = requestedDomains.map((occurrence) => occurrence.domain);
+            const showsRequestedDomain = (article: NewsArticle): boolean =>
+              hasEconomicTopicEvidence(article);
+            const focused = articles.filter(showsRequestedDomain);
+            let supplementalSearched = false;
+            if (focused.length > 0) {
+              articles = focused;
+            } else {
+              supplementalSearched = true;
+              const supplemental: NewsArticle[] = [];
+              for (const domain of domains.slice(0, 2)) {
+                const term = makeProviderSafeNewsQuery(
+                  buildSupplementalSearchTerm(country.name, domain),
+                );
+                if (term === undefined) continue;
+                try {
+                  const response = await this.newsService.search(term, SEARCH_POOL_SIZE);
+                  const providerFailure =
+                    response.dataMode === 'unavailable' ||
+                    (response.dataMode === 'cached' &&
+                      response.fallbackReason === 'provider-error');
+                  if (providerFailure) continue;
+                  supplemental.push(
+                    ...response.articles.filter(
+                      (article) =>
+                        scoreCountryRelevance(article, country).isRelevant &&
+                        admitsToAnalysisCorpus(article, country) &&
+                        showsRequestedDomain(article),
+                    ),
+                  );
+                } catch (error) {
+                  this.logger.warn(
+                    `Focused-domain supplemental search failed for "${domain}"; continuing without it`,
+                    error instanceof Error ? error : undefined,
+                  );
+                }
+              }
+              articles = collapseDuplicateStories(deduplicateArticles(supplemental));
+            }
+            retrievalContext = {
+              ...retrievalContext,
+              focusedDomains: {
+                requested: domains,
+                matched: articles.length,
+                supplementalSearched,
+                gap: articles.length === 0,
+              },
+            };
           }
         } else {
           // Milestone #37: attempt deterministic relational decomposition

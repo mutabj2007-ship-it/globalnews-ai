@@ -173,6 +173,9 @@ describe('R2 · the trigger is exactly "resolved country + broad economy"', () =
     ['the economy of Poland', 'POL'],
     ['Polska gospodarka', 'POL'],
     ["Kenya's economy", 'KEN'],
+    /* CTO checkpoint 5 §6 — interrogative framing only */
+    ['How is Madagascar s economy doing', 'MDG'],
+    ['How is the Kenyan economy performing', 'KEN'],
   ])('%s → %s', (subject, iso3) => {
     expect(resolveCountryEconomyQuery(subject)?.iso3).toBe(iso3);
   });
@@ -180,6 +183,9 @@ describe('R2 · the trigger is exactly "resolved country + broad economy"', () =
   it.each([
     "Poland's energy sources",
     "Poland's economy this week",
+    'How is Poland s economy doing this week',
+    'How is Poland s energy doing',
+    'How is Poland doing',
     'inflation in Poland',
     'Poland and Germany economy',
     'the economy',

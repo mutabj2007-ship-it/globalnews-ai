@@ -60,7 +60,26 @@ const BROAD_ECONOMY_TERMS = new Set([
 ]);
 
 /** Framing that may surround the pair without changing it ("the economy of Poland"). */
-const FRAMING = new Set(['the', 'of', 'in', 's', 'state', 'situation', 'w', 'stan', 'sytuacja']);
+/* CTO checkpoint 5 §6 — interrogative framing only ("How is Madagascar's economy doing?", also the
+   form a cross-country continuation composes). It names no topic, period or second country, so the
+   trigger is still exactly "country + broad economy", and the article side still needs BOTH. */
+const FRAMING = new Set([
+  'the',
+  'of',
+  'in',
+  's',
+  'state',
+  'situation',
+  'w',
+  'stan',
+  'sytuacja',
+  'how',
+  'is',
+  'are',
+  'doing',
+  'performing',
+  'faring',
+]);
 
 function words(text: string): string[] {
   return text

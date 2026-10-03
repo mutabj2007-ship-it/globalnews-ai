@@ -1001,6 +1001,19 @@ export interface AnalysisRetrievalContext {
    */
   requestedScope?: RequestedRegionScope;
   comparisonCoverage?: import('./comparison-coverage').ComparisonCountryCoverage[];
+  /**
+   * CTO CHECKPOINT 5 §6 — a FOCUSED domain question about a country ("And the economy?" in a
+   * Madagascar conversation): the requested domains, how many retrieved reports showed one of
+   * them in their own text, whether the bounded supplemental search was needed, and — when no
+   * domain evidence was found at all — the gap, so the answer says so instead of filling it with
+   * other domains. Absent for broad (3+ domain) and domain-free questions.
+   */
+  focusedDomains?: {
+    readonly requested: readonly string[];
+    readonly matched: number;
+    readonly supplementalSearched: boolean;
+    readonly gap: boolean;
+  };
   storyContextUsed?: boolean;
   /**
    * MAP ASK GEOGRAPHY CONTEXT R1 — present only when the request carried a
