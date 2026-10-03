@@ -5243,8 +5243,11 @@ export class AnalysisService {
     const perMember = await Promise.all(
       members.map(async (member): Promise<NewsArticle[]> => {
         try {
+          /* The retained-country relation (ArticleCountry) is keyed by ISO3 — the governed storage
+             contract, as country news, My Intelligence and security read it. ISO2 matched nothing,
+             so this fallback silently admitted no retained evidence (CTO checkpoint 5 §4). */
           return await this.newsService.findRetainedByCountry(
-            member.iso2,
+            member.iso3,
             RETAINED_PER_MEMBER_LIMIT,
             RETAINED_MAX_AGE_MINUTES,
           );

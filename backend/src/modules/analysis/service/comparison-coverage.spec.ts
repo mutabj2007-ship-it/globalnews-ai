@@ -61,7 +61,7 @@ function harness(retained: NewsArticle[] = [], empty = false, maxArticles = 8) {
     search,
     topHeadlines: jest.fn(async () => response([])),
     findArticleById: jest.fn(async () => article('pakistan', 'Pakistan')),
-    findRetainedByCountry: jest.fn(async (iso: string) => (iso === 'IR' ? retained : [])),
+    findRetainedByCountry: jest.fn(async (iso: string) => (iso === 'IRN' ? retained : [])),
   };
   const analyzeNews = jest.fn(async (_input: AnalysisProviderInput) => {
     return new MockAnalysisProvider().analyzeNews(_input);
@@ -122,8 +122,9 @@ describe('Ask comparison coverage truth', () => {
     ]);
     expect(h.news.topHeadlines).not.toHaveBeenCalled();
     expect(h.news.findRetainedByCountry.mock.calls).toEqual([
-      ['IR', 6, 2880],
-      ['SA', 6, 2880],
+      /* ISO3: the ArticleCountry key (CTO checkpoint 5 §4) */
+      ['IRN', 6, 2880],
+      ['SAU', 6, 2880],
     ]);
     expect(h.analyzeNews).toHaveBeenCalledTimes(1);
     expect(result.analysis).not.toBeNull();
@@ -176,7 +177,7 @@ describe('Ask comparison coverage truth', () => {
       ]),
     );
     h.news.findRetainedByCountry.mockImplementation(async (iso) =>
-      iso === 'IL'
+      iso === 'ISR'
         ? [
             {
               ...article('il-stored', 'Israel'),
