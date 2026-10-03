@@ -1,4 +1,9 @@
-import { COUNTRIES, resolveCountryByAnyIdentifier, type CountryMeta } from '@globalnews-ai/shared';
+import {
+  COUNTRIES,
+  COUNTRY_ALIASES_BY_ISO3,
+  resolveCountryByAnyIdentifier,
+  type CountryMeta,
+} from '@globalnews-ai/shared';
 import {
   GAZETTEER_ATTRIBUTION,
   allAdmin2,
@@ -301,6 +306,16 @@ function buildIndex(): void {
     push({ form: foldPlaceName(country.name), kind: 'country', matchKind: 'EXACT', country });
     push({ form: foldPlaceName(country.iso2), kind: 'country', matchKind: 'ALIAS', country });
     push({ form: foldPlaceName(country.iso3), kind: 'country', matchKind: 'ALIAS', country });
+  }
+  /*
+   * TRUST R1 — the registry's own alias table (one authority with the resolver): place search
+   * found "Greenland" but not "Grønland" or "Kalaallit Nunaat", which Ask already resolved.
+   */
+  for (const [alias, iso3] of Object.entries(COUNTRY_ALIASES_BY_ISO3)) {
+    const country = COUNTRIES.find((c) => c.iso3 === iso3);
+    if (country !== undefined) {
+      push({ form: foldPlaceName(alias), kind: 'country', matchKind: 'ALIAS', country });
+    }
   }
 
   for (const region of allRegions()) {
