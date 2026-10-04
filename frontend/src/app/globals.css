@@ -506,6 +506,94 @@ html:not([data-gna-schedule]) [data-gna-theme='scheduled'],
   --ask-strip-bg: var(--gt-sunk);
   --ask-drawer-bg: var(--gt-card);
   --ask-surface-bg: var(--gt-pg);
+
+  /*
+    ══════════════════════════════════════════════════════════════════════════
+    R4 ANSWER READING EXPERIENCE R1 · PHASE C — THE ASK READING PALETTE (LIGHT)
+    ══════════════════════════════════════════════════════════════════════════
+
+    THE MEASURED DEFECT, because "washed out and blue-gray" understates it.
+
+    The Ask surface carries 266 hard-coded colour literals across 82 distinct values,
+    all from the dark palette. In a light scope the handful of var()-driven BACKGROUNDS
+    turned light and every hard-coded INK and BORDER stayed dark-navy — including the
+    answer's own text. Measured on the harness at 1440 in a light scope:
+
+      page background      #F3F6F9
+      earlier-turn card    #EEF2F7     ← 5/4/2 away from the page in RGB. Invisible.
+      answer prose colour  #E6EEF6     ← near-WHITE text on a near-white page.
+
+    #E6EEF6 on #F3F6F9 is a contrast ratio of about 1.1:1. The light theme was not
+    desaturated; the reading text was very nearly absent, and the three surfaces the
+    Product Owner asked to be able to tell apart — page, answer, control — differed by
+    less than 2% luminance.
+
+    WHY THIS IS A SEPARATE TOKEN FAMILY AND NOT AN EDIT TO --gt-*.
+
+    The --gt-* palette is the whole product's. Changing #F3F6F9 would move Home, My
+    Intelligence, the maps and every dashboard, which this round's scope ruling places
+    outside the patch. So the READING roles get their own tokens, mapped here, and the
+    Ask stylesheet consumes them with the accepted dark value as the var() fallback —
+    so a dark scope, and any page with no theme scope, renders byte-identically to the
+    accepted palette.
+
+    WHY NEUTRAL RATHER THAN MORE SATURATED.
+
+    The instruction was explicit: *"Do not simply increase saturation globally."* The
+    blue cast is what made the light theme read as a dimmed version of the dark one, so
+    the reading surfaces drop the cast entirely — R, G and B within 4 of each other —
+    and the SEPARATION between them is what does the work:
+
+      page   #E7E9EC   the area around the answer
+      answer #FFFFFF   the answer is the brightest thing on the page
+      sunk   #DADDE2   earlier turns and nested metadata, clearly recessed
+      line   #C9CCD1   a rule you can actually see
+
+    Three steps of roughly 5% luminance each, which is what "clearer page / answer /
+    control distinction" requires.
+
+    Contrast computed, not guessed, against BOTH the answer surface and the page — because
+    provenance and meta text render on the page, not on the answer:
+
+                      on #FFFFFF    on #E7E9EC
+      ink  #15181C      17.8:1        14.6:1
+      ink2 #54585D       7.2:1         5.9:1
+      ink3 #5F6368       6.1:1         5.0:1
+
+    All above WCAG AA for body text, with the body ink past AAA. The inks are the reason
+    the complaint was "washed out" at all: the old light scope rendered the answer in
+    #E6EEF6, a near-white, at 1.1:1.
+
+    A SMALL COOL CAST IS DELIBERATE AND BOUNDED. R, G and B stay within 10 of each other —
+    under 4% of the range — because a fully achromatic grey reads yellow on most sRGB
+    panels. That is a different thing from the cast that was there before, which was large
+    enough to tint the surfaces and was paired with navy inks that never lightened at all.
+
+    DARK/LIGHT PARITY is structural, not chromatic. Dark keeps the navy identity the
+    accepted palette established — the instruction is to preserve GlobalNewsAI's
+    identity, not to make the two themes the same colour — and gains the same THREE-STEP
+    separation, which it did not have either: its page and its answer card differed only
+    by a gradient.
+  */
+  --ask-read-bg: #e7e9ec;
+  --ask-read-answer-bg: #ffffff;
+  --ask-read-sunk: #dadde2;
+  --ask-read-line: #c9ccd1;
+  --ask-read-line-soft: #d8dbdf;
+  --ask-read-ink: #15181c;
+  --ask-read-ink2: #54585d;
+  --ask-read-ink3: #5f6368;
+  /* State rules: a 3px edge, not a box. Hue carries the meaning; the ink stays neutral. */
+  --ask-read-rule-current: #2f6fd6;
+  --ask-read-rule-reference: #8a7a52;
+  --ask-read-rule-insufficient: #b4453f;
+  --ask-read-rule-retained: #1f7a52;
+  --ask-read-rule-clarify: #2f6fd6;
+  --ask-read-control-ink: #1f4e9c;
+  --ask-read-control-line: #c9ccd1;
+  --ask-read-deep-ink: #6d5620;
+  --ask-read-deep-line: #c9a46a;
+  --ask-read-deep-bg: #faf5ea;
 }
 html[data-gna-schedule='dark'] [data-gna-theme='scheduled'],
 [data-gna-theme='dark'] {
@@ -524,6 +612,25 @@ html[data-gna-schedule='dark'] [data-gna-theme='scheduled'],
   --ask-strip-bg: initial;
   --ask-drawer-bg: initial;
   --ask-surface-bg: initial;
+  /* R4 · PHASE C — `initial` restores the accepted dark value each var() carries. */
+  --ask-read-bg: initial;
+  --ask-read-answer-bg: initial;
+  --ask-read-sunk: initial;
+  --ask-read-line: initial;
+  --ask-read-line-soft: initial;
+  --ask-read-ink: initial;
+  --ask-read-ink2: initial;
+  --ask-read-ink3: initial;
+  --ask-read-rule-current: initial;
+  --ask-read-rule-reference: initial;
+  --ask-read-rule-insufficient: initial;
+  --ask-read-rule-retained: initial;
+  --ask-read-rule-clarify: initial;
+  --ask-read-control-ink: initial;
+  --ask-read-control-line: initial;
+  --ask-read-deep-ink: initial;
+  --ask-read-deep-line: initial;
+  --ask-read-deep-bg: initial;
 }
 @media (prefers-color-scheme: dark) {
   html:not([data-gna-schedule]) [data-gna-theme='scheduled'],
@@ -543,6 +650,25 @@ html[data-gna-schedule='dark'] [data-gna-theme='scheduled'],
     --ask-strip-bg: initial;
     --ask-drawer-bg: initial;
     --ask-surface-bg: initial;
+    /* R4 · PHASE C — same reset inside the system-preference scope. */
+    --ask-read-bg: initial;
+    --ask-read-answer-bg: initial;
+    --ask-read-sunk: initial;
+    --ask-read-line: initial;
+    --ask-read-line-soft: initial;
+    --ask-read-ink: initial;
+    --ask-read-ink2: initial;
+    --ask-read-ink3: initial;
+    --ask-read-rule-current: initial;
+    --ask-read-rule-reference: initial;
+    --ask-read-rule-insufficient: initial;
+    --ask-read-rule-retained: initial;
+    --ask-read-rule-clarify: initial;
+    --ask-read-control-ink: initial;
+    --ask-read-control-line: initial;
+    --ask-read-deep-ink: initial;
+    --ask-read-deep-line: initial;
+    --ask-read-deep-bg: initial;
   --ask-surface-bg: initial;
   }
 }

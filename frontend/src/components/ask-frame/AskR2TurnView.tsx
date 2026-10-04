@@ -68,6 +68,27 @@ const QUESTION =
   'mb-3 mt-2.5 text-[21px] font-bold leading-[1.2] tracking-[-0.015em] text-white md:text-[26px] min-[1900px]:text-[30px]';
 const CARD = 'rounded-[12px] p-3.5 md:p-5';
 
+/*
+  R4 · PHASE C — WHICH TONES ARE A BOX AND WHICH ARE THE PAGE.
+
+  `CARD_CLASS` gave every answer a border, a gradient and a 20px pad. The three NORMAL
+  answered tones — current, verified, partial — lose the box: they are the answer, and the
+  answer is the page. The QUALIFIED tones keep a visible edge, because a reference-background
+  or insufficient-evidence answer must never read like a researched one; the stylesheet turns
+  that edge into a 3px start-rule, so the distinction survives at a quarter of the weight.
+
+  This is a VISUAL decision only. No tone is merged, no state is renamed, and
+  `data-ask-tone` still carries the state for anything that reads it.
+*/
+const PLAIN_TONES: ReadonlySet<AskR2View['tone']> = new Set(['current', 'verified', 'partial']);
+
+function readingTone(tone: AskR2View['tone']): {
+  readonly 'data-ask-read-plain'?: 'true';
+  readonly 'data-ask-read-rule'?: AskR2View['tone'];
+} {
+  return PLAIN_TONES.has(tone) ? { 'data-ask-read-plain': 'true' } : { 'data-ask-read-rule': tone };
+}
+
 export function AskR2TurnView({
   turn,
   locale,
@@ -404,9 +425,13 @@ export function AskR2TurnView({
           data-ask="answer"
           data-ask-governed="true"
           data-ask-basis={payload.answer.basis}
+          data-ask-tone="current"
+          {...readingTone('current')}
           className={`flex flex-col gap-3 ${CARD} ${CARD_CLASS.current}`}
         >
-          <p className={EYEBROW}>{s.answer}</p>
+          <p data-ask-eyebrow="answer" className={EYEBROW}>
+            {s.answer}
+          </p>
           {/* A governed answer is never blank: the helper always returns at least one paragraph. */}
           {governed.paragraphs.map((line) => (
             <p
@@ -465,12 +490,18 @@ export function AskR2TurnView({
       ) : computedAnswer ? null : (
         <section
           data-ask="answer"
+          data-ask-tone={view.tone}
+          {...readingTone(view.tone)}
           className={`flex flex-col gap-3.5 ${CARD} ${CARD_CLASS[view.tone]}`}
         >
-          <p className={EYEBROW}>{s.answer}</p>
+          <p data-ask-eyebrow="answer" className={EYEBROW}>
+            {s.answer}
+          </p>
           {view.badge === 'ref' && !view.citable && (
             <div
               data-ask="reference-note"
+              /* R4 · PHASE C — compact metadata beside the answer header, same words. */
+              data-ask-read="r4"
               className="rounded-[8px] border border-dashed border-[#4a5a6e] bg-[#121a26] px-3 py-2.5 text-[13px] leading-[1.45] text-[#a9b6c6]"
             >
               {/* CTO P0 — advice is labelled as general guidance, never as current sourced research */}

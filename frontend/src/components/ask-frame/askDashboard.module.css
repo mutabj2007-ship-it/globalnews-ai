@@ -486,3 +486,416 @@
     font-size: 17.5px;
   }
 }
+
+/*
+  ══════════════════════════════════════════════════════════════════════════════
+  R4 ANSWER READING EXPERIENCE R1 · PHASE C — HIERARCHY, DENSITY AND THE THEMES
+  ══════════════════════════════════════════════════════════════════════════════
+
+  MEASURED BEFORE, on the harness at 1440 with two earlier turns and a four-source
+  answer:
+
+    first answer word at      y = 507      more than half the fold spent before the answer
+    bordered boxes in a turn  13           "a dashboard of large bordered cards"
+    earlier-turn stack        202px        two collapsed questions
+    answer card               535px high, bordered, gradient-filled
+    the two hand-off controls 58px each, bordered, competing with the answer
+    sources rail              340px wide, starting ABOVE the answer's own first line
+    light-theme answer ink    #E6EEF6 on #F3F6F9 — 1.1:1
+
+  Every value here is aimed at one of those numbers. Nothing changes what the answer
+  SAYS: no state is merged, no provenance is dropped, no source is hidden. What changes
+  is which of those things is allowed to look like the most important object on the page.
+
+  THE ONE RULE THE WHOLE SECTION FOLLOWS. A border is reserved for something a reader
+  must treat as separate from the answer — an earlier turn, a qualified state, the
+  composer. The answer itself is the page. Everything else distinguishes itself with
+  space, weight and a single rule, which is what a research conversation looks like and
+  a dashboard does not.
+*/
+
+/* ── THE READING SURFACE ──────────────────────────────────────────────────── */
+
+.frame[data-ask-read='r4'] {
+  background: var(--ask-read-bg, radial-gradient(120% 60% at 20% 0%, #04203d 0%, #010a19 60%));
+  color: var(--ask-read-ink, #e6eef6);
+}
+
+/*
+  THE ANSWER IS THE PAGE, NOT A CARD.
+
+  `CARD_CLASS.current` / `.verified` / `.partial` were a border plus a three-stop
+  gradient plus a 20px pad — 535px of card around prose that is the reason the page
+  exists. Those three tones are the NORMAL answered states, so they lose the box
+  entirely. The QUALIFIED tones keep a visible edge, because a reference-background or
+  insufficient-evidence answer must not read like a researched one; they keep it as a
+  3px start-rule rather than a full box, so the distinction survives at a quarter of the
+  visual weight.
+*/
+.thread :global([data-ask='answer'][data-ask-read-plain='true']) {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--ask-read-ink, #e6eef6);
+}
+.thread :global([data-ask='answer'][data-ask-read-rule]) {
+  border: 0;
+  border-inline-start: 3px solid var(--ask-read-rule, #0e2d4d);
+  border-radius: 0;
+  padding: 0.25rem 0 0.25rem 1rem;
+  background: var(--ask-read-answer-bg, transparent);
+}
+.thread :global([data-ask='answer'][data-ask-read-rule='reference']) {
+  --ask-read-rule: var(--ask-read-rule-reference, #4a5a6e);
+}
+.thread :global([data-ask='answer'][data-ask-read-rule='insufficient']) {
+  --ask-read-rule: var(--ask-read-rule-insufficient, #4a2a2e);
+}
+.thread :global([data-ask='answer'][data-ask-read-rule='unavailable']) {
+  --ask-read-rule: var(--ask-read-rule-insufficient, #3a4a5e);
+}
+.thread :global([data-ask='answer'][data-ask-read-rule='retained']) {
+  --ask-read-rule: var(--ask-read-rule-retained, #1f4a3a);
+}
+.thread :global([data-ask='answer'][data-ask-read-rule='clarification']) {
+  --ask-read-rule: var(--ask-read-rule-clarify, #2a6d9e);
+}
+
+/* The answer prose follows the reading ink in both themes. */
+.thread :global([data-ask-prose]) {
+  color: var(--ask-read-ink, #e6eef6);
+}
+.thread :global([data-ask='answer-heading']) {
+  color: var(--ask-read-ink, #fff);
+}
+
+/*
+  THE EYEBROW. `ANSWER` above every answer, in a mono caps 10px, was one of the reasons
+  the eye reached the prose at y=507: a label naming the obvious, given its own line and
+  its own margin. It stays in the DOM — several accepted specs read it, and a screen
+  reader reaching the region benefits — but it stops taking vertical space from the
+  reading column on the latest turn, where the question directly above it has already
+  said what this is.
+*/
+.thread :global([data-ask-latest] [data-ask='answer'] > p[data-ask-eyebrow='answer']) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/*
+  EARLIER TURNS — 202px of card for two collapsed questions.
+
+  The instruction is to compress previous-turn context, and a collapsed question needs
+  one line, not a 101px bordered block with its own eyebrow. The eyebrow goes (the
+  section already has an `aria-label`), the question becomes a single clamped line, and
+  the border becomes a quiet start-rule — so two earlier turns read as a margin note
+  above the conversation instead of two cards competing with it.
+*/
+.thread :global([data-ask='earlier']) {
+  gap: 0;
+  margin-bottom: 1rem;
+  border-inline-start: 2px solid var(--ask-read-line-soft, #0e2d4d);
+  padding-inline-start: 0.875rem;
+}
+.earlier[data-ask-read='r4'] {
+  border: 0;
+  border-radius: 0;
+  padding: 0.25rem 0;
+  background: none;
+}
+.earlier[data-ask-read='r4'] :global([data-ask-earlier-eyebrow]) {
+  display: none;
+}
+.earlier[data-ask-read='r4'] summary > :global(span:last-child) {
+  margin-top: 0;
+  display: block;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--ask-read-ink2, #8fa6c0);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.earlier[data-ask-read='r4'][open] summary > :global(span:last-child) {
+  white-space: normal;
+}
+
+/*
+  THE HAND-OFF CONTROLS — two 58px bordered blocks below every answer.
+
+  "Save / Save as briefing / Copy / Deep analysis must be visually secondary." They were
+  the two heaviest objects on the page after the answer: 56px minimum height, a border
+  each, one of them a filled sand block with a 2px border. They keep their 44px touch
+  target (the cross-platform parity addendum requires it) and lose the filled block, the
+  double border and the competing weight.
+*/
+.thread :global([data-ask='handoffs']) {
+  margin-top: 1.25rem;
+  gap: 1.25rem;
+}
+.thread :global([data-ask='handoffs'] [data-ask='open-full-analysis']),
+.thread :global([data-ask='handoffs'] [data-ask='run-deeper']) {
+  min-height: 44px;
+  flex: 0 1 auto;
+  border: 0;
+  border-radius: 6px;
+  padding: 0;
+  background: none;
+}
+.thread :global([data-ask='handoffs'] [data-ask='open-full-analysis'] span:first-child),
+.thread :global([data-ask='handoffs'] [data-ask='run-deeper'] span:first-child) {
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--ask-read-control-line, #1b6fa8);
+  text-underline-offset: 3px;
+}
+.thread :global([data-ask='handoffs'] [data-ask='open-full-analysis'] span:first-child) {
+  color: var(--ask-read-control-ink, #cfe2f2);
+}
+.thread :global([data-ask='handoffs'] [data-ask='run-deeper'] span:first-child) {
+  color: var(--ask-read-deep-ink, #d9b98a);
+}
+/*
+  The 11px mono meta line under each control said "Asks before running" and "Opens the
+  full analysis". That is a TRUTHFUL disclosure and is NOT removed — a control that runs
+  AI must say so before it is pressed. It is demoted to the same ink as other provenance
+  text and put on one line with the label, so the pair reads as a sentence rather than
+  as a titled card.
+*/
+.thread :global([data-ask='handoffs'] [data-ask='open-full-analysis'] span:last-child),
+.thread :global([data-ask='handoffs'] [data-ask='run-deeper'] span:last-child) {
+  color: var(--ask-read-ink3, #8299b4);
+}
+
+/* Copy / Save / Save as briefing — a row of quiet text actions, not bordered chips. */
+.thread :global([data-ask='turn-actions']) {
+  gap: 1.25rem;
+}
+.thread :global([data-ask='turn-actions'] > *) {
+  border: 0;
+  background: none;
+}
+
+/*
+  SOURCES — secondary, and never taller than the answer it supports.
+
+  Four sources were four bordered cards (77–95px each) inside a 340px rail with its own
+  border, and the rail STARTED at y=0 — above the answer's own first line — so the first
+  thing a reader's eye landed on at the top right was provenance for an answer they had
+  not read yet. The rail keeps its width and its content; it loses its border, its
+  per-source boxes, and its claim on the top of the page.
+*/
+.sourcesColumn[data-ask-read='r4'] {
+  padding-top: 2.25rem;
+}
+.sourcesColumn[data-ask-read='r4'] :global([data-ask='sources-column']),
+.sourcesColumn[data-ask-read='r4'] :global([data-ask='sources']) {
+  border: 0;
+  background: none;
+}
+.sourcesColumn[data-ask-read='r4'] :global([data-ask='source']) {
+  border: 0;
+  border-radius: 0;
+  padding: 0.5rem 0;
+  background: none;
+}
+.sourcesColumn[data-ask-read='r4'] :global([data-ask='source']) + :global([data-ask='source']) {
+  border-top: 1px solid var(--ask-read-line-soft, #0e2d4d);
+}
+
+/*
+  ZERO SOURCES — "no large empty rail; a compact provenance text instead."
+
+  The grid gave the rail its 340px track whether or not there was anything in it, so an
+  answer with no citable sources was followed by a third of the page of nothing. The
+  track collapses, and the provenance stays as the one line it actually is.
+*/
+.frame[data-ask-sources-column='false'] .grid,
+.frame:not([data-ask-sources-column='true']) .grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+.frame[data-ask-sources-column='false'] .sourcesColumn {
+  display: none;
+}
+.thread :global([data-ask='no-citable'][data-ask-read='r4']) {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--ask-read-ink3, #8299b4);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+/*
+  THE MODEL-BACKGROUND STATE — "must stay truthful but stop being a dominant darkened
+  nested card."
+
+  It was a bordered, darkened block nested INSIDE the answer card, which made the
+  honest disclosure the visually loudest part of an honest answer. It becomes compact
+  metadata beside the answer's own header: same words, same placement in the reading
+  order, a quarter of the weight. The dashed edge is kept deliberately — a dashed rule
+  is the one piece of vocabulary this surface already uses to mean "not current sourced
+  research", and dropping it would be a provenance change dressed as a visual one.
+*/
+.thread :global([data-ask='reference-note'][data-ask-read='r4']) {
+  border: 0;
+  border-inline-start: 2px dashed var(--ask-read-rule-reference, #4a5a6e);
+  border-radius: 0;
+  padding: 0 0 0 0.75rem;
+  background: none;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ask-read-ink2, #a9b6c6);
+}
+.thread :global([data-ask='reference-note'][data-ask-read='r4'] p:first-child) {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ask-read-ink3, #d3dbe5);
+}
+
+/*
+  THE READING COLUMN. 68ch at 17px measures 642px, which lands at roughly 72 characters
+  of real prose — inside the 65–75 band that reading research puts the fewest regressions
+  in, and the reason the column is NOT widened to fill 1440px. The grid gets the extra
+  space as margin instead, so the answer sits in a column rather than spanning a desk.
+*/
+.thread :global([data-ask-prose]) p {
+  max-width: 68ch;
+}
+@media (min-width: 1536px) {
+  .thread :global([data-ask-prose]) p {
+    max-width: 70ch;
+  }
+}
+
+/* Secondary ink everywhere provenance speaks, in both themes. */
+.thread :global([data-ask='sources-after-choice']),
+.thread :global([data-ask='retained-note']),
+.thread :global([data-ask='based-on']),
+.thread :global([data-ask='place-context']) {
+  color: var(--ask-read-ink3, #8299b4);
+}
+
+/*
+  SAVE / SAVE AS BRIEFING / COPY — item 7, made literal.
+
+  They live in the `engine-state` row beside the freshness and badge chips, and each was a
+  bordered pill of the same weight as the provenance chips around it. A chip that STATES
+  something (scope, freshness, badge) keeps its border, because a border is what separates a
+  stated fact from the prose; a chip that DOES something becomes a quiet text action. That is
+  the distinction the row was missing, and it is why these are not simply made smaller.
+*/
+.thread :global([data-ask='engine-state'] button),
+.thread :global([data-ask='engine-state'] a[data-ask='copy']),
+.thread :global([data-ask='engine-state'] [data-ask='copy']),
+.thread :global([data-ask='engine-state'] [data-ask='save']),
+.thread :global([data-ask='engine-state'] [data-ask='save-briefing']) {
+  min-height: 32px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--ask-read-control-ink, #cfe2f2);
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+  transition: text-decoration-color 120ms ease;
+}
+.thread :global([data-ask='engine-state'] button:hover),
+.thread :global([data-ask='engine-state'] [data-ask='copy']:hover),
+.thread :global([data-ask='engine-state'] [data-ask='save']:hover),
+.thread :global([data-ask='engine-state'] [data-ask='save-briefing']:hover) {
+  text-decoration-color: currentColor;
+}
+/* Focus stays visible — a borderless control must not become an invisible one. */
+.thread :global([data-ask='engine-state'] button:focus-visible),
+.thread :global([data-ask='engine-state'] [data-ask='copy']:focus-visible),
+.thread :global([data-ask='engine-state'] [data-ask='save']:focus-visible),
+.thread :global([data-ask='engine-state'] [data-ask='save-briefing']:focus-visible) {
+  outline: 2px solid var(--ask-read-control-ink, #5abff5);
+  outline-offset: 2px;
+}
+
+/*
+  THE RAIL STARTED ABOVE THE ANSWER. Measured: `railTop: 0` — the sources column's first
+  row was level with the top of the scroll area, so the first thing a reader's eye met at
+  the top right was provenance for an answer they had not begun. It now begins below the
+  question and the answer's opening line, which is where a reader actually wants it.
+
+  The offset is on the COLUMN rather than on the rail's own first child so that a rail with
+  a different first block (no-citable, a single provenance line) lands in the same place.
+*/
+.grid > .sourcesColumn[data-ask-read='r4'] {
+  align-self: start;
+  padding-top: 11.5rem;
+}
+@media (max-width: 1023px) {
+  .grid > .sourcesColumn[data-ask-read='r4'] {
+    padding-top: 0;
+  }
+}
+
+/*
+  ══════════════════════════════════════════════════════════════════════════════
+  THE INKS THE LIGHT THEME COULD NOT REACH
+  ══════════════════════════════════════════════════════════════════════════════
+
+  Measured from the first light-theme capture after the density work, and it is the same
+  root cause as the washed-out complaint rather than a new one: these elements set their
+  colour as a Tailwind arbitrary value from the dark palette, so a light scope left them
+  near-white on a near-white page.
+
+    the question heading        `text-white`        1.1:1
+    a source title in the rail  `text-[#e6eef6]`    1.1:1
+    an earlier turn's question  `text-[#e6eef6]`    1.1:1
+    the analytical-inference run  light grey italic
+
+  They are corrected HERE, in the stylesheet, rather than by editing 266 literals across the
+  Ask components. Two reasons, and the second is the important one. First, a scoped rule
+  under `.thread` / `.sourcesColumn` outranks a single-class arbitrary value, so the dark
+  rendering is unchanged byte for byte while the light scope resolves a token. Second, the
+  question heading, the source title and the inference run are the FOUR elements a reader
+  actually reads; sweeping all 82 distinct literals would be a far larger diff for the same
+  reading outcome, and this round is a reading round. The remaining literals are listed in
+  the handoff as known work, not quietly left.
+*/
+.thread :global([data-ask-latest] h2),
+.thread h2 {
+  color: var(--ask-read-ink, #fff);
+}
+.earlier[data-ask-read='r4'] summary > :global(span:last-child) {
+  color: var(--ask-read-ink2, #e6eef6);
+}
+.sourcesColumn[data-ask-read='r4'] :global([data-ask='source'] a),
+.thread :global([data-ask='source'] a) {
+  color: var(--ask-read-ink, #e6eef6);
+}
+.sourcesColumn[data-ask-read='r4'] :global([data-ask='source']) :global(span),
+.sourcesColumn[data-ask-read='r4'] :global([data-ask='source']) :global(time) {
+  color: var(--ask-read-ink3, #8299b4);
+}
+/*
+  THE ANALYTICAL-INFERENCE RUN. Its italic + lighter ink is a GOVERNED distinction — the
+  reader must be able to see that a sentence is the model's inference and not something a
+  source reported — so the treatment is kept and only its contrast is fixed. It stays
+  visibly lighter than reported fact, at a ratio that is still readable.
+*/
+.thread :global([data-ask-statement='ANALYTICAL_INFERENCE']),
+.thread :global([data-statement-kind='ANALYTICAL_INFERENCE']) {
+  color: var(--ask-read-ink2, #9fb4cc);
+}
+.thread :global([data-ask='eyebrow']),
+.thread :global([data-ask='scope'] > p),
+.thread :global([data-ask='engine-state'] > span) {
+  color: var(--ask-read-ink3, #8fa6c0);
+}

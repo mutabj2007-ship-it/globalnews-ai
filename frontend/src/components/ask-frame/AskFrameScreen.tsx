@@ -457,7 +457,13 @@ export function AskFrameScreen({
       data-ask-surface
       data-ask-path={showR2 ? 'r2' : r2.availability === 'legacy' ? 'legacy' : 'unknown'}
       data-ask-phase={isPending ? 'loading' : hasQuestion ? 'answered' : 'idle'}
-      data-ask-sources-column={withSourcesColumn ? 'true' : undefined}
+      /*
+        R4 · PHASE C — the rail's track is now driven by this attribute in BOTH directions.
+        It was set only when a rail existed, so an answer with no citable sources still paid
+        340px of empty grid track: "zero sources must not leave a large empty rail".
+      */
+      data-ask-sources-column={withSourcesColumn ? 'true' : 'false'}
+      data-ask-read="r4"
       /* CENTERED COMPOSER R1 — the entry geometry is a STATE of this frame; see the CSS. */
       data-ask-entry={entryState ? 'true' : undefined}
       className={styles.frame}
@@ -686,9 +692,11 @@ export function AskFrameScreen({
                 className="mb-5 flex flex-col gap-2"
               >
                 {openedEarlier.map((turn, i) => (
-                  <details key={`restored-${i}`} data-ask="earlier-turn" className={styles.earlier}>
+                  <details key={`restored-${i}`} data-ask="earlier-turn" data-ask-read="r4" className={styles.earlier}>
                     <summary className="cursor-pointer list-none">
-                      <span className={ASK_EYEBROW}>{r2s.earlier}</span>
+                      <span data-ask-earlier-eyebrow="" className={ASK_EYEBROW}>
+                        {r2s.earlier}
+                      </span>
                       <span className="mt-2 block text-[15px] font-bold leading-[1.3] text-[#e6eef6]">
                         {turn.question}
                       </span>
@@ -725,9 +733,11 @@ export function AskFrameScreen({
                 className="mb-5 flex flex-col gap-2"
               >
                 {earlierR2.map((turn, i) => (
-                  <details key={`r2-${i}`} data-ask="earlier-turn" className={styles.earlier}>
+                  <details key={`r2-${i}`} data-ask="earlier-turn" data-ask-read="r4" className={styles.earlier}>
                     <summary className="cursor-pointer list-none">
-                      <span className={ASK_EYEBROW}>{r2s.earlier}</span>
+                      <span data-ask-earlier-eyebrow="" className={ASK_EYEBROW}>
+                        {r2s.earlier}
+                      </span>
                       <span className="mt-2 block text-[15px] font-bold leading-[1.3] text-[#e6eef6]">
                         {turn.question}
                       </span>
@@ -794,7 +804,7 @@ export function AskFrameScreen({
             )}
           </div>
           {withSourcesColumn && (
-            <div className={styles.sourcesColumn}>
+            <div data-ask-read="r4" className={styles.sourcesColumn}>
               <AskSourcesColumn turn={lastR2} locale={interfaceLocale} />
             </div>
           )}
