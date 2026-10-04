@@ -823,7 +823,6 @@ export const adminPl: AdminDictionary = {
         'Wymaga magazynu ustawień działającego w czasie rzeczywistym. Konfiguracja jest odczytywana ze środowiska przy starcie i nie da się jej zmienić z tego panelu.',
       localisation: {
         adminLanguages: 'Języki panelu',
-        adminLanguagesValue: 'English, Polski',
         dateFormat: 'Format daty',
         numberFormat: 'Format liczb',
         timezone: 'Strefa czasowa',

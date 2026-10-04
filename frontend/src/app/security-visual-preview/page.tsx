@@ -1,8 +1,7 @@
 import type { Metadata } from 'next';
 import type { JSX } from 'react';
-import { cookies } from 'next/headers';
 import { ScriptRun } from '@/lib/typography/runBoundary';
-import { LANGUAGE_COOKIE_NAME, SELECTABLE_LOCALES, isActiveLanguageCode } from '@/lib/i18n/languages';
+import { surfaceLocale } from '@/lib/i18n/displayLocale.server';
 import type { SecLocale } from '@/lib/security/securityStrings';
 import { SecurityScreen } from '@/components/security/SecurityScreen';
 
@@ -45,9 +44,8 @@ export const metadata: Metadata = {
 };
 
 function securityLocale(): SecLocale {
-  const cookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
-  const active = cookie && isActiveLanguageCode(cookie) ? cookie : 'en';
-  return SELECTABLE_LOCALES.find((l) => l === active) ?? 'en';
+  /* T2 — the display-locale authority + effective-locale rule (was the EN/PL clamp). */
+  return surfaceLocale('security').effective;
 }
 
 export default function SecurityVisualPreviewPage(): JSX.Element {

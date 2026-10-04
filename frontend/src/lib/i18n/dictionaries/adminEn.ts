@@ -836,7 +836,6 @@ export const adminEn = {
         'Requires a runtime settings store. Configuration is read from the environment at start-up and cannot be changed from this platform.',
       localisation: {
         adminLanguages: 'Admin languages',
-        adminLanguagesValue: 'English, Polski',
         dateFormat: 'Date format',
         numberFormat: 'Number format',
         timezone: 'Timezone',

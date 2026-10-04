@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { NavBar } from '@/components/navigation/NavBar';
 import { Footer } from '@/components/layout/Footer';
 import { getDictionary } from '@/lib/i18n/dictionaries';
-import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
+import { surfaceLocale } from '@/lib/i18n/displayLocale.server';
 import { buildPageMetadata } from '@/lib/seo/metadata';
 
 /**
@@ -12,7 +12,7 @@ import { buildPageMetadata } from '@/lib/seo/metadata';
  * This page is a deliberate, line-for-line reuse of the B2 legal-page
  * architecture established by app/privacy/page.tsx and app/terms/page.tsx:
  * the same server-side language resolution (cookies().get(
- * LANGUAGE_COOKIE_NAME) + isActiveLanguageCode(), defaulting to 'en'),
+ * LANGUAGE_COOKIE_NAME) — T2: now through surfaceLocale(), the display-locale authority),
  * the same <NavBar> / max-w-3xl <main> / <Footer> shell, the same legacy
  * token scale, and the same { title, lastUpdatedLabel, lastUpdatedDate,
  * intro, sections[] } dictionary shape. A plain async server component —
@@ -50,8 +50,7 @@ import { buildPageMetadata } from '@/lib/seo/metadata';
  * fabricated metadata applies to prose as much as to dates.
  */
 export async function generateMetadata(): Promise<Metadata> {
-  const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
-  const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
+  const language = surfaceLocale('sourcePolicy').language;
   const t = getDictionary(language).sourcePolicyPage;
 
   return buildPageMetadata({
@@ -63,8 +62,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function SourcePolicyPage(): Promise<JSX.Element> {
-  const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
-  const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
+  const language = surfaceLocale('sourcePolicy').language;
   const t = getDictionary(language).sourcePolicyPage;
 
   return (

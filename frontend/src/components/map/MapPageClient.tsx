@@ -88,21 +88,21 @@ import { countryReadRequestFor, countryReadState } from '@/lib/map/retrieval/cou
 import { countryReadPresentationFrom } from '@/lib/map/retrieval/countryReadPresentation';
 import { usePublishGeographyContext } from '@/lib/ask/geographyContextStore';
 import { getDictionary } from '@/lib/i18n/dictionaries';
-import { readLanguageCookie } from '@/lib/i18n/languages';
+import { documentRenderLanguage } from '@/lib/i18n/languages';
 
 /**
  * Milestone #49 (Phase B cleanup) — next/dynamic's `loading` callback
  * is a module-scope function with no access to MapPageClient's own
  * `language` prop or React state. This callback only ever executes
  * client-side (guaranteed by `ssr: false` below), so it's safe to call
- * the SAME `readLanguageCookie()` utility already used for the
+ * the SAME `documentRenderLanguage()` utility (T2: the document's effective locale) already used for the
  * homepage's Hero.tsx language-sync logic directly here — reusing the
  * existing cookie-reading mechanism rather than introducing a second
  * one. Falls back to 'en' exactly like every other cookie-absent case
  * in this codebase.
  */
 function DynamicMapLoadingFallback(): JSX.Element {
-  const language = readLanguageCookie() ?? 'en';
+  const language = documentRenderLanguage();
   const t = getDictionary(language).map;
 
   return (

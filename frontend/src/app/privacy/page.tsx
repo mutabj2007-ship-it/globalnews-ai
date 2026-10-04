@@ -5,14 +5,14 @@ import { AskThemedSurface } from '@/components/ask-nav/AskThemedSurface';
 import { THEME_COOKIE_NAME, parseThemePreference } from '@/lib/theme/theme';
 import { Footer } from '@/components/layout/Footer';
 import { getDictionary } from '@/lib/i18n/dictionaries';
-import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
+import { surfaceLocale } from '@/lib/i18n/displayLocale.server';
 import { buildPageMetadata } from '@/lib/seo/metadata';
 import { COOKIES_PAGE } from '@/lib/privacy/cookiesPageStrings';
 
 /**
  * B2 — Public Legal Surfaces. Mirrors the homepage's own server-side
- * language resolution exactly (cookies().get(LANGUAGE_COOKIE_NAME) +
- * isActiveLanguageCode(), defaulting to 'en' — see app/page.tsx) so
+ * language resolution exactly (cookies().get(LANGUAGE_COOKIE_NAME) —
+ * T2: now through surfaceLocale(), the display-locale authority) so
  * this page respects the same stored language preference NavBar/
  * Footer already use elsewhere, without introducing any new
  * resolution mechanism. A plain server component — no client
@@ -30,8 +30,7 @@ import { COOKIES_PAGE } from '@/lib/privacy/cookiesPageStrings';
  * fabricated metadata applies to prose as much as to dates.
  */
 export async function generateMetadata(): Promise<Metadata> {
-  const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
-  const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
+  const language = surfaceLocale('privacy').language;
   const t = getDictionary(language).privacyPage;
 
   return buildPageMetadata({
@@ -43,8 +42,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function PrivacyPage(): Promise<JSX.Element> {
-  const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
-  const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
+  const language = surfaceLocale('privacy').language;
   const t = getDictionary(language).privacyPage;
 
   return (

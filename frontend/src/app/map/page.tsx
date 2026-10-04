@@ -1,5 +1,4 @@
 import { ConflictDashboard } from '@/components/conflict/ConflictDashboard';
-import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
 import { NavBar } from '@/components/navigation/NavBar';
 import { Footer } from '@/components/layout/Footer';
@@ -9,7 +8,7 @@ import { MapBookmarkProvider } from '@/components/bookmark/MapBookmarkProvider';
 import { LanguageSync } from '@/components/i18n/LanguageSync';
 /* CHECKPOINT I — restores the map state the sign-in redirect may not carry. */
 import { MapSignInReturn } from '@/components/map/MapSignInReturn';
-import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
+import { surfaceLocale } from '@/lib/i18n/displayLocale.server';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { buildPageMetadata } from '@/lib/seo/metadata';
 import { mapShellVariant } from '@/lib/map/mapShellFlag';
@@ -24,8 +23,7 @@ import { mapShellVariant } from '@/lib/map/mapShellFlag';
  * surface Next.js actually provides for this.
  */
 export async function generateMetadata(): Promise<Metadata> {
-  const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
-  const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
+  const language = surfaceLocale('map').language;
   const t = getDictionary(language).map;
 
   /*
@@ -51,8 +49,7 @@ export async function generateMetadata(): Promise<Metadata> {
  * persistence mechanism is introduced.
  */
 export default function MapPage({ searchParams }: { searchParams?: { from?: string; domain?: string; observation?: string; cam?: string } }): JSX.Element {
-  const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
-  const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
+  const language = surfaceLocale('map').language;
 
   // Explicit Part V handoff: retained-only spatial lens, never a Country retrieval.
   if (searchParams?.from === 'conflict' && searchParams.domain === 'conflict') {

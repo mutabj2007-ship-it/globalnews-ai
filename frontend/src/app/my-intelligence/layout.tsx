@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { cookies } from 'next/headers';
-import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
+import { surfaceLocale } from '@/lib/i18n/displayLocale.server';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { buildPageMetadata } from '@/lib/seo/metadata';
 
@@ -14,9 +13,7 @@ import { buildPageMetadata } from '@/lib/seo/metadata';
  * that put `/history` behind its own layout, applied here for the same reason.
  */
 export async function generateMetadata(): Promise<Metadata> {
-  const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
-  const language =
-    languageCookie !== undefined && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
+  const language = surfaceLocale('myIntelligence').language;
   const t = getDictionary(language).myIntelligence;
 
   return buildPageMetadata({

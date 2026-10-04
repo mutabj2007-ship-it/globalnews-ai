@@ -301,7 +301,7 @@ export const supportEn = {
     /* C-14 — the EN/PL boundary. */
     locale: {
       outOfScope:
-        'Automatic answers are available in English and Polish only. Write here in either, or a person from Support can take this.',
+        'Automatic answers in Support are written in English and Polish; your display language does not change this. Write here in either, or a person from Support can take this.',
     },
 
     /* Surface chrome. A reader-owned close: the reader ends the conversation,

@@ -1,7 +1,6 @@
 import Link from 'next/link';
-import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
-import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
+import { surfaceLocale } from '@/lib/i18n/displayLocale.server';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { buildPageMetadata } from '@/lib/seo/metadata';
 import { NavBar } from '@/components/navigation/NavBar';
@@ -234,8 +233,7 @@ function CapabilityCard({ module }: { module: CapabilityModule }): JSX.Element {
  * is one field in `lib/seo/routes.ts` and nothing here moves.
  */
 export async function generateMetadata(): Promise<Metadata> {
-  const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
-  const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
+  const language = surfaceLocale('workspace').language;
   const t = getDictionary(language);
 
   return buildPageMetadata({

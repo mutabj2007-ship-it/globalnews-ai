@@ -1,7 +1,8 @@
 import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
 import type { LanguageCode } from '@globalnews-ai/shared';
-import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
+import { surfaceLocale } from '@/lib/i18n/displayLocale.server';
+import { effectiveWithin } from '@/lib/i18n/surfaceLocale';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { buildPageMetadata } from '@/lib/seo/metadata';
 import { SupportScreen } from '@/components/support/SupportScreen';
@@ -33,8 +34,8 @@ import { standaloneAskRoot } from '@/lib/ask/standaloneRoot';
  * anyone else regardless — it is simply correct.
  */
 function currentLanguage(): LanguageCode {
-  const cookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
-  return cookie && isActiveLanguageCode(cookie) ? cookie : 'en';
+  /* T2 — the display-locale authority + effective-locale rule (was the EN/PL clamp). */
+  return surfaceLocale('support').language;
 }
 
 function resolveSupportDictionary(): ReturnType<typeof getDictionary>['support'] {
@@ -72,7 +73,7 @@ export default function SupportPage(): JSX.Element {
     active UI language would otherwise silently store English in a thread that
     asked for something else.
   */
-  const language = currentLanguage() === 'pl' ? 'pl' : 'en';
+  const language = effectiveWithin(surfaceLocale('support'), ['en', 'pl']);
 
   /*
     ALPHA VISUAL ACCEPTANCE REPAIR R1 — in the standalone Public Beta, Help & feedback stays

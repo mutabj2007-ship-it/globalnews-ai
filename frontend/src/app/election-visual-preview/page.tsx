@@ -2,9 +2,9 @@ import { readElection } from '@/lib/evidence/retainedReaders';
 import { bindElection } from '@/lib/evidence/electionBinding';
 import type { Metadata } from 'next';
 import type { JSX } from 'react';
-import { cookies } from 'next/headers';
 import { ScriptRun } from '@/lib/typography/runBoundary';
-import { LANGUAGE_COOKIE_NAME, SELECTABLE_LOCALES, isActiveLanguageCode } from '@/lib/i18n/languages';
+import { surfaceLocale } from '@/lib/i18n/displayLocale.server';
+import { effectiveWithin } from '@/lib/i18n/surfaceLocale';
 import { ElectionPreviewScreen } from '@/components/election/ElectionPreviewScreen';
 import type { ElectionLocale } from '@/lib/election/electionStrings';
 
@@ -16,10 +16,9 @@ export const metadata: Metadata = {
 
 /** The platform locale mechanism, not a second one. EN/PL, the established baseline. */
 function electionLocale(): ElectionLocale {
-  const cookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
-  const active = cookie && isActiveLanguageCode(cookie) ? cookie : 'en';
-  const selectable = SELECTABLE_LOCALES.find((l) => l === active) ?? 'en';
-  return selectable === 'pl' ? 'pl' : 'en';
+  /* T2 — the effective locale of the surface; the catalogue authors en/pl, so the rule can only
+     yield one of them (any other selection renders English with the declared notice). */
+  return effectiveWithin(surfaceLocale('election'), ['en', 'pl']);
 }
 
 export default async function ElectionVisualPreviewPage(): Promise<JSX.Element> {

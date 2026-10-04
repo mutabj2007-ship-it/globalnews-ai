@@ -1,12 +1,7 @@
 import type { JSX } from 'react';
 import type { Metadata } from 'next';
-import { cookies } from 'next/headers';
 import { ScriptRun } from '@/lib/typography/runBoundary';
-import {
-  LANGUAGE_COOKIE_NAME,
-  SELECTABLE_LOCALES,
-  isActiveLanguageCode,
-} from '@/lib/i18n/languages';
+import { surfaceLocale } from '@/lib/i18n/displayLocale.server';
 import type { LanguageCode } from '@globalnews-ai/shared';
 import { NavBar } from '@/components/navigation/NavBar';
 import { Footer } from '@/components/layout/Footer';
@@ -37,13 +32,13 @@ export const metadata: Metadata = {
 };
 
 function mktLanguage(): LanguageCode {
-  const cookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
-  return cookie && isActiveLanguageCode(cookie) ? cookie : 'en';
+  /* T2 — the display-locale authority + effective-locale rule (was the EN/PL clamp). */
+  return surfaceLocale('market').language;
 }
 
 function mktLocale(): MktLocale {
   const language = mktLanguage();
-  return SELECTABLE_LOCALES.find((l) => l === language) ?? 'en';
+  return surfaceLocale('market').effective;
 }
 
 export default async function MarketCompactPage(): Promise<JSX.Element> {

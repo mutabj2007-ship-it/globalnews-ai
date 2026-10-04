@@ -1,8 +1,7 @@
 import type { Metadata } from 'next';
 import type { JSX } from 'react';
-import { cookies } from 'next/headers';
 import { ScriptRun } from '@/lib/typography/runBoundary';
-import { LANGUAGE_COOKIE_NAME, SELECTABLE_LOCALES, isActiveLanguageCode } from '@/lib/i18n/languages';
+import { surfaceLocale } from '@/lib/i18n/displayLocale.server';
 import type { PolLocale } from '@/lib/politics/politicsStrings';
 import { PoliticsCompactScreen } from '@/components/politics/PoliticsCompactScreen';
 import { readPoliticsObservations } from '@/lib/politics/politicsReadModel';
@@ -26,9 +25,8 @@ export const metadata: Metadata = {
 };
 
 function politicsLocale(): PolLocale {
-  const cookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
-  const active = cookie && isActiveLanguageCode(cookie) ? cookie : 'en';
-  return SELECTABLE_LOCALES.find((l) => l === active) ?? 'en';
+  /* T2 — the display-locale authority + effective-locale rule (was the EN/PL clamp). */
+  return surfaceLocale('politics').effective;
 }
 
 export default async function PoliticsVisualPreviewCompactPage(): Promise<JSX.Element> {

@@ -1,5 +1,4 @@
-import { cookies } from 'next/headers';
-import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
+import { surfaceLocale } from '@/lib/i18n/displayLocale.server';
 import { BetaHomeHeader } from '@/components/home/BetaHomeHeader';
 import { MobileBottomNav } from '@/components/navigation/MobileBottomNav';
 import { Footer } from '@/components/layout/Footer';
@@ -35,8 +34,7 @@ export default function MyIntelligencePage({
 }: {
   searchParams?: { state?: string };
 }): JSX.Element {
-  const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
-  const language = languageCookie !== undefined && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
+  const language = surfaceLocale('myIntelligence').language;
 
   const state = searchParams?.state;
 

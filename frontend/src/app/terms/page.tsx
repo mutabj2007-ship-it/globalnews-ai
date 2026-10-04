@@ -1,9 +1,8 @@
-import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
 import { NavBar } from '@/components/navigation/NavBar';
 import { Footer } from '@/components/layout/Footer';
 import { getDictionary } from '@/lib/i18n/dictionaries';
-import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
+import { surfaceLocale } from '@/lib/i18n/displayLocale.server';
 import { buildPageMetadata } from '@/lib/seo/metadata';
 
 /**
@@ -20,8 +19,7 @@ import { buildPageMetadata } from '@/lib/seo/metadata';
  * fabricated metadata applies to prose as much as to dates.
  */
 export async function generateMetadata(): Promise<Metadata> {
-  const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
-  const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
+  const language = surfaceLocale('terms').language;
   const t = getDictionary(language).termsPage;
 
   return buildPageMetadata({
@@ -33,8 +31,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function TermsPage(): Promise<JSX.Element> {
-  const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
-  const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
+  const language = surfaceLocale('terms').language;
   const t = getDictionary(language).termsPage;
 
   return (
