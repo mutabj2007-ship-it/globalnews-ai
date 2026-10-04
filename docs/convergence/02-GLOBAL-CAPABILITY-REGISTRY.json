@@ -5,12 +5,33 @@
   "sha": "5513275f"
  },
  "productionRef": {
-  "branch": "release/production-c908",
-  "sha": "a9cf8a89"
+  "branch": "Railway Production (backend 5b714833 / frontend 58f80fd4)",
+  "sha": "5b714833 / 58f80fd4"
  },
  "measuredAt": "2026-10-04",
- "deploymentObserved": false,
- "deploymentNote": "Alpha/Production hosts are not reachable from the measuring container (network policy 403). Alpha/Production states are derived from refs + code; any cell depending on a deployment flag is UNVERIFIED.",
+ "deploymentObserved": "via CTO-supplied Railway authority (hosts still not reachable from the measuring container)",
+ "runtime": {
+  "source": "CTO-verified Railway state, contract GLOBALNEWSAI_CLOUD_STAGE2_BUILD_CONTRACT_R2 (2026-10-04)",
+  "alpha": {
+   "backend": "5513275ff731936a07c01e937b92c263ba6d6cf9",
+   "frontend": "5513275ff731936a07c01e937b92c263ba6d6cf9",
+   "GNA_PUBLIC_ROOT": "platform (configured; live root is platform Home)",
+   "askV2": "active (signed-in Ask operations execute)",
+   "guestTrial": "OFF by design during controlled acceptance"
+  },
+  "production": {
+   "backend": "5b714833f2a036557a022a55c646fdb101ec596e",
+   "frontend": "58f80fd4108d3472e5433c7a50e19295788f2544",
+   "flags": "not measured — HOLD"
+  },
+  "handoffs": {
+   "R4 semantic baseline": "handoff/r4-semantic-baseline-5699eb7 @ 5699eb7058b3d20026c62bcffd75f97b7ca846ec",
+   "H final (Ask reading/localization, incl. Claude L delivery)": "handoff/r4-h-answer-reading-5699eb7 @ 266007c930e8293638bc7971670ee0264923c18c",
+   "Politics immutable base": "specialist/politics-r1-integration-d920893 @ d9208933c6ec758756b3b1019d8d01aa1f7592d1",
+   "R4 final replacement": "does not exist yet"
+  }
+ },
+ "deploymentNote": "Alpha runtime facts come from the CTO's verified Railway state; any cell depending on an unmeasured flag remains UNVERIFIED. Production flags are never inferred (UNVERIFIED_RUNTIME).",
  "allowedMaturityStates": [
   "ABSENT",
   "ALPHA_LIVE",
@@ -49,9 +70,9 @@
     "components/ask",
     "lib/ask"
    ],
-   "alphaState": "ASK_BOUND",
-   "productionState": "ABSENT",
-   "productionNote": "c908 serves legacy /analysis/news Ask (see ASK-LEGACY); Ask V2 absent at c908",
+   "alphaState": "ALPHA_LIVE",
+   "productionState": "UNVERIFIED_RUNTIME",
+   "productionNote": "code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)",
    "dataState": "news (GNews) + governed UCDP/TED/NISR CPI/Imihigo records",
    "sourceRightsState": "BLOCKED_RIGHTS (GNews has no rights record; see 07)",
    "sharedSearchBinding": "ASK_BOUND",
@@ -86,15 +107,9 @@
      "evidence": "backend/src/modules/ask-intelligence/contributor-selection.ts:29-45,224-236; stage0/search-binding.json R1"
     },
     {
-     "id": "P1-ASK-02",
-     "priority": "P1",
-     "summary": "Ask V2 requires ASK_V2_ENABLED+ASK_R2_ENABLED+ASK_PUBLIC_COMPUTE_ENABLED (+DB switch); code default OFF; Alpha value unobservable — if unset Ask shows 'unavailable' on every surface",
-     "evidence": "ask-v2.controller.ts:61; AskFrameScreen.tsx:137-139"
-    },
-    {
      "id": "P1-ASK-03",
      "priority": "P1",
-     "summary": "FR/DE/ES/PT/AR Ask chrome partly English (askR2Strings 184 keys en/pl only); FR–AR example questions are unqualified drafts shown to readers",
+     "summary": "FR/DE/ES/PT/AR Ask chrome partly English on Alpha 5513275f; resolved in H final 266007c (pending final R4 integration)",
      "evidence": "stage0/language.json; useRotatingExample.ts:126"
     },
     {
@@ -113,7 +128,7 @@
    "acceptance": {
     "Data": "PASS",
     "Search": "PASS",
-    "Ask": "UNVERIFIED",
+    "Ask": "PASS",
     "Citation": "PASS",
     "Continuity": "PARTIAL",
     "Briefing": "PARTIAL",
@@ -129,7 +144,9 @@
     "branch": "release/alpha-r4-search-conversation-5513275",
     "sha": "5513275f"
    },
-   "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md"
+   "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
+   "alphaNote": "runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority); guest trial OFF by design (not a defect)",
+   "handoffNote": "H final 266007c: Ask shell complete in all seven display locales (not yet deployed; integrates with final R4). Not a system-wide language completion claim."
   },
   {
    "id": "ASK-SEARCH",
@@ -143,9 +160,9 @@
    "frontendOwner": [
     "components/search"
    ],
-   "alphaState": "ASK_BOUND",
-   "productionState": "PRODUCTION_LIVE",
-   "productionNote": "c908 /search uses legacy analyzeNews (ref only; deployment unobserved); at 5513275f /search is redirected to / in Standalone",
+   "alphaState": "ALPHA_LIVE",
+   "productionState": "UNVERIFIED_RUNTIME",
+   "productionNote": "code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)",
    "dataState": "as ASK-CORE",
    "sourceRightsState": "BLOCKED_RIGHTS",
    "sharedSearchBinding": "ASK_BOUND",
@@ -178,7 +195,7 @@
    "acceptance": {
     "Data": "PASS",
     "Search": "PASS",
-    "Ask": "UNVERIFIED",
+    "Ask": "PASS",
     "Citation": "PASS",
     "Continuity": "PARTIAL",
     "Briefing": "PARTIAL",
@@ -195,7 +212,8 @@
     "sha": "5513275f"
    },
    "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
-   "sourceLanguages": []
+   "sourceLanguages": [],
+   "alphaNote": "runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority)"
   },
   {
    "id": "ASK-LEGACY",
@@ -210,8 +228,8 @@
     "lib/api/analysisApi.ts (orphan useAskConversation, AnalysisFrameClient)"
    ],
    "alphaState": "LOCAL_ONLY",
-   "productionState": "PRODUCTION_LIVE",
-   "productionNote": "the Ask engine of c908 (ref only)",
+   "productionState": "UNVERIFIED_RUNTIME",
+   "productionNote": "legacy route still served by Production backend 5b714833 (frontend callers: see T4 caller graph)",
    "dataState": "news",
    "sourceRightsState": "BLOCKED_RIGHTS",
    "sharedSearchBinding": "SEARCHABLE",
@@ -277,8 +295,8 @@
    "frontendOwner": [
     "lib/ask"
    ],
-   "alphaState": "ASK_BOUND",
-   "productionState": "ABSENT",
+   "alphaState": "ALPHA_LIVE",
+   "productionState": "UNVERIFIED_RUNTIME",
    "dataState": "AskThread/AskTurn/StoredResult",
    "sourceRightsState": "N/A",
    "sharedSearchBinding": "ASK_BOUND",
@@ -333,7 +351,9 @@
     "sha": "5513275f"
    },
    "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
-   "sourceLanguages": []
+   "sourceLanguages": [],
+   "productionNote": "code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)",
+   "alphaNote": "runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority)"
   },
   {
    "id": "LANG-SYSTEM",
@@ -354,8 +374,8 @@
    ],
    "alphaState": "COVERAGE_GAP",
    "alphaNote": "7 locales selectable; full-shell rendering only en/pl; Ask frame partial for fr–ar",
-   "productionState": "ABSENT",
-   "productionNote": "c908: ACTIVE_LANGUAGES=['en','pl'] only",
+   "productionState": "COVERAGE_GAP",
+   "productionNote": "Production frontend 58f80fd4: ACTIVE_LANGUAGES en/pl; no seven-locale Ask catalogue",
    "dataState": "23 catalogues + 12 inline tables + 41 '=== pl' branches; 3 catalogues hold all 7 locales",
    "sourceRightsState": "N/A",
    "sharedSearchBinding": "N/A",
@@ -460,10 +480,10 @@
     "components/home",
     "lib/homeFeed.ts"
    ],
-   "alphaState": "ALPHA_READY",
-   "alphaNote": "platform Home only when GNA_PUBLIC_ROOT=platform (Alpha value unobservable); Home R1 gates GNA_* default off",
-   "productionState": "PRODUCTION_LIVE",
-   "productionNote": "c908 Home (ref only); at 5513275f Standalone root serves Ask instead",
+   "alphaState": "ALPHA_LIVE",
+   "alphaNote": "runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority); Home R1 discussion/alert flags still unmeasured",
+   "productionState": "UNVERIFIED_RUNTIME",
+   "productionNote": "code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)",
    "dataState": "GNews top headlines (en/pl only)",
    "sourceRightsState": "BLOCKED_RIGHTS",
    "sharedSearchBinding": "ASK_BOUND",
@@ -496,7 +516,7 @@
    "acceptance": {
     "Data": "PASS",
     "Search": "PASS",
-    "Ask": "UNVERIFIED",
+    "Ask": "PASS",
     "Citation": "N/A",
     "Continuity": "N/A",
     "Briefing": "ABSENT",
@@ -530,10 +550,10 @@
     "components/map",
     "lib/map"
    ],
-   "alphaState": "ALPHA_READY",
-   "alphaNote": "redirected to / in Standalone; served when GNA_PUBLIC_ROOT=platform",
-   "productionState": "PRODUCTION_LIVE",
-   "productionNote": "c908 /map (ref only)",
+   "alphaState": "ALPHA_LIVE",
+   "alphaNote": "runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority)",
+   "productionState": "UNVERIFIED_RUNTIME",
+   "productionNote": "code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)",
    "dataState": "world-atlas geometry + GNews country feed + retained",
    "sourceRightsState": "BLOCKED_RIGHTS",
    "sharedSearchBinding": "ASK_BOUND",
@@ -565,7 +585,7 @@
    "acceptance": {
     "Data": "PASS",
     "Search": "PASS",
-    "Ask": "UNVERIFIED",
+    "Ask": "PASS",
     "Citation": "PARTIAL",
     "Continuity": "N/A",
     "Briefing": "ABSENT",
@@ -599,8 +619,8 @@
    "frontendOwner": [
     "components/conflict"
    ],
-   "alphaState": "ASK_BOUND",
-   "productionState": "ABSENT",
+   "alphaState": "ALPHA_LIVE",
+   "productionState": "UNVERIFIED_RUNTIME",
    "dataState": "RETAINED (UCDP Candidate capture via operator script)",
    "sourceRightsState": "RIGHTS_CLEARED (UCDP Candidate E-5); UCDP GED API BLOCKED_CREDENTIAL",
    "sharedSearchBinding": "ASK_BOUND",
@@ -655,7 +675,9 @@
     "sha": "5513275f"
    },
    "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
-   "sourceLanguages": []
+   "sourceLanguages": [],
+   "productionNote": "code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)",
+   "alphaNote": "runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority)"
   },
   {
    "id": "SECURITY",
@@ -670,7 +692,7 @@
     "lib/securityApi.ts (0 importers)"
    ],
    "alphaState": "PREVIEW_ONLY",
-   "productionState": "ABSENT",
+   "productionState": "UNVERIFIED_RUNTIME",
    "dataState": "route returns NOT_ASSESSED; security served through Conflict",
    "sourceRightsState": "UNKNOWN",
    "sharedSearchBinding": "RETAINED_ONLY",
@@ -719,7 +741,8 @@
     "sha": "5513275f"
    },
    "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
-   "sourceLanguages": []
+   "sourceLanguages": [],
+   "productionNote": "code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)"
   },
   {
    "id": "POLITICS",
@@ -738,7 +761,7 @@
     "sha": "d9208933"
    },
    "alphaState": "PREVIEW_ONLY",
-   "productionState": "ABSENT",
+   "productionState": "UNVERIFIED_RUNTIME",
    "dataState": "POLITICS_RETAINED_CAPTURES = [] (empty ledger); lane adds observation store migration",
    "sourceRightsState": "UNKNOWN",
    "sharedSearchBinding": "RETAINED_ONLY",
@@ -783,7 +806,8 @@
     "Status": "RED"
    },
    "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
-   "sourceLanguages": []
+   "sourceLanguages": [],
+   "productionNote": "code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)"
   },
   {
    "id": "ECONOMY",
@@ -801,7 +825,7 @@
    ],
    "alphaState": "ASK_BOUND",
    "alphaNote": "Ask-bound for Rwanda NISR CPI only; UI is preview-only",
-   "productionState": "ABSENT",
+   "productionState": "UNVERIFIED_RUNTIME",
    "dataState": "RETAINED (NISR CPI RWA); Eurostat producer unbound",
    "sourceRightsState": "BLOCKED_RIGHTS (rw-nisr RIGHTS-RECORD-UNRESOLVED yet served); Eurostat E-5 recorded twice outside registry",
    "sharedSearchBinding": "ASK_BOUND",
@@ -856,7 +880,8 @@
     "sha": "5513275f"
    },
    "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
-   "sourceLanguages": []
+   "sourceLanguages": [],
+   "productionNote": "code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)"
   },
   {
    "id": "MARKET",
@@ -872,8 +897,8 @@
     "components/market",
     "lib/market"
    ],
-   "alphaState": "ASK_BOUND",
-   "productionState": "ABSENT",
+   "alphaState": "ALPHA_LIVE",
+   "productionState": "UNVERIFIED_RUNTIME",
    "dataState": "RETAINED (TED capture via operator script)",
    "sourceRightsState": "RIGHTS_CLEARED (TED E-5)",
    "sharedSearchBinding": "ASK_BOUND",
@@ -928,7 +953,9 @@
     "sha": "5513275f"
    },
    "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
-   "sourceLanguages": []
+   "sourceLanguages": [],
+   "productionNote": "code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)",
+   "alphaNote": "runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority)"
   },
   {
    "id": "ENERGY",
@@ -943,7 +970,7 @@
     "components/energy"
    ],
    "alphaState": "RETAINED_ONLY",
-   "productionState": "ABSENT",
+   "productionState": "UNVERIFIED_RUNTIME",
    "dataState": "RETAINED (Eurostat nrg_cb_pem one capture); ENTSO-E BLOCKED_CREDENTIAL",
    "sourceRightsState": "RIGHTS_CLEARED (Eurostat)",
    "sharedSearchBinding": "RETAINED_ONLY",
@@ -992,7 +1019,8 @@
     "sha": "5513275f"
    },
    "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
-   "sourceLanguages": []
+   "sourceLanguages": [],
+   "productionNote": "code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)"
   },
   {
    "id": "ELECTION",
@@ -1007,7 +1035,7 @@
     "components/election"
    ],
    "alphaState": "PREVIEW_ONLY",
-   "productionState": "ABSENT",
+   "productionState": "UNVERIFIED_RUNTIME",
    "dataState": "RETAINED (IEBC PDF committed); reader flag ELECTION_EVIDENCE_READ_ENABLED default false",
    "sourceRightsState": "BLOCKED_RIGHTS (admission policy, no rights record)",
    "sharedSearchBinding": "RETAINED_ONLY",
@@ -1056,7 +1084,8 @@
     "sha": "5513275f"
    },
    "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
-   "sourceLanguages": []
+   "sourceLanguages": [],
+   "productionNote": "code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)"
   },
   {
    "id": "HUMANITARIAN",
@@ -1077,7 +1106,7 @@
     "sha": "05e6c23e"
    },
    "alphaState": "COVERAGE_GAP",
-   "productionState": "ABSENT",
+   "productionState": "UNVERIFIED_RUNTIME",
    "dataState": "NOT_ASSESSED constant at 5513275f; ReliefWeb/HDX/OCHA/ACLED absent; Copernicus EMS E-5 CONDITIONAL",
    "sourceRightsState": "BLOCKED_CREDENTIAL / BLOCKED_RIGHTS (per lane)",
    "sharedSearchBinding": "ABSENT",
@@ -1123,7 +1152,8 @@
    },
    "acceptanceNote": "Ask=PASS means honest NOT_ASSESSED, never evidence (governed-answer.spec G5)",
    "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
-   "sourceLanguages": []
+   "sourceLanguages": [],
+   "productionNote": "code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)"
   },
   {
    "id": "IMIHIGO",
@@ -1138,8 +1168,8 @@
    "frontendOwner": [
     "lib/imihigo/retained.json"
    ],
-   "alphaState": "ASK_BOUND",
-   "productionState": "ABSENT",
+   "alphaState": "ALPHA_LIVE",
+   "productionState": "UNVERIFIED_RUNTIME",
    "dataState": "RETAINED (capture 2026-09-22)",
    "sourceRightsState": "BLOCKED_RIGHTS (self-declared CC BY, not through rights evaluator)",
    "sharedSearchBinding": "ASK_BOUND",
@@ -1188,7 +1218,9 @@
     "sha": "5513275f"
    },
    "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
-   "sourceLanguages": []
+   "sourceLanguages": [],
+   "productionNote": "code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)",
+   "alphaNote": "runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority)"
   },
   {
    "id": "SIGNALS",
@@ -1248,7 +1280,8 @@
     "sha": "5513275f"
    },
    "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
-   "sourceLanguages": []
+   "sourceLanguages": [],
+   "productionNote": "unbound substrate"
   },
   {
    "id": "MY-INTELLIGENCE",
@@ -1264,9 +1297,9 @@
    "frontendOwner": [
     "components/my-intelligence"
    ],
-   "alphaState": "ASK_BOUND",
-   "alphaNote": "selection actions run through Ask V2; redirected in Standalone",
-   "productionState": "ABSENT",
+   "alphaState": "ALPHA_LIVE",
+   "alphaNote": "runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority)",
+   "productionState": "UNVERIFIED_RUNTIME",
    "dataState": "SavedStory, interests, follows; dev fixtures behind NEXT_PUBLIC_MI_DEV_FIXTURES",
    "sourceRightsState": "N/A",
    "sharedSearchBinding": "ASK_BOUND",
@@ -1304,7 +1337,7 @@
    "acceptance": {
     "Data": "PASS",
     "Search": "PARTIAL",
-    "Ask": "UNVERIFIED",
+    "Ask": "PASS",
     "Citation": "PASS",
     "Continuity": "PARTIAL",
     "Briefing": "PARTIAL",
@@ -1321,7 +1354,8 @@
     "sha": "5513275f"
    },
    "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
-   "sourceLanguages": []
+   "sourceLanguages": [],
+   "productionNote": "code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)"
   },
   {
    "id": "SAVED",
@@ -1336,8 +1370,8 @@
     "components/ask-nav",
     "lib/ask"
    ],
-   "alphaState": "ALPHA_READY",
-   "productionState": "ABSENT",
+   "alphaState": "ALPHA_LIVE",
+   "productionState": "UNVERIFIED_RUNTIME",
    "dataState": "StoredResult bookmarks",
    "sourceRightsState": "N/A",
    "sharedSearchBinding": "ASK_BOUND",
@@ -1361,7 +1395,7 @@
    "acceptance": {
     "Data": "PASS",
     "Search": "N/A",
-    "Ask": "UNVERIFIED",
+    "Ask": "PASS",
     "Citation": "PASS",
     "Continuity": "PASS",
     "Briefing": "PARTIAL",
@@ -1379,7 +1413,9 @@
    },
    "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
    "sourceLanguages": [],
-   "blockers": []
+   "blockers": [],
+   "productionNote": "code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)",
+   "alphaNote": "runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority)"
   },
   {
    "id": "HISTORY-RECENT",
@@ -1396,10 +1432,10 @@
     "components/ask-nav",
     "app/history"
    ],
-   "alphaState": "ALPHA_READY",
-   "alphaNote": "/ask/recent ready; /history receives no new entries from Ask V2",
-   "productionState": "PRODUCTION_LIVE",
-   "productionNote": "c908 /history (ref only)",
+   "alphaState": "ALPHA_LIVE",
+   "alphaNote": "runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority)",
+   "productionState": "UNVERIFIED_RUNTIME",
+   "productionNote": "code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)",
    "dataState": "AskThread (recent); SearchHistoryEntry stale",
    "sourceRightsState": "N/A",
    "sharedSearchBinding": "N/A",
@@ -1513,7 +1549,8 @@
     "sha": "5513275f"
    },
    "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
-   "sourceLanguages": []
+   "sourceLanguages": [],
+   "productionNote": "no briefings in Production backend 5b714833; /saved/briefing absent in 58f80fd4"
   },
   {
    "id": "FOLLOW",
@@ -1530,7 +1567,7 @@
    ],
    "alphaState": "LOCAL_ONLY",
    "alphaNote": "countries only; no issue follow; not in Standalone",
-   "productionState": "ABSENT",
+   "productionState": "UNVERIFIED_RUNTIME",
    "dataState": "FollowedCountry",
    "sourceRightsState": "N/A",
    "sharedSearchBinding": "N/A",
@@ -1579,7 +1616,8 @@
     "sha": "5513275f"
    },
    "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
-   "sourceLanguages": []
+   "sourceLanguages": [],
+   "productionNote": "code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)"
   },
   {
    "id": "ALERTS-WATCH",
@@ -1645,7 +1683,8 @@
     "sha": "5513275f"
    },
    "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
-   "sourceLanguages": []
+   "sourceLanguages": [],
+   "productionNote": "`stories` module absent in Production backend 5b714833; Watch dormant"
   },
   {
    "id": "DISCUSSIONS",
@@ -1710,7 +1749,8 @@
     "sha": "5513275f"
    },
    "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
-   "sourceLanguages": []
+   "sourceLanguages": [],
+   "productionNote": "`stories` module absent in Production backend 5b714833"
   },
   {
    "id": "ACCOUNT-AUTH",
@@ -1726,9 +1766,9 @@
     "components/account",
     "components/auth"
    ],
-   "alphaState": "ALPHA_READY",
-   "productionState": "PRODUCTION_LIVE",
-   "productionNote": "c908 /account/settings (ref only)",
+   "alphaState": "ALPHA_LIVE",
+   "productionState": "UNVERIFIED_RUNTIME",
+   "productionNote": "code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)",
    "dataState": "User, sessions (Google OAuth)",
    "sourceRightsState": "N/A",
    "sharedSearchBinding": "N/A",
@@ -1777,7 +1817,8 @@
     "sha": "5513275f"
    },
    "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
-   "sourceLanguages": []
+   "sourceLanguages": [],
+   "alphaNote": "runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority)"
   },
   {
    "id": "SUPPORT",
@@ -1791,9 +1832,9 @@
    "frontendOwner": [
     "components/support"
    ],
-   "alphaState": "ALPHA_READY",
-   "productionState": "PRODUCTION_LIVE",
-   "productionNote": "c908 /support (ref only)",
+   "alphaState": "ALPHA_LIVE",
+   "productionState": "UNVERIFIED_RUNTIME",
+   "productionNote": "code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)",
    "dataState": "support tickets",
    "sourceRightsState": "N/A",
    "sharedSearchBinding": "N/A",
@@ -1842,7 +1883,8 @@
     "sha": "5513275f"
    },
    "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
-   "sourceLanguages": []
+   "sourceLanguages": [],
+   "alphaNote": "runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority)"
   },
   {
    "id": "LEGAL",
@@ -1858,9 +1900,9 @@
    "frontendOwner": [
     "app/(legal pages)"
    ],
-   "alphaState": "ALPHA_READY",
-   "productionState": "PRODUCTION_LIVE",
-   "productionNote": "c908 has /privacy /terms /source-policy (no /cookies)",
+   "alphaState": "ALPHA_LIVE",
+   "productionState": "UNVERIFIED_RUNTIME",
+   "productionNote": "code present at 58f80fd4 except /cookies; runtime flags not measured (HOLD)",
    "dataState": "static",
    "sourceRightsState": "N/A",
    "sharedSearchBinding": "N/A",
@@ -1915,7 +1957,8 @@
     "sha": "5513275f"
    },
    "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
-   "sourceLanguages": []
+   "sourceLanguages": [],
+   "alphaNote": "runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority)"
   },
   {
    "id": "CONSENT",
@@ -1944,10 +1987,10 @@
    },
    "blockers": [
     {
-     "id": "P1-PRIV-01",
-     "priority": "P1",
-     "summary": "No consent/cookie notice component exists; guest trial and pre-login flows have no notice (contract Part X)",
-     "evidence": "stage0/language.json Consent"
+     "id": "P0-PRIV-01",
+     "priority": "P0",
+     "summary": "Public-Beta Production P0: pre-login privacy/data/cookie notice and guest-trial boundary (≥3 questions before login, truthful guest session) not proven",
+     "evidence": "no consent component at 5513275f or 58f80fd4; contract R2 T5; Alpha guest OFF is intentional"
     }
    ],
    "evidence": [
@@ -1973,7 +2016,8 @@
     "sha": "5513275f"
    },
    "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
-   "sourceLanguages": []
+   "sourceLanguages": [],
+   "productionNote": "no consent notice component at 58f80fd4"
   },
   {
    "id": "THEME",
@@ -1988,7 +2032,7 @@
    ],
    "alphaState": "LOCAL_ONLY",
    "alphaNote": "tokens exist; every Alpha dashboard dark-only with hex-colour token files",
-   "productionState": "ABSENT",
+   "productionState": "UNVERIFIED_RUNTIME",
    "dataState": "N/A",
    "sourceRightsState": "N/A",
    "sharedSearchBinding": "N/A",
@@ -2037,7 +2081,8 @@
     "sha": "5513275f"
    },
    "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
-   "sourceLanguages": []
+   "sourceLanguages": [],
+   "productionNote": "code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)"
   },
   {
    "id": "PREVIEW-ROUTES",
@@ -2054,8 +2099,8 @@
    ],
    "alphaState": "PREVIEW_ONLY",
    "alphaNote": "10 preview routes public without auth on platform Alpha (noindex only); /workspace fake page",
-   "productionState": "ABSENT",
-   "productionNote": "Standalone allowlist excludes them at 5513275f; c908 serves /workspace",
+   "productionState": "UNVERIFIED_RUNTIME",
+   "productionNote": "code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)",
    "dataState": "design fixtures (none reachable as evidence)",
    "sourceRightsState": "N/A",
    "sharedSearchBinding": "N/A",
@@ -2125,8 +2170,8 @@
    ],
    "frontendOwner": [],
    "alphaState": "COVERAGE_GAP",
-   "productionState": "PRODUCTION_LIVE",
-   "productionNote": "GNews in c908 (ref only)",
+   "productionState": "UNVERIFIED_RUNTIME",
+   "productionNote": "code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)",
    "dataState": "1 active source (GNews) of 348 records; 0 active+rights-cleared local in 54 priority countries",
    "sourceRightsState": "BLOCKED_RIGHTS",
    "sharedSearchBinding": "ASK_BOUND",
@@ -2217,8 +2262,8 @@
     "lib/admin"
    ],
    "alphaState": "LOCAL_ONLY",
-   "productionState": "PRODUCTION_LIVE",
-   "productionNote": "c908 admin pages (ref only)",
+   "productionState": "UNVERIFIED_RUNTIME",
+   "productionNote": "code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)",
    "dataState": "AnalysisRun only for /analysis/news; Ask V2 traffic invisible",
    "sourceRightsState": "N/A",
    "sharedSearchBinding": "N/A",
@@ -2327,7 +2372,8 @@
     "sha": "5513275f"
    },
    "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
-   "sourceLanguages": []
+   "sourceLanguages": [],
+   "productionNote": "charging hard-off"
   }
  ]
 }

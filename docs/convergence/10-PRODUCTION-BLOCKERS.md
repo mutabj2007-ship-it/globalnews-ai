@@ -1,5 +1,12 @@
 # 10 — Production Blockers (Stage 1 gap classification)
 
+> **Stage 2 runtime correction (2026-10-04, CTO contract R2).** Railway runtime authority replaces the Git-derived Production assumption below:
+> - **Alpha:** backend and frontend at `5513275f` (SUCCESS); live root is platform Home (`GNA_PUBLIC_ROOT` configured); Ask V2 active for signed-in users; guest trial **OFF by design** during controlled acceptance (not a defect).
+> - **Production:** backend `5b714833`, frontend `58f80fd4` (SUCCESS). Strict ancestors of Alpha, 85 and 84 commits behind. Not `release/production-c908`.
+> - **Production flags are not inferred; Production stays HOLD.**
+>
+> Registries (02, 09, 10, `status.json`) are regenerated with these facts. See `stage2/STAGE2-REPORT.md`.
+
 Authority `5513275f`. **Production posture: HOLD.** Nothing here authorizes a Production change.
 
 ## Classes (contract Stage 1)
@@ -13,10 +20,9 @@ The list below is generated from `02-GLOBAL-CAPABILITY-REGISTRY.json`. A blocker
 
 ## Production qualification preconditions (not blockers of a single capability)
 
-1. **Production is 928 commits behind the Alpha line.**
-   - `release/production-c908` (`a9cf8a89`) → `5513275f`: 1962 files, +422,610 / −8,551.
+1. **Production is 85 / 84 commits behind the Alpha line** (backend `5b714833`, frontend `58f80fd4`, Railway authority; corrected from the Stage 0 assumption of `release/production-c908`).
    - Any promotion must come from one exact Alpha-tested SHA, with a rollback ref recorded first (13).
-2. **Deployed SHAs and flags are unobserved.**
+2. **Production flags are unmeasured.** Alpha runtime is now supplied by the CTO's Railway authority. The text below records the Stage 0 position, superseded for Alpha:
    - Alpha and Production hosts are unreachable from the measuring container (network policy 403 on `frontend-alpha-4560.up.railway.app`).
    - Every in-repo statement of a deployed SHA is stale. `docs/ALPHA_PRODUCTION_PARITY_MATRIX.md:14` names `2c4b6ce` / `fc162e2`, and neither is an ancestor of `production-c908`.
    - The deployed values of `GNA_PUBLIC_ROOT`, `ASK_V2_ENABLED`, `ASK_R2_ENABLED` and `ASK_PUBLIC_COMPUTE_ENABLED` must be recorded before any Alpha cell can move from UNVERIFIED to PASS.
@@ -27,7 +33,7 @@ The list below is generated from `02-GLOBAL-CAPABILITY-REGISTRY.json`. A blocker
 4. **Source rights.** GNews commercial terms are still an open beta gate (`docs/beta/HOME-R2-DEDUP-PROVIDER-DISCLOSURE-R1.md:69`). Product Owner/legal decision required (contract stop condition).
 
 <!-- GENERATED:BEGIN -->
-### P0 — product blocker (5)
+### P0 — product blocker (6)
 
 | ID | Blocker | Capabilities | Evidence |
 |---|---|---|---|
@@ -35,15 +41,15 @@ The list below is generated from `02-GLOBAL-CAPABILITY-REGISTRY.json`. A blocker
 | P0-LANG-01 | Selector offers 7 locales but 36 route files + root layout clamp to en/pl via isActiveLanguageCode; fr/de/es/pt/ar render English; <html lang> en\|pl only | ASK-SEARCH, LANG-SYSTEM | frontend/src/lib/i18n/languages.ts:21,91,159; app/layout.tsx:193,259,273; app/search/page.tsx:20 |
 | P0-LANG-02 | Stored fr–ar choice is overwritten to 'pl' on Polish browsers | LANG-SYSTEM | LanguageSync.tsx:52-58; Hero.tsx:264-269 |
 | P0-LANG-03 | No <html dir>; Arabic RTL only inside AskFrameScreen; Economy forces dir=ltr | LANG-SYSTEM | AskFrameScreen.tsx:431-432; EconomyScreen.tsx:222 |
+| P0-PRIV-01 | Public-Beta Production P0: pre-login privacy/data/cookie notice and guest-trial boundary (≥3 questions before login, truthful guest session) not proven | CONSENT | no consent component at 5513275f or 58f80fd4; contract R2 T5; Alpha guest OFF is intentional |
 | P0-SRC-01 | GNews (no rights record) is the only active source and silently substitutes for local coverage in all 54 priority countries; no COVERAGE_GAP disclosure | NEWS-SOURCES | news.module.ts:71; stage0/source-coverage.json |
 
-### P1 — Alpha blocker (30)
+### P1 — Alpha blocker (28)
 
 | ID | Blocker | Capabilities | Evidence |
 |---|---|---|---|
 | P1-ACC-01 | platform-mode settings hard-code language='en' | ACCOUNT-AUTH | account/settings/page.tsx:27 |
-| P1-ASK-02 | Ask V2 requires ASK_V2_ENABLED+ASK_R2_ENABLED+ASK_PUBLIC_COMPUTE_ENABLED (+DB switch); code default OFF; Alpha value unobservable — if unset Ask shows 'unavailable' on every surface | ASK-CORE | ask-v2.controller.ts:61; AskFrameScreen.tsx:137-139 |
-| P1-ASK-03 | FR/DE/ES/PT/AR Ask chrome partly English (askR2Strings 184 keys en/pl only); FR–AR example questions are unqualified drafts shown to readers | ASK-CORE | stage0/language.json; useRotatingExample.ts:126 |
+| P1-ASK-03 | FR/DE/ES/PT/AR Ask chrome partly English on Alpha 5513275f; resolved in H final 266007c (pending final R4 integration) | ASK-CORE | stage0/language.json; useRotatingExample.ts:126 |
 | P1-ASK-04 | Deterministic routers/conversation readers EN/PL only (7 guards) | ASK-CORE | knowledge-requirement.ts:400,438; turn-normalization.ts:64; conversation-place.ts:41 |
 | P1-ASK-05 | Second public Ask engine still served; bypasses routeAskR2 and governed reads; contradicts 'one Ask engine'. Retire after Production moves to Ask V2 | ASK-LEGACY | analysis.controller.ts:66; stage0/search-binding.json R2 |
 | P1-BRF-01 | briefing-snapshot ignores payload.intelligence; governed answers lose provenance or are unbriefable | BRIEFINGS | briefing-snapshot.ts:65-102 |
@@ -65,7 +71,6 @@ The list below is generated from `02-GLOBAL-CAPABILITY-REGISTRY.json`. A blocker
 | P1-MKT-02 | mktStrings English-only (PL disclosed fallback) | MARKET | mktStrings.ts:316 |
 | P1-OBS-01 | Telemetry interceptor records only /analysis/news; admin analytics blind to Ask V2 | TELEMETRY-ADMIN | telemetry.interceptor.ts:31,40; admin-analytics.service.ts:238 |
 | P1-POL-01 | No searchable projection or Ask contributor; route constant NOT_ASSESSED; owned by Politics lane — consume its handoff | POLITICS | politics.retained.ts:9; stage0/search-binding.json politics |
-| P1-PRIV-01 | No consent/cookie notice component exists; guest trial and pre-login flows have no notice (contract Part X) | CONSENT | stage0/language.json Consent |
 | P1-PRV-01 | Preview routes linked from Alpha Home/My Intelligence and public | PREVIEW-ROUTES | lib/intelligenceModules.ts:203,284,305; homeRevaModel.ts:101; miWorkspaceModel.ts:53-68 |
 | P1-RIGHTS-04 | Imihigo committed/served without rights-evaluator record | IMIHIGO | data/imihigo/capture.json:4 |
 | P1-SEC-01 | SecurityObservation store unbound; producer module never imported | SECURITY | stage0/backend-modules.json#security |

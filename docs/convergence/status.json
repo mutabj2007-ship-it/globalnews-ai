@@ -10,16 +10,16 @@
   "AMBER": 1
  },
  "cells": {
-  "PASS": 138,
-  "UNVERIFIED": 31,
+  "PASS": 144,
   "PARTIAL": 63,
   "N/A": 165,
   "FAIL": 153,
-  "ABSENT": 77
+  "ABSENT": 77,
+  "UNVERIFIED": 25
  },
  "blockers": {
-  "P0": 5,
-  "P1": 30,
+  "P0": 6,
+  "P1": 28,
   "P2": 11,
   "P3": 2
  },

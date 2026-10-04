@@ -708,3 +708,94 @@ CAPABILITIES = [
         acceptance=dict(Data="N/A", Search="N/A", Ask="N/A", Citation="N/A", Continuity="N/A", Briefing="N/A", Follow="N/A", Alert="N/A", Mobile="N/A", Desktop="N/A", Rights="N/A", Security="N/A"),
     ),
 ]
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# STAGE 2 RUNTIME CORRECTION (CTO contract R2, 2026-10-04) — applied on top of the Stage 0 cells.
+#
+# Railway runtime authority supplied by the CTO (wins over any Git-derived inference):
+#   Alpha backend  5513275ff731936a07c01e937b92c263ba6d6cf9  SUCCESS
+#   Alpha frontend 5513275ff731936a07c01e937b92c263ba6d6cf9  SUCCESS
+#   Production backend  5b714833f2a036557a022a55c646fdb101ec596e  SUCCESS
+#   Production frontend 58f80fd4108d3472e5433c7a50e19295788f2544  SUCCESS
+# Observed Alpha facts: GNA_PUBLIC_ROOT configured (live root = platform Home); Ask V2 active
+# (signed-in R4 Ask operations execute); guest trial deliberately OFF during controlled acceptance
+# (NOT a defect). Production flag values are NOT inferred (Production HOLD).
+#
+# Production code measured at the two Production SHAs: Ask V2, route gate, ask-intelligence and every
+# module except `stories` (Discussions/Alerts) and `data-retention` are present; frontend lacks
+# /cookies and /saved/briefing; backend has no briefings; Ask locale EN/PL only (no askSevenStrings).
+# A capability whose code is present at the Production SHAs but whose runtime flags are unmeasured is
+# recorded as UNVERIFIED_RUNTIME (a documented Production-only extension of the maturity vocabulary;
+# never counted as live).
+# ════════════════════════════════════════════════════════════════════════════
+
+RUNTIME = {
+    "source": "CTO-verified Railway state, contract GLOBALNEWSAI_CLOUD_STAGE2_BUILD_CONTRACT_R2 (2026-10-04)",
+    "alpha": {"backend": "5513275ff731936a07c01e937b92c263ba6d6cf9", "frontend": "5513275ff731936a07c01e937b92c263ba6d6cf9",
+              "GNA_PUBLIC_ROOT": "platform (configured; live root is platform Home)",
+              "askV2": "active (signed-in Ask operations execute)",
+              "guestTrial": "OFF by design during controlled acceptance"},
+    "production": {"backend": "5b714833f2a036557a022a55c646fdb101ec596e", "frontend": "58f80fd4108d3472e5433c7a50e19295788f2544",
+                   "flags": "not measured — HOLD"},
+    "handoffs": {
+        "R4 semantic baseline": "handoff/r4-semantic-baseline-5699eb7 @ 5699eb7058b3d20026c62bcffd75f97b7ca846ec",
+        "H final (Ask reading/localization, incl. Claude L delivery)": "handoff/r4-h-answer-reading-5699eb7 @ 266007c930e8293638bc7971670ee0264923c18c",
+        "Politics immutable base": "specialist/politics-r1-integration-d920893 @ d9208933c6ec758756b3b1019d8d01aa1f7592d1",
+        "R4 final replacement": "does not exist yet",
+    },
+}
+PROD_REF = {"branch": "Railway Production (backend 5b714833 / frontend 58f80fd4)", "sha": "5b714833 / 58f80fd4"}
+
+_by_id = {c["id"]: c for c in CAPABILITIES}
+
+# Production: code present at the Production SHAs but runtime flags unmeasured → UNVERIFIED_RUNTIME.
+_PROD_PRESENT = ["ASK-CORE", "ASK-SEARCH", "ASK-LEGACY", "CONVERSATION", "HOME", "MAP-COUNTRY", "CONFLICT", "SECURITY",
+                 "POLITICS", "ECONOMY", "MARKET", "ENERGY", "ELECTION", "HUMANITARIAN", "IMIHIGO", "MY-INTELLIGENCE",
+                 "SAVED", "HISTORY-RECENT", "FOLLOW", "ACCOUNT-AUTH", "SUPPORT", "LEGAL", "PREVIEW-ROUTES",
+                 "NEWS-SOURCES", "TELEMETRY-ADMIN", "THEME"]
+for _id in _PROD_PRESENT:
+    _by_id[_id]["productionState"] = "UNVERIFIED_RUNTIME"
+    _by_id[_id]["productionNote"] = "code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)"
+_by_id["LANG-SYSTEM"]["productionState"] = "COVERAGE_GAP"
+_by_id["LANG-SYSTEM"]["productionNote"] = "Production frontend 58f80fd4: ACTIVE_LANGUAGES en/pl; no seven-locale Ask catalogue"
+for _id, _note in [("BRIEFINGS", "no briefings in Production backend 5b714833; /saved/briefing absent in 58f80fd4"),
+                   ("DISCUSSIONS", "`stories` module absent in Production backend 5b714833"),
+                   ("ALERTS-WATCH", "`stories` module absent in Production backend 5b714833; Watch dormant"),
+                   ("CONSENT", "no consent notice component at 58f80fd4"),
+                   ("SIGNALS", "unbound substrate"), ("PAID", "charging hard-off")]:
+    _by_id[_id]["productionState"] = "ABSENT"
+    _by_id[_id]["productionNote"] = _note
+_by_id["LEGAL"]["productionNote"] = "code present at 58f80fd4 except /cookies; runtime flags not measured (HOLD)"
+_by_id["ASK-LEGACY"]["productionNote"] = "legacy route still served by Production backend 5b714833 (frontend callers: see T4 caller graph)"
+
+# Alpha: verified live at 5513275f with platform root + Ask V2 active → reachable, Ask-bound capabilities are ALPHA_LIVE.
+for _id in ["ASK-CORE", "ASK-SEARCH", "CONVERSATION", "HOME", "MAP-COUNTRY", "CONFLICT", "MARKET", "IMIHIGO",
+            "MY-INTELLIGENCE", "SAVED", "HISTORY-RECENT", "ACCOUNT-AUTH", "SUPPORT", "LEGAL"]:
+    _by_id[_id]["alphaState"] = "ALPHA_LIVE"
+    _by_id[_id]["alphaNote"] = "runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority)"
+_by_id["ASK-CORE"]["alphaNote"] += "; guest trial OFF by design (not a defect)"
+_by_id["HOME"]["alphaNote"] += "; Home R1 discussion/alert flags still unmeasured"
+
+# UNVERIFIED cells that the runtime facts now resolve (Ask execution on Alpha).
+for _id in ["ASK-CORE", "ASK-SEARCH", "HOME", "MAP-COUNTRY", "MY-INTELLIGENCE", "SAVED"]:
+    if _by_id[_id]["acceptance"]["Ask"] == "UNVERIFIED":
+        _by_id[_id]["acceptance"]["Ask"] = "PASS"
+
+# The Ask-V2-enabled-flag blocker is resolved for Alpha by runtime authority.
+_by_id["ASK-CORE"]["blockers"] = [b for b in _by_id["ASK-CORE"]["blockers"] if b["id"] != "P1-ASK-02"]
+
+# H final 266007c delivers the seven-locale Ask shell (Claude L: zero unqualified Ask-shell keys) — available in the
+# handoff, NOT yet on Alpha. Record without changing the Alpha locale cells.
+_by_id["ASK-CORE"]["handoffNote"] = ("H final 266007c: Ask shell complete in all seven display locales (not yet deployed; "
+                                     "integrates with final R4). Not a system-wide language completion claim.")
+for _b in _by_id["ASK-CORE"]["blockers"]:
+    if _b["id"] == "P1-ASK-03":
+        _b["summary"] = ("FR/DE/ES/PT/AR Ask chrome partly English on Alpha 5513275f; resolved in H final 266007c "
+                         "(pending final R4 integration)")
+
+# Public-Beta Production P0 (contract R2): pre-login privacy/data/cookie notice + guest-trial boundary not proven.
+_by_id["CONSENT"]["blockers"] = [{
+    "id": "P0-PRIV-01", "priority": "P0",
+    "summary": "Public-Beta Production P0: pre-login privacy/data/cookie notice and guest-trial boundary (≥3 questions before login, truthful guest session) not proven",
+    "evidence": "no consent component at 5513275f or 58f80fd4; contract R2 T5; Alpha guest OFF is intentional"}]

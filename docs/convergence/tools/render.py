@@ -33,6 +33,8 @@ ALLOWED_STATES = {
     "ASK_BOUND", "ALPHA_READY", "ALPHA_LIVE", "PRODUCTION_CANDIDATE", "PRODUCTION_LIVE",
     "BLOCKED_RIGHTS", "BLOCKED_CREDENTIAL", "BLOCKED_SECURITY", "BLOCKED_RELIABILITY", "COVERAGE_GAP",
 }
+# Documented Production-only extension: code present at the Production SHA, runtime flags unmeasured (HOLD).
+PRODUCTION_EXTRA_STATES = {"UNVERIFIED_RUNTIME"}
 CELL_VALUES = {"PASS", "PARTIAL", "FAIL", "ABSENT", "N/A", "UNVERIFIED"}
 LOCALES = ["en", "pl", "fr", "de", "es", "pt", "ar"]
 ACCEPT_COLS = ["Data", "Search", "Ask", "Citation", "Continuity", "Briefing", "Follow", "Alert"]
@@ -66,7 +68,8 @@ def validate(caps):
             errors.append(f"duplicate id {c['id']}")
         seen.add(c["id"])
         for k in ("alphaState", "productionState"):
-            if c[k] not in ALLOWED_STATES:
+            allowed = ALLOWED_STATES | (PRODUCTION_EXTRA_STATES if k == "productionState" else set())
+            if c[k] not in allowed:
                 errors.append(f"{c['id']}.{k}={c[k]} not an allowed maturity state")
         for k, v in c["acceptance"].items():
             if v not in CELL_VALUES:
@@ -122,9 +125,10 @@ def main():
         "authority": src.AUTH,
         "productionRef": src.PROD_REF,
         "measuredAt": "2026-10-04",
-        "deploymentObserved": False,
-        "deploymentNote": "Alpha/Production hosts are not reachable from the measuring container (network policy 403). "
-                          "Alpha/Production states are derived from refs + code; any cell depending on a deployment flag is UNVERIFIED.",
+        "deploymentObserved": "via CTO-supplied Railway authority (hosts still not reachable from the measuring container)",
+        "runtime": getattr(src, "RUNTIME", None),
+        "deploymentNote": "Alpha runtime facts come from the CTO's verified Railway state; any cell depending on an unmeasured flag "
+                          "remains UNVERIFIED. Production flags are never inferred (UNVERIFIED_RUNTIME).",
         "allowedMaturityStates": sorted(ALLOWED_STATES),
         "capabilities": caps,
     }
@@ -136,7 +140,7 @@ def main():
         "",
         "Generated from `02-GLOBAL-CAPABILITY-REGISTRY.json` by `tools/render.py`. Do not edit by hand; edit `tools/capabilities.source.py`.",
         "",
-        f"Authority: `{src.AUTH['branch']}` @ `{src.AUTH['sha']}` · Production ref `{src.PROD_REF['branch']}` @ `{src.PROD_REF['sha']}` · deployment observed: **no**",
+        f"Authority: `{src.AUTH['branch']}` @ `{src.AUTH['sha']}` (Alpha runtime, Railway-verified) · Production `{src.PROD_REF['sha']}` (runtime flags unmeasured, HOLD)",
         "",
         "| Capability | Alpha state | Production state | Shared search | Citation | Continuity | Briefing | Follow | Alert | Locales (en pl fr de es pt ar) | Blockers |",
         "|---|---|---|---|---|---|---|---|---|---|---|",

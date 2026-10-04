@@ -1,10 +1,31 @@
 # 11 — Whole-Product Roadmap
 
+> **Stage 2 runtime correction (2026-10-04, CTO contract R2).** Railway runtime authority replaces the Git-derived Production assumption below:
+> - **Alpha:** backend and frontend at `5513275f` (SUCCESS); live root is platform Home (`GNA_PUBLIC_ROOT` configured); Ask V2 active for signed-in users; guest trial **OFF by design** during controlled acceptance (not a defect).
+> - **Production:** backend `5b714833`, frontend `58f80fd4` (SUCCESS). Strict ancestors of Alpha, 85 and 84 commits behind. Not `release/production-c908`.
+> - **Production flags are not inferred; Production stays HOLD.**
+>
+> Registries (02, 09, 10, `status.json`) are regenerated with these facts. See `stage2/STAGE2-REPORT.md`.
+
 Authority `5513275f`. Stage numbering follows contract Part XIII.
 
 **Exit criteria are measurable.** Each one names the matrix cells (09) or blocker IDs (10) that must change. Re-run `python3 docs/convergence/tools/render.py` after every tranche. `status.json` is the progress metric.
 
 Current: **0 GREEN · 1 AMBER · 32 RED**. Blockers: 5 P0 · 30 P1 · 11 P2 · 2 P3.
+
+## Tranche numbering after contract R2
+
+| Contract R2 | Stage 0 roadmap item | Status |
+|---|---|---|
+| T1 Coverage truthfulness | T2 | **building** (branch `claude/stage2-t1-coverage-truthfulness`) |
+| T2 Global language foundation | T3 + T4 + T5 (frontend half) | **building** on H final `266007c` |
+| T3 Ask contributor selection | T1 | **reproduce + spec only** until final R4 |
+| T4 Legacy Ask convergence | T15 (retirement half) + T10 telemetry | caller graph + legacy-use telemetry |
+| T5 Pre-login consent + guest trial | T9 | **Public-Beta Production P0** |
+| T6 Module → Ask binding | T7 | contract + matrix (`stage2/T6-…`) |
+| T7 Data maturity | T11 | ranking (`stage2/T7-…`) |
+| T8 Alerts / watch | T12 | after evidence identity and shared search are stable |
+| T9 Whole-product acceptance | T14 | matrix maintained by `tools/render.py` |
 
 ## Stage 0 — Measure ✅ (this delivery)
 

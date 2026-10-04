@@ -2,42 +2,42 @@
 
 Generated from `02-GLOBAL-CAPABILITY-REGISTRY.json` by `tools/render.py`. Do not edit by hand; edit `tools/capabilities.source.py`.
 
-Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f` · Production ref `release/production-c908` @ `a9cf8a89` · deployment observed: **no**
+Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f` (Alpha runtime, Railway-verified) · Production `5b714833 / 58f80fd4` (runtime flags unmeasured, HOLD)
 
 | Capability | Alpha state | Production state | Shared search | Citation | Continuity | Briefing | Follow | Alert | Locales (en pl fr de es pt ar) | Blockers |
 |---|---|---|---|---|---|---|---|---|---|---|
-| **ASK-CORE** Ask GlobalNewsAI (root /, /ask, global dock) | ASK_BOUND | ABSENT | ASK_BOUND | PASS (evidenceId + governed basis) | PARTIAL (Ask V2 threads; prior user question only; prior-reference resolver unwired) | PARTIAL (briefing snapshot drops governed intelligence) | ABSENT | ABSENT | F F P P P P P | P0-ASK-01, P1-ASK-02, P1-ASK-03, P1-ASK-04 |
-| **ASK-SEARCH** Search (/search) on the shared Ask engine | ASK_BOUND | PRODUCTION_LIVE | ASK_BOUND | PASS | PARTIAL | PARTIAL | ABSENT | ABSENT | F F E E E E E | P0-LANG-01 |
-| **ASK-LEGACY** Legacy POST /analysis/news engine | LOCAL_ONLY | PRODUCTION_LIVE | SEARCHABLE | PASS | PARTIAL (priorQuestion only) | ABSENT | ABSENT | ABSENT | F F P P P P P | P1-ASK-05 |
-| **CONVERSATION** Shared conversation continuity (prior answer, 'why did you say that', 'still true now') | ASK_BOUND | ABSENT | ASK_BOUND | FAIL (prior evidence/citations never carried forward) | PARTIAL | N/A | N/A | N/A | F F P P P P P | P1-CONV-01, P1-CONV-02 |
-| **LANG-SYSTEM** Seven-locale display system (one switch governs whole UI) | COVERAGE_GAP | ABSENT | N/A | N/A | N/A | N/A | N/A | N/A | F F E E E E E | P0-LANG-01, P0-LANG-02, P0-LANG-03, P1-LANG-04, P1-LANG-05, P1-LANG-06, P2-LANG-07 |
-| **HOME** Home (What Changed · Follow · Alerts · Ask with Evidence) | ALPHA_READY | PRODUCTION_LIVE | ASK_BOUND | N/A | N/A | ABSENT | PARTIAL | PARTIAL (in-app, flag off) | F F E E E E E | P1-HOME-01 |
-| **MAP-COUNTRY** Map / country views | ALPHA_READY | PRODUCTION_LIVE | ASK_BOUND | PARTIAL | N/A | ABSENT | PARTIAL | ABSENT | F F E E E E E | P2-MAP-01 |
-| **CONFLICT** Conflict (UCDP retained observations) | ASK_BOUND | ABSENT | ASK_BOUND | PASS | PARTIAL | FAIL (dropped by briefing snapshot) | ABSENT | ABSENT | F F E E E E E | P0-ASK-01, P2-CONF-02 |
-| **SECURITY** Security observations | PREVIEW_ONLY | ABSENT | RETAINED_ONLY | ABSENT | N/A | ABSENT | ABSENT | ABSENT | F E E E E E E | P1-SEC-01 |
-| **POLITICS** Politics (institutions, legislatures, decisions) | PREVIEW_ONLY | ABSENT | RETAINED_ONLY | ABSENT | N/A | ABSENT | ABSENT | ABSENT | F F E E E E E | P1-POL-01 |
-| **ECONOMY** Economy (official indicators) | ASK_BOUND | ABSENT | ASK_BOUND | PASS | PARTIAL | FAIL | ABSENT | ABSENT | F F E E E E E | P1-ECON-01, P1-ECON-02 |
-| **MARKET** Market (TED procurement) | ASK_BOUND | ABSENT | ASK_BOUND | PASS | PARTIAL | FAIL | ABSENT | ABSENT | F E E E E E E | P1-MKT-01, P1-MKT-02 |
-| **ENERGY** Energy (Eurostat retained) | RETAINED_ONLY | ABSENT | RETAINED_ONLY | ABSENT | N/A | ABSENT | ABSENT | ABSENT | F F E E E E E | P1-ENG-01 |
-| **ELECTION** Election (Kenya IEBC bundle only — not a global Election product) | PREVIEW_ONLY | ABSENT | RETAINED_ONLY | ABSENT | N/A | ABSENT | ABSENT | ABSENT | F F E E E E E | P2-ELE-01 |
-| **HUMANITARIAN** Humanitarian | COVERAGE_GAP | ABSENT | ABSENT | ABSENT | N/A | ABSENT | ABSENT | ABSENT | F E E E E E E | P1-HUM-01 |
-| **IMIHIGO** Imihigo (NISR retained snapshot) | ASK_BOUND | ABSENT | ASK_BOUND | PASS | PARTIAL | FAIL | ABSENT | ABSENT | F F E E E E E | P1-RIGHTS-04 |
+| **ASK-CORE** Ask GlobalNewsAI (root /, /ask, global dock) | ALPHA_LIVE | UNVERIFIED_RUNTIME | ASK_BOUND | PASS (evidenceId + governed basis) | PARTIAL (Ask V2 threads; prior user question only; prior-reference resolver unwired) | PARTIAL (briefing snapshot drops governed intelligence) | ABSENT | ABSENT | F F P P P P P | P0-ASK-01, P1-ASK-03, P1-ASK-04 |
+| **ASK-SEARCH** Search (/search) on the shared Ask engine | ALPHA_LIVE | UNVERIFIED_RUNTIME | ASK_BOUND | PASS | PARTIAL | PARTIAL | ABSENT | ABSENT | F F E E E E E | P0-LANG-01 |
+| **ASK-LEGACY** Legacy POST /analysis/news engine | LOCAL_ONLY | UNVERIFIED_RUNTIME | SEARCHABLE | PASS | PARTIAL (priorQuestion only) | ABSENT | ABSENT | ABSENT | F F P P P P P | P1-ASK-05 |
+| **CONVERSATION** Shared conversation continuity (prior answer, 'why did you say that', 'still true now') | ALPHA_LIVE | UNVERIFIED_RUNTIME | ASK_BOUND | FAIL (prior evidence/citations never carried forward) | PARTIAL | N/A | N/A | N/A | F F P P P P P | P1-CONV-01, P1-CONV-02 |
+| **LANG-SYSTEM** Seven-locale display system (one switch governs whole UI) | COVERAGE_GAP | COVERAGE_GAP | N/A | N/A | N/A | N/A | N/A | N/A | F F E E E E E | P0-LANG-01, P0-LANG-02, P0-LANG-03, P1-LANG-04, P1-LANG-05, P1-LANG-06, P2-LANG-07 |
+| **HOME** Home (What Changed · Follow · Alerts · Ask with Evidence) | ALPHA_LIVE | UNVERIFIED_RUNTIME | ASK_BOUND | N/A | N/A | ABSENT | PARTIAL | PARTIAL (in-app, flag off) | F F E E E E E | P1-HOME-01 |
+| **MAP-COUNTRY** Map / country views | ALPHA_LIVE | UNVERIFIED_RUNTIME | ASK_BOUND | PARTIAL | N/A | ABSENT | PARTIAL | ABSENT | F F E E E E E | P2-MAP-01 |
+| **CONFLICT** Conflict (UCDP retained observations) | ALPHA_LIVE | UNVERIFIED_RUNTIME | ASK_BOUND | PASS | PARTIAL | FAIL (dropped by briefing snapshot) | ABSENT | ABSENT | F F E E E E E | P0-ASK-01, P2-CONF-02 |
+| **SECURITY** Security observations | PREVIEW_ONLY | UNVERIFIED_RUNTIME | RETAINED_ONLY | ABSENT | N/A | ABSENT | ABSENT | ABSENT | F E E E E E E | P1-SEC-01 |
+| **POLITICS** Politics (institutions, legislatures, decisions) | PREVIEW_ONLY | UNVERIFIED_RUNTIME | RETAINED_ONLY | ABSENT | N/A | ABSENT | ABSENT | ABSENT | F F E E E E E | P1-POL-01 |
+| **ECONOMY** Economy (official indicators) | ASK_BOUND | UNVERIFIED_RUNTIME | ASK_BOUND | PASS | PARTIAL | FAIL | ABSENT | ABSENT | F F E E E E E | P1-ECON-01, P1-ECON-02 |
+| **MARKET** Market (TED procurement) | ALPHA_LIVE | UNVERIFIED_RUNTIME | ASK_BOUND | PASS | PARTIAL | FAIL | ABSENT | ABSENT | F E E E E E E | P1-MKT-01, P1-MKT-02 |
+| **ENERGY** Energy (Eurostat retained) | RETAINED_ONLY | UNVERIFIED_RUNTIME | RETAINED_ONLY | ABSENT | N/A | ABSENT | ABSENT | ABSENT | F F E E E E E | P1-ENG-01 |
+| **ELECTION** Election (Kenya IEBC bundle only — not a global Election product) | PREVIEW_ONLY | UNVERIFIED_RUNTIME | RETAINED_ONLY | ABSENT | N/A | ABSENT | ABSENT | ABSENT | F F E E E E E | P2-ELE-01 |
+| **HUMANITARIAN** Humanitarian | COVERAGE_GAP | UNVERIFIED_RUNTIME | ABSENT | ABSENT | N/A | ABSENT | ABSENT | ABSENT | F E E E E E E | P1-HUM-01 |
+| **IMIHIGO** Imihigo (NISR retained snapshot) | ALPHA_LIVE | UNVERIFIED_RUNTIME | ASK_BOUND | PASS | PARTIAL | FAIL | ABSENT | ABSENT | F F E E E E E | P1-RIGHTS-04 |
 | **SIGNALS** Signals (GDELT GEO / Event Registry) | ABSENT | ABSENT | ABSENT | ABSENT | N/A | ABSENT | ABSENT | ABSENT | A A A A A A A | P3-SIG-01 |
-| **MY-INTELLIGENCE** My Intelligence workspace | ASK_BOUND | ABSENT | ASK_BOUND | PASS | PARTIAL | PARTIAL | PARTIAL | ABSENT | F F E E E E E | P1-MI-01, P1-MI-02 |
-| **SAVED** Saved (Ask results) | ALPHA_READY | ABSENT | ASK_BOUND | PASS | PASS | PARTIAL | N/A | N/A | F F E E E E E | — |
-| **HISTORY-RECENT** History / Recent | ALPHA_READY | PRODUCTION_LIVE | N/A | N/A | PASS | N/A | N/A | N/A | F P E E E E E | P1-HIST-01 |
+| **MY-INTELLIGENCE** My Intelligence workspace | ALPHA_LIVE | UNVERIFIED_RUNTIME | ASK_BOUND | PASS | PARTIAL | PARTIAL | PARTIAL | ABSENT | F F E E E E E | P1-MI-01, P1-MI-02 |
+| **SAVED** Saved (Ask results) | ALPHA_LIVE | UNVERIFIED_RUNTIME | ASK_BOUND | PASS | PASS | PARTIAL | N/A | N/A | F F E E E E E | — |
+| **HISTORY-RECENT** History / Recent | ALPHA_LIVE | UNVERIFIED_RUNTIME | N/A | N/A | PASS | N/A | N/A | N/A | F P E E E E E | P1-HIST-01 |
 | **BRIEFINGS** Briefings | LOCAL_ONLY | ABSENT | RETAINED_ONLY | FAIL (governed intelligence dropped; RETAINED_RECORD answers unbriefable) | PARTIAL | PARTIAL | N/A | N/A | F F E E E E E | P1-BRF-01 |
-| **FOLLOW** Follow an issue / country | LOCAL_ONLY | ABSENT | N/A | N/A | N/A | ABSENT | PARTIAL | ABSENT | F F E E E E E | P2-FOL-01 |
+| **FOLLOW** Follow an issue / country | LOCAL_ONLY | UNVERIFIED_RUNTIME | N/A | N/A | N/A | ABSENT | PARTIAL | ABSENT | F F E E E E E | P2-FOL-01 |
 | **ALERTS-WATCH** Alerts / Watch | DESIGN_ONLY | ABSENT | RETAINED_ONLY | N/A | N/A | N/A | N/A | LOCAL_ONLY | F F E E E E E | P2-ALR-01 |
 | **DISCUSSIONS** Discussions / comments | LOCAL_ONLY | ABSENT | RETAINED_ONLY | N/A | N/A | N/A | N/A | N/A | F F E E E E E | P2-DIS-01 |
-| **ACCOUNT-AUTH** Account, sign-in, settings | ALPHA_READY | PRODUCTION_LIVE | N/A | N/A | N/A | N/A | N/A | N/A | F P E E E E E | P1-ACC-01 |
-| **SUPPORT** Support / Help & feedback | ALPHA_READY | PRODUCTION_LIVE | N/A | N/A | N/A | N/A | N/A | N/A | F F E E E E E | P1-LANG-06 |
-| **LEGAL** Privacy, Cookies, Terms, Source policy, Third-party notices | ALPHA_READY | PRODUCTION_LIVE | N/A | N/A | N/A | N/A | N/A | N/A | F F E E E E E | P1-LEG-01, P2-THEME-01 |
-| **CONSENT** Pre-login consent / cookie / data-handling notice | ABSENT | ABSENT | N/A | N/A | N/A | N/A | N/A | N/A | A A A A A A A | P1-PRIV-01 |
-| **THEME** Light/Dark theme system | LOCAL_ONLY | ABSENT | N/A | N/A | N/A | N/A | N/A | N/A | - - - - - - - | P2-THEME-02 |
-| **PREVIEW-ROUTES** Preview / fixture route containment | PREVIEW_ONLY | ABSENT | N/A | N/A | N/A | N/A | N/A | N/A | F F E E E E E | P1-PRV-01, P2-PRV-02 |
-| **NEWS-SOURCES** News retrieval + source coverage (local vs international) | COVERAGE_GAP | PRODUCTION_LIVE | ASK_BOUND | PASS | N/A | N/A | N/A | N/A | - - - - - - - | P0-SRC-01, P1-SRC-02, P1-SRC-03, P2-SRC-04 |
-| **TELEMETRY-ADMIN** Admin + analytics | LOCAL_ONLY | PRODUCTION_LIVE | N/A | N/A | N/A | N/A | N/A | N/A | F F E E E E E | P1-OBS-01 |
+| **ACCOUNT-AUTH** Account, sign-in, settings | ALPHA_LIVE | UNVERIFIED_RUNTIME | N/A | N/A | N/A | N/A | N/A | N/A | F P E E E E E | P1-ACC-01 |
+| **SUPPORT** Support / Help & feedback | ALPHA_LIVE | UNVERIFIED_RUNTIME | N/A | N/A | N/A | N/A | N/A | N/A | F F E E E E E | P1-LANG-06 |
+| **LEGAL** Privacy, Cookies, Terms, Source policy, Third-party notices | ALPHA_LIVE | UNVERIFIED_RUNTIME | N/A | N/A | N/A | N/A | N/A | N/A | F F E E E E E | P1-LEG-01, P2-THEME-01 |
+| **CONSENT** Pre-login consent / cookie / data-handling notice | ABSENT | ABSENT | N/A | N/A | N/A | N/A | N/A | N/A | A A A A A A A | P0-PRIV-01 |
+| **THEME** Light/Dark theme system | LOCAL_ONLY | UNVERIFIED_RUNTIME | N/A | N/A | N/A | N/A | N/A | N/A | - - - - - - - | P2-THEME-02 |
+| **PREVIEW-ROUTES** Preview / fixture route containment | PREVIEW_ONLY | UNVERIFIED_RUNTIME | N/A | N/A | N/A | N/A | N/A | N/A | F F E E E E E | P1-PRV-01, P2-PRV-02 |
+| **NEWS-SOURCES** News retrieval + source coverage (local vs international) | COVERAGE_GAP | UNVERIFIED_RUNTIME | ASK_BOUND | PASS | N/A | N/A | N/A | N/A | - - - - - - - | P0-SRC-01, P1-SRC-02, P1-SRC-03, P2-SRC-04 |
+| **TELEMETRY-ADMIN** Admin + analytics | LOCAL_ONLY | UNVERIFIED_RUNTIME | N/A | N/A | N/A | N/A | N/A | N/A | F F E E E E E | P1-OBS-01 |
 | **PAID** Paid product (Sand ledger / charging) | DESIGN_ONLY | ABSENT | N/A | N/A | N/A | N/A | N/A | N/A | A A A A A A A | P3-PAID-01 |
 
 Locale key: F full · P partial · E English fallback · A absent · - not applicable.
@@ -50,16 +50,15 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Backend owner: ask-v2, ask-router (routeAskR2 / SemanticTurnIR), analysis (engine under adapter), ask-intelligence
 - Frontend owner: components/ask-frame, components/ask, lib/ask
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
-- Alpha: **ASK_BOUND**
-- Production: **ABSENT** — c908 serves legacy /analysis/news Ask (see ASK-LEGACY); Ask V2 absent at c908
+- Alpha: **ALPHA_LIVE** — runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority); guest trial OFF by design (not a defect)
+- Production: **UNVERIFIED_RUNTIME** — code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)
 - Data: news (GNews) + governed UCDP/TED/NISR CPI/Imihigo records
 - Source rights: BLOCKED_RIGHTS (GNews has no rights record; see 07)
 - Source languages: en, fr, es, ar (native GNews search), pl (headlines then en), de/pt (en strategy), sw/rw (en strategy)
 - Rollback: rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md
 - Evidence: stage0/search-binding.json, stage0/backend-modules.json#ask-v2, AskFrameScreen.tsx:158, AskAiDock.tsx:300
 - **P0 P0-ASK-01** — Conflict contributor selected for any country + 'situation' (travel/visa/political/energy/economic questions inject UCDP records) _(evidence: backend/src/modules/ask-intelligence/contributor-selection.ts:29-45,224-236; stage0/search-binding.json R1)_
-- **P1 P1-ASK-02** — Ask V2 requires ASK_V2_ENABLED+ASK_R2_ENABLED+ASK_PUBLIC_COMPUTE_ENABLED (+DB switch); code default OFF; Alpha value unobservable — if unset Ask shows 'unavailable' on every surface _(evidence: ask-v2.controller.ts:61; AskFrameScreen.tsx:137-139)_
-- **P1 P1-ASK-03** — FR/DE/ES/PT/AR Ask chrome partly English (askR2Strings 184 keys en/pl only); FR–AR example questions are unqualified drafts shown to readers _(evidence: stage0/language.json; useRotatingExample.ts:126)_
+- **P1 P1-ASK-03** — FR/DE/ES/PT/AR Ask chrome partly English on Alpha 5513275f; resolved in H final 266007c (pending final R4 integration) _(evidence: stage0/language.json; useRotatingExample.ts:126)_
 - **P1 P1-ASK-04** — Deterministic routers/conversation readers EN/PL only (7 guards) _(evidence: knowledge-requirement.ts:400,438; turn-normalization.ts:64; conversation-place.ts:41)_
 
 ### ASK-SEARCH — Search (/search) on the shared Ask engine
@@ -68,8 +67,8 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Backend owner: ask-v2
 - Frontend owner: components/search
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
-- Alpha: **ASK_BOUND**
-- Production: **PRODUCTION_LIVE** — c908 /search uses legacy analyzeNews (ref only; deployment unobserved); at 5513275f /search is redirected to / in Standalone
+- Alpha: **ALPHA_LIVE** — runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority)
+- Production: **UNVERIFIED_RUNTIME** — code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)
 - Data: as ASK-CORE
 - Source rights: BLOCKED_RIGHTS
 - Source languages: —
@@ -84,7 +83,7 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Frontend owner: lib/api/analysisApi.ts (orphan useAskConversation, AnalysisFrameClient)
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
 - Alpha: **LOCAL_ONLY**
-- Production: **PRODUCTION_LIVE** — the Ask engine of c908 (ref only)
+- Production: **UNVERIFIED_RUNTIME** — legacy route still served by Production backend 5b714833 (frontend callers: see T4 caller graph)
 - Data: news
 - Source rights: BLOCKED_RIGHTS
 - Source languages: —
@@ -98,8 +97,8 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Backend owner: ask-v2 (threads), ask-router (conversation-state)
 - Frontend owner: lib/ask
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
-- Alpha: **ASK_BOUND**
-- Production: **ABSENT**
+- Alpha: **ALPHA_LIVE** — runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority)
+- Production: **UNVERIFIED_RUNTIME** — code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)
 - Data: AskThread/AskTurn/StoredResult
 - Source rights: N/A
 - Source languages: —
@@ -115,7 +114,7 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Frontend owner: lib/i18n, lib/ask (askSevenStrings, askLocale), app/layout.tsx
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
 - Alpha: **COVERAGE_GAP** — 7 locales selectable; full-shell rendering only en/pl; Ask frame partial for fr–ar
-- Production: **ABSENT** — c908: ACTIVE_LANGUAGES=['en','pl'] only
+- Production: **COVERAGE_GAP** — Production frontend 58f80fd4: ACTIVE_LANGUAGES en/pl; no seven-locale Ask catalogue
 - Data: 23 catalogues + 12 inline tables + 41 '=== pl' branches; 3 catalogues hold all 7 locales
 - Source rights: N/A
 - Source languages: sw, rw (retrieval only; still present in UI-facing LANGUAGE tables)
@@ -135,8 +134,8 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Backend owner: news, follows, stories
 - Frontend owner: components/home, lib/homeFeed.ts
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
-- Alpha: **ALPHA_READY** — platform Home only when GNA_PUBLIC_ROOT=platform (Alpha value unobservable); Home R1 gates GNA_* default off
-- Production: **PRODUCTION_LIVE** — c908 Home (ref only); at 5513275f Standalone root serves Ask instead
+- Alpha: **ALPHA_LIVE** — runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority); Home R1 discussion/alert flags still unmeasured
+- Production: **UNVERIFIED_RUNTIME** — code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)
 - Data: GNews top headlines (en/pl only)
 - Source rights: BLOCKED_RIGHTS
 - Source languages: —
@@ -150,8 +149,8 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Backend owner: geo, news (country), conflict-observation
 - Frontend owner: components/map, lib/map
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
-- Alpha: **ALPHA_READY** — redirected to / in Standalone; served when GNA_PUBLIC_ROOT=platform
-- Production: **PRODUCTION_LIVE** — c908 /map (ref only)
+- Alpha: **ALPHA_LIVE** — runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority)
+- Production: **UNVERIFIED_RUNTIME** — code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)
 - Data: world-atlas geometry + GNews country feed + retained
 - Source rights: BLOCKED_RIGHTS
 - Source languages: —
@@ -165,8 +164,8 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Backend owner: conflict-observation, conflict-claim, ask-intelligence
 - Frontend owner: components/conflict
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
-- Alpha: **ASK_BOUND**
-- Production: **ABSENT**
+- Alpha: **ALPHA_LIVE** — runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority)
+- Production: **UNVERIFIED_RUNTIME** — code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)
 - Data: RETAINED (UCDP Candidate capture via operator script)
 - Source rights: RIGHTS_CLEARED (UCDP Candidate E-5); UCDP GED API BLOCKED_CREDENTIAL
 - Source languages: —
@@ -182,7 +181,7 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Frontend owner: lib/securityApi.ts (0 importers)
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
 - Alpha: **PREVIEW_ONLY**
-- Production: **ABSENT**
+- Production: **UNVERIFIED_RUNTIME** — code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)
 - Data: route returns NOT_ASSESSED; security served through Conflict
 - Source rights: UNKNOWN
 - Source languages: —
@@ -197,7 +196,7 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Frontend owner: components/politics
 - Authority: `specialist/politics-r1-integration-d920893 (active lane, 3 ahead)` @ `d9208933`
 - Alpha: **PREVIEW_ONLY**
-- Production: **ABSENT**
+- Production: **UNVERIFIED_RUNTIME** — code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)
 - Data: POLITICS_RETAINED_CAPTURES = [] (empty ledger); lane adds observation store migration
 - Source rights: UNKNOWN
 - Source languages: —
@@ -212,7 +211,7 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Frontend owner: components/economy, lib/economy
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
 - Alpha: **ASK_BOUND** — Ask-bound for Rwanda NISR CPI only; UI is preview-only
-- Production: **ABSENT**
+- Production: **UNVERIFIED_RUNTIME** — code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)
 - Data: RETAINED (NISR CPI RWA); Eurostat producer unbound
 - Source rights: BLOCKED_RIGHTS (rw-nisr RIGHTS-RECORD-UNRESOLVED yet served); Eurostat E-5 recorded twice outside registry
 - Source languages: —
@@ -227,8 +226,8 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Backend owner: market-ingest (read only; scheduler/adapters unbound)
 - Frontend owner: components/market, lib/market
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
-- Alpha: **ASK_BOUND**
-- Production: **ABSENT**
+- Alpha: **ALPHA_LIVE** — runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority)
+- Production: **UNVERIFIED_RUNTIME** — code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)
 - Data: RETAINED (TED capture via operator script)
 - Source rights: RIGHTS_CLEARED (TED E-5)
 - Source languages: —
@@ -244,7 +243,7 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Frontend owner: components/energy
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
 - Alpha: **RETAINED_ONLY**
-- Production: **ABSENT**
+- Production: **UNVERIFIED_RUNTIME** — code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)
 - Data: RETAINED (Eurostat nrg_cb_pem one capture); ENTSO-E BLOCKED_CREDENTIAL
 - Source rights: RIGHTS_CLEARED (Eurostat)
 - Source languages: —
@@ -259,7 +258,7 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Frontend owner: components/election
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
 - Alpha: **PREVIEW_ONLY**
-- Production: **ABSENT**
+- Production: **UNVERIFIED_RUNTIME** — code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)
 - Data: RETAINED (IEBC PDF committed); reader flag ELECTION_EVIDENCE_READ_ENABLED default false
 - Source rights: BLOCKED_RIGHTS (admission policy, no rights record)
 - Source languages: —
@@ -274,7 +273,7 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Frontend owner: components/humanitarian, lib/humanitarian
 - Authority: `integration/humanitarian-data-r1-convergence (active lane, 31 ahead / 84 behind, not final)` @ `05e6c23e`
 - Alpha: **COVERAGE_GAP**
-- Production: **ABSENT**
+- Production: **UNVERIFIED_RUNTIME** — code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)
 - Data: NOT_ASSESSED constant at 5513275f; ReliefWeb/HDX/OCHA/ACLED absent; Copernicus EMS E-5 CONDITIONAL
 - Source rights: BLOCKED_CREDENTIAL / BLOCKED_RIGHTS (per lane)
 - Source languages: —
@@ -288,8 +287,8 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Backend owner: ask-intelligence (imihigo-retained.json)
 - Frontend owner: lib/imihigo/retained.json
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
-- Alpha: **ASK_BOUND**
-- Production: **ABSENT**
+- Alpha: **ALPHA_LIVE** — runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority)
+- Production: **UNVERIFIED_RUNTIME** — code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)
 - Data: RETAINED (capture 2026-09-22)
 - Source rights: BLOCKED_RIGHTS (self-declared CC BY, not through rights evaluator)
 - Source languages: —
@@ -304,7 +303,7 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Frontend owner: —
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
 - Alpha: **ABSENT**
-- Production: **ABSENT**
+- Production: **ABSENT** — unbound substrate
 - Data: none (live-only providers, no store)
 - Source rights: BLOCKED_RIGHTS (no rights record); .env.example GDELT_ENABLED=true
 - Source languages: —
@@ -318,8 +317,8 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Backend owner: my-intelligence, follows, ask-v2 (selection)
 - Frontend owner: components/my-intelligence
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
-- Alpha: **ASK_BOUND** — selection actions run through Ask V2; redirected in Standalone
-- Production: **ABSENT**
+- Alpha: **ALPHA_LIVE** — runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority)
+- Production: **UNVERIFIED_RUNTIME** — code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)
 - Data: SavedStory, interests, follows; dev fixtures behind NEXT_PUBLIC_MI_DEV_FIXTURES
 - Source rights: N/A
 - Source languages: —
@@ -334,8 +333,8 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Backend owner: ask-v2 (bookmarks)
 - Frontend owner: components/ask-nav, lib/ask
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
-- Alpha: **ALPHA_READY**
-- Production: **ABSENT**
+- Alpha: **ALPHA_LIVE** — runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority)
+- Production: **UNVERIFIED_RUNTIME** — code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)
 - Data: StoredResult bookmarks
 - Source rights: N/A
 - Source languages: —
@@ -348,8 +347,8 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Backend owner: ask-v2 (threads), history (SearchHistoryEntry — written only by legacy /analysis/news)
 - Frontend owner: components/ask-nav, app/history
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
-- Alpha: **ALPHA_READY** — /ask/recent ready; /history receives no new entries from Ask V2
-- Production: **PRODUCTION_LIVE** — c908 /history (ref only)
+- Alpha: **ALPHA_LIVE** — runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority)
+- Production: **UNVERIFIED_RUNTIME** — code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)
 - Data: AskThread (recent); SearchHistoryEntry stale
 - Source rights: N/A
 - Source languages: —
@@ -364,7 +363,7 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Frontend owner: components/briefing
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
 - Alpha: **LOCAL_ONLY** — flag ASK_BRIEFINGS_ENABLED absent by default; route not in Standalone allowlist
-- Production: **ABSENT**
+- Production: **ABSENT** — no briefings in Production backend 5b714833; /saved/briefing absent in 58f80fd4
 - Data: briefing snapshots
 - Source rights: N/A
 - Source languages: —
@@ -379,7 +378,7 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Frontend owner: lib/api (follows)
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
 - Alpha: **LOCAL_ONLY** — countries only; no issue follow; not in Standalone
-- Production: **ABSENT**
+- Production: **UNVERIFIED_RUNTIME** — code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)
 - Data: FollowedCountry
 - Source rights: N/A
 - Source languages: —
@@ -394,7 +393,7 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Frontend owner: components/home (AlertsCentre)
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
 - Alpha: **DESIGN_ONLY** — in-app alert foundation behind ALERTS_IN_APP (default off); no push transport; Watch dormant
-- Production: **ABSENT**
+- Production: **ABSENT** — `stories` module absent in Production backend 5b714833; Watch dormant
 - Data: StoryAlert only
 - Source rights: N/A
 - Source languages: —
@@ -409,7 +408,7 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Frontend owner: components/home (DiscussionPanel)
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
 - Alpha: **LOCAL_ONLY** — DISCUSSION_READ/WRITE absent by default; docker-compose passes neither
-- Production: **ABSENT**
+- Production: **ABSENT** — `stories` module absent in Production backend 5b714833
 - Data: story discussion tables; excluded from Ask by design (proven)
 - Source rights: N/A
 - Source languages: —
@@ -423,8 +422,8 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Backend owner: auth, users
 - Frontend owner: components/account, components/auth
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
-- Alpha: **ALPHA_READY**
-- Production: **PRODUCTION_LIVE** — c908 /account/settings (ref only)
+- Alpha: **ALPHA_LIVE** — runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority)
+- Production: **UNVERIFIED_RUNTIME** — code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)
 - Data: User, sessions (Google OAuth)
 - Source rights: N/A
 - Source languages: —
@@ -438,8 +437,8 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Backend owner: support (SUPPORT_AI_ENABLED false)
 - Frontend owner: components/support
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
-- Alpha: **ALPHA_READY**
-- Production: **PRODUCTION_LIVE** — c908 /support (ref only)
+- Alpha: **ALPHA_LIVE** — runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority)
+- Production: **UNVERIFIED_RUNTIME** — code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)
 - Data: support tickets
 - Source rights: N/A
 - Source languages: —
@@ -453,8 +452,8 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Backend owner: —
 - Frontend owner: app/(legal pages)
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
-- Alpha: **ALPHA_READY**
-- Production: **PRODUCTION_LIVE** — c908 has /privacy /terms /source-policy (no /cookies)
+- Alpha: **ALPHA_LIVE** — runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority)
+- Production: **UNVERIFIED_RUNTIME** — code present at 58f80fd4 except /cookies; runtime flags not measured (HOLD)
 - Data: static
 - Source rights: N/A
 - Source languages: —
@@ -470,13 +469,13 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Frontend owner: —
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
 - Alpha: **ABSENT**
-- Production: **ABSENT**
+- Production: **ABSENT** — no consent notice component at 58f80fd4
 - Data: none
 - Source rights: N/A
 - Source languages: —
 - Rollback: rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md
 - Evidence: stage0/language.json
-- **P1 P1-PRIV-01** — No consent/cookie notice component exists; guest trial and pre-login flows have no notice (contract Part X) _(evidence: stage0/language.json Consent)_
+- **P0 P0-PRIV-01** — Public-Beta Production P0: pre-login privacy/data/cookie notice and guest-trial boundary (≥3 questions before login, truthful guest session) not proven _(evidence: no consent component at 5513275f or 58f80fd4; contract R2 T5; Alpha guest OFF is intentional)_
 
 ### THEME — Light/Dark theme system
 
@@ -485,7 +484,7 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Frontend owner: app/globals.css, domain token files
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
 - Alpha: **LOCAL_ONLY** — tokens exist; every Alpha dashboard dark-only with hex-colour token files
-- Production: **ABSENT**
+- Production: **UNVERIFIED_RUNTIME** — code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)
 - Data: N/A
 - Source rights: N/A
 - Source languages: —
@@ -500,7 +499,7 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Frontend owner: app/*-visual-preview, app/workspace
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
 - Alpha: **PREVIEW_ONLY** — 10 preview routes public without auth on platform Alpha (noindex only); /workspace fake page
-- Production: **ABSENT** — Standalone allowlist excludes them at 5513275f; c908 serves /workspace
+- Production: **UNVERIFIED_RUNTIME** — code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)
 - Data: design fixtures (none reachable as evidence)
 - Source rights: N/A
 - Source languages: —
@@ -516,7 +515,7 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Frontend owner: —
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
 - Alpha: **COVERAGE_GAP**
-- Production: **PRODUCTION_LIVE** — GNews in c908 (ref only)
+- Production: **UNVERIFIED_RUNTIME** — code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)
 - Data: 1 active source (GNews) of 348 records; 0 active+rights-cleared local in 54 priority countries
 - Source rights: BLOCKED_RIGHTS
 - Source languages: en, fr, es, ar, pl
@@ -534,7 +533,7 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Frontend owner: components/admin, lib/admin
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
 - Alpha: **LOCAL_ONLY**
-- Production: **PRODUCTION_LIVE** — c908 admin pages (ref only)
+- Production: **UNVERIFIED_RUNTIME** — code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)
 - Data: AnalysisRun only for /analysis/news; Ask V2 traffic invisible
 - Source rights: N/A
 - Source languages: —
@@ -549,7 +548,7 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Frontend owner: —
 - Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f`
 - Alpha: **DESIGN_ONLY**
-- Production: **ABSENT**
+- Production: **ABSENT** — charging hard-off
 - Data: none
 - Source rights: N/A
 - Source languages: —

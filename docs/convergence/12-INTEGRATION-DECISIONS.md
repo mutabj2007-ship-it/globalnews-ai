@@ -1,5 +1,12 @@
 # 12 — Integration Decisions
 
+> **Stage 2 runtime correction (2026-10-04, CTO contract R2).** Railway runtime authority replaces the Git-derived Production assumption below:
+> - **Alpha:** backend and frontend at `5513275f` (SUCCESS); live root is platform Home (`GNA_PUBLIC_ROOT` configured); Ask V2 active for signed-in users; guest trial **OFF by design** during controlled acceptance (not a defect).
+> - **Production:** backend `5b714833`, frontend `58f80fd4` (SUCCESS). Strict ancestors of Alpha, 85 and 84 commits behind. Not `release/production-c908`.
+> - **Production flags are not inferred; Production stays HOLD.**
+>
+> Registries (02, 09, 10, `status.json`) are regenerated with these facts. See `stage2/STAGE2-REPORT.md`.
+
 A decision log for the convergence programme. Each entry states the decision, the evidence behind it, and who must ratify it. Entries marked **ADOPTED (programme)** are working rules this programme applies inside its own contract scope. Entries marked **PROPOSED** need CTO or Product Owner ratification before any code depends on them.
 
 | ID | Decision | Status | Evidence / rationale |

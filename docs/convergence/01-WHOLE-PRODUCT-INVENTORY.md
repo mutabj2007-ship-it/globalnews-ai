@@ -1,11 +1,18 @@
 # 01 — Whole-Product Inventory (Stage 0)
 
+> **Stage 2 runtime correction (2026-10-04, CTO contract R2).** Railway runtime authority replaces the Git-derived Production assumption below:
+> - **Alpha:** backend and frontend at `5513275f` (SUCCESS); live root is platform Home (`GNA_PUBLIC_ROOT` configured); Ask V2 active for signed-in users; guest trial **OFF by design** during controlled acceptance (not a defect).
+> - **Production:** backend `5b714833`, frontend `58f80fd4` (SUCCESS). Strict ancestors of Alpha, 85 and 84 commits behind. Not `release/production-c908`.
+> - **Production flags are not inferred; Production stays HOLD.**
+>
+> Registries (02, 09, 10, `status.json`) are regenerated with these facts. See `stage2/STAGE2-REPORT.md`.
+
 | | |
 |---|---|
 | Programme | GlobalNewsAI Whole-Product Convergence & Seven-Language System R1 |
 | Stage | **0 — Measure** (no product code changed) |
 | Measurement authority | `release/alpha-r4-search-conversation-5513275` @ `5513275f` (newest Alpha release; contains Production c908, m08, the home/discussions/alerts candidate and trust-r3) |
-| Production ref | `release/production-c908` @ `a9cf8a89` (strict ancestor; 928 commits behind) |
+| Production runtime (Railway) | backend `5b714833`, frontend `58f80fd4` (strict ancestors; 85 / 84 commits behind Alpha). Stage 0 wrongly assumed `release/production-c908` @ `a9cf8a89`. |
 | `origin/main` | `5149276f` (2026-08-17), stale; not an ancestor of the Alpha line |
 | Convergence branch | `claude/whole-product-convergence-r1` (from `5513275f`; `docs/convergence/` only) |
 | Measured | 2026-10-04 |
@@ -40,7 +47,7 @@
 8. **Alpha-ready?** At most AMBER after the P0s close.
    - Today the matrix reads **0 GREEN · 1 AMBER (Theme) · 32 RED** (09, `status.json`).
 9. **Production-ready?** None.
-   - Production c908 predates Ask V2, the route gate, every intelligence module and the seven-locale work.
+   - Production (`5b714833` / `58f80fd4`) ships Ask V2, the route gate and the intelligence modules, but not Discussions/Alerts (`stories`), briefings, `/cookies` or the seven-locale Ask catalogue. Its runtime flags are unmeasured (HOLD).
 10. **What remains red?**
     - 153 FAIL, 77 ABSENT and 31 UNVERIFIED cells.
     - Blockers: 5 P0, 30 P1, 11 P2, 2 P3 (10).

@@ -1,5 +1,12 @@
 # 05 — Backend Module Registry
 
+> **Stage 2 runtime correction (2026-10-04, CTO contract R2).** Railway runtime authority replaces the Git-derived Production assumption below:
+> - **Alpha:** backend and frontend at `5513275f` (SUCCESS); live root is platform Home (`GNA_PUBLIC_ROOT` configured); Ask V2 active for signed-in users; guest trial **OFF by design** during controlled acceptance (not a defect).
+> - **Production:** backend `5b714833`, frontend `58f80fd4` (SUCCESS). Strict ancestors of Alpha, 85 and 84 commits behind. Not `release/production-c908`.
+> - **Production flags are not inferred; Production stays HOLD.**
+>
+> Registries (02, 09, 10, `status.json`) are regenerated with these facts. See `stage2/STAGE2-REPORT.md`.
+
 Authority `5513275f`. Raw records: `stage0/backend-modules.json` (37 module directories plus 7 top-level areas). Classification follows contract Part IX. A Nest import is **not** treated as a user capability: the column *User usefulness* states whether a reachable public route actually consumes the module.
 
 ## Facts that decide product behaviour

@@ -1,5 +1,12 @@
 # 13 — Rollback Registry
 
+> **Stage 2 runtime correction (2026-10-04, CTO contract R2).** Railway runtime authority replaces the Git-derived Production assumption below:
+> - **Alpha:** backend and frontend at `5513275f` (SUCCESS); live root is platform Home (`GNA_PUBLIC_ROOT` configured); Ask V2 active for signed-in users; guest trial **OFF by design** during controlled acceptance (not a defect).
+> - **Production:** backend `5b714833`, frontend `58f80fd4` (SUCCESS). Strict ancestors of Alpha, 85 and 84 commits behind. Not `release/production-c908`.
+> - **Production flags are not inferred; Production stays HOLD.**
+>
+> Registries (02, 09, 10, `status.json`) are regenerated with these facts. See `stage2/STAGE2-REPORT.md`.
+
 Read-only inventory of every release and rollback ref at measurement time (2026-10-04). Source: `stage0/workstreams.json` → `release_rollback`.
 
 **Rule for any future promotion (contract Definition of Done #10):** promote only an exact Alpha-tested SHA, and record its rollback ref here **before** promotion.
@@ -8,10 +15,10 @@ Read-only inventory of every release and rollback ref at measurement time (2026-
 
 | Role | Ref | SHA | Date | Note |
 |---|---|---|---|---|
-| Alpha line head (measurement authority) | `release/alpha-r4-search-conversation-5513275` | `5513275f` | 2026-10-04 | deployed? **UNVERIFIED** |
+| Alpha (Railway runtime) | `release/alpha-r4-search-conversation-5513275` | `5513275f` | 2026-10-04 | **deployed backend + frontend (CTO Railway authority)** |
 | Previous Alpha release | `release/alpha-trust-r3-livefix-c7e8c03` | `c7e8c034` | 2026-10-03 | ancestor of `5513275f` (21 behind) |
 | Explicit Alpha rollback | `rollback/alpha-pre-home-discussions-alerts-r1` | `58f80fd4` | 2026-10-01 | **the only `rollback/*` ref**; pre Home/Discussions/Alerts |
-| Production | `release/production-c908` | `a9cf8a89` | 2026-09-14 | deployed? **UNVERIFIED**; strict ancestor of Alpha |
+| Production (Railway runtime) | backend `5b714833` (`integration/unified-intelligence-binding-r2` tip) / frontend `58f80fd4` (= `rollback/alpha-pre-home-discussions-alerts-r1`) | `5b714833` / `58f80fd4` | 2026-10-01 | **deployed (CTO Railway authority)**; `release/production-c908` (`a9cf8a89`) is an older ref, not the running build |
 | `main` | `main` | `5149276f` | 2026-08-17 | stale, not on the Alpha line |
 | Safety base | `safety/i3-mvp-release-base-20260821` | `0deebe57` | 2026-08-21 | historical |
 
