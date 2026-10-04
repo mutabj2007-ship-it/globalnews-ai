@@ -170,7 +170,25 @@ function recordData(o: AskContributionObservation): Record<string, unknown> {
     label: clean(o.label),
     value: clean(o.value),
     unit: clean(o.unit),
+    /* SHARED-ASK-DISCLOSURE-PROPAGATION-R1 — only for a record that carries the additive provenance block
+       (absent everywhere else, so every other contributor's data stays byte-identical): the record's OWN
+       date and what that date is, and whether it is an official primary record. Never the retrieval time. */
+    ...(o.provenance === undefined
+      ? {}
+      : {
+          dateBasis: clean(o.provenance.temporalBasis),
+          publishedOn: clean(o.provenance.publishedAt.slice(0, 10)),
+          officialPrimaryRecord:
+            o.provenance.sourceType === 'OFFICIAL_SOURCE' && o.provenance.evidenceRole === 'PRIMARY_RECORD',
+          revision: o.provenance.revisionOrdinal,
+        }),
   };
+}
+
+/** The newest record date a contribution carries (its own period), or null. */
+function newestPeriod(c: AskContribution): string | null {
+  const periods = c.observations.map((o) => clean(o.period)).filter((p): p is string => p !== null).sort();
+  return periods.length ? periods[periods.length - 1] : null;
 }
 
 /** JSON, with the characters that could close or spoof the delimiters escaped. */
@@ -202,7 +220,8 @@ export function governedPrompt(set: AskContributionSet): GovernedPrompt {
     const name = CONTRIBUTOR_NAME[c.contributorId];
     if (c.contributorId === 'GEOGRAPHY') {
       const place = clean(c.observations[0]?.label);
-      if (place !== null) {
+      // CONTEXT_NOT_EVIDENCE is the code GEOGRAPHY always carries; its rule is the one below.
+      if (place !== null && (c.disclosures.length === 0 || c.disclosures.some((code) => code === 'CONTEXT_NOT_EVIDENCE'))) {
         data.push({ contributor: 'GEOGRAPHY', role: 'PLACE_CONTEXT_NOT_EVIDENCE', place });
         rules.add(
           'A GEOGRAPHY entry is place context only — never evidence that anything happened.',
@@ -218,6 +237,9 @@ export function governedPrompt(set: AskContributionSet): GovernedPrompt {
       scope: clean(c.geographyBasis),
       recordCount: c.observations.length,
       records: used ? c.observations.slice(0, MAX_PROMPT_RECORDS).map(recordData) : [],
+      /* SHARED-ASK-DISCLOSURE-PROPAGATION-R1 — the newest record's own date, as DATA (never in the trusted
+         rules), only when the no-recent disclosure applies; absent otherwise, so other data stays unchanged. */
+      ...(used && c.disclosures.includes('NO_RECENT_RETAINED_RECORD') ? { newestPeriod: newestPeriod(c) } : {}),
     });
     if (c.status === 'NOT_ASSESSED') {
       rules.add(
@@ -227,16 +249,55 @@ export function governedPrompt(set: AskContributionSet): GovernedPrompt {
       rules.add(
         `${name} found no governed record for this scope: that is not evidence that nothing happened — do not say so.`,
       );
+    } else if (c.status === 'DEGRADED' || c.status === 'REFUSED') {
+      /* SHARED-ASK-DISCLOSURE-PROPAGATION-R1 — a read that failed or was refused reaches the answer. */
+      rules.add(
+        `${name} could not be read for this answer: do not state or imply what it holds, and never treat its absence as evidence that nothing happened.`,
+      );
     }
     for (const code of c.disclosures) {
+      /* SHARED-ASK-DISCLOSURE-PROPAGATION-R1 — every code a contributor emits is recognised here
+         (contributor-neutral rules; no domain-specific rendering). */
+      if (code === 'RETAINED_NOT_CURRENT') {
+        rules.add(
+          `${name} records are retained, not current: when you use one, give the record's own date or period (its "period" field) and never present it as today's situation — the day it was retrieved is not the day it happened.`,
+        );
+      }
+      if (code === 'PINNED_BY_READER') {
+        rules.add(
+          `The reader chose one ${name} record from a dashboard: answer about that record, still as a retained record with its own date.`,
+        );
+      }
+      if (code === 'NO_RETAINED_CAPTURE') {
+        rules.add(
+          `${name} holds no retained capture for this: do not state a figure or record from it, and do not say none exists.`,
+        );
+      }
+      if (code === 'RETAINED_ARTIFACT_NOT_DISPLAYABLE') {
+        rules.add(
+          `${name} holds a retained artifact that cannot be read under its governed rules: do not state its contents or imply that nothing exists.`,
+        );
+      }
+      if (code === 'CLOSED_EVALUATION_CYCLE') {
+        rules.add(
+          `${name} covers a closed evaluation cycle (its "period" field): never present it as the current or latest cycle.`,
+        );
+      }
+      if (code === 'HUMANITARIAN_NOT_ASSESSED') {
+        rules.add(
+          `${name} was not assessed: never state or imply that ${name} supports, confirms or assessed anything in this answer.`,
+        );
+      }
       if (code === 'SEVERITY_NOT_ASSESSED') {
         rules.add(
           'No severity has been assessed for the retained conflict records: do not rank, grade or characterise severity or trend from them beyond what reporting states.',
         );
       }
       if (code === 'NO_RECENT_RETAINED_RECORD') {
+        /* Generalised from the Conflict-only wording: the newest record's OWN date, and that nothing newer was
+           admitted (CTO freshness ruling: never expire an older valid record into "nothing exists"). */
         rules.add(
-          'The newest retained conflict record is more than a week old: say so if you use the records.',
+          `The newest retained ${name} record is more than a week old (its date is the "newestPeriod" field of that contributor's data entry): if you use the records, say that the latest admitted record is from that date and that no newer admitted record was found — never that nothing has happened since.`,
         );
       }
       if (code === 'SUBNATIONAL_SCOPE_NOT_APPLIED') {
