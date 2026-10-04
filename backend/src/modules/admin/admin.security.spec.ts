@@ -39,6 +39,8 @@ const ADMIN_ROUTES: ReadonlyArray<{ method: 'get'; path: string }> = [
   // inherits the same 401/403/404 battery rather than relying on the guard chain being
   // right by inspection.
   { method: 'get', path: '/admin/ai/ask-intelligence' },
+  // STAGE 2 / T4 — the legacy-route usage read inherits the same battery.
+  { method: 'get', path: '/admin/analytics/legacy-usage' },
 ];
 
 const ORDINARY_TOKEN = 'raw-token-ordinary-user';

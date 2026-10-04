@@ -7,6 +7,7 @@ import { AdminReadonlyController } from './admin-readonly.controller';
 import { AdminNewsService } from './news/admin-news.service';
 import { AdminSystemService } from './system/admin-system.service';
 import { AdminAnalyticsService } from './analytics/admin-analytics.service';
+import { AdminLegacyUsageController } from './legacy-usage/admin-legacy-usage.controller';
 import { AdminGuard } from './admin.guard';
 import { AdminPlatformEnabledGuard } from './admin-platform.guard';
 import { AdminService } from './admin.service';
@@ -76,6 +77,8 @@ import { AdminOperationsService } from './operations/admin-operations.service';
     AdminReadonlyController,
     AdminGlobalReachController,
     AdminAskIntelligenceController,
+    /* STAGE 2 / T4 — read-only legacy-route usage counters (GET /admin/analytics/legacy-usage). */
+    AdminLegacyUsageController,
     /*
       ADMIN OPERATIONS R1 — the first controller on this surface with a write.
       Registered as its own controller so the analytics controllers keep their

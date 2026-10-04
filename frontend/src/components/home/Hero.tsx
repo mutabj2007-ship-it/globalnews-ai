@@ -78,8 +78,10 @@ interface HeroProps {
  *
  * ── FUNCTIONAL TRUTH, COMPLETELY UNCHANGED ────────────────────────────────
  *
- *   - handleSubmit still routes to /search?q=<encodeURIComponent(query)>, which
- *     is what reaches analysisApi -> POST /analysis/news;
+ *   - handleSubmit still routes to /search?q=<encodeURIComponent(query)>. Since
+ *     UNIFIED INTELLIGENCE BINDING, /search (SearchPageClient) runs the question on
+ *     the canonical Ask V2 engine (useAskR2Conversation -> askV2Api); it no longer
+ *     reaches analysisApi -> POST /analysis/news (STAGE 2 / T4, measured);
  *   - the 1000-char cap mirroring AnalyzeNewsDto, Enter / Shift+Enter, the
  *     auto-growing textarea and the aria-describedby character count are all
  *     byte-identical in behaviour;

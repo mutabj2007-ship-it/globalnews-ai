@@ -1,5 +1,14 @@
 # Ask V2 / Compute / Sand adaptation (CODEX J R2)
 
+> **Status (Stage 2 / T4, measured at Alpha `5513275f` and Production frontend `58f80fd4`):**
+> Ask V2 is now the ONE Ask engine. Every mounted Ask surface (global dock, `/ask`, `/search`,
+> My Intelligence selection actions) calls `/ask-v2`; none calls `POST /analysis/news`. The
+> adapter below still calls `AnalysisService.analyzeNews` internally, which is intended. The
+> legacy public route remains served as a measured compatibility route; see
+> `docs/convergence/stage2/T4-LEGACY-ASK-CONVERGENCE.md`. The paragraph below is the original
+> R2 substrate description and is kept for history: its "not a replacement" and "no frontend
+> call sites are changed" statements no longer describe the product.
+
 This is an additive substrate, not a replacement for the current Ask dock,
 specialist dashboards, retrieval or AnalysisService. No frontend call sites
 are changed. Routes are under `/ask-v2` (plus the application's existing global
