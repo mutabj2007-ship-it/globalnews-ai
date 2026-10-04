@@ -1,0 +1,1224 @@
+{
+ "east-africa": {
+  "membership_source": "backend/source-packs/east-africa-r1/index.json",
+  "members": 11,
+  "countries": [
+   {
+    "iso3": "BDI",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 7,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 7,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 7,
+    "listed_local_rights_restricted_raw": 2,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "COD",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 7,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 7,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 7,
+    "listed_local_rights_restricted_raw": 4,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "DJI",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 5,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 5,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 2,
+    "listed_local_disabled_count": 5,
+    "listed_local_rights_restricted_raw": 3,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "ERI",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 2,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 2,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 1,
+    "listed_local_disabled_count": 2,
+    "listed_local_rights_restricted_raw": 1,
+    "retained_only_local": [],
+    "international_listed_in_pack": [
+     "ea-r1:eri:erena"
+    ],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "ETH",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 7,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 7,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 7,
+    "listed_local_rights_restricted_raw": 2,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "KEN",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 14,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 11,
+     "feed_registry": 2,
+     "other": 1
+    },
+    "listed_local_news_count": 5,
+    "listed_local_disabled_count": 14,
+    "listed_local_rights_restricted_raw": 7,
+    "retained_only_local": [
+     "election:IEBC"
+    ],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "RWA",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 16,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 11,
+     "feed_registry": 2,
+     "other": 3
+    },
+    "listed_local_news_count": 6,
+    "listed_local_disabled_count": 16,
+    "listed_local_rights_restricted_raw": 1,
+    "retained_only_local": [
+     "official-data:rw-nisr-cpi",
+     "ask:nisr-imihigo-2024-2025"
+    ],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "SOM",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 7,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 7,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 7,
+    "listed_local_rights_restricted_raw": 5,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "SSD",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 5,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 5,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 2,
+    "listed_local_disabled_count": 5,
+    "listed_local_rights_restricted_raw": 3,
+    "retained_only_local": [],
+    "international_listed_in_pack": [
+     "ea-r1:ssd:tamazuj"
+    ],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "TZA",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 7,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 7,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 7,
+    "listed_local_rights_restricted_raw": 1,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "UGA",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 7,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 7,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 7,
+    "listed_local_rights_restricted_raw": 2,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   }
+  ],
+  "countries_with_gap": 11
+ },
+ "middle-east": {
+  "membership_source": "shared/source-packs/middle-east-r1/pack.json",
+  "members": 16,
+  "countries": [
+   {
+    "iso3": "BHR",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 3,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 3,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 2,
+    "listed_local_disabled_count": 3,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "EGY",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 3,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 3,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 2,
+    "listed_local_disabled_count": 3,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "IRN",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 3,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 3,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 2,
+    "listed_local_disabled_count": 3,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [
+     "me-r1:irn:bbc-persian"
+    ],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "IRQ",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 3,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 3,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 2,
+    "listed_local_disabled_count": 3,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "ISR",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 3,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 3,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 2,
+    "listed_local_disabled_count": 3,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "JOR",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 3,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 3,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 2,
+    "listed_local_disabled_count": 3,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "KWT",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 3,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 3,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 2,
+    "listed_local_disabled_count": 3,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "LBN",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 3,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 3,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 2,
+    "listed_local_disabled_count": 3,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "OMN",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 3,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 3,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 2,
+    "listed_local_disabled_count": 3,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "PSE",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 3,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 3,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 2,
+    "listed_local_disabled_count": 3,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [
+     "me-r1:pse:ocha-opt"
+    ],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "QAT",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 3,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 3,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 1,
+    "listed_local_disabled_count": 3,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "SAU",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 3,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 3,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 2,
+    "listed_local_disabled_count": 3,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "SYR",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 3,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 3,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 2,
+    "listed_local_disabled_count": 3,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "TUR",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 3,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 3,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 2,
+    "listed_local_disabled_count": 3,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "ARE",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 3,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 3,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 2,
+    "listed_local_disabled_count": 3,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "YEM",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 3,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 3,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 2,
+    "listed_local_disabled_count": 3,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   }
+  ],
+  "countries_with_gap": 16
+ },
+ "eu27": {
+  "membership_source": "backend/src/modules/source-packs/eu27/governance.json",
+  "members": 27,
+  "countries": [
+   {
+    "iso3": "AUT",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 6,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 6,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 6,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "BEL",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 6,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 6,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 6,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "BGR",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 6,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 6,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 6,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "CYP",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 6,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 6,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 6,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "CZE",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 6,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 6,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 6,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "DEU",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 6,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 6,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 6,
+    "listed_local_rights_restricted_raw": 1,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "DNK",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 6,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 6,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 6,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "EST",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 6,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 6,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 6,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "ESP",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 6,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 6,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 6,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "FIN",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 6,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 6,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 6,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "FRA",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 6,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 6,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 6,
+    "listed_local_rights_restricted_raw": 1,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "GRC",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 6,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 6,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 6,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "HRV",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 6,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 6,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 6,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "HUN",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 6,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 6,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 6,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "IRL",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 6,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 6,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 6,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "ITA",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 6,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 6,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 6,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "LTU",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 6,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 6,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 6,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "LUX",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 6,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 6,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 6,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "LVA",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 6,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 6,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 6,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "MLT",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 6,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 6,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 6,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "NLD",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 6,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 6,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 6,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "POL",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 8,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 6,
+     "feed_registry": 2,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 8,
+    "listed_local_rights_restricted_raw": 1,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "PRT",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 6,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 6,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 6,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "ROU",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 6,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 6,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 6,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "SWE",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 6,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 6,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 6,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "SVN",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 6,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 6,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 6,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   },
+   {
+    "iso3": "SVK",
+    "active_local_qualified_count": 0,
+    "listed_local_count": 6,
+    "listed_local_breakdown": {
+     "global_reach_canonical": 6,
+     "feed_registry": 0,
+     "other": 0
+    },
+    "listed_local_news_count": 3,
+    "listed_local_disabled_count": 6,
+    "listed_local_rights_restricted_raw": 0,
+    "retained_only_local": [],
+    "international_listed_in_pack": [],
+    "international_active_count": 1,
+    "international_active": [
+     "gnews"
+    ],
+    "system_accountSourceCoverage_state": "UNVERIFIED",
+    "state": "COVERAGE_GAP",
+    "international_substitution": "SILENT: GNews (no rights record) serves country reads; no local-coverage disclosure found in news path"
+   }
+  ],
+  "countries_with_gap": 27
+ }
+}

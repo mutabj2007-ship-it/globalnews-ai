@@ -1,0 +1,2717 @@
+{
+ "commit": "5513275f",
+ "measuredAt": "2026-10-04",
+ "contractedDisplayLocales": [
+  "en",
+  "pl",
+  "fr",
+  "de",
+  "es",
+  "pt",
+  "ar"
+ ],
+ "distinctLocaleSystems": {
+  "frontendModuleCatalogues": 23,
+  "frontendInlineAdHocTableFiles": 12,
+  "frontendInlineBranchFilesTotal": 41,
+  "backendLocaleTables": 2,
+  "note": "23 module-level catalogues (incl. dormant recovered C55 set) + ad-hoc inline tables in 12 files; 7-locale-complete catalogues: askSevenStrings, askQuestionExamples (5 drafts), economyStrings (route-unreachable)"
+ },
+ "systems": [
+  {
+   "id": "dictionaries",
+   "files": [
+    "frontend/src/lib/i18n/dictionaries/{en,pl,adminEn,adminPl,supportEn,supportPl,myIntelligenceEn,myIntelligencePl,homeR1En,homeR1Pl,homeRevaEn,homeRevaPl}.ts",
+    "frontend/src/lib/i18n/dictionaries/index.ts"
+   ],
+   "accessor": "getDictionary(LanguageCode)",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "runtimeFallback": "en for every other code (index.ts:22-24)",
+   "consumers": "NavBar, Footer, Home/Hero/HomeR1 (alerts, discussion, theme), Map, Search/AnalysisFrame, MyIntelligence, Support, Admin, Privacy/Terms/Source-policy/Third-party pages, AccountSettingsBody, ThemeControl, root layout metadata"
+  },
+  {
+   "id": "recovered-c55",
+   "files": [
+    "frontend/src/lib/i18n/recovered/c55-{fr,de,es,pt,ar}.ts",
+    "c55-admin{Fr,De,Es,Pt,Ar}.ts",
+    "c55-support{Fr,De,Es,Pt,Ar}.ts",
+    "recoveredCatalogue.ts"
+   ],
+   "locales": [
+    "fr",
+    "de",
+    "es",
+    "pt",
+    "ar"
+   ],
+   "wired": false,
+   "consumers": "NONE at runtime (only languageReadiness.spec.ts); dictionaries/index.ts does not import it"
+  },
+  {
+   "id": "askR2Strings",
+   "files": [
+    "frontend/src/lib/ask/askR2Strings.ts"
+   ],
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "type": "AskR2Locale='en'|'pl'",
+   "consumers": "AskFrameScreen (21 refs), AskR2TurnView, AskSourcesColumn, AskDeepConfirm, AskAiDock, SearchPageClient"
+  },
+  {
+   "id": "askSevenStrings",
+   "files": [
+    "frontend/src/lib/ask/askSevenStrings.ts"
+   ],
+   "locales": [
+    "en",
+    "pl",
+    "fr",
+    "de",
+    "es",
+    "pt",
+    "ar"
+   ],
+   "consumers": "AskFrameScreen (3 refs: composer hint, etc.)"
+  },
+  {
+   "id": "askStrings (legacy AskLocale)",
+   "files": [
+    "frontend/src/lib/ask/askStrings.ts"
+   ],
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "type": "AskLocale = LanguageCode & DisplayLocale (en|pl|fr|es|ar) — cannot express de/pt",
+   "consumers": "AskRecentClient and legacy Ask components via askLocaleForLegacyCatalogue"
+  },
+  {
+   "id": "askNavStrings",
+   "files": [
+    "frontend/src/lib/ask/askNavStrings.ts"
+   ],
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "consumers": "AskNavShell, AskShellFrame (Ask header, mobile menu, product name)"
+  },
+  {
+   "id": "askContinuityStrings",
+   "files": [
+    "frontend/src/lib/ask/askContinuityStrings.ts"
+   ],
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "consumers": "AskContinuityHeader (Recent/Saved/Settings), AskRecentClient"
+  },
+  {
+   "id": "briefingStrings",
+   "files": [
+    "frontend/src/lib/ask/briefingStrings.ts"
+   ],
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "consumers": "SavedBriefings, BriefingDetailClient"
+  },
+  {
+   "id": "askQuestionExamples",
+   "files": [
+    "frontend/src/lib/ask/askQuestionExamples.ts"
+   ],
+   "locales": [
+    "en",
+    "pl",
+    "fr",
+    "de",
+    "es",
+    "pt",
+    "ar"
+   ],
+   "note": "fr..ar EXAMPLE_QUALIFICATION=DRAFT_PENDING_CLAUDE_L but isExampleQualified() is never called by a component; drafts are shown (useRotatingExample.ts:126)"
+  },
+  {
+   "id": "conflictStrings",
+   "files": [
+    "frontend/src/lib/conflict/strings.ts"
+   ],
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "consumers": "ConflictDashboard"
+  },
+  {
+   "id": "deliveryStrings",
+   "files": [
+    "frontend/src/lib/delivery/deliveryStrings.ts"
+   ],
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "consumers": "delivery-visual-preview, ImihigoScreen"
+  },
+  {
+   "id": "electionStrings",
+   "files": [
+    "frontend/src/lib/election/electionStrings.ts"
+   ],
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "consumers": "election-visual-preview"
+  },
+  {
+   "id": "energyStrings",
+   "files": [
+    "frontend/src/lib/energy/energyStrings.ts"
+   ],
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "consumers": "/energy"
+  },
+  {
+   "id": "economyStrings",
+   "files": [
+    "frontend/src/lib/economy/strings.ts"
+   ],
+   "locales": [
+    "en",
+    "pl",
+    "fr",
+    "de",
+    "es",
+    "pt",
+    "ar"
+   ],
+   "consumers": "economy-visual-preview (only route) — unreachable for fr..ar because route clamps cookie to en/pl"
+  },
+  {
+   "id": "humStrings",
+   "files": [
+    "frontend/src/lib/humanitarian/humStrings.ts"
+   ],
+   "locales": [
+    "en"
+   ],
+   "note": "HUM_PL_DRAFT_AWAITING_COMPLETION exists but not registered",
+   "consumers": "/humanitarian"
+  },
+  {
+   "id": "mktStrings",
+   "files": [
+    "frontend/src/lib/market/mktStrings.ts"
+   ],
+   "locales": [
+    "en"
+   ],
+   "note": "MKT_PL_DRAFT_AWAITING_COMPLETION exists but not registered",
+   "consumers": "/market"
+  },
+  {
+   "id": "polStrings",
+   "files": [
+    "frontend/src/lib/politics/politicsStrings.ts"
+   ],
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "consumers": "politics-visual-preview"
+  },
+  {
+   "id": "secStrings",
+   "files": [
+    "frontend/src/lib/security/securityStrings.ts"
+   ],
+   "locales": [
+    "en"
+   ],
+   "consumers": "security-visual-preview"
+  },
+  {
+   "id": "failureCopy",
+   "files": [
+    "frontend/src/lib/i18n/failureCopy.ts"
+   ],
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "consumers": "app/error.tsx, app/global-error.tsx, not-found"
+  },
+  {
+   "id": "returnStrings",
+   "files": [
+    "frontend/src/lib/navigation/returnStrings.ts"
+   ],
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "consumers": "return/back affordances"
+  },
+  {
+   "id": "cookiesPageStrings",
+   "files": [
+    "frontend/src/lib/privacy/cookiesPageStrings.ts"
+   ],
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "consumers": "/cookies, /privacy"
+  },
+  {
+   "id": "trustReasonLabels",
+   "files": [
+    "frontend/src/lib/trustReasonLabels.ts"
+   ],
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "consumers": "search trust UI"
+  },
+  {
+   "id": "selectionActionQuestions",
+   "files": [
+    "frontend/src/lib/myIntelligence/selection.ts"
+   ],
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "consumers": "My Intelligence multi-story actions"
+  },
+  {
+   "id": "inline-component-tables",
+   "files": [
+    "components/search/TrustBadge.tsx",
+    "components/search/SourceArticleCard.tsx",
+    "components/search/SourceDiversitySummary.tsx",
+    "components/ask-frame/AskTurnCopy.tsx",
+    "components/ask-frame/AskRecentReporting.tsx",
+    "components/ask/AskEvidenceTable.tsx",
+    "components/home/HomeCompare.tsx",
+    "lib/ask/askModuleRef.ts",
+    "lib/evidence/electionBinding.ts",
+    "lib/seo/metadata.ts",
+    "lib/privacy/storageInventory.ts",
+    "lib/support/conversation/mockAdapter.ts"
+   ],
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "note": "12 files with ad-hoc per-locale tables; TrustBadge/SourceArticleCard/SourceDiversitySummary are Record<LanguageCode> with fr/es/ar/sw/rw values = English text. A further 29 files branch with `=== 'pl'` ternaries (41 files total with inline locale branching)."
+  },
+  {
+   "id": "backend-ask-v2 RETURN_LABEL",
+   "files": [
+    "backend/src/modules/ask-v2/ask-compute.contract.ts:263"
+   ],
+   "locales": [
+    "en",
+    "pl",
+    "fr",
+    "de",
+    "es",
+    "pt",
+    "ar"
+   ]
+  },
+  {
+   "id": "backend analysis NO_EVIDENCE/PROVIDER_FAILURE",
+   "files": [
+    "backend/src/modules/analysis/service/analysis.service.ts:540,551"
+   ],
+   "locales": [
+    "en",
+    "pl"
+   ]
+  }
+ ],
+ "coverage": {
+  "dictionaries(getDictionary)": {
+   "enKeys": 2813,
+   "locales": {
+    "pl": {
+     "status": "AUTHORED",
+     "present": 2813,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 62,
+     "identicalTrivial": 3,
+     "extraKeys": 0,
+     "note": "live"
+    },
+    "fr": {
+     "status": "EN_FALLBACK",
+     "missing": 2813,
+     "note": "runtime returns en object"
+    },
+    "de": {
+     "status": "EN_FALLBACK",
+     "missing": 2813,
+     "note": "runtime returns en object"
+    },
+    "es": {
+     "status": "EN_FALLBACK",
+     "missing": 2813,
+     "note": "runtime returns en object"
+    },
+    "pt": {
+     "status": "EN_FALLBACK",
+     "missing": 2813,
+     "note": "runtime returns en object"
+    },
+    "ar": {
+     "status": "EN_FALLBACK",
+     "missing": 2813,
+     "note": "runtime returns en object"
+    }
+   }
+  },
+  "recovered-c55 (DORMANT, not wired) vs live en": {
+   "enKeys": 2813,
+   "locales": {
+    "pl": {
+     "status": "ABSENT",
+     "missing": 2813
+    },
+    "fr": {
+     "status": "AUTHORED",
+     "present": 1655,
+     "missing": 1158,
+     "empty": 0,
+     "identicalToEn": 95,
+     "identicalTrivial": 3,
+     "extraKeys": 197,
+     "note": "dormant; not imported by dictionaries/index.ts"
+    },
+    "de": {
+     "status": "AUTHORED",
+     "present": 1655,
+     "missing": 1158,
+     "empty": 0,
+     "identicalToEn": 52,
+     "identicalTrivial": 3,
+     "extraKeys": 168,
+     "note": "dormant; not imported by dictionaries/index.ts"
+    },
+    "es": {
+     "status": "AUTHORED",
+     "present": 1655,
+     "missing": 1158,
+     "empty": 0,
+     "identicalToEn": 38,
+     "identicalTrivial": 3,
+     "extraKeys": 197,
+     "note": "dormant; not imported by dictionaries/index.ts"
+    },
+    "pt": {
+     "status": "AUTHORED",
+     "present": 1655,
+     "missing": 1158,
+     "empty": 0,
+     "identicalToEn": 37,
+     "identicalTrivial": 3,
+     "extraKeys": 197,
+     "note": "dormant; not imported by dictionaries/index.ts"
+    },
+    "ar": {
+     "status": "AUTHORED",
+     "present": 1655,
+     "missing": 1158,
+     "empty": 0,
+     "identicalToEn": 30,
+     "identicalTrivial": 3,
+     "extraKeys": 284,
+     "note": "dormant; not imported by dictionaries/index.ts"
+    }
+   }
+  },
+  "admin (adminEn/adminPl live + c55-admin* dormant)": {
+   "enKeys": 579,
+   "locales": {
+    "pl": {
+     "status": "AUTHORED",
+     "present": 579,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 21,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "fr": {
+     "status": "AUTHORED",
+     "present": 359,
+     "missing": 220,
+     "empty": 0,
+     "identicalToEn": 29,
+     "identicalTrivial": 0,
+     "extraKeys": 0,
+     "note": "dormant"
+    },
+    "de": {
+     "status": "AUTHORED",
+     "present": 359,
+     "missing": 220,
+     "empty": 0,
+     "identicalToEn": 22,
+     "identicalTrivial": 0,
+     "extraKeys": 0,
+     "note": "dormant"
+    },
+    "es": {
+     "status": "AUTHORED",
+     "present": 359,
+     "missing": 220,
+     "empty": 0,
+     "identicalToEn": 20,
+     "identicalTrivial": 0,
+     "extraKeys": 0,
+     "note": "dormant"
+    },
+    "pt": {
+     "status": "AUTHORED",
+     "present": 359,
+     "missing": 220,
+     "empty": 0,
+     "identicalToEn": 21,
+     "identicalTrivial": 0,
+     "extraKeys": 0,
+     "note": "dormant"
+    },
+    "ar": {
+     "status": "AUTHORED",
+     "present": 359,
+     "missing": 220,
+     "empty": 0,
+     "identicalToEn": 17,
+     "identicalTrivial": 0,
+     "extraKeys": 0,
+     "note": "dormant"
+    }
+   }
+  },
+  "support (supportEn/supportPl live + c55-support* dormant)": {
+   "enKeys": 102,
+   "locales": {
+    "pl": {
+     "status": "AUTHORED",
+     "present": 102,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 0,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "fr": {
+     "status": "AUTHORED",
+     "present": 62,
+     "missing": 40,
+     "empty": 0,
+     "identicalToEn": 2,
+     "identicalTrivial": 0,
+     "extraKeys": 13,
+     "note": "dormant"
+    },
+    "de": {
+     "status": "AUTHORED",
+     "present": 62,
+     "missing": 40,
+     "empty": 0,
+     "identicalToEn": 2,
+     "identicalTrivial": 0,
+     "extraKeys": 13,
+     "note": "dormant"
+    },
+    "es": {
+     "status": "AUTHORED",
+     "present": 62,
+     "missing": 40,
+     "empty": 0,
+     "identicalToEn": 0,
+     "identicalTrivial": 0,
+     "extraKeys": 13,
+     "note": "dormant"
+    },
+    "pt": {
+     "status": "AUTHORED",
+     "present": 62,
+     "missing": 40,
+     "empty": 0,
+     "identicalToEn": 0,
+     "identicalTrivial": 0,
+     "extraKeys": 13,
+     "note": "dormant"
+    },
+    "ar": {
+     "status": "AUTHORED",
+     "present": 62,
+     "missing": 40,
+     "empty": 0,
+     "identicalToEn": 0,
+     "identicalTrivial": 0,
+     "extraKeys": 13,
+     "note": "dormant"
+    }
+   }
+  },
+  "askR2Strings": {
+   "enKeys": 184,
+   "locales": {
+    "pl": {
+     "status": "AUTHORED",
+     "present": 184,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 5,
+     "identicalTrivial": 1,
+     "extraKeys": 0
+    },
+    "fr": {
+     "status": "ABSENT",
+     "missing": 184,
+     "note": "type AskR2Locale='en'|'pl'"
+    },
+    "de": {
+     "status": "ABSENT",
+     "missing": 184,
+     "note": "type AskR2Locale='en'|'pl'"
+    },
+    "es": {
+     "status": "ABSENT",
+     "missing": 184,
+     "note": "type AskR2Locale='en'|'pl'"
+    },
+    "pt": {
+     "status": "ABSENT",
+     "missing": 184,
+     "note": "type AskR2Locale='en'|'pl'"
+    },
+    "ar": {
+     "status": "ABSENT",
+     "missing": 184,
+     "note": "type AskR2Locale='en'|'pl'"
+    }
+   }
+  },
+  "askSevenStrings": {
+   "enKeys": 24,
+   "locales": {
+    "pl": {
+     "status": "AUTHORED",
+     "present": 24,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 0,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "fr": {
+     "status": "AUTHORED",
+     "present": 24,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 2,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "de": {
+     "status": "AUTHORED",
+     "present": 24,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 0,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "es": {
+     "status": "AUTHORED",
+     "present": 24,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 0,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "pt": {
+     "status": "AUTHORED",
+     "present": 24,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 0,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "ar": {
+     "status": "AUTHORED",
+     "present": 24,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 0,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    }
+   }
+  },
+  "askStrings": {
+   "enKeys": 57,
+   "locales": {
+    "pl": {
+     "status": "AUTHORED",
+     "present": 57,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 1,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "fr": {
+     "status": "EN_FALLBACK",
+     "missing": 57
+    },
+    "de": {
+     "status": "ABSENT",
+     "missing": 57,
+     "note": "AskLocale cannot express de/pt"
+    },
+    "es": {
+     "status": "EN_FALLBACK",
+     "missing": 57
+    },
+    "pt": {
+     "status": "ABSENT",
+     "missing": 57,
+     "note": "AskLocale cannot express de/pt"
+    },
+    "ar": {
+     "status": "EN_FALLBACK",
+     "missing": 57
+    }
+   }
+  },
+  "askNavStrings": {
+   "enKeys": 14,
+   "locales": {
+    "pl": {
+     "status": "AUTHORED",
+     "present": 14,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 0,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "fr": {
+     "status": "ABSENT",
+     "missing": 14
+    },
+    "de": {
+     "status": "ABSENT",
+     "missing": 14
+    },
+    "es": {
+     "status": "ABSENT",
+     "missing": 14
+    },
+    "pt": {
+     "status": "ABSENT",
+     "missing": 14
+    },
+    "ar": {
+     "status": "ABSENT",
+     "missing": 14
+    }
+   }
+  },
+  "askContinuityStrings": {
+   "enKeys": 36,
+   "locales": {
+    "pl": {
+     "status": "AUTHORED",
+     "present": 36,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 0,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "fr": {
+     "status": "EN_FALLBACK",
+     "missing": 36
+    },
+    "de": {
+     "status": "EN_FALLBACK",
+     "missing": 36
+    },
+    "es": {
+     "status": "EN_FALLBACK",
+     "missing": 36
+    },
+    "pt": {
+     "status": "EN_FALLBACK",
+     "missing": 36
+    },
+    "ar": {
+     "status": "EN_FALLBACK",
+     "missing": 36
+    }
+   }
+  },
+  "briefingStrings": {
+   "enKeys": 38,
+   "locales": {
+    "pl": {
+     "status": "AUTHORED",
+     "present": 38,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 0,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "fr": {
+     "status": "EN_FALLBACK",
+     "missing": 38
+    },
+    "de": {
+     "status": "EN_FALLBACK",
+     "missing": 38
+    },
+    "es": {
+     "status": "EN_FALLBACK",
+     "missing": 38
+    },
+    "pt": {
+     "status": "EN_FALLBACK",
+     "missing": 38
+    },
+    "ar": {
+     "status": "EN_FALLBACK",
+     "missing": 38
+    }
+   }
+  },
+  "conflictStrings": {
+   "enKeys": 63,
+   "locales": {
+    "pl": {
+     "status": "AUTHORED",
+     "present": 63,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 0,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "fr": {
+     "status": "ABSENT",
+     "missing": 63
+    },
+    "de": {
+     "status": "ABSENT",
+     "missing": 63
+    },
+    "es": {
+     "status": "ABSENT",
+     "missing": 63
+    },
+    "pt": {
+     "status": "ABSENT",
+     "missing": 63
+    },
+    "ar": {
+     "status": "ABSENT",
+     "missing": 63
+    }
+   }
+  },
+  "deliveryStrings": {
+   "enKeys": 27,
+   "locales": {
+    "pl": {
+     "status": "AUTHORED",
+     "present": 27,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 1,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "fr": {
+     "status": "ABSENT",
+     "missing": 27
+    },
+    "de": {
+     "status": "ABSENT",
+     "missing": 27
+    },
+    "es": {
+     "status": "ABSENT",
+     "missing": 27
+    },
+    "pt": {
+     "status": "ABSENT",
+     "missing": 27
+    },
+    "ar": {
+     "status": "ABSENT",
+     "missing": 27
+    }
+   }
+  },
+  "electionStrings": {
+   "enKeys": 44,
+   "locales": {
+    "pl": {
+     "status": "AUTHORED",
+     "present": 44,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 1,
+     "identicalTrivial": 1,
+     "extraKeys": 0
+    },
+    "fr": {
+     "status": "ABSENT",
+     "missing": 44
+    },
+    "de": {
+     "status": "ABSENT",
+     "missing": 44
+    },
+    "es": {
+     "status": "ABSENT",
+     "missing": 44
+    },
+    "pt": {
+     "status": "ABSENT",
+     "missing": 44
+    },
+    "ar": {
+     "status": "ABSENT",
+     "missing": 44
+    }
+   }
+  },
+  "energyStrings": {
+   "enKeys": 161,
+   "locales": {
+    "pl": {
+     "status": "AUTHORED",
+     "present": 160,
+     "missing": 0,
+     "empty": 1,
+     "identicalToEn": 4,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "fr": {
+     "status": "EN_FALLBACK",
+     "missing": 161
+    },
+    "de": {
+     "status": "EN_FALLBACK",
+     "missing": 161
+    },
+    "es": {
+     "status": "EN_FALLBACK",
+     "missing": 161
+    },
+    "pt": {
+     "status": "EN_FALLBACK",
+     "missing": 161
+    },
+    "ar": {
+     "status": "EN_FALLBACK",
+     "missing": 161
+    }
+   }
+  },
+  "economyStrings": {
+   "enKeys": 83,
+   "locales": {
+    "pl": {
+     "status": "AUTHORED",
+     "present": 83,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 1,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "fr": {
+     "status": "AUTHORED",
+     "present": 83,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 4,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "de": {
+     "status": "AUTHORED",
+     "present": 83,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 2,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "es": {
+     "status": "AUTHORED",
+     "present": 83,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 1,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "pt": {
+     "status": "AUTHORED",
+     "present": 83,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 1,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "ar": {
+     "status": "AUTHORED",
+     "present": 83,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 1,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    }
+   }
+  },
+  "economy retainedCopy": {
+   "enKeys": 29,
+   "locales": {
+    "pl": {
+     "status": "AUTHORED",
+     "present": 29,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 0,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "fr": {
+     "status": "AUTHORED",
+     "present": 29,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 2,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "de": {
+     "status": "AUTHORED",
+     "present": 29,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 0,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "es": {
+     "status": "AUTHORED",
+     "present": 29,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 1,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "pt": {
+     "status": "AUTHORED",
+     "present": 29,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 0,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "ar": {
+     "status": "AUTHORED",
+     "present": 29,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 0,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    }
+   }
+  },
+  "humStrings": {
+   "enKeys": 120,
+   "locales": {
+    "pl": {
+     "status": "EN_FALLBACK",
+     "missing": 120
+    },
+    "fr": {
+     "status": "EN_FALLBACK",
+     "missing": 120
+    },
+    "de": {
+     "status": "EN_FALLBACK",
+     "missing": 120
+    },
+    "es": {
+     "status": "EN_FALLBACK",
+     "missing": 120
+    },
+    "pt": {
+     "status": "EN_FALLBACK",
+     "missing": 120
+    },
+    "ar": {
+     "status": "EN_FALLBACK",
+     "missing": 120
+    }
+   }
+  },
+  "mktStrings": {
+   "enKeys": 102,
+   "locales": {
+    "pl": {
+     "status": "EN_FALLBACK",
+     "missing": 102
+    },
+    "fr": {
+     "status": "EN_FALLBACK",
+     "missing": 102
+    },
+    "de": {
+     "status": "EN_FALLBACK",
+     "missing": 102
+    },
+    "es": {
+     "status": "EN_FALLBACK",
+     "missing": 102
+    },
+    "pt": {
+     "status": "EN_FALLBACK",
+     "missing": 102
+    },
+    "ar": {
+     "status": "EN_FALLBACK",
+     "missing": 102
+    }
+   }
+  },
+  "polStrings": {
+   "enKeys": 87,
+   "locales": {
+    "pl": {
+     "status": "AUTHORED",
+     "present": 87,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 0,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "fr": {
+     "status": "EN_FALLBACK",
+     "missing": 87
+    },
+    "de": {
+     "status": "EN_FALLBACK",
+     "missing": 87
+    },
+    "es": {
+     "status": "EN_FALLBACK",
+     "missing": 87
+    },
+    "pt": {
+     "status": "EN_FALLBACK",
+     "missing": 87
+    },
+    "ar": {
+     "status": "EN_FALLBACK",
+     "missing": 87
+    }
+   }
+  },
+  "secStrings": {
+   "enKeys": 39,
+   "locales": {
+    "pl": {
+     "status": "EN_FALLBACK",
+     "missing": 39
+    },
+    "fr": {
+     "status": "EN_FALLBACK",
+     "missing": 39
+    },
+    "de": {
+     "status": "EN_FALLBACK",
+     "missing": 39
+    },
+    "es": {
+     "status": "EN_FALLBACK",
+     "missing": 39
+    },
+    "pt": {
+     "status": "EN_FALLBACK",
+     "missing": 39
+    },
+    "ar": {
+     "status": "EN_FALLBACK",
+     "missing": 39
+    }
+   }
+  },
+  "failureCopy": {
+   "enKeys": 15,
+   "locales": {
+    "pl": {
+     "status": "AUTHORED",
+     "present": 15,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 0,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "fr": {
+     "status": "EN_FALLBACK",
+     "missing": 15
+    },
+    "de": {
+     "status": "ABSENT",
+     "missing": 15,
+     "note": "LanguageCode cannot express"
+    },
+    "es": {
+     "status": "EN_FALLBACK",
+     "missing": 15
+    },
+    "pt": {
+     "status": "ABSENT",
+     "missing": 15,
+     "note": "LanguageCode cannot express"
+    },
+    "ar": {
+     "status": "EN_FALLBACK",
+     "missing": 15
+    }
+   }
+  },
+  "returnStrings": {
+   "enKeys": 5,
+   "locales": {
+    "pl": {
+     "status": "AUTHORED",
+     "present": 5,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 0,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "fr": {
+     "status": "EN_FALLBACK",
+     "missing": 5
+    },
+    "de": {
+     "status": "EN_FALLBACK",
+     "missing": 5
+    },
+    "es": {
+     "status": "EN_FALLBACK",
+     "missing": 5
+    },
+    "pt": {
+     "status": "EN_FALLBACK",
+     "missing": 5
+    },
+    "ar": {
+     "status": "EN_FALLBACK",
+     "missing": 5
+    }
+   }
+  },
+  "cookiesPageStrings": {
+   "enKeys": 22,
+   "locales": {
+    "pl": {
+     "status": "AUTHORED",
+     "present": 22,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 0,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "fr": {
+     "status": "ABSENT",
+     "missing": 22
+    },
+    "de": {
+     "status": "ABSENT",
+     "missing": 22
+    },
+    "es": {
+     "status": "ABSENT",
+     "missing": 22
+    },
+    "pt": {
+     "status": "ABSENT",
+     "missing": 22
+    },
+    "ar": {
+     "status": "ABSENT",
+     "missing": 22
+    }
+   }
+  },
+  "trustReasonLabels": {
+   "enKeys": 11,
+   "locales": {
+    "pl": {
+     "status": "AUTHORED",
+     "present": 11,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 0,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "fr": {
+     "status": "ABSENT",
+     "missing": 11
+    },
+    "de": {
+     "status": "ABSENT",
+     "missing": 11
+    },
+    "es": {
+     "status": "ABSENT",
+     "missing": 11
+    },
+    "pt": {
+     "status": "ABSENT",
+     "missing": 11
+    },
+    "ar": {
+     "status": "ABSENT",
+     "missing": 11
+    }
+   }
+  },
+  "selectionActionQuestions": {
+   "enKeys": 6,
+   "locales": {
+    "pl": {
+     "status": "AUTHORED",
+     "present": 6,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 0,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "fr": {
+     "status": "ABSENT",
+     "missing": 6
+    },
+    "de": {
+     "status": "ABSENT",
+     "missing": 6
+    },
+    "es": {
+     "status": "ABSENT",
+     "missing": 6
+    },
+    "pt": {
+     "status": "ABSENT",
+     "missing": 6
+    },
+    "ar": {
+     "status": "ABSENT",
+     "missing": 6
+    }
+   }
+  },
+  "askQuestionExamples": {
+   "enKeys": 42,
+   "locales": {
+    "pl": {
+     "status": "AUTHORED",
+     "present": 42,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 0,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "fr": {
+     "status": "AUTHORED",
+     "present": 42,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 0,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "de": {
+     "status": "AUTHORED",
+     "present": 42,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 0,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "es": {
+     "status": "AUTHORED",
+     "present": 42,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 0,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "pt": {
+     "status": "AUTHORED",
+     "present": 42,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 0,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    },
+    "ar": {
+     "status": "AUTHORED",
+     "present": 42,
+     "missing": 0,
+     "empty": 0,
+     "identicalToEn": 0,
+     "identicalTrivial": 0,
+     "extraKeys": 0
+    }
+   }
+  },
+  "recovered-c55 namespace coverage": {
+   "admin": {
+    "total": 579,
+    "pl": 579,
+    "fr": 359,
+    "de": 359,
+    "es": 359,
+    "pt": 359,
+    "ar": 359
+   },
+   "support": {
+    "total": 102,
+    "pl": 102,
+    "fr": 62,
+    "de": 62,
+    "es": 62,
+    "pt": 62,
+    "ar": 62
+   },
+   "myIntelligence": {
+    "total": 260,
+    "pl": 260,
+    "fr": 0,
+    "de": 0,
+    "es": 0,
+    "pt": 0,
+    "ar": 0
+   },
+   "homeReva": {
+    "total": 90,
+    "pl": 90,
+    "fr": 0,
+    "de": 0,
+    "es": 0,
+    "pt": 0,
+    "ar": 0
+   },
+   "homeR1": {
+    "total": 231,
+    "pl": 231,
+    "fr": 0,
+    "de": 0,
+    "es": 0,
+    "pt": 0,
+    "ar": 0
+   },
+   "languageSelectorLabel": {
+    "total": 1,
+    "pl": 1,
+    "fr": 1,
+    "de": 1,
+    "es": 1,
+    "pt": 1,
+    "ar": 1
+   },
+   "yourQuestion": {
+    "total": 1,
+    "pl": 1,
+    "fr": 1,
+    "de": 1,
+    "es": 1,
+    "pt": 1,
+    "ar": 1
+   },
+   "noQuestionProvided": {
+    "total": 1,
+    "pl": 1,
+    "fr": 1,
+    "de": 1,
+    "es": 1,
+    "pt": 1,
+    "ar": 1
+   },
+   "noQuestionMessage": {
+    "total": 1,
+    "pl": 1,
+    "fr": 1,
+    "de": 1,
+    "es": 1,
+    "pt": 1,
+    "ar": 1
+   },
+   "genericFetchError": {
+    "total": 1,
+    "pl": 1,
+    "fr": 1,
+    "de": 1,
+    "es": 1,
+    "pt": 1,
+    "ar": 1
+   },
+   "searchMetaTitle": {
+    "total": 1,
+    "pl": 1,
+    "fr": 1,
+    "de": 1,
+    "es": 1,
+    "pt": 1,
+    "ar": 1
+   },
+   "searchMetaDescription": {
+    "total": 1,
+    "pl": 1,
+    "fr": 1,
+    "de": 1,
+    "es": 1,
+    "pt": 1,
+    "ar": 1
+   },
+   "homeMetaTitle": {
+    "total": 1,
+    "pl": 1,
+    "fr": 1,
+    "de": 1,
+    "es": 1,
+    "pt": 1,
+    "ar": 1
+   },
+   "homeMetaDescription": {
+    "total": 1,
+    "pl": 1,
+    "fr": 1,
+    "de": 1,
+    "es": 1,
+    "pt": 1,
+    "ar": 1
+   },
+   "askRootMetaTitle": {
+    "total": 1,
+    "pl": 1,
+    "fr": 0,
+    "de": 0,
+    "es": 0,
+    "pt": 0,
+    "ar": 0
+   },
+   "askRootMetaDescription": {
+    "total": 1,
+    "pl": 1,
+    "fr": 0,
+    "de": 0,
+    "es": 0,
+    "pt": 0,
+    "ar": 0
+   },
+   "searchWorkspaceHeading": {
+    "total": 1,
+    "pl": 1,
+    "fr": 1,
+    "de": 1,
+    "es": 1,
+    "pt": 1,
+    "ar": 1
+   },
+   "searchWorkspaceIntro": {
+    "total": 1,
+    "pl": 1,
+    "fr": 1,
+    "de": 1,
+    "es": 1,
+    "pt": 1,
+    "ar": 1
+   },
+   "searchWorkspacePlaceholder": {
+    "total": 1,
+    "pl": 1,
+    "fr": 1,
+    "de": 1,
+    "es": 1,
+    "pt": 1,
+    "ar": 1
+   },
+   "searchWorkspaceSubmitLabel": {
+    "total": 1,
+    "pl": 1,
+    "fr": 1,
+    "de": 1,
+    "es": 1,
+    "pt": 1,
+    "ar": 1
+   },
+   "analysisStagedNote": {
+    "total": 1,
+    "pl": 1,
+    "fr": 0,
+    "de": 0,
+    "es": 0,
+    "pt": 0,
+    "ar": 0
+   },
+   "analysisStagedRun": {
+    "total": 1,
+    "pl": 1,
+    "fr": 0,
+    "de": 0,
+    "es": 0,
+    "pt": 0,
+    "ar": 0
+   },
+   "analysisStagedEdit": {
+    "total": 1,
+    "pl": 1,
+    "fr": 0,
+    "de": 0,
+    "es": 0,
+    "pt": 0,
+    "ar": 0
+   },
+   "searchWorkspaceAriaLabel": {
+    "total": 1,
+    "pl": 1,
+    "fr": 1,
+    "de": 1,
+    "es": 1,
+    "pt": 1,
+    "ar": 1
+   },
+   "analysisErrorTimeout": {
+    "total": 1,
+    "pl": 1,
+    "fr": 1,
+    "de": 1,
+    "es": 1,
+    "pt": 1,
+    "ar": 1
+   },
+   "analysisErrorNetwork": {
+    "total": 1,
+    "pl": 1,
+    "fr": 1,
+    "de": 1,
+    "es": 1,
+    "pt": 1,
+    "ar": 1
+   },
+   "analysisErrorInvalidQuery": {
+    "total": 1,
+    "pl": 1,
+    "fr": 1,
+    "de": 1,
+    "es": 1,
+    "pt": 1,
+    "ar": 1
+   },
+   "analysisErrorRateLimited": {
+    "total": 1,
+    "pl": 1,
+    "fr": 1,
+    "de": 1,
+    "es": 1,
+    "pt": 1,
+    "ar": 1
+   },
+   "analysisErrorServer": {
+    "total": 1,
+    "pl": 1,
+    "fr": 1,
+    "de": 1,
+    "es": 1,
+    "pt": 1,
+    "ar": 1
+   },
+   "noEvidenceMessage": {
+    "total": 1,
+    "pl": 1,
+    "fr": 1,
+    "de": 1,
+    "es": 1,
+    "pt": 1,
+    "ar": 1
+   },
+   "aiUnavailableMessage": {
+    "total": 1,
+    "pl": 1,
+    "fr": 1,
+    "de": 1,
+    "es": 1,
+    "pt": 1,
+    "ar": 1
+   },
+   "originalSourcesHeading": {
+    "total": 1,
+    "pl": 1,
+    "fr": 1,
+    "de": 1,
+    "es": 1,
+    "pt": 1,
+    "ar": 1
+   },
+   "evidenceLanguageLabel": {
+    "total": 1,
+    "pl": 1,
+    "fr": 1,
+    "de": 1,
+    "es": 1,
+    "pt": 1,
+    "ar": 1
+   },
+   "askAi": {
+    "total": 41,
+    "pl": 41,
+    "fr": 0,
+    "de": 0,
+    "es": 0,
+    "pt": 0,
+    "ar": 0
+   },
+   "loadingStages": {
+    "total": 1,
+    "pl": 1,
+    "fr": 1,
+    "de": 1,
+    "es": 1,
+    "pt": 1,
+    "ar": 1
+   },
+   "analysisResultView": {
+    "total": 35,
+    "pl": 35,
+    "fr": 33,
+    "de": 33,
+    "es": 33,
+    "pt": 33,
+    "ar": 33
+   },
+   "analysisWorkspace": {
+    "total": 146,
+    "pl": 146,
+    "fr": 136,
+    "de": 136,
+    "es": 136,
+    "pt": 136,
+    "ar": 136
+   },
+   "heroContext": {
+    "total": 5,
+    "pl": 5,
+    "fr": 5,
+    "de": 5,
+    "es": 5,
+    "pt": 5,
+    "ar": 5
+   },
+   "hero": {
+    "total": 35,
+    "pl": 35,
+    "fr": 30,
+    "de": 30,
+    "es": 30,
+    "pt": 30,
+    "ar": 30
+   },
+   "analysisModeBadge": {
+    "total": 7,
+    "pl": 7,
+    "fr": 7,
+    "de": 7,
+    "es": 7,
+    "pt": 7,
+    "ar": 7
+   },
+   "evidenceSufficiencyNote": {
+    "total": 4,
+    "pl": 4,
+    "fr": 4,
+    "de": 4,
+    "es": 4,
+    "pt": 4,
+    "ar": 4
+   },
+   "retrievalContextStatus": {
+    "total": 14,
+    "pl": 14,
+    "fr": 11,
+    "de": 11,
+    "es": 11,
+    "pt": 11,
+    "ar": 11
+   },
+   "sourceEntitiesPanel": {
+    "total": 4,
+    "pl": 4,
+    "fr": 4,
+    "de": 4,
+    "es": 4,
+    "pt": 4,
+    "ar": 4
+   },
+   "formatRelativeTime": {
+    "total": 7,
+    "pl": 7,
+    "fr": 7,
+    "de": 7,
+    "es": 7,
+    "pt": 7,
+    "ar": 7
+   },
+   "newsroomSnapshot": {
+    "total": 2,
+    "pl": 2,
+    "fr": 2,
+    "de": 2,
+    "es": 2,
+    "pt": 2,
+    "ar": 2
+   },
+   "featuredStory": {
+    "total": 4,
+    "pl": 4,
+    "fr": 3,
+    "de": 3,
+    "es": 3,
+    "pt": 3,
+    "ar": 3
+   },
+   "inFocusSidebar": {
+    "total": 3,
+    "pl": 3,
+    "fr": 3,
+    "de": 3,
+    "es": 3,
+    "pt": 3,
+    "ar": 3
+   },
+   "globalDevelopments": {
+    "total": 14,
+    "pl": 14,
+    "fr": 13,
+    "de": 13,
+    "es": 13,
+    "pt": 13,
+    "ar": 13
+   },
+   "todayWorkspace": {
+    "total": 59,
+    "pl": 59,
+    "fr": 59,
+    "de": 59,
+    "es": 59,
+    "pt": 59,
+    "ar": 59
+   },
+   "presentationRibbon": {
+    "total": 11,
+    "pl": 11,
+    "fr": 11,
+    "de": 11,
+    "es": 11,
+    "pt": 11,
+    "ar": 11
+   },
+   "today": {
+    "total": 66,
+    "pl": 66,
+    "fr": 62,
+    "de": 62,
+    "es": 62,
+    "pt": 62,
+    "ar": 62
+   },
+   "situationMap": {
+    "total": 23,
+    "pl": 23,
+    "fr": 14,
+    "de": 14,
+    "es": 14,
+    "pt": 14,
+    "ar": 14
+   },
+   "categoryCards": {
+    "total": 5,
+    "pl": 5,
+    "fr": 4,
+    "de": 4,
+    "es": 4,
+    "pt": 4,
+    "ar": 4
+   },
+   "latestNowRail": {
+    "total": 6,
+    "pl": 6,
+    "fr": 6,
+    "de": 6,
+    "es": 6,
+    "pt": 6,
+    "ar": 6
+   },
+   "worldMapGateway": {
+    "total": 4,
+    "pl": 4,
+    "fr": 4,
+    "de": 4,
+    "es": 4,
+    "pt": 4,
+    "ar": 4
+   },
+   "latestUpdatesFeed": {
+    "total": 5,
+    "pl": 5,
+    "fr": 4,
+    "de": 4,
+    "es": 4,
+    "pt": 4,
+    "ar": 4
+   },
+   "howItWorks": {
+    "total": 4,
+    "pl": 4,
+    "fr": 4,
+    "de": 4,
+    "es": 4,
+    "pt": 4,
+    "ar": 4
+   },
+   "trustSection": {
+    "total": 3,
+    "pl": 3,
+    "fr": 3,
+    "de": 3,
+    "es": 3,
+    "pt": 3,
+    "ar": 3
+   },
+   "footer": {
+    "total": 18,
+    "pl": 18,
+    "fr": 17,
+    "de": 17,
+    "es": 17,
+    "pt": 17,
+    "ar": 17
+   },
+   "mobileBottomNav": {
+    "total": 5,
+    "pl": 5,
+    "fr": 5,
+    "de": 5,
+    "es": 5,
+    "pt": 5,
+    "ar": 5
+   },
+   "navBar": {
+    "total": 39,
+    "pl": 39,
+    "fr": 38,
+    "de": 38,
+    "es": 38,
+    "pt": 38,
+    "ar": 38
+   },
+   "liveStatusStrip": {
+    "total": 8,
+    "pl": 8,
+    "fr": 8,
+    "de": 8,
+    "es": 8,
+    "pt": 8,
+    "ar": 8
+   },
+   "map": {
+    "total": 633,
+    "pl": 633,
+    "fr": 554,
+    "de": 554,
+    "es": 554,
+    "pt": 554,
+    "ar": 554
+   },
+   "betaHome": {
+    "total": 73,
+    "pl": 73,
+    "fr": 0,
+    "de": 0,
+    "es": 0,
+    "pt": 0,
+    "ar": 0
+   },
+   "intelligenceModules": {
+    "total": 43,
+    "pl": 43,
+    "fr": 24,
+    "de": 24,
+    "es": 24,
+    "pt": 24,
+    "ar": 24
+   },
+   "privacyPage": {
+    "total": 5,
+    "pl": 5,
+    "fr": 5,
+    "de": 5,
+    "es": 5,
+    "pt": 5,
+    "ar": 5
+   },
+   "termsPage": {
+    "total": 5,
+    "pl": 5,
+    "fr": 5,
+    "de": 5,
+    "es": 5,
+    "pt": 5,
+    "ar": 5
+   },
+   "thirdPartyNoticesPage": {
+    "total": 10,
+    "pl": 10,
+    "fr": 0,
+    "de": 0,
+    "es": 0,
+    "pt": 0,
+    "ar": 0
+   },
+   "sourcePolicyPage": {
+    "total": 5,
+    "pl": 5,
+    "fr": 5,
+    "de": 5,
+    "es": 5,
+    "pt": 5,
+    "ar": 5
+   },
+   "eventAnchor": {
+    "total": 32,
+    "pl": 32,
+    "fr": 0,
+    "de": 0,
+    "es": 0,
+    "pt": 0,
+    "ar": 0
+   },
+   "analysisFrame": {
+    "total": 123,
+    "pl": 123,
+    "fr": 120,
+    "de": 120,
+    "es": 120,
+    "pt": 120,
+    "ar": 120
+   },
+   "accountSettings": {
+    "total": 13,
+    "pl": 13,
+    "fr": 0,
+    "de": 0,
+    "es": 0,
+    "pt": 0,
+    "ar": 0
+   },
+   "authError": {
+    "total": 3,
+    "pl": 3,
+    "fr": 0,
+    "de": 0,
+    "es": 0,
+    "pt": 0,
+    "ar": 0
+   }
+  },
+  "askSevenStringsCopyCoverage": {
+   "en": {
+    "locale": "en",
+    "boundedCopy": true,
+    "fullAskCopy": true,
+    "catalogueLocale": "en"
+   },
+   "pl": {
+    "locale": "pl",
+    "boundedCopy": true,
+    "fullAskCopy": true,
+    "catalogueLocale": "pl"
+   },
+   "fr": {
+    "locale": "fr",
+    "boundedCopy": true,
+    "fullAskCopy": false,
+    "catalogueLocale": "en"
+   },
+   "de": {
+    "locale": "de",
+    "boundedCopy": true,
+    "fullAskCopy": false,
+    "catalogueLocale": "en"
+   },
+   "es": {
+    "locale": "es",
+    "boundedCopy": true,
+    "fullAskCopy": false,
+    "catalogueLocale": "en"
+   },
+   "pt": {
+    "locale": "pt",
+    "boundedCopy": true,
+    "fullAskCopy": false,
+    "catalogueLocale": "en"
+   },
+   "ar": {
+    "locale": "ar",
+    "boundedCopy": true,
+    "fullAskCopy": false,
+    "catalogueLocale": "en"
+   }
+  },
+  "askQuestionExamplesQualification": {
+   "en": "AUTHORED",
+   "pl": "AUTHORED",
+   "fr": "DRAFT_PENDING_CLAUDE_L",
+   "de": "DRAFT_PENDING_CLAUDE_L",
+   "es": "DRAFT_PENDING_CLAUDE_L",
+   "pt": "DRAFT_PENDING_CLAUDE_L",
+   "ar": "DRAFT_PENDING_CLAUDE_L"
+  }
+ },
+ "types": {
+  "LanguageCode": {
+   "file": "shared/src/analysis.ts:30",
+   "values": [
+    "en",
+    "pl",
+    "sw",
+    "fr",
+    "es",
+    "ar",
+    "rw"
+   ],
+   "missingDisplay": [
+    "de",
+    "pt"
+   ]
+  },
+  "DisplayLocale": {
+   "file": "shared/src/language/index.ts:30-32",
+   "values": [
+    "en",
+    "pl",
+    "fr",
+    "de",
+    "es",
+    "pt",
+    "ar"
+   ]
+  },
+  "ACTIVE_LANGUAGES": {
+   "file": "frontend/src/lib/i18n/languages.ts:21",
+   "values": [
+    "en",
+    "pl"
+   ],
+   "role": "gates cookie reads on ~30 routes + html lang + browser detection"
+  },
+  "SELECTABLE_LOCALES": {
+   "file": "frontend/src/lib/i18n/languages.ts:91",
+   "values": [
+    "en",
+    "pl",
+    "fr",
+    "de",
+    "es",
+    "pt",
+    "ar"
+   ]
+  },
+  "ASK_CATALOGUE_LOCALES": {
+   "file": "frontend/src/lib/ask/askLocale.ts",
+   "values": [
+    "en",
+    "pl"
+   ]
+  },
+  "AskLocale": {
+   "file": "frontend/src/lib/ask/askStrings.ts:5",
+   "values": [
+    "en",
+    "pl",
+    "fr",
+    "es",
+    "ar"
+   ]
+  },
+  "conflation": "Display locale read through LanguageCode predicate isActiveLanguageCode (languages.ts:159) everywhere outside Ask; sw/rw are NOT offered in UI (SELECTABLE_LOCALES excludes them) but LANGUAGE_NATIVE_LABELS/LANGUAGE_DIRECTION/ALL_LANGUAGES still carry them; LANGUAGE_DIRECTION is Record<LanguageCode> (no de/pt)."
+ },
+ "selector": {
+  "offers": [
+   "en",
+   "pl",
+   "fr",
+   "de",
+   "es",
+   "pt",
+   "ar"
+  ],
+  "persistence": "localStorage key globalnews-ai:language + cookie globalnews-ai-language (1y, SameSite=Lax), no account sync (languages.ts:242-258)",
+  "refresh": "persistLanguageSelection then router.refresh() (NavBar.tsx:84-88, AskNavShell.tsx:263-269, HomeLanguageControl.tsx:43-44, WorkspaceNav.tsx:196-197, ConflictDashboard.tsx:649)",
+  "reconciliationBug": "LanguageSync.tsx:52-58 and Hero.tsx:264-269: readLanguageCookie() and resolveInitialLanguage() reject fr/de/es/pt/ar; with a pl browser, a stored fr choice is overwritten with pl on Home/Map/Conflict",
+  "htmlLang": "app/layout.tsx:259,273 <html lang> = cookie clamped by isActiveLanguageCode → only en|pl; no dir attribute on <html>",
+  "rtl": "component-scoped only: AskFrameScreen.tsx:431-432 lang/dir from askDirectionProps (directionFor(ar)=rtl). AskNavShell header, Saved/Recent/Settings, AskAiDock and all non-Ask routes never get dir=rtl. Economy forces dir=ltr (EconomyScreen.tsx:222, EconomyCompactScreen.tsx:131). ScriptRun (runBoundary.tsx:127) adds Arabic typography only, unreachable outside Ask due to clamp.",
+  "ltrIsolation": "isolatedLtr() for URLs/hosts in AskSourcesColumn.tsx:65, AskCompactResult.tsx:447; isolatedAuto in AskR2TurnView/AskSourcesColumn/AskFrameScreen; runBoundary.tsx:170 MachineReadable dir=ltr + unicode-bidi:isolate (Energy 28 consumers)."
+ },
+ "backend": {
+  "analysisDto": {
+   "file": "backend/src/modules/analysis/dto/analyze-news.dto.ts:144-152,177",
+   "accepts": [
+    "en",
+    "pl",
+    "sw",
+    "fr",
+    "es",
+    "ar",
+    "rw"
+   ],
+   "rejects": [
+    "de",
+    "pt"
+   ]
+  },
+  "telemetryDto": {
+   "file": "backend/src/modules/telemetry/dto/record-event.dto.ts:51",
+   "note": "UI language validated against SUPPORTED_LANGUAGE_CODES → de/pt telemetry rejected"
+  },
+  "topHeadlines": {
+   "file": "backend/src/modules/news/dto/top-headlines-query.dto.ts:20",
+   "accepts": [
+    "en",
+    "pl"
+   ]
+  },
+  "askV2": {
+   "file": "backend/src/modules/ask-v2/ask-v2.dto.ts:19,25; ask-compute.contract.ts:21",
+   "accepts": [
+    "en",
+    "pl",
+    "fr",
+    "de",
+    "es",
+    "pt",
+    "ar"
+   ],
+   "retrieval": "de/pt retrieve with en, answerLanguage set (ask-r2-execution.adapter.ts:192-197)",
+   "deterministicReaders": "EN/PL only: knowledge-requirement.ts:400,438; decision-support.ts:67; advisory-requirement.ts:208; bilateral-relationship.ts:310; turn-normalization.ts:64; cross-country-continuation.ts:185; conversation-state.ts ('en'|'pl'), conversation-place.ts:41; companion-relevance.ts:42"
+  },
+  "responseLanguageInstruction": {
+   "file": "backend/src/modules/analysis/prompt/build-analysis-prompt.util.ts:867-885",
+   "covers": [
+    "pl",
+    "sw",
+    "fr",
+    "de",
+    "es",
+    "pt",
+    "ar",
+    "rw"
+   ],
+   "en": "empty (base prompt English)"
+  },
+  "retrievalStrategy": {
+   "file": "backend/src/modules/analysis/language/resolve-retrieval-language.util.ts",
+   "native": [
+    "en",
+    "fr",
+    "es",
+    "ar"
+   ],
+   "pl": "top-headlines pl then search en",
+   "sw": "search en",
+   "rw": "search en (unproven)",
+   "de": "undefined (not in SEARCH_STRATEGY_LANGUAGES)",
+   "pt": "undefined"
+  },
+  "localizedErrors": "analysis.service.ts:540-554 NO_EVIDENCE/PROVIDER_FAILURE en/pl only (others → en); GlobalExceptionFilter has no language handling; no Accept-Language handling anywhere in backend or frontend"
+ },
+ "staleDisclosures": [
+  {
+   "file": "frontend/src/lib/ask/askR2Strings.ts:473",
+   "text": "Ask answers in English and Polish. Could you ask your question in one of them?",
+   "reach": "LANGUAGE_UNSUPPORTED code; comment says dormant"
+  },
+  {
+   "file": "frontend/src/lib/ask/askR2Strings.ts:766",
+   "text": "Zapytaj odpowiada po polsku i po angielsku…",
+   "reach": "PL twin, dormant"
+  },
+  {
+   "file": "frontend/src/lib/i18n/dictionaries/supportEn.ts:304",
+   "text": "Automatic answers are available in English and Polish only…",
+   "reach": "support locale.outOfScope (live, may be accurate for support backend)"
+  },
+  {
+   "file": "frontend/src/lib/i18n/dictionaries/supportPl.ts:216",
+   "text": "Odpowiedzi automatyczne są dostępne wyłącznie po angielsku i po polsku…",
+   "reach": "PL twin"
+  },
+  {
+   "file": "frontend/src/lib/i18n/dictionaries/adminEn.ts:839 / adminPl.ts:826",
+   "text": "adminLanguagesValue: 'English, Polski'",
+   "reach": "admin Settings screen (SettingsScreen.tsx:41)"
+  },
+  {
+   "file": "frontend/src/components/home/homeClickContract.ts:241",
+   "text": "label: 'Language (EN/PL)'",
+   "reach": "click-contract test data, not rendered (UNKNOWN visibility)"
+  },
+  {
+   "file": "frontend/src/lib/support/conversation/mockAdapter.ts:66-70",
+   "text": "fixture answer about language control; en/pl only",
+   "reach": "mock adapter"
+  }
+ ],
+ "surfaces": [
+  {
+   "surface": "Home (platform Home, GNA_PUBLIC_ROOT=platform)",
+   "status": {
+    "en": "FULL",
+    "pl": "FULL",
+    "fr": "EN_FALLBACK",
+    "de": "EN_FALLBACK",
+    "es": "EN_FALLBACK",
+    "pt": "EN_FALLBACK",
+    "ar": "EN_FALLBACK"
+   },
+   "evidence": "app/page.tsx:111 route reads cookie via isActiveLanguageCode (ACTIVE_LANGUAGES=[en,pl], languages.ts:21,159) → fr/de/es/pt/ar resolve to en; dictionary homeReva/homeR1 en/pl only (c55 has 0 keys in homeR1/homeReva)"
+  },
+  {
+   "surface": "Home root `/` (default = standalone Ask)",
+   "status": {
+    "en": "FULL",
+    "pl": "FULL",
+    "fr": "PARTIAL",
+    "de": "PARTIAL",
+    "es": "PARTIAL",
+    "pt": "PARTIAL",
+    "ar": "PARTIAL"
+   },
+   "evidence": "app/page.tsx:120 AskStandaloneRoot locale=resolveAskLocale(cookie) (unclamped); nav chrome = catalogueLocale (AskStandaloneRoot.tsx:35) → EN for fr..ar"
+  },
+  {
+   "surface": "Ask standalone (/ask)",
+   "status": {
+    "en": "FULL",
+    "pl": "FULL",
+    "fr": "PARTIAL",
+    "de": "PARTIAL",
+    "es": "PARTIAL",
+    "pt": "PARTIAL",
+    "ar": "PARTIAL"
+   },
+   "evidence": "app/ask/page.tsx:40 resolveAskLocale; AskNavShell/AskShellFrame use askNavStrings(catalogueLocale=en); AskFrameScreen.tsx:133-134 r2s=askR2Strings(en) (21 refs) vs askSevenStrings (3 refs, 24 keys all 7); examples localized (draft); fullAskCopy=false disclosed only as data-ask-full-copy attribute (AskFrameScreen.tsx:440)"
+  },
+  {
+   "surface": "Ask answer view",
+   "status": {
+    "en": "FULL",
+    "pl": "FULL",
+    "fr": "PARTIAL",
+    "de": "PARTIAL",
+    "es": "PARTIAL",
+    "pt": "PARTIAL",
+    "ar": "PARTIAL"
+   },
+   "evidence": "AskR2TurnView/AskSourcesColumn receive locale={r2Locale} (AskFrameScreen.tsx:683,697,722,736,781) → 184 askR2Strings chrome keys in EN; answer prose requested in reader locale (askRequestLanguage; backend ask-v2 accepts 7, answerLanguage for de/pt). Global AskAiDock gets clamped layout language (layout.tsx:259,311) → EN/PL only"
+  },
+  {
+   "surface": "Search",
+   "status": {
+    "en": "FULL",
+    "pl": "FULL",
+    "fr": "EN_FALLBACK",
+    "de": "EN_FALLBACK",
+    "es": "EN_FALLBACK",
+    "pt": "EN_FALLBACK",
+    "ar": "EN_FALLBACK"
+   },
+   "evidence": "app/search/page.tsx:20 route reads cookie via isActiveLanguageCode (ACTIVE_LANGUAGES=[en,pl], languages.ts:21,159) → fr/de/es/pt/ar resolve to en (cast 'en'|'pl'); analysis requestedLanguage never fr/es/ar from UI"
+  },
+  {
+   "surface": "Map",
+   "status": {
+    "en": "FULL",
+    "pl": "FULL",
+    "fr": "EN_FALLBACK",
+    "de": "EN_FALLBACK",
+    "es": "EN_FALLBACK",
+    "pt": "EN_FALLBACK",
+    "ar": "EN_FALLBACK"
+   },
+   "evidence": "app/map/page.tsx:28,55 route reads cookie via isActiveLanguageCode (ACTIVE_LANGUAGES=[en,pl], languages.ts:21,159) → fr/de/es/pt/ar resolve to en; dictionary.map en/pl"
+  },
+  {
+   "surface": "Conflict",
+   "status": {
+    "en": "FULL",
+    "pl": "FULL",
+    "fr": "EN_FALLBACK",
+    "de": "EN_FALLBACK",
+    "es": "EN_FALLBACK",
+    "pt": "EN_FALLBACK",
+    "ar": "EN_FALLBACK"
+   },
+   "evidence": "app/conflict/page.tsx:11 route reads cookie via isActiveLanguageCode (ACTIVE_LANGUAGES=[en,pl], languages.ts:21,159) → fr/de/es/pt/ar resolve to en; conflictStrings en/pl"
+  },
+  {
+   "surface": "Politics (only /politics-visual-preview)",
+   "status": {
+    "en": "FULL",
+    "pl": "FULL",
+    "fr": "EN_FALLBACK",
+    "de": "EN_FALLBACK",
+    "es": "EN_FALLBACK",
+    "pt": "EN_FALLBACK",
+    "ar": "EN_FALLBACK"
+   },
+   "evidence": "politics-visual-preview/page.tsx:66 clamp; polStrings en/pl; fellBack disclosure never fires because requested is already en"
+  },
+  {
+   "surface": "Economy (only /economy-visual-preview)",
+   "status": {
+    "en": "FULL",
+    "pl": "FULL",
+    "fr": "EN_FALLBACK",
+    "de": "EN_FALLBACK",
+    "es": "EN_FALLBACK",
+    "pt": "EN_FALLBACK",
+    "ar": "EN_FALLBACK"
+   },
+   "evidence": "economy-visual-preview/page.tsx:53 clamp makes the 7-locale economyStrings (83/83 keys each) unreachable; EconomyScreen.tsx:222 and EconomyCompactScreen.tsx:131 hard-code dir=\"ltr\" (Arabic would render LTR)"
+  },
+  {
+   "surface": "Market",
+   "status": {
+    "en": "FULL",
+    "pl": "EN_FALLBACK",
+    "fr": "EN_FALLBACK",
+    "de": "EN_FALLBACK",
+    "es": "EN_FALLBACK",
+    "pt": "EN_FALLBACK",
+    "ar": "EN_FALLBACK"
+   },
+   "evidence": "mktStrings catalogue = {en} only (mktStrings.ts:316); PL gets disclosed fallback (MarketScreen.tsx:161); fr..ar clamped at market/page.tsx:59 → no disclosure"
+  },
+  {
+   "surface": "Energy",
+   "status": {
+    "en": "FULL",
+    "pl": "FULL",
+    "fr": "EN_FALLBACK",
+    "de": "EN_FALLBACK",
+    "es": "EN_FALLBACK",
+    "pt": "EN_FALLBACK",
+    "ar": "EN_FALLBACK"
+   },
+   "evidence": "energy/page.tsx:47 clamp; energyStrings en/pl (PL 160/161, 1 empty)"
+  },
+  {
+   "surface": "Election (only /election-visual-preview)",
+   "status": {
+    "en": "FULL",
+    "pl": "FULL",
+    "fr": "EN_FALLBACK",
+    "de": "EN_FALLBACK",
+    "es": "EN_FALLBACK",
+    "pt": "EN_FALLBACK",
+    "ar": "EN_FALLBACK"
+   },
+   "evidence": "election-visual-preview/page.tsx:20-22 clamp; electionStrings en/pl"
+  },
+  {
+   "surface": "Humanitarian",
+   "status": {
+    "en": "FULL",
+    "pl": "EN_FALLBACK",
+    "fr": "EN_FALLBACK",
+    "de": "EN_FALLBACK",
+    "es": "EN_FALLBACK",
+    "pt": "EN_FALLBACK",
+    "ar": "EN_FALLBACK"
+   },
+   "evidence": "humStrings catalogue = {en} only (humStrings.ts:516); PL disclosed via t.common.localeFallback (HumanitarianScreen.tsx:70); fr..ar clamped at humanitarian/page.tsx:61"
+  },
+  {
+   "surface": "My Intelligence",
+   "status": {
+    "en": "FULL",
+    "pl": "FULL",
+    "fr": "EN_FALLBACK",
+    "de": "EN_FALLBACK",
+    "es": "EN_FALLBACK",
+    "pt": "EN_FALLBACK",
+    "ar": "EN_FALLBACK"
+   },
+   "evidence": "my-intelligence/page.tsx:39 clamp; dictionary.myIntelligence en/pl; c55 0/260 keys"
+  },
+  {
+   "surface": "Saved",
+   "status": {
+    "en": "FULL",
+    "pl": "FULL",
+    "fr": "EN_FALLBACK",
+    "de": "EN_FALLBACK",
+    "es": "EN_FALLBACK",
+    "pt": "EN_FALLBACK",
+    "ar": "EN_FALLBACK"
+   },
+   "evidence": "app/saved/page.tsx:41-49 chrome=catalogueLocale → AskNavShell/AskContinuityHeader/SavedClient all EN for fr..ar"
+  },
+  {
+   "surface": "History/Recent",
+   "status": {
+    "en": "FULL",
+    "pl": "PARTIAL",
+    "fr": "EN_FALLBACK",
+    "de": "EN_FALLBACK",
+    "es": "EN_FALLBACK",
+    "pt": "EN_FALLBACK",
+    "ar": "EN_FALLBACK"
+   },
+   "evidence": "/ask/recent: askContinuityStrings(catalogueLocale) en/pl; /history: hard-coded English (app/history/page.tsx:60 <NavBar /> default en, :62 \"History\", :65, :69)"
+  },
+  {
+   "surface": "Account",
+   "status": {
+    "en": "FULL",
+    "pl": "PARTIAL",
+    "fr": "EN_FALLBACK",
+    "de": "EN_FALLBACK",
+    "es": "EN_FALLBACK",
+    "pt": "EN_FALLBACK",
+    "ar": "EN_FALLBACK"
+   },
+   "evidence": "account/layout.tsx:24 clamp; app/account/settings/page.tsx:27 platform mode passes language=\"en\" for everyone incl. PL"
+  },
+  {
+   "surface": "Settings",
+   "status": {
+    "en": "FULL",
+    "pl": "PARTIAL",
+    "fr": "EN_FALLBACK",
+    "de": "EN_FALLBACK",
+    "es": "EN_FALLBACK",
+    "pt": "EN_FALLBACK",
+    "ar": "EN_FALLBACK"
+   },
+   "evidence": "account/settings/page.tsx:27 (platform: en hard-coded) and :31-43 (standalone: chrome=catalogueLocale en/pl)"
+  },
+  {
+   "surface": "Support",
+   "status": {
+    "en": "FULL",
+    "pl": "FULL",
+    "fr": "EN_FALLBACK",
+    "de": "EN_FALLBACK",
+    "es": "EN_FALLBACK",
+    "pt": "EN_FALLBACK",
+    "ar": "EN_FALLBACK"
+   },
+   "evidence": "support/page.tsx:37 clamp; supportEn/supportPl; dormant c55-support 62/102 keys"
+  },
+  {
+   "surface": "Privacy",
+   "status": {
+    "en": "FULL",
+    "pl": "FULL",
+    "fr": "EN_FALLBACK",
+    "de": "EN_FALLBACK",
+    "es": "EN_FALLBACK",
+    "pt": "EN_FALLBACK",
+    "ar": "EN_FALLBACK"
+   },
+   "evidence": "privacy/page.tsx:34,47 clamp; privacyPage + COOKIES_PAGE[pl|en] (:78)"
+  },
+  {
+   "surface": "Cookies",
+   "status": {
+    "en": "FULL",
+    "pl": "FULL",
+    "fr": "EN_FALLBACK",
+    "de": "EN_FALLBACK",
+    "es": "EN_FALLBACK",
+    "pt": "EN_FALLBACK",
+    "ar": "EN_FALLBACK"
+   },
+   "evidence": "cookies/page.tsx:21 → pl|en; cookiesPageStrings en/pl"
+  },
+  {
+   "surface": "Terms",
+   "status": {
+    "en": "FULL",
+    "pl": "FULL",
+    "fr": "EN_FALLBACK",
+    "de": "EN_FALLBACK",
+    "es": "EN_FALLBACK",
+    "pt": "EN_FALLBACK",
+    "ar": "EN_FALLBACK"
+   },
+   "evidence": "terms/page.tsx:24,37 clamp; termsPage en/pl"
+  },
+  {
+   "surface": "Alerts",
+   "status": {
+    "en": "FULL",
+    "pl": "FULL",
+    "fr": "EN_FALLBACK",
+    "de": "EN_FALLBACK",
+    "es": "EN_FALLBACK",
+    "pt": "EN_FALLBACK",
+    "ar": "EN_FALLBACK"
+   },
+   "evidence": "AlertsCentre.tsx:34 / AlertSetupSheet.tsx:28 getDictionary(language).homeR1.alerts; language from clamped Home"
+  },
+  {
+   "surface": "Discussions/comments",
+   "status": {
+    "en": "FULL",
+    "pl": "FULL",
+    "fr": "EN_FALLBACK",
+    "de": "EN_FALLBACK",
+    "es": "EN_FALLBACK",
+    "pt": "EN_FALLBACK",
+    "ar": "EN_FALLBACK"
+   },
+   "evidence": "DiscussionPanel.tsx:56 getDictionary(language).homeR1.discussion"
+  },
+  {
+   "surface": "Briefings",
+   "status": {
+    "en": "FULL",
+    "pl": "FULL",
+    "fr": "EN_FALLBACK",
+    "de": "EN_FALLBACK",
+    "es": "EN_FALLBACK",
+    "pt": "EN_FALLBACK",
+    "ar": "EN_FALLBACK"
+   },
+   "evidence": "saved/briefing/page.tsx:37 chrome=catalogueLocale; briefingStrings en/pl; BriefingDetailClient.tsx:98 and SavedBriefings.tsx:35 clamp pl|en"
+  },
+  {
+   "surface": "Empty/loading/error states",
+   "status": {
+    "en": "FULL",
+    "pl": "FULL",
+    "fr": "PARTIAL",
+    "de": "PARTIAL",
+    "es": "PARTIAL",
+    "pt": "PARTIAL",
+    "ar": "PARTIAL"
+   },
+   "evidence": "failureCopy {en,pl} (failureCopy.ts:126); error.tsx reads readLanguageCookie (clamped en/pl); Ask empty/error/clarification states are in askSevenStrings (all 7) so only Ask is localized"
+  },
+  {
+   "surface": "Mobile menu",
+   "status": {
+    "en": "FULL",
+    "pl": "FULL",
+    "fr": "EN_FALLBACK",
+    "de": "EN_FALLBACK",
+    "es": "EN_FALLBACK",
+    "pt": "EN_FALLBACK",
+    "ar": "EN_FALLBACK"
+   },
+   "evidence": "NavBar mobile menu uses dictionary.navBar (NavBar.tsx:79,337) with clamped language; Ask shell menu uses askNavStrings(catalogueLocale)"
+  },
+  {
+   "surface": "Theme menu",
+   "status": {
+    "en": "FULL",
+    "pl": "FULL",
+    "fr": "EN_FALLBACK",
+    "de": "EN_FALLBACK",
+    "es": "EN_FALLBACK",
+    "pt": "EN_FALLBACK",
+    "ar": "EN_FALLBACK"
+   },
+   "evidence": "ThemeControl.tsx:74 getDictionary(language).homeR1.theme; AskNavShell passes catalogueLocale"
+  },
+  {
+   "surface": "Consent/cookie notice",
+   "status": {
+    "en": "ABSENT",
+    "pl": "ABSENT",
+    "fr": "ABSENT",
+    "de": "ABSENT",
+    "es": "ABSENT",
+    "pt": "ABSENT",
+    "ar": "ABSENT"
+   },
+   "evidence": "no consent banner/cookie-notice component found under components/ or app/ (grep consent|cookie banner|notice); only the /cookies page exists"
+  },
+  {
+   "surface": "Language selector itself",
+   "status": {
+    "en": "FULL",
+    "pl": "FULL",
+    "fr": "PARTIAL",
+    "de": "PARTIAL",
+    "es": "PARTIAL",
+    "pt": "PARTIAL",
+    "ar": "PARTIAL"
+   },
+   "evidence": "LanguageSelector/MapLanguageControl list SELECTABLE_LOCALES = DISPLAY_LOCALES (7, endonyms). On clamped routes the selector value is displayLocaleOf(clamped language) so after choosing fr the page reloads in English and the selector shows English again (NavBar.tsx:285)"
+  }
+ ]
+}

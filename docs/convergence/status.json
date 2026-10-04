@@ -1,0 +1,27 @@
+{
+ "authority": {
+  "branch": "release/alpha-r4-search-conversation-5513275",
+  "sha": "5513275f"
+ },
+ "measuredAt": "2026-10-04",
+ "capabilities": 33,
+ "rowStatus": {
+  "RED": 32,
+  "AMBER": 1
+ },
+ "cells": {
+  "PASS": 138,
+  "UNVERIFIED": 31,
+  "PARTIAL": 63,
+  "N/A": 165,
+  "FAIL": 153,
+  "ABSENT": 77
+ },
+ "blockers": {
+  "P0": 5,
+  "P1": 30,
+  "P2": 11,
+  "P3": 2
+ },
+ "finishLine": "every capability row GREEN except explicitly approved Production-only blockers (contract Definition of Done #9)"
+}
