@@ -19,6 +19,7 @@ import {
   resolveAskLocale,
 } from './askLocale';
 import { ASK_SEVEN_LOCALES, askCopyCoverage, askSevenStrings } from './askSevenStrings';
+import { askShellStrings } from './shell/askShellCatalogue';
 import {
   askChipProps,
   askForeignCopyProps,
@@ -562,5 +563,35 @@ describe('H-6 · clarification, empty and error copy', () => {
       expect(body).not.toMatch(/\bquestion\s*[:.)]/i);
       expect(body).not.toMatch(/questionText|\.question\b/i);
     }
+  });
+});
+
+describe('R4 · ONE TRANSLATION AUTHORITY — askSevenStrings never re-authors a shell key (CTO, H 266007c integration)', () => {
+  it('in all seven, every shell-owned key is the merged shell’s own value — read, not a second copy', () => {
+    for (const locale of SEVEN) {
+      const shell = askShellStrings(locale);
+      const seven = askSevenStrings(locale);
+      expect(seven.composerHint).toBe(shell.dict.askAi.inputPlaceholder);
+      expect(seven.emptyNoAnswer).toBe(shell.askR2Strings.noAnswer);
+      expect(seven.clarificationWhichOne).toBe(shell.askR2Strings.whichOne);
+      expect(seven.reasoning).toEqual(shell.askR2Strings.badges);
+      expect(seven.evidence.sources).toBe(shell.askR2Strings.sources);
+      expect(seven.evidence.answer).toBe(shell.askR2Strings.answer);
+      expect(seven.evidence.scope).toBe(shell.askR2Strings.scope);
+      expect(seven.evidence.noScope).toBe(shell.askR2Strings.noScope);
+      expect(seven.evidence.noCitableSources).toBe(shell.askR2Strings.noCitable);
+    }
+  });
+
+  it('the source file holds no FR / DE / ES / PT / AR copy of a shell-owned key', () => {
+    const src = readFileSync(join(__dirname, 'askSevenStrings.ts'), 'utf8');
+    expect(src).not.toMatch(/NEW_LOCALES/);
+    expect(src).not.toMatch(/^\s+(?:composerHint|emptyNoAnswer|clarificationWhichOne):\s*'/m);
+    expect(src).not.toMatch(/^\s+(?:clar|sources|noCitableSources):\s*'/m);
+  });
+
+  it('the drift this closes: pt-BR "você" and the French hint now come from Claude L’s overlay', () => {
+    expect(askSevenStrings('pt').clarificationWhichOne).toBe('A qual você se refere?');
+    expect(askSevenStrings('fr').composerHint).toBe('Que souhaitez-vous comprendre ?');
   });
 });

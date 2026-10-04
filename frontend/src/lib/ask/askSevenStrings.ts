@@ -1,6 +1,5 @@
 import { DISPLAY_LOCALES, type DisplayLocale } from '@globalnews-ai/shared';
-import { askR2Strings } from './askR2Strings';
-import { getDictionary } from '@/lib/i18n/dictionaries';
+import { askShellStrings } from './shell/askShellCatalogue';
 import { ASK_AUTHORED_COPY_LOCALES, type AuthoredCopyLocale } from './askLocale';
 
 /**
@@ -99,7 +98,10 @@ export interface AskSevenStrings {
   readonly exampleUse: string;
 }
 
-type AuthoredSubset = Omit<AskSevenStrings, 'reasoning' | 'evidence'> & {
+type AuthoredSubset = Omit<
+  AskSevenStrings,
+  'reasoning' | 'evidence' | 'composerHint' | 'emptyNoAnswer' | 'clarificationWhichOne'
+> & {
   readonly evidence: Pick<AskSevenStrings['evidence'], 'sourceChipLabel'>;
 };
 
@@ -111,215 +113,70 @@ type AuthoredSubset = Omit<AskSevenStrings, 'reasoning' | 'evidence'> & {
  */
 const AUTHORED: Readonly<Record<DisplayLocale, AuthoredSubset>> = {
   en: {
-    composerHint: 'Ask about what is happening',
     clarificationNeeded: 'More than one subject matches. Choose one to continue.',
     emptyNothingAsked: 'Nothing has been asked yet',
-    emptyNoAnswer: 'No answer given · nothing presented as fact',
     errorRequestFailed: 'The request did not complete',
     errorRetry: 'Try again',
     interpretationUnresolved: 'The question could not be resolved to one subject · nothing was run',
     evidence: { sourceChipLabel: 'Source' },
-    clarificationWhichOne: 'Which one do you mean?',
     exampleUse: 'Use this example question',
   },
   pl: {
-    composerHint: 'Zapytaj o to, co się dzieje',
     clarificationNeeded: 'Pasuje więcej niż jeden temat. Wybierz jeden, aby kontynuować.',
     emptyNothingAsked: 'Jeszcze o nic nie zapytano',
-    emptyNoAnswer: 'Brak odpowiedzi · nic nie przedstawiono jako faktu',
     errorRequestFailed: 'Żądanie nie zostało zakończone',
     errorRetry: 'Spróbuj ponownie',
     interpretationUnresolved: 'Nie udało się ustalić jednego tematu pytania · nic nie uruchomiono',
     evidence: { sourceChipLabel: 'Źródło' },
-    clarificationWhichOne: 'Które z nich masz na myśli?',
     exampleUse: 'Użyj tego przykładowego pytania',
   },
   fr: {
-    composerHint: 'Posez une question sur ce qui se passe',
     clarificationNeeded: 'Plusieurs sujets correspondent. Choisissez-en un pour continuer.',
     emptyNothingAsked: 'Aucune question n’a encore été posée',
-    emptyNoAnswer: 'Aucune réponse donnée · rien n’est présenté comme un fait',
     errorRequestFailed: 'La requête ne s’est pas terminée',
     errorRetry: 'Réessayer',
     interpretationUnresolved:
       'La question n’a pu être ramenée à un seul sujet · rien n’a été exécuté',
     evidence: { sourceChipLabel: 'Source' },
-    clarificationWhichOne: 'Lequel voulez-vous dire ?',
     exampleUse: 'Utiliser cet exemple de question',
   },
   de: {
-    composerHint: 'Fragen Sie, was gerade geschieht',
     clarificationNeeded: 'Mehr als ein Thema passt. Wählen Sie eines aus, um fortzufahren.',
     emptyNothingAsked: 'Es wurde noch nichts gefragt',
-    emptyNoAnswer: 'Keine Antwort gegeben · nichts als Tatsache dargestellt',
     errorRequestFailed: 'Die Anfrage wurde nicht abgeschlossen',
     errorRetry: 'Erneut versuchen',
     interpretationUnresolved:
       'Die Frage ließ sich nicht auf ein einzelnes Thema zurückführen · es wurde nichts ausgeführt',
     evidence: { sourceChipLabel: 'Quelle' },
-    clarificationWhichOne: 'Welches meinen Sie?',
     exampleUse: 'Diese Beispielfrage übernehmen',
   },
   es: {
-    composerHint: 'Pregunta por lo que está ocurriendo',
     clarificationNeeded: 'Coincide más de un tema. Elige uno para continuar.',
     emptyNothingAsked: 'Aún no se ha preguntado nada',
-    emptyNoAnswer: 'No se dio respuesta · nada se presenta como un hecho',
     errorRequestFailed: 'La solicitud no se completó',
     errorRetry: 'Inténtalo de nuevo',
     interpretationUnresolved: 'La pregunta no pudo reducirse a un solo tema · no se ejecutó nada',
     evidence: { sourceChipLabel: 'Fuente' },
-    clarificationWhichOne: '¿A cuál te refieres?',
     exampleUse: 'Usar esta pregunta de ejemplo',
   },
   pt: {
-    composerHint: 'Pergunte sobre o que está acontecendo',
     clarificationNeeded: 'Corresponde mais do que um assunto. Escolha um para continuar.',
     emptyNothingAsked: 'Ainda não foi feita nenhuma pergunta',
-    emptyNoAnswer: 'Nenhuma resposta dada · nada é apresentado como fato',
     errorRequestFailed: 'O pedido não foi concluído',
     errorRetry: 'Tentar novamente',
     interpretationUnresolved:
       'Não foi possível reduzir a pergunta a um único assunto · nada foi executado',
     evidence: { sourceChipLabel: 'Fonte' },
-    clarificationWhichOne: 'A qual se refere?',
     exampleUse: 'Usar esta pergunta de exemplo',
   },
   ar: {
-    composerHint: 'اسأل عمّا يحدث',
     clarificationNeeded: 'يوجد أكثر من موضوع مطابق. اختر واحدًا للمتابعة.',
     emptyNothingAsked: 'لم يُطرح أي سؤال بعد',
-    emptyNoAnswer: 'لم تُقدَّم أي إجابة · لم يُعرض شيء كحقيقة',
     errorRequestFailed: 'لم يكتمل الطلب',
     errorRetry: 'حاول مرة أخرى',
     interpretationUnresolved: 'لم يتسنَّ حصر السؤال في موضوع واحد · لم يُنفَّذ أي شيء',
     evidence: { sourceChipLabel: 'المصدر' },
-    clarificationWhichOne: 'أيٌّ منها تقصد؟',
     exampleUse: 'استخدم هذا السؤال كمثال',
-  },
-};
-
-/**
- * The reasoning labels and evidence vocabulary for the five new locales.
- *
- * EN and PL are absent from this table ON PURPOSE: they are read from the frozen
- * authority in `askSevenStrings` below, so the frozen text has exactly one home.
- */
-type FrozenSubset = {
-  readonly reasoning: AskSevenStrings['reasoning'];
-  readonly evidence: Omit<AskSevenStrings['evidence'], 'sourceChipLabel'>;
-};
-
-/*
-  R4 · PHASE B — this read `Exclude<DisplayLocale, AskCatalogueLocale>`, and `AskCatalogueLocale`
-  was 'en' | 'pl', so the exclusion produced exactly the five locales this table holds. Phase B
-  widened `AskCatalogueLocale` to all seven — correctly, because the shell is now indexable by
-  all seven — which collapsed that exclusion to `never` and made this table untypeable.
-
-  The five are therefore written as what they actually are: the locales that are NOT the two
-  authored copy catalogues. `AUTHORED_COPY_LOCALES` names that fact in one place rather than
-  letting it ride on a type whose meaning has moved.
-*/
-const NEW_LOCALES: Readonly<Record<Exclude<DisplayLocale, AuthoredCopyLocale>, FrozenSubset>> = {
-  fr: {
-    reasoning: {
-      ref: 'CONTEXTE DE RÉFÉRENCE',
-      ver: 'VÉRIFIÉ ACTUELLEMENT',
-      cur: 'INFORMATION ACTUELLE',
-      clar: 'PRÉCISION REQUISE',
-      part: 'PREUVES PARTIELLES',
-      insuf: 'PREUVES INSUFFISANTES',
-      unavail: 'FONCTION INDISPONIBLE',
-      rec: 'ENREGISTREMENT CONSERVÉ',
-      calc: 'CALCUL',
-    },
-    evidence: {
-      sources: 'Sources',
-      answer: 'RÉPONSE',
-      scope: 'PÉRIMÈTRE',
-      noScope: 'Question générale · aucun périmètre appliqué',
-      noCitableSources: 'Aucune source citable',
-    },
-  },
-  de: {
-    reasoning: {
-      ref: 'HINTERGRUNDWISSEN',
-      ver: 'AKTUELL VERIFIZIERT',
-      cur: 'AKTUELLE LAGE',
-      clar: 'PRÄZISIERUNG ERFORDERLICH',
-      part: 'TEILWEISE BELEGT',
-      insuf: 'ZU WENIG BELEGE',
-      unavail: 'FUNKTION NICHT VERFÜGBAR',
-      rec: 'AUFBEWAHRTER DATENSATZ',
-      calc: 'BERECHNUNG',
-    },
-    evidence: {
-      sources: 'Quellen',
-      answer: 'ANTWORT',
-      scope: 'GELTUNGSBEREICH',
-      noScope: 'Allgemeine Frage · kein Geltungsbereich angewandt',
-      noCitableSources: 'Keine zitierfähigen Quellen',
-    },
-  },
-  es: {
-    reasoning: {
-      ref: 'CONTEXTO DE REFERENCIA',
-      ver: 'VERIFICADO ACTUALMENTE',
-      cur: 'INFORMACIÓN ACTUAL',
-      clar: 'REQUIERE ACLARACIÓN',
-      part: 'PRUEBAS PARCIALES',
-      insuf: 'PRUEBAS INSUFICIENTES',
-      unavail: 'FUNCIÓN NO DISPONIBLE',
-      rec: 'REGISTRO CONSERVADO',
-      calc: 'CÁLCULO',
-    },
-    evidence: {
-      sources: 'Fuentes',
-      answer: 'RESPUESTA',
-      scope: 'ALCANCE',
-      noScope: 'Pregunta general · sin alcance aplicado',
-      noCitableSources: 'Sin fuentes citables',
-    },
-  },
-  pt: {
-    reasoning: {
-      ref: 'CONTEXTO DE REFERÊNCIA',
-      ver: 'VERIFICADO ATUALMENTE',
-      cur: 'INFORMAÇÃO ATUAL',
-      clar: 'REQUER ESCLARECIMENTO',
-      part: 'PROVAS PARCIAIS',
-      insuf: 'PROVAS INSUFICIENTES',
-      unavail: 'FUNÇÃO INDISPONÍVEL',
-      rec: 'REGISTRO CONSERVADO',
-      calc: 'CÁLCULO',
-    },
-    evidence: {
-      sources: 'Fontes',
-      answer: 'RESPOSTA',
-      scope: 'ÂMBITO',
-      noScope: 'Pergunta geral · sem âmbito aplicado',
-      noCitableSources: 'Sem fontes citáveis',
-    },
-  },
-  ar: {
-    reasoning: {
-      ref: 'خلفية مرجعية',
-      ver: 'مُتحقَّق منه حاليًا',
-      cur: 'معلومات حالية',
-      clar: 'يتطلب توضيحًا',
-      part: 'أدلة جزئية',
-      insuf: 'أدلة غير كافية',
-      unavail: 'الميزة غير متاحة',
-      rec: 'سجل محفوظ',
-      calc: 'حساب',
-    },
-    evidence: {
-      sources: 'المصادر',
-      answer: 'الإجابة',
-      scope: 'النطاق',
-      noScope: 'سؤال عام · لم يُطبَّق أي نطاق',
-      noCitableSources: 'لا توجد مصادر قابلة للاقتباس',
-    },
   },
 };
 
@@ -329,36 +186,31 @@ const NEW_LOCALES: Readonly<Record<Exclude<DisplayLocale, AuthoredCopyLocale>, F
  */
 export function askSevenStrings(locale: DisplayLocale): AskSevenStrings {
   const authored = AUTHORED[locale];
-  if (locale === 'en' || locale === 'pl') {
-    /* The frozen authority is the source for these keys, read rather than copied. */
-    const frozen = askR2Strings(locale);
-    return {
-      ...authored,
-      /* `clar` and the rest come from the frozen badge table; `emptyNoAnswer` and
-         `clarificationWhichOne` are the frozen strings too, so the authored copies above
-         are overwritten here and cannot drift from the authority. */
-      /* The released composer hint lives in the shared dictionary, so it is READ for EN/PL
-         rather than copied — the live strings are 'What would you like to understand?' and
-         'Co chcesz zrozumieć?', and this keeps them byte-identical by construction. */
-      composerHint: getDictionary(locale).askAi.inputPlaceholder,
-      emptyNoAnswer: frozen.noAnswer,
-      clarificationWhichOne: frozen.whichOne,
-      reasoning: frozen.badges,
-      evidence: {
-        sources: frozen.sources,
-        answer: frozen.answer,
-        scope: frozen.scope,
-        noScope: frozen.noScope,
-        noCitableSources: frozen.noCitable,
-        sourceChipLabel: authored.evidence.sourceChipLabel,
-      },
-    };
-  }
-  const added = NEW_LOCALES[locale];
+  /*
+    R4 · CTO "NO TWO TRANSLATION AUTHORITIES" (integration of H 266007c). Every key that exists
+    in the Ask shell is READ from the one merged shell for this locale — the frozen EN/PL
+    catalogues, or the English source with Claude L's qualified overlay merged over it — never
+    from a second, separately authored copy. Until this, FR / DE / ES / PT / AR kept their own
+    table of these values and had already drifted from L's wording (the French composer hint,
+    the pt-BR "você" form, four "no answer" lines). EN and PL resolve exactly as before.
+    Only the keys with no shell counterpart remain authored in AUTHORED above.
+  */
+  const shell = askShellStrings(locale);
+  const frozen = shell.askR2Strings;
   return {
     ...authored,
-    reasoning: added.reasoning,
-    evidence: { ...added.evidence, sourceChipLabel: authored.evidence.sourceChipLabel },
+    composerHint: shell.dict.askAi.inputPlaceholder,
+    emptyNoAnswer: frozen.noAnswer,
+    clarificationWhichOne: frozen.whichOne,
+    reasoning: frozen.badges,
+    evidence: {
+      sources: frozen.sources,
+      answer: frozen.answer,
+      scope: frozen.scope,
+      noScope: frozen.noScope,
+      noCitableSources: frozen.noCitable,
+      sourceChipLabel: authored.evidence.sourceChipLabel,
+    },
   };
 }
 
