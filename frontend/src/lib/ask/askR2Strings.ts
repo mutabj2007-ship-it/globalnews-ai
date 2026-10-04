@@ -461,8 +461,14 @@ const EN: AskR2Strings = {
     useSuggestion: 'Use this question',
     chooseHint: 'Choosing one adds it to your question below — nothing runs until you press Ask.',
     codes: {
+      /* R4 closeout — REACHABLE: an EN / PL selection whose question is written in another
+         language (frozen C's LANGUAGE_DECLARATION_CONFLICT → UNCLASSIFIED). Ask supports seven
+         languages, so the copy never claims English and Polish only. */
       LANGUAGE_UNCLASSIFIED:
-        'Which language is your question in? Please ask it in English or Polish.',
+        'This question could not be handled in the selected language. Try rephrasing it, or choose the language you are writing in from the language menu.',
+      /* DORMANT legacy path: only a source language outside the seven product languages reaches
+         LANGUAGE_UNSUPPORTED, and the request contract rejects those before routing. Left for
+         a later cleanup (CTO H closeout §5). */
       LANGUAGE_UNSUPPORTED:
         'Ask answers in English and Polish. Could you ask your question in one of them?',
       SOURCE_FRAME_UNPARSED:
@@ -755,7 +761,7 @@ const PL: AskR2Strings = {
       'Wybór doda go do Twojego pytania poniżej — nic nie zostanie uruchomione, dopóki nie naciśniesz Zapytaj.',
     codes: {
       LANGUAGE_UNCLASSIFIED:
-        'W jakim języku jest Twoje pytanie? Zadaj je po polsku lub po angielsku.',
+        'Nie udało się obsłużyć tego pytania w wybranym języku. Spróbuj je przeformułować albo wybierz w menu języka ten, w którym piszesz.',
       LANGUAGE_UNSUPPORTED:
         'Zapytaj odpowiada po polsku i po angielsku. Czy możesz zadać pytanie w jednym z tych języków?',
       SOURCE_FRAME_UNPARSED:

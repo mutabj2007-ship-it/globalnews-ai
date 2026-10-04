@@ -173,10 +173,10 @@ const AUTHORED: Readonly<Record<DisplayLocale, AuthoredSubset>> = {
     exampleUse: 'Usar esta pregunta de ejemplo',
   },
   pt: {
-    composerHint: 'Pergunte sobre o que está a acontecer',
+    composerHint: 'Pergunte sobre o que está acontecendo',
     clarificationNeeded: 'Corresponde mais do que um assunto. Escolha um para continuar.',
     emptyNothingAsked: 'Ainda não foi feita nenhuma pergunta',
-    emptyNoAnswer: 'Nenhuma resposta dada · nada é apresentado como facto',
+    emptyNoAnswer: 'Nenhuma resposta dada · nada é apresentado como fato',
     errorRequestFailed: 'O pedido não foi concluído',
     errorRetry: 'Tentar novamente',
     interpretationUnresolved:
@@ -280,7 +280,7 @@ const NEW_LOCALES: Readonly<Record<Exclude<DisplayLocale, AskCatalogueLocale>, F
       part: 'PROVAS PARCIAIS',
       insuf: 'PROVAS INSUFICIENTES',
       unavail: 'FUNÇÃO INDISPONÍVEL',
-      rec: 'REGISTO CONSERVADO',
+      rec: 'REGISTRO CONSERVADO',
       calc: 'CÁLCULO',
     },
     evidence: {
