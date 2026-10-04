@@ -446,14 +446,13 @@ export class AskSpecialistReadCoordinator {
       view.provenance === undefined ||
       view.retainedState !== 'DISPLAYABLE'
     ) {
+      /* SHARED-ASK-DISCLOSURE-PROPAGATION-R1 — the emitted code is computed OUTSIDE the disclosure list, so
+         the list names only codes a consumer recognises (the store state 'NO_CAPTURE' is not a disclosure). */
+      const gapCode = view.retainedState === 'NO_CAPTURE' ? 'NO_RETAINED_CAPTURE' : 'RETAINED_ARTIFACT_NOT_DISPLAYABLE';
       return base(s, {
         status: 'NO_DATA',
         temporalBasis: 'RETAINED_STATISTICAL_RELEASE',
-        disclosures: [
-          view.retainedState === 'NO_CAPTURE'
-            ? 'NO_RETAINED_CAPTURE'
-            : 'RETAINED_ARTIFACT_NOT_DISPLAYABLE',
-        ],
+        disclosures: [gapCode],
         degradationReason: view.slot.kind === 'GAP' ? view.slot.reason : 'NOT_DISPLAYABLE',
       });
     }
