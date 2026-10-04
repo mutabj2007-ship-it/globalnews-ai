@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import {
   ALL_ISO3_CODES,
-  BRIEFING_UNAVAILABLE_SPECIALIST_EVIDENCE,
+  BRIEFING_UNAVAILABLE_GOVERNED_EVIDENCE,
   briefingPreservesEvidence,
 } from '@globalnews-ai/shared';
 import { PrismaService } from '../../../database/prisma.service';
@@ -122,7 +122,7 @@ export class BriefingsService {
     /* CTO Politics ruling (briefings) — the snapshot cannot carry governed specialist evidence, so an answer
        that rests on it is refused BEFORE any write (create and addVersion both pass here first). */
     if (stored && !briefingPreservesEvidence(stored.payload)) {
-      throw new UnprocessableEntityException({ code: BRIEFING_UNAVAILABLE_SPECIALIST_EVIDENCE });
+      throw new UnprocessableEntityException({ code: BRIEFING_UNAVAILABLE_GOVERNED_EVIDENCE });
     }
     const snapshot = stored ? briefingSnapshotOf(stored.payload) : null;
     if (!stored || !snapshot) {
