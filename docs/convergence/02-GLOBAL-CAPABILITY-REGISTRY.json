@@ -465,7 +465,8 @@
     "branch": "release/alpha-r4-search-conversation-5513275",
     "sha": "5513275f"
    },
-   "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md"
+   "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
+   "stage2Branch": "T2 branch c3754bdd (on H final 266007c): one DisplayLocale authority; stored choice never overwritten; root <html lang>/<dir> from the EFFECTIVE rendered locale (ar=rtl); every route migrated off the en/pl clamp; non-complete surfaces render a DECLARED English fallback with a localized notice (no silent English). Seven locales render fully only on Ask surfaces; recovered C55 catalogues: 0 kept (source English unprovable), 3525 keys/locale handed to Claude L; nothing machine-translated. Integration after final R4; needs H to apply SPEC-T2-H-3 (H spec asserts no root dir) and Humanitarian SPEC-T2-HUM-1/2."
   },
   {
    "id": "HOME",

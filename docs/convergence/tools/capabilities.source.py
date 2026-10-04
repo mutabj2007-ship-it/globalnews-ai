@@ -832,3 +832,11 @@ _by_id["CONSENT"]["blockers"] += [
      "summary": "Production backend 5b714833 stores raw IPv4 (and /64 IPv6) in guest/compute limit scopes with no deletion; Alpha uses a keyed daily pseudonym — fixed at next promotion; live only if Production guest flags are on (unmeasured)",
      "evidence": "5b714833:backend/src/modules/compute-controls/compute-scopes.ts:43-51 vs 5513275f:…:44-47"},
 ]
+
+STAGE2_BRANCHES["T2 global language foundation"] = "claude/stage2-t2-global-language-foundation @ c3754bdd (base 266007c H final)"
+_by_id["LANG-SYSTEM"]["stage2Branch"] = (
+    "T2 branch c3754bdd (on H final 266007c): one DisplayLocale authority; stored choice never overwritten; root <html lang>/<dir> "
+    "from the EFFECTIVE rendered locale (ar=rtl); every route migrated off the en/pl clamp; non-complete surfaces render a DECLARED "
+    "English fallback with a localized notice (no silent English). Seven locales render fully only on Ask surfaces; recovered C55 "
+    "catalogues: 0 kept (source English unprovable), 3525 keys/locale handed to Claude L; nothing machine-translated. "
+    "Integration after final R4; needs H to apply SPEC-T2-H-3 (H spec asserts no root dir) and Humanitarian SPEC-T2-HUM-1/2.")
