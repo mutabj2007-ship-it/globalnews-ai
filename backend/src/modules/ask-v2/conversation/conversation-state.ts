@@ -22,6 +22,7 @@ import {
 import {
   readCausalSelfAttribution,
   readClaimValidity,
+  readAnswerRequest,
 } from '../../ask-router/semantic-ir/prior-claim';
 import {
   conversationObjectiveState,
@@ -1022,6 +1023,8 @@ function step(
   */
   const aboutEarlierAnswer =
     readClaimValidity(question, lang) ||
+    /* SHARED R4 CONTINUITY — the evidence behind / change since the earlier answer */
+    readAnswerRequest(question, lang) !== null ||
     referencesOwnPriorStatement(question, lang) ||
     readCausalSelfAttribution(question, lang);
   const continues =

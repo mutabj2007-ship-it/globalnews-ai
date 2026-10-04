@@ -89,3 +89,107 @@ export function readClaimValidity(text: string, language: string): boolean {
   if (language === 'en') return EN_CLAIM_VALIDITY.test(text.trim());
   return false;
 }
+
+/*
+  ════════════════════════════════════════════════════════════════════════════
+  SHARED R4 CONTINUITY (CTO "EARLIER_TURN SUBJECT CARRY") — ANSWER-DEPENDENT REQUESTS
+  ════════════════════════════════════════════════════════════════════════════
+  Two more forms whose object exists ONLY in an earlier answer, built like the claim-validity form:
+  an action on an answer-dependent object and NOTHING else in the turn (no subject of its own).
+    EVIDENCE      "Show me the (official) evidence.", "What are the sources for that?",
+                  "Pokaż oficjalne dowody.", "Jakie są źródła?" — the evidence BEHIND the answer
+    CHANGE_SINCE  "What changed since the previous stage?", "Anything new since then?",
+                  "Co się zmieniło od poprzedniego etapu?" — the anchor is the earlier answer
+  "Show me the official evidence on Poland's inflation" names its own subject and is NOT this form.
+  Bound → the turn inherits that answer's scope (provenance EARLIER_TURN); unbound → clarification
+  (R-4). EN / PL only; FR–AR reach the bound reading through the interpreter verdict.
+*/
+export type AnswerRequestKind = 'EVIDENCE' | 'OFFICIAL_EVIDENCE' | 'CHANGE_SINCE';
+
+const EN_LEAD = String.raw`^\s*(?:(?:so|and|but|ok(?:ay)?|please|now)[,\s]+)*`;
+const EN_ANSWER_OBJECT = String.raw`(?:\s+(?:for|behind|of|supporting|on|backing)\s+(?:that|it|this|those|these|them|your\s+(?:answer|claims?|conclusions?|points?)|what\s+you\s+(?:said|wrote)))?`;
+const EN_EVIDENCE_NOUN = String.raw`(?:evidence|sources?|source\s+(?:documents?|records?)|documents?|documentation|records?|proof|citations?|references?)`;
+const EN_EVIDENCE = new RegExp(
+  EN_LEAD +
+    String.raw`(?:` +
+    /* show / give / list … me the (official) evidence (for that) */
+    String.raw`(?:(?:can|could|would|will)\s+you\s+)?(?:please\s+)?(?:show|give|send|list|share|provide|cite|point\s+me\s+to)(?:\s+(?:me|us))?\s+(?:the\s+|your\s+)?(?:(official|primary|underlying|supporting|original)\s+)?${EN_EVIDENCE_NOUN}${EN_ANSWER_OBJECT}` +
+    '|' +
+    /* what / which are the (official) sources (for that) */
+    String.raw`(?:what|which)\s+(?:is|are|was|were)\s+(?:the|your)\s+(?:(official|primary|underlying|supporting|original)\s+)?${EN_EVIDENCE_NOUN}${EN_ANSWER_OBJECT}` +
+    '|' +
+    /* where does that come from / what sources did you use */
+    String.raw`where\s+(?:does|did|do)\s+(?:that|it|this|those|these)\s+come\s+from` +
+    '|' +
+    String.raw`what\s+(?:sources?|evidence)\s+(?:did|do)\s+you\s+(?:use|rely\s+on|base\s+(?:that|it|this)\s+on)` +
+    ')' +
+    String.raw`(?:\s+please)?\s*[?.!]*\s*$`,
+  'i',
+);
+const EN_CHANGE_SINCE = new RegExp(
+  EN_LEAD +
+    String.raw`(?:what(?:'s|\s+has|\s+have|\s+is)?\s+(?:changed|new|happened)|has\s+anything\s+(?:changed|happened)|did\s+anything\s+(?:change|happen)|(?:are\s+there\s+)?any(?:thing)?\s+(?:new|changes?|updates?|developments?))` +
+    String.raw`\s+since\s+(?:then|that|the\s+(?:previous|last|prior|earlier)\s+(?:stage|step|update|version|reading|report|answer|time|one)|(?:your|my)\s+(?:last|previous|earlier)\s+(?:answer|update|report|question|reply))` +
+    String.raw`\s*[?.!]*\s*$`,
+  'i',
+);
+
+const PL_LEAD = String.raw`^\s*(?:(?:a|i|więc|ok|proszę|to)[,\s]+)*`;
+const PL_ANSWER_OBJECT = String.raw`(?:\s+(?:na\s+to|do\s+tego|dla\s+tego|tego|tej\s+odpowiedzi|twojej\s+odpowiedzi|tych\s+twierdzeń))?`;
+const PL_EVIDENCE_NOUN = String.raw`(?:dowod\p{L}*|dowód|źród\p{L}*|dokument\p{L}*|dokumentacj\p{L}*|zapis\p{L}*|potwierdzeni\p{L}*|przypis\p{L}*)`;
+const PL_EVIDENCE = plTolerant(
+  new RegExp(
+    PL_LEAD +
+      String.raw`(?:` +
+      String.raw`(?:czy\s+(?:możesz|mógłbyś|mogłabyś|możecie)\s+)?(?:proszę\s+)?(?:pokaż\p{L}*|podaj\p{L}*|wskaż\p{L}*|przedstaw\p{L}*|wymień\p{L}*|przytocz\p{L}*|daj)(?:\s+mi)?\s+(?:(oficjaln\p{L}*|źródłow\p{L}*|pierwotn\p{L}*|urzędow\p{L}*)\s+)?${PL_EVIDENCE_NOUN}${PL_ANSWER_OBJECT}` +
+      '|' +
+      String.raw`(?:jakie|jaki|jaka|które)\s+(?:są|jest|były|był)\s+(?:(oficjaln\p{L}*|źródłow\p{L}*|pierwotn\p{L}*|urzędow\p{L}*)\s+)?${PL_EVIDENCE_NOUN}${PL_ANSWER_OBJECT}` +
+      '|' +
+      String.raw`skąd\s+(?:to\s+wiesz|ta\s+informacja|to\s+wiadomo|to\s+pochodzi)` +
+      ')' +
+      String.raw`(?:\s+proszę)?\s*[?.!]*\s*$`,
+    'iu',
+  ),
+);
+const PL_CHANGE_SINCE = plTolerant(
+  new RegExp(
+    PL_LEAD +
+      String.raw`(?:co\s+(?:się\s+)?zmieniło(?:\s+się)?|co\s+nowego|co\s+się\s+wydarzyło|czy\s+(?:coś\s+)?(?:się\s+)?zmieniło(?:\s+się)?|czy\s+są\s+(?:jakieś\s+)?(?:zmiany|nowości))` +
+      String.raw`\s+od\s+(?:tamtej\s+pory|tego\s+czasu|wtedy|(?:poprzedni\p{L}*|ostatni\p{L}*|wcześniejsz\p{L}*|twoj\p{L}*\s+(?:ostatni\p{L}*|poprzedni\p{L}*))\s+(?:etap\p{L}*|krok\p{L}*|raz\p{L}*|raport\p{L}*|odpowiedzi|wersj\p{L}*|aktualizacj\p{L}*|czas\p{L}*))` +
+      String.raw`\s*[?.!]*\s*$`,
+    'iu',
+  ),
+);
+
+/** The turn asks for something that exists only relative to an earlier answer (or null). */
+export function readAnswerRequest(text: string, language: string): AnswerRequestKind | null {
+  const t = text.trim();
+  if (language !== 'en' && language !== 'pl') return null;
+  const evidence = (language === 'pl' ? PL_EVIDENCE : EN_EVIDENCE).exec(t);
+  if (evidence !== null) {
+    const qualifier = evidence.slice(1).find((g) => g !== undefined) ?? '';
+    return /^(?:official|oficjaln|urz[eę]dow)/iu.test(qualifier) ? 'OFFICIAL_EVIDENCE' : 'EVIDENCE';
+  }
+  return (language === 'pl' ? PL_CHANGE_SINCE : EN_CHANGE_SINCE).test(t) ? 'CHANGE_SINCE' : null;
+}
+
+/**
+ * SHARED R4 CONTINUITY (CTO "EARLIER_TURN SUBJECT CARRY") — the subject / scope a turn inherits from
+ * the SPECIFIC earlier answer it was bound to. Derived only from the server's own record of that
+ * answer (R-3 scope + evidence references), never from the reader's words; it stays EARLIER_TURN
+ * wherever it travels and is never relabelled as a place or subject the reader typed.
+ */
+export interface InheritedScope {
+  readonly provenance: 'EARLIER_TURN';
+  /** the operation whose answer is referenced (null when the record does not carry it) */
+  readonly sourceOperationId: string | null;
+  /** the referenced answer's own question (its subject, for scope matching and retrieval) */
+  readonly question: string;
+  readonly countries: readonly string[];
+  readonly relation: string | null;
+  readonly job: string | null;
+  /** the evidence the referenced answer stood on (references only — never re-stored evidence) */
+  readonly evidenceRefs: readonly string[];
+  /** the reader asked for OFFICIAL evidence: reporting is not an official source */
+  readonly officialOnly: boolean;
+}

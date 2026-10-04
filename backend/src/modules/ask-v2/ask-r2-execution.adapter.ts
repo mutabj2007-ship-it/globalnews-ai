@@ -214,6 +214,17 @@ function withContractRules(
  * (codes and the composed question only — never model text).
  */
 function scopeOfRoute(route: AskR2Route): ArtifactScope {
+  /* SHARED R4 CONTINUITY — a turn bound to a specific earlier answer answered about THAT answer's
+     subject: its record keeps the inherited scope, so the next follow-up binds the same subject */
+  const inherited = route.inheritedScope;
+  if (inherited !== undefined)
+    return {
+      question: inherited.question,
+      job: route.job.job,
+      countries: [...inherited.countries],
+      relation: inherited.relation,
+      freshness: route.semantic.turn.freshness,
+    };
   const states = route.semantic.entities
     .filter((e) => (e.type === 'COUNTRY' || e.type === 'TERRITORY') && e.iso3 !== null)
     .map((e) => e.iso3 as string);
@@ -984,6 +995,11 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       route,
       ...(request.priorArtifact === undefined ? {} : { priorArtifact: request.priorArtifact }),
     });
+    /* SHARED R4 CONTINUITY (CTO "EARLIER_TURN SUBJECT CARRY") — a turn bound to a specific earlier
+       answer exposes that answer's subject / scope to every downstream shared reader (governed
+       contributor selection and reads), as INHERITED: frozen C's envelope is not touched */
+    if (contract.inheritedScope !== null)
+      route = { ...route, inheritedScope: contract.inheritedScope };
 
     if (route.knowledgeRequirement === 'DECISION_SUPPORT' && route.decisionObjective === null) {
       return this.result(
@@ -1100,8 +1116,19 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       is told so (zero AI) instead of silently answered from news. Background / advisory answers
       cite nothing and stay labelled as general guidance.
     */
+    /*
+      SHARED R4 CONTINUITY — "Show me the official evidence." bound to an earlier answer: the
+      governed official records in THAT answer's scope (local reads, zero model / provider calls)
+      are what can qualify. None used → the truthful "no qualifying official source" answer below,
+      never a news search standing in for official evidence and never an invented source.
+    */
+    const officialEvidenceMissing =
+      route.inheritedScope?.officialOnly === true &&
+      !(await this.readIntelligence(route, request.context)).contributions.some(
+        (c) => c.status === 'USED',
+      );
     if (
-      request.conversation?.officialSourcesOnly === true &&
+      (request.conversation?.officialSourcesOnly === true || officialEvidenceMissing) &&
       requiredRolesOf(route.plan).includes('REPORTING')
     ) {
       return this.result(

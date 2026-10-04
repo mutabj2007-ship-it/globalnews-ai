@@ -41,6 +41,7 @@ import { type KnowledgeRequirement } from './knowledge-requirement';
 import { buildEnvelope, type EnvelopeSource } from './frozen-c/src/envelope';
 import { plan as frozenPlan, type PlannerDeps } from './frozen-c/src/planner';
 import { route as frozenRoute } from './frozen-c/src/index';
+import type { AnswerRequestKind, InheritedScope } from './semantic-ir/prior-claim';
 import type {
   AskQuestionEnvelope,
   LanguageClassification,
@@ -225,6 +226,16 @@ export interface AskR2Route {
   /** R4 ALPHA R-4 — the clarification is because the turn refers to an earlier answer this thread
    *  does not hold (implies semanticClarification). */
   readonly priorReferenceUnresolved?: boolean;
+  /** SHARED R4 CONTINUITY — the turn asks for the evidence behind / the change since a SPECIFIC
+   *  earlier answer this thread holds (interpret-turn.ts priorAnswerRequest). */
+  readonly priorAnswerRequest?: AnswerRequestKind;
+  /**
+   * SHARED R4 CONTINUITY (CTO "EARLIER_TURN SUBJECT CARRY") — set by the executor ONLY when the turn
+   * is bound to a specific earlier answer (execution-contract.ts): that answer's subject / scope, for
+   * downstream shared retrieval. Provenance is EARLIER_TURN and never becomes reader-stated: frozen
+   * C's envelope (TYPED_GEOGRAPHY …) is untouched; consumers read this field as inherited.
+   */
+  readonly inheritedScope?: InheritedScope;
   readonly outcome: NormalizationOutcome;
   readonly source: EnvelopeSource;
   readonly envelope: AskQuestionEnvelope;
@@ -888,6 +899,7 @@ export function routeAskR2(
     semantic,
     semanticClarification: d.semanticClarification,
     priorReferenceUnresolved: d.priorReferenceUnresolved,
+    ...(d.priorAnswerRequest === null ? {} : { priorAnswerRequest: d.priorAnswerRequest }),
     outcome,
     source,
     envelope,

@@ -196,12 +196,29 @@ export function retainedCycleCovers(question: string, statedPeriod: string): boo
 }
 
 export function selectContributors(route: AskR2Route): AskContributorSelection[] {
-  const question = route.envelope.rawQuestion;
+  const own = route.envelope.rawQuestion;
   const typed = route.envelope.geography.candidates.find(
     (c) => c.source === 'TYPED_GEOGRAPHY' && /^[A-Z]{3}$/.test(c.value),
   )?.value;
+  /*
+    SHARED R4 CONTINUITY (CTO "EARLIER_TURN SUBJECT CARRY") — a turn the R4 resolver bound to a
+    SPECIFIC earlier answer ("Show me the official evidence.", "Is that still true now?") carries no
+    subject of its own: its subject is that answer's, exposed by the execution contract as
+    route.inheritedScope. It is read here AS INHERITED — the scope is marked EARLIER_TURN, the typed
+    geography stays empty — and only when the turn names no place of its own (a new explicit
+    subject always wins). No contributor-specific logic: every governed contributor sees it alike.
+  */
+  const inherited = route.inheritedScope;
+  const inherit =
+    inherited !== undefined &&
+    typed === undefined &&
+    nisrDistrictNamed(own) === null &&
+    placeNamed(own) === null;
+  const question = inherit ? inherited.question : own;
   const district = nisrDistrictNamed(question);
-  const countryIso3 = typed ?? (district !== null ? 'RWA' : null);
+  const inheritedCountry =
+    inherit && inherited.countries.length === 1 ? (inherited.countries[0] ?? null) : null;
+  const countryIso3 = typed ?? (district !== null ? 'RWA' : inheritedCountry);
   const place = district === null ? placeNamed(question) : null;
   const domains = route.envelope.domains.domains;
   const scope = {
@@ -209,6 +226,7 @@ export function selectContributors(route: AskR2Route): AskContributorSelection[]
     district: district === null ? null : { id: district.id, name: district.name },
     place,
     qualifier: district === null && place === null ? subnationalQualifier(question) : null,
+    ...(inherit ? { provenance: 'EARLIER_TURN' as const } : {}),
   };
 
   const out: AskContributorSelection[] = [];

@@ -42,6 +42,8 @@ import {
   attributionIsAnaphoric,
   readCausalSelfAttribution,
   readClaimValidity,
+  readAnswerRequest,
+  type AnswerRequestKind,
 } from './prior-claim';
 import { interpretSemanticFirstTurn, isSemanticFirstLanguage } from './semantic-first';
 import { readEntityCandidates } from './entities';
@@ -181,6 +183,12 @@ export interface RoutingDecision {
    * Always implies `semanticClarification`.
    */
   readonly priorReferenceUnresolved: boolean;
+  /**
+   * SHARED R4 CONTINUITY — the turn asks for the evidence behind, or the change since, a SPECIFIC
+   * earlier answer this thread holds (prior-claim.ts readAnswerRequest). The executor inherits that
+   * answer's scope (provenance EARLIER_TURN). Null when the form is absent or nothing is bound.
+   */
+  readonly priorAnswerRequest: AnswerRequestKind | null;
 }
 
 /* CTO R4 third pass — the reader asks for the REPORTING itself (an archive / coverage request) */
@@ -454,6 +462,11 @@ export function interpretTurn(input: TurnInterpretationInput): {
   const anyWork = input.conversation?.artifact ?? input.priorWork;
   const artifact =
     anyWork !== undefined && ANSWER_RECORD_KINDS.includes(anyWork.kind) ? undefined : anyWork;
+  /* SHARED R4 CONTINUITY — an answer-dependent request ("Show me the official evidence.", "What
+     changed since the previous stage?") is about THE earlier answer: bound when one exists, else
+     the R-4 clarification below. Decided here, before any reading of the turn's own job. */
+  const answerRequest = readAnswerRequest(readerText, lang);
+  const answerRequestBound = answerRequest !== null && anyWork !== undefined;
   const boundedStateHasWork =
     artifact !== undefined ||
     choiceSet.length > 0 ||
@@ -963,6 +976,7 @@ export function interpretTurn(input: TurnInterpretationInput): {
     ...(broadHeadlines ? ['HEADLINES_REQUEST'] : []),
   ];
   const unresolvedEligible =
+    !answerRequestBound &&
     !otherwiseDecided &&
     !clarificationHolds &&
     !reasoningByForm &&
@@ -1038,7 +1052,8 @@ export function interpretTurn(input: TurnInterpretationInput): {
     knowledge.requirement === 'MIXED_REFERENCE_CURRENT' &&
     resolvedJob.job === 'MIXED' &&
     !advisory &&
-    !referencesWork;
+    !referencesWork &&
+    !answerRequestBound;
   if (changeSpanOnly)
     knowledge = {
       requirement: 'CURRENT_REPORTING',
@@ -1110,7 +1125,8 @@ export function interpretTurn(input: TurnInterpretationInput): {
     !strongCurrent &&
     resolution?.needsCurrentEvidence !== true &&
     !advisory &&
-    !changeSpanOnly;
+    !changeSpanOnly &&
+    !answerRequestBound;
   if (referenceClauseOnly)
     knowledge = {
       requirement: 'STABLE_REFERENCE',
@@ -1142,7 +1158,10 @@ export function interpretTurn(input: TurnInterpretationInput): {
   /* R-4 — only content that lives in an earlier answer needs one: an attribution that states its
      own proposition is answerable as asked (prior-claim.ts, attributionIsAnaphoric) */
   const priorReferenceUnresolved =
-    (claimValidity || (selfAttribution && attributionIsAnaphoric(readerText, lang))) && !priorBound;
+    (claimValidity ||
+      answerRequest !== null ||
+      (selfAttribution && attributionIsAnaphoric(readerText, lang))) &&
+    !priorBound;
   const claimRecheck = claimValidity && priorBound && !advisory && !changeSpanOnly;
   const claimRecheckCurrent = claimRecheck && input.priorWork?.provenance === 'SOURCED_REPORTING';
   const claimRecheckReasoning = claimRecheck && !claimRecheckCurrent;
@@ -1156,43 +1175,62 @@ export function interpretTurn(input: TurnInterpretationInput): {
       requirement: 'STABLE_REFERENCE',
       reason: 'R-5: the earlier answer was model reasoning, re-examined by reasoning (not news)',
     };
+  /* SHARED R4 CONTINUITY — the evidence behind / the change since the earlier answer is read from
+     current evidence in THAT answer's scope (the executor inherits it, provenance EARLIER_TURN) */
+  if (answerRequestBound)
+    knowledge = {
+      requirement: 'CURRENT_REPORTING',
+      reason:
+        answerRequest === 'CHANGE_SINCE'
+          ? "the change since the earlier answer, read in that answer's scope"
+          : "the evidence behind the earlier answer, read in that answer's scope",
+    };
   const clarifyNow = semanticClarification || priorReferenceUnresolved;
 
-  const job: JobReading = claimRecheckCurrent
+  const job: JobReading = answerRequestBound
     ? {
         ...resolvedJob,
-        job: 'MIXED',
+        job: answerRequest === 'CHANGE_SINCE' ? 'CHANGE_ANALYSIS' : 'CURRENT_REPORTING',
         freshness: 'CURRENT',
         evidence: 'CURRENT_REPORTING',
         discourseReference: 'PRIOR_WORK',
-        currentnessEvidence: [...currentnessEvidence, 'PRIOR_CLAIM_RECHECK'],
+        currentnessEvidence: [...currentnessEvidence, 'PRIOR_ANSWER_REQUEST'],
       }
-    : claimRecheckReasoning
+    : claimRecheckCurrent
       ? {
           ...resolvedJob,
-          job: 'EXPLANATION',
-          freshness: 'NONE',
-          evidence: 'NONE',
+          job: 'MIXED',
+          freshness: 'CURRENT',
+          evidence: 'CURRENT_REPORTING',
           discourseReference: 'PRIOR_WORK',
-          currentnessEvidence: [],
+          currentnessEvidence: [...currentnessEvidence, 'PRIOR_CLAIM_RECHECK'],
         }
-      : changeSpanOnly
+      : claimRecheckReasoning
         ? {
             ...resolvedJob,
-            job: 'CHANGE_ANALYSIS',
-            freshness: 'CURRENT',
-            evidence: 'CURRENT_REPORTING',
-            currentnessEvidence,
+            job: 'EXPLANATION',
+            freshness: 'NONE',
+            evidence: 'NONE',
+            discourseReference: 'PRIOR_WORK',
+            currentnessEvidence: [],
           }
-        : referenceClauseOnly
+        : changeSpanOnly
           ? {
               ...resolvedJob,
-              job: 'EXPLANATION',
-              freshness: 'NONE',
-              evidence: 'NONE',
-              currentnessEvidence: [],
+              job: 'CHANGE_ANALYSIS',
+              freshness: 'CURRENT',
+              evidence: 'CURRENT_REPORTING',
+              currentnessEvidence,
             }
-          : { ...resolvedJob, currentnessEvidence };
+          : referenceClauseOnly
+            ? {
+                ...resolvedJob,
+                job: 'EXPLANATION',
+                freshness: 'NONE',
+                evidence: 'NONE',
+                currentnessEvidence: [],
+              }
+            : { ...resolvedJob, currentnessEvidence };
 
   /* §18 — the objective: this turn's own, else the conversation's (reader's words), else a
      DECISION_CRITERIA artifact; "best for what?" only when none exists */
@@ -1234,18 +1272,19 @@ export function interpretTurn(input: TurnInterpretationInput): {
   /* ══ 3 · THE IR ══════════════════════════════════════════════════════════════════════════ */
   /* an unresolved job the interpreter found CURRENT is planned as current reporting */
   const willPlanNews =
-    !stableOrComputed &&
-    !placeReference &&
-    !advisory &&
-    !reasoning &&
-    /* CLAUDE F — a single-clause prior-work reference asks nothing about now, so nothing about now
+    answerRequestBound ||
+    (!stableOrComputed &&
+      !placeReference &&
+      !advisory &&
+      !reasoning &&
+      /* CLAUDE F — a single-clause prior-work reference asks nothing about now, so nothing about now
        is planned. Without this the job above read EXPLANATION while the IR still carried CURRENT
        and the plan still requested news: the same internal contradiction an earlier review
        returned, one layer further on. */
-    !referenceClauseOnly &&
-    /* R-5 — an earlier REASONING answer is re-examined by reasoning: nothing about now is planned */
-    !claimRecheckReasoning &&
-    !(unresolvedEligible && semanticJob?.needsCurrentEvidence !== true);
+      !referenceClauseOnly &&
+      /* R-5 — an earlier REASONING answer is re-examined by reasoning: nothing about now is planned */
+      !claimRecheckReasoning &&
+      !(unresolvedEligible && semanticJob?.needsCurrentEvidence !== true));
   /* advice / a decision with a time-anchored part keeps BOTH components (the current part is named
      as needing current sourced evidence) */
   const mixed =
@@ -1279,8 +1318,8 @@ export function interpretTurn(input: TurnInterpretationInput): {
         ? choiceSet.length > 0 || carried !== null
           ? 'CHOICE_SET'
           : 'ARTIFACT'
-        : claimRecheck
-          ? /* R-5 — the claim the earlier answer made is what is re-examined */
+        : claimRecheck || answerRequestBound
+          ? /* R-5 — the claim the earlier answer made is what is re-examined (or evidenced) */
             'ARTIFACT_PROPOSITION'
           : evaluationKind === 'ARTIFACT_COMPONENT_EVALUATION' &&
               job.discourseReference === 'PRIOR_WORK'
@@ -1388,7 +1427,7 @@ export function interpretTurn(input: TurnInterpretationInput): {
          reported clause in the present tense reached frozen C as a current event and fetched news
          although the job, the IR freshness and the temporal verdict all said "explain our earlier
          claim". The route then frames it exactly as the English turn: EXPLANATION, no news. */
-      reasoning: reasoning || referenceClauseOnly || claimRecheckReasoning,
+      reasoning: (reasoning || referenceClauseOnly || claimRecheckReasoning) && !answerRequestBound,
       job,
       decisionObjective,
       currentEvidenceNeeded:
@@ -1410,6 +1449,7 @@ export function interpretTurn(input: TurnInterpretationInput): {
       typedGeographyOverride,
       semanticClarification: clarifyNow,
       priorReferenceUnresolved,
+      priorAnswerRequest: answerRequestBound ? answerRequest : null,
     },
   };
 }

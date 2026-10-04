@@ -476,6 +476,8 @@ export function interpretSemanticFirstTurn(input: TurnInterpretationInput): {
           : null,
       semanticClarification,
       priorReferenceUnresolved,
+      /* FR / DE / ES / PT / AR reach an earlier answer through the interpreter verdict (R-5 recheck) */
+      priorAnswerRequest: null,
     },
   };
 }

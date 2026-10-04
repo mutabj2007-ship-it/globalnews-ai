@@ -1,6 +1,7 @@
 import type { AskR2Route } from '../ask-router/ask-r2-route';
 import { RELATION_KINDS, type RelationKind } from '../ask-router/bilateral-relationship';
 import { semanticReaderText } from '../ask-router/semantic-ir/interpret-turn';
+import type { InheritedScope } from '../ask-router/semantic-ir/prior-claim';
 import { artifactPromptBlock, type PriorArtifact } from './conversation/conversation-artifact';
 
 /**
@@ -25,11 +26,19 @@ import { artifactPromptBlock, type PriorArtifact } from './conversation/conversa
  *   answerRules / Data  trusted rules (system) + delimited data (never instructions) for the one
  *                       analysis call, through the EXISTING governed prompt boundary
  *   relationship        the two-sided scope (the route's, or the bound earlier answer's)
+ *   inheritedScope      SHARED R4 CONTINUITY: the subject / scope of the SPECIFIC earlier answer the
+ *                       turn is bound to, exposed to downstream shared retrieval (governed
+ *                       contributors) with provenance EARLIER_TURN — null for every other turn
  * The job, freshness, geography and temporal requirement reach retrieval through the route as
  * before (reportingWindow, relationship, the composed question): no second parser exists here —
  * this module reads codes and the IR's own clause spans, never words.
  */
-export type ExecutionContractKind = 'DIRECT' | 'MIXED_CURRENT_PART' | 'CLAIM_RECHECK';
+export type ExecutionContractKind =
+  | 'DIRECT'
+  | 'MIXED_CURRENT_PART'
+  | 'CLAIM_RECHECK'
+  | 'PRIOR_ANSWER_EVIDENCE'
+  | 'PRIOR_ANSWER_CHANGE';
 
 export interface ExecutionContract {
   readonly kind: ExecutionContractKind;
@@ -42,6 +51,7 @@ export interface ExecutionContract {
     readonly countries: readonly string[];
     readonly relations: readonly RelationKind[];
   } | null;
+  readonly inheritedScope: InheritedScope | null;
 }
 
 const MIXED_CURRENT_RULES =
@@ -56,6 +66,51 @@ const CLAIM_RECHECK_RULES =
   'provided for this request: say whether current reporting supports it, contradicts it, or does ' +
   'not address it, and what has changed. The earlier answer is not evidence and must never be ' +
   'cited or restated as if it were current reporting.';
+
+const PRIOR_EVIDENCE_RULES =
+  'EVIDENCE FOR YOUR EARLIER ANSWER. The reader asks which evidence stands behind the points of ' +
+  'your own earlier answer (the EARLIER WORK block below). For EACH earlier point, name the ' +
+  'provided source(s) that support it, or say plainly that no provided source supports it. Never ' +
+  'invent, guess or describe a source that is not provided. The earlier answer is not evidence.';
+
+const PRIOR_OFFICIAL_EVIDENCE_RULES =
+  PRIOR_EVIDENCE_RULES +
+  ' The reader asked for OFFICIAL evidence: news reporting is not an official source. Point only to ' +
+  'governed official records provided for this request; where none supports a point, say that no ' +
+  'qualifying official evidence was found.';
+
+const PRIOR_CHANGE_RULES =
+  'CHANGE SINCE YOUR EARLIER ANSWER. The reader asks what has changed since your own earlier answer ' +
+  "(the EARLIER WORK block below), in that answer's scope. Report only changes the provided " +
+  'evidence for this request shows, against the earlier points. If no change is evidenced, say ' +
+  'that no material change is evidenced; never infer or invent a stage, step or event. The earlier ' +
+  'answer is not evidence and must never be cited as current reporting.';
+
+/** SHARED R4 CONTINUITY — the bound earlier answer's scope, as inherited (EARLIER_TURN). */
+function inheritedScopeOf(prior: PriorArtifact, officialOnly: boolean): InheritedScope | null {
+  if (prior.scope === undefined) return null;
+  return {
+    provenance: 'EARLIER_TURN',
+    sourceOperationId: prior.sourceOperationId ?? null,
+    question: prior.scope.question,
+    countries: [...prior.scope.countries],
+    relation: prior.scope.relation,
+    job: prior.scope.job,
+    evidenceRefs: [...(prior.evidenceRefs ?? [])],
+    officialOnly,
+  };
+}
+
+function scopedRelationship(
+  scope: NonNullable<PriorArtifact['scope']>,
+  fallback: ExecutionContract['relationship'],
+): ExecutionContract['relationship'] {
+  return scope.countries.length === 2 &&
+    scope.relation !== null &&
+    (RELATION_KINDS as readonly string[]).includes(scope.relation)
+    ? { countries: [...scope.countries], relations: [scope.relation as RelationKind] }
+    : fallback;
+}
 
 /** The contract for one executable turn. Pure: route + request + the bound earlier answer. */
 export function executionContractOf(input: {
@@ -73,6 +128,35 @@ export function executionContractOf(input: {
           relations: [...route.relationship.relations],
         };
 
+  /*
+    SHARED R4 CONTINUITY — the evidence behind / the change since a SPECIFIC earlier answer: retrieval
+    for THAT answer's own question, in THAT answer's scope, the earlier points as delimited data; the
+    scope is inherited (EARLIER_TURN) by every downstream shared reader. Any provenance: a reasoning
+    answer's evidence is truthfully "none provided", and its subject still scopes the reads.
+  */
+  if (
+    route.priorAnswerRequest !== undefined &&
+    route.job.discourseReference === 'PRIOR_WORK' &&
+    priorArtifact?.scope !== undefined
+  ) {
+    const official = route.priorAnswerRequest === 'OFFICIAL_EVIDENCE';
+    const change = route.priorAnswerRequest === 'CHANGE_SINCE';
+    return {
+      kind: change ? 'PRIOR_ANSWER_CHANGE' : 'PRIOR_ANSWER_EVIDENCE',
+      retrievalQuestion: priorArtifact.scope.question,
+      usePriorQuestion: false,
+      stableQuestion: null,
+      answerRules: change
+        ? PRIOR_CHANGE_RULES
+        : official
+          ? PRIOR_OFFICIAL_EVIDENCE_RULES
+          : PRIOR_EVIDENCE_RULES,
+      answerData: artifactPromptBlock(priorArtifact),
+      relationship: scopedRelationship(priorArtifact.scope, routeRelationship),
+      inheritedScope: inheritedScopeOf(priorArtifact, official),
+    };
+  }
+
   /* R-5 — the earlier SOURCED answer's claim, re-verified in the earlier answer's own scope */
   if (
     route.job.discourseReference === 'PRIOR_WORK' &&
@@ -89,12 +173,9 @@ export function executionContractOf(input: {
       stableQuestion: null,
       answerRules: CLAIM_RECHECK_RULES,
       answerData: artifactPromptBlock(priorArtifact),
-      relationship:
-        scope.countries.length === 2 &&
-        scope.relation !== null &&
-        (RELATION_KINDS as readonly string[]).includes(scope.relation)
-          ? { countries: [...scope.countries], relations: [scope.relation as RelationKind] }
-          : routeRelationship,
+      relationship: scopedRelationship(scope, routeRelationship),
+      /* the re-verified claim's subject reaches shared retrieval as inherited (EARLIER_TURN) */
+      inheritedScope: inheritedScopeOf(priorArtifact, false),
     };
   }
 
@@ -131,6 +212,7 @@ export function executionContractOf(input: {
           `<<<CURRENT PART (the reader's own words)\n${currentText}\nCURRENT PART>>>\n` +
           `<<<EXPLANATORY PART (answered separately — context only)\n${stableText}\nEXPLANATORY PART>>>`,
         relationship: routeRelationship,
+        inheritedScope: null,
       };
     }
   }
@@ -143,5 +225,6 @@ export function executionContractOf(input: {
     answerRules: '',
     answerData: '',
     relationship: routeRelationship,
+    inheritedScope: null,
   };
 }

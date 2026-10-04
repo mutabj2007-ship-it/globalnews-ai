@@ -123,5 +123,10 @@ export interface AskContributorSelection {
      * governed geography resolved. Carried only so the answer can DISCLOSE the scope it read at.
      */
     readonly qualifier?: string | null;
+    /**
+     * SHARED R4 CONTINUITY — present only when the scope was INHERITED from the specific earlier
+     * answer the turn is bound to (never reader-stated; see contributor-selection.ts).
+     */
+    readonly provenance?: 'EARLIER_TURN';
   };
 }
