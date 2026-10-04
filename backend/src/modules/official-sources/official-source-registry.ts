@@ -170,6 +170,50 @@ export const OFFICIAL_SOURCES: OfficialSourceEntry[] = [
       'identity verification with a timestamp, and PO authorization by source id.',
     rights: { rightsAuthorityId: 'EAST_AFRICA_ACQUISITION_RIGHTS', rightsRecordKey: 'RW_NISR' },
   },
+  /*
+    ════════════════════════════════════════════════════════════════════════════
+    PL-SEJM · CHANCELLERY OF THE SEJM — REGISTERED FOR HOST GOVERNANCE, NOT ADMITTED.
+    ════════════════════════════════════════════════════════════════════════════
+
+    E1 SEJM-RIGHTS-AND-HOST-ADMISSION-R1 + CTO Politics ruling 13 (security plumbing only).
+
+      HOST SECURITY   https-only, exact host, port 443, no userinfo, every redirect re-gated,
+                      4 MiB / 60 s bounds, host from THIS registry (no environment override),
+                      PATH-GATED with ZERO admitted families (`official-source-path-policies.ts`),
+                      credential-free by assertion (SEJM-CRED-1).
+      RIGHTS          BLOCKED_RIGHTS / RIGHTS_CONFIRMATION_REQUIRED. The publisher's documentation
+                      names no licence, no permitted act and no attribution. "Public" is not a
+                      licence; "official" is not a licence.
+
+    `enabled: false` AND `rights: null` ARE BOTH LOAD-BEARING. `rights: null` is a REFUSAL (SI-17),
+    so `evaluateSourceRights` refuses whoever sets `enabled`; and with zero path families the safe
+    fetch refuses every URL on this host. Presence here authorizes NO acquisition, retention or display.
+    The API is mostly person-level (MPs with photos, interpellations, written questions, statements,
+    individual MP votes); those surfaces are structurally inadmissible as path families.
+  */
+  {
+    id: 'pl-sejm',
+    name: 'Kancelaria Sejmu (Chancellery of the Sejm)',
+    countryCode: 'PL',
+    languages: ['pl'],
+    /* The vocabulary has no LEGISLATURE class; GOVERNMENT is the closest existing member. A
+       parliamentary chancellery is not the government; the imprecision is recorded, not resolved
+       by inventing a class in a registry entry. */
+    authorityClass: 'GOVERNMENT',
+    baseUrl: 'https://api.sejm.gov.pl/sejm/',
+    reliabilityNote:
+      'Parliamentary chancellery API. Documentation read 2026-10-04: unauthenticated GETs, no licence, ' +
+      'no attribution wording, no rate limit published. /processes is NOT on the publisher documentation ' +
+      'page (E1 C-1, open). /votings returns individual MP votes and is inadmissible. No byte has been ' +
+      'fetched; nothing here is retrieval-proven.',
+    enabled: false,
+    ingestionMethod: 'api',
+    provenanceNote:
+      'Registered under E1 SEJM-RIGHTS-AND-HOST-ADMISSION-R1 and CTO Politics ruling 13 (host security ' +
+      'plumbing only). Rights state BLOCKED_RIGHTS / RIGHTS_CONFIRMATION_REQUIRED; see that document §A4 ' +
+      'for the evidence required. REGISTRATION ONLY — not activation, not rights approval, zero path families.',
+    rights: null,
+  },
 ];
 
 export function getOfficialSourceByIdFrom(

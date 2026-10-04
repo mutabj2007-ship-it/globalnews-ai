@@ -51,6 +51,11 @@ import {
   type OriginBoundCredential,
   type SafeFetchPolicy,
 } from './official-artifact-safe-fetch';
+import { assertPathIsAdmitted, type PathFamily } from './official-path-allowlist';
+import {
+  credentialFreeHosts,
+  officialSourcePathFamilyResolver,
+} from '../official-sources/official-source-path-policies';
 import type {
   ProviderHostResolver,
   WireFetch,
@@ -229,6 +234,14 @@ export interface SafeWireFetchDeps {
    * safely carry (control characters, CR/LF) is refused here, before any request exists.
    */
   readonly userAgent?: string;
+  /**
+   * SEJM-PATH-1 — the path families for a provider; `undefined` = not path-gated (host-only,
+   * unchanged). DEFAULTS to the registry's own table (`OFFICIAL_SOURCE_PATH_POLICIES`), so a
+   * caller cannot open a path-gated host by forgetting to pass it.
+   */
+  readonly resolvePathFamilies?: (providerId: string) => readonly PathFamily[] | undefined;
+  /** SEJM-CRED-1 — hosts that may never be bound a credential. Defaults to the registry table. */
+  readonly credentialFreeHosts?: readonly string[];
 }
 
 export class SafeWireFetchConfigurationRefused extends Error {
@@ -242,6 +255,19 @@ export function makeSafeWireFetch(deps: SafeWireFetchDeps): WireFetch {
   const { resolver, connector, policy, resolveHost, credential, userAgent } = deps;
   if (userAgent !== undefined && !/^[\x20-\x7e]{1,256}$/.test(userAgent)) {
     throw new SafeWireFetchConfigurationRefused('USER_AGENT_NOT_PRINTABLE_ASCII');
+  }
+  const resolvePathFamilies = deps.resolvePathFamilies ?? officialSourcePathFamilyResolver();
+  /* SEJM-CRED-1 — a credential bound to a credential-free host is refused before any request exists. */
+  if (credential !== undefined) {
+    let boundHost = '';
+    try {
+      boundHost = new URL(credential.origin).hostname.toLowerCase();
+    } catch {
+      throw new SafeWireFetchConfigurationRefused('CREDENTIAL_ORIGIN_UNPARSEABLE');
+    }
+    if ((deps.credentialFreeHosts ?? credentialFreeHosts()).includes(boundHost)) {
+      throw new SafeWireFetchConfigurationRefused(`CREDENTIAL_BOUND_TO_CREDENTIAL_FREE_HOST:${boundHost}`);
+    }
   }
 
   return async function safeWireFetch(
@@ -278,6 +304,15 @@ export function makeSafeWireFetch(deps: SafeWireFetchDeps): WireFetch {
       /* ── 1 · THE URL GATE, BEFORE ANY RESOLUTION ───────────────────────── */
       const gate = assertUrlIsFetchable(url, governedHost!, policy);
       if (!gate.admitted) refuse(gate.kind, gate.reason);
+
+      /* ── 1b · SEJM-PATH-1, THE PATH GATE — this step re-runs on EVERY hop (the redirect
+         branch `continue`s back here), before any resolution, so a redirect cannot move a
+         request from an admitted family onto a person surface. Default deny. ───────────── */
+      const families = resolvePathFamilies(request.providerId);
+      if (families !== undefined) {
+        const pathGate = assertPathIsAdmitted(url, families);
+        if (!pathGate.admitted) refuse(pathGate.kind, pathGate.reason);
+      }
 
       /* ── 2 · EVERY ADDRESS FOR THE NAME ────────────────────────────────── */
       let addresses: readonly string[];
