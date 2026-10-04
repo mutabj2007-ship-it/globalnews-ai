@@ -276,6 +276,45 @@ describe('A-5 · the Paris Agreement acceptance fixture', () => {
   });
 });
 
+describe('A-7 · the reconciliation onto the 5699eb7 semantic baseline', () => {
+  const turnView = readFileSync(
+    join(__dirname, '..', '..', 'components', 'ask-frame', 'AskR2TurnView.tsx'),
+    'utf8',
+  );
+  const code = turnView.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+
+  it('NO answer text is rendered raw any more — including the mixed path the baseline added', () => {
+    /*
+      The semantic baseline introduced a SECOND `<p className="whitespace-pre-wrap">` for a
+      MIXED_REFERENCE_CURRENT answer. It survives a clean cherry-pick, because the two edits sit
+      in different regions and git raises no conflict. This assertion is what makes that
+      impossible to miss again.
+    */
+    expect(code).not.toContain('whitespace-pre-wrap');
+    /* The answer text may appear ONLY as the renderer's `source` prop — never as an element's
+       own child, which is what rendering it raw looks like. */
+    const all = code.match(/\{payload\.background\.text\}/g) ?? [];
+    const asSource = code.match(/source=\{payload\.background\.text\}/g) ?? [];
+    expect(all).toHaveLength(asSource.length);
+    expect(asSource.length).toBeGreaterThan(0);
+  });
+
+  it('both background paths go through the one renderer', () => {
+    expect(code.match(/<AskAnswerProse/g)).toHaveLength(2);
+    expect(code).toMatch(/source=\{payload\.background\.text\}/);
+  });
+
+  it('the baseline’s SEMANTIC conditions are kept exactly — rendering changed, meaning did not', () => {
+    expect(code).toMatch(/payload\.guidance\?\.kind === 'MIXED_REFERENCE_CURRENT'/);
+    expect(code).toMatch(/payload\.guidance\?\.currentPart === 'SOURCED'/);
+    expect(code).toMatch(/payload\.guidance\.stablePart === 'UNAVAILABLE'/);
+    expect(code).toMatch(/payload\.guidance\.currentPart !== 'SOURCED'/);
+    expect(code).toContain('data-ask="mixed-stable"');
+    expect(code).toContain('data-ask="mixed-stable-unavailable"');
+    expect(code).toContain('data-ask="guidance-current-gap"');
+  });
+});
+
 describe('A-6 · inline parsing', () => {
   it('reads code before emphasis, so markup inside code is literal', () => {
     expect(parseInline('a `**x**` b')).toEqual([

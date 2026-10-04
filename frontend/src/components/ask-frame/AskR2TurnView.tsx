@@ -527,16 +527,29 @@ export function AskR2TurnView({
               {s.limitedNote}
             </p>
           )}
-          {/* R4 ALPHA R-2 — MIXED: the explanatory part (model reasoning, never a source) beside the
-              sourced current part below; the authored text is kept as written (paragraphs, lists) */}
+          {/*
+            R4 ALPHA R-2 — MIXED: the explanatory part (model reasoning, never a source) beside the
+            sourced current part below.
+
+            RECONCILIATION, 5699eb7 x H (CTO ruling: semantics from the baseline, rendering from H).
+            The baseline's CONDITION is kept exactly — when a mixed answer shows its stable part is
+            a semantic decision and it is not this lane's. Its RENDERING is not: it reintroduced
+            `<p className="whitespace-pre-wrap">{payload.background.text}</p>`, a second instance of
+            the very defect phase A closed, and its own comment ("kept as written (paragraphs,
+            lists)") shows the intent was to preserve the authored structure — which a raw <p>
+            cannot do. A model-background answer written with `## headings` and `- bullets` would
+            have reached readers as raw syntax here exactly as it did on the other path.
+
+            A clean cherry-pick would have left this standing, because the two edits are in
+            different regions and git has no conflict to raise. This is why the ruling said not to
+            blind-cherry-pick through.
+          */}
           {payload.analysis !== null &&
             payload.background != null &&
             payload.guidance?.kind === 'MIXED_REFERENCE_CURRENT' && (
               <div data-ask="mixed-stable" className="flex flex-col gap-1.5">
                 <p className={EYEBROW}>{s.r4.mixedStableTitle}</p>
-                <p className="whitespace-pre-wrap text-[16px] leading-[1.55]">
-                  {payload.background.text}
-                </p>
+                <AskAnswerProse source={payload.background.text} sources={[]} language={locale} />
               </div>
             )}
           {payload.analysis !== null && (
@@ -571,11 +584,7 @@ export function AskR2TurnView({
               provenance line beside the header says so.
             */
             <div data-ask="background-text">
-              <AskAnswerProse
-                source={payload.background.text}
-                sources={[]}
-                language={locale}
-              />
+              <AskAnswerProse source={payload.background.text} sources={[]} language={locale} />
             </div>
           )}
           {/* TRUST R1 — mixed answer: retained recent reporting about the same place. */}
