@@ -2,13 +2,13 @@ import type { DisplayLocale } from '@globalnews-ai/shared';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
- * THE DECLARED PENDING-CLAUDE-L MANIFEST — WHAT IS STILL ENGLISH, IN WRITING
+ * THE DECLARED UNQUALIFIED SET — WHAT IS STILL ENGLISH, IN WRITING
  * ════════════════════════════════════════════════════════════════════════════
  *
  * R4 · PHASE B · CLAUDE H.
  *
  * The CTO's rule: *"Missing catalogue keys must fail tests rather than silently displaying
- * English."* This file is the half of that rule that a test can hold on to.
+ * English."* This file is the half of that rule a test can hold on to.
  *
  * `askShellCoverage(locale).fallbacks` measures what ACTUALLY falls through to English.
  * This list declares what is ALLOWED to. `askShellCoverage.spec.ts` asserts the two sets are
@@ -19,343 +19,61 @@ import type { DisplayLocale } from '@globalnews-ai/shared';
  *   · a key Claude L delivers but that is left declared here   → FAILS, because it is
  *                                                                declared but not measured;
  *   · the honest current state                                 → passes, and the exact size
- *                                                                of the gap is 468 lines a
+ *                                                                of the gap is 144 lines a
  *                                                                reviewer can read.
  *
- * So the file shrinks as L delivers, the test tightens by itself, and nothing can start
- * falling back quietly between rounds. It is a declaration of an incomplete state, not a
- * suppression of one: the CTO sees 468 here and reads it as 468 strings of English still in
- * front of a French reader.
- *
- * ── HOW THIS RECONCILES WITH THE MANIFEST SENT TO CLAUDE L (REVISION 4) ───
+ * ── AFTER CLAUDE L'S DELIVERY: 468 → 144 ─────────────────────────────────
  *
  *   559  reader-visible Ask-shell keys on the base 5699eb7
- *   -24  `askSevenStrings` — already total over all seven from an earlier H round, read
- *        directly by the surfaces and therefore not overlay-managed
+ *   -24  `askSevenStrings` — already total over all seven, read directly, not overlaid
  *   ────
  *   535  overlay-managed keys  (`askShellKeyPaths().length`)
  *    -5  provider and product proper nouns, which no locale translates
  *   ────
  *   530  Claude L's scope
- *   -62  H's drafts, every one declared `DRAFT_PENDING_CLAUDE_L`
+ *  -386  delivered and qualified by L, verified against her SHA-256 sums
  *   ────
- *   468  declared below, per locale
+ *   144  declared below, per locale — identical in all five
  *
- * ── WHY THIS NUMBER MOVED TWICE, AND WHAT EACH MOVE MEANT ─────────────────
+ * ── WHY 144 REMAIN, WHICH IS NOT A SHORTFALL BY L ────────────────────────
  *
- * 469 → 479: the enumerator was skipping function-valued members, so ten templates were
- * invisible to the accounting (the correction in `askShellOverlay.ts`).
+ * L worked from manifest **Revision 2** — 413 keys, the latest on disk when she began — and
+ * delivered every one of them plus three the rebase had added that Revision 2 did not list.
+ * Revisions 3 and 4 then raised the measured inventory to 530, after two corrections H found
+ * while wiring: the enumerator was skipping function-valued members (33 templates), and
+ * eighty more keys were never in a catalogue at all. The remainder is exactly those two
+ * findings plus the `dict.navBar` and `dict.footer` members Revision 2 under-listed:
  *
- * 479 → 559: wiring the components found EIGHTY more keys that were never in a catalogue at
- * all. Three components declared their own private `Record<AskR2Locale, …>`, three more
- * carried bare `locale === 'pl' ? … : …` ternaries with no key, and two view builders
- * resolved their own copy internally from a locale argument. None of it was reachable by any
- * overlay, countable by any coverage report, or capable of failing any missing-key test —
- * a French reader would have been shown "Copy", "Copied", "Coverage checked" and a dated
- * reporting title in English however complete the named catalogues became. They are
- * `askSurfaceStrings.ts`, `askGovernedCopy` and `askIntelligenceStrings` now.
+ *    33  templates — function-valued members; they need plural forms per CLDR category,
+ *        not a sentence, and no manifest before Revision 3 asked for one
+ *    80  keys recovered from inside components (askGovernedCopy, askIntelligenceStrings,
+ *        askRecentReportingStrings, askEvidenceTableStrings, askCopyStrings, askContextStrings)
+ *    54  dict.navBar and dict.footer members Revision 2 did not carry
+ *   ────
+ *   167  with 23 of them counted twice above, being templates inside those namespaces
+ *   ────
+ *   144  distinct keys
  *
- * Both moves made the number WORSE and both were reported rather than absorbed. A
- * localization mechanism whose denominator is wrong is not a mechanism, it is a reassurance.
+ * A Revision 5 DELTA manifest covering exactly these 144 has been issued to L. Nothing here
+ * is a draft: a key L has not reached is ABSENT from the overlay and falls through to
+ * English, which is a visible gap rather than an unreviewed sentence that looks finished.
  *
- * The five draft locales share one list because H drafted the same first-paint chrome in
- * each. The shape is per-locale so that L delivering French does not have to wait for Arabic.
+ * The five locales share one list because the gap is structural — it is the same set of keys
+ * no manifest asked for — not because the five were treated as one.
  */
 
-/** Keys H has drafted in every draft locale, so the five lists are identical today. */
-const PENDING_ALL_DRAFT_LOCALES: readonly string[] = Object.freeze([
-  'askR2Strings.inheritedScope',
-  'askR2Strings.scopePending',
-  'askR2Strings.keptAsAsked',
-  'askR2Strings.openFullMeta',
-  'askR2Strings.runDeepMeta',
-  'askR2Strings.deepEyebrow',
-  'askR2Strings.deepTitle',
-  'askR2Strings.deepBody',
-  'askR2Strings.notNow',
-  'askR2Strings.runConfirm',
-  'askR2Strings.badges.ref',
-  'askR2Strings.badges.ver',
-  'askR2Strings.badges.cur',
-  'askR2Strings.badges.clar',
-  'askR2Strings.badges.part',
-  'askR2Strings.badges.insuf',
-  'askR2Strings.badges.unavail',
-  'askR2Strings.badges.rec',
-  'askR2Strings.badges.calc',
-  'askR2Strings.referenceNoteTitle',
-  'askR2Strings.guidanceNoteTitle',
-  'askR2Strings.guidanceNoteBody',
-  'askR2Strings.guidanceCurrentGap',
-  'askR2Strings.referenceNoteBody',
-  'askR2Strings.freshness.reference',
-  'askR2Strings.freshness.retainedRecord',
-  'askR2Strings.freshness.computed',
-  'askR2Strings.freshness.referenceWithSources',
-  'askR2Strings.freshness.nothingRan',
-  'askR2Strings.freshness.checked',
-  'askR2Strings.freshness.retainedTo',
-  'askR2Strings.freshness.publishedWindow',
-  'askR2Strings.freshness.zero',
-  'askR2Strings.freshness.limited',
+/** Identical in all five L-qualified locales today; the shape stays per-locale. */
+const UNQUALIFIED_ALL_L_LOCALES: readonly string[] = Object.freeze([
   'askR2Strings.freshness.corroboratedAsOf()',
-  'askR2Strings.clarificationFooter',
-  'askR2Strings.sourcesAfterChoice',
-  'askR2Strings.insufficientTitle',
-  'askR2Strings.verification.notVerified',
-  'askR2Strings.verification.coverageIncomplete',
-  'askR2Strings.verification.sourcesChecked',
-  'askR2Strings.verification.available',
-  'askR2Strings.verification.unavailable',
-  'askR2Strings.verification.claims',
-  'askR2Strings.verification.lanes.rss-feeds',
-  'askR2Strings.verification.lanes.news-providers',
-  'askR2Strings.verification.reasons.not-configured',
-  'askR2Strings.verification.reasons.rate-limited',
-  'askR2Strings.verification.reasons.auth',
-  'askR2Strings.verification.reasons.timeout',
-  'askR2Strings.verification.reasons.unavailable',
-  'askR2Strings.verification.states.CONFIRMED',
-  'askR2Strings.verification.states.CORROBORATED_REPORTING',
-  'askR2Strings.verification.states.REPORTED',
-  'askR2Strings.verification.states.DISPUTED',
-  'askR2Strings.verification.states.NOT_VERIFIED',
-  'askR2Strings.verification.states.COVERAGE_INCOMPLETE',
-  'askR2Strings.limitedTitle',
-  'askR2Strings.limitedNote',
-  'askR2Strings.unavailable',
-  'askR2Strings.retryKept',
-  'askR2Strings.newAnswerBelow',
-  'askR2Strings.budgetRefused',
-  'askR2Strings.retainedAnswer',
-  'askR2Strings.followUpHint',
-  'askR2Strings.retainedFallback.GOVERNED_NO_RECORD',
-  'askR2Strings.retainedFallback.GOVERNED_RECORD',
-  'askR2Strings.governedGap.notDisplayable.ECONOMY_CPI',
-  'askR2Strings.governedGap.notDisplayable.IMIHIGO',
-  'askR2Strings.governedGap.notDisplayable.default',
-  'askR2Strings.governedGap.noCapture.ECONOMY_CPI',
-  'askR2Strings.governedGap.noCapture.MARKET_PROCUREMENT',
-  'askR2Strings.governedGap.noCapture.default',
-  'askR2Strings.governedGap.unreadable',
-  'askR2Strings.noCitable',
-  'askR2Strings.unavailableBecause.REFERENCE_UNAVAILABLE',
-  'askR2Strings.unavailableBecause.EXECUTOR_NOT_WIRED',
-  'askR2Strings.unavailableBecause.PLAN_IDENTITY_REQUIRED',
-  'askR2Strings.unavailableBecause.PLAN_CAPABILITY_UNAVAILABLE',
-  'askR2Strings.unavailableBecause.OFFICIAL_SOURCE_UNAVAILABLE',
-  'askR2Strings.unavailableBecause.GOVERNED_RECORD_UNAVAILABLE',
-  'askR2Strings.noAnswer',
-  'askR2Strings.whichOne',
-  'askR2Strings.clarificationFooterNoAi',
-  'askR2Strings.askedBeforeAnswering',
-  'askR2Strings.expiredNote',
-  'askR2Strings.continuationAnsweredAs',
-  'askR2Strings.continuationNote',
-  'askR2Strings.r4.conceptualNoteTitle',
-  'askR2Strings.r4.conceptualNoteBody',
-  'askR2Strings.r4.workNoteTitle',
-  'askR2Strings.r4.workNoteBody',
-  'askR2Strings.r4.framework',
-  'askR2Strings.r4.mixedStableTitle',
-  'askR2Strings.r4.mixedStableUnavailable',
-  'askR2Strings.r4.priorReferenceUnresolved',
-  'askR2Strings.r3.continuationJobNote',
-  'askR2Strings.r3.decisionNoteTitle',
-  'askR2Strings.r3.decisionNoteBody',
-  'askR2Strings.r3.decisionObjective',
-  'askR2Strings.r3.partialCurrent.UNAVAILABLE',
-  'askR2Strings.r3.partialCurrent.NO_EVIDENCE',
   'askR2Strings.r3.relationshipScope()',
-  'askR2Strings.r3.relations.BORDER',
-  'askR2Strings.r3.relations.CORRIDOR',
-  'askR2Strings.r3.relations.TRADE',
-  'askR2Strings.r3.relations.TRANSPORT',
-  'askR2Strings.r3.relations.ENERGY',
-  'askR2Strings.r3.relations.INSTITUTIONAL',
-  'askR2Strings.r3.relations.DIPLOMATIC',
-  'askR2Strings.r3.relations.SECURITY',
-  'askR2Strings.r3.relations.WAR',
-  'askR2Strings.r3.relations.TERRITORIAL_DISPUTE',
-  'askR2Strings.r3.relations.ALLIANCE',
-  'askR2Strings.r3.relations.COMPETITION',
-  'askR2Strings.r3.relations.POLICY_COORDINATION',
-  'askR2Strings.r3.relations.ECONOMIC',
-  'askR2Strings.r3.relations.HISTORICAL_RELATION',
-  'askR2Strings.r3.decisionObjectiveMissing',
-  'askR2Strings.r3.objectives.investment',
-  'askR2Strings.r3.objectives.logistics',
-  'askR2Strings.r3.objectives.market size',
-  'askR2Strings.r3.objectives.growth',
   'askR2Strings.r3.choiceFor()',
-  'askR2Strings.r3.constraintNoted',
-  'askR2Strings.r3.networkFailed',
-  'askR2Strings.noPriorSubject',
   'askR2Strings.clarify.broadening()',
-  'askR2Strings.clarify.suggestion',
-  'askR2Strings.clarify.useSuggestion',
-  'askR2Strings.clarify.chooseHint',
-  'askR2Strings.clarify.codes.LANGUAGE_UNCLASSIFIED',
-  'askR2Strings.clarify.codes.LANGUAGE_UNSUPPORTED',
-  'askR2Strings.clarify.codes.SOURCE_FRAME_UNPARSED',
-  'askR2Strings.clarify.codes.SELECTION_EXCEEDS_MAX',
-  'askR2Strings.clarify.codes.SELECTION_BELOW_MINIMUM',
-  'askR2Strings.clarify.fallback',
-  'askR2Strings.signInRequired.title',
-  'askR2Strings.signInRequired.body',
-  'askR2Strings.signInRequired.action',
-  'askR2Strings.guest.intro',
   'askR2Strings.guest.remaining()',
-  'askR2Strings.guest.notCounted',
-  'askR2Strings.guest.exhaustedTitle',
-  'askR2Strings.guest.exhaustedBody',
-  'askR2Strings.guest.continueAction',
-  'askR2Strings.guest.signInOptional',
-  'askR2Strings.guest.inProgress',
-  'askR2Strings.guest.cooldown',
-  'askR2Strings.guest.limited',
-  'askR2Strings.guest.attemptsExhausted',
-  'askR2Strings.guest.unavailable',
-  'askR2Strings.guest.signInForDeeper',
-  'askR2Strings.guest.privacy',
-  'askR2Strings.guest.cancelled',
-  'askR2Strings.guest.failed',
-  'askR2Strings.guest.resumed',
-  'askR2Strings.unified.contextUnavailable',
-  'askR2Strings.unified.askUnavailable',
-  'askR2Strings.unified.newTopic',
-  'askR2Strings.unified.newTopicStarted',
-  'askR2Strings.personal.SAVED_STORIES.signIn',
-  'askR2Strings.personal.SAVED_STORIES.notAvailable',
-  'askR2Strings.personal.INTERESTS.signIn',
-  'askR2Strings.personal.INTERESTS.notAvailable',
-  'askR2Strings.personal.NEUTRAL.signIn',
-  'askR2Strings.personal.NEUTRAL.notAvailable',
-  'askStrings.regions.changeStrip',
-  'askStrings.regions.mapCanvas',
-  'askStrings.regions.contextSummary',
-  'askStrings.regions.evidenceFooter',
-  'askStrings.regions.suggestions',
-  'askStrings.regions.watch',
-  'askStrings.regions.alerts',
-  'askStrings.regions.workspaceHandoff',
-  'askStrings.regions.places',
-  'askStrings.regions.computeLadder',
-  'askStrings.answerBlocks.answer',
-  'askStrings.answerBlocks.why-it-matters',
-  'askStrings.answerBlocks.confidence',
-  'askStrings.answerBlocks.key-evidence',
-  'askStrings.answerBlocks.geographic-context',
-  'askStrings.answerBlocks.actions',
-  'askStrings.answerBlocks.follow-ups',
-  'askStrings.computeSteps.retrieval',
-  'askStrings.computeSteps.change-record',
-  'askStrings.computeSteps.geographic-check',
-  'askStrings.computeSteps.composition',
-  'askStrings.suggestionCategories.situation',
-  'askStrings.suggestionCategories.explanation',
-  'askStrings.suggestionCategories.comparative',
-  'askStrings.suggestionCategories.watch-oriented',
-  'askStrings.suggestionCategories.deeper-analysis',
-  'askStrings.states.suggestionsUnavailable',
-  'askStrings.states.noAnalysisRun',
-  'askStrings.states.noGeographyResolved',
-  'askStrings.states.noEvidenceYet',
-  'askStrings.states.noAlerts',
-  'askStrings.controls.splitMode',
-  'askStrings.controls.exploreMode',
-  'askStrings.controls.questionMode',
-  'askStrings.controls.answerMode',
-  'askStrings.controls.fullMapMode',
-  'askStrings.controls.visualState',
-  'askStrings.controls.detent',
-  'askStrings.controls.viewSources',
-  'askStrings.controls.saveAnswer',
-  'askStrings.controls.continueInWorkspace',
-  'askStrings.controls.attachContext',
-  'askStrings.controls.miniMap',
-  'askStrings.controls.composerDock',
-  'askStrings.controls.removeContext',
-  'askStrings.controls.peek',
-  'askStrings.controls.half',
-  'askStrings.controls.full',
-  'askStrings.localeFallback',
-  'askContinuityStrings.recentIntro',
-  'askContinuityStrings.savedIntro',
-  'askContinuityStrings.groups.today',
-  'askContinuityStrings.groups.yesterday',
-  'askContinuityStrings.groups.earlier',
-  'askContinuityStrings.tabs.questions',
-  'askContinuityStrings.turnCount',
-  'askContinuityStrings.turnCountOne',
-  'askContinuityStrings.lastActive',
-  'askContinuityStrings.reopen',
-  'askContinuityStrings.reopenNote',
-  'askContinuityStrings.noStoredResult',
-  'askContinuityStrings.continueNote',
-  'askContinuityStrings.filterLabel',
-  'askContinuityStrings.filterPlaceholder',
-  'askContinuityStrings.noQuestionStored',
-  'askContinuityStrings.operationStates.QUOTED',
-  'askContinuityStrings.operationStates.ACCEPTED',
-  'askContinuityStrings.operationStates.RESERVED',
-  'askContinuityStrings.operationStates.RUNNING',
-  'askContinuityStrings.operationStates.COMPLETED',
-  'askContinuityStrings.operationStates.RELEASED',
-  'askContinuityStrings.operationStates.REFUNDED',
-  'askContinuityStrings.startedWith',
-  'askContinuityStrings.save',
-  'askContinuityStrings.unsave',
-  'askContinuityStrings.saved',
-  'askContinuityStrings.states.signedOut',
-  'askContinuityStrings.states.unavailable',
-  'askContinuityStrings.states.network',
-  'askContinuityStrings.states.refused',
-  'askContinuityStrings.empty.recent',
-  'askContinuityStrings.empty.questions',
-  'askContinuityStrings.empty.filtered',
-  'briefingStrings.save',
-  'briefingStrings.saving',
-  'briefingStrings.newBriefing',
-  'briefingStrings.addTo',
+  'askR2Strings.sourcesLabel()',
   'briefingStrings.savedAs()',
-  'briefingStrings.open',
-  'briefingStrings.failed',
-  'briefingStrings.sectionTitle',
-  'briefingStrings.sectionIntro',
-  'briefingStrings.empty',
   'briefingStrings.latest()',
-  'briefingStrings.updateAvailable',
-  'briefingStrings.noUpdate',
-  'briefingStrings.storyGone',
-  'briefingStrings.scopeQuestion',
-  'briefingStrings.scopeCountry',
-  'briefingStrings.scopeStory',
-  'briefingStrings.versions',
-  'briefingStrings.asOf',
-  'briefingStrings.window',
+  'briefingStrings.version()',
   'briefingStrings.superseded()',
-  'briefingStrings.readOnly',
-  'briefingStrings.summary',
-  'briefingStrings.keyFacts',
-  'briefingStrings.background',
-  'briefingStrings.backgroundNote',
-  'briefingStrings.coverageGaps',
-  'briefingStrings.noGaps',
-  'briefingStrings.sources',
-  'briefingStrings.delete',
-  'briefingStrings.deleteConfirm',
-  'briefingStrings.deleted',
-  'briefingStrings.back',
-  'briefingStrings.notFound',
-  'briefingStrings.unavailable',
-  'briefingStrings.signedOut',
-  'briefingStrings.noSourcedAnswer',
-  'askRecordStrings.askAboutRecord',
-  'askRecordStrings.moduleRecord.CONFLICT',
-  'askRecordStrings.moduleRecord.IMIHIGO',
-  'askRecordStrings.moduleRecord.ECONOMY',
-  'askRecordStrings.moduleRecord.MARKET',
   'askCopyStrings.copy',
   'askCopyStrings.copied',
   'askCopyStrings.failed',
@@ -436,52 +154,23 @@ const PENDING_ALL_DRAFT_LOCALES: readonly string[] = Object.freeze([
   'askIntelligenceStrings.lead.imihigo()',
   'askIntelligenceStrings.lead.cpi()',
   'askIntelligenceStrings.lead.procurement()',
-  'dict.askAi.askingAboutGeography',
-  'dict.askAi.geographyBasis',
-  'dict.askAi.geographyOutranked',
-  'dict.askAi.geographyNotApplied',
-  'dict.askAi.mapComputeNotice',
-  'dict.askAi.close',
-  'dict.askAi.inputPlaceholder',
-  'dict.askAi.idle',
-  'dict.askAi.contextPending',
-  'dict.askAi.contextPendingHint',
-  'dict.askAi.contextChipAnchored',
-  'dict.askAi.contextChipGeneric',
-  'dict.askAi.citationLabel',
-  'dict.askAi.inferenceLabel',
-  'dict.askAi.unsupportedLabel',
-  'dict.askAi.continuingSubject',
-  'dict.askAi.startNewTopic',
-  'dict.askAi.newTopicStarted',
-  'dict.askAi.productApplicabilityNotEstablished',
-  'dict.askAi.focusNotInEvidence',
-  'dict.askAi.resultSourcesNone',
-  'dict.askAi.resultSourcesTruncated',
-  'dict.askAi.resultBriefAbsent',
-  'dict.askAi.resultNoAnswer',
-  'dict.askAi.resultNoAnswerProvider',
-  'dict.askAi.resultNoAnswerEvidence',
-  'dict.askAi.resultNoAnswerSafety',
-  'dict.askAi.runFullAnalysis',
-  'dict.askAi.runFullAnalysisNote',
-  'dict.askAi.telemetryReports',
-  'dict.askAi.telemetryClusters',
-  'dict.askAi.sourceDatePublished',
-  'dict.askAi.sourceDateObserved',
-  'dict.askAi.sourceDateUnknownBasis',
-  'dict.askAi.sourceDatesNote',
   'dict.navBar.homeAriaLabel',
   'dict.navBar.primaryNavigationAriaLabel',
   'dict.navBar.mobileNavigationAriaLabel',
   'dict.navBar.searchAriaLabel',
   'dict.navBar.openMenuAriaLabel',
   'dict.navBar.closeMenuAriaLabel',
+  'dict.navBar.signIn',
+  'dict.navBar.account',
+  'dict.navBar.accountMenuAriaLabel',
   'dict.navBar.signedInAs',
+  'dict.navBar.help',
   'dict.navBar.history',
   'dict.navBar.support',
+  'dict.navBar.signOut',
   'dict.navBar.deleteAccount',
   'dict.navBar.deleteAccountConfirm',
+  'dict.navBar.languageSelectorLabel',
   'dict.navBar.languageSelectorAction',
   'dict.navBar.sectionsHeading',
   'dict.navBar.editorialUnavailableLabel',
@@ -516,22 +205,9 @@ const PENDING_ALL_DRAFT_LOCALES: readonly string[] = Object.freeze([
   'dict.footer.linkLabels./privacy',
   'dict.footer.linkLabels./terms',
   'dict.footer.linkLabels./source-policy',
-  'dict.footer.linkLabels./third-party-notices',
   'dict.footer.comingSoon',
   'dict.footer.copyrightSuffix',
-  'dict.footer.closingTagline',
-  'dict.accountSettings.intro',
-  'dict.accountSettings.signInPrompt',
-  'dict.accountSettings.dangerZoneHeading',
-  'dict.accountSettings.dangerZoneNote',
-  'dict.accountSettings.confirmationLabel',
-  'dict.accountSettings.confirmationHint',
-  'dict.accountSettings.confirmationMismatch',
-  'dict.accountSettings.deletePermanently',
-  'dict.accountSettings.deletingLabel',
-  'dict.accountSettings.deletedHeading',
-  'dict.accountSettings.deletedNote',
-  'dict.accountSettings.deleteFailed'
+  'dict.footer.closingTagline'
 ]);
 
 /**
@@ -541,11 +217,11 @@ const PENDING_ALL_DRAFT_LOCALES: readonly string[] = Object.freeze([
 export const ASK_SHELL_DECLARED_FALLBACKS: Readonly<
   Partial<Record<DisplayLocale, readonly string[]>>
 > = Object.freeze({
-  fr: PENDING_ALL_DRAFT_LOCALES,
-  de: PENDING_ALL_DRAFT_LOCALES,
-  es: PENDING_ALL_DRAFT_LOCALES,
-  pt: PENDING_ALL_DRAFT_LOCALES,
-  ar: PENDING_ALL_DRAFT_LOCALES,
+  fr: UNQUALIFIED_ALL_L_LOCALES,
+  de: UNQUALIFIED_ALL_L_LOCALES,
+  es: UNQUALIFIED_ALL_L_LOCALES,
+  pt: UNQUALIFIED_ALL_L_LOCALES,
+  ar: UNQUALIFIED_ALL_L_LOCALES,
 });
 
 export function declaredFallbacksFor(locale: DisplayLocale): readonly string[] {

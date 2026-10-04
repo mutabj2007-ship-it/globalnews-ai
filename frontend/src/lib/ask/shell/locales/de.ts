@@ -5,88 +5,87 @@ import type { ShellLocaleOverlay } from '@/lib/ask/shell/askShellOverlay';
  * ASK SHELL OVERLAY — GERMAN
  * ════════════════════════════════════════════════════════════════════════════
  *
- * R4 · PHASE B · CLAUDE H.
+ * R4 · PHASE B · WORDING BY CLAUDE L. Structure and wiring by Claude H.
  *
- * ── EVERY STRING IN THIS FILE IS `DRAFT_PENDING_CLAUDE_L` ────────────────
+ * ── PROVENANCE ───────────────────────────────────────────────────────────
  *
- * The Product Owner ruled that Claude L owns native-quality wording for
- * fr / de / es / pt-BR / ar, and that H must never label its own strings as
- * linguistically qualified. These are H's DRAFTS. They exist so the seven-language
- * shell can be wired, tested and shown working end to end — the French screenshot
- * and the Arabic RTL proof the contract asks for — not because H is qualifying
- * German.
+ *   source file   `R4_PARALLEL/CLAUDE_L/TO_CLAUDE_H/OVERLAY-de.json`
+ *   sha-256       82d73f200b295aae0b0a49debd4cce5164728524fc200a69aa1973d4bba80ddb
+ *   L's status    LINGUISTICALLY_QUALIFIED_BY_CLAUDE_L
+ *   L's manifest  Revision 2 — see the gap note below
+ *   measured tree 5699eb7058b3d20026c62bcffd75f97b7ca846ec
  *
- * `askShellQualification('de')` reports `DRAFT_PENDING_CLAUDE_L` for every key
- * below, and the acceptance spec asserts that the whole set is still declared as
- * pending. When L returns wording for a key, the key moves out of the draft
- * declaration and the test tightens by itself. Nothing here is presented to a
- * reviewer as finished translation.
+ * The strings below are TRANSCRIBED from that file. H did not reword any of them, and no
+ * string H drafted survives in this file: a key L qualified carries L's wording, and a key
+ * L did not reach is absent rather than filled with a draft, so `shellFallbacks()` reports
+ * it instead of a reader meeting an unreviewed sentence.
  *
- * ── SCOPE OF THIS DRAFT ──────────────────────────────────────────────────
+ * ── THE GAP, STATED HERE BECAUSE IT IS NOT VISIBLE FROM THE STRINGS ──────
  *
- * The chrome a Standalone Ask reader meets on first paint: navigation, the account
- * and language menus, the hero and composer, the primary answer labels, the
- * no-compute state line, Privacy and Cookies, Recent and Saved, the loading stages
- * and the sign-in error copy — i.e. the strings the Product Owner's own French
- * screenshot showed in English. Keys outside that set are NOT drafted and are
- * reported by `askShellCoverage('de')` as fallbacks, so the gap is visible
- * rather than guessed at.
+ * Claude L worked from manifest **Revision 2**, which was the latest on disk when L began.
+ * Revisions 3 and 4 then measured 530 keys rather than 413, after two corrections H
+ * found while wiring: the enumerator was skipping function-valued members, and eighty more
+ * keys were never in a catalogue at all.
  *
- * Two templates are drafted deliberately — `askR2Strings.sourcesLabel` and
- * `briefingStrings.version` — so the plural-category machinery is exercised in
- * production code and not only in its own spec.
+ * So this overlay qualifies **386** of them and **144** remain unqualified. They are
+ * declared in `askShellDeclaredFallbacks.ts` and fail a test if they ever stop being
+ * declared. A Revision 5 delta manifest covering exactly that remainder has been issued
+ * to L.
+ *
+ * L also caught something H's manifest had missed in the other direction: the rebase onto
+ * `5699eb7` added three reader-facing `askR2Strings.r4.*` keys that Revision 2 did not
+ * list, and L authored them rather than delivering a complete-looking file with a hole in
+ * it.
  */
 
 export const deShellOverlay: ShellLocaleOverlay = {
   data: {
-    askR2Strings: {
-      askTitle: "GlobalNewsAI fragen",
-      ask: "Fragen",
-      close: "Schließen",
-      returnMap: "Zurück zur Karte",
-      youAsked: "IHRE FRAGE",
-      scope: "GELTUNGSBEREICH",
-      noScope: "Allgemeine Frage · kein Geltungsbereich angewendet",
-      answer: "ANTWORT",
-      sources: "Quellen",
-      openFull: "Vollständige Analyse öffnen",
-      runDeep: "Tiefere Analyse starten",
-      newQ: "Neue Frage",
-      earlier: "FRÜHER IN DIESEM GESPRÄCH",
-      privacyLink: "Datenschutz",
-      cookiesLink: "Cookies",
-      sourcesLabel: {
-        kind: "plural",
-        forms: {
-          one: "{0} Quelle",
-          other: "{0} Quellen",
-        },
-      },
-    },
-    askStrings: {
-      frameLabel: "KI fragen",
-      metaTitle: "KI fragen — GlobalNews AI",
-      states: {
-        costNotConfigured: "Die Recherche startet erst, wenn Sie eine Frage absenden.",
-        awaitingQuestion: "Stellen Sie eine Frage, um zu beginnen.",
-      },
-      regions: {
-        composer: "Eine Frage stellen",
-        answer: "Antwort",
-        sources: "Quellen",
-      },
-      metaDescription: "Die fragenspezifische Rechercheoberfläche: kartenbewusst, quellengestützt und ausdrücklich darüber, was nicht bewertet wurde.",
-    },
     askContinuityStrings: {
       recentTitle: "Zuletzt",
+      recentIntro: "Ihre Ask-Unterhaltungen. Eine zu öffnen zeigt das bereits Erstellte — es wird nichts ausgeführt.",
       savedTitle: "Gespeichert",
-    },
-    briefingStrings: {
-      version: {
-        kind: "plural",
-        forms: {
-          other: "Version {0}",
-        },
+      savedIntro: "Von Ihnen gespeicherte Fragen. Eine zu öffnen zeigt das bereits Erstellte — es wird nichts ausgeführt.",
+      groups: {
+        today: "Heute",
+        yesterday: "Gestern",
+        earlier: "Früher",
+      },
+      tabs: {
+        questions: "Gespeicherte Fragen",
+      },
+      turnCount: "{n} Fragen",
+      turnCountOne: "1 Frage",
+      lastActive: "Zuletzt aktiv",
+      reopen: "Öffnen",
+      reopenNote: "Bereits erstellt. Es wird nichts ausgeführt.",
+      noStoredResult: "Kein gespeichertes Ergebnis zum Öffnen.",
+      continueNote: "Senden Sie eine neue Frage, um fortzufahren.",
+      filterLabel: "Filtern",
+      filterPlaceholder: "Nach Frage filtern",
+      noQuestionStored: "Für diese Unterhaltung ist keine Frage gespeichert.",
+      operationStates: {
+        QUOTED: "ANGEBOTEN",
+        ACCEPTED: "ANGENOMMEN",
+        RESERVED: "RESERVIERT",
+        RUNNING: "LÄUFT",
+        COMPLETED: "ABGESCHLOSSEN",
+        RELEASED: "FREIGEGEBEN",
+        REFUNDED: "ERSTATTET",
+      },
+      startedWith: "Begonnen mit:",
+      save: "Speichern",
+      unsave: "Entfernen",
+      saved: "Gespeichert",
+      states: {
+        signedOut: "Melden Sie sich an, um Ihre Ask-Unterhaltungen zu sehen.",
+        unavailable: "Ask-Unterhaltungen sind in dieser Beta nicht verfügbar.",
+        network: "Ihre Unterhaltungen waren nicht erreichbar. Es ist nichts verloren gegangen.",
+        refused: "Ihre Unterhaltungen konnten gerade nicht gelesen werden.",
+      },
+      empty: {
+        recent: "Sie haben noch keine Ask-Unterhaltungen.",
+        questions: "Sie haben noch keine Frage gespeichert.",
+        filtered: "Nichts entspricht diesem Filter.",
       },
     },
     askNavStrings: {
@@ -98,44 +97,435 @@ export const deShellOverlay: ShellLocaleOverlay = {
       language: "Sprache",
       signIn: "Anmelden",
       signOut: "Abmelden",
-      navAriaLabel: "Fragen-Navigation",
+      navAriaLabel: "Ask-Navigation",
       openMenuAriaLabel: "Menü öffnen",
       closeMenuAriaLabel: "Menü schließen",
       account: "Konto",
       accountMenuAriaLabel: "Kontomenü",
       languageSelectorAction: "Sprache wählen",
     },
+    askR2Strings: {
+      askTitle: "Ask GlobalNewsAI",
+      ask: "Fragen",
+      close: "Schließen",
+      returnMap: "Zurück zur Karte",
+      youAsked: "SIE HABEN GEFRAGT",
+      scope: "BEREICH",
+      noScope: "Allgemeine Frage · kein Bereich angewendet",
+      inheritedScope: "Anschlussfrage · setzt {subject} fort",
+      scopePending: "Der Bereich wartet auf Ihre Auswahl",
+      keptAsAsked: "Wie gefragt beibehalten",
+      answer: "ANTWORT",
+      sources: "Quellen",
+      openFull: "Vollständige Analyse öffnen",
+      openFullMeta: "0 KI · 0 Anbieter · keine Berechnung",
+      runDeep: "Tiefere Analyse starten",
+      runDeepMeta: "Fragt vor dem Ausführen",
+      newQ: "Neue Frage",
+      earlier: "FRÜHER IN DIESER UNTERHALTUNG",
+      deepEyebrow: "AUSDRÜCKLICHE BERECHNUNG",
+      deepTitle: "Tiefere Analyse starten?",
+      deepBody: "Die tiefere Analyse liest mehr Quellen über einen größeren Zeitraum und erstellt einen strukturierten Bericht. Sie läuft erst nach Ihrer Bestätigung.",
+      notNow: "Jetzt nicht",
+      runConfirm: "Tiefere Analyse starten",
+      badges: {
+        ref: "HINTERGRUNDWISSEN",
+        ver: "AKTUELL BESTÄTIGT",
+        cur: "AKTUELLE LAGE",
+        clar: "RÜCKFRAGE NÖTIG",
+        part: "TEILWEISE BELEGT",
+        insuf: "ZU WENIG BELEGE",
+        unavail: "FUNKTION NICHT VERFÜGBAR",
+        rec: "GESPEICHERTER DATENSATZ",
+        calc: "BERECHNUNG",
+      },
+      referenceNoteTitle: "Modellhintergrund · ohne Quellenangaben",
+      guidanceNoteTitle: "Allgemeine Orientierung · Modellschluss",
+      guidanceNoteBody: "Dies ist ein allgemeiner Rat aus Schlussfolgerung und Allgemeinwissen, keine aktuelle quellenbasierte Recherche. Es wurde keine Quelle geprüft, und nichts hiervon ist eine bestätigte aktuelle Tatsache (Preise, Wettbewerber, Marktzahlen).",
+      guidanceCurrentGap: "Erfordert aktuelle, quellenbasierte Belege — hier nicht beantwortet:",
+      referenceNoteBody: "Dieser Antwort ist keine externe Referenzquelle beigefügt. Behandeln Sie sie als Orientierung, nicht als bestätigte aktuelle Tatsache.",
+      freshness: {
+        reference: "Stabiles Allgemeinwissen · nicht gegen aktuelle Quellen geprüft",
+        retainedRecord: "Gespeicherter Datensatz · nicht aktuell · keine KI verwendet",
+        computed: "Deterministisch aus den Werten in Ihrer Frage berechnet · keine Quellen nötig · keine KI verwendet",
+        referenceWithSources: "Hintergrund: Referenz · geprüft {when} · {sources}",
+        nothingRan: "Eine Frage vor der Suche · es wurde nichts ausgeführt",
+        checked: "Geprüft {when} · {sources}",
+        retainedTo: "Berichterstattung gespeichert bis {when} · {sources}",
+        publishedWindow: "Berichterstattung veröffentlicht {from} – {to}",
+        zero: "Geprüft {when} · 0 passende Berichte",
+        limited: "Geprüft {when} · eine Nachrichtenquelle war zeitweise nicht verfügbar, daher war dies keine vollständige Suche",
+      },
+      clarificationFooter: "Keine Quellen durchsucht · keine Berechnung verwendet",
+      sourcesAfterChoice: "Quellen erscheinen nach Ihrer Auswahl",
+      insufficientTitle: "Zu wenig passende Berichterstattung",
+      verification: {
+        notVerified: "Diese Aussage konnte aus den erfolgreich geprüften Quellen nicht bestätigt werden.",
+        coverageIncomplete: "Die Prüfung blieb unvollständig, weil einige Quellenkanäle nicht verfügbar waren.",
+        sourcesChecked: "Geprüfte Quellen",
+        available: "geprüft",
+        unavailable: "nicht verfügbar",
+        claims: "Status der Aussage",
+        lanes: {
+          "rss-feeds": "Verlags-Feeds",
+          "news-providers": "Nachrichtenanbieter",
+        },
+        reasons: {
+          "not-configured": "nicht konfiguriert",
+          "rate-limited": "durch Ratenbegrenzung blockiert",
+          auth: "Zugriff verweigert",
+          timeout: "Zeitüberschreitung",
+          unavailable: "nicht verfügbar",
+        },
+        states: {
+          CONFIRMED: "Bestätigt",
+          CORROBORATED_REPORTING: "Durch mehrere Berichte gestützt",
+          REPORTED: "Berichtet (eine Quelle)",
+          DISPUTED: "Bestritten",
+          NOT_VERIFIED: "Nicht bestätigt",
+          COVERAGE_INCOMPLETE: "Nicht bestätigt — Abdeckung unvollständig",
+        },
+      },
+      limitedTitle: "Suche war eingeschränkt",
+      limitedNote: "Eine Nachrichtenquelle war zeitweise nicht verfügbar. Diese Antwort nutzt die Berichterstattung, die erreichbar war.",
+      unavailable: "Ask ist derzeit nicht verfügbar. Es wurde nichts ausgeführt.",
+      privacyLink: "Datenschutz",
+      cookiesLink: "Cookies",
+      retryKept: "Nicht beantwortet — Ihre Frage steht noch im Feld. Drücken Sie Fragen, um es erneut zu versuchen.",
+      newAnswerBelow: "Neue Antwort unten",
+      budgetRefused: "Sie haben das heutige Ask-Limit erreicht, daher wurde nichts ausgeführt und nichts berechnet. Fragen, die aus gespeicherten Datensätzen beantwortet werden, funktionieren weiterhin.",
+      retainedAnswer: "Aus einem gespeicherten, geregelten Datensatz beantwortet — es wurde keine KI verwendet.",
+      followUpHint: "Sie könnten als Nächstes fragen",
+      retainedFallback: {
+        GOVERNED_NO_RECORD: "Für den Bereich dieser Frage gibt es keinen einzelnen gespeicherten Datensatz.",
+        GOVERNED_RECORD: "Der gespeicherte Datensatz wird unten mit seiner Quelle angezeigt.",
+      },
+      governedGap: {
+        notDisplayable: {
+          ECONOMY_CPI: "Eine NISR-VPI-Veröffentlichung ist gespeichert, kann aber unter ihren geregelten Auswertungsregeln derzeit nicht gelesen werden, daher wird kein Wert angezeigt. Es wurde nichts an ihrer Stelle ausgeführt.",
+          IMIHIGO: "Die NISR-Imihigo-Bewertung ist gespeichert, kann aber unter ihren geregelten Zulassungsregeln derzeit nicht gelesen werden, daher wird kein Ergebnis angezeigt. Es wurde nichts an ihrer Stelle ausgeführt.",
+          default: "Ein gespeicherter, geregelter Datensatz liegt vor, kann aber unter seinen geregelten Regeln derzeit nicht gelesen werden, daher wird kein Wert angezeigt. Es wurde nichts an seiner Stelle ausgeführt.",
+        },
+        noCapture: {
+          ECONOMY_CPI: "Es ist keine NISR-VPI-Veröffentlichung gespeichert, daher wird kein Wert angezeigt. Es wurde nichts an ihrer Stelle ausgeführt.",
+          MARKET_PROCUREMENT: "Es ist kein TED-Vergabe-Snapshot gespeichert, daher werden keine Bekanntmachungen angezeigt. Es wurde nichts an ihrer Stelle ausgeführt.",
+          default: "Für diese Frage ist kein gespeicherter, geregelter Datensatz vorhanden, daher wird nichts angezeigt. Es wurde nichts an seiner Stelle ausgeführt.",
+        },
+        unreadable: "Der gespeicherte Datensatz zu dieser Frage konnte gerade nicht gelesen werden. Es wird in keiner Richtung etwas behauptet, und es wurde nichts an seiner Stelle ausgeführt.",
+      },
+      noCitable: "Keine zitierfähigen Quellen",
+      unavailableBecause: {
+        REFERENCE_UNAVAILABLE: "Dafür sind aktuelle Informationen nötig, die allgemeines Hintergrundwissen nicht verlässlich liefern kann; daher wurde dies nicht aus dem Gedächtnis beantwortet. Fragen Sie nach den neuesten Nachrichten dazu oder nennen Sie einen Ort oder Zeitraum.",
+        EXECUTOR_NOT_WIRED: "Diese Frage benötigt eine Quelle, die Ask noch nicht lesen kann — etwa Ihre gespeicherten Storys, eine amtliche Veröffentlichung oder eine Facheinschätzung. Es wurde an ihrer Stelle nichts aus Nachrichten beantwortet.",
+        PLAN_IDENTITY_REQUIRED: "Melden Sie sich an, um Ihre gespeicherten Informationen zu nutzen.",
+        PLAN_CAPABILITY_UNAVAILABLE: "Diese Art von Frage benötigt eine Funktion, die Ask nicht hat — Berechnungen, Dateien, Code, amtliche Veröffentlichungen oder Facheinschätzungen. Es wurde nichts ausgeführt.",
+        OFFICIAL_SOURCE_UNAVAILABLE: "Sie haben nach der amtlichen Zahl gefragt. Ask hat für diese amtliche Quelle keinen zugelassenen Leser, kann den amtlichen Wert daher nicht liefern, und Berichterstattung wird nicht als amtlich dargestellt. Es wurde nichts ausgeführt.",
+        GOVERNED_RECORD_UNAVAILABLE: "Der gespeicherte Datensatz zu dieser Frage kann derzeit nicht angezeigt werden. Es wurde nichts an seiner Stelle ausgeführt.",
+      },
+      noAnswer: "Keine Antwort gegeben · nichts wird als Tatsache dargestellt",
+      whichOne: "Welches meinen Sie?",
+      clarificationFooterNoAi: "Keine KI verwendet · es wurde nichts beantwortet",
+      askedBeforeAnswering: "Eine Frage vor der Antwort · keine KI verwendet",
+      expiredNote: "Diese gespeicherte Antwort ist abgelaufen · unverändert angezeigt, nicht erneut geprüft",
+      continuationAnsweredAs: "Beantwortet als",
+      continuationNote: "Fortsetzung Ihrer früheren Frage für den neuen Ort",
+      r4: {
+        conceptualNoteTitle: "Konzeptionelle Analyse · Modellschluss",
+        conceptualNoteBody: "Eine durch Schlussfolgerung erstellte Analyse, kein Bericht über aktuelle Ereignisse. Es waren keine Quellen nötig, und nichts hiervon wird als bestätigte aktuelle Tatsache dargestellt.",
+        workNoteTitle: "Gesprächsarbeit · Modellschluss",
+        workNoteBody: "Aus den früheren Antworten dieser Unterhaltung erstellt. Es ist eine Schlussfolgerung, keine aktuellen quellenbasierten Daten: prüfen Sie jede Zahl, bevor Sie sich darauf verlassen.",
+        framework: "Rahmen",
+        mixedStableTitle: "Erläuterung · Modellschluss (keine Quelle)",
+        mixedStableUnavailable: "Der erklärende Teil Ihrer Frage konnte gerade nicht beantwortet werden; der aktuelle Teil unten stammt aus quellenbasierter Berichterstattung.",
+        priorReferenceUnresolved: "Ich finde in dieser Unterhaltung keine frühere Antwort, auf die sich das bezieht. Welche Antwort oder Aussage meinen Sie?",
+      },
+      r3: {
+        continuationJobNote: "Fortsetzung dessen, woran Sie in dieser Unterhaltung arbeiten",
+        decisionNoteTitle: "Entscheidungshilfe · allgemeine Schlussfolgerung",
+        decisionNoteBody: "Die Optionen werden gegen Ihr Ziel unter genannten Annahmen abgewogen. Dies ist eine Schlussfolgerung, keine aktuellen quellenbasierten Daten: keine Zahl hier ist eine bestätigte aktuelle Tatsache.",
+        decisionObjective: "Ziel",
+        partialCurrent: {
+          UNAVAILABLE: "Der aktuelle Teil konnte gerade nicht bestätigt werden. Die allgemeine Erklärung oben gilt weiterhin.",
+          NO_EVIDENCE: "Für diesen Teil wurde keine aktuelle Berichterstattung gefunden. Die allgemeine Erklärung oben gilt weiterhin.",
+        },
+        relations: {
+          BORDER: "Grenze",
+          CORRIDOR: "Korridor",
+          TRADE: "Handel",
+          TRANSPORT: "Verkehr",
+          ENERGY: "Energie",
+          INSTITUTIONAL: "regionale Institutionen",
+          DIPLOMATIC: "Beziehungen",
+          SECURITY: "Sicherheit",
+          WAR: "Krieg",
+          TERRITORIAL_DISPUTE: "Gebietsstreit",
+          ALLIANCE: "Bündnis",
+          COMPETITION: "Rivalität",
+          POLICY_COORDINATION: "Politikkoordinierung",
+          ECONOMIC: "Wirtschaftsbeziehungen",
+          HISTORICAL_RELATION: "Geschichte",
+        },
+        decisionObjectiveMissing: "Am besten für welches Ziel? Davon hängt die Antwort ab.",
+        objectives: {
+          investment: "Investition",
+          logistics: "Logistik",
+          "market size": "Marktgröße",
+          growth: "Wachstum",
+        },
+        constraintNoted: "Notiert — ich behalte das für den Rest dieser Unterhaltung. Was möchten Sie wissen?",
+        networkFailed: "Die Verbindung ist fehlgeschlagen, bevor Ask starten konnte. Es wurde nichts ausgeführt. Ihre Frage steht für einen erneuten Versuch bereit.",
+      },
+      noPriorSubject: "Was möchten Sie über diesen Ort wissen? Eine frühere Frage wird nicht von sich aus auf einen neuen Ort übertragen.",
+      clarify: {
+        suggestion: "Vorgeschlagene Frage",
+        useSuggestion: "Diese Frage verwenden",
+        chooseHint: "Eine auszuwählen fügt sie Ihrer Frage unten hinzu — es wird nichts ausgeführt, bis Sie Fragen drücken.",
+        codes: {
+          LANGUAGE_UNCLASSIFIED: "Diese Frage konnte in der gewählten Sprache nicht bearbeitet werden. Formulieren Sie sie um oder wählen Sie im Sprachmenü die Sprache, in der Sie schreiben.",
+          LANGUAGE_UNSUPPORTED: "Ask antwortet in den Sprachen, die im Sprachmenü angeboten werden. Könnten Sie Ihre Frage in einer davon stellen?",
+          SOURCE_FRAME_UNPARSED: "Aus welcher Quelle soll die Antwort kommen? Nennen Sie das Medium oder die Institution — zum Beispiel „Was berichtet Reuters über …?“",
+          SELECTION_EXCEEDS_MAX: "Es sind zu viele Storys ausgewählt. Wählen Sie weniger aus und fragen Sie erneut.",
+          SELECTION_BELOW_MINIMUM: "Es sind zu wenige Storys ausgewählt. Wählen Sie mehr aus und fragen Sie erneut.",
+        },
+        fallback: "Was genau soll das umfassen? Fügen Sie einen bestimmten Ort, ein Thema oder einen Zeitraum hinzu und fragen Sie erneut.",
+      },
+      signInRequired: {
+        title: "ANMELDUNG ERFORDERLICH",
+        body: "Melden Sie sich an, um GlobalNewsAI zu fragen. Ihre Frage bleibt unten erhalten und wurde nicht gesendet — es wurde nichts ausgeführt.",
+        action: "Zum Fragen anmelden",
+      },
+      guest: {
+        intro: "Stellen Sie 3 Fragen — ohne Anmeldung.",
+        notCounted: "Diese hat keine Gastfrage verbraucht.",
+        exhaustedTitle: "GASTFRAGEN AUFGEBRAUCHT",
+        exhaustedBody: "Sie haben Ihre 3 Gastfragen verbraucht. Melden Sie sich an, um diese Unterhaltung fortzusetzen und Ihre Antworten zu behalten.",
+        continueAction: "Zum Fortsetzen anmelden",
+        signInOptional: "Anmelden",
+        inProgress: "Ihre vorherige Frage wird noch beantwortet. Ihre neue Frage bleibt unten erhalten.",
+        cooldown: "Gastfragen sind vorübergehend begrenzt. Versuchen Sie es in einigen Minuten erneut oder melden Sie sich an. Ihre Frage bleibt unten erhalten.",
+        limited: "Der Dienst ist derzeit ausgelastet, daher wurde nichts ausgeführt. Versuchen Sie es in Kürze erneut. Ihre Frage bleibt unten erhalten.",
+        attemptsExhausted: "Gastfragen sind für diesen Browser begrenzt. Melden Sie sich an, um fortzufahren. Ihre Frage bleibt unten erhalten.",
+        unavailable: "Gastfragen sind derzeit nicht verfügbar. Melden Sie sich an, um zu fragen.",
+        signInForDeeper: "Die tiefere Analyse ist nach der Anmeldung verfügbar.",
+        privacy: "Gastfragen und -antworten werden bis zu 7 Tage auf unseren Servern gespeichert. Zur Beantwortung geht Ihre Frage an einen KI-Anbieter (OpenAI) und Suchwörter gehen an Nachrichtendienste. Die Anmeldung teilt nur Ihre E-Mail-Adresse.",
+        cancelled: "Die Anmeldung wurde abgebrochen. Ihre Unterhaltung ist noch da.",
+        failed: "Die Anmeldung wurde nicht abgeschlossen. Ihre Unterhaltung ist noch da.",
+        resumed: "Angemeldet. Ihre Unterhaltung wird hier fortgesetzt — es wurde nichts erneut ausgeführt.",
+      },
+      unified: {
+        contextUnavailable: "Die Story, der Ort oder der Datensatz, um den es bei dieser Frage ging, war nicht zu finden, daher wurde nichts ausgeführt. Ihre Frage bleibt unten erhalten.",
+        askUnavailable: "Ask ist derzeit nicht verfügbar, daher wurde nichts ausgeführt. Ihre Frage bleibt unten erhalten.",
+        newTopic: "Neues Thema",
+        newTopicStarted: "Neues Thema — frühere Fragen werden nicht übernommen.",
+      },
+      personal: {
+        SAVED_STORIES: {
+          signIn: "Melden Sie sich an, um Ihre gespeicherten Storys zu vergleichen.",
+          notAvailable: "Das Vergleichen Ihrer gespeicherten Storys ist noch nicht verfügbar.",
+        },
+        INTERESTS: {
+          signIn: "Melden Sie sich an, um Ihre Interessen zu nutzen.",
+          notAvailable: "Die Nutzung Ihrer Interessen ist noch nicht verfügbar.",
+        },
+        NEUTRAL: {
+          signIn: "Melden Sie sich an, um Ihre gespeicherten Informationen zu nutzen.",
+          notAvailable: "Ihre gespeicherten Informationen sind hier noch nicht verfügbar.",
+        },
+      },
+    },
+    askRecordStrings: {
+      askAboutRecord: "Zu diesem Datensatz fragen",
+      moduleRecord: {
+        CONFLICT: "Konfliktdatensatz",
+        IMIHIGO: "Imihigo-Distriktergebnis",
+        ECONOMY: "Rwanda VPI (Gesamtindex)",
+        MARKET: "Vergabebekanntmachung",
+      },
+    },
+    askStrings: {
+      frameLabel: "Ask AI",
+      metaTitle: "Ask AI — GlobalNews AI",
+      metaDescription: "Die fragebezogene Recherchefläche: kartenbezogen, quellenbasiert und ausdrücklich darüber, was nicht bewertet wurde.",
+      regions: {
+        changeStrip: "Änderungen im Ausschnitt",
+        mapCanvas: "Karteninformationen",
+        contextSummary: "Lagekontext",
+        evidenceFooter: "Belege und Aktualität",
+        suggestions: "Fragen, die sich lohnen",
+        composer: "Eine Frage stellen",
+        answer: "Antwort",
+        sources: "Quellen",
+        watch: "Beobachten",
+        alerts: "Aktuelle Hinweise",
+        workspaceHandoff: "Im Arbeitsbereich fortsetzen",
+        places: "Orte in dieser Antwort",
+        computeLadder: "Was eine Frage auslöst",
+      },
+      answerBlocks: {
+        answer: "Antwort",
+        "why-it-matters": "Warum es wichtig ist",
+        confidence: "Verlässlichkeit und Grenzen",
+        "key-evidence": "Zentrale Belege",
+        "geographic-context": "Geografischer Kontext",
+        actions: "Aktionen",
+        "follow-ups": "Anschlussfragen",
+      },
+      computeSteps: {
+        retrieval: "Relevante Quellen werden abgerufen",
+        "change-record": "Das Änderungsprotokoll wird gelesen",
+        "geographic-check": "Geografischer Kontext wird geprüft",
+        composition: "Die strukturierte Antwort wird vorbereitet",
+      },
+      suggestionCategories: {
+        situation: "Lage",
+        explanation: "Erklärung",
+        comparative: "Vergleich",
+        "watch-oriented": "Beobachten",
+        "deeper-analysis": "Tiefere Analyse",
+      },
+      states: {
+        suggestionsUnavailable: "Die Fragen hier stammen aus dem Änderungsprotokoll. Es sind noch keine verfügbar — das ist keine Aussage darüber, dass es nichts zu fragen gäbe.",
+        noAnalysisRun: "Es wurde keine Recherche ausgeführt. Dies ist die Form, die eine fertige Antwort annimmt, keine Antwort.",
+        noGeographyResolved: "Für diesen Ausschnitt ist keine Geografie aufgelöst.",
+        noEvidenceYet: "Es sind noch keine Belege angehängt.",
+        noAlerts: "Es werden noch keine Hinweise ausgeliefert.",
+        costNotConfigured: "Recherche läuft nur, wenn Sie eine Frage absenden.",
+        awaitingQuestion: "Stellen Sie eine Frage, um zu beginnen.",
+      },
+      controls: {
+        splitMode: "Verhältnis Karte und Ask",
+        exploreMode: "Erkunden",
+        questionMode: "Frage",
+        answerMode: "Antwort",
+        fullMapMode: "Ganze Karte",
+        visualState: "Visueller Zustand",
+        detent: "Höhe des Ask-Bereichs",
+        viewSources: "Quellen ansehen",
+        saveAnswer: "Antwort speichern",
+        continueInWorkspace: "Im Arbeitsbereich fortsetzen",
+        attachContext: "Kartenkontext anhängen",
+        miniMap: "Karte",
+        composerDock: "Zur sichtbaren Region fragen",
+        removeContext: "Kontext entfernen",
+        peek: "Vorschau",
+        half: "Hälfte",
+        full: "Voll",
+      },
+      localeFallback: "Die eigenen Bezeichnungen des Ask-AI-Rahmens sind in dieser Sprache noch nicht verfasst. Diese Bezeichnungen erscheinen auf Englisch; der übrige Bereich folgt Ihrer Sprache.",
+    },
+    briefingStrings: {
+      save: "Als Briefing speichern",
+      saving: "Wird gespeichert…",
+      newBriefing: "Neues Briefing",
+      addTo: "Als nächste Version hinzufügen zu",
+      open: "Briefing öffnen",
+      failed: "Nicht gespeichert. Es wurde nichts geändert.",
+      sectionTitle: "Briefings",
+      sectionIntro: "Ihre gespeicherten Briefings. Jede Version bleibt genau so erhalten, wie sie gespeichert wurde; eine zu öffnen führt nichts aus.",
+      empty: "Noch keine Briefings. Verwenden Sie „Als Briefing speichern“ bei einer Antwort.",
+      updateAvailable: "Seit der letzten Version sind neue Belege zur verfolgten Story hinzugekommen.",
+      noUpdate: "Keine neuen Belege zur verfolgten Story seit der letzten Version.",
+      storyGone: "Die verfolgte Story ist nicht mehr verfügbar.",
+      scopeQuestion: "Frage",
+      scopeCountry: "Ort",
+      scopeStory: "Verfolgte Story",
+      versions: "Versionen",
+      asOf: "Stand",
+      window: "Beobachtet seit der vorherigen Version",
+      readOnly: "Gespeicherte Kopie · schreibgeschützt · das Öffnen führt keine KI aus und sucht nichts.",
+      summary: "Antwort",
+      keyFacts: "Kernfakten",
+      background: "Hintergrund (ohne Quellen)",
+      backgroundNote: "Allgemeiner Hintergrund vom Modell — keine Belege, ohne Quellenangaben.",
+      coverageGaps: "Was die Belege nicht abgedeckt haben",
+      noGaps: "Es wurden keine Lücken erfasst.",
+      sources: "Quellen (Links zu den ursprünglichen Berichten)",
+      delete: "Briefing löschen",
+      deleteConfirm: "Dieses Briefing und alle seine Versionen löschen? Das kann nicht rückgängig gemacht werden.",
+      deleted: "Briefing gelöscht.",
+      back: "Zurück zu Gespeichert",
+      notFound: "Dieses Briefing wurde nicht gefunden.",
+      unavailable: "Briefings sind derzeit nicht verfügbar.",
+      signedOut: "Melden Sie sich an, um Ihre Briefings zu sehen.",
+      noSourcedAnswer: "Diese Version hat keine quellenbasierte Antwort.",
+    },
     dict: {
-      askAi: {
-        title: "GlobalNews AI fragen",
-        panelLabel: "GlobalNews AI fragen",
-        submit: "Fragen",
-        launcher: "KI fragen",
-        inputLabel: "Stellen Sie eine Frage zum Weltgeschehen",
-        resultSourcesHeading: "Quellen",
-      },
-      navBar: {
-        signIn: "Anmelden",
-        signOut: "Abmelden",
-        account: "Konto",
-        settings: "Einstellungen",
-        help: "Hilfe",
-        languageSelectorLabel: "Sprache",
-        accountMenuAriaLabel: "Kontomenü",
-      },
       accountSettings: {
         heading: "Kontoeinstellungen",
+        intro: "Verwalten Sie das Konto, mit dem Sie angemeldet sind.",
+        signInPrompt: "Melden Sie sich an, um Ihr Konto zu verwalten.",
+        dangerZoneHeading: "Kritischer Bereich",
+        dangerZoneNote: "Diese Aktionen sind endgültig. Nichts davon kann rückgängig gemacht werden.",
+        confirmationLabel: "Geben Sie zur Bestätigung die E-Mail-Adresse Ihres Kontos ein",
+        confirmationHint: "Das Löschen bleibt deaktiviert, bis die Eingabe der Adresse oben Zeichen für Zeichen entspricht.",
+        confirmationMismatch: "Das stimmt nicht mit der Adresse des Kontos überein, mit dem Sie angemeldet sind.",
+        deletePermanently: "Konto endgültig löschen",
+        deletingLabel: "Wird gelöscht…",
+        deletedHeading: "Konto gelöscht",
+        deletedNote: "Ihr Konto und seine Daten wurden gelöscht. Sie sind jetzt abgemeldet.",
+        deleteFailed: "Das Konto konnte nicht gelöscht werden. Es wurde nichts entfernt. Bitte versuchen Sie es erneut.",
       },
-      loadingStages: [
-        "Suche in vertrauenswürdigen Quellen…",
-        "Gruppierung verwandter Berichte…",
-        "Vergleich der Berichterstattung…",
-        "Quellenbasierte Analyse wird vorbereitet…",
-      ],
+      askAi: {
+        launcher: "Ask AI",
+        askingAboutGeography: "Frage zu {place}",
+        geographyBasis: "Ländergeografie · keine Belege angehängt",
+        geographyOutranked: "Ausgewählt: {place} · nicht verwendet — Ihre Frage nannte einen anderen Ort",
+        geographyNotApplied: "Ausgewählt: {place} · auf diese Frage nicht angewendet",
+        mapComputeNotice: "Führt eine KI-Analyse aus. Es wird nichts gesendet, bevor Sie auf Senden drücken.",
+        title: "Ask GlobalNews AI",
+        panelLabel: "Ask GlobalNews AI",
+        close: "Schließen",
+        inputLabel: "Stellen Sie eine Frage zum Weltgeschehen",
+        inputPlaceholder: "Was möchten Sie verstehen?",
+        submit: "Fragen",
+        idle: "Stellen Sie eine Frage, und die Antwort wird aus der abgerufenen Berichterstattung zusammengestellt, mit Angabe ihrer Quellen.",
+        contextPending: "Zu dieser Ansicht fragen — in Kürze",
+        contextPendingHint: "Fragen zur Seite, auf der Sie sich befinden, sind noch nicht möglich. Fragen hier werden ausschließlich aus abgerufener Berichterstattung beantwortet.",
+        contextChipAnchored: "Frage zu dieser Story",
+        contextChipGeneric: "Frage zum Weltgeschehen",
+        resultSourcesHeading: "Quellen",
+        citationLabel: "Quelle {n}: {title} — {publisher}",
+        inferenceLabel: "Analytische Schlussfolgerung:",
+        unsupportedLabel: "Durch die Berichterstattung nicht belegt:",
+        continuingSubject: "Fortsetzung von: {subject}",
+        startNewTopic: "Neues Thema beginnen",
+        newTopicStarted: "Ihre nächste Frage beginnt ein neues Thema",
+        productApplicabilityNotEstablished: "Die genaue Übertragbarkeit auf GlobalNewsAI lässt sich aus dieser Berichterstattung nicht feststellen: keine dieser Quellen beschreibt GlobalNewsAI selbst.",
+        focusNotInEvidence: "Keiner der abgerufenen Berichte behandelt {focus} direkt; diese Antwort stützt sich auf Berichterstattung über das Thema selbst.",
+        resultSourcesNone: "Für diese Frage wurden keine Quellen abgerufen.",
+        resultSourcesTruncated: "{shown} von {total} werden angezeigt. Öffnen Sie die vollständige Analyse für den Rest.",
+        resultBriefAbsent: "Diese Analyse enthielt keine Kurzfassung. Das ist ein Fehlen, keine Bewertung — es wurde nichts gemessen und zurückgehalten.",
+        resultNoAnswer: "Für diese Frage wurde keine Antwort erzeugt. Der Status oben nennt den Grund.",
+        resultNoAnswerProvider: "Aktuelle Berichterstattung ist vorübergehend nicht verfügbar. Bitte versuchen Sie es in einem Moment erneut.",
+        resultNoAnswerEvidence: "Keine relevante Berichterstattung zu dieser Frage gefunden. Nennen Sie den Ort, die Organisation oder das Ereignis.",
+        resultNoAnswerSafety: "GlobalNews AI hat ohne stützende Belege keine Antwort erzeugt. Versuchen Sie es in Kürze erneut oder stellen Sie eine engere Frage zu einem Ort, Ereignis oder Zeitraum.",
+        runFullAnalysis: "Vollständige Analyse starten",
+        runFullAnalysisNote: "Startet eine neue quellenbasierte Analyse.",
+        telemetryReports: "abgerufene Berichte",
+        telemetryClusters: "Berichtsgruppen",
+        sourceDatePublished: "Veröffentlicht am {date}",
+        sourceDateObserved: "Von GlobalNewsAI erstmals gesehen am {date}",
+        sourceDateUnknownBasis: "Berichtsdatum {date}",
+        sourceDatesNote: "Die Daten zeigen, wann jeder Bericht veröffentlicht oder erstmals gesehen wurde, nicht wann die Ereignisse stattfanden.",
+      },
       authError: {
-        cancelled: "Die Anmeldung wurde abgebrochen. Sie können sich jederzeit anmelden.",
+        cancelled: "Die Anmeldung wurde abgebrochen. Sie können sich anmelden, wann Sie möchten.",
         failed: "Die Anmeldung wurde nicht abgeschlossen. Bitte versuchen Sie es erneut.",
         dismissLabel: "Schließen",
+      },
+      footer: {
+        linkLabels: {
+          "/third-party-notices": "Hinweise zu Drittanbietern",
+        },
+      },
+      loadingStages: {
+        "0": "Vertrauenswürdige Quellen werden durchsucht…",
+        "1": "Verwandte Berichte werden gruppiert…",
+        "2": "Berichterstattung wird verglichen…",
+        "3": "Quellenbasierte Analyse wird vorbereitet…",
+      },
+      navBar: {
+        settings: "Einstellungen",
       },
     },
   },

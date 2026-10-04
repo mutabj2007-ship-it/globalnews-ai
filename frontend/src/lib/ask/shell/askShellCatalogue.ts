@@ -58,13 +58,29 @@ const OVERLAYS: Readonly<Partial<Record<DisplayLocale, ShellLocaleOverlay>>> = O
 });
 
 /**
- * The locales whose overlay content is, today, H's draft rather than L's wording.
+ * THE LOCALES WHOSE OVERLAY CONTENT IS CLAUDE L'S QUALIFIED WORDING.
  *
- * Declared as a list rather than inferred from "is there an overlay", because the moment L
- * delivers one locale the other four must keep reporting honestly, and the difference has to
- * be visible in one place a reviewer can read.
+ * ── WHAT CHANGED WHEN L DELIVERED, AND WHY THE SHAPE OF THIS CHANGED TOO ──
+ *
+ * These five were `ASK_SHELL_DRAFT_LOCALES` while their overlays held H's drafts. L has now
+ * delivered, every H draft string has been REPLACED rather than kept alongside, and the
+ * draft list is empty — which is the evidence for the ruling's step 3 ("remove corresponding
+ * `DRAFT_PENDING_CLAUDE_L` entries") rather than a claim about it.
+ *
+ * But "qualified" and "complete" are not the same fact, and collapsing them is exactly the
+ * kind of thing that lets an incomplete surface look finished:
+ *
+ *   QUALIFIED   every string this locale renders from its overlay is L's wording. True of
+ *               all five today — no H draft survives in any overlay file.
+ *   COMPLETE    every reachable key has one. NOT true of any of the five: L worked from
+ *               manifest Revision 2 and 144 keys per locale are outside it, so those keys
+ *               still fall through to English.
+ *
+ * `askShellCoverage(locale)` reports both, and a key with no qualified wording is absent
+ * from the overlay rather than filled with a draft — so it is REPORTED by `shellFallbacks()`
+ * instead of a reader meeting an unreviewed sentence that looks finished.
  */
-export const ASK_SHELL_DRAFT_LOCALES: readonly DisplayLocale[] = Object.freeze([
+export const ASK_SHELL_L_QUALIFIED_LOCALES: readonly DisplayLocale[] = Object.freeze([
   'fr',
   'de',
   'es',
@@ -72,17 +88,32 @@ export const ASK_SHELL_DRAFT_LOCALES: readonly DisplayLocale[] = Object.freeze([
   'ar',
 ] as const);
 
+/**
+ * Locales still carrying H-authored draft strings. EMPTY since L delivered, and kept as a
+ * list rather than deleted because a future round that needs a draft to wire a surface must
+ * declare it here, where `askShellQualification` and the acceptance spec can both see it.
+ */
+export const ASK_SHELL_DRAFT_LOCALES: readonly DisplayLocale[] = Object.freeze([] as const);
+
 /** English and Polish: authored catalogues, not overlays. */
 export const ASK_SHELL_SOURCE_LOCALES: readonly DisplayLocale[] = Object.freeze([
   'en',
   'pl',
 ] as const);
 
+/**
+ * What the wording in this locale IS — not how much of it there is.
+ *
+ * A locale is `CLAUDE_L_QUALIFIED` when every string it renders from its overlay came from
+ * Claude L, whether or not the overlay covers every key. Coverage is the separate question
+ * `askShellCoverage(locale).complete` answers, and the two are deliberately not merged: a
+ * locale that is qualified but incomplete falls back to ENGLISH on the keys it lacks, which
+ * is a different and more honest failure than rendering an unreviewed draft.
+ */
 export function askShellQualification(locale: DisplayLocale): ShellQualification {
   if (ASK_SHELL_SOURCE_LOCALES.includes(locale)) return 'SOURCE';
-  return ASK_SHELL_DRAFT_LOCALES.includes(locale)
-    ? 'DRAFT_PENDING_CLAUDE_L'
-    : 'CLAUDE_L_QUALIFIED';
+  if (ASK_SHELL_DRAFT_LOCALES.includes(locale)) return 'DRAFT_PENDING_CLAUDE_L';
+  return 'CLAUDE_L_QUALIFIED';
 }
 
 /**

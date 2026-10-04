@@ -1,6 +1,7 @@
 import { DISPLAY_LOCALES, directionFor } from '@globalnews-ai/shared';
 import {
   ASK_SHELL_DRAFT_LOCALES,
+  ASK_SHELL_L_QUALIFIED_LOCALES,
   ASK_SHELL_SOURCE_LOCALES,
   askShellCoverage,
   askShellCoverageAll,
@@ -31,7 +32,8 @@ import { shellKeyPaths } from '@/lib/ask/shell/askShellOverlay';
  * rounds without a test moving.
  */
 
-const DRAFT = ASK_SHELL_DRAFT_LOCALES;
+/* The five locales L qualified. They were ASK_SHELL_DRAFT_LOCALES before she delivered. */
+const L_LOCALES = ASK_SHELL_L_QUALIFIED_LOCALES;
 
 describe('B-6 · the shell is one catalogue over seven locales', () => {
   it('every contracted locale resolves a whole shell', () => {
@@ -156,14 +158,20 @@ describe('B-7 · no English fallback is ever silent', () => {
     }
   });
 
-  it('the draft locales report an HONEST, non-zero gap', () => {
-    for (const locale of DRAFT) {
+  it('the L-qualified locales report an HONEST, non-zero gap', () => {
+    /*
+      QUALIFIED IS NOT COMPLETE, and this test exists to keep the two apart. Every string
+      these five render from their overlay is Claude L's; 144 keys per locale have no
+      qualified wording yet and fall through to English, declared. Collapsing the two facts
+      into one "localized: yes" is how an incomplete surface comes to look finished.
+    */
+    for (const locale of L_LOCALES) {
       const coverage = askShellCoverage(locale);
-      expect(coverage.qualification).toBe('DRAFT_PENDING_CLAUDE_L');
+      expect(coverage.qualification).toBe('CLAUDE_L_QUALIFIED');
       expect(coverage.complete).toBe(false);
-      expect(coverage.localizedKeys).toBe(62);
-      expect(coverage.fallbacks).toHaveLength(468);
-      /* 62 drafted + 468 pending + 5 proper nouns = the 535 overlay-managed keys. */
+      expect(coverage.localizedKeys).toBe(386);
+      expect(coverage.fallbacks).toHaveLength(144);
+      /* 386 qualified + 144 unqualified + 5 proper nouns = the 535 overlay-managed keys. */
       expect(coverage.localizedKeys + coverage.fallbacks.length + coverage.properNouns).toBe(
         coverage.totalKeys,
       );
@@ -178,7 +186,7 @@ describe('B-7 · no English fallback is ever silent', () => {
       a leaf shape nobody handles, this count stops matching and the suite fails here.
     */
     expect(askShellKeyPaths()).toHaveLength(535);
-    for (const locale of DRAFT) {
+    for (const locale of L_LOCALES) {
       const coverage = askShellCoverage(locale);
       expect(coverage.totalKeys).toBe(535);
     }
@@ -191,7 +199,7 @@ describe('B-7 · no English fallback is ever silent', () => {
       the equality above — and leaving a path declared that does not exist at all fails here.
     */
     const paths = askShellKeyPaths();
-    for (const locale of DRAFT) {
+    for (const locale of L_LOCALES) {
       for (const declared of declaredFallbacksFor(locale)) {
         expect(paths).toContain(declared);
       }
@@ -199,61 +207,85 @@ describe('B-7 · no English fallback is ever silent', () => {
   });
 });
 
-describe('B-8 · H drafts are never labelled as qualified', () => {
-  it('every draft locale reports DRAFT_PENDING_CLAUDE_L', () => {
-    for (const locale of DRAFT) {
-      expect(askShellQualification(locale)).toBe('DRAFT_PENDING_CLAUDE_L');
+describe('B-8 · every overlay string is Claude L\u2019s, and no H draft survives', () => {
+  it('no locale carries H drafts any more', () => {
+    /*
+      THE TRIPWIRE FIRED, WHICH IS WHAT IT WAS FOR. This block previously asserted that NO
+      locale reported CLAUDE_L_QUALIFIED, so that H could not label its own drafts as
+      linguistically qualified and a silent promotion would fail a test. L has now delivered,
+      every H draft string was REPLACED rather than kept beside hers, and the draft list is
+      empty — which is the evidence for the ruling's step 3 rather than a claim about it.
+    */
+    expect(ASK_SHELL_DRAFT_LOCALES).toEqual([]);
+    for (const locale of L_LOCALES) {
+      expect(askShellQualification(locale)).toBe('CLAUDE_L_QUALIFIED');
     }
   });
 
-  it('no locale is reported CLAUDE_L_QUALIFIED until L has delivered one', () => {
-    /*
-      The CTO's instruction was explicit: H must not label its own drafts as linguistically
-      qualified. So this assertion is deliberately a TRIPWIRE, not a permanent truth — when L
-      delivers French, `fr` moves out of ASK_SHELL_DRAFT_LOCALES and this test is the one that
-      says so out loud, instead of the change passing silently.
-    */
-    const qualified = askShellCoverageAll().filter(
-      (c) => c.qualification === 'CLAUDE_L_QUALIFIED',
-    );
-    expect(qualified).toEqual([]);
+  it('every locale is SOURCE or CLAUDE_L_QUALIFIED — nothing is unreviewed', () => {
+    for (const c of askShellCoverageAll()) {
+      expect(['SOURCE', 'CLAUDE_L_QUALIFIED']).toContain(c.qualification);
+    }
   });
 
-  it('every draft locale file says so in its own header', () => {
+  it('every overlay file records the provenance of the strings in it', () => {
+    /*
+      A transcribed file is only as trustworthy as its provenance, so each one carries the
+      source filename and the SHA-256 L published for it. The sums were verified against
+      `TO_CLAUDE_H/SHA256SUMS.txt` before transcription.
+    */
     const fs = require('fs') as typeof import('fs');
     const path = require('path') as typeof import('path');
-    for (const locale of DRAFT) {
-      const file = path.join(__dirname, 'locales', `${locale}.ts`);
-      const src = fs.readFileSync(file, 'utf8');
-      expect(src).toContain('DRAFT_PENDING_CLAUDE_L');
-      expect(src).toContain('Claude L owns native-quality wording');
+    for (const locale of L_LOCALES) {
+      const src = fs.readFileSync(path.join(__dirname, 'locales', `${locale}.ts`), 'utf8');
+      expect(src).toContain('WORDING BY CLAUDE L');
+      expect(src).toMatch(/sha-256\s+[0-9a-f]{64}/);
+      expect(src).toContain('LINGUISTICALLY_QUALIFIED_BY_CLAUDE_L');
+      /* And no H draft hides inside a file that claims to be L's. */
+      expect(src).not.toContain('DRAFT_PENDING_CLAUDE_L');
     }
   });
 });
 
-describe('B-9 · the drafted chrome is the surface the P0 correction named', () => {
+describe('B-9 · the chrome the P0 correction named, in Claude L\u2019s wording', () => {
   /*
     The Product Owner listed the French defects by hand. Each one is asserted here in its own
     language, so "the French screenshot is fixed" is a test result and not a screenshot
-    somebody has to trust.
+    somebody has to trust. The values are L's, transcribed — H reworded none of them.
   */
   it('French renders the named chrome in French', () => {
     const s = askShellStrings('fr');
     expect(s.askNavStrings.newQuestion).toBe('Nouvelle question');
-    expect(s.askNavStrings.recent).toBe('Récentes');
-    expect(s.askNavStrings.saved).toBe('Enregistrées');
-    expect(s.askNavStrings.help).toBe('Aide et commentaires');
+    expect(s.askNavStrings.recent).toBe('Récents');
+    expect(s.askNavStrings.saved).toBe('Enregistrés');
+    expect(s.askNavStrings.help).toBe('Aide et retours');
     expect(s.askNavStrings.settings).toBe('Paramètres');
     expect(s.askNavStrings.account).toBe('Compte');
     expect(s.askR2Strings.ask).toBe('Demander');
     expect(s.askR2Strings.privacyLink).toBe('Confidentialité');
     expect(s.askR2Strings.cookiesLink).toBe('Cookies');
     expect(s.askStrings.states.costNotConfigured).toBe(
-      'La recherche ne démarre que lorsque vous envoyez une question.',
+      'La recherche ne s’exécute que lorsque vous envoyez une question.',
     );
   });
 
-  it('the same named chrome is localized in all five draft locales — no English left', () => {
+  it('a key the Product Owner named that is STILL English is declared, not silent', () => {
+    /*
+      "Sign in" is on the Product Owner's own defect list and is one of the 38 `dict.navBar`
+      members Revision 2 under-listed, so it has no qualified wording yet. It renders English
+      in all five — and that is the honest state only because it is DECLARED. This assertion
+      is the difference between a known gap and a silent one, and it fails the moment the key
+      stops being declared, in either direction.
+    */
+    for (const locale of L_LOCALES) {
+      expect(askShellStrings(locale).dict.navBar.signIn).toBe(
+        askShellStrings('en').dict.navBar.signIn,
+      );
+      expect(declaredFallbacksFor(locale)).toContain('dict.navBar.signIn');
+    }
+  });
+
+  it('the same named chrome is localized in all five L-qualified locales', () => {
     const english = askShellStrings('en');
     const named = [
       (s: ReturnType<typeof askShellStrings>) => s.askNavStrings.newQuestion,
@@ -265,10 +297,15 @@ describe('B-9 · the drafted chrome is the surface the P0 correction named', () 
       (s: ReturnType<typeof askShellStrings>) => s.askR2Strings.ask,
       (s: ReturnType<typeof askShellStrings>) => s.askR2Strings.privacyLink,
       (s: ReturnType<typeof askShellStrings>) => s.askStrings.states.costNotConfigured,
-      (s: ReturnType<typeof askShellStrings>) => s.dict.navBar.signIn,
       (s: ReturnType<typeof askShellStrings>) => s.dict.askAi.submit,
     ];
-    for (const locale of DRAFT) {
+    /*
+      `dict.navBar.signIn` is deliberately NOT in this list. It is on the Product Owner's
+      defect list, it is still English, and the test above asserts exactly that — with its
+      declaration. Including it here would make this test fail for a reason the suite already
+      states precisely, and quietly dropping it from both would be the real defect.
+    */
+    for (const locale of L_LOCALES) {
       const shell = askShellStrings(locale);
       for (const read of named) {
         /* `Cookies` is the same word in several of these, so the English COMPARISON is on the
@@ -281,22 +318,95 @@ describe('B-9 · the drafted chrome is the surface the P0 correction named', () 
   });
 });
 
+describe('B-13 · the strings Claude L flagged back at H', () => {
+  /*
+    L's manifest raised two keys whose TRUTH, not whose translation, had moved. Both are
+    H's files. They are here because a flagged defect that is only answered in prose is a
+    defect nobody re-checks.
+  */
+  it('LANGUAGE_UNSUPPORTED no longer claims Ask answers in two languages', () => {
+    /*
+      It read "Ask answers in English and Polish." That was true of the engine the catalogue
+      was written against and false of this one. L refused to translate it faithfully — a
+      faithful French rendering would have told a French reader, in French, that Ask answers
+      only in English and Polish — delivered a truthful rendering in all five, and flagged
+      the English as H's to fix. It is fixed, in English and in Polish.
+
+      The new wording names NO list, deliberately: the explicit list is what drifted, and a
+      list in seven languages drifts seven times.
+    */
+    for (const locale of DISPLAY_LOCALES) {
+      const text = askShellStrings(locale).askR2Strings.clarify.codes.LANGUAGE_UNSUPPORTED;
+      expect(text).not.toMatch(/English and Polish|angielsku|polsku/i);
+      expect(text.length).toBeGreaterThan(0);
+    }
+    expect(askShellStrings('en').askR2Strings.clarify.codes.LANGUAGE_UNSUPPORTED).toBe(
+      'Ask answers in the languages offered in the language menu. Could you ask your question in one of them?',
+    );
+  });
+
+  it('localeFallback is UNREACHABLE from the Ask shell, which is better than translating it', () => {
+    /*
+      It says "The Ask AI frame's own labels are not yet authored in this language." L
+      translated it faithfully because the key must exist for the missing-key test and may
+      still be right for a locale with no overlay — then pointed out that for these five it is
+      now untrue, and that a test proving it never renders is worth more than its translation.
+      She is right, so this is that test.
+
+      `resolveAskStrings` is the only thing that can produce the fellBack state that string
+      describes, and since Phase B no Ask SURFACE calls it: they all read `askShellStrings`.
+      Asserted on the source rather than by rendering, because the claim is about reachability
+      and a render test can only show one path at a time.
+    */
+    const fs = require('fs') as typeof import('fs');
+    const path = require('path') as typeof import('path');
+    const root = path.join(__dirname, '..', '..', '..');
+    const callers: string[] = [];
+    const walk = (dir: string): void => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name !== 'node_modules') walk(full);
+          continue;
+        }
+        if (!/\.tsx?$/.test(entry.name) || /\.spec\.tsx?$/.test(entry.name)) continue;
+        const src = fs.readFileSync(full, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+        if (/\bresolveAskStrings\s*\(/.test(src)) callers.push(path.relative(root, full));
+      }
+    };
+    walk(path.join(root, 'components'));
+    walk(path.join(root, 'app'));
+    expect(callers).toEqual([]);
+    /* It is still a key, still declared if unqualified, and still asserted to exist. */
+    expect(askShellKeyPaths()).toContain('askStrings.localeFallback');
+  });
+});
+
 describe('B-10 · Arabic', () => {
   it('the Arabic shell is Arabic, and the direction comes from the shared contract', () => {
     const s = askShellStrings('ar');
     expect(directionFor('ar')).toBe('rtl');
     expect(s.askNavStrings.settings).toBe('الإعدادات');
     expect(s.askR2Strings.answer).toBe('الإجابة');
-    expect(s.dict.navBar.signIn).toBe('تسجيل الدخول');
+    expect(s.askR2Strings.ask).toBe('اسأل');
+    expect(s.askNavStrings.newQuestion).toBe('سؤال جديد');
   });
 
-  it('Arabic plural categories and numerals come out of the template machinery', () => {
-    const s = askShellStrings('ar');
-    /* Six categories, and the count in the locale's own numerals — ٢, ٣, ١١. */
-    expect(s.askR2Strings.sourcesLabel(1)).toBe('مصدر واحد');
-    expect(s.askR2Strings.sourcesLabel(2)).toBe('مصدران');
-    expect(s.askR2Strings.sourcesLabel(3)).toBe('٣ مصادر');
-    expect(s.askR2Strings.sourcesLabel(11)).toBe('١١ مصدرًا');
+  it('the Arabic TEMPLATES are honestly still English, and declared', () => {
+    /*
+      This block previously asserted Arabic plural forms — against H's own DRAFT. Those
+      drafts are gone, L worked from a manifest that listed no function-valued member, and
+      `sourcesLabel` therefore has no qualified wording. It renders English.
+
+      The assertion is kept rather than deleted, inverted to the truth: the machinery is
+      proven separately in `askShellOverlay.spec.ts`, and what is proven HERE is that the
+      shell does not pretend. A template with no wording falls through visibly and is
+      declared, instead of rendering a plural form nobody reviewed.
+    */
+    const ar = askShellStrings('ar');
+    const en = askShellStrings('en');
+    expect(ar.askR2Strings.sourcesLabel(3)).toBe(en.askR2Strings.sourcesLabel(3));
+    expect(declaredFallbacksFor('ar')).toContain('askR2Strings.sourcesLabel()');
   });
 
   it('no draft locale string carries a hand-inserted bidi control character', () => {
@@ -306,7 +416,7 @@ describe('B-10 · Arabic', () => {
       direction authority inside a paragraph that already has one.
     */
     const forbidden = /[‎‏‪-‮⁦-⁩]/;
-    for (const locale of DRAFT) {
+    for (const locale of L_LOCALES) {
       const shell = askShellStrings(locale);
       const walk = (node: unknown): void => {
         if (typeof node === 'string') {

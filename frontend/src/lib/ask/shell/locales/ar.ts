@@ -5,92 +5,87 @@ import type { ShellLocaleOverlay } from '@/lib/ask/shell/askShellOverlay';
  * ASK SHELL OVERLAY — ARABIC
  * ════════════════════════════════════════════════════════════════════════════
  *
- * R4 · PHASE B · CLAUDE H.
+ * R4 · PHASE B · WORDING BY CLAUDE L. Structure and wiring by Claude H.
  *
- * ── EVERY STRING IN THIS FILE IS `DRAFT_PENDING_CLAUDE_L` ────────────────
+ * ── PROVENANCE ───────────────────────────────────────────────────────────
  *
- * The Product Owner ruled that Claude L owns native-quality wording for
- * fr / de / es / pt-BR / ar, and that H must never label its own strings as
- * linguistically qualified. These are H's DRAFTS. They exist so the seven-language
- * shell can be wired, tested and shown working end to end — the French screenshot
- * and the Arabic RTL proof the contract asks for — not because H is qualifying
- * Arabic.
+ *   source file   `R4_PARALLEL/CLAUDE_L/TO_CLAUDE_H/OVERLAY-ar.json`
+ *   sha-256       8c8743398be63975321828cdaab20851e9039568c3c69bd16d411482f1e6b3c0
+ *   L's status    LINGUISTICALLY_QUALIFIED_BY_CLAUDE_L
+ *   L's manifest  Revision 2 — see the gap note below
+ *   measured tree 5699eb7058b3d20026c62bcffd75f97b7ca846ec
  *
- * `askShellQualification('ar')` reports `DRAFT_PENDING_CLAUDE_L` for every key
- * below, and the acceptance spec asserts that the whole set is still declared as
- * pending. When L returns wording for a key, the key moves out of the draft
- * declaration and the test tightens by itself. Nothing here is presented to a
- * reviewer as finished translation.
+ * The strings below are TRANSCRIBED from that file. H did not reword any of them, and no
+ * string H drafted survives in this file: a key L qualified carries L's wording, and a key
+ * L did not reach is absent rather than filled with a draft, so `shellFallbacks()` reports
+ * it instead of a reader meeting an unreviewed sentence.
  *
- * ── SCOPE OF THIS DRAFT ──────────────────────────────────────────────────
+ * ── THE GAP, STATED HERE BECAUSE IT IS NOT VISIBLE FROM THE STRINGS ──────
  *
- * The chrome a Standalone Ask reader meets on first paint: navigation, the account
- * and language menus, the hero and composer, the primary answer labels, the
- * no-compute state line, Privacy and Cookies, Recent and Saved, the loading stages
- * and the sign-in error copy — i.e. the strings the Product Owner's own French
- * screenshot showed in English. Keys outside that set are NOT drafted and are
- * reported by `askShellCoverage('ar')` as fallbacks, so the gap is visible
- * rather than guessed at.
+ * Claude L worked from manifest **Revision 2**, which was the latest on disk when L began.
+ * Revisions 3 and 4 then measured 530 keys rather than 413, after two corrections H
+ * found while wiring: the enumerator was skipping function-valued members, and eighty more
+ * keys were never in a catalogue at all.
  *
- * Two templates are drafted deliberately — `askR2Strings.sourcesLabel` and
- * `briefingStrings.version` — so the plural-category machinery is exercised in
- * production code and not only in its own spec.
+ * So this overlay qualifies **386** of them and **144** remain unqualified. They are
+ * declared in `askShellDeclaredFallbacks.ts` and fail a test if they ever stop being
+ * declared. A Revision 5 delta manifest covering exactly that remainder has been issued
+ * to L.
+ *
+ * L also caught something H's manifest had missed in the other direction: the rebase onto
+ * `5699eb7` added three reader-facing `askR2Strings.r4.*` keys that Revision 2 did not
+ * list, and L authored them rather than delivering a complete-looking file with a hole in
+ * it.
  */
 
 export const arShellOverlay: ShellLocaleOverlay = {
   data: {
-    askR2Strings: {
-      askTitle: "اسأل GlobalNewsAI",
-      ask: "اسأل",
-      close: "إغلاق",
-      returnMap: "العودة إلى الخريطة",
-      youAsked: "سؤالك",
-      scope: "النطاق",
-      noScope: "سؤال عام · لم يُطبَّق أي نطاق",
-      answer: "الإجابة",
-      sources: "المصادر",
-      openFull: "فتح التحليل الكامل",
-      runDeep: "إجراء تحليل أعمق",
-      newQ: "سؤال جديد",
-      earlier: "سابقًا في هذه المحادثة",
-      privacyLink: "الخصوصية",
-      cookiesLink: "ملفات تعريف الارتباط",
-      sourcesLabel: {
-        kind: "plural",
-        forms: {
-          zero: "لا مصادر",
-          one: "مصدر واحد",
-          two: "مصدران",
-          few: "{0} مصادر",
-          many: "{0} مصدرًا",
-          other: "{0} مصدر",
-        },
-      },
-    },
-    askStrings: {
-      frameLabel: "اسأل الذكاء الاصطناعي",
-      metaTitle: "اسأل الذكاء الاصطناعي — GlobalNews AI",
-      states: {
-        costNotConfigured: "لا يبدأ البحث إلا عند إرسال سؤالك.",
-        awaitingQuestion: "اطرح سؤالًا للبدء.",
-      },
-      regions: {
-        composer: "اطرح سؤالًا",
-        answer: "الإجابة",
-        sources: "المصادر",
-      },
-      metaDescription: "واجهة البحث الخاصة بكل سؤال: مدركة للموقع الجغرافي، ومستندة إلى المصادر، وصريحة بشأن ما لم يُقيَّم.",
-    },
     askContinuityStrings: {
       recentTitle: "الأخيرة",
+      recentIntro: "محادثاتك في Ask. فتح إحداها يعرض ما أُنتج سابقًا — ولا يُنفَّذ أي شيء.",
       savedTitle: "المحفوظة",
-    },
-    briefingStrings: {
-      version: {
-        kind: "plural",
-        forms: {
-          other: "الإصدار {0}",
-        },
+      savedIntro: "الأسئلة التي حفظتها. فتح أحدها يعرض ما أُنتج سابقًا — ولا يُنفَّذ أي شيء.",
+      groups: {
+        today: "اليوم",
+        yesterday: "أمس",
+        earlier: "قبل ذلك",
+      },
+      tabs: {
+        questions: "الأسئلة المحفوظة",
+      },
+      turnCount: "{n} أسئلة",
+      turnCountOne: "سؤال واحد",
+      lastActive: "آخر نشاط",
+      reopen: "فتح",
+      reopenNote: "أُنتج سابقًا. لا يُنفَّذ أي شيء.",
+      noStoredResult: "لا توجد نتيجة مخزَّنة لفتحها.",
+      continueNote: "للمتابعة، أرسل سؤالًا جديدًا.",
+      filterLabel: "تصفية",
+      filterPlaceholder: "تصفية بحسب السؤال",
+      noQuestionStored: "لا يوجد سؤال مخزَّن لهذه المحادثة.",
+      operationStates: {
+        QUOTED: "مُقدَّر",
+        ACCEPTED: "مقبول",
+        RESERVED: "محجوز",
+        RUNNING: "قيد التنفيذ",
+        COMPLETED: "مكتمل",
+        RELEASED: "مُفرَج عنه",
+        REFUNDED: "مُسترَد",
+      },
+      startedWith: "بدأت بـ:",
+      save: "حفظ",
+      unsave: "إزالة",
+      saved: "محفوظ",
+      states: {
+        signedOut: "سجّل الدخول لعرض محادثاتك في Ask.",
+        unavailable: "محادثات Ask غير متوفرة في هذه النسخة التجريبية.",
+        network: "لم يتسنَّ الوصول إلى محادثاتك. لم يُفقد أي شيء.",
+        refused: "لم يتسنَّ قراءة محادثاتك في هذه اللحظة.",
+      },
+      empty: {
+        recent: "ليست لديك محادثات في Ask بعد.",
+        questions: "لم تحفظ أي سؤال بعد.",
+        filtered: "لا شيء يطابق هذه التصفية.",
       },
     },
     askNavStrings: {
@@ -102,44 +97,435 @@ export const arShellOverlay: ShellLocaleOverlay = {
       language: "اللغة",
       signIn: "تسجيل الدخول",
       signOut: "تسجيل الخروج",
-      navAriaLabel: "تنقّل الاستفسار",
+      navAriaLabel: "تنقّل Ask",
       openMenuAriaLabel: "فتح القائمة",
       closeMenuAriaLabel: "إغلاق القائمة",
       account: "الحساب",
       accountMenuAriaLabel: "قائمة الحساب",
       languageSelectorAction: "اختيار اللغة",
     },
+    askR2Strings: {
+      askTitle: "Ask GlobalNewsAI",
+      ask: "اسأل",
+      close: "إغلاق",
+      returnMap: "العودة إلى الخريطة",
+      youAsked: "سؤالك",
+      scope: "النطاق",
+      noScope: "سؤال عام · لم يُطبَّق نطاق",
+      inheritedScope: "متابعة · تُكمل {subject}",
+      scopePending: "النطاق ينتظر اختيارك",
+      keptAsAsked: "مُحفوظ كما طُرح",
+      answer: "الإجابة",
+      sources: "المصادر",
+      openFull: "فتح التحليل الكامل",
+      openFullMeta: "0 ذكاء اصطناعي · 0 مزوّد · بلا حسابات",
+      runDeep: "تشغيل تحليل أعمق",
+      runDeepMeta: "يسأل قبل التنفيذ",
+      newQ: "سؤال جديد",
+      earlier: "سابقًا في هذه المحادثة",
+      deepEyebrow: "تشغيل صريح",
+      deepTitle: "تشغيل تحليل أعمق؟",
+      deepBody: "يقرأ التحليل الأعمق مصادر أكثر على مدى زمني أوسع ويُعدّ تقريرًا منظَّمًا. ولا يُنفَّذ إلا بعد تأكيدك.",
+      notNow: "ليس الآن",
+      runConfirm: "تشغيل التحليل الأعمق",
+      badges: {
+        ref: "خلفية مرجعية",
+        ver: "مُتحقَّق حاليًا",
+        cur: "معلومات حالية",
+        clar: "يلزم توضيح",
+        part: "أدلة جزئية",
+        insuf: "أدلة غير كافية",
+        unavail: "قدرة غير متوفرة",
+        rec: "سجل محفوظ",
+        calc: "حساب",
+      },
+      referenceNoteTitle: "خلفية النموذج · بدون مصادر مُقتبسة",
+      guidanceNoteTitle: "توجيه عام · استدلال النموذج",
+      guidanceNoteBody: "هذه نصيحة عامة مبنية على الاستدلال والمعرفة العامة، وليست بحثًا حاليًا مستندًا إلى مصادر. لم يُتحقَّق من أي مصدر، ولا شيء هنا حقيقة حالية مُتحقَّق منها (أسعار، منافسون، أرقام السوق).",
+      guidanceCurrentGap: "يتطلّب أدلة حالية مستندة إلى مصادر — لم يُجَب عنه هنا:",
+      referenceNoteBody: "لا يُرفق بهذه الإجابة أي مصدر مرجعي خارجي. اعتبرها توجيهًا، لا حقيقة حالية مُتحقَّقًا منها.",
+      freshness: {
+        reference: "معرفة عامة ثابتة · لم تُقارَن بالمصادر الحالية",
+        retainedRecord: "سجل محفوظ · غير حالي · دون استخدام الذكاء الاصطناعي",
+        computed: "محسوب حسابًا حتميًا من القيم الواردة في سؤالك · دون حاجة إلى مصادر · دون استخدام الذكاء الاصطناعي",
+        referenceWithSources: "الخلفية: مرجعية · تم التحقق {when} · {sources}",
+        nothingRan: "سؤال واحد قبل البحث · لم يُنفَّذ أي شيء",
+        checked: "تم التحقق {when} · {sources}",
+        retainedTo: "تقارير محفوظة حتى {when} · {sources}",
+        publishedWindow: "تقارير نُشرت من {from} إلى {to}",
+        zero: "تم التحقق {when} · 0 تقارير مطابقة",
+        limited: "تم التحقق {when} · كان أحد مصادر الأخبار غير متوفر مؤقتًا، لذا لم يكن البحث كاملًا",
+      },
+      clarificationFooter: "لم تُبحَث مصادر · ولم تُستخدم حسابات",
+      sourcesAfterChoice: "تظهر المصادر بعد اختيارك",
+      insufficientTitle: "لا توجد تقارير مطابقة كافية",
+      verification: {
+        notVerified: "لم يتسنَّ التحقق من هذا الادعاء من المصادر التي فُحصت بنجاح.",
+        coverageIncomplete: "بقي التحقق ناقصًا لأن بعض مسارات المصادر كانت غير متوفرة.",
+        sourcesChecked: "المصادر التي فُحصت",
+        available: "فُحصت",
+        unavailable: "غير متوفرة",
+        claims: "حالة الادعاء",
+        lanes: {
+          "rss-feeds": "خلاصات الناشرين",
+          "news-providers": "مزوّدو الأخبار",
+        },
+        reasons: {
+          "not-configured": "غير مُهيّأة",
+          "rate-limited": "مُقيَّدة بحدّ الطلبات",
+          auth: "رُفض الوصول",
+          timeout: "انتهت المدة",
+          unavailable: "غير متوفرة",
+        },
+        states: {
+          CONFIRMED: "مؤكَّد",
+          CORROBORATED_REPORTING: "تقارير مؤيِّدة",
+          REPORTED: "مذكور (مصدر واحد)",
+          DISPUTED: "مُتنازَع عليه",
+          NOT_VERIFIED: "غير مُتحقَّق منه",
+          COVERAGE_INCOMPLETE: "غير مُتحقَّق منه — التغطية ناقصة",
+        },
+      },
+      limitedTitle: "كان البحث محدودًا",
+      limitedNote: "كان أحد مصادر الأخبار غير متوفر مؤقتًا. وتستند هذه الإجابة إلى التقارير التي أمكن الوصول إليها.",
+      unavailable: "خدمة Ask غير متوفرة حاليًا. لم يُنفَّذ أي شيء.",
+      privacyLink: "الخصوصية",
+      cookiesLink: "ملفات تعريف الارتباط",
+      retryKept: "لم تُجَب — سؤالك ما زال في الحقل. اضغط اسأل للمحاولة مرة أخرى.",
+      newAnswerBelow: "إجابة جديدة أدناه",
+      budgetRefused: "لقد وصلت إلى حدّ أسئلة اليوم، لذا لم يُنفَّذ شيء ولم تُحتسب أي تكلفة. وتظل الأسئلة المُجابة من السجلات المحفوظة متاحة.",
+      retainedAnswer: "أُجيب من سجل محفوظ ومُحكَم — دون استخدام الذكاء الاصطناعي.",
+      followUpHint: "قد تسأل بعد ذلك",
+      retainedFallback: {
+        GOVERNED_NO_RECORD: "لا يوجد سجل محفوظ مفرد لنطاق هذا السؤال.",
+        GOVERNED_RECORD: "يُعرض السجل المحفوظ أدناه مع مصدره.",
+      },
+      governedGap: {
+        notDisplayable: {
+          ECONOMY_CPI: "يوجد إصدار محفوظ لمؤشر أسعار المستهلك من NISR، لكن لا يمكن قراءته حاليًا وفق قواعد الاستخراج المُحكَمة، لذا لا تُعرض أي قيمة. ولم يُنفَّذ شيء بديل.",
+          IMIHIGO: "يوجد تقييم Imihigo المحفوظ من NISR، لكن لا يمكن قراءته حاليًا وفق قواعد القبول المُحكَمة، لذا لا تُعرض أي نتيجة. ولم يُنفَّذ شيء بديل.",
+          default: "يوجد سجل محفوظ ومُحكَم، لكن لا يمكن قراءته حاليًا وفق قواعده المُحكَمة، لذا لا تُعرض أي قيمة. ولم يُنفَّذ شيء بديل.",
+        },
+        noCapture: {
+          ECONOMY_CPI: "لا يوجد إصدار محفوظ لمؤشر أسعار المستهلك من NISR، لذا لا تُعرض أي قيمة. ولم يُنفَّذ شيء بديل.",
+          MARKET_PROCUREMENT: "لا يوجد لقطة محفوظة لمشتريات TED، لذا لا تُعرض أي إعلانات. ولم يُنفَّذ شيء بديل.",
+          default: "لا يوجد سجل محفوظ ومُحكَم لهذا السؤال، لذا لا يُعرض شيء. ولم يُنفَّذ شيء بديل.",
+        },
+        unreadable: "لم يتسنَّ قراءة السجل المحفوظ لهذا السؤال في هذه اللحظة. ولا يُؤكَّد شيء في أي اتجاه، ولم يُنفَّذ شيء بديل.",
+      },
+      noCitable: "لا توجد مصادر قابلة للاقتباس",
+      unavailableBecause: {
+        REFERENCE_UNAVAILABLE: "يتطلّب هذا معلومات حديثة لا تستطيع المعرفة العامة تقديمها بثقة، لذا لم يُجَب عنه من الذاكرة. جرّب السؤال عن أحدث الأخبار بشأنه، أو سمِّ مكانًا أو فترة زمنية.",
+        EXECUTOR_NOT_WIRED: "يحتاج هذا السؤال إلى مصدر لا يستطيع Ask قراءته بعد — مثل موضوعاتك المحفوظة أو إصدار رسمي أو تقييم متخصّص. ولم يُجَب عنه من الأخبار بديلًا عن ذلك.",
+        PLAN_IDENTITY_REQUIRED: "سجّل الدخول لاستخدام معلوماتك المحفوظة.",
+        PLAN_CAPABILITY_UNAVAILABLE: "يحتاج هذا النوع من الأسئلة إلى قدرة لا يملكها Ask — حسابات أو ملفات أو شيفرة أو إصدارات رسمية أو تقييمات متخصّصة. لم يُنفَّذ أي شيء.",
+        OFFICIAL_SOURCE_UNAVAILABLE: "لقد طلبت الرقم الرسمي. لا يملك Ask قارئًا معتمدًا لهذا المصدر الرسمي، لذا لا يستطيع تقديم القيمة الرسمية، ولا تُقدَّم التقارير الصحفية كرسمية. لم يُنفَّذ أي شيء.",
+        GOVERNED_RECORD_UNAVAILABLE: "لا يمكن عرض السجل المحفوظ لهذا السؤال حاليًا. ولم يُنفَّذ شيء بديل.",
+      },
+      noAnswer: "لا إجابة · لا شيء مُقدَّم كحقيقة",
+      whichOne: "أيّهما تقصد؟",
+      clarificationFooterNoAi: "دون استخدام الذكاء الاصطناعي · لم يُجَب عن شيء",
+      askedBeforeAnswering: "سؤال واحد قبل الإجابة · دون استخدام الذكاء الاصطناعي",
+      expiredNote: "انتهت صلاحية هذه الإجابة المحفوظة · تُعرض كما كانت، دون إعادة التحقق",
+      continuationAnsweredAs: "أُجيب على أنه",
+      continuationNote: "متابعة لسؤالك السابق بشأن المكان الجديد",
+      r4: {
+        conceptualNoteTitle: "تحليل مفاهيمي · استدلال النموذج",
+        conceptualNoteBody: "تحليل مبني على الاستدلال، لا تقرير عن أحداث جارية. لم تكن هناك حاجة إلى مصادر، ولا شيء هنا مُقدَّم كحقيقة حالية مُتحقَّق منها.",
+        workNoteTitle: "عمل المحادثة · استدلال النموذج",
+        workNoteBody: "مبني على الإجابات السابقة في هذه المحادثة. إنه استدلال، لا بيانات حالية مستندة إلى مصادر: تحقَّق من أي رقم قبل الاعتماد عليه.",
+        framework: "الإطار",
+        mixedStableTitle: "تفسير · استدلال النموذج (ليس مصدرًا)",
+        mixedStableUnavailable: "لم يتسنَّ الإجابة عن الجزء التفسيري من سؤالك في هذه اللحظة؛ والجزء الحالي أدناه مستند إلى تقارير ذات مصادر.",
+        priorReferenceUnresolved: "لا أجد في هذه المحادثة إجابة سابقة يشير إليها هذا. أي إجابة أو عبارة تقصد؟",
+      },
+      r3: {
+        continuationJobNote: "متابعة لما تعمل عليه في هذه المحادثة",
+        decisionNoteTitle: "دعم القرار · استدلال عام",
+        decisionNoteBody: "تُوازَن الخيارات مقابل هدفك وفق افتراضات مُعلَنة. هذا استدلال، لا بيانات حالية مستندة إلى مصادر: ولا رقم هنا حقيقة حالية مُتحقَّق منها.",
+        decisionObjective: "الهدف",
+        partialCurrent: {
+          UNAVAILABLE: "لم يتسنَّ التحقق من الجزء الحالي في هذه اللحظة. ويبقى التفسير العام أعلاه قائمًا.",
+          NO_EVIDENCE: "لم تُعثَر تقارير حالية لهذا الجزء. ويبقى التفسير العام أعلاه قائمًا.",
+        },
+        relations: {
+          BORDER: "الحدود",
+          CORRIDOR: "الممر",
+          TRADE: "التجارة",
+          TRANSPORT: "النقل",
+          ENERGY: "الطاقة",
+          INSTITUTIONAL: "المؤسسات الإقليمية",
+          DIPLOMATIC: "العلاقات",
+          SECURITY: "الأمن",
+          WAR: "الحرب",
+          TERRITORIAL_DISPUTE: "نزاع على الأراضي",
+          ALLIANCE: "التحالف",
+          COMPETITION: "التنافس",
+          POLICY_COORDINATION: "تنسيق السياسات",
+          ECONOMIC: "الروابط الاقتصادية",
+          HISTORICAL_RELATION: "التاريخ",
+        },
+        decisionObjectiveMissing: "الأفضل لأي هدف؟ الإجابة تتوقف على ذلك.",
+        objectives: {
+          investment: "الاستثمار",
+          logistics: "اللوجستيات",
+          "market size": "حجم السوق",
+          growth: "النمو",
+        },
+        constraintNoted: "تمّ تسجيل ذلك — سأحتفظ به لبقية هذه المحادثة. ما الذي تريد معرفته؟",
+        networkFailed: "فشل الاتصال قبل أن يتمكّن Ask من البدء. لم يُنفَّذ أي شيء. وسؤالك ما زال متاحًا لإعادة المحاولة.",
+      },
+      noPriorSubject: "ما الذي تريد معرفته عن هذا المكان؟ السؤال السابق لا يُنقل من تلقاء نفسه إلى مكان جديد.",
+      clarify: {
+        suggestion: "سؤال مقترح",
+        useSuggestion: "استخدام هذا السؤال",
+        chooseHint: "اختيار أحدها يضيفه إلى سؤالك أدناه — ولا يُنفَّذ شيء حتى تضغط اسأل.",
+        codes: {
+          LANGUAGE_UNCLASSIFIED: "لم يتسنَّ معالجة هذا السؤال باللغة المحددة. أعِد صياغته، أو اختر من قائمة اللغات اللغة التي تكتب بها.",
+          LANGUAGE_UNSUPPORTED: "يجيب Ask باللغات المتاحة في قائمة اللغات. هل يمكنك طرح سؤالك بإحداها؟",
+          SOURCE_FRAME_UNPARSED: "من أي مصدر يجب أن تأتي الإجابة؟ سمِّ الوسيلة أو المؤسسة — مثلًا: «ماذا تذكر Reuters عن…؟»",
+          SELECTION_EXCEEDS_MAX: "عدد الموضوعات المحددة كبير جدًا. حدِّد عددًا أقل ثم اسأل مرة أخرى.",
+          SELECTION_BELOW_MINIMUM: "عدد الموضوعات المحددة غير كافٍ. حدِّد عددًا أكبر ثم اسأل مرة أخرى.",
+        },
+        fallback: "ما الذي ينبغي أن يشمله هذا تحديدًا؟ أضِف مكانًا أو موضوعًا أو فترة زمنية محددة ثم اسأل مرة أخرى.",
+      },
+      signInRequired: {
+        title: "يلزم تسجيل الدخول",
+        body: "سجّل الدخول لتسأل GlobalNewsAI. سؤالك محفوظ أدناه ولم يُرسَل — ولم يُنفَّذ أي شيء.",
+        action: "سجّل الدخول لتسأل",
+      },
+      guest: {
+        intro: "اطرح 3 أسئلة — دون تسجيل دخول.",
+        notCounted: "هذا السؤال لم يستهلك من أسئلة الزائر.",
+        exhaustedTitle: "انتهت أسئلة الزائر",
+        exhaustedBody: "استخدمت أسئلة الزائر الثلاثة. سجّل الدخول لمتابعة هذه المحادثة والاحتفاظ بإجاباتك.",
+        continueAction: "سجّل الدخول للمتابعة",
+        signInOptional: "تسجيل الدخول",
+        inProgress: "ما زال سؤالك السابق قيد الإجابة. وسؤالك الجديد محفوظ أدناه.",
+        cooldown: "أسئلة الزائر مُقيَّدة مؤقتًا. أعِد المحاولة بعد دقائق، أو سجّل الدخول. وسؤالك محفوظ أدناه.",
+        limited: "الخدمة مزدحمة حاليًا، لذا لم يُنفَّذ شيء. أعِد المحاولة قريبًا. وسؤالك محفوظ أدناه.",
+        attemptsExhausted: "أسئلة الزائر محدودة لهذا المتصفح. سجّل الدخول للمتابعة. وسؤالك محفوظ أدناه.",
+        unavailable: "أسئلة الزائر غير متوفرة حاليًا. سجّل الدخول لتسأل.",
+        signInForDeeper: "يتوفر التحليل الأعمق بعد تسجيل الدخول.",
+        privacy: "تُحفظ أسئلة الزائر وإجاباته على خوادمنا لمدة تصل إلى 7 أيام. وللإجابة، يُرسَل سؤالك إلى مزوّد ذكاء اصطناعي (OpenAI) وتُرسَل كلمات البحث إلى خدمات الأخبار. ولا يشارك تسجيل الدخول سوى عنوان بريدك الإلكتروني.",
+        cancelled: "تم إلغاء تسجيل الدخول. ومحادثتك ما زالت هنا.",
+        failed: "لم يكتمل تسجيل الدخول. ومحادثتك ما زالت هنا.",
+        resumed: "تم تسجيل الدخول. وتتابع محادثتك هنا — ولم يُنفَّذ أي شيء من جديد.",
+      },
+      unified: {
+        contextUnavailable: "لم يُعثر على الموضوع أو المكان أو السجل الذي يتعلق به هذا السؤال، لذا لم يُنفَّذ شيء. وسؤالك محفوظ أدناه.",
+        askUnavailable: "خدمة Ask غير متوفرة حاليًا، لذا لم يُنفَّذ شيء. وسؤالك محفوظ أدناه.",
+        newTopic: "موضوع جديد",
+        newTopicStarted: "موضوع جديد — ولا تُنقل إليه الأسئلة السابقة.",
+      },
+      personal: {
+        SAVED_STORIES: {
+          signIn: "سجّل الدخول لمقارنة موضوعاتك المحفوظة.",
+          notAvailable: "مقارنة موضوعاتك المحفوظة غير متوفرة بعد.",
+        },
+        INTERESTS: {
+          signIn: "سجّل الدخول لاستخدام اهتماماتك.",
+          notAvailable: "استخدام اهتماماتك غير متوفر بعد.",
+        },
+        NEUTRAL: {
+          signIn: "سجّل الدخول لاستخدام معلوماتك المحفوظة.",
+          notAvailable: "معلوماتك المحفوظة غير متوفرة هنا بعد.",
+        },
+      },
+    },
+    askRecordStrings: {
+      askAboutRecord: "اسأل عن هذا السجل",
+      moduleRecord: {
+        CONFLICT: "سجل نزاع",
+        IMIHIGO: "نتيجة Imihigo على مستوى المقاطعة",
+        ECONOMY: "مؤشر أسعار المستهلك العام في رواندا",
+        MARKET: "إعلان مشتريات",
+      },
+    },
+    askStrings: {
+      frameLabel: "Ask AI",
+      metaTitle: "Ask AI — GlobalNews AI",
+      metaDescription: "واجهة البحث الخاصة بسؤالك: مرتبطة بالخريطة، ومستندة إلى المصادر، وصريحة بشأن ما لم يُقيَّم.",
+      regions: {
+        changeStrip: "التغيّرات في العرض",
+        mapCanvas: "معلومات الخريطة",
+        contextSummary: "سياق الحالة",
+        evidenceFooter: "الأدلة ومدى الحداثة",
+        suggestions: "أسئلة تستحق الطرح",
+        composer: "اطرح سؤالًا",
+        answer: "الإجابة",
+        sources: "المصادر",
+        watch: "للمتابعة",
+        alerts: "التنبيهات الأخيرة",
+        workspaceHandoff: "المتابعة في مساحة العمل",
+        places: "الأماكن في هذه الإجابة",
+        computeLadder: "ما يُشغّله السؤال",
+      },
+      answerBlocks: {
+        answer: "الإجابة",
+        "why-it-matters": "لماذا يهمّ ذلك",
+        confidence: "الثقة والحدود",
+        "key-evidence": "الأدلة الأساسية",
+        "geographic-context": "السياق الجغرافي",
+        actions: "الإجراءات",
+        "follow-ups": "أسئلة للمتابعة",
+      },
+      computeSteps: {
+        retrieval: "جارٍ استرجاع المصادر ذات الصلة",
+        "change-record": "جارٍ قراءة سجل التغيّرات",
+        "geographic-check": "جارٍ التحقق من السياق الجغرافي",
+        composition: "جارٍ إعداد الإجابة المنظَّمة",
+      },
+      suggestionCategories: {
+        situation: "الحالة",
+        explanation: "تفسير",
+        comparative: "مقارنة",
+        "watch-oriented": "للمتابعة",
+        "deeper-analysis": "تحليل أعمق",
+      },
+      states: {
+        suggestionsUnavailable: "تُستمدّ الأسئلة هنا من سجل التغيّرات. ولا يتوفر أي منها بعد — وهذا ليس قولًا بأن لا شيء يستحقّ السؤال.",
+        noAnalysisRun: "لم يُجرَ أي بحث. هذا هو الشكل الذي تتخذه الإجابة المكتملة، وليس إجابة.",
+        noGeographyResolved: "لم تُحدَّد أي جغرافيا لهذا العرض.",
+        noEvidenceYet: "لا توجد أدلة مرفقة بعد.",
+        noAlerts: "لا تُرسَل أي تنبيهات بعد.",
+        costNotConfigured: "لا يُجرى البحث إلا عند إرسالك سؤالًا.",
+        awaitingQuestion: "اطرح سؤالًا للبدء.",
+      },
+      controls: {
+        splitMode: "نسبة الخريطة إلى Ask",
+        exploreMode: "استكشاف",
+        questionMode: "سؤال",
+        answerMode: "إجابة",
+        fullMapMode: "الخريطة كاملة",
+        visualState: "الحالة المرئية",
+        detent: "ارتفاع لوحة Ask",
+        viewSources: "عرض المصادر",
+        saveAnswer: "حفظ الإجابة",
+        continueInWorkspace: "المتابعة في مساحة العمل",
+        attachContext: "إرفاق سياق الخريطة",
+        miniMap: "الخريطة",
+        composerDock: "اسأل عن المنطقة الظاهرة",
+        removeContext: "إزالة السياق",
+        peek: "لمحة",
+        half: "نصف",
+        full: "كامل",
+      },
+      localeFallback: "لم تُكتب بعد التسميات الخاصة بإطار Ask AI بهذه اللغة. تُعرض تلك التسميات بالإنجليزية؛ وبقية الواجهة تتبع لغتك.",
+    },
+    briefingStrings: {
+      save: "حفظ كموجز",
+      saving: "جارٍ الحفظ…",
+      newBriefing: "موجز جديد",
+      addTo: "إضافة كالنسخة التالية من",
+      open: "فتح الموجز",
+      failed: "لم يُحفظ. لم يتغيّر أي شيء.",
+      sectionTitle: "الموجزات",
+      sectionIntro: "موجزاتك المحفوظة. تُحفظ كل نسخة كما هي تمامًا؛ وفتح أحدها لا يُنفِّذ شيئًا.",
+      empty: "لا توجد موجزات بعد. استخدم «حفظ كموجز» على إحدى الإجابات.",
+      updateAvailable: "انضمّت أدلة جديدة إلى الموضوع المتابَع منذ آخر نسخة.",
+      noUpdate: "لا أدلة جديدة عن الموضوع المتابَع منذ آخر نسخة.",
+      storyGone: "الموضوع المتابَع لم يعد متوفرًا.",
+      scopeQuestion: "سؤال",
+      scopeCountry: "مكان",
+      scopeStory: "موضوع متابَع",
+      versions: "النسخ",
+      asOf: "حتى",
+      window: "مُراقَب منذ النسخة السابقة",
+      readOnly: "نسخة محفوظة · للقراءة فقط · فتحها لا يُشغّل أي ذكاء اصطناعي ولا يبحث عن شيء.",
+      summary: "الإجابة",
+      keyFacts: "الوقائع الأساسية",
+      background: "خلفية (غير مستندة إلى مصادر)",
+      backgroundNote: "خلفية عامة من النموذج — ليست دليلًا، وبدون مصادر مُقتبسة.",
+      coverageGaps: "ما لم تُغطِّه الأدلة",
+      noGaps: "لم تُسجَّل أي ثغرات.",
+      sources: "المصادر (روابط إلى التقارير الأصلية)",
+      delete: "حذف الموجز",
+      deleteConfirm: "حذف هذا الموجز وكل نسخه؟ لا يمكن التراجع عن ذلك.",
+      deleted: "تم حذف الموجز.",
+      back: "رجوع إلى المحفوظة",
+      notFound: "لم يُعثر على هذا الموجز.",
+      unavailable: "الموجزات غير متوفرة حاليًا.",
+      signedOut: "سجّل الدخول لعرض موجزاتك.",
+      noSourcedAnswer: "هذه النسخة لا تحتوي إجابة مستندة إلى مصادر.",
+    },
     dict: {
-      askAi: {
-        title: "اسأل GlobalNews AI",
-        panelLabel: "اسأل GlobalNews AI",
-        submit: "اسأل",
-        launcher: "اسأل الذكاء الاصطناعي",
-        inputLabel: "اطرح سؤالًا عن الأحداث العالمية",
-        resultSourcesHeading: "المصادر",
-      },
-      navBar: {
-        signIn: "تسجيل الدخول",
-        signOut: "تسجيل الخروج",
-        account: "الحساب",
-        settings: "الإعدادات",
-        help: "المساعدة",
-        languageSelectorLabel: "اللغة",
-        accountMenuAriaLabel: "قائمة الحساب",
-      },
       accountSettings: {
         heading: "إعدادات الحساب",
+        intro: "أدِر الحساب الذي سجّلت الدخول به.",
+        signInPrompt: "سجّل الدخول لإدارة حسابك.",
+        dangerZoneHeading: "منطقة حسّاسة",
+        dangerZoneNote: "هذه الإجراءات نهائية. لا يمكن التراجع عن أي منها.",
+        confirmationLabel: "اكتب عنوان البريد الإلكتروني لحسابك للتأكيد",
+        confirmationHint: "يبقى الحذف معطَّلًا حتى يتطابق هذا مع العنوان أعلاه، حرفًا بحرف.",
+        confirmationMismatch: "هذا لا يطابق عنوان الحساب الذي سجّلت الدخول به.",
+        deletePermanently: "حذف الحساب نهائيًا",
+        deletingLabel: "جارٍ الحذف…",
+        deletedHeading: "تم حذف الحساب",
+        deletedNote: "تم حذف حسابك وبياناته. تم تسجيل خروجك الآن.",
+        deleteFailed: "لم يتمكّن النظام من حذف الحساب. لم يُحذف أي شيء. يُرجى المحاولة مرة أخرى.",
       },
-      loadingStages: [
-        "جارٍ البحث في المصادر الموثوقة…",
-        "جارٍ تجميع التقارير ذات الصلة…",
-        "جارٍ مقارنة التغطية…",
-        "جارٍ إعداد التحليل المُسنَد إلى المصادر…",
-      ],
+      askAi: {
+        launcher: "Ask AI",
+        askingAboutGeography: "سؤال عن {place}",
+        geographyBasis: "جغرافيا الدولة · لا أدلة مرفقة",
+        geographyOutranked: "المحدَّد: {place} · لم يُستخدم — سؤالك ذكر مكانًا آخر",
+        geographyNotApplied: "المحدَّد: {place} · لم يُطبَّق على هذا السؤال",
+        mapComputeNotice: "يُشغّل تحليلًا بالذكاء الاصطناعي. لا يُرسل شيء حتى تضغط إرسال.",
+        title: "Ask GlobalNews AI",
+        panelLabel: "Ask GlobalNews AI",
+        close: "إغلاق",
+        inputLabel: "اطرح سؤالًا عن أحداث العالم",
+        inputPlaceholder: "ما الذي تريد فهمه؟",
+        submit: "اسأل",
+        idle: "اطرح سؤالًا وستُبنى الإجابة من التقارير المسترجَعة، مع إظهار مصادرها.",
+        contextPending: "السؤال عن هذا العرض — قريبًا",
+        contextPendingHint: "السؤال عن الصفحة التي تتصفّحها غير متوفر بعد. تُجاب الأسئلة هنا من التقارير المسترجَعة فقط.",
+        contextChipAnchored: "سؤال عن هذا الموضوع",
+        contextChipGeneric: "سؤال عن أحداث العالم",
+        resultSourcesHeading: "المصادر",
+        citationLabel: "المصدر {n}: {title} — {publisher}",
+        inferenceLabel: "استنتاج تحليلي:",
+        unsupportedLabel: "غير ثابت من التقارير:",
+        continuingSubject: "متابعة: {subject}",
+        startNewTopic: "بدء موضوع جديد",
+        newTopicStarted: "سؤالك التالي يبدأ موضوعًا جديدًا",
+        productApplicabilityNotEstablished: "لا يمكن إثبات مدى انطباق ذلك تحديدًا على GlobalNewsAI من هذه التقارير: لا يوصف GlobalNewsAI نفسه في أي منها.",
+        focusNotInEvidence: "لا يتناول أي من التقارير المسترجَعة {focus} مباشرةً؛ وتستند هذه الإجابة إلى تقارير عن الموضوع نفسه.",
+        resultSourcesNone: "لم تُسترجَع أي مصادر لهذا السؤال.",
+        resultSourcesTruncated: "يُعرض {shown} من {total}. افتح التحليل الكامل لبقيتها.",
+        resultBriefAbsent: "لم يتضمّن هذا التحليل ملخّصًا تنفيذيًا. هذا غياب، وليس تقييمًا — فلم يُقَس شيء ويُحتجَز.",
+        resultNoAnswer: "لم تُنتَج إجابة لهذا السؤال. والحالة أعلاه تبيّن السبب.",
+        resultNoAnswerProvider: "التقارير الحيّة غير متوفرة مؤقتًا. يُرجى المحاولة بعد لحظات.",
+        resultNoAnswerEvidence: "لم تُعثَر تقارير ذات صلة بهذا السؤال. جرّب تسمية المكان أو الجهة أو الحدث.",
+        resultNoAnswerSafety: "لم يُنشئ GlobalNews AI إجابة دون أدلة تدعمها. أعِد المحاولة قريبًا أو اطرح سؤالًا أضيق عن مكان أو حدث أو فترة زمنية.",
+        runFullAnalysis: "تشغيل التحليل الكامل",
+        runFullAnalysisNote: "يبدأ تحليلًا جديدًا مستندًا إلى المصادر.",
+        telemetryReports: "تقارير مسترجَعة",
+        telemetryClusters: "مجموعات تقارير",
+        sourceDatePublished: "نُشر في {date}",
+        sourceDateObserved: "رُصد أول مرة بواسطة GlobalNewsAI في {date}",
+        sourceDateUnknownBasis: "تاريخ التقرير: {date}",
+        sourceDatesNote: "تُظهر التواريخ وقت نشر كل تقرير أو أول رصد له، لا وقت وقوع الأحداث.",
+      },
       authError: {
-        cancelled: "تم إلغاء تسجيل الدخول. يمكنك تسجيل الدخول في أي وقت.",
+        cancelled: "تم إلغاء تسجيل الدخول. يمكنك تسجيل الدخول في أي وقت تشاء.",
         failed: "لم يكتمل تسجيل الدخول. يُرجى المحاولة مرة أخرى.",
-        dismissLabel: "تجاهل",
+        dismissLabel: "إغلاق",
+      },
+      footer: {
+        linkLabels: {
+          "/third-party-notices": "إشعارات الأطراف الثالثة",
+        },
+      },
+      loadingStages: {
+        "0": "جارٍ البحث في المصادر الموثوقة…",
+        "1": "جارٍ تجميع التقارير المترابطة…",
+        "2": "جارٍ مقارنة التغطية…",
+        "3": "جارٍ إعداد التحليل المستند إلى المصادر…",
+      },
+      navBar: {
+        settings: "الإعدادات",
       },
     },
   },

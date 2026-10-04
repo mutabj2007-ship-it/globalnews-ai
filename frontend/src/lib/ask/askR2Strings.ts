@@ -477,11 +477,33 @@ const EN: AskR2Strings = {
          languages, so the copy never claims English and Polish only. */
       LANGUAGE_UNCLASSIFIED:
         'This question could not be handled in the selected language. Try rephrasing it, or choose the language you are writing in from the language menu.',
-      /* DORMANT legacy path: only a source language outside the seven product languages reaches
-         LANGUAGE_UNSUPPORTED, and the request contract rejects those before routing. Left for
-         a later cleanup (CTO H closeout §5). */
+      /*
+        DORMANT legacy path: only a source language outside the seven product languages
+        reaches LANGUAGE_UNSUPPORTED, and the request contract rejects those before routing.
+
+        ── R4 · PHASE B — THIS SENTENCE BECAME FALSE, AND CLAUDE L CAUGHT IT ──
+
+        It read: "Ask answers in English and Polish. Could you ask your question in one of
+        them?" That was true of the engine this catalogue was written against. It is not
+        true of the current one — the answer comes back in the reader's own language, all
+        seven — and Phase B made the shell say so everywhere else.
+
+        Claude L refused to translate it faithfully, which was the right call: a faithful
+        French rendering would have told a French reader, in French, that Ask only answers
+        in English and Polish. L delivered a truthful rendering in all five and flagged the
+        English as H's to fix. Leaving it would have made the product contradict itself by
+        surface — five languages saying one thing and English saying another.
+
+        The replacement names no list on purpose. An explicit list is what drifted here, and
+        a list in six languages drifts six times; the language menu is the one place the
+        set is actually true.
+
+        This is a COPY change to a catalogue whose header says it is transcribed verbatim
+        from the frozen D25 table, so it is flagged in the handoff for the CTO rather than
+        made quietly. Reverting it is this one string and its Polish counterpart.
+      */
       LANGUAGE_UNSUPPORTED:
-        'Ask answers in English and Polish. Could you ask your question in one of them?',
+        'Ask answers in the languages offered in the language menu. Could you ask your question in one of them?',
       SOURCE_FRAME_UNPARSED:
         'Which source should the answer come from? Name the outlet or institution — for example “What does Reuters report about …?”',
       SELECTION_EXCEEDS_MAX: 'Too many stories are selected. Select fewer stories and ask again.',
@@ -778,8 +800,9 @@ const PL: AskR2Strings = {
     codes: {
       LANGUAGE_UNCLASSIFIED:
         'Nie udało się obsłużyć tego pytania w wybranym języku. Spróbuj je przeformułować albo wybierz w menu języka ten, w którym piszesz.',
+      /* R4 · PHASE B — the same correction as the English above; see the note there. */
       LANGUAGE_UNSUPPORTED:
-        'Zapytaj odpowiada po polsku i po angielsku. Czy możesz zadać pytanie w jednym z tych języków?',
+        'Zapytaj odpowiada w językach dostępnych w menu języka. Czy możesz zadać pytanie w jednym z nich?',
       SOURCE_FRAME_UNPARSED:
         'Z jakiego źródła ma pochodzić odpowiedź? Podaj nazwę redakcji lub instytucji — np. „Co Reuters podaje o …?”',
       SELECTION_EXCEEDS_MAX:
