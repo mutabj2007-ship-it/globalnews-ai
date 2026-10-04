@@ -1,6 +1,6 @@
-import { projectSummaryStatements, safeExternalHref } from '@globalnews-ai/shared';
+import type { JSX } from 'react';
 import type { AnalysisSourceRef, LanguageCode, SummaryStatement } from '@globalnews-ai/shared';
-import { getDictionary } from '@/lib/i18n/dictionaries';
+import { AskAnswerProse } from './AskAnswerProse';
 
 /**
  * ═══ ASK INLINE EVIDENCE CITATIONS + INFERENCE LABEL R1 ═══════════════════
@@ -39,6 +39,19 @@ export function citedSourceNumbers(
   return new Set((statements ?? []).flatMap((statement) => citationNumbers(statement, sources)));
 }
 
+/**
+ * R4 ANSWER READING EXPERIENCE R1 — THIS COMPONENT IS NOW A THIN ADAPTER.
+ *
+ * It kept its name and its props because `AskCompactResult` and the accepted dock specs pin
+ * them, and `citationNumbers` / `citedSourceNumbers` above are imported elsewhere. What moved
+ * is the drawing: `AskAnswerProse` renders the ANSWER'S OWN structure — headings, bullets,
+ * numbered steps, emphasis — instead of printing its markup at the reader, and places the same
+ * citations through the same `projectSummaryStatements` call, in the same document order.
+ *
+ * The paragraphs arrive already split by `splitSynthesisParagraphs`; re-joining them with blank
+ * lines hands the parser the ONE string the answer was authored as, so a list that straddles a
+ * paragraph split is still read as one list.
+ */
 export function AskCitedBrief({
   paragraphs,
   statements,
@@ -50,66 +63,12 @@ export function AskCitedBrief({
   readonly sources: readonly AnalysisSourceRef[];
   readonly language: LanguageCode;
 }): JSX.Element {
-  const t = getDictionary(language).askAi;
-  let remaining: readonly SummaryStatement[] = statements ?? [];
-
   return (
-    <div data-ask="brief" className="flex flex-col gap-3">
-      {paragraphs.map((paragraph, index) => {
-        const { segments, placed } = projectSummaryStatements(paragraph, remaining);
-        remaining = remaining.filter((statement) => !placed.includes(statement));
-
-        return (
-          <p
-            key={`${index}-${paragraph.slice(0, 24)}`}
-            data-ask="brief-paragraph"
-            className="text-sm leading-relaxed text-ink-primary"
-          >
-            {segments.map((segment, segmentIndex) => {
-              const statement = segment.statement;
-              const key = `${segmentIndex}-${segment.text.slice(0, 12)}`;
-              if (statement === undefined) return <span key={key}>{segment.text}</span>;
-
-              if (statement.kind === 'ANALYTICAL_INFERENCE' || statement.kind === 'UNSUPPORTED') {
-                return (
-                  <span key={key} data-ask="statement" data-statement-kind={statement.kind} className="text-ink-secondary">
-                    <span className="font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">
-                      {statement.kind === 'ANALYTICAL_INFERENCE' ? t.inferenceLabel : t.unsupportedLabel}
-                    </span>{' '}
-                    <em>{segment.text}</em>
-                  </span>
-                );
-              }
-
-              return (
-                <span key={key} data-ask="statement" data-statement-kind={statement.kind}>
-                  {segment.text}
-                  {citationNumbers(statement, sources).map((n) => {
-                    const source = sources[n - 1];
-                    return (
-                      <a
-                        key={n}
-                        data-ask="citation"
-                        data-citation={n}
-                        href={safeExternalHref(source.url)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label={t.citationLabel
-                          .replace('{n}', String(n))
-                          .replace('{title}', source.title)
-                          .replace('{publisher}', source.publisher)}
-                        className="ms-0.5 inline-flex min-h-6 min-w-6 items-center justify-center rounded px-0.5 font-mono text-[11px] text-signal underline decoration-signal/40 underline-offset-2 hover:decoration-signal focus-visible:outline focus-visible:outline-2 focus-visible:outline-signal"
-                      >
-                        [{n}]
-                      </a>
-                    );
-                  })}
-                </span>
-              );
-            })}
-          </p>
-        );
-      })}
-    </div>
+    <AskAnswerProse
+      source={paragraphs.join('\n\n')}
+      statements={statements}
+      sources={sources}
+      language={language}
+    />
   );
 }

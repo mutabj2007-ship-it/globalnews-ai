@@ -13,6 +13,7 @@ import { AskTurnSave } from './AskTurnSave';
 import { AskTurnBrief } from './AskTurnBrief';
 import { AskTurnCopy } from './AskTurnCopy';
 import { AskRecentReporting } from './AskRecentReporting';
+import { AskAnswerProse } from '@/components/ask/AskAnswerProse';
 
 /**
  * ASK R2 CONSOLIDATED INTEGRATION R1 · GATE G — ONE ASK R2 TURN, AS D25 DRAWS IT.
@@ -558,12 +559,24 @@ export function AskR2TurnView({
            * evidence-citation/sources-specific and would misrepresent this as sourced).
            */}
           {payload.analysis === null && payload.background != null && (
-            <p
-              data-ask="background-text"
-              className="whitespace-pre-wrap text-[16px] leading-[1.55]"
-            >
-              {payload.background.text}
-            </p>
+            /*
+              R4 PHASE A — THE DEFECT THE PRODUCT OWNER REPORTED, CLOSED AT ITS SOURCE.
+
+              This was one <p> with `whitespace-pre-wrap`, so every heading, bullet, numbered
+              step and bold run a model-background answer was authored with reached the reader
+              as raw syntax — `**Nationally Determined Contributions**` with its asterisks.
+              The same renderer the cited brief uses now draws it: the answer's OWN structure,
+              nothing invented, no HTML executed. There are no statements and no sources on a
+              background answer, so no citation can be placed — which is correct, and the
+              provenance line beside the header says so.
+            */
+            <div data-ask="background-text">
+              <AskAnswerProse
+                source={payload.background.text}
+                sources={[]}
+                language={locale}
+              />
+            </div>
           )}
           {/* TRUST R1 — mixed answer: retained recent reporting about the same place. */}
           {payload.analysis === null && payload.recentReporting != null && (

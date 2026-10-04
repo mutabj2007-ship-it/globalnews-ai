@@ -37,6 +37,17 @@ const rule = (selector: string) =>
     .map((block) => block.split('}')[0])
     .join('\n');
 
+/*
+  R4 ANSWER READING R1 — the stylesheet now carries a SECOND appended section (answer prose
+  typography). These assertions are about the centred-composer section only, so they read it
+  between its own banner and the next one. Without this they would claim a later contract's
+  rules as unscoped entry rules.
+*/
+const centredComposerCss = (): string =>
+  (css.split('STANDALONE CENTERED INTELLIGENCE COMPOSER + ROTATING')[1] ?? '').split(
+    'R4 ANSWER READING EXPERIENCE R1',
+  )[0];
+
 const example = (locale: DisplayLocale = 'en', compact = false) => ({
   text: exampleText(QUESTION_EXAMPLES[0], locale, compact),
   id: QUESTION_EXAMPLES[0].id,
@@ -96,8 +107,8 @@ describe('C-1 · the entry state, and nothing outside it', () => {
   });
 
   it('leaves the post-answer workspace geometry alone: every new rule is entry-scoped', () => {
-    const introduced = css.split('STANDALONE CENTERED INTELLIGENCE COMPOSER + ROTATING')[1];
-    expect(introduced).toBeDefined();
+    const introduced = centredComposerCss();
+    expect(introduced.length).toBeGreaterThan(0);
     const selectors = introduced
       .split('\n')
       .filter((line) => line.trim().endsWith('{') && !line.includes('@'))
@@ -373,7 +384,7 @@ describe('C-6 · cross-platform functional parity addendum', () => {
   });
 
   it('hides no capability at any width: the lane added no display:none', () => {
-    const introduced = css.split('STANDALONE CENTERED INTELLIGENCE COMPOSER + ROTATING')[1];
+    const introduced = centredComposerCss();
     expect(introduced).not.toMatch(/display:\s*none/);
     expect(introduced).not.toMatch(/visibility:\s*hidden/);
     expect(introduced).not.toMatch(/content-visibility/);
@@ -410,7 +421,7 @@ describe('C-6 · cross-platform functional parity addendum', () => {
 
   it('the phone entry view lifts the group less, but loses nothing', () => {
     const phone =
-      css
+      centredComposerCss()
         .split('@media (max-width: 860px), (orientation: portrait) and (max-width: 1100px) {')
         .pop() ?? '';
     /* CTO H closeout §4 — the near-the-thumb lift is PHONE-only (≤600px); a portrait tablet keeps
@@ -493,7 +504,7 @@ describe('C-8 · responsive widths', () => {
   it('the entry geometry is declared for the desktop widths and for the phone band', () => {
     expect(css).toMatch(/\.frame\[data-ask-entry='true'\] \.emptyTitle \{\s*font-size: 44px;/);
     const phone =
-      css
+      centredComposerCss()
         .split('@media (max-width: 860px), (orientation: portrait) and (max-width: 1100px) {')
         .pop() ?? '';
     expect(phone).toMatch(/\.frame\[data-ask-entry='true'\] \.emptyTitle \{\s*font-size: 28px;/);
@@ -507,7 +518,7 @@ describe('C-8 · responsive widths', () => {
   it('375 / 390 / 430 all fall in the phone band and keep the composer above the safe area', () => {
     for (const width of [375, 390, 430]) expect(width).toBeLessThanOrEqual(860);
     const phone =
-      css
+      centredComposerCss()
         .split('@media (max-width: 860px), (orientation: portrait) and (max-width: 1100px) {')
         .pop() ?? '';
     expect(css).toMatch(/padding-bottom: max\(10px, env\(safe-area-inset-bottom\)\);/);

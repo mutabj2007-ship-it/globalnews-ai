@@ -176,9 +176,16 @@ describe('PUBLIC BETA HARDENING R1A — COMPUTED_RESULT renders exactly one answ
     expect(answerSurfaces(r)).toHaveLength(1);
     expect(byData(r, 'answer')).toHaveLength(1);
     expect(byData(r, 'reference-note')).toHaveLength(1);
-    expect(byData(r, 'background-text')[0]!.props.children).toBe(
-      'TCP is connection-oriented; UDP is connectionless.',
-    );
+    /*
+      R4 ANSWER READING R1 — MOVED, NOT RELAXED. This asserted that the background element's
+      children were the literal answer string, which was true only because the answer was
+      printed as ONE raw <p> — the defect that put `**Nationally Determined Contributions**`
+      in front of readers. The background text is now rendered by the shared answer renderer,
+      so the property this test protects (the background text reaches the one Answer surface,
+      exactly once, unaltered) is asserted on the text the renderer RECEIVES.
+    */
+    const prose = byData(r, 'background-text')[0]!.props.children as { props: { source: string } };
+    expect(prose.props.source).toBe('TCP is connection-oriented; UDP is connectionless.');
   });
 
   it('INSUFFICIENT is unchanged: one Answer surface carrying its title', () => {
