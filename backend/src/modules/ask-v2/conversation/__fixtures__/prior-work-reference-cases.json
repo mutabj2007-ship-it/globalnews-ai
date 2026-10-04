@@ -1,0 +1,2496 @@
+{
+  "corpus": "CLAUDE_F · R4_PARALLEL · prior-work reference suite",
+  "version": "3.0.0",
+  "base": "782b175fbf1266ff12c13e4c6de7d492425ff2d5 (integration/r4-post-run3, parent 752d8b7)",
+  "productDisplayLanguages": ["en", "pl", "fr", "de", "es", "pt", "ar"],
+  "supersedes": {
+    "version": "2.0.0",
+    "sha256": "a782ea6c445a1fe98df159d07b3a65db6784f896a8b5f46a3b45a3c96a3ad2b0",
+    "reason": "v2's 63 items are carried forward unchanged. v3 ADDS the returnedProbes section: the three present-tense P0s Claude Code's review returned, a fourth present-opinion probe, their four Polish counterparts, a MIXED control and three past-reference controls — 14 route-level items that v2 did not cover at all. v1.0.0 (sha256 cb93f1c8f5b2e68025e670ff63060b7632e8ceada032726efd1475591699922f) used the wrong language set and is superseded through v2."
+  },
+  "freshness": "Authored fresh for this lane and used as the DEVELOPMENT set. No item is taken from, or tuned against, any phrase in the inspected benchmark material (the seven-language battery, the EN/PL reliability set, sealed #1-#5).",
+  "modelling": {
+    "artifactsAreLocalized": "Each fixture artifact's label and components are in the conversation's own language, because a ConversationArtifact is produced by the same reasoning call that wrote the answer. This is what makes component identity work in all seven display languages with one mechanism and no language table.",
+    "reviewNote": "en and pl are idiomatic. fr, de, es, pt and ar were authored by Claude F: grammatical, and sufficient for asserting ROUTING behaviour, which is the point — if resolution is language-independent the exact wording must not matter. They are NOT reviewed for answer-language quality and must not be used to score it."
+  },
+  "readingTheExpectations": {
+    "resolution": "RESOLVED | NEEDS_INTERPRETATION | UNRESOLVABLE | NO_REFERENCE",
+    "componentIndex": "index into the fixture artifact's own components array, so the expectation is language-independent; null means a whole-artifact reference",
+    "sourceOperationId": "REQUIRED on every RESOLVED item. A resolution with no traceable prior turn is a failure even when the target is right",
+    "job / discourseReference": "asserted only where this lane's applied change determines them (the EN/PL deterministic reading). null means not asserted by this corpus",
+    "mayRequestCurrentEvidence": "true on exactly one case. Any other case answering with a news call is a failure",
+    "scoring": "21 of 63 items are negative, isolation or escalation controls. A run that scores well on the positive cases and fails any control has made the family WORSE, not better: it bought recall with fabrication."
+  },
+  "counts": {
+    "items": 63,
+    "cases": 9,
+    "languages": 7,
+    "returnedProbes": 14,
+    "total": 77
+  },
+  "items": [
+    {
+      "id": "F-PW-001",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "EXACT_PRIOR_STATEMENT",
+      "language": "en",
+      "turn": "Why did you say the pilot was lower risk?",
+      "deterministicLanguage": true,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "Start with the pilot",
+            "components": ["lower risk", "faster feedback", "reversible", "smaller budget"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_PROPOSITION",
+        "componentIndex": 0,
+        "sourceOperationId": "op-0002",
+        "basis": "COMPONENT_IDENTITY",
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "the reader quotes a component the artifact itself declared. Component identity resolves it with no language rule — the needle is the artifact’s own string, in the conversation’s own language"
+    },
+    {
+      "id": "F-PW-002",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "EXACT_PRIOR_STATEMENT",
+      "language": "pl",
+      "turn": "Dlaczego powiedziałeś, że pilotaż to mniejsze ryzyko?",
+      "deterministicLanguage": true,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "Zacznij od pilotażu",
+            "components": [
+              "mniejsze ryzyko",
+              "szybsza informacja zwrotna",
+              "odwracalne",
+              "mniejszy budżet"
+            ],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_PROPOSITION",
+        "componentIndex": 0,
+        "sourceOperationId": "op-0002",
+        "basis": "COMPONENT_IDENTITY",
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "the reader quotes a component the artifact itself declared. Component identity resolves it with no language rule — the needle is the artifact’s own string, in the conversation’s own language"
+    },
+    {
+      "id": "F-PW-003",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "EXACT_PRIOR_STATEMENT",
+      "language": "fr",
+      "turn": "Pourquoi avez-vous dit que le pilote était un risque plus faible ?",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "Commencer par le pilote",
+            "components": [
+              "risque plus faible",
+              "retour plus rapide",
+              "réversible",
+              "budget plus petit"
+            ],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_PROPOSITION",
+        "componentIndex": 0,
+        "sourceOperationId": "op-0002",
+        "basis": "COMPONENT_IDENTITY",
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "the reader quotes a component the artifact itself declared. Component identity resolves it with no language rule — the needle is the artifact’s own string, in the conversation’s own language"
+    },
+    {
+      "id": "F-PW-004",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "EXACT_PRIOR_STATEMENT",
+      "language": "de",
+      "turn": "Warum haben Sie gesagt, das Pilotprojekt sei ein geringeres Risiko?",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "Mit dem Pilotprojekt beginnen",
+            "components": [
+              "geringeres Risiko",
+              "schnelleres Feedback",
+              "umkehrbar",
+              "kleineres Budget"
+            ],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_PROPOSITION",
+        "componentIndex": 0,
+        "sourceOperationId": "op-0002",
+        "basis": "COMPONENT_IDENTITY",
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "the reader quotes a component the artifact itself declared. Component identity resolves it with no language rule — the needle is the artifact’s own string, in the conversation’s own language"
+    },
+    {
+      "id": "F-PW-005",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "EXACT_PRIOR_STATEMENT",
+      "language": "es",
+      "turn": "¿Por qué dijiste que el piloto era un menor riesgo?",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "Empezar con el piloto",
+            "components": [
+              "menor riesgo",
+              "retroalimentación más rápida",
+              "reversible",
+              "presupuesto menor"
+            ],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_PROPOSITION",
+        "componentIndex": 0,
+        "sourceOperationId": "op-0002",
+        "basis": "COMPONENT_IDENTITY",
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "the reader quotes a component the artifact itself declared. Component identity resolves it with no language rule — the needle is the artifact’s own string, in the conversation’s own language"
+    },
+    {
+      "id": "F-PW-006",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "EXACT_PRIOR_STATEMENT",
+      "language": "pt",
+      "turn": "Por que você disse que o piloto era um menor risco?",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "Começar pelo piloto",
+            "components": ["menor risco", "retorno mais rápido", "reversível", "orçamento menor"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_PROPOSITION",
+        "componentIndex": 0,
+        "sourceOperationId": "op-0002",
+        "basis": "COMPONENT_IDENTITY",
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "the reader quotes a component the artifact itself declared. Component identity resolves it with no language rule — the needle is the artifact’s own string, in the conversation’s own language"
+    },
+    {
+      "id": "F-PW-007",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "EXACT_PRIOR_STATEMENT",
+      "language": "ar",
+      "turn": "لماذا قلت إن المشروع التجريبي خطر أقل؟",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "ابدأ بالمشروع التجريبي",
+            "components": ["خطر أقل", "تغذية راجعة أسرع", "قابل للعكس", "ميزانية أصغر"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_PROPOSITION",
+        "componentIndex": 0,
+        "sourceOperationId": "op-0002",
+        "basis": "COMPONENT_IDENTITY",
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "the reader quotes a component the artifact itself declared. Component identity resolves it with no language rule — the needle is the artifact’s own string, in the conversation’s own language"
+    },
+    {
+      "id": "F-PW-008",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "PARAPHRASED_PRIOR_STATEMENT",
+      "language": "en",
+      "turn": "Earlier you argued the smaller start was the safer bet — on what basis?",
+      "deterministicLanguage": true,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "Start with the pilot",
+            "components": ["lower risk", "faster feedback", "reversible", "smaller budget"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "NEEDS_INTERPRETATION",
+        "target": null,
+        "componentIndex": null,
+        "sourceOperationId": null,
+        "basis": null,
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "INTERPRETER-GATED BY DESIGN. No declared surface appears, and a paraphrase of something really said is indistinguishable HERE from a claim never made — both share no token with the components. Only a reader of the turn AND the earlier work can tell them apart, so the resolver escalates instead of guessing. With a grounded verdict it resolves; without one it declines"
+    },
+    {
+      "id": "F-PW-009",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "PARAPHRASED_PRIOR_STATEMENT",
+      "language": "pl",
+      "turn": "Wcześniej twierdziłeś, że mniejszy start jest bezpieczniejszy — na jakiej podstawie?",
+      "deterministicLanguage": true,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "Zacznij od pilotażu",
+            "components": [
+              "mniejsze ryzyko",
+              "szybsza informacja zwrotna",
+              "odwracalne",
+              "mniejszy budżet"
+            ],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "NEEDS_INTERPRETATION",
+        "target": null,
+        "componentIndex": null,
+        "sourceOperationId": null,
+        "basis": null,
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "INTERPRETER-GATED BY DESIGN. No declared surface appears, and a paraphrase of something really said is indistinguishable HERE from a claim never made — both share no token with the components. Only a reader of the turn AND the earlier work can tell them apart, so the resolver escalates instead of guessing. With a grounded verdict it resolves; without one it declines"
+    },
+    {
+      "id": "F-PW-010",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "PARAPHRASED_PRIOR_STATEMENT",
+      "language": "fr",
+      "turn": "Plus tôt, vous avez dit qu’un démarrage plus modeste était plus sûr — sur quelle base ?",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "Commencer par le pilote",
+            "components": [
+              "risque plus faible",
+              "retour plus rapide",
+              "réversible",
+              "budget plus petit"
+            ],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "NEEDS_INTERPRETATION",
+        "target": null,
+        "componentIndex": null,
+        "sourceOperationId": null,
+        "basis": null,
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "INTERPRETER-GATED BY DESIGN. No declared surface appears, and a paraphrase of something really said is indistinguishable HERE from a claim never made — both share no token with the components. Only a reader of the turn AND the earlier work can tell them apart, so the resolver escalates instead of guessing. With a grounded verdict it resolves; without one it declines"
+    },
+    {
+      "id": "F-PW-011",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "PARAPHRASED_PRIOR_STATEMENT",
+      "language": "de",
+      "turn": "Sie haben vorher gesagt, der kleinere Anfang sei die sicherere Wahl — auf welcher Grundlage?",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "Mit dem Pilotprojekt beginnen",
+            "components": [
+              "geringeres Risiko",
+              "schnelleres Feedback",
+              "umkehrbar",
+              "kleineres Budget"
+            ],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "NEEDS_INTERPRETATION",
+        "target": null,
+        "componentIndex": null,
+        "sourceOperationId": null,
+        "basis": null,
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "INTERPRETER-GATED BY DESIGN. No declared surface appears, and a paraphrase of something really said is indistinguishable HERE from a claim never made — both share no token with the components. Only a reader of the turn AND the earlier work can tell them apart, so the resolver escalates instead of guessing. With a grounded verdict it resolves; without one it declines"
+    },
+    {
+      "id": "F-PW-012",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "PARAPHRASED_PRIOR_STATEMENT",
+      "language": "es",
+      "turn": "Antes dijiste que empezar en pequeño era la apuesta más segura — ¿con qué base?",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "Empezar con el piloto",
+            "components": [
+              "menor riesgo",
+              "retroalimentación más rápida",
+              "reversible",
+              "presupuesto menor"
+            ],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "NEEDS_INTERPRETATION",
+        "target": null,
+        "componentIndex": null,
+        "sourceOperationId": null,
+        "basis": null,
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "INTERPRETER-GATED BY DESIGN. No declared surface appears, and a paraphrase of something really said is indistinguishable HERE from a claim never made — both share no token with the components. Only a reader of the turn AND the earlier work can tell them apart, so the resolver escalates instead of guessing. With a grounded verdict it resolves; without one it declines"
+    },
+    {
+      "id": "F-PW-013",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "PARAPHRASED_PRIOR_STATEMENT",
+      "language": "pt",
+      "turn": "Antes você disse que começar pequeno era a aposta mais segura — com que base?",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "Começar pelo piloto",
+            "components": ["menor risco", "retorno mais rápido", "reversível", "orçamento menor"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "NEEDS_INTERPRETATION",
+        "target": null,
+        "componentIndex": null,
+        "sourceOperationId": null,
+        "basis": null,
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "INTERPRETER-GATED BY DESIGN. No declared surface appears, and a paraphrase of something really said is indistinguishable HERE from a claim never made — both share no token with the components. Only a reader of the turn AND the earlier work can tell them apart, so the resolver escalates instead of guessing. With a grounded verdict it resolves; without one it declines"
+    },
+    {
+      "id": "F-PW-014",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "PARAPHRASED_PRIOR_STATEMENT",
+      "language": "ar",
+      "turn": "قلت سابقًا إن البداية الأصغر هي الخيار الأكثر أمانًا — على أي أساس؟",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "ابدأ بالمشروع التجريبي",
+            "components": ["خطر أقل", "تغذية راجعة أسرع", "قابل للعكس", "ميزانية أصغر"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "NEEDS_INTERPRETATION",
+        "target": null,
+        "componentIndex": null,
+        "sourceOperationId": null,
+        "basis": null,
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "INTERPRETER-GATED BY DESIGN. No declared surface appears, and a paraphrase of something really said is indistinguishable HERE from a claim never made — both share no token with the components. Only a reader of the turn AND the earlier work can tell them apart, so the resolver escalates instead of guessing. With a grounded verdict it resolves; without one it declines"
+    },
+    {
+      "id": "F-PW-015",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "REFERENCE_TWO_TURNS_BACK",
+      "language": "en",
+      "turn": "Why did you put timing first?",
+      "deterministicLanguage": true,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "COMPARISON",
+            "label": "Pilot versus full rollout",
+            "components": ["risk", "speed", "cost", "reversibility"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0004"
+          },
+          {
+            "kind": "CONCEPTUAL_FRAMEWORK",
+            "label": "Prime moment",
+            "components": ["timing", "capacity", "coalition", "cost of delay"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0001"
+          }
+        ]
+      },
+      "stateName": "FRAMEWORK_THEN_COMPARISON",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_PROPOSITION",
+        "componentIndex": 0,
+        "sourceOperationId": "op-0001",
+        "basis": "COMPONENT_IDENTITY",
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "the newest artifact is the comparison; the named component belongs to the framework two turns back. Resolving to op-0004 is a FAILURE, not a near miss — recency must not decide"
+    },
+    {
+      "id": "F-PW-016",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "REFERENCE_TWO_TURNS_BACK",
+      "language": "pl",
+      "turn": "Dlaczego postawiłeś moment na pierwszym miejscu?",
+      "deterministicLanguage": true,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "COMPARISON",
+            "label": "Pilotaż a pełne wdrożenie",
+            "components": ["ryzyko", "tempo", "koszt", "odwracalność"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0004"
+          },
+          {
+            "kind": "CONCEPTUAL_FRAMEWORK",
+            "label": "Kluczowy moment",
+            "components": ["moment", "zdolność", "koalicja", "koszt zwłoki"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0001"
+          }
+        ]
+      },
+      "stateName": "FRAMEWORK_THEN_COMPARISON",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_PROPOSITION",
+        "componentIndex": 0,
+        "sourceOperationId": "op-0001",
+        "basis": "COMPONENT_IDENTITY",
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "the newest artifact is the comparison; the named component belongs to the framework two turns back. Resolving to op-0004 is a FAILURE, not a near miss — recency must not decide"
+    },
+    {
+      "id": "F-PW-017",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "REFERENCE_TWO_TURNS_BACK",
+      "language": "fr",
+      "turn": "Pourquoi avez-vous placé le moment en premier ?",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "COMPARISON",
+            "label": "Pilote contre déploiement complet",
+            "components": ["risque", "rapidité", "coût", "réversibilité"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0004"
+          },
+          {
+            "kind": "CONCEPTUAL_FRAMEWORK",
+            "label": "Moment clé",
+            "components": ["moment", "capacité", "coalition", "coût du retard"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0001"
+          }
+        ]
+      },
+      "stateName": "FRAMEWORK_THEN_COMPARISON",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_PROPOSITION",
+        "componentIndex": 0,
+        "sourceOperationId": "op-0001",
+        "basis": "COMPONENT_IDENTITY",
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "the newest artifact is the comparison; the named component belongs to the framework two turns back. Resolving to op-0004 is a FAILURE, not a near miss — recency must not decide"
+    },
+    {
+      "id": "F-PW-018",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "REFERENCE_TWO_TURNS_BACK",
+      "language": "de",
+      "turn": "Warum haben Sie den Zeitpunkt an die erste Stelle gesetzt?",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "COMPARISON",
+            "label": "Pilotprojekt gegen vollständige Einführung",
+            "components": ["Risiko", "Geschwindigkeit", "Kosten", "Umkehrbarkeit"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0004"
+          },
+          {
+            "kind": "CONCEPTUAL_FRAMEWORK",
+            "label": "Entscheidender Moment",
+            "components": ["Zeitpunkt", "Kapazität", "Koalition", "Kosten der Verzögerung"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0001"
+          }
+        ]
+      },
+      "stateName": "FRAMEWORK_THEN_COMPARISON",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_PROPOSITION",
+        "componentIndex": 0,
+        "sourceOperationId": "op-0001",
+        "basis": "COMPONENT_IDENTITY",
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "the newest artifact is the comparison; the named component belongs to the framework two turns back. Resolving to op-0004 is a FAILURE, not a near miss — recency must not decide"
+    },
+    {
+      "id": "F-PW-019",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "REFERENCE_TWO_TURNS_BACK",
+      "language": "es",
+      "turn": "¿Por qué pusiste el momento primero?",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "COMPARISON",
+            "label": "Piloto frente a despliegue completo",
+            "components": ["riesgo", "velocidad", "costo", "reversibilidad"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0004"
+          },
+          {
+            "kind": "CONCEPTUAL_FRAMEWORK",
+            "label": "Momento clave",
+            "components": ["momento", "capacidad", "coalición", "costo de la demora"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0001"
+          }
+        ]
+      },
+      "stateName": "FRAMEWORK_THEN_COMPARISON",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_PROPOSITION",
+        "componentIndex": 0,
+        "sourceOperationId": "op-0001",
+        "basis": "COMPONENT_IDENTITY",
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "the newest artifact is the comparison; the named component belongs to the framework two turns back. Resolving to op-0004 is a FAILURE, not a near miss — recency must not decide"
+    },
+    {
+      "id": "F-PW-020",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "REFERENCE_TWO_TURNS_BACK",
+      "language": "pt",
+      "turn": "Por que você colocou o momento em primeiro lugar?",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "COMPARISON",
+            "label": "Piloto contra implantação completa",
+            "components": ["risco", "velocidade", "custo", "reversibilidade"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0004"
+          },
+          {
+            "kind": "CONCEPTUAL_FRAMEWORK",
+            "label": "Momento decisivo",
+            "components": ["momento", "capacidade", "coligação", "custo do atraso"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0001"
+          }
+        ]
+      },
+      "stateName": "FRAMEWORK_THEN_COMPARISON",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_PROPOSITION",
+        "componentIndex": 0,
+        "sourceOperationId": "op-0001",
+        "basis": "COMPONENT_IDENTITY",
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "the newest artifact is the comparison; the named component belongs to the framework two turns back. Resolving to op-0004 is a FAILURE, not a near miss — recency must not decide"
+    },
+    {
+      "id": "F-PW-021",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "REFERENCE_TWO_TURNS_BACK",
+      "language": "ar",
+      "turn": "لماذا وضعت التوقيت أولًا؟",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "COMPARISON",
+            "label": "المشروع التجريبي مقابل التنفيذ الكامل",
+            "components": ["الخطر", "السرعة", "الكلفة", "قابلية العكس"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0004"
+          },
+          {
+            "kind": "CONCEPTUAL_FRAMEWORK",
+            "label": "اللحظة الحاسمة",
+            "components": ["التوقيت", "القدرة", "التحالف", "كلفة التأخير"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0001"
+          }
+        ]
+      },
+      "stateName": "FRAMEWORK_THEN_COMPARISON",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_PROPOSITION",
+        "componentIndex": 0,
+        "sourceOperationId": "op-0001",
+        "basis": "COMPONENT_IDENTITY",
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "the newest artifact is the comparison; the named component belongs to the framework two turns back. Resolving to op-0004 is a FAILURE, not a near miss — recency must not decide"
+    },
+    {
+      "id": "F-PW-022",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "REFERENCE_TO_RECOMMENDATION",
+      "language": "en",
+      "turn": "Why did you recommend \"Start with the pilot\"?",
+      "deterministicLanguage": true,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "Start with the pilot",
+            "components": ["lower risk", "faster feedback", "reversible", "smaller budget"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_PROPOSITION",
+        "componentIndex": null,
+        "sourceOperationId": "op-0002",
+        "basis": "LABEL_IDENTITY",
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "the reader quotes the artifact LABEL, so the reference is to the work as a whole and component is null"
+    },
+    {
+      "id": "F-PW-023",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "REFERENCE_TO_RECOMMENDATION",
+      "language": "pl",
+      "turn": "Dlaczego zarekomendowałeś \"Zacznij od pilotażu\"?",
+      "deterministicLanguage": true,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "Zacznij od pilotażu",
+            "components": [
+              "mniejsze ryzyko",
+              "szybsza informacja zwrotna",
+              "odwracalne",
+              "mniejszy budżet"
+            ],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_PROPOSITION",
+        "componentIndex": null,
+        "sourceOperationId": "op-0002",
+        "basis": "LABEL_IDENTITY",
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "the reader quotes the artifact LABEL, so the reference is to the work as a whole and component is null"
+    },
+    {
+      "id": "F-PW-024",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "REFERENCE_TO_RECOMMENDATION",
+      "language": "fr",
+      "turn": "Pourquoi avez-vous recommandé « Commencer par le pilote » ?",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "Commencer par le pilote",
+            "components": [
+              "risque plus faible",
+              "retour plus rapide",
+              "réversible",
+              "budget plus petit"
+            ],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_PROPOSITION",
+        "componentIndex": null,
+        "sourceOperationId": "op-0002",
+        "basis": "LABEL_IDENTITY",
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "the reader quotes the artifact LABEL, so the reference is to the work as a whole and component is null"
+    },
+    {
+      "id": "F-PW-025",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "REFERENCE_TO_RECOMMENDATION",
+      "language": "de",
+      "turn": "Warum haben Sie „Mit dem Pilotprojekt beginnen“ empfohlen?",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "Mit dem Pilotprojekt beginnen",
+            "components": [
+              "geringeres Risiko",
+              "schnelleres Feedback",
+              "umkehrbar",
+              "kleineres Budget"
+            ],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_PROPOSITION",
+        "componentIndex": null,
+        "sourceOperationId": "op-0002",
+        "basis": "LABEL_IDENTITY",
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "the reader quotes the artifact LABEL, so the reference is to the work as a whole and component is null"
+    },
+    {
+      "id": "F-PW-026",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "REFERENCE_TO_RECOMMENDATION",
+      "language": "es",
+      "turn": "¿Por qué recomendaste «Empezar con el piloto»?",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "Empezar con el piloto",
+            "components": [
+              "menor riesgo",
+              "retroalimentación más rápida",
+              "reversible",
+              "presupuesto menor"
+            ],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_PROPOSITION",
+        "componentIndex": null,
+        "sourceOperationId": "op-0002",
+        "basis": "LABEL_IDENTITY",
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "the reader quotes the artifact LABEL, so the reference is to the work as a whole and component is null"
+    },
+    {
+      "id": "F-PW-027",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "REFERENCE_TO_RECOMMENDATION",
+      "language": "pt",
+      "turn": "Por que você recomendou «Começar pelo piloto»?",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "Começar pelo piloto",
+            "components": ["menor risco", "retorno mais rápido", "reversível", "orçamento menor"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_PROPOSITION",
+        "componentIndex": null,
+        "sourceOperationId": "op-0002",
+        "basis": "LABEL_IDENTITY",
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "the reader quotes the artifact LABEL, so the reference is to the work as a whole and component is null"
+    },
+    {
+      "id": "F-PW-028",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "REFERENCE_TO_RECOMMENDATION",
+      "language": "ar",
+      "turn": "لماذا أوصيت بـ«ابدأ بالمشروع التجريبي»؟",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "ابدأ بالمشروع التجريبي",
+            "components": ["خطر أقل", "تغذية راجعة أسرع", "قابل للعكس", "ميزانية أصغر"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_PROPOSITION",
+        "componentIndex": null,
+        "sourceOperationId": "op-0002",
+        "basis": "LABEL_IDENTITY",
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "the reader quotes the artifact LABEL, so the reference is to the work as a whole and component is null"
+    },
+    {
+      "id": "F-PW-029",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "REFERENCE_TO_CONCEPTUAL_FRAMEWORK",
+      "language": "en",
+      "turn": "What did you mean when you called it a Prime moment?",
+      "deterministicLanguage": true,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "CONCEPTUAL_FRAMEWORK",
+            "label": "Prime moment",
+            "components": ["timing", "capacity", "coalition", "cost of delay"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0001"
+          }
+        ]
+      },
+      "stateName": "FRAMEWORK",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_PROPOSITION",
+        "componentIndex": null,
+        "sourceOperationId": "op-0001",
+        "basis": "LABEL_IDENTITY",
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "label identity again, on a different artifact kind"
+    },
+    {
+      "id": "F-PW-030",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "REFERENCE_TO_CONCEPTUAL_FRAMEWORK",
+      "language": "pl",
+      "turn": "Co miałeś na myśli, nazywając to Kluczowy moment?",
+      "deterministicLanguage": true,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "CONCEPTUAL_FRAMEWORK",
+            "label": "Kluczowy moment",
+            "components": ["moment", "zdolność", "koalicja", "koszt zwłoki"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0001"
+          }
+        ]
+      },
+      "stateName": "FRAMEWORK",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_PROPOSITION",
+        "componentIndex": null,
+        "sourceOperationId": "op-0001",
+        "basis": "LABEL_IDENTITY",
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "label identity again, on a different artifact kind"
+    },
+    {
+      "id": "F-PW-031",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "REFERENCE_TO_CONCEPTUAL_FRAMEWORK",
+      "language": "fr",
+      "turn": "Que vouliez-vous dire en parlant d’un Moment clé ?",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "CONCEPTUAL_FRAMEWORK",
+            "label": "Moment clé",
+            "components": ["moment", "capacité", "coalition", "coût du retard"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0001"
+          }
+        ]
+      },
+      "stateName": "FRAMEWORK",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_PROPOSITION",
+        "componentIndex": null,
+        "sourceOperationId": "op-0001",
+        "basis": "LABEL_IDENTITY",
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "label identity again, on a different artifact kind"
+    },
+    {
+      "id": "F-PW-032",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "REFERENCE_TO_CONCEPTUAL_FRAMEWORK",
+      "language": "de",
+      "turn": "Was meinten Sie, als Sie es Entscheidender Moment nannten?",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "CONCEPTUAL_FRAMEWORK",
+            "label": "Entscheidender Moment",
+            "components": ["Zeitpunkt", "Kapazität", "Koalition", "Kosten der Verzögerung"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0001"
+          }
+        ]
+      },
+      "stateName": "FRAMEWORK",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_PROPOSITION",
+        "componentIndex": null,
+        "sourceOperationId": "op-0001",
+        "basis": "LABEL_IDENTITY",
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "label identity again, on a different artifact kind"
+    },
+    {
+      "id": "F-PW-033",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "REFERENCE_TO_CONCEPTUAL_FRAMEWORK",
+      "language": "es",
+      "turn": "¿Qué querías decir al llamarlo Momento clave?",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "CONCEPTUAL_FRAMEWORK",
+            "label": "Momento clave",
+            "components": ["momento", "capacidad", "coalición", "costo de la demora"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0001"
+          }
+        ]
+      },
+      "stateName": "FRAMEWORK",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_PROPOSITION",
+        "componentIndex": null,
+        "sourceOperationId": "op-0001",
+        "basis": "LABEL_IDENTITY",
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "label identity again, on a different artifact kind"
+    },
+    {
+      "id": "F-PW-034",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "REFERENCE_TO_CONCEPTUAL_FRAMEWORK",
+      "language": "pt",
+      "turn": "O que você quis dizer ao chamá-lo de Momento decisivo?",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "CONCEPTUAL_FRAMEWORK",
+            "label": "Momento decisivo",
+            "components": ["momento", "capacidade", "coligação", "custo do atraso"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0001"
+          }
+        ]
+      },
+      "stateName": "FRAMEWORK",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_PROPOSITION",
+        "componentIndex": null,
+        "sourceOperationId": "op-0001",
+        "basis": "LABEL_IDENTITY",
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "label identity again, on a different artifact kind"
+    },
+    {
+      "id": "F-PW-035",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "REFERENCE_TO_CONCEPTUAL_FRAMEWORK",
+      "language": "ar",
+      "turn": "ماذا كنت تعني عندما وصفته باللحظة الحاسمة؟",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "CONCEPTUAL_FRAMEWORK",
+            "label": "اللحظة الحاسمة",
+            "components": ["التوقيت", "القدرة", "التحالف", "كلفة التأخير"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0001"
+          }
+        ]
+      },
+      "stateName": "FRAMEWORK",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_PROPOSITION",
+        "componentIndex": null,
+        "sourceOperationId": "op-0001",
+        "basis": "LABEL_IDENTITY",
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "label identity again, on a different artifact kind"
+    },
+    {
+      "id": "F-PW-036",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "REFERENCE_TO_PLAN",
+      "language": "en",
+      "turn": "In your earlier plan, why does review come before scale?",
+      "deterministicLanguage": true,
+      "pointsBack": "DEMONSTRATIVE",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "PLAN",
+            "label": "90-day rollout",
+            "components": ["baseline", "pilot", "review", "scale"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0003"
+          }
+        ]
+      },
+      "stateName": "PLAN",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_COMPONENT",
+        "componentIndex": 2,
+        "sourceOperationId": "op-0003",
+        "basis": "COMPONENT_IDENTITY",
+        "job": null,
+        "discourseReference": null,
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "an ordering question about two declared components. DEMONSTRATIVE + a component match gives ARTIFACT_COMPONENT, not ARTIFACT_PROPOSITION — the reader asks about the structure, not about a claim. job/discourse are not asserted here because the EN/PL deterministic reading of this phrasing is not part of this lane’s change"
+    },
+    {
+      "id": "F-PW-037",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "REFERENCE_TO_PLAN",
+      "language": "pl",
+      "turn": "W twoim wcześniejszym planie, dlaczego przegląd jest przed skalowanie?",
+      "deterministicLanguage": true,
+      "pointsBack": "DEMONSTRATIVE",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "PLAN",
+            "label": "Wdrożenie w 90 dni",
+            "components": ["punkt odniesienia", "pilotaż", "przegląd", "skalowanie"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0003"
+          }
+        ]
+      },
+      "stateName": "PLAN",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_COMPONENT",
+        "componentIndex": 2,
+        "sourceOperationId": "op-0003",
+        "basis": "COMPONENT_IDENTITY",
+        "job": null,
+        "discourseReference": null,
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "an ordering question about two declared components. DEMONSTRATIVE + a component match gives ARTIFACT_COMPONENT, not ARTIFACT_PROPOSITION — the reader asks about the structure, not about a claim. job/discourse are not asserted here because the EN/PL deterministic reading of this phrasing is not part of this lane’s change"
+    },
+    {
+      "id": "F-PW-038",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "REFERENCE_TO_PLAN",
+      "language": "fr",
+      "turn": "Dans votre plan précédent, pourquoi la revue vient-elle avant la montée en charge ?",
+      "deterministicLanguage": false,
+      "pointsBack": "DEMONSTRATIVE",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "PLAN",
+            "label": "Déploiement en 90 jours",
+            "components": ["référence", "pilote", "revue", "montée en charge"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0003"
+          }
+        ]
+      },
+      "stateName": "PLAN",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_COMPONENT",
+        "componentIndex": 2,
+        "sourceOperationId": "op-0003",
+        "basis": "COMPONENT_IDENTITY",
+        "job": null,
+        "discourseReference": null,
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "an ordering question about two declared components. DEMONSTRATIVE + a component match gives ARTIFACT_COMPONENT, not ARTIFACT_PROPOSITION — the reader asks about the structure, not about a claim. job/discourse are not asserted here because the EN/PL deterministic reading of this phrasing is not part of this lane’s change"
+    },
+    {
+      "id": "F-PW-039",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "REFERENCE_TO_PLAN",
+      "language": "de",
+      "turn": "In Ihrem früheren Plan, warum kommt die Überprüfung vor der Skalierung?",
+      "deterministicLanguage": false,
+      "pointsBack": "DEMONSTRATIVE",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "PLAN",
+            "label": "90-Tage-Einführung",
+            "components": ["Ausgangswert", "Pilotprojekt", "Überprüfung", "Skalierung"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0003"
+          }
+        ]
+      },
+      "stateName": "PLAN",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_COMPONENT",
+        "componentIndex": 2,
+        "sourceOperationId": "op-0003",
+        "basis": "COMPONENT_IDENTITY",
+        "job": null,
+        "discourseReference": null,
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "an ordering question about two declared components. DEMONSTRATIVE + a component match gives ARTIFACT_COMPONENT, not ARTIFACT_PROPOSITION — the reader asks about the structure, not about a claim. job/discourse are not asserted here because the EN/PL deterministic reading of this phrasing is not part of this lane’s change"
+    },
+    {
+      "id": "F-PW-040",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "REFERENCE_TO_PLAN",
+      "language": "es",
+      "turn": "En tu plan anterior, ¿por qué la revisión va antes del escalado?",
+      "deterministicLanguage": false,
+      "pointsBack": "DEMONSTRATIVE",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "PLAN",
+            "label": "Despliegue de 90 días",
+            "components": ["línea base", "piloto", "revisión", "escalado"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0003"
+          }
+        ]
+      },
+      "stateName": "PLAN",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_COMPONENT",
+        "componentIndex": 2,
+        "sourceOperationId": "op-0003",
+        "basis": "COMPONENT_IDENTITY",
+        "job": null,
+        "discourseReference": null,
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "an ordering question about two declared components. DEMONSTRATIVE + a component match gives ARTIFACT_COMPONENT, not ARTIFACT_PROPOSITION — the reader asks about the structure, not about a claim. job/discourse are not asserted here because the EN/PL deterministic reading of this phrasing is not part of this lane’s change"
+    },
+    {
+      "id": "F-PW-041",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "REFERENCE_TO_PLAN",
+      "language": "pt",
+      "turn": "No seu plano anterior, por que a revisão vem antes da escala?",
+      "deterministicLanguage": false,
+      "pointsBack": "DEMONSTRATIVE",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "PLAN",
+            "label": "Implantação em 90 dias",
+            "components": ["linha de base", "piloto", "revisão", "escala"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0003"
+          }
+        ]
+      },
+      "stateName": "PLAN",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_COMPONENT",
+        "componentIndex": 2,
+        "sourceOperationId": "op-0003",
+        "basis": "COMPONENT_IDENTITY",
+        "job": null,
+        "discourseReference": null,
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "an ordering question about two declared components. DEMONSTRATIVE + a component match gives ARTIFACT_COMPONENT, not ARTIFACT_PROPOSITION — the reader asks about the structure, not about a claim. job/discourse are not asserted here because the EN/PL deterministic reading of this phrasing is not part of this lane’s change"
+    },
+    {
+      "id": "F-PW-042",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "REFERENCE_TO_PLAN",
+      "language": "ar",
+      "turn": "في خطتك السابقة، لماذا تأتي المراجعة قبل التوسّع؟",
+      "deterministicLanguage": false,
+      "pointsBack": "DEMONSTRATIVE",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "PLAN",
+            "label": "خطة تسعين يومًا",
+            "components": ["خط الأساس", "المشروع التجريبي", "المراجعة", "التوسّع"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0003"
+          }
+        ]
+      },
+      "stateName": "PLAN",
+      "expect": {
+        "resolution": "RESOLVED",
+        "target": "ARTIFACT_COMPONENT",
+        "componentIndex": 2,
+        "sourceOperationId": "op-0003",
+        "basis": "COMPONENT_IDENTITY",
+        "job": null,
+        "discourseReference": null,
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "an ordering question about two declared components. DEMONSTRATIVE + a component match gives ARTIFACT_COMPONENT, not ARTIFACT_PROPOSITION — the reader asks about the structure, not about a claim. job/discourse are not asserted here because the EN/PL deterministic reading of this phrasing is not part of this lane’s change"
+    },
+    {
+      "id": "F-PW-043",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "FALSE_REFERENCE_NEGATIVE_CONTROL",
+      "language": "en",
+      "turn": "Why did you say Finland should leave the euro?",
+      "deterministicLanguage": true,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "Start with the pilot",
+            "components": ["lower risk", "faster feedback", "reversible", "smaller budget"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "NEEDS_INTERPRETATION",
+        "target": null,
+        "componentIndex": null,
+        "sourceOperationId": null,
+        "basis": null,
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "THE LOAD-BEARING CASE (F-5). State holds exactly one artifact and nothing resembling this was ever said. The resolver must NOT resolve to op-0002 — \"the only candidate\" is not evidence. It escalates; and with an interpreter verdict that does not affirm grounding it returns UNRESOLVABLE / PROPOSITION_NOT_IN_ARTIFACT, never a resolution. A news call here is also a failure: an unfamiliar reference is not evidence of currentness"
+    },
+    {
+      "id": "F-PW-044",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "FALSE_REFERENCE_NEGATIVE_CONTROL",
+      "language": "pl",
+      "turn": "Dlaczego powiedziałeś, że Finlandia powinna porzucić euro?",
+      "deterministicLanguage": true,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "Zacznij od pilotażu",
+            "components": [
+              "mniejsze ryzyko",
+              "szybsza informacja zwrotna",
+              "odwracalne",
+              "mniejszy budżet"
+            ],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "NEEDS_INTERPRETATION",
+        "target": null,
+        "componentIndex": null,
+        "sourceOperationId": null,
+        "basis": null,
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "THE LOAD-BEARING CASE (F-5). State holds exactly one artifact and nothing resembling this was ever said. The resolver must NOT resolve to op-0002 — \"the only candidate\" is not evidence. It escalates; and with an interpreter verdict that does not affirm grounding it returns UNRESOLVABLE / PROPOSITION_NOT_IN_ARTIFACT, never a resolution. A news call here is also a failure: an unfamiliar reference is not evidence of currentness"
+    },
+    {
+      "id": "F-PW-045",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "FALSE_REFERENCE_NEGATIVE_CONTROL",
+      "language": "fr",
+      "turn": "Pourquoi avez-vous dit que la Finlande devait quitter l’euro ?",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "Commencer par le pilote",
+            "components": [
+              "risque plus faible",
+              "retour plus rapide",
+              "réversible",
+              "budget plus petit"
+            ],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "NEEDS_INTERPRETATION",
+        "target": null,
+        "componentIndex": null,
+        "sourceOperationId": null,
+        "basis": null,
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "THE LOAD-BEARING CASE (F-5). State holds exactly one artifact and nothing resembling this was ever said. The resolver must NOT resolve to op-0002 — \"the only candidate\" is not evidence. It escalates; and with an interpreter verdict that does not affirm grounding it returns UNRESOLVABLE / PROPOSITION_NOT_IN_ARTIFACT, never a resolution. A news call here is also a failure: an unfamiliar reference is not evidence of currentness"
+    },
+    {
+      "id": "F-PW-046",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "FALSE_REFERENCE_NEGATIVE_CONTROL",
+      "language": "de",
+      "turn": "Warum haben Sie gesagt, Finnland solle den Euro verlassen?",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "Mit dem Pilotprojekt beginnen",
+            "components": [
+              "geringeres Risiko",
+              "schnelleres Feedback",
+              "umkehrbar",
+              "kleineres Budget"
+            ],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "NEEDS_INTERPRETATION",
+        "target": null,
+        "componentIndex": null,
+        "sourceOperationId": null,
+        "basis": null,
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "THE LOAD-BEARING CASE (F-5). State holds exactly one artifact and nothing resembling this was ever said. The resolver must NOT resolve to op-0002 — \"the only candidate\" is not evidence. It escalates; and with an interpreter verdict that does not affirm grounding it returns UNRESOLVABLE / PROPOSITION_NOT_IN_ARTIFACT, never a resolution. A news call here is also a failure: an unfamiliar reference is not evidence of currentness"
+    },
+    {
+      "id": "F-PW-047",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "FALSE_REFERENCE_NEGATIVE_CONTROL",
+      "language": "es",
+      "turn": "¿Por qué dijiste que Finlandia debía salir del euro?",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "Empezar con el piloto",
+            "components": [
+              "menor riesgo",
+              "retroalimentación más rápida",
+              "reversible",
+              "presupuesto menor"
+            ],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "NEEDS_INTERPRETATION",
+        "target": null,
+        "componentIndex": null,
+        "sourceOperationId": null,
+        "basis": null,
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "THE LOAD-BEARING CASE (F-5). State holds exactly one artifact and nothing resembling this was ever said. The resolver must NOT resolve to op-0002 — \"the only candidate\" is not evidence. It escalates; and with an interpreter verdict that does not affirm grounding it returns UNRESOLVABLE / PROPOSITION_NOT_IN_ARTIFACT, never a resolution. A news call here is also a failure: an unfamiliar reference is not evidence of currentness"
+    },
+    {
+      "id": "F-PW-048",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "FALSE_REFERENCE_NEGATIVE_CONTROL",
+      "language": "pt",
+      "turn": "Por que você disse que a Finlândia devia sair do euro?",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "Começar pelo piloto",
+            "components": ["menor risco", "retorno mais rápido", "reversível", "orçamento menor"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "NEEDS_INTERPRETATION",
+        "target": null,
+        "componentIndex": null,
+        "sourceOperationId": null,
+        "basis": null,
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "THE LOAD-BEARING CASE (F-5). State holds exactly one artifact and nothing resembling this was ever said. The resolver must NOT resolve to op-0002 — \"the only candidate\" is not evidence. It escalates; and with an interpreter verdict that does not affirm grounding it returns UNRESOLVABLE / PROPOSITION_NOT_IN_ARTIFACT, never a resolution. A news call here is also a failure: an unfamiliar reference is not evidence of currentness"
+    },
+    {
+      "id": "F-PW-049",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "FALSE_REFERENCE_NEGATIVE_CONTROL",
+      "language": "ar",
+      "turn": "لماذا قلت إن فنلندا يجب أن تترك اليورو؟",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "ابدأ بالمشروع التجريبي",
+            "components": ["خطر أقل", "تغذية راجعة أسرع", "قابل للعكس", "ميزانية أصغر"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "NEEDS_INTERPRETATION",
+        "target": null,
+        "componentIndex": null,
+        "sourceOperationId": null,
+        "basis": null,
+        "job": "EXPLANATION",
+        "discourseReference": "PRIOR_WORK",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "THE LOAD-BEARING CASE (F-5). State holds exactly one artifact and nothing resembling this was ever said. The resolver must NOT resolve to op-0002 — \"the only candidate\" is not evidence. It escalates; and with an interpreter verdict that does not affirm grounding it returns UNRESOLVABLE / PROPOSITION_NOT_IN_ARTIFACT, never a resolution. A news call here is also a failure: an unfamiliar reference is not evidence of currentness"
+    },
+    {
+      "id": "F-PW-050",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "NEW_TOPIC_RESET",
+      "language": "en",
+      "turn": "What caused the First World War?",
+      "deterministicLanguage": true,
+      "pointsBack": "NONE",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "Start with the pilot",
+            "components": ["lower risk", "faster feedback", "reversible", "smaller budget"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "NO_REFERENCE",
+        "target": null,
+        "componentIndex": null,
+        "sourceOperationId": null,
+        "basis": null,
+        "job": null,
+        "discourseReference": "NONE",
+        "mayRequestCurrentEvidence": true
+      },
+      "why": "state holds work and this turn does not point at it. NO_REFERENCE, not UNRESOLVABLE: an ordinary question must not trigger a clarification, and it is the one case where current evidence remains permissible"
+    },
+    {
+      "id": "F-PW-051",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "NEW_TOPIC_RESET",
+      "language": "pl",
+      "turn": "Co wywołało pierwszą wojnę światową?",
+      "deterministicLanguage": true,
+      "pointsBack": "NONE",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "Zacznij od pilotażu",
+            "components": [
+              "mniejsze ryzyko",
+              "szybsza informacja zwrotna",
+              "odwracalne",
+              "mniejszy budżet"
+            ],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "NO_REFERENCE",
+        "target": null,
+        "componentIndex": null,
+        "sourceOperationId": null,
+        "basis": null,
+        "job": null,
+        "discourseReference": "NONE",
+        "mayRequestCurrentEvidence": true
+      },
+      "why": "state holds work and this turn does not point at it. NO_REFERENCE, not UNRESOLVABLE: an ordinary question must not trigger a clarification, and it is the one case where current evidence remains permissible"
+    },
+    {
+      "id": "F-PW-052",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "NEW_TOPIC_RESET",
+      "language": "fr",
+      "turn": "Quelles ont été les causes de la Première Guerre mondiale ?",
+      "deterministicLanguage": false,
+      "pointsBack": "NONE",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "Commencer par le pilote",
+            "components": [
+              "risque plus faible",
+              "retour plus rapide",
+              "réversible",
+              "budget plus petit"
+            ],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "NO_REFERENCE",
+        "target": null,
+        "componentIndex": null,
+        "sourceOperationId": null,
+        "basis": null,
+        "job": null,
+        "discourseReference": "NONE",
+        "mayRequestCurrentEvidence": true
+      },
+      "why": "state holds work and this turn does not point at it. NO_REFERENCE, not UNRESOLVABLE: an ordinary question must not trigger a clarification, and it is the one case where current evidence remains permissible"
+    },
+    {
+      "id": "F-PW-053",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "NEW_TOPIC_RESET",
+      "language": "de",
+      "turn": "Was waren die Ursachen des Ersten Weltkriegs?",
+      "deterministicLanguage": false,
+      "pointsBack": "NONE",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "Mit dem Pilotprojekt beginnen",
+            "components": [
+              "geringeres Risiko",
+              "schnelleres Feedback",
+              "umkehrbar",
+              "kleineres Budget"
+            ],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "NO_REFERENCE",
+        "target": null,
+        "componentIndex": null,
+        "sourceOperationId": null,
+        "basis": null,
+        "job": null,
+        "discourseReference": "NONE",
+        "mayRequestCurrentEvidence": true
+      },
+      "why": "state holds work and this turn does not point at it. NO_REFERENCE, not UNRESOLVABLE: an ordinary question must not trigger a clarification, and it is the one case where current evidence remains permissible"
+    },
+    {
+      "id": "F-PW-054",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "NEW_TOPIC_RESET",
+      "language": "es",
+      "turn": "¿Qué causó la Primera Guerra Mundial?",
+      "deterministicLanguage": false,
+      "pointsBack": "NONE",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "Empezar con el piloto",
+            "components": [
+              "menor riesgo",
+              "retroalimentación más rápida",
+              "reversible",
+              "presupuesto menor"
+            ],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "NO_REFERENCE",
+        "target": null,
+        "componentIndex": null,
+        "sourceOperationId": null,
+        "basis": null,
+        "job": null,
+        "discourseReference": "NONE",
+        "mayRequestCurrentEvidence": true
+      },
+      "why": "state holds work and this turn does not point at it. NO_REFERENCE, not UNRESOLVABLE: an ordinary question must not trigger a clarification, and it is the one case where current evidence remains permissible"
+    },
+    {
+      "id": "F-PW-055",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "NEW_TOPIC_RESET",
+      "language": "pt",
+      "turn": "O que causou a Primeira Guerra Mundial?",
+      "deterministicLanguage": false,
+      "pointsBack": "NONE",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "Começar pelo piloto",
+            "components": ["menor risco", "retorno mais rápido", "reversível", "orçamento menor"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "NO_REFERENCE",
+        "target": null,
+        "componentIndex": null,
+        "sourceOperationId": null,
+        "basis": null,
+        "job": null,
+        "discourseReference": "NONE",
+        "mayRequestCurrentEvidence": true
+      },
+      "why": "state holds work and this turn does not point at it. NO_REFERENCE, not UNRESOLVABLE: an ordinary question must not trigger a clarification, and it is the one case where current evidence remains permissible"
+    },
+    {
+      "id": "F-PW-056",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "NEW_TOPIC_RESET",
+      "language": "ar",
+      "turn": "ما أسباب الحرب العالمية الأولى؟",
+      "deterministicLanguage": false,
+      "pointsBack": "NONE",
+      "state": {
+        "artifactsNewestFirst": [
+          {
+            "kind": "RECOMMENDATION",
+            "label": "ابدأ بالمشروع التجريبي",
+            "components": ["خطر أقل", "تغذية راجعة أسرع", "قابل للعكس", "ميزانية أصغر"],
+            "provenance": "MODEL_REASONING",
+            "citable": false,
+            "sourceOperationId": "op-0002"
+          }
+        ]
+      },
+      "stateName": "RECOMMENDATION",
+      "expect": {
+        "resolution": "NO_REFERENCE",
+        "target": null,
+        "componentIndex": null,
+        "sourceOperationId": null,
+        "basis": null,
+        "job": null,
+        "discourseReference": "NONE",
+        "mayRequestCurrentEvidence": true
+      },
+      "why": "state holds work and this turn does not point at it. NO_REFERENCE, not UNRESOLVABLE: an ordinary question must not trigger a clarification, and it is the one case where current evidence remains permissible"
+    },
+    {
+      "id": "F-PW-057",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "CROSS_THREAD_ISOLATION",
+      "language": "en",
+      "turn": "Why did you say the pilot was lower risk?",
+      "deterministicLanguage": true,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [],
+        "foreignConversationArtifact": {
+          "kind": "RECOMMENDATION",
+          "label": "Start with the pilot",
+          "components": ["lower risk", "faster feedback", "reversible", "smaller budget"],
+          "provenance": "MODEL_REASONING",
+          "citable": false,
+          "sourceOperationId": "op-0002"
+        }
+      },
+      "stateName": "OTHER_CONVERSATION",
+      "expect": {
+        "resolution": "UNRESOLVABLE",
+        "because": "NO_PRIOR_WORK_IN_STATE",
+        "target": null,
+        "componentIndex": null,
+        "sourceOperationId": null,
+        "basis": null,
+        "job": null,
+        "discourseReference": "NONE",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "TEXT-IDENTICAL to EXACT_PRIOR_STATEMENT. The only difference is that the artifact belongs to a DIFFERENT conversation and is therefore not in this conversation’s state. A detector that reads text alone cannot pass both cases; a resolver that reads state passes both for the same reason"
+    },
+    {
+      "id": "F-PW-058",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "CROSS_THREAD_ISOLATION",
+      "language": "pl",
+      "turn": "Dlaczego powiedziałeś, że pilotaż to mniejsze ryzyko?",
+      "deterministicLanguage": true,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [],
+        "foreignConversationArtifact": {
+          "kind": "RECOMMENDATION",
+          "label": "Zacznij od pilotażu",
+          "components": [
+            "mniejsze ryzyko",
+            "szybsza informacja zwrotna",
+            "odwracalne",
+            "mniejszy budżet"
+          ],
+          "provenance": "MODEL_REASONING",
+          "citable": false,
+          "sourceOperationId": "op-0002"
+        }
+      },
+      "stateName": "OTHER_CONVERSATION",
+      "expect": {
+        "resolution": "UNRESOLVABLE",
+        "because": "NO_PRIOR_WORK_IN_STATE",
+        "target": null,
+        "componentIndex": null,
+        "sourceOperationId": null,
+        "basis": null,
+        "job": null,
+        "discourseReference": "NONE",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "TEXT-IDENTICAL to EXACT_PRIOR_STATEMENT. The only difference is that the artifact belongs to a DIFFERENT conversation and is therefore not in this conversation’s state. A detector that reads text alone cannot pass both cases; a resolver that reads state passes both for the same reason"
+    },
+    {
+      "id": "F-PW-059",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "CROSS_THREAD_ISOLATION",
+      "language": "fr",
+      "turn": "Pourquoi avez-vous dit que le pilote était un risque plus faible ?",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [],
+        "foreignConversationArtifact": {
+          "kind": "RECOMMENDATION",
+          "label": "Commencer par le pilote",
+          "components": [
+            "risque plus faible",
+            "retour plus rapide",
+            "réversible",
+            "budget plus petit"
+          ],
+          "provenance": "MODEL_REASONING",
+          "citable": false,
+          "sourceOperationId": "op-0002"
+        }
+      },
+      "stateName": "OTHER_CONVERSATION",
+      "expect": {
+        "resolution": "UNRESOLVABLE",
+        "because": "NO_PRIOR_WORK_IN_STATE",
+        "target": null,
+        "componentIndex": null,
+        "sourceOperationId": null,
+        "basis": null,
+        "job": null,
+        "discourseReference": "NONE",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "TEXT-IDENTICAL to EXACT_PRIOR_STATEMENT. The only difference is that the artifact belongs to a DIFFERENT conversation and is therefore not in this conversation’s state. A detector that reads text alone cannot pass both cases; a resolver that reads state passes both for the same reason"
+    },
+    {
+      "id": "F-PW-060",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "CROSS_THREAD_ISOLATION",
+      "language": "de",
+      "turn": "Warum haben Sie gesagt, das Pilotprojekt sei ein geringeres Risiko?",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [],
+        "foreignConversationArtifact": {
+          "kind": "RECOMMENDATION",
+          "label": "Mit dem Pilotprojekt beginnen",
+          "components": [
+            "geringeres Risiko",
+            "schnelleres Feedback",
+            "umkehrbar",
+            "kleineres Budget"
+          ],
+          "provenance": "MODEL_REASONING",
+          "citable": false,
+          "sourceOperationId": "op-0002"
+        }
+      },
+      "stateName": "OTHER_CONVERSATION",
+      "expect": {
+        "resolution": "UNRESOLVABLE",
+        "because": "NO_PRIOR_WORK_IN_STATE",
+        "target": null,
+        "componentIndex": null,
+        "sourceOperationId": null,
+        "basis": null,
+        "job": null,
+        "discourseReference": "NONE",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "TEXT-IDENTICAL to EXACT_PRIOR_STATEMENT. The only difference is that the artifact belongs to a DIFFERENT conversation and is therefore not in this conversation’s state. A detector that reads text alone cannot pass both cases; a resolver that reads state passes both for the same reason"
+    },
+    {
+      "id": "F-PW-061",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "CROSS_THREAD_ISOLATION",
+      "language": "es",
+      "turn": "¿Por qué dijiste que el piloto era un menor riesgo?",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [],
+        "foreignConversationArtifact": {
+          "kind": "RECOMMENDATION",
+          "label": "Empezar con el piloto",
+          "components": [
+            "menor riesgo",
+            "retroalimentación más rápida",
+            "reversible",
+            "presupuesto menor"
+          ],
+          "provenance": "MODEL_REASONING",
+          "citable": false,
+          "sourceOperationId": "op-0002"
+        }
+      },
+      "stateName": "OTHER_CONVERSATION",
+      "expect": {
+        "resolution": "UNRESOLVABLE",
+        "because": "NO_PRIOR_WORK_IN_STATE",
+        "target": null,
+        "componentIndex": null,
+        "sourceOperationId": null,
+        "basis": null,
+        "job": null,
+        "discourseReference": "NONE",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "TEXT-IDENTICAL to EXACT_PRIOR_STATEMENT. The only difference is that the artifact belongs to a DIFFERENT conversation and is therefore not in this conversation’s state. A detector that reads text alone cannot pass both cases; a resolver that reads state passes both for the same reason"
+    },
+    {
+      "id": "F-PW-062",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "CROSS_THREAD_ISOLATION",
+      "language": "pt",
+      "turn": "Por que você disse que o piloto era um menor risco?",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [],
+        "foreignConversationArtifact": {
+          "kind": "RECOMMENDATION",
+          "label": "Começar pelo piloto",
+          "components": ["menor risco", "retorno mais rápido", "reversível", "orçamento menor"],
+          "provenance": "MODEL_REASONING",
+          "citable": false,
+          "sourceOperationId": "op-0002"
+        }
+      },
+      "stateName": "OTHER_CONVERSATION",
+      "expect": {
+        "resolution": "UNRESOLVABLE",
+        "because": "NO_PRIOR_WORK_IN_STATE",
+        "target": null,
+        "componentIndex": null,
+        "sourceOperationId": null,
+        "basis": null,
+        "job": null,
+        "discourseReference": "NONE",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "TEXT-IDENTICAL to EXACT_PRIOR_STATEMENT. The only difference is that the artifact belongs to a DIFFERENT conversation and is therefore not in this conversation’s state. A detector that reads text alone cannot pass both cases; a resolver that reads state passes both for the same reason"
+    },
+    {
+      "id": "F-PW-063",
+      "family": "PRIOR_WORK_REFERENCE",
+      "case": "CROSS_THREAD_ISOLATION",
+      "language": "ar",
+      "turn": "لماذا قلت إن المشروع التجريبي خطر أقل؟",
+      "deterministicLanguage": false,
+      "pointsBack": "SELF_ATTRIBUTION",
+      "state": {
+        "artifactsNewestFirst": [],
+        "foreignConversationArtifact": {
+          "kind": "RECOMMENDATION",
+          "label": "ابدأ بالمشروع التجريبي",
+          "components": ["خطر أقل", "تغذية راجعة أسرع", "قابل للعكس", "ميزانية أصغر"],
+          "provenance": "MODEL_REASONING",
+          "citable": false,
+          "sourceOperationId": "op-0002"
+        }
+      },
+      "stateName": "OTHER_CONVERSATION",
+      "expect": {
+        "resolution": "UNRESOLVABLE",
+        "because": "NO_PRIOR_WORK_IN_STATE",
+        "target": null,
+        "componentIndex": null,
+        "sourceOperationId": null,
+        "basis": null,
+        "job": null,
+        "discourseReference": "NONE",
+        "mayRequestCurrentEvidence": false
+      },
+      "why": "TEXT-IDENTICAL to EXACT_PRIOR_STATEMENT. The only difference is that the artifact belongs to a DIFFERENT conversation and is therefore not in this conversation’s state. A detector that reads text alone cannot pass both cases; a resolver that reads state passes both for the same reason"
+    }
+  ],
+  "returnedProbes": {
+    "why": "Claude Code's F-REVIEW-RETURN.md returned the first version of this lane with three current-to-timeless P0s. These probes are measured at the ROUTE (routeAskR2 with prior work in the conversation), not at the reader, because that is where the defect was visible: the reader's job was only half of it, the other half was IR freshness and whether news was required.",
+    "invariants": [
+      "past reference (\"you said / did you say / earlier / your previous answer\") may resolve prior work",
+      "present advice or opinion language ALONE is never a prior-work reference",
+      "explicit currentness always survives — nothing here may make a current turn timeless",
+      "\"You said X — is it still true now?\" keeps BOTH the prior reference and the current evidence requirement"
+    ],
+    "howToRead": "expect.sameAsBase true means the route must be bit-for-bit what 782b175 produced: this lane may not touch it. expect.job / irFreshness / ref / news are the asserted route values.",
+    "items": [
+      {
+        "id": "P1",
+        "language": "en",
+        "turn": "Do you recommend travelling to Mali right now?",
+        "class": "PRESENT_ADVICE_NEGATIVE_CONTROL",
+        "expect": {
+          "sameAsBase": true,
+          "job": "CURRENT_REPORTING",
+          "irFreshness": "CURRENT",
+          "ref": "NONE",
+          "news": true
+        },
+        "why": "returned P0 #1. Present-tense advice with prior work in state. \"do you recommend\" is not \"did you recommend\"; the two must never share a pattern."
+      },
+      {
+        "id": "P2",
+        "language": "en",
+        "turn": "What do you say about the Fed rate decision today?",
+        "class": "PRESENT_ADVICE_NEGATIVE_CONTROL",
+        "expect": {
+          "sameAsBase": true,
+          "job": "CURRENT_REPORTING",
+          "irFreshness": "CURRENT",
+          "ref": "NONE",
+          "news": true
+        },
+        "why": "returned P0 #2. \"what do you say about X\" asks for an opinion now."
+      },
+      {
+        "id": "P3",
+        "language": "en",
+        "turn": "Do you suggest I buy gold this week?",
+        "class": "PRESENT_ADVICE_NEGATIVE_CONTROL",
+        "expect": {
+          "sameAsBase": true,
+          "job": "CURRENT_REPORTING",
+          "irFreshness": "CURRENT",
+          "ref": "NONE",
+          "news": true
+        },
+        "why": "returned P0 #3. A reporting window (\"this week\") must not be swallowed by a reference reading."
+      },
+      {
+        "id": "P4",
+        "language": "en",
+        "turn": "What is your opinion on the euro currently?",
+        "class": "PRESENT_ADVICE_NEGATIVE_CONTROL",
+        "expect": {
+          "sameAsBase": true,
+          "job": "CURRENT_REPORTING",
+          "irFreshness": "CURRENT",
+          "ref": "NONE",
+          "news": true
+        },
+        "why": "present opinion with an explicit present-state marker. Added by F, not returned: \"your opinion\" is the nearest miss to \"your earlier answer\" and the one most likely to regress."
+      },
+      {
+        "id": "P1pl",
+        "language": "pl",
+        "turn": "Czy polecasz teraz podróż do Mali?",
+        "class": "PRESENT_ADVICE_NEGATIVE_CONTROL",
+        "expect": {
+          "sameAsBase": true,
+          "job": "CURRENT_REPORTING",
+          "irFreshness": "CURRENT",
+          "ref": "NONE",
+          "news": true
+        },
+        "why": "Polish counterpart. \"polecasz\" is present; the -łeś / -łaś discipline already excluded it, and this control keeps it excluded."
+      },
+      {
+        "id": "P2pl",
+        "language": "pl",
+        "turn": "Co sądzisz o dzisiejszej decyzji Fed o stopach?",
+        "class": "PRESENT_ADVICE_NEGATIVE_CONTROL",
+        "expect": {
+          "sameAsBase": true,
+          "job": "CURRENT_REPORTING",
+          "irFreshness": "CURRENT",
+          "ref": "NONE",
+          "news": true
+        },
+        "why": "Polish counterpart of P2."
+      },
+      {
+        "id": "P3pl",
+        "language": "pl",
+        "turn": "Czy sugerujesz, żebym kupił złoto w tym tygodniu?",
+        "class": "PRESENT_ADVICE_NEGATIVE_CONTROL",
+        "expect": {
+          "sameAsBase": true,
+          "job": "CURRENT_REPORTING",
+          "irFreshness": "CURRENT",
+          "ref": "NONE",
+          "news": true
+        },
+        "why": "Polish counterpart of P3."
+      },
+      {
+        "id": "P4pl",
+        "language": "pl",
+        "turn": "Jaka jest twoja opinia o euro obecnie?",
+        "class": "PRESENT_ADVICE_NEGATIVE_CONTROL",
+        "expect": {
+          "sameAsBase": true,
+          "job": "CURRENT_REPORTING",
+          "irFreshness": "CURRENT",
+          "ref": "NONE",
+          "news": true
+        },
+        "why": "Polish counterpart of P4. \"twoja opinia\" is the nearest miss to \"twoja wcześniejsza odpowiedź\"."
+      },
+      {
+        "id": "M1",
+        "language": "en",
+        "turn": "You said inflation was easing — is it still true now?",
+        "class": "MIXED_CONTROL",
+        "expect": {
+          "sameAsBase": false,
+          "job": "MIXED",
+          "irFreshness": "CURRENT",
+          "ref": "ARTIFACT",
+          "news": true
+        },
+        "why": "the invariant the review named: earlier work re-examined against the present. BOTH halves. A timeless answer is a failure and a lost reference is a failure; at the base the reference was lost."
+      },
+      {
+        "id": "M1pl",
+        "language": "pl",
+        "turn": "Powiedziałeś, że inflacja spada — czy to nadal prawda teraz?",
+        "class": "MIXED_CONTROL",
+        "expect": {
+          "sameAsBase": false,
+          "job": "MIXED",
+          "irFreshness": "CURRENT",
+          "ref": "ARTIFACT",
+          "news": true
+        },
+        "why": "Polish MIXED control."
+      },
+      {
+        "id": "R1",
+        "language": "en",
+        "turn": "Why did you say the pilot was lower risk?",
+        "class": "PAST_REFERENCE",
+        "expect": {
+          "sameAsBase": false,
+          "job": "EXPLANATION",
+          "irFreshness": "NONE",
+          "ref": "ARTIFACT",
+          "news": false
+        },
+        "why": "the family being repaired. At the base this was UNRESOLVED and still asked for news."
+      },
+      {
+        "id": "R2",
+        "language": "en",
+        "turn": "What did you mean when you called it a Prime moment?",
+        "class": "PAST_REFERENCE",
+        "expect": {
+          "sameAsBase": true,
+          "job": "EXPLANATION",
+          "irFreshness": "NONE",
+          "ref": "ARTIFACT",
+          "news": false
+        },
+        "why": "already worked at the base (no named place, so the anaphora reading survived). Asserted sameAsBase so the repair cannot regress what already worked."
+      },
+      {
+        "id": "R3",
+        "language": "en",
+        "turn": "Why did you put timing first?",
+        "class": "PAST_REFERENCE",
+        "expect": {
+          "sameAsBase": false,
+          "job": "EXPLANATION",
+          "irFreshness": "NONE",
+          "ref": "ARTIFACT",
+          "news": false
+        },
+        "why": "an authorship act rather than a speech act, and past: \"did you put\". UNRESOLVED at the base."
+      },
+      {
+        "id": "R1pl",
+        "language": "pl",
+        "turn": "Dlaczego powiedziałeś, że pilotaż to mniejsze ryzyko?",
+        "class": "PAST_REFERENCE",
+        "expect": {
+          "sameAsBase": true,
+          "job": "EXPLANATION",
+          "irFreshness": "NONE",
+          "ref": "ARTIFACT",
+          "news": false
+        },
+        "why": "Polish past reference; worked at the base and must keep working."
+      }
+    ]
+  }
+}

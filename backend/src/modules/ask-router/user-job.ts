@@ -379,6 +379,54 @@ const PL_SELF_KIND: ReadonlyArray<readonly [TransformationKind, RegExp]> = [
 ];
 
 /* ── REFERENCES TO WORK ALREADY DONE IN THIS CONVERSATION ───────────────────────────────────── */
+/*
+  CLAUDE F · R4 PRIOR-WORK REFERENCE REPAIR (C-1) — THE SELF-ATTRIBUTION FORM.
+
+  Measured at 782b175: `referencesPriorWork` returned false for every member of the family
+  "why did you say X" / "why did you recommend Y" / "what did you mean when you called it Z" /
+  "you said X earlier — why?" in BOTH deterministic languages. EN_REFERENCE wants a demonstrative
+  plus a noun from a closed list, or a bare `why?`; none of these is either. The family was not
+  mis-handled, it was absent.
+
+  It is its own form rather than five more alternatives inside EN_REFERENCE because it is a
+  different KIND of reference. EN_REFERENCE points at a STRUCTURE the answer built ("that idea",
+  "which part"); this points at a CLAIM attributed to the assistant, which resolves against the
+  artifact's components or label rather than against its shape, and which must never be answered
+  with current evidence. Keeping them apart is what lets `readUserJob` treat them differently
+  below, and what keeps this change out of EN_REFERENCE's own matching behaviour entirely.
+
+  EN AND PL ONLY, DELIBERATELY. `fr / de / es / pt / ar` are interpreter-first by the seven-language
+  ruling — "the EN / PL deterministic readers are NOT applied: they do not understand these
+  languages and pretending they do is the defect this ruling forbids". Those five are served by the
+  bounded interpreter verdict feeding `resolvePriorReference`, not by a sixth and seventh regex
+  bank. This is the whole reason the resolver resolves against bounded state and not against text.
+
+  SECOND PERSON IS REQUIRED. "What did the minister say about the pilot?" is a question about the
+  world, not about this conversation, and it must keep routing as one.
+
+  AND SO IS THE PAST TENSE. Claude Code's review returned the first version of this form with three
+  P0s that did not exist at the base: "Do you recommend travelling to Mali right now?", "What do you
+  say about the Fed rate decision today?" and "Do you suggest I buy gold this week?" all became
+  timeless reasoning with no news call, because the form admitted `do you recommend` beside `did you
+  recommend` and bare present verbs beside past ones. Present-tense second person asks for advice
+  NOW; it is not a claim attributed to an earlier turn, and the two must never share a pattern.
+
+  So every alternative below is anchored in the past or in an explicit back-reference, and there is
+  no auxiliary group, optional tense or bare-stem alternative through which a present form could
+  return:
+    did you <bare verb>        the past auxiliary carries the tense
+    you <past-tense verb>      "you said", "you recommended" — a reference on its own, needing no
+                               trailing "why": "You said X — is it still true now?" is one
+    your earlier/previous …    an explicit pointer at an earlier answer
+
+  Polish needed no equivalent change: `-łeś` / `-łaś` is already a past-tense marker, so the four
+  returned probes were never matched in Polish. That is the discipline paying for itself, not luck.
+*/
+const EN_SELF_ATTRIBUTION =
+  /\bdid\s+you\s+(?:say|mean|recommend|suggest|call|argue|claim|conclude|propose|write|put|place|choose|give|list|rank|order|include)\b|\byou\s+(?:said|meant|wrote|argued|claimed|recommended|suggested|concluded|proposed|called|put|placed|chose|gave|listed|ranked|ordered|included)\b|\byour\s+(?:earlier|previous|last|first|own)\s+(?:answer|reply|response|point|points|recommendation|recommendations|advice|analysis|summary|framework|plan|comparison)\b/i;
+const PL_SELF_ATTRIBUTION = plTolerant(
+  /(?:powiedział|mówił|napisał|twierdził|stwierdził|zarekomendował|rekomendował|zasugerował|sugerował|nazwał|doradził|zaproponował|proponował|postawił|umieścił|wybrał|podał|wymienił|uporządkował|uwzględnił|opisał|argumentował)(?:eś|aś)(?![\p{L}])|miał(?:eś|aś)\s+na\s+myśli|twoj\p{L}*\s+(?:wcześniejsz\p{L}*|poprzedni\p{L}*|pierwsz\p{L}*|ostatni\p{L}*|własn\p{L}*)\s+(?:odpowied\p{L}*|rad\p{L}*|rekomendacj\p{L}*|analiz\p{L}*|punkt\p{L}*|podsumowani\p{L}*|ram\p{L}*|plan\p{L}*|porównani\p{L}*)/iu,
+);
 const EN_REFERENCE =
   /\b(?:that|this|these|those|the\s+same)\s+(?:idea|ideas|framework|frameworks|concept|model|analysis|diagnosis|plan|conclusion|conclusions|recommendation|recommendations|advice|answer|point|points|list|comparison|approach|argument|arguments|definition|reason|reasons|assumption|assumptions|criticism|criticisms|critique|criteria|criterion|steps|step|options|option|factors|factor|risks|risk|claims|claim|scenarios|scenario|signals|levers|principles|pillars|dimensions|lessons|trade-?offs|pros|cons|asymmetry|dynamic|mechanism|logic|reasoning|explanation|summary|checklist|table|strategy|model)\b|\b(?:which|what)\s+of\s+(?:those|these|them|the\s+(?:above|ones|options|arguments|reasons|factors|steps|points))\b|\bthe\s+(?:weakest|strongest|biggest|riskiest|most\s+(?:important|fragile|critical|questionable|robust)|least\s+(?:robust|convincing|important)|best|worst|first|last|main|key)\s+(?:part|assumption|argument|point|factor|risk|reason|step|option|element|dimension|one|link|lever|pillar|claim|criterion)\b|\b(?:which|what)\s+(?:part|component|dimension|element|factor|pillar|piece|one|assumption|argument|reason|risk|step|option|claim|criterion|lever|link|point)s?\b|\b(?:apply|use|test)\s+(?:that|this|it)\b|^\s*(?:why|how\s+so|in\s+what\s+way)\s*\??\s*$|\b(?:about|on|with|into|of)\s+(?:it|that|this|them)\s*[?.!]?\s*$|^\s*(?:turn|convert|make|put|summari[sz]e|compare|explain|expand|elaborate)\s+(?:that|this|it|them|those|these)\b/i;
 const PL_REFERENCE = plTolerant(
@@ -536,6 +584,16 @@ export function readTransformation(question: string, lang: 'en' | 'pl'): Transfo
 export function referencesPriorWork(question: string, lang: 'en' | 'pl'): boolean {
   return (lang === 'pl' ? PL_REFERENCE : EN_REFERENCE).test(question.trim());
 }
+/**
+ * CLAUDE F · R4 — the reader attributes a claim to the assistant and asks about it.
+ *
+ * Separate from `referencesPriorWork` so a caller can tell the two apart: this one is resolved
+ * against what the artifact ASSERTED (`ARTIFACT_PROPOSITION`), and it may never be answered with
+ * current evidence. EN / PL only; the other five display languages are interpreter-first by ruling.
+ */
+export function referencesOwnPriorStatement(question: string, lang: 'en' | 'pl'): boolean {
+  return (lang === 'pl' ? PL_SELF_ATTRIBUTION : EN_SELF_ATTRIBUTION).test(question.trim());
+}
 export function readApplicationTarget(question: string, lang: 'en' | 'pl'): string | null {
   const m = (lang === 'pl' ? PL_APPLY : EN_APPLY).exec(question);
   return m?.[1]?.trim() ?? null;
@@ -578,8 +636,20 @@ export function readUserJob(question: string, language: string, ctx: JobContext)
   const deep = (lang === 'pl' ? PL_DEPTH : EN_DEPTH).test(text);
   const depth: Depth = deep ? 'DEEP' : 'STANDARD';
   const transformation = readTransformation(text, lang);
+  /*
+    CLAUDE F · R4 (C-1) — a claim attributed to the assistant is a reference to this conversation's
+    own earlier work, and it is read as a REFERENCE rather than as anaphora. That matters: the
+    anaphora reading below is switched off whenever the turn names a place or a public event, and
+    these questions name their subject precisely BECAUSE they refer back to what was said about it.
+    Measured at this base, "You said the pilot was lower risk earlier — why?" resolved only when
+    namedPlace and publicEvent were both false. An explicit self-attribution is not an ambiguous
+    pronoun, so it does not need — and must not inherit — that guard. The guard itself is left
+    exactly as it was, still protecting the genuinely ambiguous pronoun case.
+  */
+  const ownStatement = referencesOwnPriorStatement(text, lang);
   const reference =
     referencesPriorWork(text, lang) ||
+    ownStatement ||
     readEvaluationKind(text, lang) === 'ARTIFACT_COMPONENT_EVALUATION';
   const anaphora =
     text.length <= 200 &&
@@ -588,6 +658,37 @@ export function readUserJob(question: string, language: string, ctx: JobContext)
     (lang === 'pl' ? PL_ANAPHORA : EN_ANAPHORA).test(text);
   const discourseReference: DiscourseReference =
     (reference || anaphora) && ctx.hasPriorWork ? 'PRIOR_WORK' : 'NONE';
+
+  /*
+    1a · EARLIER WORK RE-EXAMINED AGAINST THE PRESENT — both halves survive.
+
+    The first version of this lane made `ownStatement` override `fresh`, and Claude Code's review
+    was right to return it: an explicit present-state ask became timeless, and the route was left
+    internally contradictory (knowledge CURRENT_REPORTING beside an IR freshness of NONE). The
+    override is gone. `fresh` is never suppressed by anything here.
+
+    What replaces it is the reading the turn actually has. "You said inflation was easing — is it
+    still true now?" is not a question about the past and not a question about the present: it is
+    OUR EARLIER CLAIM, re-examined against current evidence. That is MIXED, which the vocabulary
+    already has and which carries both halves — `discourseReference: PRIOR_WORK` keeps the
+    reference, `PARTIAL` + `CURRENT_REPORTING` keep the news requirement.
+
+    Note what this does NOT need: a rule separating "present tense describing a past claim" from
+    real currentness. Choosing MIXED whenever both signals are present is safe in both directions —
+    never timeless, never a lost reference — and needs no judgement that could be got wrong later.
+    The review allowed the narrower override for a past-claim description; I am not taking it,
+    because the broader rule has no failure mode and one less moving part.
+  */
+  if (discourseReference === 'PRIOR_WORK' && ownStatement && fresh)
+    return reading('MIXED', {
+      reason: 'earlier work in this conversation, re-examined against current evidence',
+      discourseReference,
+      freshness: 'PARTIAL',
+      evidence: 'CURRENT_REPORTING',
+      temporal,
+      depth,
+      ...(transformation === null ? {} : { transformation }),
+    });
 
   /* 1 · an operation on work already done in this conversation */
   if (discourseReference === 'PRIOR_WORK' && !fresh) {

@@ -1,4 +1,5 @@
 import { plTolerant } from '../../ask-router/pl-tolerant';
+import type { PriorArtifact } from './conversation-artifact';
 import {
   findCountryByIso3,
   getLocalizedCountryName,
@@ -1143,6 +1144,82 @@ function step(
  * that interprets this turn, then decide this turn. `hasOwnContext`: the turn carries a story /
  * module / selection context — never composed.
  */
+/* ══════════════════════════════════════════════════════════════════════════════════════════════
+ * CLAUDE F · R4 — THE BOUNDED CONTAINER FOR THE INTERPRETER-FIRST DISPLAY LANGUAGES
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ *
+ * `readConversationalTurn` returns `null` for `fr / de / es / pt / ar` (`asLang` admits en and pl
+ * only), and that is CORRECT: its field readers are EN/PL grammar and running them on French would
+ * be the defect the seven-language ruling forbids. But the consequence measured at 782b175 went
+ * further than it needed to. With no conversation state at all, `semantic-first.ts` computes
+ * `boundedStateHasWork === false`, so `PRIOR_WORK_REFERENCE` never enters `unresolvedFields` — the
+ * one bounded interpreter call is never asked to resolve a reference — and the composition then
+ * forces `discourseReference` back to `'NONE'` even if a verdict had named one. Five of the seven
+ * display languages could not reference their own earlier work at all, and no interpreter, however
+ * good, could have changed that.
+ *
+ * The missing piece is not a reader. It is the CONTAINER: which artifact this conversation holds,
+ * which turn produced it, what options the reader named, and how many turns in we are. None of that
+ * is grammar — the artifact's own `kind`, `label` and `components` were produced by the answer, not
+ * parsed out of the reader's words.
+ *
+ * So this builds the container and NOTHING ELSE. No `composition` (no effective-question
+ * rewriting), no geography, no comparison set, no duration, no interests, no priorities, no
+ * relationship, no portable subject inference — every field that would require reading the
+ * reader's language stays empty, and `EMPTY_FOR_DISPLAY_LANGUAGE` is what it is called so that
+ * nobody later "completes" it. The EN/PL readers are not applied, and this function cannot apply
+ * them: it never calls `step`.
+ */
+export const INTERPRETER_FIRST_DISPLAY_LANGUAGES: readonly string[] = Object.freeze([
+  'fr',
+  'de',
+  'es',
+  'pt',
+  'ar',
+]);
+
+/** The container handed to routing. Structurally the `BoundedConversationState` the composition
+ *  already reads, plus the source turn an artifact reference must be traceable to. */
+export interface BoundedConversationContainer {
+  readonly artifact?: { readonly kind: string; readonly label: string };
+  /** CLAUDE F · R4 — WHICH TURN produced that artifact. Required for a traceable reference. */
+  readonly artifactSourceOperationId?: string;
+  readonly artifacts: readonly PriorArtifact[];
+  readonly choiceSet?: readonly string[];
+  readonly turnIndex: number;
+  /** the reader's own earlier question, when there is one (never rewritten, never translated) */
+  readonly priorQuestion?: string;
+}
+
+/**
+ * The bounded container for a display language whose meaning is read by the interpreter.
+ *
+ * Returns `null` for `en` / `pl` — not because they have no container, but because they already
+ * have `readConversationalTurn`, and two code paths producing a state for one language is how the
+ * two of them come to disagree.
+ */
+export function readInterpreterFirstContainer(
+  language: string,
+  earlierNewestFirst: readonly EarlierTurnText[],
+  artifactsNewestFirst: readonly PriorArtifact[] = [],
+): BoundedConversationContainer | null {
+  if (!INTERPRETER_FIRST_DISPLAY_LANGUAGES.includes(language)) return null;
+  /* same-language turns only — a switch of language is a new reading, exactly as for EN/PL */
+  const window = earlierNewestFirst.slice(0, STATE_LOOKBACK).filter((t) => t.language === language);
+  const newest = artifactsNewestFirst[0];
+  return Object.freeze({
+    ...(newest === undefined
+      ? {}
+      : {
+          artifact: { kind: newest.kind, label: newest.label },
+          artifactSourceOperationId: newest.sourceOperationId,
+        }),
+    artifacts: Object.freeze([...artifactsNewestFirst]),
+    turnIndex: window.length,
+    ...(window.length === 0 ? {} : { priorQuestion: window[0].question }),
+  });
+}
+
 export function readConversationalTurn(
   question: string,
   language: string,
