@@ -264,9 +264,25 @@ export function mergeShell<T>(
       return node;
     }
     if (Array.isArray(node)) {
-      return node.map((item, index) =>
-        walk(item, Array.isArray(over) ? (over as unknown[])[index] : undefined, `${path}[${index}]`),
-      );
+      /*
+        AN OVERLAY MAY EXPRESS AN ARRAY AS AN INDEX-KEYED OBJECT, and it must, because that
+        is what a JSON delivery and a dotted key path naturally produce: Claude L's
+        `dict.loadingStages[0..3]` arrive as `{ "0": …, "1": … }`, not as a JSON array.
+
+        This read `Array.isArray(over)` alone, so an index-keyed object was silently ignored —
+        the merge kept English while `shellFallbacks` (which resolves `[0]` to `.0` and found
+        the key) counted it as covered. Four qualified French strings rendered English with
+        the accounting reporting zero gap, which is exactly the failure the whole declared-
+        fallback mechanism exists to make impossible. A1 in this spec pins it.
+      */
+      const member = (index: number): unknown => {
+        if (Array.isArray(over)) return (over as unknown[])[index];
+        if (over !== null && typeof over === 'object') {
+          return (over as Record<string, unknown>)[String(index)];
+        }
+        return undefined;
+      };
+      return node.map((item, index) => walk(item, member(index), `${path}[${index}]`));
     }
     if (node !== null && typeof node === 'object') {
       const o = over !== null && typeof over === 'object' ? (over as Record<string, unknown>) : {};

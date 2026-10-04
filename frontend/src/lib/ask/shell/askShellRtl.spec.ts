@@ -141,17 +141,15 @@ describe('B-12 · Arabic reads as Arabic, including its numbers', () => {
     expect(askPluralCategory(1, 'ar')).toBe('one');
     expect(askPluralCategory(2, 'ar')).toBe('two');
     /*
-      The CATEGORIES above are the language's and are proven. The shell's own
-      `sourcesLabel` template is a separate question and the honest answer is that it has no
-      qualified Arabic wording yet — Claude L's manifest listed no function-valued member —
-      so it renders English and is declared. The machinery that will select among six
-      categories the moment L delivers the forms is proven in `askShellOverlay.spec.ts`
-      against a fixture, which is where it belongs: a mechanism test must not depend on
-      whether a particular string has been translated.
+      The CATEGORIES above are the language's and are proven. Claude L has now delivered all
+      six forms, so the shell's own template follows them — ٢ and ٣ and ١١ each select a
+      different Arabic form, which a `n === 1 ? a : b` branch could never have produced.
     */
     const s = askShellStrings('ar');
-    expect(s.askR2Strings.sourcesLabel(2)).toBe(askShellStrings('en').askR2Strings.sourcesLabel(2));
-    expect(declaredFallbacksFor('ar')).toContain('askR2Strings.sourcesLabel()');
+    expect(s.askR2Strings.sourcesLabel(2)).toMatch(/[\u0600-\u06FF]/);
+    expect(s.askR2Strings.sourcesLabel(2)).not.toBe(s.askR2Strings.sourcesLabel(3));
+    expect(s.askR2Strings.sourcesLabel(3)).not.toBe(s.askR2Strings.sourcesLabel(11));
+    expect(declaredFallbacksFor('ar')).toEqual([]);
   });
 });
 

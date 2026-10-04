@@ -104,6 +104,23 @@ describe('B-2 · an overlay can only replace a leaf the source already has', () 
     const merged = mergeShell(source, { data: { stages: ['Lecture'] } }, 'fr');
     expect(merged.stages).toEqual(['Lecture', 'Checking']);
   });
+
+  it('REGRESSION — an array may also be overlaid as an INDEX-KEYED OBJECT', () => {
+    /*
+      THE BUG THIS PINS WAS INVISIBLE TO THE ACCOUNTING, which is what makes it worth a test
+      of its own. A JSON delivery and a dotted key path both produce `{ "0": …, "1": … }`
+      rather than a JSON array — Claude L's `dict.loadingStages[0..3]` arrive that way. The
+      merge checked `Array.isArray` and ignored the object, so English survived; meanwhile
+      `shellFallbacks` resolves `[0]` to `.0`, found the key, and reported the locale
+      COMPLETE. Four qualified French strings rendered English with a passing coverage test.
+
+      Both shapes must work, and the fallback report must agree with the merge — asserted
+      together here, because either one alone would have passed while the defect was live.
+    */
+    const overlay = { data: { stages: { '0': 'Lecture', '1': 'Vérification' } } };
+    expect(mergeShell(source, overlay, 'fr').stages).toEqual(['Lecture', 'Vérification']);
+    expect(shellFallbacks(source, overlay).filter((p) => p.startsWith('stages'))).toEqual([]);
+  });
 });
 
 describe('B-3 · a template is localized as data and keeps the source signature', () => {

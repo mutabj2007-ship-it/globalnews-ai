@@ -132,8 +132,15 @@ describe('H-1 · the selector and the request language cover all seven', () => {
         asserts the measured and declared sets are EQUAL for all seven.
       */
       expect(d.catalogueLocale).toBe(locale);
-      /* Still false, and for the honest reason: keys remain pending Claude L's wording. */
-      expect(d.fullAskCopy).toBe(false);
+      /*
+        NOW TRUE, AND THAT IS THE WHOLE POINT OF THE LANE. This assertion has moved three
+        times and each move was a fact about the delivery, not a relaxation: it read
+        `catalogueLocale === 'en'` while the shell was EN/PL-only, then `fullAskCopy === false`
+        while Claude L's wording was outstanding, and now the shell is complete in all seven.
+        `fullAskCopy` is computed from `askShellCoverage(locale).complete` — a measurement of
+        the overlay, not a flag anyone sets — so it cannot be true unless nothing falls back.
+      */
+      expect(d.fullAskCopy).toBe(true);
       /* ...which says nothing about the answer. */
       expect(d.answerLocale).toBe(locale);
     }
@@ -461,8 +468,8 @@ describe('H-7 · the authorized client pin — Ask SENDS the selected language',
         borrowing the P0 correction ordered removed.
       */
       expect(d.catalogueLocale).toBe(locale);
-      /* Keys still pending Claude L's wording, reported per key rather than per catalogue. */
-      expect(d.fullAskCopy).toBe(false);
+      /* Complete since Claude L's Revision 4 answer; measured, not asserted. See above. */
+      expect(d.fullAskCopy).toBe(true);
     }
   });
 });

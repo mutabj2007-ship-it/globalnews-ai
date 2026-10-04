@@ -12,7 +12,20 @@ import {
 } from '@/lib/ask/shell/askShellCatalogue';
 import { declaredFallbacksFor } from '@/lib/ask/shell/askShellDeclaredFallbacks';
 import { ASK_SHELL_PROPER_NOUNS, askShellSource } from '@/lib/ask/shell/askShellSource';
-import { shellPathWithoutMarker } from '@/lib/ask/shell/askShellOverlay';
+import { isShellTemplatePath, shellPathWithoutMarker } from '@/lib/ask/shell/askShellOverlay';
+import { qualifiedUnchangedFor } from '@/lib/ask/shell/askShellQualifiedUnchanged';
+
+/** Read one key path out of a resolved shell. */
+function readPath(source: unknown, path: string): unknown {
+  return path
+    .replace(/\[(\d+)\]/g, '.$1')
+    .split('.')
+    .reduce<unknown>(
+      (acc, key) =>
+        acc !== null && typeof acc === 'object' ? (acc as Record<string, unknown>)[key] : undefined,
+      source,
+    );
+}
 import { askSevenStrings } from '@/lib/ask/askSevenStrings';
 import { shellKeyPaths } from '@/lib/ask/shell/askShellOverlay';
 
@@ -163,20 +176,24 @@ describe('B-7 · no English fallback is ever silent', () => {
     }
   });
 
-  it('the L-qualified locales report an HONEST, non-zero gap', () => {
+  it('the L-qualified locales are now COMPLETE — zero fallback, not zero declared', () => {
     /*
-      QUALIFIED IS NOT COMPLETE, and this test exists to keep the two apart. Every string
-      these five render from their overlay is Claude L's; 144 keys per locale have no
-      qualified wording yet and fall through to English, declared. Collapsing the two facts
-      into one "localized: yes" is how an incomplete surface comes to look finished.
+      This block spent three revisions asserting an honest NON-ZERO gap, which was the right
+      assertion while there was one. Claude L's Revision 4 answer closed it.
+
+      `complete` is the measured fact, not the declared one: it is
+      `shellFallbacks(source, overlay).length === 0`, computed from the overlay itself. The
+      empty declaration in `askShellDeclaredFallbacks.ts` is checked SEPARATELY against the
+      same measurement by the equality test above, so an empty list cannot pass by being
+      empty — it passes only because nothing measures as falling back.
     */
     for (const locale of L_LOCALES) {
       const coverage = askShellCoverage(locale);
       expect(coverage.qualification).toBe('CLAUDE_L_QUALIFIED');
-      expect(coverage.complete).toBe(false);
-      expect(coverage.localizedKeys).toBe(383);
-      expect(coverage.fallbacks).toHaveLength(144);
-      /* 383 qualified + 144 unqualified + 8 not-translated = the 535 overlay-managed keys. */
+      expect(coverage.complete).toBe(true);
+      expect(coverage.fallbacks).toEqual([]);
+      expect(coverage.localizedKeys).toBe(527);
+      /* 527 qualified + 0 unqualified + 8 not-translated = the 535 overlay-managed keys. */
       expect(coverage.localizedKeys + coverage.fallbacks.length + coverage.properNouns).toBe(
         coverage.totalKeys,
       );
@@ -274,19 +291,18 @@ describe('B-9 · the chrome the P0 correction named, in Claude L\u2019s wording'
     );
   });
 
-  it('a key the Product Owner named that is STILL English is declared, not silent', () => {
+  it('the key the Product Owner named that WAS English is now qualified', () => {
     /*
-      "Sign in" is on the Product Owner's own defect list and is one of the 38 `dict.navBar`
-      members Revision 2 under-listed, so it has no qualified wording yet. It renders English
-      in all five — and that is the honest state only because it is DECLARED. This assertion
-      is the difference between a known gap and a silent one, and it fails the moment the key
-      stops being declared, in either direction.
+      "Sign in" is on the Product Owner's own defect list and was one of the 38 `dict.navBar`
+      members manifest Revision 2 under-listed. It spent three revisions rendering English —
+      declared, which was the honest state at the time. It is qualified now, and the
+      assertion is inverted rather than deleted so the key stays watched.
     */
     for (const locale of L_LOCALES) {
-      expect(askShellStrings(locale).dict.navBar.signIn).toBe(
+      expect(askShellStrings(locale).dict.navBar.signIn).not.toBe(
         askShellStrings('en').dict.navBar.signIn,
       );
-      expect(declaredFallbacksFor(locale)).toContain('dict.navBar.signIn');
+      expect(declaredFallbacksFor(locale)).not.toContain('dict.navBar.signIn');
     }
   });
 
@@ -320,6 +336,63 @@ describe('B-9 · the chrome the P0 correction named, in Claude L\u2019s wording'
         expect(read(shell).length).toBeGreaterThan(0);
       }
     }
+  });
+});
+
+describe('B-14 · a value that reads English is one of exactly three things', () => {
+  /*
+    The CTO's rule: a value may be byte-identical to English only when Claude L explicitly
+    marks it QUALIFIED_UNCHANGED, and it must not count as fallback. The three categories are
+    kept apart here because this round produced the case where they blurred — see the note in
+    `askShellQualifiedUnchanged.ts`.
+  */
+  it('every English-reading value is declared, in the right category', () => {
+    const en = askShellStrings('en');
+    for (const locale of L_LOCALES) {
+      const shell = askShellStrings(locale);
+      const unchanged = new Set(qualifiedUnchangedFor(locale));
+      const notTranslated = new Set(ASK_SHELL_PROPER_NOUNS);
+      for (const path of askShellKeyPaths()) {
+        if (isShellTemplatePath(path)) continue;
+        const bare = shellPathWithoutMarker(path);
+        const a = readPath(shell, bare);
+        const b = readPath(en, bare);
+        if (typeof a !== 'string' || a !== b) continue;
+        expect(unchanged.has(bare) || notTranslated.has(bare)).toBe(true);
+      }
+    }
+  });
+
+  it('nothing is on BOTH lists — not-translated and qualified-unchanged are disjoint', () => {
+    for (const locale of L_LOCALES) {
+      for (const path of qualifiedUnchangedFor(locale)) {
+        expect(ASK_SHELL_PROPER_NOUNS).not.toContain(path);
+      }
+    }
+  });
+
+  it('a QUALIFIED_UNCHANGED entry must be a key that exists and is in scope', () => {
+    const paths = new Set(askShellKeyPaths().map(shellPathWithoutMarker));
+    for (const locale of L_LOCALES) {
+      for (const path of qualifiedUnchangedFor(locale)) {
+        expect(paths.has(path)).toBe(true);
+        /* And it is NOT a fallback — the rule's operative half. */
+        expect(declaredFallbacksFor(locale)).not.toContain(path);
+      }
+    }
+  });
+
+  it('Arabic has the fewest, which is the sanity check on the whole list', () => {
+    /*
+      A language sharing no alphabet with English should share almost nothing but the brand.
+      If Arabic's count ever approached French's, something would be falling through and
+      being absorbed by this list rather than reported — which is the one way the list could
+      become a hiding place.
+    */
+    expect(qualifiedUnchangedFor('ar').length).toBeLessThan(
+      qualifiedUnchangedFor('fr').length,
+    );
+    expect(qualifiedUnchangedFor('ar').length).toBeLessThan(10);
   });
 });
 
@@ -405,21 +478,23 @@ describe('B-10 · Arabic', () => {
     expect(s.askNavStrings.newQuestion).toBe('سؤال جديد');
   });
 
-  it('the Arabic TEMPLATES are honestly still English, and declared', () => {
+  it('the Arabic templates render Arabic, across all six plural categories', () => {
     /*
-      This block previously asserted Arabic plural forms — against H's own DRAFT. Those
-      drafts are gone, L worked from a manifest that listed no function-valued member, and
-      `sourcesLabel` therefore has no qualified wording. It renders English.
-
-      The assertion is kept rather than deleted, inverted to the truth: the machinery is
-      proven separately in `askShellOverlay.spec.ts`, and what is proven HERE is that the
-      shell does not pretend. A template with no wording falls through visibly and is
-      declared, instead of rendering a plural form nobody reviewed.
+      Claude L delivered all six CLDR categories for Arabic. This block has now asserted three
+      different things across three revisions — H's draft forms, then an honest English
+      fallback, now L's qualified forms — and each change was a fact about the delivery rather
+      than a relaxation of the test.
     */
     const ar = askShellStrings('ar');
     const en = askShellStrings('en');
-    expect(ar.askR2Strings.sourcesLabel(3)).toBe(en.askR2Strings.sourcesLabel(3));
-    expect(declaredFallbacksFor('ar')).toContain('askR2Strings.sourcesLabel()');
+    for (const n of [0, 1, 2, 3, 11, 100]) {
+      expect(ar.askR2Strings.sourcesLabel(n)).not.toBe(en.askR2Strings.sourcesLabel(n));
+      expect(ar.askR2Strings.sourcesLabel(n)).toMatch(/[\u0600-\u06FF]/);
+    }
+    /* Six categories must produce more than two distinct renderings. */
+    expect(new Set([0, 1, 2, 3, 11, 100].map((n) => ar.askR2Strings.sourcesLabel(n))).size).
+      toBeGreaterThan(3);
+    expect(declaredFallbacksFor('ar')).toEqual([]);
   });
 
   it('no draft locale string carries a hand-inserted bidi control character', () => {
