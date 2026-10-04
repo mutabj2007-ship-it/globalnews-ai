@@ -92,6 +92,7 @@ live('Politics retained store on disposable PostgreSQL (no providers)', () => {
       '20260919050000_snapshot_admission_r2',
       '20260920140000_snapshot_retrieval_lineage_fields',
       '20261004120000_politics_observation_store',
+      '20261004130000_politics_reinstatement',
     ])
       await db.query(readFileSync(join(migrations, migration, 'migration.sql'), 'utf8'));
     prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: url, options: `-c search_path=${schema}` }, { schema }) });
@@ -187,6 +188,65 @@ live('Politics retained store on disposable PostgreSQL (no providers)', () => {
         "sourceReference","attributeAuthorship",'{"revisionOrdinal":1,"supersedesRevisionOrdinal":0,"revisionKind":"CORRECTION","recordedAt":"2026-10-02T13:30:00Z"}',
         1,"publishedAt","artifactSha256","review","snapshotRetrievalId","snapshotAdmissibility","effectiveOn","retrievedAt","temporalBasis","language"
       FROM "PoliticsObservation" WHERE "upstreamId" = 's1'`)).rejects.toThrow(/preceding revision/);
+  });
+
+  it('A R2 finding (reproduced on d920893): withholding is scoped to the asked subject, never ledger-wide', async () => {
+    // 'r1' is retracted (SUPER-02). An unrelated subject must not inherit that state, and a live subject has no reason.
+    expect(await repository.absenceReason({ subjectId: 'bill-r1' })).toBe('RETRACTED');
+    expect(await repository.absenceReason({ subjectId: 'bill-unrelated' })).toBe('NO_EVIDENCE');
+    expect(await repository.absenceReason({ subjectId: 'bill-a1' })).toBeNull();
+    expect(await repository.absenceReason({ countryIso3: 'KEN' })).toBe('NO_EVIDENCE');
+  });
+
+  it('CTO reinstatement ruling: only an explicit accountable reinstatement naming the retraction revives a claim', async () => {
+    const x0 = capture('x1');
+    await repository.append(x0, await retain(x0.artifact.text));
+    const x1 = capture('x1', { ordinal: 1, kind: 'RETRACTION' });
+    await repository.append(x1, await retain(x1.artifact.text));
+    // An ordinary correction after a retraction never resurrects the claim (repository AND database).
+    const plain = capture('x1', { ordinal: 2, kind: 'CORRECTION' });
+    await expect(repository.append(plain, await retain(plain.artifact.text))).rejects.toThrow(/explicit accountable reinstatement/);
+    await expect(db.query(`INSERT INTO "PoliticsObservation"
+      ("id","observationKey","upstreamAuthority","upstreamId","subjectType","subjectId","observationKind","claim",
+       "temporal","provenance","sourceReference","attributeAuthorship","revision","publication","revisionOrdinal","publishedAt",
+       "artifactSha256","review","snapshotRetrievalId","snapshotAdmissibility","effectiveOn","retrievedAt","temporalBasis","language")
+      SELECT 'raw-plain-after-retraction',"observationKey","upstreamAuthority","upstreamId","subjectType","subjectId","observationKind","claim","temporal","provenance",
+        "sourceReference","attributeAuthorship",'{"revisionOrdinal":2,"supersedesRevisionOrdinal":1,"revisionKind":"CORRECTION","recordedAt":"2026-10-02T13:02:00Z"}',
+        "publication",2,"publishedAt","artifactSha256","review","snapshotRetrievalId","snapshotAdmissibility","effectiveOn","retrievedAt","temporalBasis","language"
+      FROM "PoliticsObservation" WHERE "upstreamId" = 'x1' AND "revisionOrdinal" = 1`)).rejects.toThrow(/explicit accountable reinstatement may follow/);
+    // An unaccountable reinstatement is refused.
+    const automated = capture('x1', { ordinal: 2, kind: 'CORRECTION' });
+    automated.reinstatement = { reinstatesRevisionOrdinal: 1, reviewer: 'system', reviewedAt: '2026-10-02T14:02:00Z', rationale: 'auto' };
+    await expect(repository.append(automated, await retain(automated.artifact.text))).rejects.toThrow(/withheld/);
+    // A reinstatement naming the wrong revision is refused.
+    const wrong = capture('x1', { ordinal: 2, kind: 'CORRECTION' });
+    wrong.reinstatement = { reinstatesRevisionOrdinal: 0, reviewer: 'Test reviewer', reviewedAt: '2026-10-02T14:02:00Z', rationale: 'Source restored the record' };
+    await expect(repository.append(wrong, await retain(wrong.artifact.text))).rejects.toThrow(/withheld/);
+    expect(await repository.currentByKey(x0.observation.observationKey)).toBeNull();
+    // The explicit, accountable reinstatement is admitted, distinguishable, and serves the claim again.
+    const reinstate = capture('x1', { ordinal: 2, kind: 'CORRECTION' });
+    reinstate.reinstatement = { reinstatesRevisionOrdinal: 1, reviewer: 'Test reviewer', reviewedAt: '2026-10-02T14:02:00Z', rationale: 'Publisher withdrew its retraction' };
+    await repository.append(reinstate, await retain(reinstate.artifact.text));
+    expect((await repository.currentByKey(x0.observation.observationKey))?.revision.revisionOrdinal).toBe(2);
+    const row = await prisma.politicsObservation.findFirstOrThrow({ where: { upstreamId: 'x1', revisionOrdinal: 2 } });
+    expect(row.reinstatement).toMatchObject({ reinstatesRevisionOrdinal: 1, reviewer: 'Test reviewer' });
+    expect(JSON.stringify((await repository.searchRecords({ subjectId: 'bill-x1' }))[0])).not.toMatch(/reinstat|reviewer/);
+    // A reinstatement that does not follow a retraction is refused (repository and database).
+    const stray = capture('a1', { ordinal: 2, kind: 'CORRECTION', stage: 'SIGNED', text: 'Synthetic record a1: the bill was signed.' });
+    stray.reinstatement = { reinstatesRevisionOrdinal: 1, reviewer: 'Test reviewer', reviewedAt: '2026-10-02T14:02:00Z', rationale: 'stray' };
+    await expect(repository.append(stray, await retain(stray.artifact.text))).rejects.toThrow(/must directly follow a retraction/);
+  });
+
+  it('CTO freshness ruling: no universal expiry; the latest record is returned with its own date and an explicit window fact', async () => {
+    const later = await repository.recency({ subjectId: 'bill-a1' }, 7, new Date('2026-10-20T00:00:00Z'));
+    expect(later.observations).toHaveLength(1);
+    expect(later.latestEffectiveAt).toBe('2026-10-01T10:00:00Z');
+    expect(later.anyWithinWindow).toBe(false);
+    const soon = await repository.recency({ subjectId: 'bill-a1' }, 7, new Date('2026-10-03T00:00:00Z'));
+    expect(soon.anyWithinWindow).toBe(true);
+    // The window is the record's own clock, never the retrieval clock (retrieved 2026-10-02, event 2026-10-01).
+    const edge = await repository.recency({ subjectId: 'bill-a1' }, 1, new Date('2026-10-02T23:00:00Z'));
+    expect(edge.anyWithinWindow).toBe(false);
   });
 
   it('is append-only: UPDATE, DELETE and TRUNCATE are refused', async () => {

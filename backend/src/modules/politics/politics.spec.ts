@@ -127,7 +127,7 @@ describe('public GET has no acquisition', () => {
       expect(http).not.toHaveBeenCalled();
       expect(https).not.toHaveBeenCalled();
       const response = await request(app.getHttpServer()).get('/politics/observations').expect(200);
-      expect(response.body).toEqual({ observations: [], absence: 'NOT_ASSESSED', truncated: false, acquisition: 'RETAINED_ONLY', coverage: { checkedCaptures: 0, admittedObservations: 0, withheld: false } });
+      expect(response.body).toEqual({ observations: [], absence: 'NOT_ASSESSED', truncated: false, acquisition: 'RETAINED_ONLY' });
       for (const query of ['limit=0', 'limit=101', 'limit=NaN', 'limit=1&limit=2', 'subjectId=']) {
         await request(app.getHttpServer()).get('/politics/observations?' + query).expect(400);
       }
@@ -169,7 +169,7 @@ it('public read exposes admitted retained rows from the store with bounded selec
   } finally { await app.close(); jest.restoreAllMocks(); }
 });
 
-it('a retracted-only store reads EVIDENCE_WITHHELD; an unreadable store reads NOT_ASSESSED, never 500', async () => {
+it('readers never see a withholding reason or ledger counts: a retracted-only store reads NOT_ASSESSED; an unreadable store reads NOT_ASSESSED, never 500', async () => {
   const withheld = await Test.createTestingModule({ imports: [PoliticsReadModule] })
     .overrideProvider(PoliticsObservationRepository).useValue(store([], true)).compile();
   const broken = await Test.createTestingModule({ imports: [PoliticsReadModule] })
@@ -179,7 +179,9 @@ it('a retracted-only store reads EVIDENCE_WITHHELD; an unreadable store reads NO
   const a = withheld.createNestApplication(), b = broken.createNestApplication();
   try {
     await a.init(); await b.init();
-    expect((await request(a.getHttpServer()).get('/politics/observations').expect(200)).body.absence).toBe('EVIDENCE_WITHHELD');
+    const body = (await request(a.getHttpServer()).get('/politics/observations').expect(200)).body;
+    expect(body).toEqual({ observations: [], truncated: false, absence: 'NOT_ASSESSED', acquisition: 'RETAINED_ONLY' });
+    expect(JSON.stringify(body)).not.toMatch(/WITHHELD|RETRACT|coverage|withheld/);
     expect((await request(b.getHttpServer()).get('/politics/observations').expect(200)).body)
       .toEqual({ observations: [], truncated: false, absence: 'NOT_ASSESSED', acquisition: 'RETAINED_ONLY' });
   } finally { await a.close(); await b.close(); }

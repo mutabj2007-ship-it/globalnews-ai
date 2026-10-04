@@ -1311,6 +1311,9 @@ model PoliticsObservation {
   sourceUpdatedAt     DateTime?
   artifactSha256      String
   review              Json
+  /// Explicit accountable reinstatement of the directly preceding RETRACTION (operator/audit only;
+  /// migration 20261004130000). Null on every other revision; enforced by the predecessor trigger.
+  reinstatement       Json?
 
   /// REQUIRED link to the SAME shared retained-capture store Conflict uses: no observation exists
   /// without its retained, admitted artifact, whose content address equals `artifactSha256`.

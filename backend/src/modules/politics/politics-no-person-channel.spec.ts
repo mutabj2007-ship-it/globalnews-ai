@@ -13,7 +13,7 @@ const REPO = join(BACKEND, '..');
 const POLITICS_OBSERVATION_COLUMNS = [
   'id', 'observationKey', 'upstreamAuthority', 'upstreamId', 'subjectType', 'subjectId', 'observationKind',
   'claim', 'temporal', 'provenance', 'sourceReference', 'attributeAuthorship', 'revision', 'publication',
-  'revisionOrdinal', 'publishedAt', 'sourceUpdatedAt', 'artifactSha256', 'review', 'snapshotRetrievalId',
+  'revisionOrdinal', 'publishedAt', 'sourceUpdatedAt', 'artifactSha256', 'review', 'reinstatement', 'snapshotRetrievalId',
   'snapshotAdmissibility', 'snapshotRetrieval', 'effectiveOn', 'retrievedAt', 'temporalBasis', 'language',
   'countryIso3', 'ingestedAt',
 ].sort();
@@ -31,7 +31,8 @@ describe('Politics holds no person channel (enforced by absence)', () => {
   });
 
   it('no person-shaped name exists in the store, its migration or the shared Politics record', () => {
-    const migration = readFileSync(join(BACKEND, 'prisma/migrations/20261004120000_politics_observation_store/migration.sql'), 'utf8');
+    const migration = ['20261004120000_politics_observation_store', '20261004130000_politics_reinstatement']
+      .map(m => readFileSync(join(BACKEND, 'prisma/migrations', m, 'migration.sql'), 'utf8')).join(' ');
     const shared = readFileSync(join(REPO, 'shared/src/politics/retained.ts'), 'utf8');
     // Code only: comments may (and do) state the prohibition itself.
     const code = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '').replace(/--.*$/gm, '');

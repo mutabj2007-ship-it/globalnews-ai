@@ -9,7 +9,7 @@ import {
 } from '@globalnews-ai/shared';
 import { PrismaService } from '../../database/prisma.service';
 import type { PoliticsObservation as RetainedRow } from '../../generated/prisma/client';
-import { producePoliticsObservation, type PoliticsCapture } from './politics.producer';
+import { assertReinstatementIsAccountable, producePoliticsObservation, type PoliticsCapture } from './politics.producer';
 
 /**
  * POLITICS INTEL R1 — THE RETAINED POLITICS EVIDENCE STORE (CTO Decision 5).
@@ -24,6 +24,7 @@ import { producePoliticsObservation, type PoliticsCapture } from './politics.pro
  * ONE READ AUTHORITY. The Politics surface (`/politics/observations`) and shared retrieval read
  * the same rows through this class. It exists to feed shared retrieval; it is not a search engine.
  */
+/** OPERATOR-ONLY whole-ledger inventory. Never returned to a reader (E1 04 §2b: a withheld count is a disclosure). */
 export interface PoliticsLedgerInventory {
   /** Distinct retained identities, whatever their current state. */
   readonly identities: number;
@@ -31,6 +32,28 @@ export interface PoliticsLedgerInventory {
   readonly admitted: number;
   /** True when at least one identity's current revision is a retraction. */
   readonly withheld: boolean;
+}
+
+/**
+ * CTO ruling (user-facing withheld): the EXACT reason is kept for audit and operators only. Readers get one
+ * uniform "no qualifying evidence" state, so a reason can never leak what withholding protects.
+ * The store can measure RETRACTED and NO_EVIDENCE; WITHHELD (producer refusal) and RIGHTS_BLOCKED (source never
+ * admitted) never produce rows and are recorded upstream, but stay in the vocabulary so the four are never collapsed.
+ */
+export type PoliticsAbsenceReason = 'WITHHELD' | 'RETRACTED' | 'NO_EVIDENCE' | 'RIGHTS_BLOCKED';
+
+/**
+ * CTO ruling (freshness): no universal expiry. The latest admitted record is returned whatever its age; whether
+ * anything newer than the window exists is a separate, explicit fact. Dates are the record's own event/publication
+ * clocks (`effectiveOn`), never the retrieval clock.
+ */
+export interface PoliticsRecency {
+  readonly observations: readonly RetainedPoliticsObservation[];
+  /** effectiveAt of the newest returned record (event time if the source states it, else publication). */
+  readonly latestEffectiveAt: string | null;
+  readonly windowDays: number;
+  /** True only if a returned record's effective time falls inside the window. */
+  readonly anyWithinWindow: boolean;
 }
 
 export interface PoliticsCaptureLink {
@@ -88,7 +111,9 @@ export class PoliticsObservationRepository {
    */
   async append(capture: PoliticsCapture, link: PoliticsCaptureLink): Promise<RetainedPoliticsObservation> {
     const o = producePoliticsObservation(capture);
+    assertReinstatementIsAccountable(capture);
     const ordinal = o.revision.revisionOrdinal;
+    const reinstatement = capture.reinstatement ? sortKeys(capture.reinstatement) : null;
 
     const existing = await this.prisma.politicsObservation.findUnique({
       where: { observationKey_revisionOrdinal: { observationKey: o.observationKey, revisionOrdinal: ordinal } },
@@ -96,6 +121,7 @@ export class PoliticsObservationRepository {
     if (existing) {
       const stored = decodeRetainedPoliticsRow(existing);
       if (JSON.stringify(sortKeys(stored)) !== JSON.stringify(sortKeys(o))) refuse('conflicting record at an existing revision');
+      if (JSON.stringify(sortKeys(existing.reinstatement ?? null)) !== JSON.stringify(reinstatement)) refuse('conflicting reinstatement at an existing revision');
       return stored;
     }
 
@@ -105,7 +131,10 @@ export class PoliticsObservationRepository {
       });
       if (!priorRow) refuse('missing preceding revision');
       const prior = decodeRetainedPoliticsRow(priorRow!);
-      if (prior.revision.revisionKind === 'RETRACTION') refuse('identity is retracted');
+      // A retraction is never undone by an ordinary correction or by chronology: only an explicit,
+      // accountable reinstatement naming that retraction may follow it, and it may follow nothing else.
+      if (prior.revision.revisionKind === 'RETRACTION' && !capture.reinstatement) refuse('identity is retracted; an explicit accountable reinstatement is required');
+      if (prior.revision.revisionKind !== 'RETRACTION' && capture.reinstatement) refuse('a reinstatement must directly follow a retraction');
       assertObservationRevisionAppends(prior.revision, o.revision);
       if (prior.subjectId !== o.subjectId || prior.subjectType !== o.subjectType) refuse('a revision cannot retarget its subject');
       if (Date.parse(o.revision.recordedAt) < Date.parse(prior.revision.recordedAt)) refuse('recordedAt went backwards');
@@ -134,6 +163,7 @@ export class PoliticsObservationRepository {
         sourceUpdatedAt: o.sourceUpdatedAt ? new Date(o.sourceUpdatedAt) : null,
         artifactSha256: o.artifactSha256,
         review: operatorReview(capture),
+        reinstatement: (reinstatement as object | null) ?? undefined,
         snapshotRetrievalId: link.snapshotRetrievalId,
         snapshotAdmissibility: 'ADMITTED',
         effectiveOn: new Date(o.temporal.occurredAt ?? o.publishedAt),
@@ -191,6 +221,46 @@ export class PoliticsObservationRepository {
     limit = 20,
   ): Promise<readonly PoliticsSearchRecord[]> {
     return (await this.current(filter, bound(limit, 20, 50))).map(politicsSearchRecord);
+  }
+
+  /**
+   * OPERATOR/AUDIT ONLY — why THIS filter has no admitted row. Scoped to the same filter the reader asked about,
+   * so one unrelated retracted subject can never change another subject's state (A R2 finding, reproduced on d920893).
+   */
+  async absenceReason(filter: { countryIso3?: string; subjectId?: string } = {}): Promise<PoliticsAbsenceReason | null> {
+    if ((await this.current(filter, 1)).length > 0) return null;
+    const { countryIso3, subjectId } = filter;
+    if (countryIso3 !== undefined && !/^[A-Z]{3}$/.test(countryIso3)) return 'NO_EVIDENCE';
+    if (subjectId !== undefined && (typeof subjectId !== 'string' || !subjectId || subjectId.length > 200)) return 'NO_EVIDENCE';
+    const rows = await this.prisma.$queryRaw<{ retracted: bigint }[]>`
+      SELECT COUNT(*) AS retracted FROM (
+        SELECT DISTINCT ON ("observationKey") * FROM "PoliticsObservation"
+        ORDER BY "observationKey", "revisionOrdinal" DESC
+      ) AS current_observations
+      WHERE ("revision"->>'revisionKind') = 'RETRACTION'
+        AND (${countryIso3 ?? null}::text IS NULL OR "countryIso3" = ${countryIso3 ?? null}::text)
+        AND (${subjectId ?? null}::text IS NULL OR "subjectId" = ${subjectId ?? null}::text)
+    `;
+    return Number(rows[0]?.retracted ?? 0n) > 0 ? 'RETRACTED' : 'NO_EVIDENCE';
+  }
+
+  /** Latest admitted records whatever their age, plus whether any falls inside the recency window. */
+  async recency(
+    filter: { countryIso3?: string; subjectId?: string },
+    windowDays: number,
+    now: Date = new Date(),
+    limit = 20,
+  ): Promise<PoliticsRecency> {
+    const days = Number.isFinite(windowDays) ? Math.max(1, Math.min(Math.trunc(windowDays), 366)) : 7;
+    const observations = await this.current(filter, bound(limit, 20, 50));
+    const effective = (o: RetainedPoliticsObservation) => o.temporal.occurredAt ?? o.publishedAt;
+    const cutoff = now.getTime() - days * 86_400_000;
+    return {
+      observations,
+      latestEffectiveAt: observations.length ? effective(observations[0]) : null,
+      windowDays: days,
+      anyWithinWindow: observations.some(o => Date.parse(effective(o)) >= cutoff),
+    };
   }
 
   async inventory(): Promise<PoliticsLedgerInventory> {
