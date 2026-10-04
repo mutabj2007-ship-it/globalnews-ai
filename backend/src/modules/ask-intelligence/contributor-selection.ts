@@ -89,7 +89,65 @@ export const CONTRIBUTOR_SCOPE_TERMS = {
     'przesiedleni',
     'głód',
   ],
+  /**
+   * POLITICS INTEL R1 — the retained Politics store's subject: institutional political acts.
+   * Deliberately NO election/result/poll terms (Election authority, Main R-2) and NO person or office-holder
+   * names (CTO security ruling): a person is never a retrieval key.
+   */
+  POLITICS: [
+    'politics',
+    'political',
+    'politically',
+    'government',
+    'parliament',
+    'parliamentary',
+    'legislature',
+    'legislation',
+    'legislative',
+    'bill',
+    'bills',
+    'law',
+    'laws',
+    'cabinet',
+    'coalition',
+    'polityka',
+    'polityki',
+    'polityczny',
+    'polityczna',
+    'polityczne',
+    'politycznie',
+    'rząd',
+    'rządu',
+    'parlament',
+    'parlamentu',
+    'ustawa',
+    'ustawy',
+    'ustaw',
+    'koalicja',
+    'koalicji',
+  ],
 } as const;
+
+/**
+ * POLITICS INTEL R1 — a closed, reviewed map from a LEGISLATIVE INSTITUTION named in the question to the
+ * jurisdiction of its own records, so "What did the Sejm decide?" is scoped without a country word. The same
+ * precedent as Imihigo implying RWA. Exact institution names only (inflected forms listed); an institution
+ * name shared by several countries (e.g. "Senate") is NOT listed. Additions are a reviewed change.
+ */
+export const POLITICS_INSTITUTION_JURISDICTION: Readonly<Record<string, string>> = {
+  sejm: 'POL',
+  sejmu: 'POL',
+  sejmie: 'POL',
+  sejmowi: 'POL',
+};
+
+export function politicsInstitutionJurisdiction(text: string): string | null {
+  const normalized = normalize(text);
+  for (const [name, iso3] of Object.entries(POLITICS_INSTITUTION_JURISDICTION)) {
+    if (normalized.includes(` ${name} `)) return iso3;
+  }
+  return null;
+}
 
 function normalize(text: string): string {
   return ` ${(text ?? '')
@@ -278,6 +336,28 @@ export function selectContributors(route: AskR2Route): AskContributorSelection[]
       domain: 'governance',
       applicability: 'SUPPLEMENTARY',
       scope,
+    });
+  }
+  /*
+   * POLITICS INTEL R1 — consulted only when the question is about politics (the router's own `political`
+   * domain, a closed Politics subject term, or a named legislative institution) AND a jurisdiction is known.
+   * Sharing a country is never enough ("weather in Poland", "capital of Poland" select nothing), and a
+   * data-scoped question (CPI, procurement, Imihigo) stays with its own contributor.
+   */
+  const institutionIso3 = politicsInstitutionJurisdiction(question);
+  const politicsIso3 = countryIso3 ?? institutionIso3;
+  if (
+    politicsIso3 !== null &&
+    !dataScoped &&
+    (domains.includes('political') ||
+      institutionIso3 !== null ||
+      namesScope(question, CONTRIBUTOR_SCOPE_TERMS.POLITICS))
+  ) {
+    out.push({
+      contributorId: 'POLITICS',
+      domain: 'political',
+      applicability: 'SUPPLEMENTARY',
+      scope: { ...scope, countryIso3: politicsIso3 },
     });
   }
   if (namesScope(question, CONTRIBUTOR_SCOPE_TERMS.HUMANITARIAN)) {

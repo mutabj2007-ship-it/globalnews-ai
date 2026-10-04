@@ -1,13 +1,16 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import {
   procurementPortalReferenceKey,
   type ConflictObservation,
   type ConflictRetainedEvidenceDetail,
   type MarketRetainedProcurementNotice,
+  politicsSearchRecord,
+  type RetainedPoliticsObservation,
 } from '@globalnews-ai/shared';
 import type { AskR2Route } from '../ask-router/ask-r2-route';
 import { ConflictObservationRepository } from '../conflict-observation/conflict-observation.repository';
 import { MarketReadRepository } from '../market-ingest/market-read.repository';
+import { PoliticsObservationRepository } from '../politics/politics-observation.repository';
 import { EconomyObservationReadService } from '../economy/economy-observation.read';
 import { readRetainedImihigo } from './imihigo-retained.reader';
 import { nisrDistricts } from '../geo/rwanda-nisr.authority';
@@ -40,6 +43,12 @@ export const READ_TIMEOUT_MS = 1500;
 export const CONFLICT_WINDOW_DAYS = 365;
 export const CONFLICT_RECENT_DAYS = 7;
 export const CONFLICT_MAX_OBSERVATIONS = 10;
+/**
+ * POLITICS INTEL R1 (CTO freshness ruling) — NO universal expiry: the latest admitted Politics records are read
+ * whatever their age. The window only decides the explicit disclosure that nothing newer was admitted.
+ */
+export const POLITICS_RECENT_DAYS = 7;
+export const POLITICS_MAX_OBSERVATIONS = 10;
 
 const KIGALI_PROVINCE_ID = '1';
 
@@ -136,6 +145,9 @@ export class AskSpecialistReadCoordinator {
     private readonly conflict: ConflictObservationRepository,
     private readonly market: MarketReadRepository,
     private readonly economy: EconomyObservationReadService,
+    /* POLITICS INTEL R1 — optional so a coordinator built without it degrades the Politics leg to
+       NOT_ASSESSED (no governed reader), exactly as Humanitarian does; AskIntelligenceModule provides it. */
+    @Optional() private readonly politics?: PoliticsObservationRepository,
   ) {}
 
   /**
@@ -324,6 +336,8 @@ export class AskSpecialistReadCoordinator {
         return this.readImihigo(s);
       case 'GEOGRAPHY':
         return this.readGeography(s);
+      case 'POLITICS':
+        return this.readPolitics(s, now);
       case 'HUMANITARIAN':
         /* R1 truth: no governed humanitarian observation reader is callable/populated. */
         return base(s, {
@@ -362,6 +376,34 @@ export class AskSpecialistReadCoordinator {
         /* "eastern DRC": the read is country-scoped; each record keeps its own stated place. */
         ...(s.scope.qualifier ? ['SUBNATIONAL_SCOPE_NOT_APPLIED'] : []),
       ],
+    });
+  }
+
+  /*
+   * POLITICS INTEL R1 — the retained Politics store, scoped by jurisdiction, current revisions only (a
+   * superseded or retracted revision is never read). The latest admitted records are returned WHATEVER
+   * THEIR AGE (no universal expiry); NO_RECENT_RETAINED_RECORD is disclosed when none falls inside the
+   * window, judged on the record's own event/publication clock, never on when it was retrieved.
+   * The reader-facing absence is NO_MATCH: the withholding reason (retracted, rights, …) stays internal.
+   */
+  private async readPolitics(s: AskContributorSelection, now: Date): Promise<AskContribution> {
+    if (this.politics === undefined) {
+      return base(s, {
+        status: 'NOT_ASSESSED',
+        temporalBasis: 'NONE',
+        degradationReason: 'NO_GOVERNED_OBSERVATION_READER',
+      });
+    }
+    const iso3 = s.scope.countryIso3 as string;
+    const recency = await this.politics.recency({ countryIso3: iso3 }, POLITICS_RECENT_DAYS, now, POLITICS_MAX_OBSERVATIONS);
+    if (recency.observations.length === 0) {
+      return base(s, { status: 'NO_MATCH', temporalBasis: 'RETAINED_OFFICIAL_RECORD' });
+    }
+    return base(s, {
+      status: 'USED',
+      temporalBasis: 'RETAINED_OFFICIAL_RECORD',
+      observations: recency.observations.map(politicsObservation),
+      disclosures: ['RETAINED_NOT_CURRENT', ...(recency.anyWithinWindow ? [] : ['NO_RECENT_RETAINED_RECORD'])],
     });
   }
 
@@ -574,6 +616,37 @@ export function conflictObservation(
       parties: detail?.sourceParties ?? [],
       headline: detail?.sourceHeadline ?? null,
       citedOutlets: citedOutletsOf(row.sourceReference.citation),
+    },
+  };
+}
+
+/**
+ * POLITICS INTEL R1 — one retained Politics observation as a governed contribution, via the shared
+ * PoliticsSearchRecord projection. The label is the publisher's citation label, NEVER the verbatim
+ * quotation (D-16); no person field exists to map (CTO security ruling).
+ */
+export function politicsObservation(o: RetainedPoliticsObservation): AskContributionObservation {
+  const r = politicsSearchRecord(o);
+  return {
+    reference: r.retrievalKey,
+    kind: `${r.eventKind}:${r.stage}`,
+    label: r.citation.label ?? null,
+    value: null,
+    unit: null,
+    period: r.effectiveAt.slice(0, 10),
+    geography: r.countryIso3 ?? '',
+    source: { name: r.institution ?? 'Official source', url: r.citation.sourceUrl ?? null, licence: null },
+    retainedAt: r.retrievedAt,
+    provenance: {
+      sourceType: r.sourceType,
+      evidenceRole: r.evidenceRole,
+      effectiveAt: r.effectiveAt,
+      temporalBasis: r.temporalBasis,
+      publishedAt: r.publishedAt,
+      sourceUpdatedAt: r.sourceUpdatedAt ?? null,
+      revisionOrdinal: r.revisionOrdinal,
+      artifactSha256: r.citation.artifactSha256,
+      language: r.language,
     },
   };
 }

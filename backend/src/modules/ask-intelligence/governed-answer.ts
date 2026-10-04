@@ -158,6 +158,7 @@ const CONTRIBUTOR_NAME: Readonly<Record<AskContribution['contributorId'], string
   IMIHIGO: 'Retained NISR Imihigo evaluation',
   GEOGRAPHY: 'Reference geography',
   HUMANITARIAN: 'Humanitarian Intelligence',
+  POLITICS: 'Retained official Politics records',
 };
 
 function recordData(o: AskContributionObservation): Record<string, unknown> {
