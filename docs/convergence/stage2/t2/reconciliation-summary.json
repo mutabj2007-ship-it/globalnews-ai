@@ -1,0 +1,93 @@
+{
+  "t2Base": "266007c930e8293638bc7971670ee0264923c18c",
+  "lineRoot": "c9473e32",
+  "englishDictionaryLeaves": 2807,
+  "locales": {
+    "fr": {
+      "recoveredLeaves": 1789,
+      "keptForRuntime": 0,
+      "declaredQualifiedUnchangedOrNotTranslated": 32,
+      "candidatesProvenanceUnknown": 1637,
+      "candidateLineage": {
+        "EN_UNCHANGED_SINCE_LINE_ROOT": 1622,
+        "EN_CHANGED_SINCE_LINE_ROOT": 15
+      },
+      "droppedStale": 120,
+      "missingNoCandidate": 1138
+    },
+    "de": {
+      "recoveredLeaves": 1789,
+      "keptForRuntime": 0,
+      "declaredQualifiedUnchangedOrNotTranslated": 32,
+      "candidatesProvenanceUnknown": 1637,
+      "candidateLineage": {
+        "EN_UNCHANGED_SINCE_LINE_ROOT": 1622,
+        "EN_CHANGED_SINCE_LINE_ROOT": 15
+      },
+      "droppedStale": 120,
+      "missingNoCandidate": 1138
+    },
+    "es": {
+      "recoveredLeaves": 1789,
+      "keptForRuntime": 0,
+      "declaredQualifiedUnchangedOrNotTranslated": 32,
+      "candidatesProvenanceUnknown": 1637,
+      "candidateLineage": {
+        "EN_UNCHANGED_SINCE_LINE_ROOT": 1622,
+        "EN_CHANGED_SINCE_LINE_ROOT": 15
+      },
+      "droppedStale": 120,
+      "missingNoCandidate": 1138
+    },
+    "pt": {
+      "recoveredLeaves": 1789,
+      "keptForRuntime": 0,
+      "declaredQualifiedUnchangedOrNotTranslated": 32,
+      "candidatesProvenanceUnknown": 1637,
+      "candidateLineage": {
+        "EN_UNCHANGED_SINCE_LINE_ROOT": 1622,
+        "EN_CHANGED_SINCE_LINE_ROOT": 15
+      },
+      "droppedStale": 120,
+      "missingNoCandidate": 1138
+    },
+    "ar": {
+      "recoveredLeaves": 1789,
+      "keptForRuntime": 0,
+      "declaredQualifiedUnchangedOrNotTranslated": 32,
+      "candidatesProvenanceUnknown": 1637,
+      "candidateLineage": {
+        "EN_UNCHANGED_SINCE_LINE_ROOT": 1622,
+        "EN_CHANGED_SINCE_LINE_ROOT": 15
+      },
+      "droppedStale": 120,
+      "missingNoCandidate": 1138
+    }
+  },
+  "manifestTotals": {
+    "pl": {
+      "pendingKeys": 277,
+      "namespacesIncomplete": 5
+    },
+    "fr": {
+      "pendingKeys": 3525,
+      "namespacesIncomplete": 60
+    },
+    "de": {
+      "pendingKeys": 3525,
+      "namespacesIncomplete": 60
+    },
+    "es": {
+      "pendingKeys": 3525,
+      "namespacesIncomplete": 60
+    },
+    "pt": {
+      "pendingKeys": 3525,
+      "namespacesIncomplete": 60
+    },
+    "ar": {
+      "pendingKeys": 3525,
+      "namespacesIncomplete": 60
+    }
+  }
+}
