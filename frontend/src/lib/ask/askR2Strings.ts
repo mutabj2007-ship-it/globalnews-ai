@@ -503,7 +503,7 @@ const EN: AskR2Strings = {
         made quietly. Reverting it is this one string and its Polish counterpart.
       */
       LANGUAGE_UNSUPPORTED:
-        'Ask answers in the languages offered in the language menu. Could you ask your question in one of them?',
+        'This question could not be handled in the selected language. Try rephrasing it, or choose a different language from the language menu.',
       SOURCE_FRAME_UNPARSED:
         'Which source should the answer come from? Name the outlet or institution — for example “What does Reuters report about …?”',
       SELECTION_EXCEEDS_MAX: 'Too many stories are selected. Select fewer stories and ask again.',
@@ -576,7 +576,14 @@ function plSources(n: number): string {
 }
 
 const PL: AskR2Strings = {
-  askTitle: 'Zapytaj GlobalNewsAI',
+  /*
+    R4 · CTO BRAND RULING — the product NAME is canonical in all seven locales and is no
+    longer translated. Polish reads `Ask GlobalNewsAI` here; `Zapytaj` remains the Ask ACTION
+    directly below, which is what the ruling preserves. The value is projected from
+    `ASK_PRODUCT_NAME` for every locale anyway (see `askShellSource`), so this line can no
+    longer be the thing that diverges — it is corrected rather than left to be overridden.
+  */
+  askTitle: 'Ask GlobalNewsAI',
   ask: 'Zapytaj',
   close: 'Zamknij',
   returnMap: 'Wróć do mapy',
@@ -800,9 +807,9 @@ const PL: AskR2Strings = {
     codes: {
       LANGUAGE_UNCLASSIFIED:
         'Nie udało się obsłużyć tego pytania w wybranym języku. Spróbuj je przeformułować albo wybierz w menu języka ten, w którym piszesz.',
-      /* R4 · PHASE B — the same correction as the English above; see the note there. */
+      /* R4 · the same ruling as the English above; see the note there. */
       LANGUAGE_UNSUPPORTED:
-        'Zapytaj odpowiada w językach dostępnych w menu języka. Czy możesz zadać pytanie w jednym z nich?',
+        'Nie udało się obsłużyć tego pytania w wybranym języku. Spróbuj je przeformułować albo wybierz inny język w menu języka.',
       SOURCE_FRAME_UNPARSED:
         'Z jakiego źródła ma pochodzić odpowiedź? Podaj nazwę redakcji lub instytucji — np. „Co Reuters podaje o …?”',
       SELECTION_EXCEEDS_MAX:

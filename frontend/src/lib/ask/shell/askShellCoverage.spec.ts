@@ -61,7 +61,7 @@ describe('B-6 · the shell is one catalogue over seven locales', () => {
       535  overlay-managed
        -5  provider/product proper nouns
       ────
-      530  Claude L's scope — Revision 4 of the manifest
+      527  Claude L's scope — Revision 4, less the three brand keys
 
       THE DENOMINATOR IS ASSERTED, NOT DOCUMENTED, because it moved twice and both moves
       were failures of measurement rather than of translation. 469 → 479 when the enumerator
@@ -75,8 +75,13 @@ describe('B-6 · the shell is one catalogue over seven locales', () => {
     expect(alreadySeven).toBe(24);
     expect(overlayManaged).toBe(535);
     expect(overlayManaged + alreadySeven).toBe(559);
-    expect(ASK_SHELL_PROPER_NOUNS).toHaveLength(5);
-    expect(overlayManaged - ASK_SHELL_PROPER_NOUNS.length).toBe(530);
+    /*
+      EIGHT, not five: the CTO's brand ruling moved the three product-NAME keys out of the
+      translation scope. A key nobody should translate does not belong in a translator's
+      manifest, and leaving it there is what let three authorities give three answers.
+    */
+    expect(ASK_SHELL_PROPER_NOUNS).toHaveLength(8);
+    expect(overlayManaged - ASK_SHELL_PROPER_NOUNS.length).toBe(527);
   });
 
   it('each proper noun names a key that actually exists', () => {
@@ -154,7 +159,7 @@ describe('B-7 · no English fallback is ever silent', () => {
       expect(coverage.qualification).toBe('SOURCE');
       expect(coverage.fallbacks).toEqual([]);
       expect(coverage.complete).toBe(true);
-      expect(coverage.localizedKeys).toBe(530);
+      expect(coverage.localizedKeys).toBe(527);
     }
   });
 
@@ -169,9 +174,9 @@ describe('B-7 · no English fallback is ever silent', () => {
       const coverage = askShellCoverage(locale);
       expect(coverage.qualification).toBe('CLAUDE_L_QUALIFIED');
       expect(coverage.complete).toBe(false);
-      expect(coverage.localizedKeys).toBe(386);
+      expect(coverage.localizedKeys).toBe(383);
       expect(coverage.fallbacks).toHaveLength(144);
-      /* 386 qualified + 144 unqualified + 5 proper nouns = the 535 overlay-managed keys. */
+      /* 383 qualified + 144 unqualified + 8 not-translated = the 535 overlay-managed keys. */
       expect(coverage.localizedKeys + coverage.fallbacks.length + coverage.properNouns).toBe(
         coverage.totalKeys,
       );
@@ -340,8 +345,16 @@ describe('B-13 · the strings Claude L flagged back at H', () => {
       expect(text).not.toMatch(/English and Polish|angielsku|polsku/i);
       expect(text.length).toBeGreaterThan(0);
     }
+    /*
+      THE CTO RULED ON THE SHAPE: say the question could not be handled in the selected
+      language, and suggest rephrasing or switching. Deliberately the same shape as
+      LANGUAGE_UNCLASSIFIED — the two states differ in cause, not in what the reader does next.
+    */
     expect(askShellStrings('en').askR2Strings.clarify.codes.LANGUAGE_UNSUPPORTED).toBe(
-      'Ask answers in the languages offered in the language menu. Could you ask your question in one of them?',
+      'This question could not be handled in the selected language. Try rephrasing it, or choose a different language from the language menu.',
+    );
+    expect(askShellStrings('pl').askR2Strings.clarify.codes.LANGUAGE_UNSUPPORTED).toBe(
+      'Nie udało się obsłużyć tego pytania w wybranym języku. Spróbuj je przeformułować albo wybierz inny język w menu języka.',
     );
   });
 
@@ -441,7 +454,14 @@ describe('B-11 · the Polish catalogue is untouched by the mechanism', () => {
       copy. These are strings the frozen D25 table owns; they must be byte-identical.
     */
     const pl = askShellStrings('pl');
-    expect(pl.askR2Strings.askTitle).toBe('Zapytaj GlobalNewsAI');
+    /*
+      The product NAME is no longer Polish — the CTO's brand ruling makes it canonical in all
+      seven. What this test exists to protect is the rest of the authored Polish catalogue,
+      which is untouched, and in particular that `Zapytaj` survives as the ACTION. The ruling
+      is explicit that the verb stays localized; only the noun is canonical.
+    */
+    expect(pl.askR2Strings.askTitle).toBe('Ask GlobalNewsAI');
+    expect(pl.askR2Strings.ask).toBe('Zapytaj');
     expect(pl.askNavStrings.newQuestion).toBe('Nowe pytanie');
     expect(pl.askNavStrings.recent).toBe('Ostatnie');
     expect(pl.askNavStrings.saved).toBe('Zapisane');

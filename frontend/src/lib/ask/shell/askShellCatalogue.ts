@@ -9,10 +9,12 @@ import {
   type ShellLocaleOverlay,
   type ShellQualification,
 } from '@/lib/ask/shell/askShellOverlay';
+import { askProductNameFor } from '@/lib/ask/askBrand';
 import {
   ASK_SHELL_PROPER_NOUNS,
   askShellPolish,
   askShellSource,
+  brandCanonical,
   type AskShellSource,
 } from '@/lib/ask/shell/askShellSource';
 import { frShellOverlay } from '@/lib/ask/shell/locales/fr';
@@ -126,21 +128,29 @@ export function askShellQualification(locale: DisplayLocale): ShellQualification
 export function askShellStrings(locale: DisplayLocale): AskShellSource {
   if (locale === 'en') return askShellSource();
   if (locale === 'pl') return askShellPolish();
-  return mergeShell(askShellSource(), OVERLAYS[locale], locale);
+  /*
+    R4 · CTO BRAND RULING — the canonical name is re-projected AFTER the merge. L's delivery
+    carries the dictionary's own "Ask GlobalNews AI" spelling for the dock title, which she
+    correctly left untranslated; without this the overlay would reintroduce a second spelling
+    of a name the ruling says has exactly one.
+  */
+  return brandCanonical(mergeShell(askShellSource(), OVERLAYS[locale], locale));
 }
 
 /**
- * THE WORDMARK — read from the frozen D25 title, in the reader's own language.
+ * THE WORDMARK — one canonical name, in every locale.
  *
- * It lives here rather than in `askNavStrings.ts`, where it used to, for one structural
- * reason: that file is a SOURCE catalogue and the shell source reads it, so importing the
- * resolver back into it would be a cycle. The property the original helper existed to
- * guarantee is unchanged and is the reason it is still a function — the wordmark is READ from
- * `askTitle` rather than copied, so the standalone header can never drift from the frozen
- * title.
+ * R4 · CTO BRAND RULING. This read the name out of the per-locale catalogue, which was
+ * correct while the name was a catalogue entry and is exactly what let three authorities give
+ * three different answers. It now returns the one constant, and `askShellSource` projects the
+ * same constant over the catalogue keys, so the header and the catalogue cannot disagree
+ * whichever one a surface happens to read.
+ *
+ * Still a function of the locale: callers hold one, and the signature keeps them honest about
+ * what varies. `ASK_BRAND_KEYS` is the list that would follow if a ruling ever changed it.
  */
 export function askProductName(locale: DisplayLocale): string {
-  return askShellStrings(locale).askR2Strings.askTitle;
+  return askProductNameFor(locale);
 }
 
 /* ────────────────────────────────────────────────────────────────────────────

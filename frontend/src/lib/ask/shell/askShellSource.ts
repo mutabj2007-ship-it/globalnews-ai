@@ -17,6 +17,7 @@ import {
 } from '@/lib/ask/askSurfaceStrings';
 import { askGovernedCopy, type AskGovernedCopy } from '@/lib/ask/askGovernedConversation';
 import { askIntelligenceStrings, type AskIntelligenceStrings } from '@/lib/ask/askIntelligenceView';
+import { ASK_BRAND_KEYS, ASK_PRODUCT_NAME } from '@/lib/ask/askBrand';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -92,11 +93,42 @@ function dictionaryProjection(): AskShellDictionary {
 }
 
 /**
+ * Project the product NAME over whatever a catalogue happens to hold for it.
+ *
+ * R4 · CTO BRAND RULING. The name is canonical in all seven locales, so it is written here
+ * from one constant rather than read from seven catalogue entries that merely agreed. This
+ * is also what makes the proper-noun exclusion honest: a key cannot be excluded from Claude
+ * L's scope while still being readable from a per-locale catalogue, or the two would drift
+ * exactly as they already did once.
+ *
+ * The product-wide dictionaries (`en.ts`, `pl.ts`) are NOT edited — Home renders from them
+ * and the scope ruling places it outside this patch — so the projection happens on the
+ * Ask-scoped copy. Home still shows the Polish form of the dock title; that is recorded in
+ * the handoff as work for whoever owns Home, not fixed silently from here.
+ *
+ * It is applied AFTER the per-locale overlay merge as well as to the source, and that is not
+ * belt-and-braces. Claude L's delivery carries `dict.askAi.title` as "Ask GlobalNews AI" —
+ * the dictionary's own spelling, which she correctly left untranslated — so projecting only
+ * onto the source would let an overlay reintroduce a second spelling of the name. Canonical
+ * means the constant wins over whatever any catalogue or overlay holds.
+ */
+export function brandCanonical<T extends AskShellSource>(shell: T): T {
+  return {
+    ...shell,
+    askR2Strings: { ...shell.askR2Strings, askTitle: ASK_PRODUCT_NAME },
+    dict: {
+      ...shell.dict,
+      askAi: { ...shell.dict.askAi, title: ASK_PRODUCT_NAME, panelLabel: ASK_PRODUCT_NAME },
+    },
+  };
+}
+
+/**
  * The English Ask shell. Read from the existing catalogues rather than re-transcribed,
  * because a second copy of 187 frozen D25 strings is a second thing to keep in step.
  */
 export function askShellSource(): AskShellSource {
-  return {
+  return brandCanonical({
     askR2Strings: askR2Strings('en'),
     askStrings: resolveAskStrings('en').strings,
     askContinuityStrings: askContinuityStrings('en'),
@@ -110,7 +142,7 @@ export function askShellSource(): AskShellSource {
     askGovernedCopy: askGovernedCopy('en'),
     askIntelligenceStrings: askIntelligenceStrings('en'),
     dict: dictionaryProjection(),
-  };
+  });
 }
 
 /**
@@ -122,7 +154,7 @@ export function askShellSource(): AskShellSource {
  * overlay path is not used for it. That is why `askShellQualification('pl')` is `SOURCE`.
  */
 export function askShellPolish(): AskShellSource {
-  return {
+  return brandCanonical({
     askR2Strings: askR2Strings('pl'),
     askStrings: resolveAskStrings('pl').strings,
     askContinuityStrings: askContinuityStrings('pl'),
@@ -146,7 +178,7 @@ export function askShellPolish(): AskShellSource {
         authError: pl.authError,
       };
     })(),
-  };
+  });
 }
 
 /**
@@ -160,6 +192,14 @@ export function askShellPolish(): AskShellSource {
  * invariance is now this list and nothing else.
  */
 export const ASK_SHELL_PROPER_NOUNS: readonly string[] = Object.freeze([
+  /*
+    R4 · CTO BRAND RULING — the product NAME joins the list. It was a per-locale catalogue
+    key, which is an INVITATION to translate it, and three authorities duly gave three
+    answers: the frozen table had EN and PL forms, H drafted five more, and Claude L
+    (correctly) returned the brand untranslated. A key nobody should translate does not
+    belong in a translation scope.
+  */
+  ...ASK_BRAND_KEYS,
   'askR2Strings.verification.lanes.gnews',
   'askR2Strings.verification.lanes.gdelt-doc',
   'askR2Strings.verification.lanes.x',
