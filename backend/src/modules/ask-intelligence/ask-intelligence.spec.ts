@@ -12,7 +12,7 @@ import {
   CONFLICT_WINDOW_DAYS,
   READ_TIMEOUT_MS,
 } from './ask-specialist-read.coordinator';
-import { selectContributors } from './contributor-selection';
+import { CONTRIBUTOR_SCOPE_TERMS, selectContributors } from './contributor-selection';
 import { imihigoContentHash, readRetainedImihigo } from './imihigo-retained.reader';
 
 /**
@@ -448,12 +448,21 @@ describe('10/11/12 — no specialist where none applies', () => {
   it.each([
     'What is an induction motor?',
     'What is happening in Kenya?',
-    'What are the latest major political developments in Poland today?',
     'Dlaczego artykuł 5 NATO jest ważny?',
   ])('%s → no contributor considered, no read performed', async (q) => {
     const { c, calls } = coordinator();
     const set = await c.read(route(q, q.startsWith('Dlaczego') ? 'pl' : 'en'), NOW);
     expect(set.considered).toEqual([]);
+    expect(calls).toEqual({ conflict: [], market: 0, economy: 0 });
+  });
+  /* POLITICS INTEL R1 — a political question now considers the Politics contributor and NOTHING else:
+     no Conflict/Market/Economy read. Without an injected Politics reader it is NOT_ASSESSED, never NO_DATA. */
+  it('What are the latest major political developments in Poland today? → only POLITICS considered, no other read', async () => {
+    const { c, calls } = coordinator();
+    const set = await c.read(route('What are the latest major political developments in Poland today?'), NOW);
+    expect(set.considered.map((s) => s.contributorId)).toEqual(['POLITICS']);
+    expect(set.considered[0]?.scope.countryIso3).toBe('POL');
+    expect(byId(set, 'POLITICS')).toMatchObject({ status: 'NOT_ASSESSED', degradationReason: 'NO_GOVERNED_OBSERVATION_READER' });
     expect(calls).toEqual({ conflict: [], market: 0, economy: 0 });
   });
 });
@@ -513,13 +522,19 @@ describe('§15 — source / quota / security proofs by dependency inspection', (
   it('the module provides read repositories only — no controller, no producer, no scheduler', () => {
     const module = code(src('ask-intelligence', 'ask-intelligence.module.ts'));
     expect(module).not.toMatch(/controllers:/);
-    expect(module).toMatch(
-      /providers: \[ConflictObservationRepository, MarketReadRepository, AskSpecialistReadCoordinator\]/,
+    /* POLITICS INTEL R1 — the Politics REPOSITORY is named directly; its module (public controller +
+       producer) never enters the Ask graph (Claude C seam §2). */
+    expect(module.replace(/\s+/g, ' ')).toMatch(
+      /providers: \[ ConflictObservationRepository, MarketReadRepository, PoliticsObservationRepository, AskSpecialistReadCoordinator, \]/,
     );
+    expect(module).not.toMatch(/PoliticsReadModule|PoliticsModule|politics\.module/);
   });
-  it('Politics/Elections specialists are not executed: no contributor exists for them', () => {
+  it('Elections has no contributor; the Politics (R1) terms carry no election, result or poll word (Main R-2)', () => {
     const selection = code(src('ask-intelligence', 'contributor-selection.ts'));
-    expect(selection).not.toMatch(/POLITIC|ELECTION/);
+    expect(selection).not.toMatch(/ELECTION/);
+    for (const term of CONTRIBUTOR_SCOPE_TERMS.POLITICS) {
+      expect(term).not.toMatch(/elect|wybor|vote|głosow|poll|sondaż|result|wynik/i);
+    }
   });
 });
 describe('UNIFIED INTELLIGENCE BINDING R2F — a dashboard record pinned by the reader', () => {

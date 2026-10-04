@@ -12,6 +12,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+  MEASURED_AFTER_TEXT_SEAM_WIRING,
   MEASURED_AT_D920893,
   assertEntityRefAdmissible,
   assertNoNameStringMatching,
@@ -71,13 +72,28 @@ describe('the seam is genuinely unbound in the tree — these fail the moment it
     expect(body).not.toContain('POLITICS');
   });
 
-  it('the coordinator does not yet inject a Politics repository', () => {
-    expect(code(coordinator)).not.toMatch(/PoliticsObservationRepository/);
-    expect(code(intelModule)).not.toMatch(/PoliticsObservationRepository/);
+  /*
+   * INTEGRATOR (Claude Code), POLITICS INTEL R1 binding: C's two tripwires "the coordinator does not yet
+   * inject a Politics repository" and "selectContributors has no POLITICS branch yet" FLIPPED when the
+   * authorized text-path seam (C's edits 4–8) was wired. They are restated as positive assertions of the
+   * wired state, against MEASURED_AFTER_TEXT_SEAM_WIRING. The pin path (edits 1–3) and the bound
+   * declaration (edit 9) are deliberately NOT wired, so the two tripwires above still hold.
+   */
+  it('WIRED (text seam): the coordinator injects the Politics repository and the module provides it directly', () => {
+    expect(code(coordinator)).toMatch(/PoliticsObservationRepository/);
+    expect(code(intelModule)).toMatch(/PoliticsObservationRepository/);
+    expect(MEASURED_AFTER_TEXT_SEAM_WIRING.repositoryInjectedIntoCoordinator).toBe(true);
   });
 
-  it('selectContributors has no POLITICS branch yet', () => {
-    expect(code(selection)).not.toMatch(/contributorId:\s*'POLITICS'/);
+  it('WIRED (text seam): selectContributors has a POLITICS branch', () => {
+    expect(code(selection)).toMatch(/contributorId:\s*'POLITICS'/);
+    expect(MEASURED_AFTER_TEXT_SEAM_WIRING.contributorSelectable).toBe(true);
+  });
+
+  it('after text-seam wiring the gate still refuses to BIND, naming only disclosure and leak probes', () => {
+    const d = decidePoliticsBinding(MEASURED_AFTER_TEXT_SEAM_WIRING);
+    expect(d.bound).toBe(false);
+    expect([...d.refusedBecause].sort()).toEqual(['DISCLOSURE_CODE_UNRECOGNISED', 'LEAK_PROBES_NOT_PASSED']);
   });
 
   it('AskIntelligenceModule must NOT import PoliticsModule when it is wired', () => {

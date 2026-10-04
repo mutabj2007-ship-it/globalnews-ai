@@ -29,6 +29,8 @@ export const ASK_CONTRIBUTOR_IDS = [
   'IMIHIGO',
   'GEOGRAPHY',
   'HUMANITARIAN',
+  /** POLITICS INTEL R1 — the retained Politics store (PoliticsObservationRepository), read-only. */
+  'POLITICS',
 ] as const;
 export type AskContributorId = (typeof ASK_CONTRIBUTOR_IDS)[number];
 
@@ -50,6 +52,11 @@ export type AskTemporalBasis =
   | 'RETAINED_EVALUATION_CYCLE'
   /** Reference geography — context, not evidence of any event. */
   | 'REFERENCE_GEOGRAPHY'
+  /**
+   * POLITICS INTEL R1 — a retained official record (e.g. a legislative stage) dated by its OWN clocks:
+   * event time when the source states it, else publication. Never the retrieval time.
+   */
+  | 'RETAINED_OFFICIAL_RECORD'
   | 'NONE';
 
 /** One governed observation, with the provenance every specialist claim must carry. */
@@ -89,6 +96,24 @@ export interface AskContributionObservation {
     readonly headline: string | null;
     /** The outlets the source cites (the publisher's own citation, split — never rewritten). */
     readonly citedOutlets: readonly string[];
+  };
+  /**
+   * POLITICS INTEL R1 (CTO ruling 11) — ADDITIVE, OPTIONAL provenance for a record whose governed
+   * contract carries it. Absent on every other contributor, so their contributions are unchanged.
+   * Only attributes the shared shape otherwise drops: official vs reporting, the record's own clocks,
+   * revision, artifact anchor and language. Never a quotation, never a person field, never review data.
+   */
+  readonly provenance?: {
+    readonly sourceType: string;
+    readonly evidenceRole: string | null;
+    /** Event time if the source states it, else publication — `temporalBasis` says which. */
+    readonly effectiveAt: string;
+    readonly temporalBasis: string;
+    readonly publishedAt: string;
+    readonly sourceUpdatedAt: string | null;
+    readonly revisionOrdinal: number;
+    readonly artifactSha256: string;
+    readonly language: string;
   };
 }
 

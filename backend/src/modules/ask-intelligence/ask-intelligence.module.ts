@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConflictObservationRepository } from '../conflict-observation/conflict-observation.repository';
 import { MarketReadRepository } from '../market-ingest/market-read.repository';
+import { PoliticsObservationRepository } from '../politics/politics-observation.repository';
 import { EconomyModule } from '../economy/economy.module';
 import { AskSpecialistReadCoordinator } from './ask-specialist-read.coordinator';
 
@@ -15,7 +16,14 @@ import { AskSpecialistReadCoordinator } from './ask-specialist-read.coordinator'
  */
 @Module({
   imports: [EconomyModule],
-  providers: [ConflictObservationRepository, MarketReadRepository, AskSpecialistReadCoordinator],
+  /* POLITICS INTEL R1 — the Politics REPOSITORY is named directly (never PoliticsReadModule), so no public
+     controller and no producer enters the Ask graph (Claude C seam §2). */
+  providers: [
+    ConflictObservationRepository,
+    MarketReadRepository,
+    PoliticsObservationRepository,
+    AskSpecialistReadCoordinator,
+  ],
   exports: [AskSpecialistReadCoordinator],
 })
 export class AskIntelligenceModule {}
