@@ -1048,6 +1048,17 @@ export const pl: Dictionary = {
       },
     },
     storedReportingNoticeAriaLabel: 'Powiadomienie o zapisanych relacjach',
+    sourceCoverage: {
+      ariaLabel: 'Lokalne pokrycie źródłami',
+      absentTitle: 'Luka w lokalnym pokryciu',
+      absentBody:
+        'Dla tego kraju nie działa żadne lokalne źródło wiadomości z uregulowanymi prawami. Pokazane relacje pochodzą ze źródeł międzynarodowych lub agregatorów i nie stanowią lokalnego pokrycia.',
+      unverifiedTitle: 'Lokalne pokrycie niezweryfikowane',
+      unverifiedBody:
+        'Lokalne źródło wiadomości jest aktywne, ale jego dostarczanie nie zostało zweryfikowane. Pokazane relacje mogą nie obejmować lokalnego pokrycia.',
+      localEvidencePrefix: 'Od zarejestrowanych lokalnych wydawców:',
+      ofSeparator: 'z',
+    },
     coverageQualityAriaSuffix: 'jakość materiałów',
     readFullStoryPrefix: 'Przeczytaj pełną historię:',
     askAboutStory: 'Zapytaj GlobalNews AI o to',
@@ -1373,6 +1384,10 @@ export const pl: Dictionary = {
           failed: 'Nie udało się teraz pobrać doniesień. Możesz spróbować ponownie.',
           load: 'Pobierz analizę kraju',
           reload: 'Pobierz ponownie',
+          coverageAbsent:
+            'Luka w lokalnym pokryciu: nie działa tu żadne lokalne źródło wiadomości z uregulowanymi prawami. Te relacje pochodzą ze źródeł międzynarodowych lub agregatorów.',
+          coverageUnverified:
+            'Lokalne pokrycie niezweryfikowane: lokalne źródło wiadomości jest aktywne, ale jego dostarczanie nie jest zweryfikowane.',
         },
         /* ── DESIGN REVISION 1.2 · THE RESTORED SELECTED-COUNTRY BLOCKS ─── */
         identityHeading: 'To\u017csamo\u015b\u0107',

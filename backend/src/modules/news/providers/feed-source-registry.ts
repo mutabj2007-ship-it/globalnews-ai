@@ -1,4 +1,5 @@
-import type { SourceType } from '@globalnews-ai/shared';
+import { rightsBlockActivation } from '@globalnews-ai/shared';
+import type { SourceRightsState, SourceType } from '@globalnews-ai/shared';
 
 /**
  * S1 — THE CURATED FEED REGISTRY.
@@ -47,6 +48,21 @@ export interface FeedSourceEntry {
   readonly enabled: boolean;
   readonly provenanceNote: string;
   readonly verifiedAt: string;
+  /**
+   * T1 — PROVIDER-RIGHTS-ACTIVATION-GATE-1. The RECORDED rights state of this
+   * feed, copied from the governed research record named in `evidence` — never
+   * inferred from a successful fetch. `RESTRICTED`/`PROHIBITED` make the feed
+   * impossible to activate through `RSS_FEED_SOURCES`; any state other than
+   * `CLEARED` keeps it out of local coverage accounting and is surfaced in
+   * health. No entry is `CLEARED` today.
+   */
+  readonly rights: FeedSourceRights;
+}
+
+export interface FeedSourceRights {
+  readonly state: SourceRightsState;
+  /** Where the state was recorded (manifest path + record id, or ruling). */
+  readonly evidence: string;
 }
 
 export const FEED_SOURCES: readonly FeedSourceEntry[] = [
@@ -64,6 +80,11 @@ export const FEED_SOURCES: readonly FeedSourceEntry[] = [
       'Fetched 2026-08-31: RSS 2.0, WordPress-generated, <sy:updatePeriod>hourly, current items. ' +
       'Byte-accurate capture retained at __fixtures__/ktpress-feed.sample.xml.',
     verifiedAt: '2026-08-31',
+    rights: {
+      state: 'UNRESOLVED',
+      evidence:
+        'backend/source-packs/east-africa-r1/RWA.json ea-r1:rwa:ktpress rights.status UNRESOLVED (ownership/integrity review; RIGHTS_NOT_CLEARED).',
+    },
   },
   {
     sourceId: 'feed:taarifa-rw',
@@ -77,6 +98,11 @@ export const FEED_SOURCES: readonly FeedSourceEntry[] = [
     provenanceNote:
       'Fetched 2026-08-31: RSS 2.0, channel "Taarifa Rwanda:", 10 items dated 30 Aug 2026.',
     verifiedAt: '2026-08-31',
+    rights: {
+      state: 'LIMITED_SCOPE_REVIEW',
+      evidence:
+        'backend/source-packs/east-africa-r1/RWA.json ea-r1:rwa:taarifa rights.status LIMITED_SCOPE_REVIEW (terms allow links/short attributed excerpts; full-text ingestion unestablished).',
+    },
   },
 
   // ---------------- Kenya ----------------
@@ -92,6 +118,11 @@ export const FEED_SOURCES: readonly FeedSourceEntry[] = [
     provenanceNote:
       'Fetched 2026-08-31: RSS, channel "The Standard News Feeds", 30 items dated 31 Aug 2026.',
     verifiedAt: '2026-08-31',
+    rights: {
+      state: 'RESTRICTED',
+      evidence:
+        'backend/source-packs/east-africa-r1/KEN.json ea-r1:ken:standard rights.status RESTRICTED (terms §§11-12 restrict automated collection and republication); G R10 ACTIVATION PROHIBITED.',
+    },
   },
   {
     sourceId: 'feed:cbk-ke',
@@ -106,6 +137,11 @@ export const FEED_SOURCES: readonly FeedSourceEntry[] = [
       'Fetched 2026-08-31: RSS, channel "CBK", 10 items dated 24 Aug 2026. Corresponds to the ' +
       'official-source registry entry ke-cbk, whose base URL was independently verified in C2-3.',
     verifiedAt: '2026-08-31',
+    rights: {
+      state: 'UNRESOLVED',
+      evidence:
+        'backend/source-packs/east-africa-r1/KEN.json ea-r1:ken:cbk rights.status UNRESOLVED (no product reuse grant established).',
+    },
   },
 
   // ---------------- Poland ----------------
@@ -123,6 +159,11 @@ export const FEED_SOURCES: readonly FeedSourceEntry[] = [
       "publisher's own feed index at stat.gov.pl/en/rss/, not guessed. Corresponds to the " +
       'official-source registry entry pl-gus. This is the ENGLISH feed.',
     verifiedAt: '2026-08-31',
+    rights: {
+      state: 'UNREVIEWED',
+      evidence:
+        'backend/src/modules/source-packs/eu27/countries/PL.json statistics candidate rightsStatus UNREVIEWED (canonical eu27:pl:statistics).',
+    },
   },
   {
     sourceId: 'feed:wp-pl',
@@ -135,6 +176,11 @@ export const FEED_SOURCES: readonly FeedSourceEntry[] = [
     enabled: false,
     provenanceNote: 'Fetched 2026-08-31: RSS, 16 items dated 31 Aug 2026, Polish-language.',
     verifiedAt: '2026-08-31',
+    rights: {
+      state: 'PROHIBITED',
+      evidence:
+        'G R10 ruling: ACTIVATION PROHIBITED on current published terms (recorded in b5ProviderDormancy.spec.ts); canonical eu27:pl:publisher-1 rightsStatus UNREVIEWED. The stricter recorded state is kept.',
+    },
   },
 ];
 
@@ -176,15 +222,67 @@ export function getEnabledFeedSources(): readonly FeedSourceEntry[] {
   return getEnabledFeedSourcesFrom(FEED_SOURCES);
 }
 
+/** A feed that was named (or shipped enabled) but refused because its recorded rights forbid it. */
+export interface RefusedFeedSource {
+  readonly sourceId: string;
+  readonly reason: 'RIGHTS_RESTRICTED' | 'RIGHTS_PROHIBITED';
+  readonly rightsState: SourceRightsState;
+  readonly evidence: string;
+}
+
+/** An activated feed whose recorded rights are not CLEARED — runs, but never counts as cleared. */
+export interface RightsUnresolvedFeedSource {
+  readonly sourceId: string;
+  readonly rightsState: SourceRightsState;
+}
+
 /**
  * The outcome of resolving which feeds are actually active for this process.
  * `unknownIds` is carried rather than discarded so a typo in the environment
  * surfaces as a visible state instead of silently activating nothing.
+ * `refused` and `rightsUnresolved` (T1) carry the rights gate's decisions the
+ * same way, so a refused source is a visible state rather than a silent drop.
  */
 export interface ActiveFeedSelection {
   readonly sources: readonly FeedSourceEntry[];
   readonly unknownIds: readonly string[];
   readonly overridden: boolean;
+  readonly refused: readonly RefusedFeedSource[];
+  readonly rightsUnresolved: readonly RightsUnresolvedFeedSource[];
+}
+
+/** The rights gate for one candidate: a refusal, or null when activation may proceed. */
+export function feedActivationRefusal(entry: FeedSourceEntry): RefusedFeedSource | null {
+  if (!rightsBlockActivation(entry.rights.state)) return null;
+  return {
+    sourceId: entry.sourceId,
+    reason: entry.rights.state === 'PROHIBITED' ? 'RIGHTS_PROHIBITED' : 'RIGHTS_RESTRICTED',
+    rightsState: entry.rights.state,
+    evidence: entry.rights.evidence,
+  };
+}
+
+function gate(
+  candidates: readonly FeedSourceEntry[],
+  unknownIds: readonly string[],
+  overridden: boolean,
+): ActiveFeedSelection {
+  const sources: FeedSourceEntry[] = [];
+  const refused: RefusedFeedSource[] = [];
+  for (const entry of candidates) {
+    const refusal = feedActivationRefusal(entry);
+    if (refusal) refused.push(refusal);
+    else sources.push(entry);
+  }
+  return {
+    sources,
+    unknownIds,
+    overridden,
+    refused,
+    rightsUnresolved: sources
+      .filter((entry) => entry.rights.state !== 'CLEARED')
+      .map((entry) => ({ sourceId: entry.sourceId, rightsState: entry.rights.state })),
+  };
 }
 
 /**
@@ -208,6 +306,13 @@ export interface ActiveFeedSelection {
  * to the caller for logging and health, because a mistyped id must not look
  * like a working configuration.
  *
+ * T1 — THE RIGHTS GATE (PROVIDER-RIGHTS-ACTIVATION-GATE-1). Naming an id is a
+ * deployment decision, not a rights decision. A feed whose recorded rights are
+ * RESTRICTED or PROHIBITED is refused here — whether named in the allowlist or
+ * shipped `enabled` — and reported in `refused` with its reason and evidence.
+ * Feeds with unresolved (not restricted) rights stay activatable, but are
+ * listed in `rightsUnresolved` so health shows they are not rights-cleared.
+ *
  * Unset or blank means "use the shipped `enabled` flags", which are all false.
  */
 export function resolveActiveFeedSources(
@@ -220,12 +325,12 @@ export function resolveActiveFeedSources(
     .filter((value) => value.length > 0);
 
   if (requested.length === 0) {
-    return { sources: getEnabledFeedSourcesFrom(entries), unknownIds: [], overridden: false };
+    return gate(getEnabledFeedSourcesFrom(entries), [], false);
   }
 
   const byId = new Map(entries.map((entry) => [entry.sourceId, entry]));
 
-  const sources: FeedSourceEntry[] = [];
+  const candidates: FeedSourceEntry[] = [];
   const unknownIds: string[] = [];
   const seen = new Set<string>();
 
@@ -238,11 +343,11 @@ export function resolveActiveFeedSources(
     if (entry) {
       // The registry entry is used exactly as verified; only `enabled` is
       // decided here, so no feed URL or identity can be set from environment.
-      sources.push({ ...entry, enabled: true });
+      candidates.push({ ...entry, enabled: true });
     } else {
       unknownIds.push(id);
     }
   }
 
-  return { sources, unknownIds, overridden: true };
+  return gate(candidates, unknownIds, true);
 }

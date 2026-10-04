@@ -1710,6 +1710,9 @@ describe('AnalysisService', () => {
         countryName: 'Spain',
         providerDisplayName: 'GNews Free',
         articlesRetrieved: 1,
+        /* T1 — UPDATED DELIBERATELY: the additive canonical coverage fact for the
+           established country (no rights-cleared local source is active anywhere today). */
+        sourceCoverage: expect.objectContaining({ iso3: 'ESP', notice: 'LOCAL_COVERAGE_ABSENT' }),
       });
     });
 
@@ -1767,6 +1770,9 @@ describe('AnalysisService', () => {
         countryName: 'Rwanda',
         providerDisplayName: 'Stored reporting',
         articlesRetrieved: 1,
+        /* T1 — UPDATED DELIBERATELY: the additive canonical coverage fact for the
+           established country (no rights-cleared local source is active anywhere today). */
+        sourceCoverage: expect.objectContaining({ iso3: 'RWA', notice: 'LOCAL_COVERAGE_ABSENT' }),
       });
     });
 
@@ -1893,6 +1899,9 @@ describe('AnalysisService', () => {
         providerDisplayName: 'GNews Free',
         articlesRetrieved: 1,
         city: 'kigali',
+        /* T1 — UPDATED DELIBERATELY: the additive canonical coverage fact for the
+           established country (no rights-cleared local source is active anywhere today). */
+        sourceCoverage: expect.objectContaining({ iso3: 'RWA', notice: 'LOCAL_COVERAGE_ABSENT' }),
       });
     });
 

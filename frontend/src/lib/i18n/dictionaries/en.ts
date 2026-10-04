@@ -1360,6 +1360,23 @@ export const en = {
       },
     },
     storedReportingNoticeAriaLabel: 'Stored reporting notice',
+    /*
+      T1 COVERAGE TRUTHFULNESS — the canonical local-source coverage fact
+      (CountryNewsResponse.sourceCoverage). Shown only when no rights-cleared
+      local news source is active, so international/aggregated reporting is
+      never presented as local coverage.
+    */
+    sourceCoverage: {
+      ariaLabel: 'Local source coverage',
+      absentTitle: 'Local coverage gap',
+      absentBody:
+        'No rights-cleared local news source is active for this country. Reports shown come from international or aggregated sources and are not local coverage.',
+      unverifiedTitle: 'Local coverage unverified',
+      unverifiedBody:
+        'A local news source is active, but its delivery has not been verified. Reports shown may not include local coverage.',
+      localEvidencePrefix: 'From registered local publishers:',
+      ofSeparator: 'of',
+    },
     coverageQualityAriaSuffix: 'coverage quality',
     readFullStoryPrefix: 'Read the full story:',
     askAboutStory: 'Ask GlobalNews AI about this',
@@ -1769,6 +1786,11 @@ export const en = {
           failed: 'Could not retrieve reporting just now. You can try again.',
           load: 'Load country intelligence',
           reload: 'Retrieve again',
+          /* T1 — one sentence per non-covered state of sourceCoverage.notice. */
+          coverageAbsent:
+            'Local coverage gap: no rights-cleared local news source is active here. These reports come from international or aggregated sources.',
+          coverageUnverified:
+            'Local coverage unverified: a local news source is active but its delivery is not verified.',
         },
         /* ── DESIGN REVISION 1.2 · THE RESTORED SELECTED-COUNTRY BLOCKS ─── */
         identityHeading: 'Identity',

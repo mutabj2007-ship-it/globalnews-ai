@@ -1600,6 +1600,7 @@ export function GlobalMapShell({
           categories={countryRead?.categories}
           items={countryRead?.items}
           topics={countryRead?.topics}
+          sourceCoverageNotice={countryRead?.sourceCoverageNotice}
           /*
             PART IV — the Watch block. Supplied only where the rail renders, so
             the callout and every other consumer of this card is untouched.

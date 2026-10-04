@@ -10,6 +10,11 @@ import { FEED_SOURCES, resolveActiveFeedSources } from './feed-source-registry';
  *
  * ── PROVIDER-RIGHTS-ACTIVATION-GATE-1 — RECORDED, NOT IMPLEMENTED ────────
  *
+ * T1 UPDATE: the gate now exists (feed-source-registry.ts `feedActivationRefusal`,
+ * driven by each entry's recorded `rights.state`). The paragraphs below are the
+ * B5 record of the gap as it was measured; the tests further down were rewritten
+ * to assert the closed behaviour, as they instructed.
+ *
  * The ruling is that activation must never be controlled solely by registry
  * presence, transport success, or an `enabled` boolean, and must require an
  * explicit governed RIGHTS-CLEARED state.
@@ -77,36 +82,39 @@ describe('B5-E · the rights-prohibited sources are PRESERVED and disabled', () 
   });
 });
 
-describe('B5-E · PROVIDER-RIGHTS-ACTIVATION-GATE-1 is OPEN — demonstrated, not asserted', () => {
-  it('RECORDED GAP — an id in the allowlist activates a rights-prohibited source today', () => {
+describe('B5-E · PROVIDER-RIGHTS-ACTIVATION-GATE-1 — CLOSED by T1 (rewritten, not deleted)', () => {
+  it('a rights-prohibited source named in the allowlist stays INERT and the refusal is visible', () => {
     /*
-      THIS TEST DOCUMENTS A GAP AND EXPECTS THE CURRENT BEHAVIOUR. It is not a
-      claim that the behaviour is correct.
-
-      Naming feed:standardmedia-ke in RSS_FEED_SOURCES activates it, because the
-      only questions the resolver asks are "is this id known?" and "was it
-      named?". Rights are not among them. That is exactly the condition
-      PROVIDER-RIGHTS-ACTIVATION-GATE-1 exists to end.
-
-      WHEN THE GATE LANDS, THIS TEST MUST FAIL — and that failure is the signal
-      that it worked. It should then be rewritten to assert that the source
-      stays inert despite being named, rather than deleted.
+      T1 — THIS TEST FAILED WHEN THE GATE LANDED, AS ITS OWN COMMENT PREDICTED, and
+      is rewritten as instructed: naming feed:standardmedia-ke in RSS_FEED_SOURCES no
+      longer activates it. The refusal is reported, with the recorded reason, rather
+      than silently dropped.
     */
     const resolved = resolveActiveFeedSources(FEED_SOURCES, 'feed:standardmedia-ke');
 
-    expect(resolved.sources.map((s) => s.sourceId)).toEqual(['feed:standardmedia-ke']);
+    expect(resolved.sources).toEqual([]);
     expect(resolved.overridden).toBe(true);
+    expect(resolved.refused).toEqual([
+      expect.objectContaining({
+        sourceId: 'feed:standardmedia-ke',
+        reason: 'RIGHTS_RESTRICTED',
+        rightsState: 'RESTRICTED',
+      }),
+    ]);
+    expect(resolveActiveFeedSources(FEED_SOURCES, 'feed:wp-pl').refused).toEqual([
+      expect.objectContaining({ sourceId: 'feed:wp-pl', reason: 'RIGHTS_PROHIBITED' }),
+    ]);
   });
 
-  it('and the registry exposes no rights-cleared state for the gate to read', () => {
+  it('and every registry entry now carries an explicit recorded rights state — none CLEARED', () => {
     /*
-      The second half of the gap: even a caller that WANTED to check rights has
-      nothing to check. No entry carries a rights field, so the future contract
-      has to add the state as well as the gate.
+      The second half of the recorded gap: the registry now exposes the state the gate
+      reads. It is a recorded state with its evidence, never inferred from a fetch.
     */
     for (const entry of FEED_SOURCES) {
-      expect(entry).not.toHaveProperty('rightsCleared');
-      expect(entry).not.toHaveProperty('rightsState');
+      expect(entry.rights.state).toBeDefined();
+      expect(entry.rights.evidence.length).toBeGreaterThan(0);
+      expect(entry.rights.state).not.toBe('CLEARED');
     }
   });
 

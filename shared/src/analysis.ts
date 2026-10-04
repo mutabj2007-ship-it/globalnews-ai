@@ -1,4 +1,5 @@
 import type { SummaryStatement } from './summary-statements';
+import type { SourceCoverageDisclosure } from './global-reach';
 import { findCountryByIso2, findCountryByIso3, type CountryMeta } from './countries';
 import type {
   NewsArticle,
@@ -927,6 +928,15 @@ export interface AnalysisRetrievalContext {
    */
   countryCode?: string;
   countryName?: string;
+
+  /**
+   * T1 COVERAGE TRUTHFULNESS — present when `countryCode` is set: the canonical
+   * local-source coverage state for that country and the locality (LOCAL /
+   * INTERNATIONAL / UNVERIFIED_LOCALITY) of the evidence actually used. A
+   * `notice` means no qualified local source is active and rights-cleared, so
+   * the evidence must not be described as local coverage. Additive, optional.
+   */
+  sourceCoverage?: SourceCoverageDisclosure;
 
   /** Present only when country-aware retrieval was used. */
   providerDisplayName?: string;

@@ -128,6 +128,9 @@ export interface EvidenceSelectionCardLabels {
     readonly failed: string;
     readonly load: string;
     readonly reload: string;
+    /** T1 — the local-coverage disclosure sentences (sourceCoverage.notice). */
+    readonly coverageAbsent?: string;
+    readonly coverageUnverified?: string;
   };
   /* ── DESIGN REVISION 1.2 · THE FIVE RESTORED BLOCKS ──────────────────── */
   /** 01 identity — the line under the name: ISO and geographic region. */
@@ -287,6 +290,12 @@ export interface EvidenceSelectionCardProps {
    */
   readonly countryReadState?: CountryReadState;
   readonly onLoadCountry?: () => void;
+  /**
+   * T1 COVERAGE TRUTHFULNESS — the backend's canonical local-coverage notice for
+   * a settled country read. Rendered as one governed sentence; computing it cost
+   * no request (it arrives on the read the reader already asked for).
+   */
+  readonly sourceCoverageNotice?: 'LOCAL_COVERAGE_ABSENT' | 'LOCAL_COVERAGE_UNVERIFIED';
   readonly onFocus?: () => void;
   readonly onOpenAnalysis?: () => void;
   readonly onOpenSources?: () => void;
@@ -433,6 +442,7 @@ export function EvidenceSelectionCard({
   onFocus,
   countryReadState,
   onLoadCountry,
+  sourceCoverageNotice,
   onOpenAnalysis,
   onOpenSources,
   onClearSelection,
@@ -677,6 +687,18 @@ export function EvidenceSelectionCard({
                     ? labels.countryRead.notLoaded
                     : null}
           </p>
+          {(countryReadState === 'READY' || countryReadState === 'READY_NO_COVERAGE') &&
+            sourceCoverageNotice !== undefined && (
+              <p
+                data-gn="country-read-source-coverage"
+                data-gn-notice={sourceCoverageNotice}
+                className="mt-[4px] text-[11px] leading-[1.45] text-sp-ink-2"
+              >
+                {sourceCoverageNotice === 'LOCAL_COVERAGE_ABSENT'
+                  ? labels.countryRead.coverageAbsent
+                  : labels.countryRead.coverageUnverified}
+              </p>
+            )}
           {/*
             OFFERED IN FOUR STATES OF SIX — never while LOADING, never when
             UNSELECTED. `loadActionIsOffered` is Main's function and the single

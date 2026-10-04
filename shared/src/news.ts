@@ -8,6 +8,7 @@
  */
 
 import type { OfficialSourceClass } from './officialSources';
+import type { SourceCoverageDisclosure } from './global-reach';
 
 export type NewsCategory =
   | 'world'
@@ -468,6 +469,16 @@ export interface ProviderHealthStatus {
 
   /** 0-1. Fraction of this provider's records for which geographic resolution succeeded. */
   geoResolutionSuccessRate?: number;
+
+  /**
+   * T1 — the source rights gate's decisions for a multi-source lane: sources
+   * refused activation because their recorded rights are RESTRICTED/PROHIBITED,
+   * and active sources whose rights are not CLEARED. Absent when neither exists.
+   */
+  sourceRights?: {
+    refused: { sourceId: string; reason: string; rightsState: string }[];
+    rightsUnresolved: { sourceId: string; rightsState: string }[];
+  };
 }
 
 /**
@@ -523,4 +534,12 @@ export interface CountryNewsResponse {
    * query such as "Rwanda" or "RWA".
    */
   city?: string;
+
+  /**
+   * T1 COVERAGE TRUTHFULNESS — the canonical local-source coverage fact for this
+   * country (shared accountCountrySourceCoverage) and the locality of the
+   * returned evidence. Computed from registries and the articles already in
+   * this response; no provider call. Additive and optional.
+   */
+  sourceCoverage?: SourceCoverageDisclosure;
 }
