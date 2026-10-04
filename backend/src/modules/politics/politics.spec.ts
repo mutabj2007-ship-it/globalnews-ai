@@ -1,9 +1,9 @@
-import * as producer from './politics.producer';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { domainObservationKey } from '@globalnews-ai/shared';
+import { domainObservationKey, type RetainedPoliticsObservation } from '@globalnews-ai/shared';
 import { politicsArtifactHash, producePoliticsLedger, producePoliticsObservation, type PoliticsCapture } from './politics.producer';
 import { PoliticsReadModule } from './politics.module';
+import { PoliticsObservationRepository } from './politics-observation.repository';
 
 // Synthetic test evidence, local to this spec; never imported by the retained ledger.
 function fixture(): PoliticsCapture {
@@ -53,6 +53,8 @@ describe('Politics governed producer', () => {
     ['changed capture bytes', c => { c.artifact.text += 'changed'; }],
     ['generated paraphrase', c => { c.observation.claim.sourceText = 'not in the captured source'; }],
     ['missing authorship', c => { (c.observation as any).attributeAuthorship = []; }],
+    // Claude A CITE-01: the cited text must be the publisher's own words, never locally asserted.
+    ['source text not attributed to the publisher', c => { (c.observation as any).attributeAuthorship = c.observation.attributeAuthorship.map(r => r.attribute === 'sourceText' ? { ...r, authorship: 'LOCALLY_ASSERTED' } : r); }],
     ['wrong language', c => { (c.observation.provenance as any).language = 'en'; }],
     ['publication after ingestion', c => { (c.observation as any).publishedAt = '2027-01-01T00:00:00Z'; }],
     ['event after ingestion', c => { (c.observation.temporal as any).occurredAt = '2027-01-01T00:00:00Z'; }],
@@ -116,7 +118,8 @@ describe('public GET has no acquisition', () => {
     const outbound = jest.spyOn(globalThis, 'fetch').mockImplementation(() => { throw new Error('provider call forbidden'); });
     const http = jest.spyOn(require('node:http'), 'request');
     const https = jest.spyOn(require('node:https'), 'request');
-    const module = await Test.createTestingModule({ imports: [PoliticsReadModule] }).compile();
+    const module = await Test.createTestingModule({ imports: [PoliticsReadModule] })
+      .overrideProvider(PoliticsObservationRepository).useValue(store([])).compile();
     const app = module.createNestApplication();
     try {
       await app.init();
@@ -136,11 +139,21 @@ describe('public GET has no acquisition', () => {
   });
 });
 
-it('public read exposes admitted retained rows with bounded selection, never acquires', async () => {
+/** A retained-store stand-in: current revisions filtered by subject, bounded like the real read. */
+function store(rows: RetainedPoliticsObservation[], withheld = false) {
+  return {
+    current: jest.fn(async (filter: { subjectId?: string }, limit: number) =>
+      rows.filter(o => filter.subjectId === undefined || o.subjectId === filter.subjectId).slice(0, limit)),
+    inventory: jest.fn(async () => ({ identities: rows.length + (withheld ? 1 : 0), admitted: rows.length, withheld })),
+  };
+}
+
+it('public read exposes admitted retained rows from the store with bounded selection, never acquires', async () => {
   const admitted = producePoliticsObservation(fixture());
-  const ledger = jest.spyOn(producer, 'producePoliticsLedger').mockReturnValue({ observations: Array(101).fill(admitted), withheld: false });
+  const repository = store(Array(101).fill(admitted));
   const outbound = jest.spyOn(globalThis, 'fetch').mockImplementation(() => { throw new Error('acquisition forbidden'); });
-  const module = await Test.createTestingModule({ imports: [PoliticsReadModule] }).compile();
+  const module = await Test.createTestingModule({ imports: [PoliticsReadModule] })
+    .overrideProvider(PoliticsObservationRepository).useValue(repository).compile();
   const app = module.createNestApplication();
   try {
     await app.init();
@@ -148,10 +161,26 @@ it('public read exposes admitted retained rows with bounded selection, never acq
     expect(response.body.observations).toEqual([admitted]);
     expect(response.body.truncated).toBe(true);
     expect(response.body.absence).toBeNull();
+    expect(repository.current).toHaveBeenLastCalledWith({ subjectId: 'test-subject' }, 2);
     const empty = await request(app.getHttpServer()).get('/politics/observations?subjectId=missing').expect(200);
     expect(empty.body.observations).toEqual([]);
     expect(empty.body.absence).toBe('NOT_ASSESSED');
-    expect(ledger).toHaveBeenCalledTimes(1); // initialized once, not per public read
     expect(outbound).not.toHaveBeenCalled();
   } finally { await app.close(); jest.restoreAllMocks(); }
+});
+
+it('a retracted-only store reads EVIDENCE_WITHHELD; an unreadable store reads NOT_ASSESSED, never 500', async () => {
+  const withheld = await Test.createTestingModule({ imports: [PoliticsReadModule] })
+    .overrideProvider(PoliticsObservationRepository).useValue(store([], true)).compile();
+  const broken = await Test.createTestingModule({ imports: [PoliticsReadModule] })
+    .overrideProvider(PoliticsObservationRepository)
+    .useValue({ current: jest.fn(async () => { throw new Error('db down'); }), inventory: jest.fn(async () => { throw new Error('db down'); }) })
+    .compile();
+  const a = withheld.createNestApplication(), b = broken.createNestApplication();
+  try {
+    await a.init(); await b.init();
+    expect((await request(a.getHttpServer()).get('/politics/observations').expect(200)).body.absence).toBe('EVIDENCE_WITHHELD');
+    expect((await request(b.getHttpServer()).get('/politics/observations').expect(200)).body)
+      .toEqual({ observations: [], truncated: false, absence: 'NOT_ASSESSED', acquisition: 'RETAINED_ONLY' });
+  } finally { await a.close(); await b.close(); }
 });
