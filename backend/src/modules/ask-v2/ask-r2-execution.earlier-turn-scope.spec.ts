@@ -468,3 +468,75 @@ describe('SHARED R4 CONTINUITY — interpreter-first (FR / DE / ES / PT / AR): t
     ).toEqual([['CONFLICT', 'MLI', 'EARLIER_TURN']]);
   });
 });
+
+describe('CTO R4 — SUBJECTLESS FOLLOW-UP GUARD: no resolved answer and no carried subject → clarify, never search the words', () => {
+  it.each([
+    ['What about it?', 'en'],
+    ['Why does this matter?', 'en'],
+    ['A co z tym?', 'pl'],
+  ] as const)(
+    '"%s" (%s) as the first turn → NO_PRIOR_SUBJECT, zero model / provider calls',
+    async (q, lang) => {
+      const c = conversation(lang);
+      const t = await c.ask(q);
+      expect(t.payload.answer).toMatchObject({
+        state: 'CLARIFICATION_REQUIRED',
+        basis: 'NO_PRIOR_SUBJECT',
+      });
+      expect(t.analysisCalls).toHaveLength(0);
+      expect(t.backgroundCalls).toHaveLength(0);
+    },
+  );
+
+  it.each([
+    ['How does this affect households?', 'en'],
+    ['Jak to wpływa na gospodarstwa domowe?', 'pl'],
+  ] as const)(
+    '"%s" (%s) first turn: it carries content words and is planned as reasoning — answered as asked, never a search of the words',
+    async (q, lang) => {
+      const c = conversation(lang);
+      const t = await c.ask(q);
+      expect(t.analysisCalls).toHaveLength(0);
+    },
+  );
+
+  it.each([
+    [SUBJECT.en, 'What about it?', 'en'],
+    ['Explain the EU AI regulation.', 'Why does this matter?', 'en'],
+    ["How is Kenya's economy doing?", 'How does this affect households?', 'en'],
+    [SUBJECT.pl, 'A co z tym?', 'pl'],
+  ] as const)(
+    'a valid reader subject exists ("%s") → "%s" keeps ordinary topical continuation',
+    async (first, follow, lang) => {
+      const c = conversation(lang);
+      await c.ask(first);
+      const t = await c.ask(follow);
+      expect(t.payload.answer.state).not.toBe('CLARIFICATION_REQUIRED');
+      expect(t.analysisCalls.length + t.backgroundCalls.length).toBe(1);
+      /* continued through the reader's subject, never an inherited answer scope */
+      expect(t.read?.inheritedScope).toBeUndefined();
+    },
+  );
+
+  it('the reader subject steers retrieval of the continued turn (prior user question, not the earlier answer)', async () => {
+    const c = conversation('en');
+    await c.ask(SUBJECT.en);
+    const t = await c.ask('What about it?');
+    expect(t.analysisCalls).toHaveLength(1);
+    expect(t.analysisCalls[0][3]).toBe(SUBJECT.en);
+  });
+
+  it('a resolved earlier-answer reference is never caught by the guard', async () => {
+    const c = conversation('en');
+    await c.ask(SUBJECT.en);
+    const t = await c.ask('Why did you say that?');
+    expect(t.payload.answer.state).not.toBe('CLARIFICATION_REQUIRED');
+    expect(t.payload.diagnostics.job.discourseReference).toBe('PRIOR_WORK');
+  });
+
+  it('a turn that names its own subject is untouched ("What is the EU AI Act?")', async () => {
+    const c = conversation('en');
+    const t = await c.ask('What is the EU AI Act?');
+    expect(t.payload.answer.state).not.toBe('CLARIFICATION_REQUIRED');
+  });
+});

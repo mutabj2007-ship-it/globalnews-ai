@@ -1,4 +1,5 @@
 import type { ConversationSubjectDisclosure } from '@globalnews-ai/shared';
+import { normalizeQuery } from '@globalnews-ai/shared';
 import { classifyQueryIntent } from '../query/query-intent.util';
 import { retrievalSubjectOf } from '../query/response-directives.util';
 import {
@@ -6,7 +7,12 @@ import {
   deriveGenericNewsQuery,
   FALLBACK_STOPWORDS,
 } from '../query/derive-generic-news-query.util';
-import { deriveEventTopic, hasAnaphoricReference, isEventTopic } from './event-anchor.util';
+import {
+  deriveEventTopic,
+  hasAnaphoricReference,
+  isAnaphoricFollowUp,
+  isEventTopic,
+} from './event-anchor.util';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -291,4 +297,37 @@ export function orderByFocus<T extends { readonly title?: string; readonly summa
     ...articles.filter((article) => addressesFocus(article, terms)),
     ...articles.filter((article) => !addressesFocus(article, terms)),
   ];
+}
+
+/**
+ * CTO R4 — SUBJECTLESS FOLLOW-UP GUARD (shared authority, no phrase list). The analysis path
+ * continues a follow-up that refers back instead of naming a subject ONLY through these two
+ * authorities (analysis.service.ts — the event anchor and topic continuity): an anaphoric follow-up
+ * to a prior EVENT question, or a subject follow-up whose prior USER question yields a conversation
+ * subject. When the follow-up refers back and NEITHER holds, nothing would be carried and the
+ * literal words would be searched.
+ *   refersBack     the turn refers back instead of naming a subject of its own
+ *   namesNothing   it names nothing at all (an anaphor and no content word or place)
+ *   carried        a valid reader subject exists to continue: the prior USER question names a
+ *                  subject of its own (it is not itself a referring follow-up), or one of the two
+ *                  continuation authorities above derives one from it
+ */
+export function readSubjectlessFollowUp(
+  question: string,
+  priorQuestion: string | undefined,
+): { readonly refersBack: boolean; readonly namesNothing: boolean; readonly carried: boolean } {
+  const q = normalizeQuery(question).normalizedQuery;
+  const namesNothing = isAnaphoricFollowUp(q);
+  const refersBack = namesNothing || isSubjectFollowUp(q);
+  if (!refersBack) return { refersBack, namesNothing, carried: false };
+  const prior =
+    priorQuestion === undefined || priorQuestion.trim().length === 0
+      ? undefined
+      : normalizeQuery(priorQuestion).normalizedQuery;
+  const carried =
+    prior !== undefined &&
+    (!(isAnaphoricFollowUp(prior) || isSubjectFollowUp(prior)) ||
+      (isAnaphoricFollowUp(q) && isEventTopic(deriveEventTopic(prior))) ||
+      (isSubjectFollowUp(q) && deriveConversationSubject(prior) !== undefined));
+  return { refersBack, namesNothing, carried };
 }

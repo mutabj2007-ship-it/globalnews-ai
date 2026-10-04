@@ -69,6 +69,7 @@ import {
   requiredRolesOf,
 } from '../ask-router/answer-state';
 import { readContinuationEllipsis } from '../analysis/anchor/continuation-ellipsis.util';
+import { readSubjectlessFollowUp } from '../analysis/anchor/conversation-subject.util';
 import { landedSpecialistRegistryPort } from '../ask-router/specialist-registry.port';
 import { planChips, withRelationshipScope, type PlanChips } from '../ask-router/plan-chips';
 import type { PlannerDeps } from '../ask-router/frozen-c/src/planner';
@@ -1079,6 +1080,60 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         null,
         false,
       );
+    }
+    /*
+      CTO R4 — SUBJECTLESS FOLLOW-UP GUARD (approved with 86795fb). A follow-up that refers back
+      instead of naming a subject ("What about it?", "How does this affect households?") is answered
+      only about a subject that actually exists: a resolved earlier answer (R4 resolver: PRIOR_WORK /
+      an inherited scope), the conversation's carried subject or place, the turn's own context, or a
+      subject the prior USER question supplies through the analysis path's own continuation
+      authorities (readSubjectlessFollowUp). With none of them the literal words would be searched,
+      so the reader is asked instead — zero model, zero provider calls. Structural (the shared
+      anaphora / subject-follow-up readers), never a phrase list; EN / PL, where those readers live.
+    */
+    if (
+      (request.language === 'en' || request.language === 'pl') &&
+      /* the turn names no entity and no typed place of its own */
+      route.semantic.entities.length === 0 &&
+      !route.envelope.geography.candidates.some((g) => g.source === 'TYPED_GEOGRAPHY') &&
+      contract.inheritedScope === null &&
+      route.job.discourseReference !== 'PRIOR_WORK' &&
+      route.semantic.references.target === 'NONE' &&
+      !route.semantic.references.objective &&
+      !route.semantic.references.choiceSet &&
+      request.context === undefined &&
+      request.continuation === undefined &&
+      (request.conversation?.trace.subject ?? null) === null
+    ) {
+      const followUp = readSubjectlessFollowUp(
+        request.question,
+        askRequestContext.getStore()?.priorQuestion ?? undefined,
+      );
+      /* a turn that names NOTHING is never answered about nothing; one that refers back but carries
+         content words ("How does this affect households?") is guarded where it would SEARCH them —
+         a reasoning / advisory turn with its own content words is answered as asked */
+      if (
+        followUp.refersBack &&
+        !followUp.carried &&
+        (followUp.namesNothing || requiredRolesOf(route.plan).includes('REPORTING'))
+      ) {
+        return this.result(
+          plan,
+          route,
+          operationId,
+          this.observeAnswer(
+            {
+              state: 'CLARIFICATION_REQUIRED',
+              basis: 'NO_PRIOR_SUBJECT',
+              missingRoles: [],
+              candidates: [],
+            },
+            draft,
+          ),
+          null,
+          false,
+        );
+      }
     }
     /*
       ASK INTELLIGENCE BINDING LIVE ACCEPTANCE REPAIR R1 (A) — two governed answers that need
