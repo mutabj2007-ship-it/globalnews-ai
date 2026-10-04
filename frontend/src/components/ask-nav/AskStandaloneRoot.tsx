@@ -4,7 +4,8 @@ import { AskShellFrame } from '@/components/ask-nav/AskShellFrame';
 import { AskThemedPage } from '@/components/ask-nav/AskThemedPage';
 import type { ThemePreference } from '@/lib/theme/theme';
 import { SiteStructuredData } from '@/components/seo/SiteStructuredData';
-import type { AskR2Locale } from '@/lib/ask/askR2Strings';
+import type { DisplayLocale } from '@globalnews-ai/shared';
+import { askLanguageDisposition } from '@/lib/ask/askLocale';
 
 /**
  * STANDALONE PUBLIC BETA CONVERGENCE R1 — `/` as the standalone Ask entry surface.
@@ -19,15 +20,19 @@ export function AskStandaloneRoot({
   locale,
   theme,
 }: {
-  readonly locale: AskR2Locale;
+  readonly locale: DisplayLocale;
   /** TRUST R1 — the reader's theme cookie, read by the root page (no flash). */
   readonly theme: ThemePreference;
 }): JSX.Element {
+  /* R4 · the shell's own labels are the EN/PL catalogue's (`askNavStrings` is a TOTAL record
+     over two locales); the frame renders in the reader's locale and discloses the difference.
+     One disposition, so the two cannot drift apart. */
+  const disposition = askLanguageDisposition(locale);
   return (
     <AskThemedPage theme={theme} root="standalone">
       <SiteStructuredData />
       <AskNavProvider>
-        <AskNavShell language={locale} theme={theme} />
+        <AskNavShell language={disposition.catalogueLocale} selected={locale} theme={theme} />
         <Suspense fallback={<main className="min-h-0 flex-1 bg-void" />}>
           <AskShellFrame locale={locale} />
         </Suspense>

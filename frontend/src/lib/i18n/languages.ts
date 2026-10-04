@@ -1,5 +1,5 @@
 import type { LanguageCode, DisplayLocale } from '@globalnews-ai/shared';
-import { isDisplayLocale } from '@globalnews-ai/shared';
+import { DISPLAY_LOCALES, DISPLAY_LOCALE_META, isDisplayLocale } from '@globalnews-ai/shared';
 
 /**
  * Milestone #47 — every language the shared LanguageCode type knows
@@ -63,7 +63,35 @@ export const ACTIVE_LANGUAGES: LanguageCode[] = ['en', 'pl'];
  * create two registries that agree only by discipline, and the next language
  * would be added to one of them.
  */
-export const SELECTABLE_LOCALES: readonly DisplayLocale[] = ACTIVE_LANGUAGES.filter(
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * R4 · CLAUDE H — THE DEPLOYMENT FACT IS NOW THE CONTRACTED SEVEN
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * CTO AUTHORIZATION: "This contract explicitly opens the previously deferred frontend
+ * language work." The registry was `['en','pl']` because no deployment offered more; the
+ * selector is now contracted to offer FR / DE / ES / PT / AR, so the deployment fact is the
+ * seven and this is where that is stated.
+ *
+ * IT IS STILL DERIVED AND STILL GUARDED. It is `DISPLAY_LOCALES` — the shared contract's own
+ * list — rather than a second literal, so it cannot drift from the contract and cannot
+ * exceed it. The previous derivation ran through `ACTIVE_LANGUAGES`, which is typed
+ * `LanguageCode[]` and therefore CANNOT express `de` or `pt` at all: deriving the seven from
+ * it is impossible, not merely awkward. `ACTIVE_LANGUAGES` keeps its own meaning (the
+ * representable source-intelligence codes this deployment treats as active) and is left
+ * exactly as it was, because the two sets answer different questions — the distinction
+ * LANG-UI-7-D1 exists to preserve.
+ *
+ * WHAT THIS DOES NOT CLAIM. Offering a locale in the selector is a UI fact. It is not a
+ * claim that every catalogue is translated, and it is not a claim that the Ask engine
+ * answers in it — `lib/ask/askLocale.ts` names that boundary and `askSevenStrings` discloses
+ * catalogue coverage. A locale appearing here with an undisclosed English fallback behind it
+ * would be the defect; a disclosed one is a state.
+ */
+export const SELECTABLE_LOCALES: readonly DisplayLocale[] = DISPLAY_LOCALES;
+
+/** The previous EN/PL-derived registry, kept for the surfaces that are still EN/PL only. */
+export const ANSWER_CAPABLE_LOCALES: readonly DisplayLocale[] = ACTIVE_LANGUAGES.filter(
   /*
     THE INTERSECTION IS LOAD-BEARING, and it is worth a line because the obvious
     form does not compile and the obvious repair is another cast.
@@ -82,14 +110,24 @@ export const SELECTABLE_LOCALES: readonly DisplayLocale[] = ACTIVE_LANGUAGES.fil
   (code): code is LanguageCode & DisplayLocale => isDisplayLocale(code),
 );
 
-export const LANGUAGE_NATIVE_LABELS: Record<LanguageCode, string> = {
-  en: 'English',
-  pl: 'Polski',
+/**
+ * R4 · TOTAL OVER BOTH SETS, AND THE DISPLAY NAMES ARE NOT RE-AUTHORED.
+ *
+ * It was `Record<LanguageCode, string>`, which has no `de` and no `pt` — so a selector
+ * offering the contracted seven could not name two of them. The seven display endonyms now
+ * come from `DISPLAY_LOCALE_META`, the shared contract's own table ("the locale's own name,
+ * in that locale. Never translated"), and `sw`/`rw` keep their entries because they are
+ * `LanguageCode` members with no display counterpart.
+ *
+ * Deriving rather than re-typing matters here: 'Français' written twice would agree with
+ * itself only by discipline, and a correction would land in one copy.
+ */
+export const LANGUAGE_NATIVE_LABELS: Record<LanguageCode | DisplayLocale, string> = {
   sw: 'Kiswahili',
-  fr: 'Français',
-  es: 'Español',
-  ar: 'العربية',
   rw: 'Kinyarwanda',
+  ...(Object.fromEntries(
+    DISPLAY_LOCALES.map((locale) => [locale, DISPLAY_LOCALE_META[locale].endonym]),
+  ) as Record<DisplayLocale, string>),
 };
 
 /** Milestone #47 — only 'ar' is right-to-left among the planned seven languages. */
@@ -193,7 +231,15 @@ export function readLanguageCookie(): LanguageCode | undefined {
  * Never contains anything beyond one of the validated LanguageCode
  * strings.
  */
-export function persistLanguageSelection(language: LanguageCode): void {
+/**
+ * R4 · accepts any contracted display locale.
+ *
+ * The cookie is a string and always was; the narrow parameter type was the only thing
+ * preventing a reader from storing `de` or `pt`. Server reads still guard the value with
+ * their own predicate, so widening what may be WRITTEN does not widen what any surface
+ * claims it can RENDER.
+ */
+export function persistLanguageSelection(language: LanguageCode | DisplayLocale): void {
   if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(STORAGE_KEY, language);
@@ -207,4 +253,16 @@ export function persistLanguageSelection(language: LanguageCode): void {
     // failed cookie write degrades to "homepage feed uses English",
     // never breaks the page.
   }
+}
+
+/**
+ * R4 · THE ONE CROSSING FROM A STORED/REPRESENTABLE CODE TO A DISPLAY LOCALE.
+ *
+ * Cookie values and `LanguageCode` values are not display locales — `sw` and `rw` have no
+ * display counterpart — so the crossing is named here rather than cast at each control. An
+ * unrecognised value resolves to `'en'`, which is a resolution and not a clamp: a value the
+ * contract does not contain is not a request for a locale.
+ */
+export function displayLocaleOf(value: string | undefined | null): DisplayLocale {
+  return isDisplayLocale(value) ? value : 'en';
 }

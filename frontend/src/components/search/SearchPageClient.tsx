@@ -1,5 +1,6 @@
 'use client';
 
+import { askLanguageDisposition, resolveAskLocale } from '@/lib/ask/askLocale';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -227,9 +228,22 @@ export function SearchPageClient({ initialLanguage = 'en' }: SearchPageClientPro
     The accepted frame below still renders the reporting analysis (the Ask V2 payload carries the
     same AnalysisApiResponse); any other answer state renders through the canonical turn view.
   */
-  const r2Locale: 'en' | 'pl' = language === 'pl' ? 'pl' : 'en';
+  /* R4 · SEVEN-LANGUAGE ASK FRONTEND — one disposition replaces the clamp this line was:
+     `const r2Locale: 'en' | 'pl' = language === 'pl' ? 'pl' : 'en';`. The interface locale is
+     the reader's own; the answer locale is the measured backend fact; the difference is
+     carried end to end. lib/ask/askLocale.ts is the one place a locale is resolved. */
+  const askDisposition = askLanguageDisposition(resolveAskLocale(language));
+  const r2Locale = askDisposition.catalogueLocale;
   const r2s = askR2Strings(r2Locale);
-  const r2 = useAskR2Conversation(r2Locale, sanitizeReturnPath('/search'), {
+  /*
+    R4 · THE REQUEST CARRIES WHAT THE READER SELECTED, NOT WHAT THE CHROME RENDERS.
+
+    `disposition.requested` is the reader's own locale, all seven. The EN/PL catalogues above
+    still read `catalogueLocale`, because those catalogues have two entries — but the SERVER is
+    told what was actually asked, so it answers in `fr` and records `fr` as `fr` instead of
+    receiving an `en` the frontend invented. That is the whole point of the client pin.
+  */
+  const r2 = useAskR2Conversation(askDisposition.requested, sanitizeReturnPath('/search'), {
     guestTrial: true,
     readOnOpen: false,
   });

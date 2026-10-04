@@ -1,5 +1,6 @@
 'use client';
 
+import { isolatedAuto, isolatedLtr } from '@/lib/ask/askDirection';
 import type { JSX } from 'react';
 import { safeExternalHref } from '@globalnews-ai/shared';
 import { askR2Strings, type AskR2Locale } from '@/lib/ask/askR2Strings';
@@ -56,19 +57,33 @@ export function AskSourcesColumn({
               data-source-number={index + 1}
               className="flex gap-2.5 border-t border-[#0a2744] py-2.5"
             >
-              <span className="flex h-[22px] min-w-[28px] shrink-0 items-center justify-center rounded-[5px] border border-[#2b4a6b] px-[5px] font-mono text-[11px] font-bold text-[#d5e4f2]">
+              {/* R4 · the citation number is a left-to-right token whatever the thread's
+                  direction, and it is bracketed by borders rather than by characters — so it
+                  is pinned LTR and isolated rather than left to the paragraph. */}
+              <span
+                className="flex h-[22px] min-w-[28px] shrink-0 items-center justify-center rounded-[5px] border border-[#2b4a6b] px-[5px] font-mono text-[11px] font-bold text-[#d5e4f2]"
+                {...isolatedLtr()}
+              >
                 {index + 1}
               </span>
               <div className="flex min-w-0 flex-1 flex-col gap-1">
+                {/* R4 · a publisher's headline is prose of unknown direction. Isolated in the
+                    inherited direction so its own punctuation stays with it. */}
                 <a
                   href={safeExternalHref(source.url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[14px] font-semibold leading-[1.3] text-[#e6eef6] underline decoration-transparent underline-offset-4 hover:decoration-[#5abff5]"
+                  {...isolatedAuto()}
                 >
                   {source.title}
                 </a>
-                <span className="font-mono text-[12px] leading-[1.3] text-[#8299b4]">
+                {/* R4 · publisher name and a UTC stamp: one run, isolated, so the stamp's
+                    Latin "UTC" cannot reorder against an Arabic publisher. */}
+                <span
+                  className="font-mono text-[12px] leading-[1.3] text-[#8299b4]"
+                  {...isolatedAuto()}
+                >
                   {[source.publisher, formatUtc(source.publishedAt, locale)]
                     .filter(Boolean)
                     .join(' · ')}

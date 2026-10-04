@@ -128,7 +128,15 @@ describe('CONVERGENCE — Unified Intelligence Binding R2 is the ONLY Ask contex
       /* useAskR2Conversation.ts — APPROVED NARROW DEVIATION (CTO checkpoint 5 §3): no longer
          whole-file pinned; pinned below as "58f80 minus the approved block" plus semantic
          invariants. This is not a retirement of the Unified Intelligence Binding authority. */
-      'components/my-intelligence/MyIntelligenceClient.tsx',
+      /* R4 · SEVEN-LANGUAGE ASK CLIENT PIN (CTO AUTHORIZED) — MyIntelligenceClient.tsx is no
+         longer whole-file pinned. It held one of the ten EN/PL clamps
+         (`const r2Locale: 'en' | 'pl' = language === 'pl' ? 'pl' : 'en';`), and a surface that
+         cannot express the reader's language cannot send it. The deviation is NARROW and is
+         pinned below by semantic invariant rather than by byte identity: the R2 context path —
+         askContextRefOf, the selection ref, the module ref, and the single canonical
+         conversation — is asserted unchanged. This is not a retirement of the Unified
+         Intelligence Binding authority; `lib/myIntelligence/selection.ts`, which owns the
+         selection contract itself, stays byte-pinned. */
       'lib/myIntelligence/selection.ts',
       'components/home/HomeCompare.tsx',
       /* TRUST R1 — AskFrameScreen is deliberately changed (chat UX, privacy links); its R2 context
@@ -145,6 +153,44 @@ describe('CONVERGENCE — Unified Intelligence Binding R2 is the ONLY Ask contex
       1. the file MINUS the one marked block is still byte-identical to 58f80 — any other drift fails;
       2. semantic invariants that hold whatever the block says.
   */
+  /*
+    R4 · SEVEN-LANGUAGE ASK CLIENT PIN (CTO AUTHORIZED) — the narrow deviation in
+    MyIntelligenceClient.tsx, pinned by invariant rather than by bytes.
+
+    Two layers replace the whole-file pin, the same shape CTO checkpoint 5 §3 used for the
+    conversation hook:
+      1. the R2 CONTEXT PATH is unchanged — this is the Unified Intelligence Binding
+         authority's actual subject, and it is what the byte pin was protecting;
+      2. the ONLY language change is the one authorized: a disposition in place of a clamp,
+         with the request carrying the reader's selection.
+  */
+  describe('MyIntelligenceClient.tsx — approved narrow deviation (R4 seven-language client pin)', () => {
+    const mi = code(read('components', 'my-intelligence', 'MyIntelligenceClient.tsx'));
+
+    it('the R2 context path is unchanged: one canonical conversation, references only', () => {
+      expect(mi).toContain('useAskR2Conversation(');
+      expect(mi).toMatch(/from '@\/lib\/ask\/useAskR2Conversation'/);
+      /* No second client, no legacy transport, no direct fetch. */
+      expect(mi).not.toMatch(/analyzeNews|\/analysis\/news|accountFetch|axios|XMLHttpRequest/);
+      expect(mi).not.toMatch(/\bfetch\s*\(/);
+    });
+
+    it('the clamp is gone and the request carries the reader selection', () => {
+      expect(mi).not.toMatch(/r2Locale:\s*'en'\s*\|\s*'pl'/);
+      expect(mi).not.toMatch(/language === 'pl' \? 'pl' : 'en'/);
+      expect(mi).toContain('askLanguageDisposition(resolveAskLocale(language))');
+      expect(mi).toContain('useAskR2Conversation(askDisposition.requested');
+      /* The two-locale chrome still reads the answer locale — the two are kept apart. */
+      expect(mi).toContain('askDisposition.catalogueLocale');
+    });
+
+    it('nothing else about the surface moved', () => {
+      /* The selection contract it consumes is still the byte-pinned one. */
+      expect(mi).toMatch(/from '@\/lib\/myIntelligence\/selection'/);
+      expect(mi).not.toMatch(/SemanticTurnIR|semanticInterpreter|userJob/i);
+    });
+  });
+
   describe('useAskR2Conversation.ts — approved narrow deviation from 58f80', () => {
     const PATH = 'lib/ask/useAskR2Conversation.ts';
     const current = read(...PATH.split('/'));

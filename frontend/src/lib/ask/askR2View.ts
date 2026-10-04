@@ -1,3 +1,5 @@
+import type { DisplayLocale } from '@globalnews-ai/shared';
+import { askFormatUtcInstant } from './askDirection';
 import type { AskAnswerState, AskPlanChip, AskR2Payload } from '@/lib/api/askV2Api';
 import type { AskR2Locale, AskR2Strings } from './askR2Strings';
 import { resolveEvidenceState } from '@globalnews-ai/shared';
@@ -131,18 +133,21 @@ const TONE_OF: Readonly<Record<AskR2Badge, AskR2View['tone']>> = {
 const HANDOFF_BADGES: ReadonlySet<AskR2Badge> = new Set(['ver', 'cur', 'part']);
 
 /** "28 Sep 2026, 04:40 UTC" / "28 wrz 2026, 04:40 UTC" — UTC, as D25 writes it. */
-export function formatUtc(iso: string | undefined, locale: AskR2Locale): string | null {
-  if (iso === undefined) return null;
-  const t = Date.parse(iso);
-  if (Number.isNaN(t)) return null;
-  const d = new Date(t);
-  const months =
-    locale === 'pl'
-      ? ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 'wrz', 'paź', 'lis', 'gru']
-      : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const hh = String(d.getUTCHours()).padStart(2, '0');
-  const mm = String(d.getUTCMinutes()).padStart(2, '0');
-  return `${d.getUTCDate()} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()}, ${hh}:${mm} UTC`;
+/**
+ * R4 · SEVEN-LANGUAGE ASK FRONTEND — Intl, not two hand-written month tables.
+ *
+ * This function carried `['sty','lut',…]` and `['Jan','Feb',…]` plus `padStart` clock
+ * arithmetic: correct for two locales, wrong for five, and structurally incapable of
+ * Eastern-Arabic numerals. It now delegates to `askFormatUtcInstant`, which builds one
+ * `Intl.DateTimeFormat` from the locale's own formatting profile — the profile the shared
+ * contract already decided, including `ar-u-nu-arab-ca-gregory`.
+ *
+ * The SIGNATURE AND THE UTC SUFFIX ARE UNCHANGED, and the parameter is widened rather than
+ * replaced, so every existing caller keeps compiling and Ask keeps stating its instants in
+ * UTC rather than in the reader's zone.
+ */
+export function formatUtc(iso: string | undefined, locale: DisplayLocale): string | null {
+  return askFormatUtcInstant(iso, locale);
 }
 
 function chipLabel(

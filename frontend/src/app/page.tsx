@@ -1,3 +1,4 @@
+import { resolveAskLocale } from '@/lib/ask/askLocale';
 import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
 import { NavBar } from '@/components/navigation/NavBar';
@@ -112,8 +113,11 @@ export default async function HomePage(): Promise<JSX.Element> {
      Home composition below is served only when GNA_PUBLIC_ROOT=platform. No Home feed is
      fetched for the Ask root. Ask serves EN/PL, like /ask. TRUST R1 — themed from the cookie. */
   const askTheme = parseThemePreference(cookies().get(THEME_COOKIE_NAME)?.value);
+  /* R4 · the standalone Ask root reads the reader's own locale. It previously re-read the RAW
+     cookie with a ternary, bypassing the `language` resolved above. The predicate below is
+     unchanged, and the note is kept out of it so the gate stays one readable statement. */
   if (standaloneAskRoot()) {
-    return <AskStandaloneRoot locale={languageCookie === 'pl' ? 'pl' : 'en'} theme={askTheme} />;
+    return <AskStandaloneRoot locale={resolveAskLocale(languageCookie)} theme={askTheme} />;
   }
   const dict = getDictionary(language);
   const t = dict.homeReva;

@@ -1,4 +1,4 @@
-import type { AnalysisApiResponse, MultiStoryAction } from '@globalnews-ai/shared';
+import type { AnalysisApiResponse, DisplayLocale, MultiStoryAction } from '@globalnews-ai/shared';
 import { accountFetch } from './accountFetch';
 
 /**
@@ -18,7 +18,28 @@ import { accountFetch } from './accountFetch';
  * cookie + CSRF).
  */
 
-export type AskV2Language = 'en' | 'pl';
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * R4 · SEVEN-LANGUAGE ASK CLIENT PIN — CTO AUTHORIZED
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * It was `'en' | 'pl'`, and that single line made the FRONTEND the thing that narrowed a
+ * reader's language: an `fr` request could not be EXPRESSED, so the server never learned
+ * what had been asked and could not refuse, disclose or record it. The narrowing happened
+ * before the request, where nothing downstream could see it.
+ *
+ * The server remains the authority on what it can ANSWER — `ask-v2.dto.ts:19` is still
+ * `@IsIn(['en','pl'])` and this lane does not touch backend routing. THAT IS PRECISELY WHY
+ * THE REQUEST MUST CARRY THE TRUTH: a server that is told `fr` can refuse it as `fr`, and a
+ * frontend that pre-clamped would make that refusal unreachable and its disclosure
+ * impossible. `lib/ask/askLocale.ts` names the boundary once and `askLanguageDisposition`
+ * returns the gap as data so the surface discloses it to the reader.
+ *
+ * NOTHING ELSE IN THIS FILE CHANGES. The widening is one type; every request body, route,
+ * header and outcome shape is untouched, which is what keeps the Unified Intelligence
+ * Binding R2 contract intact while the language it carries stops being a lie.
+ */
+export type AskV2Language = DisplayLocale;
 export type AskV2Intent = 'ask' | 'deep-analysis' | 'research-report';
 
 /**

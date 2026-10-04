@@ -192,7 +192,18 @@ describe('ASK SHELL — one session read, zero compute', () => {
   });
 
   it('re-selecting the current language is a no-op, so it cannot cost a reload', () => {
-    expect(shell).toContain('if (next === (language as LanguageCode)) return;');
+    /*
+      MOVED, NOT RELAXED. The guard now compares against `selectedLocale` — the reader's own
+      selection — rather than against the two-locale catalogue index, because the selector
+      used to display "English" to a reader who had chosen Arabic. The property this test
+      protects (re-selecting costs no reload) is unchanged, and it is now correct for all
+      seven rather than only for the two.
+    */
+    expect(shell).toContain('if (next === selectedLocale) return;');
+    expect(shell).toContain(
+      'const selectedLocale: DisplayLocale = selected ?? displayLocaleOf(language);',
+    );
+    expect(shell).toContain('value={selectedLocale}');
   });
 });
 

@@ -1,5 +1,6 @@
 'use client';
 
+import { isolatedAuto, isolatedLtr } from '@/lib/ask/askDirection';
 import {
   comparisonCoverageLines,
   resolveEvidenceState,
@@ -441,7 +442,9 @@ export function AskCompactResult({
                     data-source-number={number}
                     className="text-sm"
                   >
-                    <span className="me-1.5 font-mono text-[11px] text-ink-tertiary">
+                    {/* R4 · "[1]" is brackets around a digit — two neutrals and a number,
+                        which is the classic bidi reorder. Pinned LTR and isolated. */}
+                    <span className="me-1.5 font-mono text-[11px] text-ink-tertiary" {...isolatedLtr()}>
                       [{number}]
                     </span>
                     <a
@@ -452,7 +455,10 @@ export function AskCompactResult({
                     >
                       {source.title}
                     </a>
-                    <span className="ms-2 font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">
+                    <span
+                      className="ms-2 font-mono text-[10px] uppercase tracking-wide text-ink-tertiary"
+                      {...isolatedAuto()}
+                    >
                       {source.publisher}
                     </span>
                     {response.retrievalContext.datesRequested
@@ -467,6 +473,7 @@ export function AskCompactResult({
                             <span
                               data-ask="source-date"
                               className="ms-2 text-xs text-ink-secondary"
+                              {...isolatedAuto()}
                             >
                               {label}
                             </span>

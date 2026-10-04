@@ -1,3 +1,5 @@
+import { askLanguageDisposition } from '@/lib/ask/askLocale';
+import { resolveAskLocale } from '@/lib/ask/askLocale';
 import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
 import { AskNavProvider, AskNavShell } from '@/components/ask-nav/AskNavShell';
@@ -29,15 +31,22 @@ export const metadata: Metadata = {
 };
 
 export default function SavedPage(): JSX.Element {
-  const locale = cookies().get(LANGUAGE_COOKIE_NAME)?.value === 'pl' ? 'pl' : 'en';
+  /* R4 · SEVEN-LANGUAGE ASK FRONTEND — the reader's own locale, resolved once and not clamped.
+     This line was `=== 'pl' ? 'pl' : 'en'`; see lib/ask/askLocale.ts for the one declared
+     boundary between the seven-locale interface and the two-locale answer engine. */
+  const locale = resolveAskLocale(cookies().get(LANGUAGE_COOKIE_NAME)?.value);
+  /* R4 · one disposition per surface. The nav and continuity chrome read the two-locale
+     catalogues (`askNavStrings` / `askContinuityStrings`); the Ask frame renders in the
+     reader's locale. Reading both from one disposition is what stops them drifting. */
+  const chrome = askLanguageDisposition(locale).catalogueLocale;
 
   return (
     <AskThemedSurface theme={parseThemePreference(cookies().get(THEME_COOKIE_NAME)?.value)}>
       <AskNavProvider>
-        <AskNavShell language={locale} />
-        <AskContinuityHeader locale={locale} surface="saved" />
+        <AskNavShell language={chrome} selected={locale} />
+        <AskContinuityHeader locale={chrome} surface="saved" />
         <AskClearedBoundary>
-          <SavedClient locale={locale} />
+          <SavedClient locale={chrome} />
         </AskClearedBoundary>
       </AskNavProvider>
     </AskThemedSurface>

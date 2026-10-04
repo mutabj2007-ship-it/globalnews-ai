@@ -1,5 +1,6 @@
 'use client';
 
+import { askLanguageDisposition, resolveAskLocale } from '@/lib/ask/askLocale';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { AnalysisApiResponse, LanguageCode } from '@globalnews-ai/shared';
 import { ARTICLE_REF_PATTERN, MAX_SELECTED_STORIES, SEARCH_HISTORY_LIST_LIMIT, findCountryByIso3 } from '@globalnews-ai/shared';
@@ -237,8 +238,20 @@ export function MyIntelligenceClient({
     local state. Each explicit Confirm opens its OWN Ask thread, so a selection never continues
     into an unrelated question and the result appears in Recent like every Ask answer.
   */
-  const r2Locale: 'en' | 'pl' = language === 'pl' ? 'pl' : 'en';
-  const r2 = useAskR2Conversation(r2Locale, sanitizeReturnPath('/my-intelligence'));
+  /* R4 · SEVEN-LANGUAGE ASK CLIENT PIN (CTO AUTHORIZED) — one disposition replaces the clamp
+     this line was. The My Intelligence chrome still reads the two-locale Ask catalogues; the
+     Ask request carries the reader's own selection. See lib/ask/askLocale.ts. */
+  const askDisposition = askLanguageDisposition(resolveAskLocale(language));
+  const r2Locale = askDisposition.catalogueLocale;
+  /*
+    R4 · THE REQUEST CARRIES WHAT THE READER SELECTED, NOT WHAT THE CHROME RENDERS.
+
+    `disposition.requested` is the reader's own locale, all seven. The EN/PL catalogues above
+    still read `catalogueLocale`, because those catalogues have two entries — but the SERVER is
+    told what was actually asked, so it answers in `fr` and records `fr` as `fr` instead of
+    receiving an `en` the frontend invented. That is the whole point of the client pin.
+  */
+  const r2 = useAskR2Conversation(askDisposition.requested, sanitizeReturnPath('/my-intelligence'));
   const r2s = askR2Strings(r2Locale);
 
   const onConfirm = useCallback(

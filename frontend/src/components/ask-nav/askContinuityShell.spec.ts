@@ -30,9 +30,12 @@ const dock = read('components', 'ask', 'AskAiDock.tsx');
 
 describe('Recent and Saved use the standalone Ask navigation, never the platform NavBar', () => {
   it.each([
-    ['/ask/recent', recentPage, 'AskRecentClient', 'recent'],
-    ['/saved', savedPage, 'SavedClient', 'saved'],
-  ])('%s', (_route, page, client, surface) => {
+    /* R4 · the client's own locale expression differs per surface: AskRecentClient takes the
+       five-member legacy AskLocale (so the crossing is named), SavedClient takes the two-member
+       catalogue locale. Carried as data rather than branched on inside the assertion. */
+    ['/ask/recent', recentPage, 'AskRecentClient', 'recent', 'askLocaleForLegacyCatalogue\\(locale\\)'],
+    ['/saved', savedPage, 'SavedClient', 'saved', 'chrome'],
+  ])('%s', (_route, page, client, surface, clientLocale) => {
     const body = code(page);
     expect(body).not.toMatch(/NavBar/);
     expect(body).not.toMatch(/components\/navigation\//);
@@ -40,7 +43,15 @@ describe('Recent and Saved use the standalone Ask navigation, never the platform
     expect(body).toMatch(
       new RegExp(
         /* ALPHA VISUAL ACCEPTANCE REPAIR R1 — the body sits inside AskClearedBoundary (Sign out / New question). */
-        String.raw`<AskNavProvider>\s*<AskNavShell language=\{locale\} />\s*<AskContinuityHeader locale=\{locale\} surface="${surface}" />\s*<AskClearedBoundary>\s*<${client} locale=\{locale\} />\s*</AskClearedBoundary>\s*</AskNavProvider>`,
+        /* R4 · the composition is unchanged. What moved is the locale each slot receives:
+           the standalone chrome reads one resolved disposition (`chrome`), and the client
+           reads the reader's own locale — through the legacy-catalogue crossing where the
+           client's own type cannot yet express all seven.
+           SEVEN-LANGUAGE CORRECTION · the shell additionally receives `selected`, the reader's
+           OWN locale, because the language control was displaying the two-locale catalogue
+           index back to the reader as their choice. The composition is still pinned exactly;
+           one prop was added to it. */
+        String.raw`<AskNavProvider>\s*<AskNavShell language=\{chrome\} selected=\{locale\} />\s*<AskContinuityHeader locale=\{chrome\} surface="${surface}" />\s*<AskClearedBoundary>\s*<${client} locale=\{${clientLocale}\} />\s*</AskClearedBoundary>\s*</AskNavProvider>`,
       ),
     );
   });

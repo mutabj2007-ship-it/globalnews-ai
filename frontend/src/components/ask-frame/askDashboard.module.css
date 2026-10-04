@@ -262,3 +262,137 @@
     font-size: 16px;
   }
 }
+
+/*
+  ══════════════════════════════════════════════════════════════════════════════
+  STANDALONE CENTERED INTELLIGENCE COMPOSER + ROTATING QUESTION EXAMPLES R1
+  ══════════════════════════════════════════════════════════════════════════════
+
+  THE ENTRY STATE IS A STATE OF THIS ONE FRAME, NOT A SECOND ASK.
+
+  Everything below is scoped to `.frame[data-ask-entry='true']`, which the frame sets only
+  while the conversation is empty — no question asked, none in flight, none reopened. The
+  moment a question exists the attribute is gone and the geometry is the frozen D25 geometry,
+  byte for byte: one scroll area, the composer bar resting on its border at the bottom. That
+  is how "do not redesign the post-answer intelligence workspace" is kept while still making
+  the first action a large, calm, centred composer.
+
+  WHY A SPACER ELEMENT RATHER THAN `justify-content: center`. The heading and the composer
+  must read as ONE centred group, but they live in two siblings — the scroll area and the
+  composer bar — because there is only ever ONE composer instance (a second one would be a
+  second submit path, which section 10 forbids). Bottom-aligning the heading inside the
+  scroll area puts it directly above the composer, and a flexible spacer below the bar lifts
+  the pair to the optical centre. No composer is moved in the tree, so nothing remounts.
+*/
+.frame[data-ask-entry='true'] .reader {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.frame[data-ask-entry='true'] .grid {
+  padding-bottom: 8px;
+}
+/* Calm: no rule across the viewport under the entry composer. */
+.frame[data-ask-entry='true'] .composerBar {
+  border-top: 0;
+  background: transparent;
+}
+.frame[data-ask-entry='true'] .empty {
+  padding-top: 0;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+}
+.frame[data-ask-entry='true'] .emptyTitle {
+  font-size: 44px;
+}
+/* The composer is the dominant object: a taller resting row and a wider ring. */
+.frame[data-ask-entry='true'] :global([data-ask='composer']) > div:first-child {
+  min-height: 64px;
+  border-radius: 16px;
+}
+.entryBrand {
+  margin: 0;
+  font-family: var(--font-cd-body), system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ask-ink2, #8fa6c0);
+}
+/*
+  Lifts the heading + composer group off the bottom edge to the OPTICAL centre. Measured, not
+  guessed: at 1440x900 with a 24vh spacer the group's centre sat at y=520 against a viewport
+  centre of 450, i.e. 70px low, so the basis is 24vh + 70px ~ 32vh. It shrinks (flex-shrink 1)
+  on short viewports, where the composer matters more than the whitespace above it.
+*/
+.entrySpacer {
+  flex: 0 1 32vh;
+  min-height: 0;
+}
+
+/*
+  THE ROTATION'S ONLY MOVEMENT — a restrained fade with a few pixels of rise. No typewriter
+  (section 5), no bounce, no horizontal travel that would read as direction in an RTL scope.
+
+  GUARDED TWICE AND DELIBERATELY SO: the driver withholds this class when the reader prefers
+  reduced motion, AND the media query below removes the animation even if some other caller
+  applies the class. A motion preference should not depend on one component remembering.
+*/
+.exampleEnter {
+  animation: exampleEnter 420ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+@keyframes exampleEnter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .exampleEnter {
+    animation: none;
+  }
+}
+
+@media (max-width: 860px), (orientation: portrait) and (max-width: 1100px) {
+  /* Phone: the composer stays near the thumb and the software keyboard, so the group is
+     lifted much less than on a desktop. */
+  .entrySpacer {
+    flex: 0 1 6vh;
+  }
+  .frame[data-ask-entry='true'] .emptyTitle {
+    font-size: 28px;
+  }
+  .frame[data-ask-entry='true'] .empty {
+    padding-top: 0;
+  }
+  /*
+    PHONE: THE EXAMPLE WRAPS RATHER THAN TRUNCATING.
+
+    Measured in this lane's own 390px Arabic capture: at the desktop size the field has room
+    for roughly 230px of text, so nearly every example was cut mid-question
+    ("ما الذي تغيّر في الاقتصاد البولندي هذا…") — the words that carry the capability are the
+    ones that disappear. The cross-platform parity addendum allows geometry, stacking and
+    control size to change and forbids the CAPABILITY from being downgraded, and an example a
+    phone reader cannot finish reading teaches less than one a desktop reader can. So the
+    phone gives the example two lines and a slightly smaller size, and the entry row grows to
+    hold them. `truncate` stays as the backstop for the second line.
+  */
+  .frame[data-ask-entry='true'] :global([data-ask='composer']) > div:first-child {
+    min-height: 72px;
+  }
+  .frame[data-ask-entry='true'] :global([data-ask='composer-example']) {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal;
+    overflow: hidden;
+    font-size: 14px;
+    line-height: 1.35;
+  }
+}

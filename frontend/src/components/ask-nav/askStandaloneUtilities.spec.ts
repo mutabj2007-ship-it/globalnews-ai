@@ -57,9 +57,14 @@ describe('J — Settings stays inside standalone Ask, in the active language', (
     expect(code(settingsPage)).toContain(
       'if (!standaloneAskRoot()) return <AccountSettingsBody language="en" chrome="platform" />;',
     );
-    expect(code(settingsPage)).toContain("cookies().get(LANGUAGE_COOKIE_NAME)?.value === 'pl'");
+    /* R4 · the route no longer clamps. It resolves the reader's own locale once; the
+       standalone chrome then reads one disposition. The property this asserted — the SERVER
+       wrapper decides the language, not the client body — is unchanged and still asserted. */
+    expect(code(settingsPage)).toContain(
+      'resolveAskLocale(cookies().get(LANGUAGE_COOKIE_NAME)?.value)',
+    );
     expect(code(settingsPage)).toMatch(
-      /<AskContinuityHeader locale=\{locale\} surface="settings" \/>\s*<AskClearedBoundary>\s*<AccountSettingsBody language=\{locale\} chrome="standalone" \/>/,
+      /<AskContinuityHeader locale=\{chrome\} surface="settings" \/>\s*<AskClearedBoundary>\s*<AccountSettingsBody language=\{chrome\} chrome="standalone" \/>/,
     );
     expect(code(settingsPage)).not.toMatch(/NavBar|Footer/);
   });

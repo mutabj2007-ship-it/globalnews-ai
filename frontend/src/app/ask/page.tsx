@@ -1,3 +1,5 @@
+import { askLanguageDisposition } from '@/lib/ask/askLocale';
+import { resolveAskLocale } from '@/lib/ask/askLocale';
 import { Suspense } from 'react';
 import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
@@ -32,13 +34,20 @@ export const metadata: Metadata = {
  * same reason.
  */
 export default function AskPage(): JSX.Element {
-  const locale = cookies().get(LANGUAGE_COOKIE_NAME)?.value === 'pl' ? 'pl' : 'en';
+  /* R4 · SEVEN-LANGUAGE ASK FRONTEND — the reader's own locale, resolved once and not clamped.
+     This line was `=== 'pl' ? 'pl' : 'en'`; see lib/ask/askLocale.ts for the one declared
+     boundary between the seven-locale interface and the two-locale answer engine. */
+  const locale = resolveAskLocale(cookies().get(LANGUAGE_COOKIE_NAME)?.value);
+  /* R4 · one disposition per surface. The nav and continuity chrome read the two-locale
+     catalogues (`askNavStrings` / `askContinuityStrings`); the Ask frame renders in the
+     reader's locale. Reading both from one disposition is what stops them drifting. */
+  const chrome = askLanguageDisposition(locale).catalogueLocale;
   /* TRUST R1 — the column is also the theme scope (AskThemedPage), rendered from the cookie. */
   const theme = parseThemePreference(cookies().get(THEME_COOKIE_NAME)?.value);
   return (
     <AskThemedPage theme={theme}>
       <AskNavProvider>
-        <AskNavShell language={locale} theme={theme} />
+        <AskNavShell language={chrome} selected={locale} theme={theme} />
         <Suspense fallback={<main className="min-h-0 flex-1 bg-void" />}>
           <AskShellFrame locale={locale} />
         </Suspense>

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { enterSends } from './AskParts';
+import { composerKeyAction, enterSends } from './AskParts';
 import { askR2Strings } from '@/lib/ask/askR2Strings';
 
 /**
@@ -33,12 +33,29 @@ describe('Enter to send', () => {
     expect(enterSends()).toBe(false);
   });
 
+  /*
+    CENTERED COMPOSER R1 — MOVED, NOT RELAXED.
+
+    This assertion used to be a regex over the inline `onKeyDown` body. The guard it pinned
+    (`key !== 'Enter' || shiftKey || isComposing`, then `if (ready) requestSubmit()`) is now
+    the pure `composerKeyAction`, so the SAME property is asserted here as BEHAVIOUR instead
+    of as source text — strictly stronger, and it no longer breaks when the handler is
+    reformatted. The composer still delegates to it, which the line below pins, and the
+    `ready` definition is pinned exactly as before.
+  */
   it('never sends on Shift+Enter, mid-composition, empty or in flight', () => {
+    const base = { key: 'Enter', shiftKey: false, isComposing: false, enterSends: true } as const;
+    expect(composerKeyAction({ ...base, ready: true })).toBe('SUBMIT');
+    expect(composerKeyAction({ ...base, shiftKey: true, ready: true })).toBe('DEFAULT');
+    expect(composerKeyAction({ ...base, isComposing: true, ready: true })).toBe('DEFAULT');
+    expect(composerKeyAction({ ...base, enterSends: false, ready: true })).toBe('DEFAULT');
+    /* Empty box, or a question already in flight: the keystroke is swallowed, nothing sent. */
+    expect(composerKeyAction({ ...base, ready: false })).toBe('SUPPRESS');
+    expect(composerKeyAction({ ...base, key: 'a', ready: true })).toBe('DEFAULT');
+
     const parts = code(read('AskParts.tsx'));
-    expect(parts).toMatch(
-      /event\.key !== 'Enter' \|\| event\.shiftKey \|\| event\.nativeEvent\.isComposing/,
-    );
-    expect(parts).toMatch(/if \(ready\) event\.currentTarget\.form\?\.requestSubmit\(\)/);
+    expect(parts).toMatch(/const action = composerKeyAction\(\{/);
+    expect(parts).toMatch(/if \(action === 'SUBMIT'\) event\.currentTarget\.form\?\.requestSubmit\(\)/);
     expect(parts).toMatch(/const ready = !pending && value\.trim\(\)\.length > 0/);
   });
 });

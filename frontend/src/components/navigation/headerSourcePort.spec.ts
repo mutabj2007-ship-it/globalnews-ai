@@ -227,7 +227,7 @@ describe('M65 — ONE language model, corrected relative to the recovered archiv
   });
 
   it('the shared selector still offers only the production-active languages and still leaves persistence to its caller', () => {
-    expect(languageSelectorSource).toMatch(/ACTIVE_LANGUAGES\.map/);
+    expect(languageSelectorSource).toMatch(/SELECTABLE_LOCALES\.map/);
     const selectorCodeOnly = languageSelectorSource
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .replace(/\/\/.*$/gm, '');
@@ -422,7 +422,7 @@ describe('M66.2 — GN-CD-026 language control', () => {
     // What this test was really protecting — the model is the source, and the
     // component owns no persistence — is unchanged and is asserted here against
     // the new implementation.
-    expect(languageSelectorSource).toMatch(/ACTIVE_LANGUAGES\.map/);
+    expect(languageSelectorSource).toMatch(/SELECTABLE_LOCALES\.map/);
     expect(languageSelectorSource).toMatch(/LANGUAGE_NATIVE_LABELS\[code\]/);
     expect(codeOnly(languageSelectorSource)).not.toMatch(/persistLanguageSelection/);
     expect(codeOnly(languageSelectorSource)).not.toMatch(/'English'|'Polski'/);

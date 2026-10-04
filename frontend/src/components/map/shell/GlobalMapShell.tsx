@@ -114,7 +114,7 @@ import {
 } from '@/lib/map/monetization/watchCtaLadder';
 import { accountSignInUrl } from '@/lib/api/accountLinks';
 /* CHECKPOINT F — the product's ONE language persistence path, reused. */
-import { persistLanguageSelection } from '@/lib/i18n/languages';
+import { persistLanguageSelection, displayLocaleOf } from '@/lib/i18n/languages';
 /* MAP-DISPLAY-NAME-CENTRALISATION — the one reader-facing place-name path. */
 import { localisedCountryName } from '@/lib/map/geography/displayName';
 
@@ -1724,7 +1724,7 @@ export function GlobalMapShell({
             */
             languageSlot={
               <MapLanguageControl
-                value={language}
+                value={displayLocaleOf(language)}
                 label={spatial.topBar.languageGroup}
                 onChange={(next) => {
                   persistLanguageSelection(next);

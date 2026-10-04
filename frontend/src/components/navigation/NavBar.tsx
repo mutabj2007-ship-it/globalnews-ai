@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import type { LanguageCode } from '@globalnews-ai/shared';
+import type { DisplayLocale, LanguageCode } from '@globalnews-ai/shared';
 import { Logo } from '@/components/ui/Logo';
 import { ReturnControl } from '@/components/navigation/ReturnControl';
 import { NAV_MODEL, type NavModelEntry } from '@/lib/navModel';
 import { getDictionary } from '@/lib/i18n/dictionaries';
-import { persistLanguageSelection } from '@/lib/i18n/languages';
+import { persistLanguageSelection, displayLocaleOf } from '@/lib/i18n/languages';
 import { LanguageSelector } from '@/components/search/LanguageSelector';
 import { AccountControl } from './AccountControl';
 
@@ -78,7 +78,8 @@ export function NavBar({ language = 'en' }: NavBarProps): JSX.Element {
   const router = useRouter();
   const t = getDictionary(language).navBar;
 
-  function handleLanguageChange(next: LanguageCode): void {
+  /* R4 · the control speaks DisplayLocale (the contracted seven); the cookie is a string. */
+  function handleLanguageChange(next: DisplayLocale): void {
     if (next === language) return;
     persistLanguageSelection(next);
     // Server Components on this route re-render against the freshly
@@ -281,7 +282,7 @@ export function NavBar({ language = 'en' }: NavBarProps): JSX.Element {
         </Link>
 
         <LanguageSelector
-          value={language}
+          value={displayLocaleOf(language)}
           onChange={handleLanguageChange}
           label={t.languageSelectorLabel}
           actionLabel={t.languageSelectorAction}
@@ -372,7 +373,7 @@ export function NavBar({ language = 'en' }: NavBarProps): JSX.Element {
           exist here before.
         */}
         <LanguageSelector
-          value={language}
+          value={displayLocaleOf(language)}
           onChange={handleLanguageChange}
           label={t.languageSelectorLabel}
           actionLabel={t.languageSelectorAction}

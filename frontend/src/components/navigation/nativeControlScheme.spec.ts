@@ -185,16 +185,25 @@ describe('M66.11 — what M66.8a asserted, and what replaced it', () => {
 });
 
 describe('M66.11 — the M66.8a contracts that survive unchanged', () => {
-  it('SURVIVES — ACTIVE_LANGUAGES remains the single source of the available languages', () => {
+  it('SURVIVES — SELECTABLE_LOCALES remains the single source of the available languages', () => {
     expect(selectorCode).toMatch(
-      /import \{ ACTIVE_LANGUAGES, LANGUAGE_NATIVE_LABELS \} from '@\/lib\/i18n\/languages'/,
+      /* R4 · MOVED, NOT RELAXED — the registry's name and type moved to SELECTABLE_LOCALES /
+         DisplayLocale so the selector can offer the contracted seven. The property (one
+         registry, no literal array) is unchanged. */
+      /import \{ LANGUAGE_NATIVE_LABELS, SELECTABLE_LOCALES \} from '@\/lib\/i18n\/languages'/,
     );
-    expect(selectorCode).toMatch(/ACTIVE_LANGUAGES\.map\(/);
+    expect(selectorCode).toMatch(/SELECTABLE_LOCALES\.map\(/);
     expect(selectorCode).toMatch(/LANGUAGE_NATIVE_LABELS\[code\]/);
     // languages.ts is untouched by M66.11 and is still the only definition.
-    expect(languagesSource).toMatch(/export const ACTIVE_LANGUAGES: LanguageCode\[\] = \['en', 'pl'\];/);
-    expect(languagesSource).toMatch(/en: 'English',/);
-    expect(languagesSource).toMatch(/pl: 'Polski',/);
+    /* R4 · MOVED, NOT RELAXED — the registry is still ONE definition in languages.ts and
+       still not a hand-written list: it is now the shared contract's own DISPLAY_LOCALES,
+       which is a stronger form of the same property (it cannot drift from the contract and
+       cannot exceed it). The endonyms likewise come from the contract's meta table rather
+       than from two literals, so "just type the two labels" is now impossible by shape. */
+    expect(languagesSource).toMatch(
+      /export const SELECTABLE_LOCALES: readonly DisplayLocale\[\] = DISPLAY_LOCALES;/,
+    );
+    expect(languagesSource).toMatch(/DISPLAY_LOCALE_META\[locale\]\.endonym/);
     // And neither file hardcodes a language NAME — the guard that most needed to
     // survive a rebuild, because a hand-authored popup is exactly where "just
     // type the two labels" becomes tempting.
@@ -203,7 +212,7 @@ describe('M66.11 — the M66.8a contracts that survive unchanged', () => {
   });
 
   it('SURVIVES — persistence and the server refresh still run, and still belong to the caller', () => {
-    expect(navBarCode).toMatch(/function handleLanguageChange\(next: LanguageCode\): void \{/);
+    expect(navBarCode).toMatch(/function handleLanguageChange\(next: DisplayLocale\): void \{/);
     expect(navBarCode).toMatch(/if \(next === language\) return;/);
     expect(navBarCode).toMatch(/persistLanguageSelection\(next\);/);
     expect(navBarCode).toMatch(/router\.refresh\(\);/);

@@ -1,5 +1,6 @@
 'use client';
 
+import { isolatedAuto, isolatedLtr } from '@/lib/ask/askDirection';
 import type { StoryContext } from '@globalnews-ai/shared';
 import { AskCompactResult } from '@/components/ask/AskCompactResult';
 import { AskIntelligenceBasis } from './AskIntelligenceBasis';
@@ -173,13 +174,19 @@ export function AskR2TurnView({
             key={`${chip.kind}-${i}`}
             data-ask-chip={chip.kind}
             data-ask-chip-kept={chip.kept ? 'true' : undefined}
+            /* R4 · a chip is a self-contained run: a publisher name, a domain or the
+               reader's own words. Isolated so its boundaries cannot reorder the row — a
+               DOMAIN chip beside an Arabic TOPIC chip is the case this exists for. */
+            {...isolatedAuto()}
             className={`inline-flex h-7 items-center whitespace-nowrap rounded-[14px] border bg-[#06223d] px-2.5 text-[13px] font-semibold text-[#cfe2f2] ${chip.kept ? 'border-dashed border-[#c98a8a]/60' : 'border-[#1d4a73]'}`}
           >
             {chip.label}
           </span>
         ))}
         {view.chips.note !== null && (
-          <span className="text-[13px] italic text-[#8fa6c0]">{view.chips.note}</span>
+          <span className="text-[13px] italic text-[#8fa6c0]" {...isolatedAuto()}>
+            {view.chips.note}
+          </span>
         )}
       </div>
 

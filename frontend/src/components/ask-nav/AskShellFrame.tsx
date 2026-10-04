@@ -1,7 +1,9 @@
 'use client';
 
 import { AskFrameScreen } from '@/components/ask-frame/AskFrameScreen';
-import { askNavStringsFor, type AskNavLocale } from '@/lib/ask/askNavStrings';
+import type { DisplayLocale } from '@globalnews-ai/shared';
+import { askNavStringsFor } from '@/lib/ask/askNavStrings';
+import { askLanguageDisposition } from '@/lib/ask/askLocale';
 import { useAskNav } from './AskNavShell';
 
 /**
@@ -18,9 +20,11 @@ import { useAskNav } from './AskNavShell';
  * of `.page` and keeps `flex: 1 1 0` — which is what makes the composer clipping
  * fix from PR #66 hold. A wrapping <div> here would silently break it.
  */
-export function AskShellFrame({ locale }: { readonly locale: AskNavLocale }): JSX.Element {
+export function AskShellFrame({ locale }: { readonly locale: DisplayLocale }): JSX.Element {
   const { open, setOpen, cleared } = useAskNav();
-  const strings = askNavStringsFor(locale);
+  /* R4 · the menu's aria labels come from the two-locale nav catalogue; the frame below gets
+     the reader's own locale. Both read one disposition. */
+  const strings = askNavStringsFor(askLanguageDisposition(locale).catalogueLocale);
   /*
     ALPHA VISUAL ACCEPTANCE REPAIR R1 — New question / Sign out: the conversation is gone
     from the screen at once, before the clean document load replaces the page. Same shape as

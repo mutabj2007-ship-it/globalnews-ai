@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-import { ACTIVE_LANGUAGES, LANGUAGE_NATIVE_LABELS } from '@/lib/i18n/languages';
+import { LANGUAGE_NATIVE_LABELS, SELECTABLE_LOCALES } from '@/lib/i18n/languages';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 
 /**
@@ -113,12 +113,14 @@ describe('F — MAP-GLOBAL-LANGUAGE-CONTROL-1, the map can change language', () 
 
     it('and the shell fills it with the map language control', () => {
       expect(globalShell).toContain('<MapLanguageControl');
-      expect(globalShell).toContain('value={language}');
+      /* R4 · the crossing from the stored code to a display locale is now named. */
+      expect(globalShell).toContain('value={displayLocaleOf(language)}');
     });
 
     it('it offers exactly the product’s active languages', () => {
-      expect(control).toContain('ACTIVE_LANGUAGES.map((code)');
-      expect([...ACTIVE_LANGUAGES]).toEqual(['en', 'pl']);
+      /* R4 · one registry, under its DisplayLocale name, so the control offers the seven. */
+      expect(control).toContain('SELECTABLE_LOCALES.map((code)');
+      expect([...SELECTABLE_LOCALES]).toEqual(['en', 'pl', 'fr', 'de', 'es', 'pt', 'ar']);
     });
   });
 

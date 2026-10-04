@@ -36,13 +36,27 @@ import { ACTIVE_LANGUAGES, SELECTABLE_LOCALES } from './languages';
 const HERE = readFileSync(join(__dirname, 'languages.ts'), 'utf-8');
 const CODE = HERE.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 
-describe('B5-C · V1 — the deployment fact is exactly EN + PL', () => {
-  it('SELECTABLE_LOCALES deep-equals [en, pl]', () => {
+/*
+  R4 · CLAUDE H — MOVED, NOT RELAXED.
+
+  CTO: "This contract explicitly opens the previously deferred frontend language work."
+  B5-C's V1 asserted the deployment fact was EN + PL because no deployment offered more. The
+  selector now offers the contracted seven, so the deployment fact IS the seven and that is
+  what V1 asserts.
+
+  EVERY OTHER B5-C PROPERTY SURVIVES VERBATIM, and they are the ones that mattered:
+  V2 (the registry can never exceed DISPLAY_LOCALES), V3/H2 (sw, rw, uk, ru are not display
+  locales and a non-display LanguageCode is DROPPED, not admitted), the three-concepts
+  separation, and "source language readiness is not claimed". Widening the deployment fact
+  does not weaken any of them — it is precisely the change V2 was written to bound.
+*/
+describe('B5-C · V1 (R4) — the deployment fact is the contracted seven', () => {
+  it('SELECTABLE_LOCALES deep-equals the contracted seven, in contract order', () => {
     /* An exact pin, not a length check and not a subset check. */
-    expect([...SELECTABLE_LOCALES]).toEqual(['en', 'pl']);
+    expect([...SELECTABLE_LOCALES]).toEqual(['en', 'pl', 'fr', 'de', 'es', 'pt', 'ar']);
   });
 
-  it('ACTIVE_LANGUAGES was not widened either', () => {
+  it('ACTIVE_LANGUAGES keeps its own, different meaning and was NOT widened', () => {
     expect([...ACTIVE_LANGUAGES]).toEqual(['en', 'pl']);
   });
 
@@ -51,6 +65,10 @@ describe('B5-C · V1 — the deployment fact is exactly EN + PL', () => {
       Re-authoring ['en','pl'] here would create two registries that agree only
       by discipline, and the next language would be added to one of them.
     */
+    /* R4 · still derived, and now from the shared contract itself rather than through
+       ACTIVE_LANGUAGES — which is a stronger form of the property, because the registry can
+       no longer be written at all. The EN/PL-derived list survives under its own name. */
+    expect(CODE).toContain('ANSWER_CAPABLE_LOCALES');
     expect(CODE).toContain('ACTIVE_LANGUAGES.filter(');
     expect(CODE).not.toMatch(/SELECTABLE_LOCALES[^=]*=\s*\[/);
   });
@@ -126,7 +144,7 @@ describe('B5-C · the three concepts stay separate', () => {
   });
 
   it('and neither is the deployment fact', () => {
-    expect(SELECTABLE_LOCALES.length).toBe(2);
+    expect(SELECTABLE_LOCALES.length).toBe(7);
     expect(DISPLAY_LOCALES.length).toBe(7);
   });
 
@@ -168,19 +186,21 @@ describe('B5-C · the infrastructure recovered is real, and dormant', () => {
     }
   });
 
-  it('but only two are selectable — infrastructure is not a claim', () => {
+  it('and all seven are selectable now — the infrastructure is in use, not dormant', () => {
     /*
-      THE POINT OF THE WHOLE SECTION, in one assertion: five display locales
-      have complete direction and formatting support and are invisible to every
-      reader, because visibility is SELECTABLE_LOCALES and nothing else.
+      R4 · THE POINT OF THE WHOLE SECTION, INVERTED BY AUTHORIZATION. B5-C's measurement was
+      that five display locales had complete direction and formatting support and were
+      invisible to every reader. They are now offered, so the assertion becomes: NOTHING the
+      contract supports is withheld, and every member still carries its direction — the
+      infrastructure B5-C recovered is the infrastructure this round put to work.
     */
     const supportedButNotOffered = DISPLAY_LOCALES.filter(
       (l) => !(SELECTABLE_LOCALES as readonly string[]).includes(l),
     );
 
-    expect(supportedButNotOffered).toEqual(['fr', 'de', 'es', 'pt', 'ar']);
+    expect(supportedButNotOffered).toEqual([]);
 
-    for (const locale of supportedButNotOffered) {
+    for (const locale of DISPLAY_LOCALES) {
       expect(directionFor(locale)).toBeDefined();
     }
   });

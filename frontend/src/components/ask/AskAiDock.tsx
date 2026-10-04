@@ -1,5 +1,6 @@
 'use client';
 
+import { askLanguageDisposition, resolveAskLocale } from '@/lib/ask/askLocale';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties, FormEvent } from 'react';
 import { usePathname } from 'next/navigation';
@@ -272,8 +273,12 @@ function GlobalAskAiDock({
 
   const dictionary = getDictionary(language);
   const t = dictionary.askAi;
-  /* Ask V2 serves the two ACTIVE languages; any other locale reads and renders as English. */
-  const r2Locale: 'en' | 'pl' = language === 'pl' ? 'pl' : 'en';
+  /* R4 · SEVEN-LANGUAGE ASK FRONTEND — one disposition replaces the clamp this line was:
+     `const r2Locale: 'en' | 'pl' = language === 'pl' ? 'pl' : 'en';`. The interface locale is
+     the reader's own; the answer locale is the measured backend fact; the difference is
+     carried end to end. lib/ask/askLocale.ts is the one place a locale is resolved. */
+  const askDisposition = askLanguageDisposition(resolveAskLocale(language));
+  const r2Locale = askDisposition.catalogueLocale;
   const r2s = askR2Strings(r2Locale);
 
   /*
@@ -284,7 +289,15 @@ function GlobalAskAiDock({
     Ask V2 operation — signed-in through the account routes, signed-out through the existing
     guest trial — and nothing is ever sent to POST /analysis/news.
   */
-  const r2 = useAskR2Conversation(r2Locale, sanitizeReturnPath(returnPath), {
+  /*
+    R4 · THE REQUEST CARRIES WHAT THE READER SELECTED, NOT WHAT THE CHROME RENDERS.
+
+    `disposition.requested` is the reader's own locale, all seven. The EN/PL catalogues above
+    still read `catalogueLocale`, because those catalogues have two entries — but the SERVER is
+    told what was actually asked, so it answers in `fr` and records `fr` as `fr` instead of
+    receiving an `en` the frontend invented. That is the whole point of the client pin.
+  */
+  const r2 = useAskR2Conversation(askDisposition.requested, sanitizeReturnPath(returnPath), {
     guestTrial: true,
     readOnOpen: false,
   });

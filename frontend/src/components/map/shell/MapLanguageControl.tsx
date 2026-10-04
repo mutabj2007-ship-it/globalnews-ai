@@ -1,7 +1,7 @@
 'use client';
 
-import type { LanguageCode } from '@globalnews-ai/shared';
-import { ACTIVE_LANGUAGES, LANGUAGE_NATIVE_LABELS } from '@/lib/i18n/languages';
+import type { DisplayLocale } from '@globalnews-ai/shared';
+import { LANGUAGE_NATIVE_LABELS, SELECTABLE_LOCALES } from '@/lib/i18n/languages';
 import { BAND_ACTIVE, BAND_AVAILABLE } from '@/lib/map/spatial/controlBands';
 
 /**
@@ -40,14 +40,14 @@ import { BAND_ACTIVE, BAND_AVAILABLE } from '@/lib/map/spatial/controlBands';
  * `onChange` and nothing else, exactly as `LanguageSelector` does, so there is
  * ONE persistence path in the product and this is not a second one.
  *
- * `ACTIVE_LANGUAGES` remains the only source of which languages exist and
+ * `SELECTABLE_LOCALES` remains the only source of which languages exist and
  * `LANGUAGE_NATIVE_LABELS` the only source of their names — no endonym appears
  * as a literal here, which is the rule the released selector also keeps.
  */
 
 export interface MapLanguageControlProps {
-  readonly value: LanguageCode;
-  readonly onChange: (language: LanguageCode) => void;
+  readonly value: DisplayLocale;
+  readonly onChange: (language: DisplayLocale) => void;
   /** The group's accessible name — map.topBar.languageGroup. */
   readonly label: string;
   readonly className?: string;
@@ -66,7 +66,8 @@ export function MapLanguageControl({
       aria-label={label}
       className={`flex shrink-0 gap-px overflow-hidden rounded-[2px] border border-sp-line ${className}`}
     >
-      {ACTIVE_LANGUAGES.map((code) => {
+      {/* R4 · the contracted seven, from the one deployment registry. */}
+      {SELECTABLE_LOCALES.map((code) => {
         const active = code === value;
 
         return (

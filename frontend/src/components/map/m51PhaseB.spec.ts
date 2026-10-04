@@ -112,8 +112,13 @@ describe('H. Existing language behavior remains intact', () => {
 
   it('storyContext never carries a language field of its own \u2014 language is a fully separate, already-correct concern', () => {
     /* R2C — the canonical turn carries the language as the conversation's own parameter and the
-       story as a reference; the story still carries no language field of its own. */
+       story as a reference; the story still carries no language field of its own.
+
+       R4 · MOVED, NOT RELAXED (CTO-authorized seven-language Ask client pin). The property is
+       unchanged and the parameter is still the conversation's own: what it now carries is the
+       reader's SELECTED locale rather than a locale the frontend had already narrowed to EN/PL.
+       The story reference is untouched, and still carries no language of its own. */
     expect(searchClientSource).toMatch(/\.current\(query, askContextRefOf\(storyContext, undefined\)/);
-    expect(searchClientSource).toMatch(/useAskR2Conversation\(r2Locale,/);
+    expect(searchClientSource).toMatch(/useAskR2Conversation\(askDisposition\.requested,/);
   });
 });

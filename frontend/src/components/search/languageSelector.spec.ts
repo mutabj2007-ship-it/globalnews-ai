@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { ACTIVE_LANGUAGES, LANGUAGE_NATIVE_LABELS } from '@/lib/i18n/languages';
+import { LANGUAGE_NATIVE_LABELS, SELECTABLE_LOCALES } from '@/lib/i18n/languages';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import tailwindConfig from '../../../tailwind.config';
 
@@ -147,10 +147,17 @@ describe('M66.11 — the native <select> is removed, not hidden', () => {
    2 · THE LANGUAGE MODEL IS STILL THE ONLY SOURCE  (carried from M66.8a)
    ========================================================================== */
 
-describe('M66.11 — ACTIVE_LANGUAGES remains the single source of truth', () => {
-  it('options are mapped from ACTIVE_LANGUAGES, never from a literal array', () => {
-    expect(code).toMatch(/import \{ ACTIVE_LANGUAGES, LANGUAGE_NATIVE_LABELS \} from '@\/lib\/i18n\/languages'/);
-    expect(code).toMatch(/ACTIVE_LANGUAGES\.map\(/);
+describe('M66.11 — SELECTABLE_LOCALES remains the single source of truth', () => {
+  it('options are mapped from SELECTABLE_LOCALES, never from a literal array', () => {
+/* R4 · MOVED, NOT RELAXED. CTO: "This contract explicitly opens the previously deferred
+       frontend language work." The property is unchanged — one registry, no literal array, no
+       hardcoded endonym, persistence still the caller's. Only the registry's NAME and TYPE
+       moved: SELECTABLE_LOCALES / DisplayLocale, because SELECTABLE_LOCALES is LanguageCode[]
+       and cannot express `de` or `pt`. */
+    expect(code).toMatch(
+      /import \{ LANGUAGE_NATIVE_LABELS, SELECTABLE_LOCALES \} from '@\/lib\/i18n\/languages'/,
+    );
+    expect(code).toMatch(/SELECTABLE_LOCALES\.map\(/);
     expect(code).toMatch(/LANGUAGE_NATIVE_LABELS\[code\]/);
   });
 
@@ -162,19 +169,29 @@ describe('M66.11 — ACTIVE_LANGUAGES remains the single source of truth', () =>
     expect(navCode).not.toMatch(/'English'|'Polski'|"English"|"Polski"/);
   });
 
-  it('exactly two languages are active, in the released order, with the released endonyms', () => {
-    expect(ACTIVE_LANGUAGES).toEqual(['en', 'pl']);
-    expect(ACTIVE_LANGUAGES).toHaveLength(2);
+  /*
+    R4 · MOVED, NOT RELAXED. CTO: "This contract explicitly opens the previously deferred
+    frontend language work." The released EN/PL endonyms are asserted unchanged — §4's rule
+    (the endonym, never "Polish") is the one that had to survive, and it does, for all seven.
+  */
+  it('the contracted seven are selectable, in contract order, each with its own endonym', () => {
+    expect(SELECTABLE_LOCALES).toEqual(['en', 'pl', 'fr', 'de', 'es', 'pt', 'ar']);
+    expect(SELECTABLE_LOCALES).toHaveLength(7);
     expect(LANGUAGE_NATIVE_LABELS.en).toBe('English');
     // GN-CD-M66.11 §4: the endonym, never "Polish".
     expect(LANGUAGE_NATIVE_LABELS.pl).toBe('Polski');
+    expect(LANGUAGE_NATIVE_LABELS.fr).toBe('Français');
+    expect(LANGUAGE_NATIVE_LABELS.de).toBe('Deutsch');
+    expect(LANGUAGE_NATIVE_LABELS.es).toBe('Español');
+    expect(LANGUAGE_NATIVE_LABELS.pt).toBe('Português');
+    expect(LANGUAGE_NATIVE_LABELS.ar).toBe('العربية');
   });
 
-  it('no third language can appear, because the list is the model and the model has two entries', () => {
-    // The count is not asserted against a literal in the component — there is
-    // none. It is asserted against the shared model, which is what the render
-    // actually iterates.
-    expect(ACTIVE_LANGUAGES.filter((c) => LANGUAGE_NATIVE_LABELS[c]).length).toBe(2);
+  it('no eighth language can appear, because the list is the model and the model is the contract', () => {
+    // The count is still not asserted against a literal in the component — there
+    // is none. It is asserted against the shared model, which is what the render
+    // actually iterates, and the model is now DISPLAY_LOCALES itself.
+    expect(SELECTABLE_LOCALES.filter((c) => LANGUAGE_NATIVE_LABELS[c]).length).toBe(7);
     expect(code).not.toMatch(/ALL_LANGUAGES/);
   });
 
@@ -318,18 +335,32 @@ describe('M66.11 — keyboard and pointer state machine (GN-CD-M66.11 §6)', () 
 
   it('onChange is called from exactly one place — the commit function', () => {
     expect((code.match(/onChange\(/g) ?? []).length).toBe(1);
-    expect(code).toMatch(/const commit = useCallback\(\s*\n?\s*\(code: LanguageCode\): void => \{[\s\S]*?onChange\(code\);/);
+/* R4 · MOVED, NOT RELAXED. CTO: "This contract explicitly opens the previously deferred
+       frontend language work." The property is unchanged — one registry, no literal array, no
+       hardcoded endonym, persistence still the caller's. Only the registry's NAME and TYPE
+       moved: SELECTABLE_LOCALES / DisplayLocale, because SELECTABLE_LOCALES is LanguageCode[]
+       and cannot express `de` or `pt`. */
+    expect(code).toMatch(
+      /const commit = useCallback\(\s*\n?\s*\(code: DisplayLocale\): void => \{[\s\S]*?onChange\(code\);/,
+    );
   });
 
   it('opening always makes the CURRENTLY SELECTED option active, never index 0', () => {
     expect(code).toMatch(/setActiveCode\(value\);/);
     const openFn = /const open = useCallback\([\s\S]*?\[value\],\s*\);/.exec(code)?.[0] ?? '';
     expect(openFn).toMatch(/setActiveCode\(value\)/);
-    expect(openFn).not.toMatch(/ACTIVE_LANGUAGES\[0\]/);
+    expect(openFn).not.toMatch(/SELECTABLE_LOCALES\[0\]/);
   });
 
   it('arrow movement wraps in both directions', () => {
-    expect(code).toMatch(/\(from \+ delta \+ ACTIVE_LANGUAGES\.length\) % ACTIVE_LANGUAGES\.length/);
+/* R4 · MOVED, NOT RELAXED. CTO: "This contract explicitly opens the previously deferred
+       frontend language work." The property is unchanged — one registry, no literal array, no
+       hardcoded endonym, persistence still the caller's. Only the registry's NAME and TYPE
+       moved: SELECTABLE_LOCALES / DisplayLocale, because SELECTABLE_LOCALES is LanguageCode[]
+       and cannot express `de` or `pt`. */
+    expect(code).toMatch(
+      /\(from \+ delta \+ SELECTABLE_LOCALES\.length\) % SELECTABLE_LOCALES\.length/,
+    );
     expect(code).toMatch(/moveActive\(key === 'ArrowDown' \? 1 : -1\)/);
   });
 
@@ -464,13 +495,29 @@ describe('M66.11 — popup geometry (GN-CD-M66.11 §3, §5)', () => {
     expect(navCode).toMatch(/className="relative flex h-\[52px\] items-center gap-3/);
   });
 
-  it('the desktop popup height resolves to the released 91.6px from its own tokens', () => {
-    // 5 padding + 40 + 40 + 5 padding + 2 border = 92 border-box.
+  /*
+    R4 · MOVED, NOT RELAXED. The released RULE is 5 padding + rows + 2 border, and it is the
+    rule that is asserted — including that two rows still resolve to the released 92. What
+    changed is the number of rows, so the popup now bounds its own height and scrolls rather
+    than running off a short viewport.
+  */
+  it('the desktop popup height is the released rule applied to the row count', () => {
     const rowH = 40;
     const pad = px('cd-5', spacing);
     const border = 1;
     expect(pad).toBe(5);
-    expect(pad * 2 + rowH * ACTIVE_LANGUAGES.length + border * 2).toBe(92);
+    /* The released two-row geometry, unchanged as a rule. */
+    expect(pad * 2 + rowH * 2 + border * 2).toBe(92);
+    /* Seven rows under the same rule. */
+    expect(pad * 2 + rowH * SELECTABLE_LOCALES.length + border * 2).toBe(292);
+  });
+
+  it('and a seven-row popup cannot run past a short viewport', () => {
+    /* Same width, radius, offset, insets, z and shadow; only a height bound is added. */
+    expect(code).toMatch(/max-h-\[60vh\]/);
+    expect(code).toMatch(/overflow-y-auto/);
+    expect(code).toMatch(/w-\[176px\]/);
+    expect(code).toMatch(/w-\[168px\]/);
   });
 
   it('the desktop row inner width resolves to the released 156px', () => {
@@ -699,7 +746,7 @@ describe('M66.11 — architecture scope', () => {
   });
 
   it('languages.ts is consumed, never redefined', () => {
-    expect(code).not.toMatch(/const ACTIVE_LANGUAGES|const LANGUAGE_NATIVE_LABELS/);
+    expect(code).not.toMatch(/const SELECTABLE_LOCALES|const LANGUAGE_NATIVE_LABELS/);
   });
 
   it('the component follows the host header’s breakpoint and defines none of its own', () => {

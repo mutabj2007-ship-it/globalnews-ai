@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
-import type { LanguageCode } from '@globalnews-ai/shared';
-import { ACTIVE_LANGUAGES, LANGUAGE_NATIVE_LABELS } from '@/lib/i18n/languages';
+import type { DisplayLocale } from '@globalnews-ai/shared';
+import { LANGUAGE_NATIVE_LABELS, SELECTABLE_LOCALES } from '@/lib/i18n/languages';
 
 export type LanguageSelectorVariant = 'desktop' | 'mobile';
 /**
@@ -16,8 +16,8 @@ export type LanguageSelectorVariant = 'desktop' | 'mobile';
 export type LanguageSelectorAnchor = 'header' | 'self';
 
 interface LanguageSelectorProps {
-  value: LanguageCode;
-  onChange: (language: LanguageCode) => void;
+  value: DisplayLocale;
+  onChange: (language: DisplayLocale) => void;
   /** navBar.languageSelectorLabel — "Language" / "Jezyk". */
   label: string;
   /** M66.11 — navBar.languageSelectorAction — "Select language" / "Wybierz jezyk". */
@@ -57,7 +57,7 @@ interface LanguageSelectorProps {
  * leave the native popup keyboard-reachable, which is the defect being removed.
  *
  * WHAT DID NOT CHANGE, AND MUST NOT.
- *   - ACTIVE_LANGUAGES is still the only source of which languages exist, and
+ *   - SELECTABLE_LOCALES is still the only source of which languages exist, and
  *     LANGUAGE_NATIVE_LABELS the only source of their names. Neither 'English'
  *     nor 'Polski' appears as a literal in this file — a rule M66.8a asserted
  *     and M66.11 keeps.
@@ -97,10 +97,10 @@ export function LanguageSelector({
   */
   const instanceId = useId();
   const listboxId = `${instanceId}-listbox`;
-  const optionId = (code: LanguageCode): string => `${instanceId}-option-${code}`;
+  const optionId = (code: DisplayLocale): string => `${instanceId}-option-${code}`;
 
   const [isOpen, setIsOpen] = useState(false);
-  const [activeCode, setActiveCode] = useState<LanguageCode>(value);
+  const [activeCode, setActiveCode] = useState<DisplayLocale>(value);
   /*
     §9 — the row's active RING is painted from component state, not a CSS
     pseudo-class, because focus never enters the popup. It must appear only when
@@ -134,7 +134,7 @@ export function LanguageSelector({
     a Server Component refresh on every keypress.
   */
   const commit = useCallback(
-    (code: LanguageCode): void => {
+    (code: DisplayLocale): void => {
       setIsOpen(false);
       onChange(code);
       // §9 — explicit, because an option click may have moved focus to the row.
@@ -148,10 +148,10 @@ export function LanguageSelector({
     (delta: number): void => {
       setIsKeyboardActive(true);
       setActiveCode((current) => {
-        const index = ACTIVE_LANGUAGES.indexOf(current);
-        const from = index === -1 ? ACTIVE_LANGUAGES.indexOf(value) : index;
-        const next = (from + delta + ACTIVE_LANGUAGES.length) % ACTIVE_LANGUAGES.length;
-        return ACTIVE_LANGUAGES[next] as LanguageCode;
+        const index = SELECTABLE_LOCALES.indexOf(current);
+        const from = index === -1 ? SELECTABLE_LOCALES.indexOf(value) : index;
+        const next = (from + delta + SELECTABLE_LOCALES.length) % SELECTABLE_LOCALES.length;
+        return SELECTABLE_LOCALES[next] as DisplayLocale;
       });
     },
     [value],
@@ -161,8 +161,8 @@ export function LanguageSelector({
     setIsKeyboardActive(true);
     setActiveCode(
       (edge === 'first'
-        ? ACTIVE_LANGUAGES[0]
-        : ACTIVE_LANGUAGES[ACTIVE_LANGUAGES.length - 1]) as LanguageCode,
+        ? SELECTABLE_LOCALES[0]
+        : SELECTABLE_LOCALES[SELECTABLE_LOCALES.length - 1]) as DisplayLocale,
     );
   }, []);
 
@@ -317,9 +317,19 @@ export function LanguageSelector({
     whole assembly above page content. The result is what the design asks for;
     the mechanism is one layer down from what §11 describes.
   */
+  /*
+    R4 · SEVEN ROWS BOUND THEIR OWN HEIGHT — and nothing else about the popup moves.
+
+    The released geometry was authored for two rows: 5 padding + 40 + 40 + 5 + 2 border = 92.
+    Seven rows is 292, which on a 568px-tall phone in landscape would run past the viewport.
+    `max-h-[60vh] overflow-y-auto` is therefore added and NOTHING ELSE — same width, radius,
+    offset, insets, z and shadow, so the horizontal overflow argument above still holds
+    verbatim and this is not a navigation redesign. Every row keeps its released height, so
+    the scroll appears only when the rows genuinely do not fit.
+  */
   const popupClass = isMobile
-    ? 'absolute right-[12px] top-[calc(100%+8px)] z-[60] box-border w-[176px] rounded-cd-12 border border-cd-edge-control-active-32 bg-cd-fill-popup p-cd-5 shadow-cd-popup-m'
-    : 'absolute right-0 top-[calc(100%+8px)] z-[60] box-border w-[168px] rounded-cd-10 border border-cd-edge-control-active-32 bg-cd-fill-popup p-cd-5 shadow-cd-popup';
+    ? 'absolute right-[12px] top-[calc(100%+8px)] z-[60] box-border max-h-[60vh] w-[176px] overflow-y-auto rounded-cd-12 border border-cd-edge-control-active-32 bg-cd-fill-popup p-cd-5 shadow-cd-popup-m'
+    : 'absolute right-0 top-[calc(100%+8px)] z-[60] box-border max-h-[60vh] w-[168px] overflow-y-auto rounded-cd-10 border border-cd-edge-control-active-32 bg-cd-fill-popup p-cd-5 shadow-cd-popup';
   /*
     ALPHA VISUAL ACCEPTANCE REPAIR R1 — anchor 'self': the SAME mobile popup (same tokens,
     width, radius, offset, z), positioned from this control's own left edge instead of the
@@ -411,7 +421,8 @@ export function LanguageSelector({
 
       {isOpen && (
         <div id={listboxId} role="listbox" aria-label={actionLabel} className={shownPopupClass}>
-          {ACTIVE_LANGUAGES.map((code) => {
+          {/* R4 · the contracted seven. SELECTABLE_LOCALES is the deployment fact. */}
+          {SELECTABLE_LOCALES.map((code) => {
             const isSelected = code === value;
             const isActive = code === activeCode;
 

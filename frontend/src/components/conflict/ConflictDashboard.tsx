@@ -12,7 +12,7 @@ import { ContextSummaryPanel } from '@/components/map/shell/ContextSummaryPanel'
 import { ConflictAssessmentRail } from '@/components/map/conflict/ConflictAssessmentRail';
 import { MobileBottomSheet, type SheetStop } from '@/components/map/mobile/MobileBottomSheet';
 import { MapLanguageControl } from '@/components/map/shell/MapLanguageControl';
-import { persistLanguageSelection } from '@/lib/i18n/languages';
+import { persistLanguageSelection, displayLocaleOf } from '@/lib/i18n/languages';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { evidenceTotals } from '@/lib/map/evidence/evidenceModel';
 import {
@@ -642,7 +642,7 @@ export function ConflictDashboard({
                 {spatialView ? spatial.topBar.brandSub : t.title}
               </a>
               <MapLanguageControl
-                value={language}
+                value={displayLocaleOf(language)}
                 label={spatial.topBar.languageGroup}
                 onChange={(next) => {
                   save();

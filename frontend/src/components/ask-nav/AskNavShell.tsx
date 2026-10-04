@@ -11,7 +11,7 @@ import {
 } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import type { LanguageCode } from '@globalnews-ai/shared';
+import type { DisplayLocale, LanguageCode } from '@globalnews-ai/shared';
 import { accountSignInUrl } from '@/lib/api/accountBase';
 import {
   askLocation,
@@ -20,7 +20,7 @@ import {
   isPlainClick,
 } from '@/lib/ask/askCleanNavigation';
 import { useAccount } from '@/lib/hooks/useAccount';
-import { persistLanguageSelection } from '@/lib/i18n/languages';
+import { persistLanguageSelection, displayLocaleOf } from '@/lib/i18n/languages';
 import { LanguageSelector } from '@/components/search/LanguageSelector';
 import { ThemeControl, ThemeScopeContext } from '@/components/platform/ThemeControl';
 import type { ThemePreference } from '@/lib/theme/theme';
@@ -205,9 +205,24 @@ const FOCUSABLE = 'a[href], button:not([disabled]), select, input, [tabindex]:no
 
 export function AskNavShell({
   language,
+  selected,
   theme,
 }: {
   readonly language: AskNavLocale;
+  /**
+   * SEVEN-LANGUAGE CORRECTION — THE READER'S OWN SELECTION, SHOWN BACK TO THEM.
+   *
+   * `language` indexes this shell's EN/PL label catalogue (`askNavStrings` is a total record
+   * over two locales). It was also being used as the language selector's VALUE, which meant a
+   * reader who chose Arabic saw the control read "English" — their own choice displayed back
+   * to them as something they did not pick. Those are two different facts about two different
+   * things, and conflating them downgraded seven-language support in the one control whose
+   * entire job is to show it.
+   *
+   * Optional, defaulting to the old behaviour, so every caller that has not been updated
+   * renders exactly as before.
+   */
+  readonly selected?: DisplayLocale;
   /**
    * TRUST & CONVERSATIONAL EXPERIENCE R1 — present only on a themed page (AskThemedPage): the
    * server-read preference, so the control's first frame matches. Absent → no theme control (a
@@ -237,11 +252,14 @@ export function AskNavShell({
   const signOutEntry = utilities.find((entry) => entry.action === 'signOut');
   const languageEntry = utilities.find((entry) => entry.action === 'language');
 
+  /* The reader's own selection when the caller knows it; the catalogue locale otherwise. */
+  const selectedLocale: DisplayLocale = selected ?? displayLocaleOf(language);
+
   const changeLanguage = useCallback(
-    (next: LanguageCode): void => {
+    (next: DisplayLocale): void => {
       /* NavBar's guard, kept verbatim in behaviour: re-selecting the current
          language is a complete no-op, so it cannot cost a reload. */
-      if (next === (language as LanguageCode)) return;
+      if (next === selectedLocale) return;
       persistLanguageSelection(next);
       /*
         ALPHA VISUAL ACCEPTANCE REPAIR R1 — the same two steps as the platform NavBar: persist,
@@ -250,7 +268,7 @@ export function AskNavShell({
       */
       router.refresh();
     },
-    [language, router],
+    [selectedLocale, router],
   );
 
   /*
@@ -430,7 +448,8 @@ export function AskNavShell({
           <div className="ml-auto flex shrink-0 items-center gap-2">
             {languageEntry !== undefined && (
               <LanguageSelector
-                value={language as LanguageCode}
+                /* R4 · the selector speaks the contracted seven; this crossing is named once. */
+                value={selectedLocale}
                 onChange={changeLanguage}
                 label={s.language}
                 actionLabel={s.languageSelectorAction}
@@ -537,7 +556,7 @@ export function AskNavShell({
             {languageEntry !== undefined && (
               <div className="flex min-h-[52px] items-center">
                 <LanguageSelector
-                  value={language as LanguageCode}
+                  value={selectedLocale}
                   onChange={changeLanguage}
                   label={s.language}
                   actionLabel={s.languageSelectorAction}

@@ -10,6 +10,11 @@ import { askContextRefOf } from '@/lib/ask/askContextRef';
 import { askRecordStrings, dashboardModuleContext } from '@/lib/ask/askModuleRef';
 import { askCompareRef, dashboardCompareContext } from '@/lib/ask/askSelectionRef';
 import { resolveAskStrings, type AskLocale } from '@/lib/ask/askStrings';
+import { sourceLanguageFor, type DisplayLocale } from '@globalnews-ai/shared';
+import { askLanguageDisposition, askLocaleForLegacyCatalogue } from '@/lib/ask/askLocale';
+import { askSevenStrings } from '@/lib/ask/askSevenStrings';
+import { askDirectionProps, askForeignCopyProps, isolatedAuto } from '@/lib/ask/askDirection';
+import { useRotatingExample } from '@/lib/ask/useRotatingExample';
 import { askR2Strings } from '@/lib/ask/askR2Strings';
 import { askR2View } from '@/lib/ask/askR2View';
 import {
@@ -28,7 +33,7 @@ import { LoadingStages } from '@/components/search/LoadingStages';
 import { AskR2TurnView } from './AskR2TurnView';
 import { AskSourcesColumn } from './AskSourcesColumn';
 import { AskDeepConfirm } from './AskDeepConfirm';
-import { ASK_EYEBROW, Composer, QuestionsWorthAsking } from './AskParts';
+import { ASK_EYEBROW, Composer } from './AskParts';
 import styles from './askDashboard.module.css';
 
 /**
@@ -75,7 +80,7 @@ export function AskFrameScreen({
   locale,
   shellMenu,
 }: {
-  readonly locale: AskLocale;
+  readonly locale: DisplayLocale;
   readonly shellMenu?: AskShellMenuControl;
 }): JSX.Element {
   const params = useSearchParams();
@@ -104,11 +109,30 @@ export function AskFrameScreen({
   const [compact, setCompact] = useState(false);
   const reader = useRef<HTMLDivElement>(null);
   const layout = useRef<HTMLDivElement>(null);
-  const t = resolveAskStrings(locale).strings;
-  /* Ask V2 serves the two ACTIVE languages; any other locale reads and renders as English. */
-  const r2Locale: 'en' | 'pl' = locale === 'pl' ? 'pl' : 'en';
+  /*
+    R4 · SEVEN-LANGUAGE ASK FRONTEND — ONE DISPOSITION, NOT A CLAMP.
+
+    This block used to read `const r2Locale: 'en' | 'pl' = locale === 'pl' ? 'pl' : 'en';`,
+    one of ten identical clamps across the Ask surfaces. A French reader was silently given
+    English and nothing said so. `askLanguageDisposition` keeps the three facts apart:
+
+      interfaceLocale  the reader's own locale, all seven — direction, Intl, bounded copy
+      answerLocale     the language the answer comes back in — the reader's own
+      catalogueLocale  which EN/PL copy catalogue to index; a TRANSLATION fact only
+
+    The reader's requested locale also reaches the request unchanged, so the server learns
+    what was asked rather than what the frontend decided to ask for.
+  */
+  const disposition = askLanguageDisposition(locale);
+  const interfaceLocale = disposition.interfaceLocale;
+  const sevenStrings = askSevenStrings(interfaceLocale);
+  const askScope = askDirectionProps(interfaceLocale);
+  /* R4 · set only when the scope is RTL and the copy below it is still EN/PL. */
+  const foreignCopy = askForeignCopyProps(interfaceLocale);
+  const t = resolveAskStrings(askLocaleForLegacyCatalogue(locale)).strings;
+  const r2Locale = disposition.catalogueLocale;
   const r2s = askR2Strings(r2Locale);
-  const dict = getDictionary(locale);
+  const dict = getDictionary(sourceLanguageFor(interfaceLocale) ?? 'en');
   /*
     UNIFIED INTELLIGENCE BINDING R2C — ONE ENGINE. The legacy news-analysis conversation that
     used to run here when Ask V2 answered 404 is retired: Ask V2 unavailable is a truthful
@@ -123,7 +147,15 @@ export function AskFrameScreen({
   const followNext = useRef(false);
   const [newBelow, setNewBelow] = useState(false);
   const returnPath = sanitizeReturnPath(params.get('return'));
-  const r2 = useAskR2Conversation(r2Locale, returnPath, { guestTrial: true });
+  /*
+    R4 · THE REQUEST CARRIES WHAT THE READER SELECTED, NOT WHAT THE CHROME RENDERS.
+
+    `disposition.requested` is the reader's own locale, all seven. The EN/PL catalogues above
+    still read `catalogueLocale`, because those catalogues have two entries — but the SERVER is
+    told what was actually asked, so it answers in `fr` and records `fr` as `fr` instead of
+    receiving an `en` the frontend invented. That is the whole point of the client pin.
+  */
+  const r2 = useAskR2Conversation(disposition.requested, returnPath, { guestTrial: true });
   const { continueThread, setGuestNotice } = r2;
   /* ASK GUEST TRIAL R3 — the server says a first-visit guest may ask; the client only mirrors it. */
   const guestMode = r2.guestMode;
@@ -169,6 +201,26 @@ export function AskFrameScreen({
     r2.signInRequired !== null;
   /* D25 01 region 4 — the Sources column carries the latest R2 turn's own sources. */
   const withSourcesColumn = showR2 && lastR2?.payload != null;
+  /*
+    CENTERED COMPOSER R1 — THE ENTRY STATE.
+
+    Exactly the condition the empty region already renders on: nothing asked, nothing in
+    flight, nothing reopened, no sign-in interruption. The instant a question exists this is
+    false and the frame is the frozen D25 workspace again, untouched — which is how the
+    contract's "do not redesign the post-answer intelligence workspace" is honoured by
+    construction rather than by care.
+  */
+  const entryState = !hasQuestion;
+  /*
+    The rotating examples. Client-side, zero compute, zero network, zero personalisation, and
+    every rule decided by the pure machine in `askExampleRotation`. `enabled` is the entry
+    state, so no timer runs in the answered workspace.
+  */
+  const rotatingExample = useRotatingExample({
+    locale: interfaceLocale,
+    enabled: entryState,
+    compact,
+  });
 
   useEffect(() => {
     setQuestion(new URLSearchParams(urlKey).get('q') ?? '');
@@ -362,11 +414,36 @@ export function AskFrameScreen({
   return (
     <main
       ref={layout}
+      /*
+        R4 · ARABIC RTL — `lang` and `dir` AT THE ASK CONTENT SCOPE, NOT ON <html>.
+
+        The bidi algorithm resolves paragraph direction from the nearest element that
+        declares one, so declaring it here gives every answer block, chip row and composer
+        inside this tree the right paragraph direction while leaving the product chrome
+        outside it untouched. Putting `dir` on <html> would mirror the whole application for
+        a reader who selected Arabic for Ask; putting it on each text node would lose
+        paragraph direction and reorder punctuation at the boundaries.
+
+        Both values come from `askDirectionProps`, which derives them from the shared
+        direction table — so no component decides its own direction, and `lang` describes the
+        content that is actually rendered.
+      */
+      lang={askScope.lang}
+      dir={askScope.dir}
       data-ask="frame-screen"
+      data-ask-locale={interfaceLocale}
+      data-ask-dir={askScope.dir}
+      data-ask-answer-locale={disposition.answerLocale}
+      /* PO ruling — the answer returns in the reader's selected language, so there is no
+         answer-language disclosure. What remains is a COPY-coverage fact, exposed as data for
+         Claude L's lane and never as a claim to the reader about answers. */
+      data-ask-full-copy={disposition.fullAskCopy ? 'true' : 'false'}
       data-ask-surface
       data-ask-path={showR2 ? 'r2' : r2.availability === 'legacy' ? 'legacy' : 'unknown'}
       data-ask-phase={isPending ? 'loading' : hasQuestion ? 'answered' : 'idle'}
       data-ask-sources-column={withSourcesColumn ? 'true' : undefined}
+      /* CENTERED COMPOSER R1 — the entry geometry is a STATE of this frame; see the CSS. */
+      data-ask-entry={entryState ? 'true' : undefined}
       className={styles.frame}
     >
       {/* PHONE / 768 PORTRAIT — header 56 (D25 11). Hidden by CSS on wider layouts. */}
@@ -426,6 +503,8 @@ export function AskFrameScreen({
               <span
                 key={`${chip.kind}-${i}`}
                 className="shrink-0 rounded-full border border-[#1d4a73] bg-[#06223d] px-2.5 py-1 text-[#cfe2f2]"
+                /* R4 · same isolation as the scope row; this strip renders the same chips. */
+                {...isolatedAuto()}
               >
                 {chip.label}
               </span>
@@ -505,12 +584,35 @@ export function AskFrameScreen({
               </div>
             )}
             {!hasQuestion && (
-              <section data-ask="empty" className={styles.empty}>
-                <p className="font-mono text-[12px] font-semibold uppercase leading-none tracking-[0.1em] text-[#5abff5]">
-                  {t.frameLabel}
+              <section data-ask="empty" data-ask-entry-view="" className={styles.empty}>
+                {/*
+                  CENTERED COMPOSER R1 §3 — the hierarchy the contract specifies: the product,
+                  then the question, then the composer. The wordmark replaces the "Ask AI"
+                  eyebrow here because on the standalone entry view they said the same thing
+                  twice. It is NOT translated: Claude L's approved catalogue carries
+                  'GlobalNews AI' verbatim as the eyebrow in every one of the five new
+                  languages, so this is the qualified form, not a new string.
+                */}
+                <p data-ask="entry-brand" className={styles.entryBrand}>
+                  GlobalNews AI
                 </p>
-                <h1 className={styles.emptyTitle}>{dict.askAi.inputPlaceholder}</h1>
-                <p className={styles.emptyLead}>{t.metaDescription}</p>
+                {/* R4 · the reader's own composer hint. EN/PL read the released dictionary
+                    string through the bounded catalogue, so they are unchanged. */}
+                <h1 className={styles.emptyTitle}>{sevenStrings.composerHint}</h1>
+                {/* R4 · this lead still comes from the EN/PL catalogue, so inside an RTL
+                    scope it is isolated — otherwise its final period is drawn at the left. */}
+                <p className={styles.emptyLead} {...(foreignCopy ?? {})}>
+                  {t.metaDescription}
+                </p>
+                {/*
+                  THE ANSWER-LANGUAGE DISCLOSURE IS REMOVED (PO ruling).
+
+                  It told a French reader, in French, that the answer would come back in
+                  English. That was measured against this lane's base `c7e8c03` and is false
+                  on the current backend, which answers in the reader's selected language. The
+                  entry view says nothing about answer language now, because there is nothing
+                  to say: the reader chose a language and gets it.
+                */}
                 {guestMode && (
                   /* ASK GUEST TRIAL R3 — restrained, factual; sign-in stays optional. */
                   <div data-ask="guest-intro" className="mt-1 flex flex-col gap-1">
@@ -518,10 +620,19 @@ export function AskFrameScreen({
                     <p className="text-[12.5px] leading-[1.45] text-[#8fa6c0]">{g.privacy}</p>
                   </div>
                 )}
-                <QuestionsWorthAsking
-                  label={t.regions.suggestions}
-                  statement={t.states.suggestionsUnavailable}
-                />
+                {/*
+                  CENTERED COMPOSER R1 §3 / §5 — THE "QUESTIONS WORTH ASKING" CARD IS NOT
+                  MOUNTED ON THE ENTRY VIEW.
+
+                  The contract rules that the first viewport must not be dominated by
+                  permanent example cards, and that there must be no standing list of example
+                  questions OUTSIDE the composer. The card's whole content was the truthful
+                  statement that no suggestion was available — and the composer now carries
+                  rotating examples itself, so the card would sit under a live suggestion
+                  saying there is none. `QuestionsWorthAsking` is kept exported and intact in
+                  `AskParts` for whatever later contract wants it back; nothing about it was
+                  weakened, it is simply not rendered here.
+                */}
               </section>
             )}
             {r2.signInRequired !== null && (
@@ -745,14 +856,49 @@ export function AskFrameScreen({
         <div className={styles.composerGrid}>
           <Composer
             value={question}
-            onChange={setQuestion}
+            onChange={(next) => {
+              setQuestion(next);
+              /* CENTERED COMPOSER R1 §8 — the rotation is TOLD the value; it never writes it.
+                 One character stops rotation and hides the example; emptying the field starts
+                 the quiet delay before it may resume. */
+              rotatingExample.onValue(next);
+            }}
             inputLabel={dict.askAi.inputLabel}
-            placeholder={dict.askAi.inputPlaceholder}
+            /* R4 · same bounded hint, so the placeholder and the empty-state title cannot
+               disagree in any locale. */
+            placeholder={sevenStrings.composerHint}
             submitLabel={dict.askAi.submit}
             costNote={t.states.costNotConfigured}
+            /* R4 · still EN/PL copy, so it isolates inside an RTL scope. */
+            costNoteProps={foreignCopy}
             onSubmit={() => void ask()}
             pending={isPending}
             maxHeight={compact ? 140 : 220}
+            /*
+              CENTERED COMPOSER R1 — the rotating example, supplied only in the entry state.
+              `onUse` sets the composer's VALUE and submits nothing (§9, §11): from that moment
+              it is ordinary editable text and the reader still has to press Ask or Enter.
+            */
+            example={
+              rotatingExample.text === null || rotatingExample.id === null
+                ? undefined
+                : {
+                    text: rotatingExample.text,
+                    id: rotatingExample.id,
+                    useLabel: sevenStrings.exampleUse,
+                    onUse: () => {
+                      rotatingExample.onUse();
+                      draftQuestion(rotatingExample.text ?? '');
+                    },
+                    onFocus: rotatingExample.onFocus,
+                    onBlur: rotatingExample.onBlur,
+                    animationClass: rotatingExample.animate ? styles.exampleEnter : undefined,
+                    generation: rotatingExample.generation,
+                    /* The example is the reader's own locale, so it takes the scope's
+                       direction and is isolated — never a direction of its own. */
+                    directionProps: isolatedAuto(),
+                  }
+            }
           />
         </div>
         {/* TRUST R1 §12 — the Privacy Notice and Cookies notice, reachable before sign-in and
@@ -769,6 +915,14 @@ export function AskFrameScreen({
           </a>
         </p>
       </div>
+      {entryState && (
+        /*
+          CENTERED COMPOSER R1 — the flexible spacer below the composer bar. It exists only in
+          the entry state and only to lift the heading + composer pair to the optical centre;
+          it holds no content and is invisible to assistive technology.
+        */
+        <div data-ask="entry-spacer" aria-hidden="true" className={styles.entrySpacer} />
+      )}
       {r2.deepQuote !== null && (
         <AskDeepConfirm
           locale={r2Locale}
