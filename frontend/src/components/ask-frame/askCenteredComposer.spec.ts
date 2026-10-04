@@ -413,7 +413,11 @@ describe('C-6 · cross-platform functional parity addendum', () => {
       css
         .split('@media (max-width: 860px), (orientation: portrait) and (max-width: 1100px) {')
         .pop() ?? '';
-    expect(phone).toMatch(/\.entrySpacer \{\s*flex: 0 1 6vh;/);
+    /* CTO H closeout §4 — the near-the-thumb lift is PHONE-only (≤600px); a portrait tablet keeps
+       the desktop optical-centre lift, so the composer is centred at ~768 and ~1024 as well. */
+    const phoneOnly = css.split('@media (max-width: 600px) {')[1]?.split('}\n}')[0] ?? '';
+    expect(phoneOnly).toMatch(/\.entrySpacer \{\s*flex: 0 1 6vh;/);
+    expect(phone).not.toMatch(/\.entrySpacer/);
     expect(phone).toMatch(/min-height: 72px;/);
     expect(phone).not.toMatch(/display:\s*none/);
     /* The example WRAPS on a phone instead of losing the words that carry the capability. */
