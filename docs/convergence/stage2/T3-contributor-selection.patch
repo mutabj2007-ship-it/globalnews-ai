@@ -1,0 +1,188 @@
+diff --git a/backend/src/modules/ask-intelligence/ask-intelligence.spec.ts b/backend/src/modules/ask-intelligence/ask-intelligence.spec.ts
+index 5f6cf60a..036c0142 100644
+--- a/backend/src/modules/ask-intelligence/ask-intelligence.spec.ts
++++ b/backend/src/modules/ask-intelligence/ask-intelligence.spec.ts
+@@ -191,11 +191,15 @@ const byId = (set: { contributions: readonly { contributorId: string }[] }, id:
+     | undefined;
+ 
+ describe('1/2 — Conflict: natural selection, security served THROUGH Conflict', () => {
+-  it('"How serious is the situation in eastern DRC?" consults Conflict without the reader naming it', async () => {
++  /* STAGE 2 · T3 — SUPERSEDED WITH UPDATED PROOF: the bare "How serious is the situation in
++     eastern DRC?" is a country + generic noun (no security facet) and no longer selects Conflict
++     (contributor-selection.domain-leak.spec.ts). The proof keeps its intent with an
++     armed-conflict question that still never names the module. */
++  it('"How serious is the fighting in eastern DRC?" consults Conflict without the reader naming it', async () => {
+     const { c, calls } = coordinator({
+       conflict: [conflictRow('e1', '2026-09-27'), conflictRow('e2', '2026-09-20')],
+     });
+-    const set = await c.read(route('How serious is the situation in eastern DRC?'), NOW);
++    const set = await c.read(route('How serious is the fighting in eastern DRC?'), NOW);
+     expect(set.considered.map((s) => s.contributorId)).toEqual(['CONFLICT']);
+     const conflict = byId(set, 'CONFLICT')!;
+     expect(conflict.status).toBe('USED');
+@@ -217,7 +221,7 @@ describe('1/2 — Conflict: natural selection, security served THROUGH Conflict'
+   it('no matching retained record → NO_MATCH, never a false contribution', async () => {
+     const { c } = coordinator({ conflict: [] });
+     const conflict = byId(
+-      await c.read(route('How serious is the situation in eastern DRC?'), NOW),
++      await c.read(route('How serious is the fighting in eastern DRC?'), NOW),
+       'CONFLICT',
+     )!;
+     expect(conflict.status).toBe('NO_MATCH');
+@@ -436,7 +440,10 @@ describe('8/9 — Humanitarian reality, multi-contributor', () => {
+ 
+   it('Conflict + Humanitarian coexist; only the real one carries observations', async () => {
+     const { c } = coordinator({ conflict: [conflictRow('e1', '2026-09-27')] });
+-    const set = await c.read(route('What is the humanitarian situation in eastern DRC?'), NOW);
++    const set = await c.read(
++      route('What is the humanitarian situation and the fighting in eastern DRC?'),
++      NOW,
++    );
+     expect(set.considered.map((s) => s.contributorId)).toEqual(['CONFLICT', 'HUMANITARIAN']);
+     expect(
+       set.contributions.filter((x) => x.status === 'USED').map((x) => x.contributorId),
+@@ -461,7 +468,10 @@ describe('10/11/12 — no specialist where none applies', () => {
+ describe('13 — failure and degradation never take the Ask down', () => {
+   it('a failing read is DEGRADED, the others continue', async () => {
+     const { c } = coordinator({ conflict: 'throw' });
+-    const set = await c.read(route('What is the humanitarian situation in eastern DRC?'), NOW);
++    const set = await c.read(
++      route('What is the humanitarian situation and the fighting in eastern DRC?'),
++      NOW,
++    );
+     expect(byId(set, 'CONFLICT')).toMatchObject({
+       status: 'DEGRADED',
+       degradationReason: 'READ_FAILED',
+@@ -473,7 +483,7 @@ describe('13 — failure and degradation never take the Ask down', () => {
+     jest.useFakeTimers();
+     try {
+       const { c } = coordinator({ conflict: 'hang' });
+-      const pending = c.read(route('How serious is the situation in eastern DRC?'), NOW);
++      const pending = c.read(route('How serious is the fighting in eastern DRC?'), NOW);
+       await jest.advanceTimersByTimeAsync(READ_TIMEOUT_MS + 1);
+       expect(byId(await pending, 'CONFLICT')).toMatchObject({
+         status: 'DEGRADED',
+diff --git a/backend/src/modules/ask-intelligence/contributor-selection.domain-leak.spec.ts b/backend/src/modules/ask-intelligence/contributor-selection.domain-leak.spec.ts
+index 47bc2aec..be51eeb9 100644
+--- a/backend/src/modules/ask-intelligence/contributor-selection.domain-leak.spec.ts
++++ b/backend/src/modules/ask-intelligence/contributor-selection.domain-leak.spec.ts
+@@ -102,18 +102,10 @@ describe('T3 · first incorrect transition — the router is right, the term net
+       expect(r.plan.specialistLegs.map((l) => l.domain)).not.toContain('security');
+     },
+   );
+-
+-  /* Reproduction lock: today the seam DOES select CONFLICT for every probe. When the fix lands
+-     this block is deleted together with the test.failing → test conversion below. */
+-  test.each(DEFECT_PROBES)('REPRODUCED today: %s (%s) → CONFLICT/%s', (q, lang, iso3) => {
+-    const selections = selectContributors(route(q, lang));
+-    const conflict = selections.find((s) => s.contributorId === 'CONFLICT');
+-    expect(conflict).toMatchObject({ domain: 'security', scope: { countryIso3: iso3 } });
+-  });
+ });
+ 
+ describe('T3 · negative controls — country + generic noun must NOT select Conflict', () => {
+-  test.failing.each(DEFECT_PROBES)('%s (%s) does not select CONFLICT', (q, lang) => {
++  test.each(DEFECT_PROBES)('%s (%s) does not select CONFLICT', (q, lang) => {
+     expect(contributorIds(route(q, lang))).not.toContain('CONFLICT');
+   });
+ 
+@@ -152,7 +144,7 @@ describe('T3 · humanitarian — Humanitarian is selected, Conflict is not', ()
+   test.each(HUMANITARIAN)('%s (%s) selects HUMANITARIAN', (q, lang) => {
+     expect(contributorIds(route(q, lang))).toContain('HUMANITARIAN');
+   });
+-  test.failing.each(HUMANITARIAN)('%s (%s) does not select CONFLICT', (q, lang) => {
++  test.each(HUMANITARIAN)('%s (%s) does not select CONFLICT', (q, lang) => {
+     expect(contributorIds(route(q, lang))).not.toContain('CONFLICT');
+   });
+ });
+diff --git a/backend/src/modules/ask-intelligence/contributor-selection.ts b/backend/src/modules/ask-intelligence/contributor-selection.ts
+index bf6a0cf4..d284b8f6 100644
+--- a/backend/src/modules/ask-intelligence/contributor-selection.ts
++++ b/backend/src/modules/ask-intelligence/contributor-selection.ts
+@@ -17,18 +17,25 @@ import { readRetainedImihigo } from './imihigo-retained.reader';
+  * not an intent classifier: it cannot route, re-route or re-classify a question, and a
+  * question the router already answers takes exactly the same route with or without it.
+  *
+- * The reader never names a module. They ask "How serious is the situation in eastern DRC?";
++ * The reader never names a module. They ask "How serious is the fighting in eastern DRC?";
+  * the router already reads DR Congo; the Conflict contributor is consulted because the
+- * question is a country situation question — and contributes only if governed retained
+- * Conflict observations exist for that scope.
++ * question is an armed-conflict / security question — and contributes only if governed
++ * retained Conflict observations exist for that scope.
++ *
++ * STAGE 2 · T3 — a typed country plus a GENERIC noun ("situation", "crisis", "sytuacja",
++ * "kryzys") is never Conflict relevance: "What is the travel / visa / political / energy
++ * situation in X?" carries no security domain and must not inject Conflict records.
+  */
+ 
+ /** Closed, reviewed subject terms per artifact (EN + the PL forms reporting/readers use). */
+ export const CONTRIBUTOR_SCOPE_TERMS = {
+-  /** A country's security/situation, served by Conflict. "security" itself is the governed domain. */
+-  SITUATION: [
+-    'situation',
+-    'crisis',
++  /**
++   * Armed-conflict vocabulary served by Conflict that the reading's security lexicon does not
++   * (yet) carry. Domain words only: a generic noun ("situation", "crisis", "sytuacja",
++   * "kryzys") is NEVER here — the router's security domain facet / security leg is the
++   * primary key (STAGE 2 · T3).
++   */
++  ARMED_CONFLICT: [
+     'fighting',
+     'clashes',
+     'violence',
+@@ -36,9 +43,6 @@ export const CONTRIBUTOR_SCOPE_TERMS = {
+     'insurgency',
+     'rebels',
+     'armed groups',
+-    'sytuacja',
+-    'sytuacji',
+-    'kryzys',
+     'walki',
+     'przemoc',
+     'starcia',
+@@ -221,12 +225,14 @@ export function selectContributors(route: AskR2Route): AskContributorSelection[]
+     namesScope(question, CONTRIBUTOR_SCOPE_TERMS.PROCUREMENT) ||
+     namesScope(question, CONTRIBUTOR_SCOPE_TERMS.CPI) ||
+     namesScope(question, CONTRIBUTOR_SCOPE_TERMS.IMIHIGO);
+-  const security = domains.includes('security');
++  /* STAGE 2 · T3 — keyed on the router's security domain facet (or its security specialist
++     leg), never on a typed country + a generic noun. */
++  const leg = route.plan.specialistLegs.find((l) => l.domain === 'security');
++  const security = domains.includes('security') || leg !== undefined;
+   if (
+     countryIso3 !== null &&
+-    (security || (!dataScoped && namesScope(question, CONTRIBUTOR_SCOPE_TERMS.SITUATION)))
++    (security || (!dataScoped && namesScope(question, CONTRIBUTOR_SCOPE_TERMS.ARMED_CONFLICT)))
+   ) {
+-    const leg = route.plan.specialistLegs.find((l) => l.domain === 'security');
+     out.push({
+       contributorId: 'CONFLICT',
+       /* Security intelligence is served THROUGH Conflict — one domain, one store. */
+diff --git a/backend/src/modules/ask-intelligence/governed-answer.spec.ts b/backend/src/modules/ask-intelligence/governed-answer.spec.ts
+index 8f8288d0..7db236e3 100644
+--- a/backend/src/modules/ask-intelligence/governed-answer.spec.ts
++++ b/backend/src/modules/ask-intelligence/governed-answer.spec.ts
+@@ -378,8 +378,11 @@ describe('C — Conflict records as concise structured observations (evidence un
+       );
+       return { c, evidenceDetails };
+     };
++    /* STAGE 2 · T3 — the live G1 wording is a country + generic noun and no longer selects
++       Conflict; the batched-detail proof reads an armed-conflict question instead. */
++    const G1_CONFLICT = 'How serious is the fighting in eastern DRC?';
+     const ok = make('ok');
+-    const set1 = await ok.c.read(route(G.G1), NOW);
++    const set1 = await ok.c.read(route(G1_CONFLICT), NOW);
+     expect(ok.evidenceDetails).toHaveBeenCalledTimes(1);
+     expect(ok.evidenceDetails.mock.calls[0][0]).toEqual(['k1', 'k2']);
+     const conflict = set1.contributions.find((x) => x.contributorId === 'CONFLICT')!;
+@@ -387,7 +390,7 @@ describe('C — Conflict records as concise structured observations (evidence un
+     expect(conflict.disclosures).toContain('SUBNATIONAL_SCOPE_NOT_APPLIED');
+ 
+     const bad = make('throw');
+-    const set2 = await bad.c.read(route(G.G1), NOW);
++    const set2 = await bad.c.read(route(G1_CONFLICT), NOW);
+     const degradedDetail = set2.contributions.find((x) => x.contributorId === 'CONFLICT')!;
+     expect(degradedDetail.status).toBe('USED');
+     expect(degradedDetail.observations[0].detail?.place).toBeNull();
