@@ -53,14 +53,14 @@ CREATE TABLE "PoliticsObservation" (
       AND ("revision"->>'supersedesRevisionOrdinal')::numeric = "revisionOrdinal" - 1
       AND COALESCE("revision"->>'revisionKind' IN ('CORRECTION', 'CLASSIFICATION_CHANGE',
         'SOURCE_REVISION', 'RETRACTION'), false)))),
-  CONSTRAINT "PoliticsObservation_snapshotRetrievalId_snapshotAdmissibility_fkey"
+  CONSTRAINT "PoliticsObservation_snapshotRetrievalId_snapshotAdmissibil_fkey"
     FOREIGN KEY ("snapshotRetrievalId", "snapshotAdmissibility")
     REFERENCES "SnapshotRetrieval"("retrievalId", "admissibility") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 CREATE UNIQUE INDEX "PoliticsObservation_observationKey_revisionOrdinal_key"
   ON "PoliticsObservation"("observationKey", "revisionOrdinal");
-CREATE UNIQUE INDEX "PoliticsObservation_upstreamAuthority_upstreamId_revisionOrdinal_key"
+CREATE UNIQUE INDEX "PoliticsObservation_upstreamAuthority_upstreamId_revisionOr_key"
   ON "PoliticsObservation"("upstreamAuthority", "upstreamId", "revisionOrdinal");
 CREATE INDEX "PoliticsObservation_countryIso3_effectiveOn_idx"
   ON "PoliticsObservation"("countryIso3", "effectiveOn");
