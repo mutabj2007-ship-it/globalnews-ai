@@ -113,8 +113,8 @@ export const MEASURED_AT_D920893: PoliticsBindingPreconditions = {
 /**
  * INTEGRATOR (Claude Code) — measured after the authorized TEXT-PATH seam wiring (C's edits 4–8) on the
  * local integration branch above d920893. MEASURED_AT_D920893 is left unchanged as the base record.
- * Still false: every emitted disclosure recognised (shared SHARED-ASK-DISCLOSURE-PROPAGATION-R1) and the
- * E1 G6 leak probes (untested). So the gate still refuses to BIND, and edit 9 (boundSpecialistDomains)
+ * Still false: the E1 G6 leak probes (untested). (Disclosure recognition became true with
+ * SHARED-ASK-DISCLOSURE-PROPAGATION-R1.) So the gate still refuses to BIND, and edit 9 (boundSpecialistDomains)
  * and the pin path (edits 1–3) stay unwired.
  */
 export const MEASURED_AFTER_TEXT_SEAM_WIRING: PoliticsBindingPreconditions = {
@@ -122,6 +122,9 @@ export const MEASURED_AFTER_TEXT_SEAM_WIRING: PoliticsBindingPreconditions = {
   searchableProjectionHasNonSpecConsumer: true,
   repositoryInjectedIntoCoordinator: true,
   contributorSelectable: true,
+  /* SHARED-ASK-DISCLOSURE-PROPAGATION-R1 landed: C's sentinel "every disclosure code the coordinator emits is
+     recognised by the governed prompt" now passes on the tree. */
+  everyEmittedDisclosureRecognised: true,
 };
 
 /* ------------------------------------------------------------------ *

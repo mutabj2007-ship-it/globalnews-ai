@@ -90,10 +90,10 @@ describe('the seam is genuinely unbound in the tree — these fail the moment it
     expect(MEASURED_AFTER_TEXT_SEAM_WIRING.contributorSelectable).toBe(true);
   });
 
-  it('after text-seam wiring the gate still refuses to BIND, naming only disclosure and leak probes', () => {
+  it('after text-seam wiring + disclosure propagation the gate still refuses to BIND, naming only the leak probes', () => {
     const d = decidePoliticsBinding(MEASURED_AFTER_TEXT_SEAM_WIRING);
     expect(d.bound).toBe(false);
-    expect([...d.refusedBecause].sort()).toEqual(['DISCLOSURE_CODE_UNRECOGNISED', 'LEAK_PROBES_NOT_PASSED']);
+    expect([...d.refusedBecause]).toEqual(['LEAK_PROBES_NOT_PASSED']);
   });
 
   it('AskIntelligenceModule must NOT import PoliticsModule when it is wired', () => {
