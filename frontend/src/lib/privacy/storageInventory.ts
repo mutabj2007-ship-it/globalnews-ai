@@ -103,7 +103,11 @@ export const STORAGE_INVENTORY: readonly StorageItem[] = [
     kind: 'COOKIE',
     category: 'PREFERENCES',
     purpose: { en: 'Shows pages in your language.', pl: 'Wyświetla strony w Twoim języku.' },
-    data: { en: '“en” or “pl”.', pl: '„en” lub „pl”.' },
+    /* T5 · the code writes any display locale (persistLanguageSelection), not only en/pl. */
+    data: {
+      en: 'A language code: “en”, “pl”, “fr”, “de”, “es”, “pt” or “ar”.',
+      pl: 'Kod języka: „en”, „pl”, „fr”, „de”, „es”, „pt” lub „ar”.',
+    },
     lifetime: { en: '1 year', pl: '1 rok' },
     whenSet: {
       en: 'When you choose a language. On the Map and Conflict pages it can also be set from your browser’s language.',
@@ -118,7 +122,11 @@ export const STORAGE_INVENTORY: readonly StorageItem[] = [
       en: 'Remembers your language in this browser.',
       pl: 'Zapamiętuje język w tej przeglądarce.',
     },
-    data: { en: '“en” or “pl”.', pl: '„en” lub „pl”.' },
+    /* T5 · the code writes any display locale (persistLanguageSelection), not only en/pl. */
+    data: {
+      en: 'A language code: “en”, “pl”, “fr”, “de”, “es”, “pt” or “ar”.',
+      pl: 'Kod języka: „en”, „pl”, „fr”, „de”, „es”, „pt” lub „ar”.',
+    },
     lifetime: { en: 'Until you remove it', pl: 'Do usunięcia' },
     whenSet: { en: 'Together with the language cookie.', pl: 'Razem z plikiem cookie języka.' },
   },
