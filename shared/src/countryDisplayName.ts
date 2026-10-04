@@ -1,4 +1,12 @@
 import type { LanguageCode } from './analysis';
+import type { DisplayLocale } from './language';
+
+/*
+  R4 · LOCALIZATION CONVERGENCE — the one CLDR construction also serves the Ask interface's
+  DisplayLocale (de / pt have no source-intelligence LanguageCode). Type widening only: the
+  lookup itself is unchanged, and this stays the ONLY Intl.DisplayNames in the codebase.
+*/
+type DisplayNamesLocale = LanguageCode | DisplayLocale;
 
 /**
  * Milestone #50 Phase C (multilingual country-relevance containment) —
@@ -19,9 +27,9 @@ import type { LanguageCode } from './analysis';
  * `Intl.DisplayNames` instances are cached per language, never
  * constructed per-call.
  */
-const displayNamesCache = new Map<LanguageCode, Intl.DisplayNames | null>();
+const displayNamesCache = new Map<DisplayNamesLocale, Intl.DisplayNames | null>();
 
-function getDisplayNamesInstance(language: LanguageCode): Intl.DisplayNames | null {
+function getDisplayNamesInstance(language: DisplayNamesLocale): Intl.DisplayNames | null {
   if (displayNamesCache.has(language)) {
     return displayNamesCache.get(language) ?? null;
   }
@@ -48,7 +56,10 @@ function getDisplayNamesInstance(language: LanguageCode): Intl.DisplayNames | nu
  * decides what to do with an absent result, never a silently-wrong
  * fallback string.
  */
-export function getLocalizedCountryName(iso2: string, language: LanguageCode): string | undefined {
+export function getLocalizedCountryName(
+  iso2: string,
+  language: DisplayNamesLocale,
+): string | undefined {
   const instance = getDisplayNamesInstance(language);
   if (!instance) return undefined;
 
