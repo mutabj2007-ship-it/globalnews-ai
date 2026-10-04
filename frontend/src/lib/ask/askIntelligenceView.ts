@@ -54,9 +54,12 @@ const EN: AskIntelligenceStrings = {
     ECONOMY_CPI: 'Retained NISR consumer price statistics',
     IMIHIGO: 'Retained NISR Imihigo evaluation',
     HUMANITARIAN: 'Humanitarian Intelligence',
+    POLITICS: 'Retained official Politics records',
   },
   retainedNote: {
     RETAINED_EVENT_RECORD: 'Retained event records dated by the source — not current reporting.',
+    RETAINED_OFFICIAL_RECORD:
+      'Retained official records, each shown with its own date — not current reporting.',
     RETAINED_PUBLICATION:
       'A retained snapshot of notices published on the date shown — not current.',
     RETAINED_STATISTICAL_RELEASE:
@@ -110,8 +113,11 @@ const PL: AskIntelligenceStrings = {
     ECONOMY_CPI: 'Zachowane statystyki cen konsumpcyjnych NISR',
     IMIHIGO: 'Zachowana ocena Imihigo NISR',
     HUMANITARIAN: 'Wywiad humanitarny',
+    POLITICS: 'Zachowane oficjalne rekordy polityczne',
   },
   retainedNote: {
+    RETAINED_OFFICIAL_RECORD:
+      'Zachowane rekordy oficjalne, każdy z własną datą — to nie są bieżące doniesienia.',
     RETAINED_EVENT_RECORD:
       'Zachowane rekordy zdarzeń datowane przez źródło — to nie są bieżące doniesienia.',
     RETAINED_PUBLICATION: 'Zachowana migawka ogłoszeń opublikowanych w podanym dniu — nie bieżąca.',
