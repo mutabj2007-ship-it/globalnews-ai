@@ -68,20 +68,22 @@ const shell = stripComments(src('components', 'map', 'shell', 'GlobalMapShell.ts
 describe('I — PL survives a refresh on the map, not only on the homepage', () => {
   describe('THE RECONCILIATION IS THE RELEASED ONE, NOT A SECOND MECHANISM', () => {
     it('it compares the client resolution against the cookie the server used', () => {
-      expect(sync).toContain("const effectiveServerLanguage = readLanguageCookie() ?? 'en';");
-      expect(sync).toContain('const resolved = resolveInitialLanguage();');
+      /* T2 — through the one display-locale authority: the pure decision compares the stored
+         choice with what the server rendered (displayLocale.ts reconcileDisplayLocale). */
+      expect(sync).toContain('reconcileStoredDisplayLocale()');
+      expect(sync).toContain("import { reconcileStoredDisplayLocale } from '@/lib/i18n/displayLocale';");
     });
 
     it('and applies the SAME fallback the routes apply', () => {
       /* If the two disagreed about the default, they would fight every render. */
-      expect(sync).toContain("?? 'en'");
-      expect(mapRoute).toContain("isActiveLanguageCode(languageCookie) ? languageCookie : 'en'");
+      /* T2 — the route and the reconciliation share the display-locale authority's validator. */
+      expect(mapRoute).toContain("surfaceLocale('map')");
+      expect(mapRoute).not.toContain('isActiveLanguageCode(');
     });
 
     it('it persists and refreshes only on disagreement', () => {
-      expect(sync).toMatch(
-        /if \(resolved !== effectiveServerLanguage\) \{\s*persistLanguageSelection\(resolved\);\s*router\.refresh\(\);\s*\}/,
-      );
+      /* T2 — the decision returns `refresh` only when the server rendered without the reader's choice. */
+      expect(sync).toMatch(/if \(reconcileStoredDisplayLocale\(\)\) \{\s*router\.refresh\(\);\s*\}/);
     });
 
     it('which is why it cannot loop', () => {
@@ -91,7 +93,8 @@ describe('I — PL survives a refresh on the map, not only on the homepage', () 
       */
       const body = sync.slice(sync.indexOf('useEffect'));
 
-      expect(body.indexOf('persistLanguageSelection')).toBeLessThan(body.indexOf('router.refresh'));
+      /* T2 — reconcileStoredDisplayLocale persists before it returns, so the write precedes the refresh. */
+      expect(body.indexOf('reconcileStoredDisplayLocale')).toBeLessThan(body.indexOf('router.refresh'));
     });
 
     it('it writes no preference store of its own', () => {
@@ -105,7 +108,7 @@ describe('I — PL survives a refresh on the map, not only on the homepage', () 
     it('and it reads localStorage in an effect, never in render', () => {
       /* M65 — reading it during render is a hydration mismatch. */
       expect(sync).toContain('useEffect(() => {');
-      expect(sync.indexOf('useEffect')).toBeLessThan(sync.indexOf('resolveInitialLanguage()'));
+      expect(sync.indexOf('useEffect(() => {')).toBeLessThan(sync.indexOf('reconcileStoredDisplayLocale()'));
     });
   });
 
@@ -119,7 +122,8 @@ describe('I — PL survives a refresh on the map, not only on the homepage', () 
         Hero's effect is pinned by its own spec and is not moved or removed —
         this adds a route that had none rather than relocating one that worked.
       */
-      expect(hero).toContain("const effectiveServerLanguage = readLanguageCookie() ?? 'en';");
+      /* T2 — same authority, still its own effect. */
+      expect(hero).toContain('if (reconcileStoredDisplayLocale()) {');
     });
 
     it('the component renders nothing, so it cannot affect layout', () => {

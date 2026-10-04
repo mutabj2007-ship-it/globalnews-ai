@@ -125,7 +125,8 @@ describe('M66.8a — the declaration itself', () => {
     const layoutSource = readFileSync(join(__dirname, '../../app/layout.tsx'), 'utf-8');
     expect(layoutSource).not.toMatch(/colorScheme/);
     expect(layoutSource).not.toMatch(/color-scheme/);
-    expect(layoutSource).toMatch(/<html lang=\{language\} className=\{fontVariables\}>/);
+    /* T2 — dir joins lang (effective surface locale); still no colour-scheme attribute. */
+    expect(layoutSource).toMatch(/<html lang=\{surface\.document\.lang\} dir=\{surface\.document\.dir\} className=\{fontVariables\}>/);
   });
 });
 
@@ -213,7 +214,8 @@ describe('M66.11 — the M66.8a contracts that survive unchanged', () => {
 
   it('SURVIVES — persistence and the server refresh still run, and still belong to the caller', () => {
     expect(navBarCode).toMatch(/function handleLanguageChange\(next: DisplayLocale\): void \{/);
-    expect(navBarCode).toMatch(/if \(next === language\) return;/);
+    /* T2 — the guard compares against the REQUESTED locale (useRequestedDisplayLocale). */
+    expect(navBarCode).toMatch(/if \(next === selectedLocale\) return;/);
     expect(navBarCode).toMatch(/persistLanguageSelection\(next\);/);
     expect(navBarCode).toMatch(/router\.refresh\(\);/);
     // The control still owns none of it.

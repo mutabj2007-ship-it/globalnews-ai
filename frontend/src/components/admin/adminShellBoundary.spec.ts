@@ -32,7 +32,8 @@ const layout = readFileSync(join(APP_ADMIN, 'layout.tsx'), 'utf-8');
 describe('F1.b — the /admin/me client boundary', () => {
   it('the layout is a Server Component that resolves the dictionary once', () => {
     expect(layout).not.toContain("'use client'");
-    expect(layout).toContain('cookies()');
+    /* T2 — the cookie is read through the display-locale authority (request-scoped server helper). */
+    expect(layout).toContain("surfaceLocale('admin')");
     expect(layout).toContain('getDictionary');
     expect(layout).toContain('AdminShell');
   });

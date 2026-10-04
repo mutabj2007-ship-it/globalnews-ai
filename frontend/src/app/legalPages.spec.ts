@@ -28,12 +28,13 @@ describe('B2 — /privacy and /terms routes', () => {
     expect(termsSource).toMatch(/export default async function TermsPage/);
   });
 
-  it('both pages resolve language using the SAME existing homepage server-component pattern (LANGUAGE_COOKIE_NAME + isActiveLanguageCode), not a new mechanism', () => {
+  it('both pages resolve language through the ONE display-locale authority (T2), not a new mechanism', () => {
     const privacySource = readFileSync(privacyPagePath, 'utf-8');
     const termsSource = readFileSync(termsPagePath, 'utf-8');
+    expect(privacySource).toMatch(/surfaceLocale\('privacy'\)/);
+    expect(termsSource).toMatch(/surfaceLocale\('terms'\)/);
     for (const source of [privacySource, termsSource]) {
-      expect(source).toMatch(/cookies\(\)\.get\(LANGUAGE_COOKIE_NAME\)/);
-      expect(source).toMatch(/isActiveLanguageCode/);
+      expect(source).not.toMatch(/isActiveLanguageCode\(/);
     }
   });
 

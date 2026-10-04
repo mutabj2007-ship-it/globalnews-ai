@@ -423,9 +423,8 @@ describe('PWA-1 §5 — M66.13 localization is preserved exactly', () => {
   });
 
   it('still reads the language cookie and the dictionary', () => {
-    expect(generateMetadataBody).toContain('cookies().get(LANGUAGE_COOKIE_NAME)');
-    expect(generateMetadataBody).toContain('isActiveLanguageCode(languageCookie)');
-    expect(generateMetadataBody).toContain('getDictionary(language)');
+    /* T2 — the cookie is read by the display-locale authority; the dictionary is the effective locale's. */
+    expect(generateMetadataBody).toContain('getDictionary(documentSurfaceLocale().language)');
   });
 
   it('title and description still resolve from the dictionary', () => {
@@ -445,7 +444,8 @@ describe('PWA-1 §5 — M66.13 localization is preserved exactly', () => {
   });
 
   it('<html lang> still reflects the resolved language', () => {
-    expect(layoutSource).toContain('<html lang={language} className={fontVariables}>');
+    /* T2 — lang AND dir from the effective surface locale. */
+    expect(layoutSource).toContain('<html lang={surface.document.lang} dir={surface.document.dir} className={fontVariables}>');
   });
 
   it('the body class list is untouched', () => {
@@ -572,7 +572,8 @@ describe('PWA-1 §5 — M66.13 localization is preserved exactly', () => {
     // exactly once. It issues no request on mount and none on navigation.
     expect(bodyInner).toBe(
       /* STANDALONE PUBLIC BETA CONVERGENCE R1 — the dock learns the server-decided root (no new element). */
-      '<ServiceWorkerRegistrar /> {children} <ReturnDepthTracker /> <AskAiDock language={language} standaloneRoot={standaloneAskRoot()} />',
+      /* T2 — the declared-fallback notice (renders nothing unless the surface fell back). */
+      '<ServiceWorkerRegistrar /> <DisplayLocaleNotice locale={surface} /> {children} <ReturnDepthTracker /> <AskAiDock language={language} standaloneRoot={standaloneAskRoot()} />',
     );
   });
 });

@@ -154,7 +154,8 @@ describe('SUPPORT-AI-1 — one submission, one ticket', () => {
 describe('SUPPORT-AI-1 — the language reaches the server as data', () => {
   it('the page resolves it once and passes it down', () => {
     const page = read(join(__dirname, '..', '..', 'app', 'support', 'page.tsx'));
-    expect(stripComments(page)).toMatch(/currentLanguage\(\) === 'pl' \? 'pl' : 'en'/);
+    /* T2 — narrowed to the Support DTO's en|pl from the EFFECTIVE surface locale (no substitution). */
+    expect(stripComments(page)).toMatch(/effectiveWithin\(surfaceLocale\('support'\), \['en', 'pl'\]\)/);
     expect(stripComments(page)).toContain('language={language}');
   });
 

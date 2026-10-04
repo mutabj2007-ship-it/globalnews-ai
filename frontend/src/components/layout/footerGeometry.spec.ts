@@ -728,7 +728,8 @@ describe('M66.8b — what deliberately did NOT change', () => {
       // M66.10B — the eighth route. It passes language={language} like the other
       // two legal pages, NOT like /history and /workspace.
       ['../../app/source-policy/page.tsx', 'language={language}'],
-      ['../../app/history/page.tsx', ''],
+      /* T2 — /history's client moved to components/history/HistoryClient.tsx (server page hands it the locale). */
+      ['../history/HistoryClient.tsx', 'language={language}'],
       ['../../app/workspace/page.tsx', ''],
     ] as const;
     for (const [relative] of routes) {
@@ -736,10 +737,10 @@ describe('M66.8b — what deliberately did NOT change', () => {
       expect(source).toMatch(/<Footer/);
       expect(source).toMatch(/from '@\/components\/layout\/Footer'/);
     }
-    // /history and /workspace still pass no language prop. That is
-    // M66.7-DEFERRED-004, deliberately NOT fixed here.
-    expect(stripComments(readFileSync(join(__dirname, '../../app/history/page.tsx'), 'utf-8'))).toMatch(
-      /<Footer \/>/,
+    // /workspace still passes no language prop (M66.7-DEFERRED-004). T2 resolved it for
+    // /history: its Footer now follows the surface's effective locale.
+    expect(stripComments(readFileSync(join(__dirname, '../history/HistoryClient.tsx'), 'utf-8'))).toMatch(
+      /<Footer language=\{language\} \/>/,
     );
   });
 
