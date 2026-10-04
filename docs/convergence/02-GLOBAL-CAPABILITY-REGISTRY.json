@@ -146,7 +146,8 @@
    },
    "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
    "alphaNote": "runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority); guest trial OFF by design (not a defect)",
-   "handoffNote": "H final 266007c: Ask shell complete in all seven display locales (not yet deployed; integrates with final R4). Not a system-wide language completion claim."
+   "handoffNote": "H final 266007c: Ask shell complete in all seven display locales (not yet deployed; integrates with final R4). Not a system-wide language completion claim.",
+   "stage2Branch": "T3 branch 424491a9: defect reproduced identically at 5513275f/5699eb7/266007c; first wrong step contributor-selection.ts:227; patch verified, applies after final R4"
   },
   {
    "id": "ASK-SEARCH",
@@ -278,7 +279,8 @@
     "sha": "5513275f"
    },
    "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
-   "sourceLanguages": []
+   "sourceLanguages": [],
+   "stage2Branch": "T4 branch 5a28e269: 22 callers classified; 0 live frontend callers at Alpha and Production; PII-free legacy-use telemetry + admin readout"
   },
   {
    "id": "CONVERSATION",
@@ -677,7 +679,8 @@
    "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
    "sourceLanguages": [],
    "productionNote": "code present at Production SHAs 5b714833/58f80fd4; runtime flags not measured (HOLD)",
-   "alphaNote": "runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority)"
+   "alphaNote": "runtime-verified: Alpha 5513275f, platform root, Ask V2 active (CTO Railway authority)",
+   "stage2Branch": "T3 branch 424491a9: see ASK-CORE"
   },
   {
    "id": "SECURITY",
@@ -1991,6 +1994,24 @@
      "priority": "P0",
      "summary": "Public-Beta Production P0: pre-login privacy/data/cookie notice and guest-trial boundary (≥3 questions before login, truthful guest session) not proven",
      "evidence": "no consent component at 5513275f or 58f80fd4; contract R2 T5; Alpha guest OFF is intentional"
+    },
+    {
+     "id": "P1-PRIV-03",
+     "priority": "P1",
+     "summary": "Privacy page retention claims (limit identifiers ~1 week, usage 90 days, conversations 12 months) hold only when RETENTION_SWEEP_ENABLED=true (default off); privacy/cookies/guest copy en/pl only",
+     "evidence": "stage2/T5-CONSENT-GUEST-TRIAL.md; RETENTION_SWEEP_ENABLED default"
+    },
+    {
+     "id": "P1-PRIV-04",
+     "priority": "P1",
+     "summary": "Guest claim moves ALL guest conversations (copy says 'keep this conversation'); plain sign-in leaves guest data visible on shared device; no immediate guest-data deletion; no /cookies footer link",
+     "evidence": "stage2/T5-CONSENT-GUEST-TRIAL.md patches P-1..P-5"
+    },
+    {
+     "id": "P2-PRIV-05",
+     "priority": "P2",
+     "summary": "Production backend 5b714833 stores raw IPv4 (and /64 IPv6) in guest/compute limit scopes with no deletion; Alpha uses a keyed daily pseudonym — fixed at next promotion; live only if Production guest flags are on (unmeasured)",
+     "evidence": "5b714833:backend/src/modules/compute-controls/compute-scopes.ts:43-51 vs 5513275f:…:44-47"
     }
    ],
    "evidence": [
@@ -2017,7 +2038,8 @@
    },
    "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
    "sourceLanguages": [],
-   "productionNote": "no consent notice component at 58f80fd4"
+   "productionNote": "no consent notice component at 58f80fd4",
+   "stage2Branch": "T5 part A branch ef0e8b95: guest trial = 3 completed answers per guest session; isolation I1–I9 proven on Postgres; consent design (no banner needed: no optional storage)"
   },
   {
    "id": "THEME",
@@ -2245,7 +2267,8 @@
     "branch": "release/alpha-r4-search-conversation-5513275",
     "sha": "5513275f"
    },
-   "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md"
+   "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
+   "stage2Branch": "T1 branch 8333551e: canonical coverage state (54/54 COVERAGE_GAP), LOCAL/INTERNATIONAL locality, reader disclosure (map), RSS rights gate, placeholder-key rejection — pending CTO integration"
   },
   {
    "id": "TELEMETRY-ADMIN",
@@ -2312,7 +2335,8 @@
     "sha": "5513275f"
    },
    "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
-   "sourceLanguages": []
+   "sourceLanguages": [],
+   "stage2Branch": "T4 branch 5a28e269: GET /admin/analytics/legacy-usage (process-scoped)"
   },
   {
    "id": "PAID",

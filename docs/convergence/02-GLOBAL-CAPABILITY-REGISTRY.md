@@ -33,7 +33,7 @@ Authority: `release/alpha-r4-search-conversation-5513275` @ `5513275f` (Alpha ru
 | **ACCOUNT-AUTH** Account, sign-in, settings | ALPHA_LIVE | UNVERIFIED_RUNTIME | N/A | N/A | N/A | N/A | N/A | N/A | F P E E E E E | P1-ACC-01 |
 | **SUPPORT** Support / Help & feedback | ALPHA_LIVE | UNVERIFIED_RUNTIME | N/A | N/A | N/A | N/A | N/A | N/A | F F E E E E E | P1-LANG-06 |
 | **LEGAL** Privacy, Cookies, Terms, Source policy, Third-party notices | ALPHA_LIVE | UNVERIFIED_RUNTIME | N/A | N/A | N/A | N/A | N/A | N/A | F F E E E E E | P1-LEG-01, P2-THEME-01 |
-| **CONSENT** Pre-login consent / cookie / data-handling notice | ABSENT | ABSENT | N/A | N/A | N/A | N/A | N/A | N/A | A A A A A A A | P0-PRIV-01 |
+| **CONSENT** Pre-login consent / cookie / data-handling notice | ABSENT | ABSENT | N/A | N/A | N/A | N/A | N/A | N/A | A A A A A A A | P0-PRIV-01, P1-PRIV-03, P1-PRIV-04, P2-PRIV-05 |
 | **THEME** Light/Dark theme system | LOCAL_ONLY | UNVERIFIED_RUNTIME | N/A | N/A | N/A | N/A | N/A | N/A | - - - - - - - | P2-THEME-02 |
 | **PREVIEW-ROUTES** Preview / fixture route containment | PREVIEW_ONLY | UNVERIFIED_RUNTIME | N/A | N/A | N/A | N/A | N/A | N/A | F F E E E E E | P1-PRV-01, P2-PRV-02 |
 | **NEWS-SOURCES** News retrieval + source coverage (local vs international) | COVERAGE_GAP | UNVERIFIED_RUNTIME | ASK_BOUND | PASS | N/A | N/A | N/A | N/A | - - - - - - - | P0-SRC-01, P1-SRC-02, P1-SRC-03, P2-SRC-04 |
@@ -476,6 +476,9 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Rollback: rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md
 - Evidence: stage0/language.json
 - **P0 P0-PRIV-01** — Public-Beta Production P0: pre-login privacy/data/cookie notice and guest-trial boundary (≥3 questions before login, truthful guest session) not proven _(evidence: no consent component at 5513275f or 58f80fd4; contract R2 T5; Alpha guest OFF is intentional)_
+- **P1 P1-PRIV-03** — Privacy page retention claims (limit identifiers ~1 week, usage 90 days, conversations 12 months) hold only when RETENTION_SWEEP_ENABLED=true (default off); privacy/cookies/guest copy en/pl only _(evidence: stage2/T5-CONSENT-GUEST-TRIAL.md; RETENTION_SWEEP_ENABLED default)_
+- **P1 P1-PRIV-04** — Guest claim moves ALL guest conversations (copy says 'keep this conversation'); plain sign-in leaves guest data visible on shared device; no immediate guest-data deletion; no /cookies footer link _(evidence: stage2/T5-CONSENT-GUEST-TRIAL.md patches P-1..P-5)_
+- **P2 P2-PRIV-05** — Production backend 5b714833 stores raw IPv4 (and /64 IPv6) in guest/compute limit scopes with no deletion; Alpha uses a keyed daily pseudonym — fixed at next promotion; live only if Production guest flags are on (unmeasured) _(evidence: 5b714833:backend/src/modules/compute-controls/compute-scopes.ts:43-51 vs 5513275f:…:44-47)_
 
 ### THEME — Light/Dark theme system
 

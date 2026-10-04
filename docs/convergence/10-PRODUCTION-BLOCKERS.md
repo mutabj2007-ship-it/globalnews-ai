@@ -44,7 +44,7 @@ The list below is generated from `02-GLOBAL-CAPABILITY-REGISTRY.json`. A blocker
 | P0-PRIV-01 | Public-Beta Production P0: pre-login privacy/data/cookie notice and guest-trial boundary (≥3 questions before login, truthful guest session) not proven | CONSENT | no consent component at 5513275f or 58f80fd4; contract R2 T5; Alpha guest OFF is intentional |
 | P0-SRC-01 | GNews (no rights record) is the only active source and silently substitutes for local coverage in all 54 priority countries; no COVERAGE_GAP disclosure | NEWS-SOURCES | news.module.ts:71; stage0/source-coverage.json |
 
-### P1 — Alpha blocker (28)
+### P1 — Alpha blocker (30)
 
 | ID | Blocker | Capabilities | Evidence |
 |---|---|---|---|
@@ -71,13 +71,15 @@ The list below is generated from `02-GLOBAL-CAPABILITY-REGISTRY.json`. A blocker
 | P1-MKT-02 | mktStrings English-only (PL disclosed fallback) | MARKET | mktStrings.ts:316 |
 | P1-OBS-01 | Telemetry interceptor records only /analysis/news; admin analytics blind to Ask V2 | TELEMETRY-ADMIN | telemetry.interceptor.ts:31,40; admin-analytics.service.ts:238 |
 | P1-POL-01 | No searchable projection or Ask contributor; route constant NOT_ASSESSED; owned by Politics lane — consume its handoff | POLITICS | politics.retained.ts:9; stage0/search-binding.json politics |
+| P1-PRIV-03 | Privacy page retention claims (limit identifiers ~1 week, usage 90 days, conversations 12 months) hold only when RETENTION_SWEEP_ENABLED=true (default off); privacy/cookies/guest copy en/pl only | CONSENT | stage2/T5-CONSENT-GUEST-TRIAL.md; RETENTION_SWEEP_ENABLED default |
+| P1-PRIV-04 | Guest claim moves ALL guest conversations (copy says 'keep this conversation'); plain sign-in leaves guest data visible on shared device; no immediate guest-data deletion; no /cookies footer link | CONSENT | stage2/T5-CONSENT-GUEST-TRIAL.md patches P-1..P-5 |
 | P1-PRV-01 | Preview routes linked from Alpha Home/My Intelligence and public | PREVIEW-ROUTES | lib/intelligenceModules.ts:203,284,305; homeRevaModel.ts:101; miWorkspaceModel.ts:53-68 |
 | P1-RIGHTS-04 | Imihigo committed/served without rights-evaluator record | IMIHIGO | data/imihigo/capture.json:4 |
 | P1-SEC-01 | SecurityObservation store unbound; producer module never imported | SECURITY | stage0/backend-modules.json#security |
 | P1-SRC-02 | RSS activation bypasses rights (Standard Media RESTRICTED activatable by env) | NEWS-SOURCES | feed-source-registry.ts:213-241 |
 | P1-SRC-03 | Placeholder API keys count as configured | NEWS-SOURCES | provider.tokens.ts:59-61; .env.example:209 |
 
-### P2 — Production blocker (11)
+### P2 — Production blocker (12)
 
 | ID | Blocker | Capabilities | Evidence |
 |---|---|---|---|
@@ -88,6 +90,7 @@ The list below is generated from `02-GLOBAL-CAPABILITY-REGISTRY.json`. A blocker
 | P2-FOL-01 | Follow is country-only; 'Follow an Issue' (paid core service) absent | FOLLOW | stage0/backend-modules.json#follows |
 | P2-LANG-07 | Preference not persisted to account; no Accept-Language | LANG-SYSTEM | stage0/language.json selector |
 | P2-MAP-01 | Arabic text-direction work marked OPEN; legacy map hidden below lg when NEXT_PUBLIC_MAP_SHELL off | MAP-COUNTRY | map/page.tsx:120-139; MapPageClient.tsx:2077 |
+| P2-PRIV-05 | Production backend 5b714833 stores raw IPv4 (and /64 IPv6) in guest/compute limit scopes with no deletion; Alpha uses a keyed daily pseudonym — fixed at next promotion; live only if Production guest flags are on (unmeasured) | CONSENT | 5b714833:backend/src/modules/compute-controls/compute-scopes.ts:43-51 vs 5513275f:…:44-47 |
 | P2-PRV-02 | /workspace fake page served by c908 Production | PREVIEW-ROUTES | workspace/page.tsx:273-285 |
 | P2-SRC-04 | Retrieval authority defects D1–D7 | NEWS-SOURCES | docs/retrieval-source-authority-audit-r1.md (branch claude/retrieval-source-authority-audit-r1) |
 | P2-THEME-01 | /terms /source-policy /third-party-notices dark-only | LEGAL | stage0/frontend-routes.json |

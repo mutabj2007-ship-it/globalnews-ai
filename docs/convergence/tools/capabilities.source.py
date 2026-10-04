@@ -799,3 +799,36 @@ _by_id["CONSENT"]["blockers"] = [{
     "id": "P0-PRIV-01", "priority": "P0",
     "summary": "Public-Beta Production P0: pre-login privacy/data/cookie notice and guest-trial boundary (≥3 questions before login, truthful guest session) not proven",
     "evidence": "no consent component at 5513275f or 58f80fd4; contract R2 T5; Alpha guest OFF is intentional"}]
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# STAGE 2 TRANCHE DELIVERIES (branches, NOT deployed — Alpha cells stay measured at 5513275f)
+# ════════════════════════════════════════════════════════════════════════════
+STAGE2_BRANCHES = {
+    "T1 coverage truthfulness": "claude/stage2-t1-coverage-truthfulness @ 8333551e (base 5513275f)",
+    "T2 global language foundation": "claude/stage2-t2-global-language-foundation (base 266007c)",
+    "T3 contributor-selection spec": "claude/stage2-t3-contributor-selection-spec @ 424491a9 (base 5513275f; spec + unapplied patch)",
+    "T4 legacy Ask convergence": "claude/stage2-t4-legacy-ask-convergence @ 5a28e269 (base 5513275f)",
+    "T5 consent + guest trial (part A)": "claude/stage2-t5-consent-guest-trial @ ef0e8b95 (base 5513275f)",
+}
+for _id, _note in [
+    ("NEWS-SOURCES", "T1 branch 8333551e: canonical coverage state (54/54 COVERAGE_GAP), LOCAL/INTERNATIONAL locality, reader disclosure (map), RSS rights gate, placeholder-key rejection — pending CTO integration"),
+    ("ASK-CORE", "T3 branch 424491a9: defect reproduced identically at 5513275f/5699eb7/266007c; first wrong step contributor-selection.ts:227; patch verified, applies after final R4"),
+    ("CONFLICT", "T3 branch 424491a9: see ASK-CORE"),
+    ("ASK-LEGACY", "T4 branch 5a28e269: 22 callers classified; 0 live frontend callers at Alpha and Production; PII-free legacy-use telemetry + admin readout"),
+    ("TELEMETRY-ADMIN", "T4 branch 5a28e269: GET /admin/analytics/legacy-usage (process-scoped)"),
+    ("CONSENT", "T5 part A branch ef0e8b95: guest trial = 3 completed answers per guest session; isolation I1–I9 proven on Postgres; consent design (no banner needed: no optional storage)"),
+]:
+    _by_id[_id]["stage2Branch"] = _note
+
+_by_id["CONSENT"]["blockers"] += [
+    {"id": "P1-PRIV-03", "priority": "P1",
+     "summary": "Privacy page retention claims (limit identifiers ~1 week, usage 90 days, conversations 12 months) hold only when RETENTION_SWEEP_ENABLED=true (default off); privacy/cookies/guest copy en/pl only",
+     "evidence": "stage2/T5-CONSENT-GUEST-TRIAL.md; RETENTION_SWEEP_ENABLED default"},
+    {"id": "P1-PRIV-04", "priority": "P1",
+     "summary": "Guest claim moves ALL guest conversations (copy says 'keep this conversation'); plain sign-in leaves guest data visible on shared device; no immediate guest-data deletion; no /cookies footer link",
+     "evidence": "stage2/T5-CONSENT-GUEST-TRIAL.md patches P-1..P-5"},
+    {"id": "P2-PRIV-05", "priority": "P2",
+     "summary": "Production backend 5b714833 stores raw IPv4 (and /64 IPv6) in guest/compute limit scopes with no deletion; Alpha uses a keyed daily pseudonym — fixed at next promotion; live only if Production guest flags are on (unmeasured)",
+     "evidence": "5b714833:backend/src/modules/compute-controls/compute-scopes.ts:43-51 vs 5513275f:…:44-47"},
+]

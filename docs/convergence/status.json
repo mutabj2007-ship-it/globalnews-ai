@@ -19,8 +19,8 @@
  },
  "blockers": {
   "P0": 6,
-  "P1": 28,
-  "P2": 11,
+  "P1": 30,
+  "P2": 12,
   "P3": 2
  },
  "finishLine": "every capability row GREEN except explicitly approved Production-only blockers (contract Definition of Done #9)"
