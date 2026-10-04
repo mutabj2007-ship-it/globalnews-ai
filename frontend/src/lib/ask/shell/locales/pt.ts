@@ -75,6 +75,7 @@ export const ptShellOverlay: ShellLocaleOverlay = {
         answer: "Resposta",
         sources: "Fontes",
       },
+      metaDescription: "A superfície de pesquisa específica para cada pergunta: atenta ao mapa, apoiada em fontes e explícita sobre o que não foi avaliado.",
     },
     askContinuityStrings: {
       recentTitle: "Recentes",

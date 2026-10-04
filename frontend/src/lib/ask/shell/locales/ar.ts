@@ -79,6 +79,7 @@ export const arShellOverlay: ShellLocaleOverlay = {
         answer: "الإجابة",
         sources: "المصادر",
       },
+      metaDescription: "واجهة البحث الخاصة بكل سؤال: مدركة للموقع الجغرافي، ومستندة إلى المصادر، وصريحة بشأن ما لم يُقيَّم.",
     },
     askContinuityStrings: {
       recentTitle: "الأخيرة",

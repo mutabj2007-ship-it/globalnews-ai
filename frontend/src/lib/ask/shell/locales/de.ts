@@ -75,6 +75,7 @@ export const deShellOverlay: ShellLocaleOverlay = {
         answer: "Antwort",
         sources: "Quellen",
       },
+      metaDescription: "Die fragenspezifische Rechercheoberfläche: kartenbewusst, quellengestützt und ausdrücklich darüber, was nicht bewertet wurde.",
     },
     askContinuityStrings: {
       recentTitle: "Zuletzt",

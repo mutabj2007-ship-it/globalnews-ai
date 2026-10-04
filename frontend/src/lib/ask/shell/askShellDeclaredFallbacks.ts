@@ -19,12 +19,12 @@ import type { DisplayLocale } from '@globalnews-ai/shared';
  *   · a key Claude L delivers but that is left declared here   → FAILS, because it is
  *                                                                declared but not measured;
  *   · the honest current state                                 → passes, and the exact size
- *                                                                of the gap is 469 lines a
+ *                                                                of the gap is 468 lines a
  *                                                                reviewer can read.
  *
  * So the file shrinks as L delivers, the test tightens by itself, and nothing can start
  * falling back quietly between rounds. It is a declaration of an incomplete state, not a
- * suppression of one: the CTO sees 469 here and reads it as 469 strings of English still in
+ * suppression of one: the CTO sees 468 here and reads it as 468 strings of English still in
  * front of a French reader.
  *
  * ── HOW THIS RECONCILES WITH THE MANIFEST SENT TO CLAUDE L (REVISION 4) ───
@@ -37,9 +37,9 @@ import type { DisplayLocale } from '@globalnews-ai/shared';
  *    -5  provider and product proper nouns, which no locale translates
  *   ────
  *   530  Claude L's scope
- *   -61  H's drafts, every one declared `DRAFT_PENDING_CLAUDE_L`
+ *   -62  H's drafts, every one declared `DRAFT_PENDING_CLAUDE_L`
  *   ────
- *   469  declared below, per locale
+ *   468  declared below, per locale
  *
  * ── WHY THIS NUMBER MOVED TWICE, AND WHAT EACH MOVE MEANT ─────────────────
  *
@@ -231,7 +231,6 @@ const PENDING_ALL_DRAFT_LOCALES: readonly string[] = Object.freeze([
   'askR2Strings.personal.INTERESTS.notAvailable',
   'askR2Strings.personal.NEUTRAL.signIn',
   'askR2Strings.personal.NEUTRAL.notAvailable',
-  'askStrings.metaDescription',
   'askStrings.regions.changeStrip',
   'askStrings.regions.mapCanvas',
   'askStrings.regions.contextSummary',

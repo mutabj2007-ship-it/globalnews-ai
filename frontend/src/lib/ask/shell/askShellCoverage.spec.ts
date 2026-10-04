@@ -161,9 +161,9 @@ describe('B-7 · no English fallback is ever silent', () => {
       const coverage = askShellCoverage(locale);
       expect(coverage.qualification).toBe('DRAFT_PENDING_CLAUDE_L');
       expect(coverage.complete).toBe(false);
-      expect(coverage.localizedKeys).toBe(61);
-      expect(coverage.fallbacks).toHaveLength(469);
-      /* 61 drafted + 469 pending + 5 proper nouns = the 535 overlay-managed keys. */
+      expect(coverage.localizedKeys).toBe(62);
+      expect(coverage.fallbacks).toHaveLength(468);
+      /* 62 drafted + 468 pending + 5 proper nouns = the 535 overlay-managed keys. */
       expect(coverage.localizedKeys + coverage.fallbacks.length + coverage.properNouns).toBe(
         coverage.totalKeys,
       );

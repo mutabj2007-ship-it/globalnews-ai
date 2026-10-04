@@ -75,6 +75,7 @@ export const frShellOverlay: ShellLocaleOverlay = {
         answer: "Réponse",
         sources: "Sources",
       },
+      metaDescription: "La surface de recherche propre à chaque question : attentive à la géographie, adossée aux sources, et explicite sur ce qui n'a pas été évalué.",
     },
     askContinuityStrings: {
       recentTitle: "Récentes",

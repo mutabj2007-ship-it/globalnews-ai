@@ -75,6 +75,7 @@ export const esShellOverlay: ShellLocaleOverlay = {
         answer: "Respuesta",
         sources: "Fuentes",
       },
+      metaDescription: "La superficie de investigación específica para cada pregunta: atenta al mapa, respaldada por fuentes y explícita sobre lo que no se ha evaluado.",
     },
     askContinuityStrings: {
       recentTitle: "Recientes",
