@@ -1,7 +1,9 @@
 import type { AskCompanionTopic, AskRecentReporting as RecentReporting } from '@/lib/api/askV2Api';
-import type { AskR2Locale } from '@/lib/ask/askR2Strings';
-import { safeExternalHref } from '@globalnews-ai/shared';
+import { safeExternalHref, type DisplayLocale } from '@globalnews-ai/shared';
 import { localisedCountryName } from '@/lib/map/geography/displayName';
+import { askLocaleForLegacyCatalogue } from '@/lib/ask/askLocale';
+import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
+import { askFormatDate } from '@/lib/ask/askDirection';
 
 /**
  * TRUST & CONVERSATIONAL EXPERIENCE R1 — mixed background + current developments.
@@ -15,59 +17,22 @@ import { localisedCountryName } from '@/lib/map/geography/displayName';
  * question…), so the block is titled by that task. An answer stored before the task rule has no
  * topic and keeps its original title.
  */
-const T: Record<
-  AskR2Locale,
-  {
-    title: (place: string, days: number) => string;
-    topic: Record<AskCompanionTopic, (place: string, days: number) => string>;
-    note: string;
-    none: string;
-    unavailable: string;
-  }
-> = {
-  en: {
-    title: (place, days) => `Recent reporting about ${place} (last ${days} days)`,
-    topic: {
-      TRAVEL: (place, days) => `Current travel notices · ${place} (last ${days} days)`,
-      ECONOMY: (place, days) => `Recent economic reporting · ${place} (last ${days} days)`,
-      SECURITY: (place, days) => `Recent security reporting · ${place} (last ${days} days)`,
-      BUSINESS: (place, days) =>
-        `Recent business and trade reporting · ${place} (last ${days} days)`,
-      SCIENCE: (place, days) => `Recent science reporting · ${place} (last ${days} days)`,
-    },
-    note: 'Listed, not analysed: the answer above is general background and does not use these reports.',
-    none: 'No recent reporting about this place is held right now. That is not evidence that nothing is happening.',
-    unavailable: 'Recent reporting could not be checked just now.',
-  },
-  pl: {
-    title: (place, days) => `Najnowsze doniesienia: ${place} (ostatnie ${days} dni)`,
-    topic: {
-      TRAVEL: (place, days) =>
-        `Bieżące komunikaty dla podróżnych · ${place} (ostatnie ${days} dni)`,
-      ECONOMY: (place, days) =>
-        `Najnowsze doniesienia gospodarcze · ${place} (ostatnie ${days} dni)`,
-      SECURITY: (place, days) =>
-        `Najnowsze doniesienia o bezpieczeństwie · ${place} (ostatnie ${days} dni)`,
-      BUSINESS: (place, days) =>
-        `Najnowsze doniesienia o biznesie i handlu · ${place} (ostatnie ${days} dni)`,
-      SCIENCE: (place, days) => `Najnowsze doniesienia naukowe · ${place} (ostatnie ${days} dni)`,
-    },
-    note: 'Lista bez analizy: powyższa odpowiedź to ogólne tło i nie korzysta z tych doniesień.',
-    none: 'Nie mamy teraz najnowszych doniesień o tym miejscu. To nie dowód, że nic się nie dzieje.',
-    unavailable: 'Nie udało się teraz sprawdzić najnowszych doniesień.',
-  },
-};
+/*
+  R4 · PHASE B — the EN/PL `T` record that lived here was module-private, so no overlay could
+  reach it and no coverage report could count it: ten keys, six of them templates, that a
+  French reader would have been shown in English whatever the catalogues did. They now live in
+  `askSurfaceStrings.ts`, verbatim.
+*/
 
-function day(iso: string, locale: AskR2Locale): string {
-  const date = new Date(iso);
-  return Number.isNaN(date.getTime())
-    ? ''
-    : date.toLocaleDateString(locale === 'pl' ? 'pl-PL' : 'en-GB', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-        timeZone: 'UTC',
-      });
+/*
+  R4 · PHASE B — this read `toLocaleDateString(locale === 'pl' ? 'pl-PL' : 'en-GB', …)`.
+  Correct for two locales, silently English for five, and incapable of Eastern-Arabic
+  numerals. `askFormatDate` is the one date formatter the Ask surface has, built from the
+  locale's own `Intl` formatting profile, and it already renders the product's frozen
+  day-month-year arrangement.
+*/
+function day(iso: string, locale: DisplayLocale): string {
+  return askFormatDate(iso, locale) ?? '';
 }
 
 export function AskRecentReporting({
@@ -75,10 +40,12 @@ export function AskRecentReporting({
   locale,
 }: {
   readonly reporting: RecentReporting;
-  readonly locale: AskR2Locale;
+  readonly locale: DisplayLocale;
 }): JSX.Element {
-  const t = T[locale];
-  const place = localisedCountryName(reporting.country, locale) ?? reporting.country;
+  const t = askShellStrings(locale).askRecentReportingStrings;
+  const place =
+    localisedCountryName(reporting.country, askLocaleForLegacyCatalogue(locale)) ??
+    reporting.country;
   const title = (reporting.topic === undefined ? t.title : t.topic[reporting.topic])(
     place,
     reporting.windowDays,

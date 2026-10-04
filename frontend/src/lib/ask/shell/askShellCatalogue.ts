@@ -98,6 +98,20 @@ export function askShellStrings(locale: DisplayLocale): AskShellSource {
   return mergeShell(askShellSource(), OVERLAYS[locale], locale);
 }
 
+/**
+ * THE WORDMARK — read from the frozen D25 title, in the reader's own language.
+ *
+ * It lives here rather than in `askNavStrings.ts`, where it used to, for one structural
+ * reason: that file is a SOURCE catalogue and the shell source reads it, so importing the
+ * resolver back into it would be a cycle. The property the original helper existed to
+ * guarantee is unchanged and is the reason it is still a function — the wordmark is READ from
+ * `askTitle` rather than copied, so the standalone header can never drift from the frozen
+ * title.
+ */
+export function askProductName(locale: DisplayLocale): string {
+  return askShellStrings(locale).askR2Strings.askTitle;
+}
+
 /* ────────────────────────────────────────────────────────────────────────────
    COVERAGE — the number the CTO asked to be able to see
    ──────────────────────────────────────────────────────────────────────────── */

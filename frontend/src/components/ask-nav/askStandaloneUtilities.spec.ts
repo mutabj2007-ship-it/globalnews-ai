@@ -64,7 +64,7 @@ describe('J — Settings stays inside standalone Ask, in the active language', (
       'resolveAskLocale(cookies().get(LANGUAGE_COOKIE_NAME)?.value)',
     );
     expect(code(settingsPage)).toMatch(
-      /<AskContinuityHeader locale=\{chrome\} surface="settings" \/>\s*<AskClearedBoundary>\s*<AccountSettingsBody language=\{chrome\} chrome="standalone" \/>/,
+      /<AskContinuityHeader locale=\{chrome\} surface="settings" \/>\s*<AskClearedBoundary>\s*<AccountSettingsBody language=\{askLocaleForLegacyCatalogue\(chrome\)\} chrome="standalone" \/>/,
     );
     expect(code(settingsPage)).not.toMatch(/NavBar|Footer/);
   });

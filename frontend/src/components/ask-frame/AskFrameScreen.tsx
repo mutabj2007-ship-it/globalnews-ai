@@ -35,6 +35,7 @@ import { AskSourcesColumn } from './AskSourcesColumn';
 import { AskDeepConfirm } from './AskDeepConfirm';
 import { ASK_EYEBROW, Composer } from './AskParts';
 import styles from './askDashboard.module.css';
+import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 
 /**
  * ASK R2 CLAUDE DESIGN RECONCILIATION R1 — /ask AS THE FROZEN D25 AUTHORITY DRAWS IT.
@@ -129,10 +130,23 @@ export function AskFrameScreen({
   const askScope = askDirectionProps(interfaceLocale);
   /* R4 · set only when the scope is RTL and the copy below it is still EN/PL. */
   const foreignCopy = askForeignCopyProps(interfaceLocale);
-  const t = resolveAskStrings(askLocaleForLegacyCatalogue(locale)).strings;
-  const r2Locale = disposition.catalogueLocale;
-  const r2s = askR2Strings(r2Locale);
-  const dict = getDictionary(sourceLanguageFor(interfaceLocale) ?? 'en');
+  /*
+    R4 · PHASE B — ONE RESOLVER, AND THE LAST CLAMP IS GONE.
+
+    These four lines each resolved copy their own way: `askStrings` through the legacy
+    five-member crossing, `askR2Strings` through `catalogueLocale` (which was 'en' | 'pl'),
+    and the dictionary through `sourceLanguageFor`, which returns undefined for a locale with
+    no source language and fell back to English. Three mechanisms, three different answers to
+    one question, and a French reader could be shown all three at once.
+
+    `askShellStrings(locale)` answers it once, for every catalogue the Ask surface reads, and
+    what it cannot word yet is reported by `askShellCoverage` rather than substituted in
+    silence.
+  */
+  const shell = askShellStrings(interfaceLocale);
+  const t = shell.askStrings;
+  const r2s = shell.askR2Strings;
+  const dict = shell.dict;
   /*
     UNIFIED INTELLIGENCE BINDING R2C — ONE ENGINE. The legacy news-analysis conversation that
     used to run here when Ask V2 answered 404 is retired: Ask V2 unavailable is a truthful
@@ -188,8 +202,8 @@ export function AskFrameScreen({
       ? askR2View(
           lastR2.payload,
           r2s,
-          r2Locale,
-          (iso) => localisedCountryName(iso, r2Locale) ?? iso,
+          interfaceLocale,
+          (iso) => localisedCountryName(iso, askLocaleForLegacyCatalogue(interfaceLocale)) ?? iso,
         )
       : null;
   const showR2 = r2.availability === 'r2' || opened !== null;
@@ -230,9 +244,11 @@ export function AskFrameScreen({
   useEffect(() => {
     const url = new URLSearchParams(urlKey);
     if (url.get('q') === null && dashboardCompareContext(url) !== undefined) {
-      setQuestion(r2Locale === 'pl' ? 'Porównaj te artykuły' : 'Compare these stories');
+      /* R4 · PHASE B — was a bare `r2Locale === 'pl' ? … : …`. A ternary with no catalogue key
+         is unreachable by every localization mechanism; this one now has a key. */
+      setQuestion(shell.askContextStrings.compareDraftQuestion);
     }
-  }, [urlKey, r2Locale]);
+  }, [urlKey, shell]);
   /*
     SIGNED-OUT FALLBACK REMOVAL R1 — back from sign-in, the kept question returns to the
     composer as a DRAFT. It is read once and removed; nothing is sent until the reader
@@ -534,10 +550,8 @@ export function AskFrameScreen({
             {compareContext && (
               <div data-ask="context" data-ask-context-kind="SELECTION" className={styles.contextChip}>
                 <span className="truncate">
-                  {(r2Locale === 'pl' ? 'Porównanie: {n} artykułów' : 'Comparing {n} stories').replace(
-                    '{n}',
-                    String(compareContext.length),
-                  )}
+                  {/* R4 · PHASE B — was a bare ternary with a hand-rolled {n} substitution. */}
+                  {shell.askContextStrings.comparingStories(compareContext.length)}
                 </span>
                 <button
                   type="button"
@@ -552,7 +566,7 @@ export function AskFrameScreen({
             {!compareContext && moduleContext && (
               <div data-ask="context" data-ask-context-kind="MODULE" className={styles.contextChip}>
                 <span className="truncate">
-                  {moduleContext.label || askRecordStrings(r2Locale).moduleRecord[moduleContext.ref.module]}
+                  {moduleContext.label || shell.askRecordStrings.moduleRecord[moduleContext.ref.module]}
                 </span>
                 <button
                   type="button"
@@ -570,7 +584,10 @@ export function AskFrameScreen({
                   {/* TRUST R1 — a country-only context (Map → Ask) names its place; it had an empty title. */}
                   {context.title ||
                     (context.countryCode
-                      ? (localisedCountryName(context.countryCode, r2Locale) ?? context.countryCode)
+                      ? (localisedCountryName(
+                          context.countryCode,
+                          askLocaleForLegacyCatalogue(interfaceLocale),
+                        ) ?? context.countryCode)
                       : '')}
                 </span>
                 <button
@@ -680,7 +697,7 @@ export function AskFrameScreen({
                       <AskR2TurnView
                         canSave={!guestMode}
                         turn={turn}
-                        locale={r2Locale}
+                        locale={interfaceLocale}
                         context={context}
                         displayOnly
                       />
@@ -694,7 +711,7 @@ export function AskFrameScreen({
                 <AskR2TurnView
                   canSave={!guestMode}
                   turn={opened}
-                  locale={r2Locale}
+                  locale={interfaceLocale}
                   context={context}
                   displayOnly
                   onUseQuestion={draftQuestion}
@@ -719,7 +736,7 @@ export function AskFrameScreen({
                       <AskR2TurnView
                         canSave={!guestMode}
                         turn={turn}
-                        locale={r2Locale}
+                        locale={interfaceLocale}
                         context={context}
                         onRunDeeper={guestMode ? undefined : (q) => void r2.runDeeper(q)}
                       />
@@ -733,7 +750,7 @@ export function AskFrameScreen({
                 <AskR2TurnView
                   canSave={!guestMode}
                   turn={latestR2}
-                  locale={r2Locale}
+                  locale={interfaceLocale}
                   context={context}
                   onRunDeeper={guestMode ? undefined : (q) => void r2.runDeeper(q)}
                   onUseQuestion={draftQuestion}
@@ -778,7 +795,7 @@ export function AskFrameScreen({
           </div>
           {withSourcesColumn && (
             <div className={styles.sourcesColumn}>
-              <AskSourcesColumn turn={lastR2} locale={r2Locale} />
+              <AskSourcesColumn turn={lastR2} locale={interfaceLocale} />
             </div>
           )}
         </div>
@@ -925,7 +942,7 @@ export function AskFrameScreen({
       )}
       {r2.deepQuote !== null && (
         <AskDeepConfirm
-          locale={r2Locale}
+          locale={interfaceLocale}
           onConfirm={() => void r2.confirmDeeper()}
           onCancel={() => void r2.cancelDeeper()}
         />

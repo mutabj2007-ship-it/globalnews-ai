@@ -277,7 +277,15 @@ describe('ASK SHELL — no dead controls, no excluded destination', () => {
   });
 
   it('the wordmark is identity, not a duplicate control', () => {
+    /*
+      R4 · PHASE B — `askProductName` still exists, still reads the wordmark from the frozen
+      D25 `askTitle` rather than copying it, and is still called exactly like this. It moved
+      module: `askNavStrings.ts` is a SOURCE catalogue that the shell resolver reads, so the
+      helper could only ever answer for two locales from there. It now answers for seven from
+      `lib/ask/shell/askShellCatalogue.ts`.
+    */
     expect(shell).toContain('{askProductName(language)}');
+    expect(shell).toContain("from '@/lib/ask/shell/askShellCatalogue'");
     expect(shell).not.toMatch(/<Link[^>]*>\s*\{askProductName/);
   });
 });

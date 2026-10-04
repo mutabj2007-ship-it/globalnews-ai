@@ -2,7 +2,11 @@ import { createElement } from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import type { AskContribution, AskR2Payload } from '@/lib/api/askV2Api';
 import { AskR2TurnView } from '@/components/ask-frame/AskR2TurnView';
-import { askGovernedConversation, isGovernedConversationTurn } from './askGovernedConversation';
+import {
+  askGovernedConversation,
+  askGovernedCopy,
+  isGovernedConversationTurn,
+} from './askGovernedConversation';
 
 /**
  * GOVERNED ANSWER CONVERSATIONAL UX R1 — conversation first, governance second, evidence third.
@@ -109,7 +113,7 @@ describe('which turns are voiced', () => {
       ['REFERENCE_BACKGROUND', 'NO_REQUIRED_EVIDENCE'],
       ['INSUFFICIENT', 'NO_REQUIRED_EVIDENCE_OBTAINED'],
     ]) {
-      expect(askGovernedConversation(payload(state, basis, null), 'en', 'Q?')).toBeNull();
+      expect(askGovernedConversation(payload(state, basis, null), askGovernedCopy('en'), 'Q?')).toBeNull();
     }
   });
 });
@@ -118,7 +122,7 @@ describe('deterministic conversational copy (EN / PL)', () => {
   it('Ngoma — PL', () => {
     const g = askGovernedConversation(
       payload('RETAINED_RECORD', 'GOVERNED_RECORD', [ngoma]),
-      'pl',
+      askGovernedCopy('pl'),
       'Q?',
     )!;
     expect(g.paragraphs[0]).toBe(
@@ -133,14 +137,14 @@ describe('deterministic conversational copy (EN / PL)', () => {
       c({ status: 'NO_MATCH' }),
     ]);
     expect(
-      askGovernedConversation(absent, 'en', "What was Nyamasheke's 2024-25 Imihigo result?")!
+      askGovernedConversation(absent, askGovernedCopy('en'), "What was Nyamasheke's 2024-25 Imihigo result?")!
         .paragraphs[0],
     ).toBe(
       'I don’t have an individual 2024/2025 Imihigo score for Nyamasheke in the retained NISR data.',
     );
     /* no cycle named → none assumed */
     expect(
-      askGovernedConversation(absent, 'en', 'How did Nyamasheke do in Imihigo?')!.paragraphs[0],
+      askGovernedConversation(absent, askGovernedCopy('en'), 'How did Nyamasheke do in Imihigo?')!.paragraphs[0],
     ).toBe('I don’t have an individual Imihigo score for Nyamasheke in the retained NISR data.');
   });
 
@@ -161,7 +165,7 @@ describe('deterministic conversational copy (EN / PL)', () => {
           ],
         }),
       ]),
-      'en',
+      askGovernedCopy('en'),
       'Q?',
     )!;
     expect(g.paragraphs[0]).toBe(
@@ -173,7 +177,7 @@ describe('deterministic conversational copy (EN / PL)', () => {
   it('CPI held but unreadable — PL, with no implementation vocabulary', () => {
     const g = askGovernedConversation(
       payload('CAPABILITY_UNAVAILABLE', 'GOVERNED_RECORD_UNAVAILABLE', [cpiHeld]),
-      'pl',
+      askGovernedCopy('pl'),
       'Q?',
     )!;
     expect(g.paragraphs[0]).toMatch(
@@ -196,7 +200,7 @@ describe('deterministic conversational copy (EN / PL)', () => {
           ],
         }),
       ]),
-      'en',
+      askGovernedCopy('en'),
       'What are the important procurement changes in Poland?',
     )!;
     expect(g.paragraphs[0]).toBe(
@@ -208,13 +212,13 @@ describe('deterministic conversational copy (EN / PL)', () => {
   it('official unavailable names the body only when the reader named it', () => {
     const named = askGovernedConversation(
       payload('CAPABILITY_UNAVAILABLE', 'OFFICIAL_SOURCE_UNAVAILABLE', null),
-      'en',
+      askGovernedCopy('en'),
       'What is the official reference rate of the National Bank of Poland?',
     )!;
     expect(named.paragraphs[0]).toMatch(/^I can’t give you NBP’s official reference rate/);
     const unnamed = askGovernedConversation(
       payload('CAPABILITY_UNAVAILABLE', 'OFFICIAL_SOURCE_UNAVAILABLE', null),
-      'en',
+      askGovernedCopy('en'),
       'What is the official unemployment figure?',
     )!;
     expect(unnamed.paragraphs[0]).toBe(
@@ -222,7 +226,7 @@ describe('deterministic conversational copy (EN / PL)', () => {
     );
     const pl = askGovernedConversation(
       payload('CAPABILITY_UNAVAILABLE', 'OFFICIAL_SOURCE_UNAVAILABLE', null),
-      'pl',
+      askGovernedCopy('pl'),
       'Jaka jest oficjalna stopa referencyjna NBP?',
     )!;
     expect(pl.paragraphs[0]).toMatch(/^Nie mogę jeszcze podać oficjalnej stopy referencyjnej NBP/);

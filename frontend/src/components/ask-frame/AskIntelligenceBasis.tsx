@@ -1,7 +1,7 @@
-import { safeExternalHref } from '@globalnews-ai/shared';
+import { safeExternalHref, type DisplayLocale } from '@globalnews-ai/shared';
 import type { AskR2Payload } from '@/lib/api/askV2Api';
-import type { AskR2Locale } from '@/lib/ask/askR2Strings';
-import { askIntelligenceStrings, askIntelligenceView } from '@/lib/ask/askIntelligenceView';
+import { askIntelligenceView } from '@/lib/ask/askIntelligenceView';
+import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 
 /**
  * ASK INTELLIGENCE BINDING R1 — the governed structured part of ONE Ask answer, inside the
@@ -15,14 +15,14 @@ export function AskIntelligenceBasis({
   hideNotes = false,
 }: {
   readonly payload: AskR2Payload;
-  readonly locale: AskR2Locale;
+  readonly locale: DisplayLocale;
   readonly reportingSourceCount: number;
   /** LIVE ACCEPTANCE REPAIR R1 — the notes already ARE the answer (a stated absence). */
   readonly hideNotes?: boolean;
 }): JSX.Element | null {
-  const view = askIntelligenceView(payload, locale, reportingSourceCount);
+  const s = askShellStrings(locale).askIntelligenceStrings;
+  const view = askIntelligenceView(payload, s, reportingSourceCount);
   if (view === null) return null;
-  const s = askIntelligenceStrings(locale);
   return (
     <section data-ask="intelligence" className="mt-4 flex flex-col gap-3">
       {view.basedOn !== null && (

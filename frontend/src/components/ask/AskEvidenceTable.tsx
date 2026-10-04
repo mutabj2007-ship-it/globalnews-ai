@@ -1,6 +1,7 @@
-import { safeExternalHref } from '@globalnews-ai/shared';
+import { safeExternalHref, type DisplayLocale } from '@globalnews-ai/shared';
 import type { AnalysisSourceRef, LanguageCode } from '@globalnews-ai/shared';
 import type { AskComparisonTable } from '@/lib/api/askV2Api';
+import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 
 /**
  * ═══ R2-S1 · THE EVIDENCE-LINKED COMPARISON TABLE ═══════════════════════════
@@ -16,32 +17,12 @@ import type { AskComparisonTable } from '@/lib/api/askV2Api';
  * Accessible: a real <table> with a caption, column headers and row headers;
  * on a phone each row stacks into a labelled block instead of scrolling sideways.
  */
-const STRINGS = {
-  en: {
-    caption: 'What the reports say, point by point',
-    point: 'Point',
-    reported: 'Reported',
-    sources: 'Sources',
-    agreement: 'Reports agree',
-    citation: (n: number) => `Source ${n}`,
-    omitted: (n: number) =>
-      n === 1
-        ? '1 point is not shown because no listed source supports it.'
-        : `${n} points are not shown because no listed source supports them.`,
-  },
-  pl: {
-    caption: 'Co mówią źródła, punkt po punkcie',
-    point: 'Kwestia',
-    reported: 'Według źródeł',
-    sources: 'Źródła',
-    agreement: 'Źródła są zgodne',
-    citation: (n: number) => `Źródło ${n}`,
-    omitted: (n: number) =>
-      n === 1
-        ? 'Nie pokazano 1 punktu, bo żadne z wymienionych źródeł go nie potwierdza.'
-        : `Nie pokazano punktów: ${n}, bo żadne z wymienionych źródeł ich nie potwierdza.`,
-  },
-} as const;
+/*
+  R4 · PHASE B — the EN/PL `STRINGS` record that lived here was module-private, so no
+  overlay could reach it and no coverage report could count it. Its seven keys (two of them
+  templates) now live in `askSurfaceStrings.ts`, verbatim, and are resolved by the one shell
+  resolver.
+*/
 
 export function AskEvidenceTable({
   table,
@@ -50,10 +31,10 @@ export function AskEvidenceTable({
 }: {
   readonly table: AskComparisonTable | null | undefined;
   readonly sources: readonly AnalysisSourceRef[];
-  readonly language: LanguageCode;
+  readonly language: DisplayLocale;
 }): JSX.Element | null {
   if (!table || table.schema !== 'ask-comparison-table/1' || table.rows.length < 2) return null;
-  const t = language === 'pl' ? STRINGS.pl : STRINGS.en;
+  const t = askShellStrings(language).askEvidenceTableStrings;
   const numbered = (ids: readonly string[]) =>
     ids
       .map((id) => sources.findIndex((s) => s.articleId === id))

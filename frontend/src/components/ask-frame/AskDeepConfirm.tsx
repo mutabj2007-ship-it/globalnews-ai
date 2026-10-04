@@ -1,8 +1,9 @@
 'use client';
+import type { DisplayLocale } from '@globalnews-ai/shared';
 
 import { useEffect, useRef } from 'react';
-import { askR2Strings, type AskR2Locale } from '@/lib/ask/askR2Strings';
 import { resolveAskStrings } from '@/lib/ask/askStrings';
+import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 
 /**
  * ASK R2 CONSOLIDATED INTEGRATION R1 · GATE G — "RUN DEEPER ANALYSIS?" (D25 10).
@@ -18,12 +19,12 @@ export function AskDeepConfirm({
   onConfirm,
   onCancel,
 }: {
-  readonly locale: AskR2Locale;
+  readonly locale: DisplayLocale;
   readonly onConfirm: () => void;
   readonly onCancel: () => void;
 }): JSX.Element {
-  const s = askR2Strings(locale);
-  const steps = resolveAskStrings(locale).strings.computeSteps;
+  const s = askShellStrings(locale).askR2Strings;
+  const steps = askShellStrings(locale).askStrings.computeSteps;
   const confirmRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {

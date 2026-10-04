@@ -24,12 +24,7 @@ import { persistLanguageSelection, displayLocaleOf } from '@/lib/i18n/languages'
 import { LanguageSelector } from '@/components/search/LanguageSelector';
 import { ThemeControl, ThemeScopeContext } from '@/components/platform/ThemeControl';
 import type { ThemePreference } from '@/lib/theme/theme';
-import {
-  askNavStringsFor,
-  askProductName,
-  type AskNavLocale,
-  type AskNavStrings,
-} from '@/lib/ask/askNavStrings';
+import type { AskNavStrings } from '@/lib/ask/askNavStrings';
 import {
   askMenuFor,
   askUtilitiesFor,
@@ -37,6 +32,7 @@ import {
   type AskMenuEntry,
 } from '@/lib/askNavModel';
 import styles from './askNav.module.css';
+import { askProductName, askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -208,7 +204,7 @@ export function AskNavShell({
   selected,
   theme,
 }: {
-  readonly language: AskNavLocale;
+  readonly language: DisplayLocale;
   /**
    * SEVEN-LANGUAGE CORRECTION — THE READER'S OWN SELECTION, SHOWN BACK TO THEM.
    *
@@ -244,7 +240,7 @@ export function AskNavShell({
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const wasOpen = useRef(false);
 
-  const s = askNavStringsFor(language);
+  const s = askShellStrings(language).askNavStrings;
   const audience: AskMenuAudience = user === null ? 'signed-out' : 'signed-in';
   const items = askMenuFor(audience);
   const utilities = askUtilitiesFor(audience);

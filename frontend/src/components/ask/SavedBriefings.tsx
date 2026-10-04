@@ -3,16 +3,17 @@
 import { useEffect, useState } from 'react';
 import { askV2Api, type AskV2BriefingSummary } from '@/lib/api/askV2Api';
 import { briefingStrings } from '@/lib/ask/briefingStrings';
-import type { AskLocale } from '@/lib/ask/askStrings';
+import type { DisplayLocale } from '@globalnews-ai/shared';
 import { BriefingListView } from './BriefingViews';
+import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 
 /**
  * R2 · D1 — the Briefings section of Saved. One read of the reader's own list (0 AI). When the
  * server has briefings off (404) or the reader is signed out, the section is not shown at all:
  * the existing Saved Questions surface is unchanged.
  */
-export function SavedBriefings({ locale }: { readonly locale: AskLocale }): JSX.Element | null {
-  const t = briefingStrings(locale);
+export function SavedBriefings({ locale }: { readonly locale: DisplayLocale }): JSX.Element | null {
+  const t = askShellStrings(locale).briefingStrings;
   const [rows, setRows] = useState<readonly AskV2BriefingSummary[] | null>(null);
 
   useEffect(() => {
@@ -32,7 +33,7 @@ export function SavedBriefings({ locale }: { readonly locale: AskLocale }): JSX.
         {t.sectionTitle}
       </h2>
       <p className="mt-1 text-[12.5px] text-ink-tertiary">{t.sectionIntro}</p>
-      <BriefingListView rows={rows} locale={locale === 'pl' ? 'pl' : 'en'} />
+      <BriefingListView rows={rows} locale={locale} />
     </section>
   );
 }

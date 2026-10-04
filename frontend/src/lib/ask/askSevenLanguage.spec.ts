@@ -114,8 +114,25 @@ describe('H-1 · the selector and the request language cover all seven', () => {
     }
     for (const locale of ['fr', 'de', 'es', 'pt', 'ar'] as const) {
       const d = askLanguageDisposition(locale);
-      /* Borrowed copy catalogue — a translation gap owned by Claude L... */
-      expect(d.catalogueLocale).toBe('en');
+      /*
+        R4 · PHASE B — THIS ASSERTION USED TO READ `expect(d.catalogueLocale).toBe('en')`,
+        AND IT WAS CORRECT WHEN IT WAS WRITTEN.
+
+        It pinned the behaviour that `catalogueLocale` borrows English for the five locales
+        with no copy catalogue of their own. The P0 correction's ruling removed the thing it
+        pinned: `selectedLocale` must drive the entire Ask UI catalogue, so the shell is now
+        indexable by all seven and `catalogueLocale` is the reader's own locale. An assertion
+        that the chrome reads English for a French reader is now an assertion that the
+        defect is still present, so it is replaced rather than relaxed.
+
+        What it checked is NOT lost — it has moved to where it can be precise. The wording
+        gap is still real for these five, and `fullAskCopy` still reports it; but it is now a
+        per-KEY fact measured by `askShellCoverage(locale).fallbacks` against a declared
+        manifest, rather than a whole-catalogue substitution. `askShellCoverage.spec.ts`
+        asserts the measured and declared sets are EQUAL for all seven.
+      */
+      expect(d.catalogueLocale).toBe(locale);
+      /* Still false, and for the honest reason: keys remain pending Claude L's wording. */
       expect(d.fullAskCopy).toBe(false);
       /* ...which says nothing about the answer. */
       expect(d.answerLocale).toBe(locale);
@@ -438,8 +455,13 @@ describe('H-7 · the authorized client pin — Ask SENDS the selected language',
       expect(askRequestLanguage(d)).toBe(locale);
       /* what comes back */
       expect(d.answerLocale).toBe(locale);
-      /* and, separately, which two-locale copy catalogue the chrome reads */
-      expect(d.catalogueLocale).toBe('en');
+      /*
+        and, separately, which copy catalogue the chrome reads — the reader's own since
+        Phase B. See the longer note above: this read `.toBe('en')`, which pinned the
+        borrowing the P0 correction ordered removed.
+      */
+      expect(d.catalogueLocale).toBe(locale);
+      /* Keys still pending Claude L's wording, reported per key rather than per catalogue. */
       expect(d.fullAskCopy).toBe(false);
     }
   });

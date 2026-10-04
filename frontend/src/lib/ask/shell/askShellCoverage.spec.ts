@@ -53,21 +53,28 @@ describe('B-6 · the shell is one catalogue over seven locales', () => {
 
   it('the inventory reconciles with the manifest sent to Claude L', () => {
     /*
-      479  reader-visible Ask-shell keys on the base 5699eb7
+      559  reader-visible Ask-shell keys on the base 5699eb7
       -24  askSevenStrings, already total over all seven and read directly
       ────
-      455  overlay-managed
+      535  overlay-managed
        -5  provider/product proper nouns
       ────
-      450  Claude L's scope — Revision 3 of the manifest
+      530  Claude L's scope — Revision 4 of the manifest
+
+      THE DENOMINATOR IS ASSERTED, NOT DOCUMENTED, because it moved twice and both moves
+      were failures of measurement rather than of translation. 469 → 479 when the enumerator
+      was found to skip function-valued members; 479 → 559 when wiring the components found
+      eighty keys that were never in a catalogue at all — component-private records, bare
+      `locale === 'pl' ? … : …` ternaries, and two view builders that resolved their own copy
+      from a locale argument. A coverage report with the wrong denominator is not a report.
     */
     const overlayManaged = askShellKeyPaths().length;
     const alreadySeven = shellKeyPaths(askSevenStrings('en')).length;
     expect(alreadySeven).toBe(24);
-    expect(overlayManaged).toBe(455);
-    expect(overlayManaged + alreadySeven).toBe(479);
+    expect(overlayManaged).toBe(535);
+    expect(overlayManaged + alreadySeven).toBe(559);
     expect(ASK_SHELL_PROPER_NOUNS).toHaveLength(5);
-    expect(overlayManaged - ASK_SHELL_PROPER_NOUNS.length).toBe(450);
+    expect(overlayManaged - ASK_SHELL_PROPER_NOUNS.length).toBe(530);
   });
 
   it('each proper noun names a key that actually exists', () => {
@@ -75,11 +82,14 @@ describe('B-6 · the shell is one catalogue over seven locales', () => {
     for (const path of ASK_SHELL_PROPER_NOUNS) expect(unmarked).toContain(path);
   });
 
-  it('the ten templates are present and enumerable', () => {
+  it('every template is present and enumerable, by name', () => {
     /*
-      A template is the one key a reviewer cannot check from a screenshot, so it is pinned by
-      name. This is also the regression for the enumerator defect: the first scaffold emitted
-      none of these, and the fallback accounting was blind to all ten.
+      A template is the one key a reviewer cannot check from a screenshot: its wording only
+      appears for particular arguments and its plural behaviour only for particular counts.
+      So all 33 are pinned by name. This is also the regression for the enumerator defect —
+      the first scaffold emitted NONE of these and the fallback accounting was blind to every
+      one, which is how a locale could have been called complete with 33 English sentences in
+      it.
     */
     expect(askShellTemplatePaths().map(shellPathWithoutMarker).sort()).toEqual(
       [
@@ -93,8 +103,34 @@ describe('B-6 · the shell is one catalogue over seven locales', () => {
         'briefingStrings.savedAs',
         'briefingStrings.superseded',
         'briefingStrings.version',
+        /* Recovered from inside components in Phase B. */
+        'askRecentReportingStrings.title',
+        'askRecentReportingStrings.topic.TRAVEL',
+        'askRecentReportingStrings.topic.ECONOMY',
+        'askRecentReportingStrings.topic.SECURITY',
+        'askRecentReportingStrings.topic.BUSINESS',
+        'askRecentReportingStrings.topic.SCIENCE',
+        'askEvidenceTableStrings.citation',
+        'askEvidenceTableStrings.omitted',
+        'askContextStrings.comparingStories',
+        /* Exported, but resolved from a locale argument inside their own modules until now. */
+        'askGovernedCopy.imihigo',
+        'askGovernedCopy.imihigoProvenance',
+        'askGovernedCopy.imihigoFollowUp',
+        'askGovernedCopy.imihigoAbsent',
+        'askGovernedCopy.imihigoAbsentFollowUp',
+        'askGovernedCopy.cpi',
+        'askGovernedCopy.cpiProvenance',
+        'askGovernedCopy.procurement',
+        'askGovernedCopy.procurementProvenance',
+        'askGovernedCopy.official',
+        'askGovernedCopy.officialFollowUp',
+        'askIntelligenceStrings.lead.imihigo',
+        'askIntelligenceStrings.lead.cpi',
+        'askIntelligenceStrings.lead.procurement',
       ].sort(),
     );
+    expect(askShellTemplatePaths()).toHaveLength(33);
   });
 });
 
@@ -116,7 +152,7 @@ describe('B-7 · no English fallback is ever silent', () => {
       expect(coverage.qualification).toBe('SOURCE');
       expect(coverage.fallbacks).toEqual([]);
       expect(coverage.complete).toBe(true);
-      expect(coverage.localizedKeys).toBe(450);
+      expect(coverage.localizedKeys).toBe(530);
     }
   });
 
@@ -126,8 +162,8 @@ describe('B-7 · no English fallback is ever silent', () => {
       expect(coverage.qualification).toBe('DRAFT_PENDING_CLAUDE_L');
       expect(coverage.complete).toBe(false);
       expect(coverage.localizedKeys).toBe(61);
-      expect(coverage.fallbacks).toHaveLength(389);
-      /* 61 drafted + 389 pending + 5 proper nouns = the 455 overlay-managed keys. */
+      expect(coverage.fallbacks).toHaveLength(469);
+      /* 61 drafted + 469 pending + 5 proper nouns = the 535 overlay-managed keys. */
       expect(coverage.localizedKeys + coverage.fallbacks.length + coverage.properNouns).toBe(
         coverage.totalKeys,
       );
@@ -141,10 +177,10 @@ describe('B-7 · no English fallback is ever silent', () => {
       misses a leaf kind. So the denominator is asserted directly: if a future catalogue adds
       a leaf shape nobody handles, this count stops matching and the suite fails here.
     */
-    expect(askShellKeyPaths()).toHaveLength(455);
+    expect(askShellKeyPaths()).toHaveLength(535);
     for (const locale of DRAFT) {
       const coverage = askShellCoverage(locale);
-      expect(coverage.totalKeys).toBe(455);
+      expect(coverage.totalKeys).toBe(535);
     }
   });
 

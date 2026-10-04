@@ -1,3 +1,4 @@
+import { askShellCoverage } from '@/lib/ask/shell/askShellCatalogue';
 import {
   DISPLAY_LOCALES,
   isDisplayLocale,
@@ -85,14 +86,25 @@ export const ASK_DISPLAY_LOCALES: readonly DisplayLocale[] = DISPLAY_LOCALES;
 export const ASK_ANSWER_LOCALES: readonly DisplayLocale[] = DISPLAY_LOCALES;
 
 /**
- * THE LOCALES THE FROZEN COPY CATALOGUES EXIST IN — a translation fact, nothing more.
+ * THE LOCALES THE ASK SHELL CAN BE INDEXED BY — now all seven. THIS LINE WAS THE P0 DEFECT.
  *
- * `AskR2Strings`, `askNavStrings` and the released dictionaries are TOTAL records over two
- * locales. Indexing them needs one of those two. That is all this list means: it says
- * nothing about what the engine can answer, and it is never used to narrow a request.
- * Widening it is Claude L's lane, not this one's.
+ * It read `Object.freeze(['en', 'pl'])`, and because every Ask surface resolved its copy
+ * through `askLanguageDisposition`, those two entries were the reason a reader who selected
+ * French got a French hero over an English application. The catalogues really were EN/PL-only,
+ * so the list was TRUE — and being true is exactly why it was not a bug anyone could see:
+ * the frontend was correctly reporting a copy-coverage fact, and the interface was silently
+ * obeying it.
+ *
+ * Phase B removed the thing the list was describing. `askShellStrings(locale)` resolves all
+ * seven, so indexing the shell no longer requires one of two locales, and this list is the
+ * contracted seven like every other locale list in the product.
+ *
+ * WHAT DID NOT CHANGE: the shell is not yet fully WORDED in five of the seven. That is a
+ * different fact, it belongs to Claude L, and it is reported per key by
+ * `askShellCoverage(locale).fallbacks` rather than by narrowing a type — so an unworded key
+ * is 1 of 389 declared lines in a manifest, not 450 English strings nobody counted.
  */
-export const ASK_CATALOGUE_LOCALES: readonly DisplayLocale[] = Object.freeze(['en', 'pl'] as const);
+export const ASK_CATALOGUE_LOCALES: readonly DisplayLocale[] = DISPLAY_LOCALES;
 
 /** The locale an Ask surface falls back to when it cannot render the requested one. */
 export const ASK_FALLBACK_LOCALE = 'en' as const satisfies DisplayLocale;
@@ -100,8 +112,22 @@ export const ASK_FALLBACK_LOCALE = 'en' as const satisfies DisplayLocale;
 /** The answer comes back in the reader's own language, so this is the whole seven. */
 export type AskAnswerLocale = DisplayLocale;
 
-/** The two locales the frozen copy catalogues can be indexed by. */
-export type AskCatalogueLocale = 'en' | 'pl';
+/** The locales the Ask shell can be indexed by. All seven, since Phase B. */
+export type AskCatalogueLocale = DisplayLocale;
+
+/**
+ * THE TWO LOCALES WHOSE COPY IS AUTHORED RATHER THAN OVERLAID — a fact about authorship.
+ *
+ * English and Polish have complete, linguistically qualified catalogues that predate the
+ * overlay mechanism; the other five are the English source with a per-locale overlay merged
+ * over it. Several modules need to know which of the two a locale is, and before Phase B they
+ * asked `AskCatalogueLocale`, which happened to mean the same thing. It no longer does — the
+ * shell is indexable by all seven — so the fact is named here instead of riding on a type
+ * whose meaning has moved.
+ */
+export const ASK_AUTHORED_COPY_LOCALES = Object.freeze(['en', 'pl'] as const);
+
+export type AuthoredCopyLocale = (typeof ASK_AUTHORED_COPY_LOCALES)[number];
 
 /**
  * Read the reader's locale without narrowing it.
@@ -135,9 +161,9 @@ export interface AskLanguageDisposition {
   readonly interfaceLocale: DisplayLocale;
   /** The language the answer comes back in: the reader's own. */
   readonly answerLocale: AskAnswerLocale;
-  /** The index into the EN/PL-only frozen copy catalogues. Never sent anywhere. */
+  /** The index into the Ask shell catalogues — the reader's own locale since Phase B. */
   readonly catalogueLocale: AskCatalogueLocale;
-  /** False when the reader's locale has no full frozen copy catalogue yet (Claude L's lane). */
+  /** False while the reader's locale still has declared keys awaiting Claude L's wording. */
   readonly fullAskCopy: boolean;
 }
 
@@ -149,8 +175,12 @@ export function askLanguageDisposition(requested: DisplayLocale): AskLanguageDis
     interfaceLocale: requested,
     /* And so does the answer. */
     answerLocale: requested,
+    /* And so does the catalogue, since Phase B. `resolveContentLocale` is kept rather than
+       assigning `requested` directly, so an unrecognised value still resolves rather than
+       being trusted — the resolution just no longer narrows a contracted locale. */
     catalogueLocale: catalogue.effectiveContentLocale as AskCatalogueLocale,
-    fullAskCopy: !catalogue.fellBack,
+    /* A WORDING fact, read from the coverage report rather than inferred from a type. */
+    fullAskCopy: askShellCoverage(requested).complete,
   };
 }
 

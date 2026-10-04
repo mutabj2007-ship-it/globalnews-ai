@@ -1,7 +1,8 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import type { AskR2Locale } from '@/lib/ask/askR2Strings';
+import type { DisplayLocale } from '@globalnews-ai/shared';
+import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 
 /**
  * TRUST & CONVERSATIONAL EXPERIENCE R1 — Copy one answer to the clipboard.
@@ -11,13 +12,17 @@ import type { AskR2Locale } from '@/lib/ask/askR2Strings';
  * anywhere, nothing is shared publicly, and no private context (saved stories, account) is
  * added. Zero network, zero AI.
  */
-const STRINGS: Record<AskR2Locale, { copy: string; copied: string; failed: string }> = {
-  en: { copy: 'Copy', copied: 'Copied', failed: 'Copy failed' },
-  pl: { copy: 'Kopiuj', copied: 'Skopiowano', failed: 'Nie udało się skopiować' },
-};
+/*
+  R4 · PHASE B — this file used to declare its own `Record<AskR2Locale, …>` of three strings.
+  A module-private catalogue is unreachable by every localization mechanism the product has:
+  no overlay can replace it, no coverage report can count it, and no missing-key test can
+  fail on it, so a French reader would have been shown "Copy" and "Copied" in English however
+  complete the catalogues became. The three strings now live in `askSurfaceStrings.ts` and are
+  resolved by the one shell resolver, verbatim.
+*/
 
-export function AskTurnCopy({ locale }: { readonly locale: AskR2Locale }): JSX.Element {
-  const t = STRINGS[locale];
+export function AskTurnCopy({ locale }: { readonly locale: DisplayLocale }): JSX.Element {
+  const t = askShellStrings(locale).askCopyStrings;
   const button = useRef<HTMLButtonElement>(null);
   const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle');
 

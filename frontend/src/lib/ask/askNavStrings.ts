@@ -94,11 +94,12 @@ export function askNavStringsFor(locale: AskNavLocale): AskNavStrings {
   return ASK_NAV_STRINGS[locale];
 }
 
-/**
- * The wordmark. Read from the frozen D25 table, never duplicated: "Ask
- * GlobalNewsAI" / "Zapytaj GlobalNewsAI" is the product's own title and the
- * phone header already prints exactly this string.
- */
-export function askProductName(locale: AskNavLocale): string {
-  return askR2Strings(locale).askTitle;
-}
+/*
+  R4 · PHASE B — `askProductName` MOVED to `lib/ask/shell/askShellCatalogue.ts`.
+
+  It did the right thing (read the wordmark from the frozen D25 title rather than copying it)
+  and it could only do it for two locales, because this file is a SOURCE catalogue and the
+  shell resolver reads it — importing the resolver back here would be a cycle. The helper
+  still exists, still reads `askTitle`, and now does it in the reader's own language.
+  Deliberately not re-exported from here: two authorities for one wordmark is how it drifts.
+*/

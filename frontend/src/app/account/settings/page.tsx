@@ -1,4 +1,4 @@
-import { askLanguageDisposition } from '@/lib/ask/askLocale';
+import { askLanguageDisposition, askLocaleForLegacyCatalogue } from '@/lib/ask/askLocale';
 import { resolveAskLocale } from '@/lib/ask/askLocale';
 import { cookies } from 'next/headers';
 import { AccountSettingsBody } from '@/components/account/AccountSettingsBody';
@@ -33,13 +33,20 @@ export default function AccountSettingsPage(): JSX.Element {
      catalogues (`askNavStrings` / `askContinuityStrings`); the Ask frame renders in the
      reader's locale. Reading both from one disposition is what stops them drifting. */
   const chrome = askLanguageDisposition(locale).catalogueLocale;
+  /*
+    R4 · PHASE B — `chrome` is now the reader's own locale rather than an EN/PL clamp, and
+    `AccountSettingsBody` below takes a `LanguageCode`: the SOURCE-intelligence set, which
+    cannot express `de` or `pt` at all. `askLocaleForLegacyCatalogue` is the one declared
+    crossing between the two sets, so the substitution is a named, testable function rather
+    than a cast at the call site.
+  */
   return (
     <AskThemedSurface theme={parseThemePreference(cookies().get(THEME_COOKIE_NAME)?.value)}>
       <AskNavProvider>
         <AskNavShell language={chrome} selected={locale} />
         <AskContinuityHeader locale={chrome} surface="settings" />
         <AskClearedBoundary>
-          <AccountSettingsBody language={chrome} chrome="standalone" />
+          <AccountSettingsBody language={askLocaleForLegacyCatalogue(chrome)} chrome="standalone" />
         </AskClearedBoundary>
       </AskNavProvider>
     </AskThemedSurface>

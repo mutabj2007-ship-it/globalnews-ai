@@ -1,4 +1,5 @@
 'use client';
+import type { DisplayLocale } from '@globalnews-ai/shared';
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -9,9 +10,9 @@ import {
   type AskV2Operation,
 } from '@/lib/api/askV2Api';
 import { briefingStrings, briefingsAvailable } from '@/lib/ask/briefingStrings';
-import type { AskR2Locale } from '@/lib/ask/askR2Strings';
 import { ASK_SAVABLE_ANSWER_STATES } from './AskTurnSave';
 import { briefingHref } from '@/components/ask/BriefingViews';
+import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 
 /** How many of the reader's briefings the "add as next version" list offers. */
 export const BRIEFING_MENU_LIMIT = 5;
@@ -31,9 +32,9 @@ export function AskTurnBrief({
   locale,
 }: {
   readonly operation: AskV2Operation | undefined;
-  readonly locale: AskR2Locale;
+  readonly locale: DisplayLocale;
 }): JSX.Element | null {
-  const t = briefingStrings(locale);
+  const t = askShellStrings(locale).briefingStrings;
   const [available, setAvailable] = useState(false);
   const [open, setOpen] = useState(false);
   const [mine, setMine] = useState<readonly AskV2BriefingSummary[]>([]);

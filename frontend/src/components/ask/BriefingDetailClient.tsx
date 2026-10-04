@@ -10,8 +10,9 @@ import {
   type AskV2Outcome,
 } from '@/lib/api/askV2Api';
 import { briefingStrings } from '@/lib/ask/briefingStrings';
-import type { AskLocale } from '@/lib/ask/askStrings';
+import type { DisplayLocale } from '@globalnews-ai/shared';
 import { BriefingVersionView } from './BriefingViews';
+import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 
 /** A briefing id is a UUID (the server validates it too). */
 const BRIEFING_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -28,9 +29,9 @@ export function BriefingDetailClient({
 }: {
   readonly id: string;
   readonly requestedVersion: number | null;
-  readonly locale: AskLocale;
+  readonly locale: DisplayLocale;
 }): JSX.Element {
-  const t = briefingStrings(locale);
+  const t = askShellStrings(locale).briefingStrings;
   const router = useRouter();
   const [detail, setDetail] = useState<AskV2Outcome<AskV2BriefingDetail> | null>(null);
   const [version, setVersion] = useState<AskV2Outcome<AskV2BriefingVersion> | null>(null);
@@ -95,7 +96,7 @@ export function BriefingDetailClient({
             <BriefingVersionView
               detail={detail.value}
               version={version.value}
-              locale={locale === 'pl' ? 'pl' : 'en'}
+              locale={locale}
             />
             <div>
               <button

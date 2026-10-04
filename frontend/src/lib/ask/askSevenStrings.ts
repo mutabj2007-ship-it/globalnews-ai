@@ -1,7 +1,7 @@
 import { DISPLAY_LOCALES, type DisplayLocale } from '@globalnews-ai/shared';
 import { askR2Strings } from './askR2Strings';
 import { getDictionary } from '@/lib/i18n/dictionaries';
-import { ASK_CATALOGUE_LOCALES, type AskCatalogueLocale } from './askLocale';
+import { ASK_AUTHORED_COPY_LOCALES, type AuthoredCopyLocale } from './askLocale';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -210,7 +210,17 @@ type FrozenSubset = {
   readonly evidence: Omit<AskSevenStrings['evidence'], 'sourceChipLabel'>;
 };
 
-const NEW_LOCALES: Readonly<Record<Exclude<DisplayLocale, AskCatalogueLocale>, FrozenSubset>> = {
+/*
+  R4 · PHASE B — this read `Exclude<DisplayLocale, AskCatalogueLocale>`, and `AskCatalogueLocale`
+  was 'en' | 'pl', so the exclusion produced exactly the five locales this table holds. Phase B
+  widened `AskCatalogueLocale` to all seven — correctly, because the shell is now indexable by
+  all seven — which collapsed that exclusion to `never` and made this table untypeable.
+
+  The five are therefore written as what they actually are: the locales that are NOT the two
+  authored copy catalogues. `AUTHORED_COPY_LOCALES` names that fact in one place rather than
+  letting it ride on a type whose meaning has moved.
+*/
+const NEW_LOCALES: Readonly<Record<Exclude<DisplayLocale, AuthoredCopyLocale>, FrozenSubset>> = {
   fr: {
     reasoning: {
       ref: 'CONTEXTE DE RÉFÉRENCE',
@@ -364,16 +374,16 @@ export interface AskCopyCoverage {
   readonly boundedCopy: true;
   readonly fullAskCopy: boolean;
   /** The frozen copy catalogue this locale borrows. A TRANSLATION fact, not an answer fact. */
-  readonly catalogueLocale: AskCatalogueLocale;
+  readonly catalogueLocale: AuthoredCopyLocale;
 }
 
 export function askCopyCoverage(locale: DisplayLocale): AskCopyCoverage {
-  const hasOwnCatalogue = (ASK_CATALOGUE_LOCALES as readonly string[]).includes(locale);
+  const hasOwnCatalogue = (ASK_AUTHORED_COPY_LOCALES as readonly string[]).includes(locale);
   return {
     locale,
     boundedCopy: true,
     fullAskCopy: hasOwnCatalogue,
-    catalogueLocale: hasOwnCatalogue ? (locale as AskCatalogueLocale) : 'en',
+    catalogueLocale: hasOwnCatalogue ? (locale as AuthoredCopyLocale) : 'en',
   };
 }
 

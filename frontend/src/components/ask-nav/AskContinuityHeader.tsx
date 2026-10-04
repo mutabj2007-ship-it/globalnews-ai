@@ -4,6 +4,8 @@ import { askContinuityStrings } from '@/lib/ask/askContinuityStrings';
 import { askNavStringsFor, type AskNavLocale } from '@/lib/ask/askNavStrings';
 import { useAskNav } from './AskNavShell';
 import styles from './askNav.module.css';
+import type { DisplayLocale } from '@globalnews-ai/shared';
+import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 
 /**
  * STANDALONE CONTINUITY SHELL CLOSURE — the phone / 768-portrait header of the two
@@ -30,12 +32,12 @@ export function AskContinuityHeader({
   locale,
   surface,
 }: {
-  readonly locale: AskNavLocale;
+  readonly locale: DisplayLocale;
   readonly surface: AskContinuitySurface;
 }): JSX.Element {
   const { open, setOpen } = useAskNav();
-  const nav = askNavStringsFor(locale);
-  const t = askContinuityStrings(locale);
+  const nav = askShellStrings(locale).askNavStrings;
+  const t = askShellStrings(locale).askContinuityStrings;
   /* ALPHA VISUAL ACCEPTANCE REPAIR R1 — Help & feedback and Settings are standalone surfaces too. */
   const title =
     surface === 'recent'

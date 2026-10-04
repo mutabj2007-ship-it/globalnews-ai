@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { safeExternalHref } from '@globalnews-ai/shared';
+import { safeExternalHref, type DisplayLocale } from '@globalnews-ai/shared';
 import type { AnalysisSourceRef } from '@globalnews-ai/shared';
 import type {
   AskV2BriefingDetail,
@@ -9,8 +9,8 @@ import type {
 } from '@/lib/api/askV2Api';
 import { formatUtc } from '@/lib/ask/askR2View';
 import { briefingStrings } from '@/lib/ask/briefingStrings';
-import type { AskR2Locale } from '@/lib/ask/askR2Strings';
 import { AskEvidenceTable } from './AskEvidenceTable';
+import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 
 /**
  * R2 · D1 — PRESENTATION ONLY. Every view here renders a stored briefing exactly as the server
@@ -27,9 +27,9 @@ function UpdateLine({
   locale,
 }: {
   readonly update: AskV2BriefingUpdate | null;
-  readonly locale: AskR2Locale;
+  readonly locale: DisplayLocale;
 }): JSX.Element | null {
-  const t = briefingStrings(locale);
+  const t = askShellStrings(locale).briefingStrings;
   if (update === null) return null;
   const text = update.storyGone ? t.storyGone : update.available ? t.updateAvailable : t.noUpdate;
   return (
@@ -48,9 +48,9 @@ export function BriefingListView({
   locale,
 }: {
   readonly rows: readonly AskV2BriefingSummary[];
-  readonly locale: AskR2Locale;
+  readonly locale: DisplayLocale;
 }): JSX.Element {
-  const t = briefingStrings(locale);
+  const t = askShellStrings(locale).briefingStrings;
   if (rows.length === 0)
     return (
       <p data-briefing="empty" className="mt-2 text-[13px] text-ink-tertiary">
@@ -94,9 +94,9 @@ export function BriefingVersionView({
 }: {
   readonly detail: AskV2BriefingDetail;
   readonly version: AskV2BriefingVersion;
-  readonly locale: AskR2Locale;
+  readonly locale: DisplayLocale;
 }): JSX.Element {
-  const t = briefingStrings(locale);
+  const t = askShellStrings(locale).briefingStrings;
   const when = (iso: string | null) => (iso === null ? null : (formatUtc(iso, locale) ?? iso));
   /* The table's citation numbers point at this version's own stored references. */
   const sources: AnalysisSourceRef[] = version.evidenceRefs.map((r) => ({

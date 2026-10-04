@@ -2,11 +2,11 @@
 
 import { isolatedAuto, isolatedLtr } from '@/lib/ask/askDirection';
 import type { JSX } from 'react';
-import { safeExternalHref } from '@globalnews-ai/shared';
-import { askR2Strings, type AskR2Locale } from '@/lib/ask/askR2Strings';
+import { safeExternalHref, type DisplayLocale } from '@globalnews-ai/shared';
 import { formatUtc } from '@/lib/ask/askR2View';
 import type { AskR2Turn } from '@/lib/ask/useAskR2Conversation';
 import { ASK_EYEBROW } from './AskParts';
+import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 
 /**
  * ASK R2 CLAUDE DESIGN RECONCILIATION R1 — D25 01 region 4: "Sources — right column ≥1280
@@ -22,9 +22,9 @@ export function AskSourcesColumn({
   locale,
 }: {
   readonly turn: AskR2Turn | undefined;
-  readonly locale: AskR2Locale;
+  readonly locale: DisplayLocale;
 }): JSX.Element {
-  const s = askR2Strings(locale);
+  const s = askShellStrings(locale).askR2Strings;
   const payload = turn?.payload ?? null;
   const sources = payload?.analysis?.analysis?.sources ?? [];
   const empty =

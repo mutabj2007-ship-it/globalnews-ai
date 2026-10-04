@@ -1,8 +1,7 @@
-import type { DisplayLocale } from '@globalnews-ai/shared';
 import { askFormatUtcInstant } from './askDirection';
 import type { AskAnswerState, AskPlanChip, AskR2Payload } from '@/lib/api/askV2Api';
 import type { AskR2Locale, AskR2Strings } from './askR2Strings';
-import { resolveEvidenceState } from '@globalnews-ai/shared';
+import { resolveEvidenceState, type DisplayLocale } from '@globalnews-ai/shared';
 import type { AnalysisRetrievalContext } from '@globalnews-ai/shared';
 
 /**
@@ -289,7 +288,10 @@ export function failedTurnCopy(failure: string | undefined, s: AskR2Strings): st
 export function askR2View(
   payload: AskR2Payload,
   s: AskR2Strings,
-  locale: AskR2Locale,
+  /* R4 · PHASE B — was AskR2Locale. Its only use is `formatUtc`, which already took the
+     reader's own locale and formats through Intl, so narrowing here bought nothing and cost
+     five languages their own month names and numerals. */
+  locale: DisplayLocale,
   placeName: (iso3: string) => string = (iso3) => iso3,
   /** The question this turn answered — the source of a suggested draft. */
   question = '',

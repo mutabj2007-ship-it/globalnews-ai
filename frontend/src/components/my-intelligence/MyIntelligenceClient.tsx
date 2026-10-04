@@ -52,6 +52,7 @@ import {
   SpecialistsDestination,
   WorkspacePhoneHeader,
 } from './workspace/WorkspaceChrome';
+import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 
 /**
  * MY INTELLIGENCE — the signed-in personal intelligence workspace.
@@ -252,7 +253,7 @@ export function MyIntelligenceClient({
     receiving an `en` the frontend invented. That is the whole point of the client pin.
   */
   const r2 = useAskR2Conversation(askDisposition.requested, sanitizeReturnPath('/my-intelligence'));
-  const r2s = askR2Strings(r2Locale);
+  const r2s = askShellStrings(r2Locale).askR2Strings;
 
   const onConfirm = useCallback(
     (question: string) => {

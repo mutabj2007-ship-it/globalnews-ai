@@ -74,7 +74,7 @@ function cycleNamed(question: string): string | null {
   return `${m[1]}/${end}`;
 }
 
-interface Copy {
+export interface AskGovernedCopy {
   imihigo: (entity: string, cycle: string, value: string) => string;
   imihigoProvenance: (cycle: string) => string;
   imihigoFollowUp: (value: string) => string;
@@ -103,7 +103,7 @@ interface Copy {
   genericProvenance: string;
 }
 
-const EN: Copy = {
+const EN: AskGovernedCopy = {
   imihigo: (entity, cycle, value) =>
     `${entity}’s final Imihigo score for the ${cycle} cycle was ${value}. This comes from the retained NISR final evaluation for that closed cycle, so it describes that evaluation period rather than the district’s current situation.`,
   imihigoProvenance: (cycle) => `Retained record · NISR · ${cycle} · No AI used`,
@@ -150,7 +150,7 @@ const EN: Copy = {
   genericProvenance: 'Retained record · No AI used',
 };
 
-const PL: Copy = {
+const PL: AskGovernedCopy = {
   imihigo: (entity, cycle, value) =>
     `Końcowy wynik Imihigo dla ${entity} w cyklu ${cycle} wyniósł ${value}. Pochodzi on z zachowanej końcowej oceny NISR dla tego zamkniętego cyklu, więc opisuje tamten okres oceny, a nie obecną sytuację dystryktu.`,
   imihigoProvenance: (cycle) => `Zachowany zapis · NISR · ${cycle} · Bez AI`,
@@ -206,13 +206,22 @@ export function isGovernedConversationTurn(payload: AskR2Payload): boolean {
   );
 }
 
+/** The EN/PL source for this surface. The shell resolver reads it; components do not. */
+export function askGovernedCopy(locale: AskR2Locale): AskGovernedCopy {
+  return locale === 'pl' ? PL : EN;
+}
+
+/**
+ * R4 · PHASE B — this took a LOCALE and resolved its own copy, which is what made it
+ * EN/PL-only. It now takes the RESOLVED copy, so the one shell resolver decides the language.
+ * The caller passes `askShellStrings(locale).askGovernedCopy`.
+ */
 export function askGovernedConversation(
   payload: AskR2Payload,
-  locale: AskR2Locale,
+  t: AskGovernedCopy,
   question: string,
 ): AskGovernedConversation | null {
   if (!isGovernedConversationTurn(payload)) return null;
-  const t = locale === 'pl' ? PL : EN;
   const basis = payload.answer.basis;
 
   if (basis === 'OFFICIAL_SOURCE_UNAVAILABLE') {

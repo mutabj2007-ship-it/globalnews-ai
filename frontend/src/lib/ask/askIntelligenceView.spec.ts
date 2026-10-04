@@ -3,7 +3,7 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import type { AskContribution, AskR2Payload } from '@/lib/api/askV2Api';
 import { AskIntelligenceBasis } from '@/components/ask-frame/AskIntelligenceBasis';
 import { askContinuityStrings } from './askContinuityStrings';
-import { askIntelligenceView } from './askIntelligenceView';
+import { askIntelligenceStrings, askIntelligenceView } from './askIntelligenceView';
 
 /** ASK INTELLIGENCE BINDING R1 — the governed "Based on" projection of one answer. */
 
@@ -44,8 +44,8 @@ const payload = (contributions: AskContribution[] | null): AskR2Payload =>
 
 describe('askIntelligenceView — governed basis of one answer', () => {
   it('shows nothing when no contributor was considered', () => {
-    expect(askIntelligenceView(payload(null), 'en', 3)).toBeNull();
-    expect(askIntelligenceView(payload([]), 'en', 3)).toBeNull();
+    expect(askIntelligenceView(payload(null), askIntelligenceStrings('en'), 3)).toBeNull();
+    expect(askIntelligenceView(payload([]), askIntelligenceStrings('en'), 3)).toBeNull();
   });
 
   it('"Based on" lists current reports only when cited, and only contributors that were USED', () => {
@@ -61,7 +61,7 @@ describe('askIntelligenceView — governed basis of one answer', () => {
           disclosures: [],
         }),
       ]),
-      'en',
+      askIntelligenceStrings('en'),
       2,
     )!;
     expect(view.basedOn).toEqual([
@@ -74,13 +74,13 @@ describe('askIntelligenceView — governed basis of one answer', () => {
     expect(view.notes).toEqual([
       'Retained EU procurement notices (TED): No governed record matched this question’s scope — this is not evidence that nothing happened.',
     ]);
-    expect(askIntelligenceView(payload([contribution({})]), 'en', 0)!.basedOn).toEqual([
+    expect(askIntelligenceView(payload([contribution({})]), askIntelligenceStrings('en'), 0)!.basedOn).toEqual([
       'Conflict Intelligence (retained UCDP event records)',
     ]);
   });
 
   it('a USED contributor with zero observations is never listed as a basis', () => {
-    const view = askIntelligenceView(payload([contribution({ observations: [] })]), 'en', 0)!;
+    const view = askIntelligenceView(payload([contribution({ observations: [] })]), askIntelligenceStrings('en'), 0)!;
     expect(view.basedOn).toBeNull();
     expect(view.sections).toEqual([]);
   });
@@ -97,7 +97,7 @@ describe('askIntelligenceView — governed basis of one answer', () => {
           disclosures: ['HUMANITARIAN_NOT_ASSESSED', 'NO_GOVERNED_OBSERVATION_READER'],
         }),
       ]),
-      'pl',
+      askIntelligenceStrings('pl'),
       1,
     )!;
     expect(view.basedOn).toEqual(['Bieżące doniesienia']);
@@ -139,7 +139,7 @@ describe('askIntelligenceView — governed basis of one answer', () => {
           disclosures: ['RETAINED_NOT_CURRENT', 'CLOSED_EVALUATION_CYCLE'],
         }),
       ]),
-      'en',
+      askIntelligenceStrings('en'),
       0,
     )!;
     expect(used.basedOn).toEqual(['Retained NISR Imihigo evaluation']);
@@ -158,7 +158,7 @@ describe('askIntelligenceView — governed basis of one answer', () => {
           disclosures: ['AGGREGATE_NOT_ASSIGNED_TO_DISTRICT'],
         }),
       ]),
-      'en',
+      askIntelligenceStrings('en'),
       0,
     )!;
     expect(gasabo.basedOn).toBeNull();
@@ -169,7 +169,7 @@ describe('askIntelligenceView — governed basis of one answer', () => {
 
   it('caps rows per contributor', () => {
     const many = Array.from({ length: 9 }, (_, i) => observation({ reference: `UCDP_GED:${i}` }));
-    const view = askIntelligenceView(payload([contribution({ observations: many })]), 'en', 0)!;
+    const view = askIntelligenceView(payload([contribution({ observations: many })]), askIntelligenceStrings('en'), 0)!;
     expect(view.sections[0].rows).toHaveLength(5);
   });
 

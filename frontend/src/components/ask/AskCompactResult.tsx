@@ -28,6 +28,8 @@ import { AskCitedBrief, citedSourceNumbers } from './AskCitedBrief';
 import { StoryBookmark } from '@/components/bookmark/StoryBookmark';
 import type { AskComparisonTable } from '@/lib/api/askV2Api';
 import { AskEvidenceTable } from './AskEvidenceTable';
+import { resolveAskLocale } from '@/lib/ask/askLocale';
+import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 
 /**
  * ═══ ASK AI REV A §6 — THE COMPACT RESULT ════════════════════════════════
@@ -94,7 +96,12 @@ export function sourceDateLabel(
   t: { sourceDatePublished: string; sourceDateObserved: string; sourceDateUnknownBasis: string },
 ): string | null {
   /* The same UTC wording the Ask answer already uses ("8 Sep 2026, 11:04 UTC"). */
-  const date = formatUtc(publishedAt, language === 'pl' ? 'pl' : 'en');
+  /*
+    R4 · PHASE B — was `language === 'pl' ? 'pl' : 'en'`. `formatUtc` has taken the reader's
+    own locale and formatted through `Intl` since the direction work landed, so the clamp did
+    nothing but deny five languages their own month names and numerals.
+  */
+  const date = formatUtc(publishedAt, resolveAskLocale(language));
   if (date === null) return null;
   const template =
     basis === 'publisher'
@@ -261,7 +268,7 @@ export function AskCompactResult({
           className="min-w-0 rounded-xl border border-border-strong px-3 py-2"
         >
           <p className="text-xs font-medium text-ink-primary">
-            {language === 'pl' ? 'Sprawdzone pokrycie' : 'Coverage checked'}
+            {askShellStrings(resolveAskLocale(language)).askContextStrings.coverageChecked}
           </p>
           <ul className="mt-2 space-y-2 text-xs leading-relaxed text-ink-secondary">
             {comparisonCoverageLines(response.retrievalContext.comparisonCoverage, language).map(
@@ -422,7 +429,12 @@ export function AskCompactResult({
 
           {/* R2-S1 — rows the validated answer already holds, each with its sources (no AI). */}
           {briefAccepted ? (
-            <AskEvidenceTable table={comparisonTable} sources={sources} language={language} />
+            <AskEvidenceTable
+              table={comparisonTable}
+              sources={sources}
+              /* The dock boundary is `LanguageCode`; one declared crossing to a UI locale. */
+              language={resolveAskLocale(language)}
+            />
           ) : null}
 
           <div data-ask="sources" className="flex flex-col gap-2">

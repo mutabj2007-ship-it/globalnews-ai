@@ -4,9 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { askV2Api, type AskV2Bookmark, type AskV2Outcome } from '@/lib/api/askV2Api';
 import { askBookmarkReopenHref, filterBookmarks } from '@/lib/ask/askRecentGrouping';
-import { askContinuityStrings } from '@/lib/ask/askContinuityStrings';
-import type { AskLocale } from '@/lib/ask/askStrings';
+import { formattingProfileFor, type DisplayLocale } from '@globalnews-ai/shared';
 import { SavedBriefings } from './SavedBriefings';
+import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -27,8 +27,8 @@ import { SavedBriefings } from './SavedBriefings';
  * COST: 0 model · 0 provider · 0 Sand in every path here, including the mutation —
  * removing a bookmark deletes one row and touches no evidence.
  */
-export function SavedClient({ locale }: { readonly locale: AskLocale }): JSX.Element {
-  const t = askContinuityStrings(locale);
+export function SavedClient({ locale }: { readonly locale: DisplayLocale }): JSX.Element {
+  const t = askShellStrings(locale).askContinuityStrings;
   const [questions, setQuestions] = useState<AskV2Outcome<readonly AskV2Bookmark[]> | null>(null);
   const [term, setTerm] = useState('');
   const [removing, setRemoving] = useState<string | null>(null);
@@ -128,7 +128,8 @@ export function SavedClient({ locale }: { readonly locale: AskLocale }): JSX.Ele
                     </p>
                     <p className="mt-1 flex flex-wrap items-center gap-x-2 text-[11.5px] text-ink-tertiary">
                       <span data-saved="saved-at">
-                        {new Date(row.savedAt).toLocaleString(locale)}
+                        {/* R4 · PHASE B — Intl handles all seven, including Arabic numerals. */}
+                        {new Date(row.savedAt).toLocaleString(formattingProfileFor(locale))}
                       </span>
                       <span aria-hidden="true">{'·'}</span>
                       <span data-saved="language">{row.language.toUpperCase()}</span>

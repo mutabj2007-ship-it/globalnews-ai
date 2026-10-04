@@ -196,14 +196,19 @@ export interface AskIntelligenceView {
 
 const MAX_ROWS = 5;
 
+/**
+ * R4 · PHASE B — this took a LOCALE and resolved its own strings, which is what made it
+ * EN/PL-only. It now takes the RESOLVED strings, so the one shell resolver decides the
+ * language and this function decides nothing about language at all. The caller passes
+ * `askShellStrings(locale).askIntelligenceStrings`.
+ */
 export function askIntelligenceView(
   payload: AskR2Payload,
-  locale: AskR2Locale,
+  s: AskIntelligenceStrings,
   reportingSourceCount: number,
 ): AskIntelligenceView | null {
   const block = payload.intelligence;
   if (block == null || block.contributions.length === 0) return null;
-  const s = askIntelligenceStrings(locale);
   const used = block.contributions.filter(
     (c) => c.status === 'USED' && c.contributorId !== 'GEOGRAPHY' && c.observations.length > 0,
   );

@@ -1,7 +1,7 @@
 import { Fragment, type JSX, type ReactNode } from 'react';
-import { projectSummaryStatements, safeExternalHref } from '@globalnews-ai/shared';
+import { projectSummaryStatements, safeExternalHref, type DisplayLocale } from '@globalnews-ai/shared';
 import type { AnalysisSourceRef, LanguageCode, SummaryStatement } from '@globalnews-ai/shared';
-import { getDictionary } from '@/lib/i18n/dictionaries';
+import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 import { parseAnswerBlocks, parseInline, type AskBlock } from '@/lib/ask/askAnswerMarkdown';
 import { citationNumbers } from './AskCitedBrief';
 
@@ -79,9 +79,9 @@ export function AskAnswerProse({
   readonly source: string;
   readonly statements?: readonly SummaryStatement[] | undefined;
   readonly sources: readonly AnalysisSourceRef[];
-  readonly language: LanguageCode;
+  readonly language: DisplayLocale;
 }): JSX.Element {
-  const t = getDictionary(language).askAi;
+  const t = askShellStrings(language).dict.askAi;
   const blocks = parseAnswerBlocks(source);
   let remaining: readonly SummaryStatement[] = statements ?? [];
 

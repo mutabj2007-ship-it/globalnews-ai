@@ -5,6 +5,7 @@ import type { DisplayLocale } from '@globalnews-ai/shared';
 import { askNavStringsFor } from '@/lib/ask/askNavStrings';
 import { askLanguageDisposition } from '@/lib/ask/askLocale';
 import { useAskNav } from './AskNavShell';
+import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 
 /**
  * THE SEAM BETWEEN THE SHELL'S STATE AND D25's HEADER.
@@ -24,7 +25,7 @@ export function AskShellFrame({ locale }: { readonly locale: DisplayLocale }): J
   const { open, setOpen, cleared } = useAskNav();
   /* R4 · the menu's aria labels come from the two-locale nav catalogue; the frame below gets
      the reader's own locale. Both read one disposition. */
-  const strings = askNavStringsFor(askLanguageDisposition(locale).catalogueLocale);
+  const strings = askShellStrings(askLanguageDisposition(locale).catalogueLocale).askNavStrings;
   /*
     ALPHA VISUAL ACCEPTANCE REPAIR R1 — New question / Sign out: the conversation is gone
     from the screen at once, before the clean document load replaces the page. Same shape as

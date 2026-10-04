@@ -95,9 +95,33 @@ describe('copy is local only', () => {
 describe('TRUST R1 — mixed answer: recent reporting is listed, labelled and local', () => {
   it('states "listed, not analysed", says absence/unavailability, and reaches no API', () => {
     const view = code(read('AskRecentReporting.tsx'));
-    expect(view).toContain('Listed, not analysed');
-    expect(view).toContain('That is not evidence that nothing is happening');
-    expect(view).toContain('could not be checked');
+    /*
+      R4 · PHASE B — THESE THREE SENTENCES MOVED, AND WHY THEY MOVED IS THE POINT.
+
+      They were asserted against this COMPONENT's source because that is where they lived: a
+      module-private `Record<AskR2Locale, …>` of ten keys, six of them templates. A private
+      const is unreachable by every localization mechanism the product has — no overlay can
+      replace it, no coverage report can count it, no missing-key test can fail on it — so a
+      French reader would have been shown "Listed, not analysed" in English however complete
+      the catalogues became. The keys are now in `lib/ask/askSurfaceStrings.ts`, verbatim,
+      and reach this component through the one shell resolver.
+
+      So the assertion follows the copy rather than being deleted: the same three sentences
+      are still pinned, in the file that now owns them, and the component is additionally
+      asserted to hold NO copy of its own.
+    */
+    const catalogue = code(
+      readFileSync(join(__dirname, '..', '..', 'lib', 'ask', 'askSurfaceStrings.ts'), 'utf8'),
+    );
+    expect(catalogue).toContain('Listed, not analysed');
+    expect(catalogue).toContain('That is not evidence that nothing is happening');
+    expect(catalogue).toContain('could not be checked');
+    /* And the Polish is still there too — moving copy must not drop a locale. */
+    expect(catalogue).toContain('Lista bez analizy');
+    /* The component now holds no catalogue of its own, which is what made the old assertion
+       possible in the first place. */
+    expect(view).not.toMatch(/Record<AskR2Locale|=== 'pl' \?/);
+    expect(view).toContain('askShellStrings(locale).askRecentReportingStrings');
     expect(view).not.toMatch(/fetch\(|askV2Api\.|useEffect/);
     /* CTO checkpoint 3 §13 — a listed report is never numbered as a citation of the answer */
     expect(view).not.toMatch(/data-citation|data-ask="citation"/);
@@ -179,8 +203,19 @@ describe('CTO P0 — advice is labelled as general guidance, never as current so
 describe('CTO P0 · Defect E — the companion block is titled by the reader’s task', () => {
   it('a travel answer reads "Current travel notices" (EN) / "Bieżące komunikaty dla podróżnych" (PL); older answers keep the generic title', () => {
     const view = read('AskRecentReporting.tsx');
-    expect(view).toContain('Current travel notices');
-    expect(view).toContain('Bieżące komunikaty dla podróżnych');
+    /*
+      R4 · PHASE B — the per-task titles moved with the rest of this component's private
+      catalogue into `lib/ask/askSurfaceStrings.ts` (see the longer note above). Both
+      languages are still pinned, in the file that now owns them; the SELECTION rule — which
+      is what Defect E was actually about — is still pinned here, in the component that
+      performs it.
+    */
+    const catalogue = readFileSync(
+      join(__dirname, '..', '..', 'lib', 'ask', 'askSurfaceStrings.ts'),
+      'utf8',
+    );
+    expect(catalogue).toContain('Current travel notices');
+    expect(catalogue).toContain('Bieżące komunikaty dla podróżnych');
     expect(code(view)).toContain(
       'reporting.topic === undefined ? t.title : t.topic[reporting.topic]',
     );

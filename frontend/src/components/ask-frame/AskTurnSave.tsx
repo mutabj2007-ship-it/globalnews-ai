@@ -1,9 +1,10 @@
 'use client';
+import type { DisplayLocale } from '@globalnews-ai/shared';
 
 import { useRef, useState } from 'react';
 import { askR2PayloadOf, askV2Api, type AskV2Operation } from '@/lib/api/askV2Api';
 import { askContinuityStrings } from '@/lib/ask/askContinuityStrings';
-import type { AskR2Locale } from '@/lib/ask/askR2Strings';
+import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 
 /**
  * STANDALONE PUBLIC BETA CONVERGENCE R1 — Save / Saved on a stored Ask turn.
@@ -35,9 +36,9 @@ export function AskTurnSave({
   locale,
 }: {
   readonly operation: AskV2Operation | undefined;
-  readonly locale: AskR2Locale;
+  readonly locale: DisplayLocale;
 }): JSX.Element | null {
-  const t = askContinuityStrings(locale);
+  const t = askShellStrings(locale).askContinuityStrings;
   const [saved, setSaved] = useState(operation?.bookmarked === true);
   const [busy, setBusy] = useState(false);
   const inFlight = useRef(false);

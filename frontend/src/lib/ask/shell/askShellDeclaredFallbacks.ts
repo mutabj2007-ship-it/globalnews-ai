@@ -19,27 +19,44 @@ import type { DisplayLocale } from '@globalnews-ai/shared';
  *   · a key Claude L delivers but that is left declared here   → FAILS, because it is
  *                                                                declared but not measured;
  *   · the honest current state                                 → passes, and the exact size
- *                                                                of the gap is 389 lines a
+ *                                                                of the gap is 469 lines a
  *                                                                reviewer can read.
  *
  * So the file shrinks as L delivers, the test tightens by itself, and nothing can start
  * falling back quietly between rounds. It is a declaration of an incomplete state, not a
- * suppression of one: the CTO sees 389 here and reads it as 389 strings of English still in
+ * suppression of one: the CTO sees 469 here and reads it as 469 strings of English still in
  * front of a French reader.
  *
- * ── HOW THIS RECONCILES WITH THE MANIFEST SENT TO CLAUDE L ────────────────
+ * ── HOW THIS RECONCILES WITH THE MANIFEST SENT TO CLAUDE L (REVISION 4) ───
  *
- *   479  reader-visible Ask-shell keys measured on the base 5699eb7
+ *   559  reader-visible Ask-shell keys on the base 5699eb7
  *   -24  `askSevenStrings` — already total over all seven from an earlier H round, read
  *        directly by the surfaces and therefore not overlay-managed
  *   ────
- *   455  overlay-managed keys  (`askShellKeyPaths().length`)
+ *   535  overlay-managed keys  (`askShellKeyPaths().length`)
  *    -5  provider and product proper nouns, which no locale translates
  *   ────
- *   450  Claude L's scope, exactly as Revision 3 of the manifest states
+ *   530  Claude L's scope
  *   -61  H's drafts, every one declared `DRAFT_PENDING_CLAUDE_L`
  *   ────
- *   389  declared below, per locale
+ *   469  declared below, per locale
+ *
+ * ── WHY THIS NUMBER MOVED TWICE, AND WHAT EACH MOVE MEANT ─────────────────
+ *
+ * 469 → 479: the enumerator was skipping function-valued members, so ten templates were
+ * invisible to the accounting (the correction in `askShellOverlay.ts`).
+ *
+ * 479 → 559: wiring the components found EIGHTY more keys that were never in a catalogue at
+ * all. Three components declared their own private `Record<AskR2Locale, …>`, three more
+ * carried bare `locale === 'pl' ? … : …` ternaries with no key, and two view builders
+ * resolved their own copy internally from a locale argument. None of it was reachable by any
+ * overlay, countable by any coverage report, or capable of failing any missing-key test —
+ * a French reader would have been shown "Copy", "Copied", "Coverage checked" and a dated
+ * reporting title in English however complete the named catalogues became. They are
+ * `askSurfaceStrings.ts`, `askGovernedCopy` and `askIntelligenceStrings` now.
+ *
+ * Both moves made the number WORSE and both were reported rather than absorbed. A
+ * localization mechanism whose denominator is wrong is not a mechanism, it is a reassurance.
  *
  * The five draft locales share one list because H drafted the same first-paint chrome in
  * each. The shape is per-locale so that L delivering French does not have to wait for Arabic.
@@ -340,6 +357,86 @@ const PENDING_ALL_DRAFT_LOCALES: readonly string[] = Object.freeze([
   'askRecordStrings.moduleRecord.IMIHIGO',
   'askRecordStrings.moduleRecord.ECONOMY',
   'askRecordStrings.moduleRecord.MARKET',
+  'askCopyStrings.copy',
+  'askCopyStrings.copied',
+  'askCopyStrings.failed',
+  'askRecentReportingStrings.title()',
+  'askRecentReportingStrings.topic.TRAVEL()',
+  'askRecentReportingStrings.topic.ECONOMY()',
+  'askRecentReportingStrings.topic.SECURITY()',
+  'askRecentReportingStrings.topic.BUSINESS()',
+  'askRecentReportingStrings.topic.SCIENCE()',
+  'askRecentReportingStrings.note',
+  'askRecentReportingStrings.none',
+  'askRecentReportingStrings.unavailable',
+  'askEvidenceTableStrings.caption',
+  'askEvidenceTableStrings.point',
+  'askEvidenceTableStrings.reported',
+  'askEvidenceTableStrings.sources',
+  'askEvidenceTableStrings.agreement',
+  'askEvidenceTableStrings.citation()',
+  'askEvidenceTableStrings.omitted()',
+  'askContextStrings.compareDraftQuestion',
+  'askContextStrings.comparingStories()',
+  'askContextStrings.coverageChecked',
+  'askGovernedCopy.imihigo()',
+  'askGovernedCopy.imihigoProvenance()',
+  'askGovernedCopy.imihigoFollowUp()',
+  'askGovernedCopy.imihigoAbsent()',
+  'askGovernedCopy.imihigoAbsentProvenance',
+  'askGovernedCopy.imihigoAbsentFollowUp()',
+  'askGovernedCopy.cpi()',
+  'askGovernedCopy.cpiProvenance()',
+  'askGovernedCopy.cpiFollowUp',
+  'askGovernedCopy.cpiNotDisplayable',
+  'askGovernedCopy.cpiNoCapture',
+  'askGovernedCopy.cpiUnavailableProvenance',
+  'askGovernedCopy.cpiUnavailableFollowUp',
+  'askGovernedCopy.procurement()',
+  'askGovernedCopy.procurementProvenance()',
+  'askGovernedCopy.procurementFollowUp',
+  'askGovernedCopy.recordNotDisplayable',
+  'askGovernedCopy.recordNoCapture',
+  'askGovernedCopy.recordUnreadable',
+  'askGovernedCopy.recordUnavailableProvenance',
+  'askGovernedCopy.official()',
+  'askGovernedCopy.officialProvenance',
+  'askGovernedCopy.officialFollowUp()',
+  'askGovernedCopy.genericRecord',
+  'askGovernedCopy.genericAbsent',
+  'askGovernedCopy.genericProvenance',
+  'askIntelligenceStrings.basedOn',
+  'askIntelligenceStrings.currentReports',
+  'askIntelligenceStrings.contributor.CONFLICT',
+  'askIntelligenceStrings.contributor.MARKET_PROCUREMENT',
+  'askIntelligenceStrings.contributor.ECONOMY_CPI',
+  'askIntelligenceStrings.contributor.IMIHIGO',
+  'askIntelligenceStrings.contributor.HUMANITARIAN',
+  'askIntelligenceStrings.retainedNote.RETAINED_EVENT_RECORD',
+  'askIntelligenceStrings.retainedNote.RETAINED_PUBLICATION',
+  'askIntelligenceStrings.retainedNote.RETAINED_STATISTICAL_RELEASE',
+  'askIntelligenceStrings.retainedNote.RETAINED_EVALUATION_CYCLE',
+  'askIntelligenceStrings.placeContext',
+  'askIntelligenceStrings.notAssessed.HUMANITARIAN',
+  'askIntelligenceStrings.noMatch',
+  'askIntelligenceStrings.aggregateNotAssigned',
+  'askIntelligenceStrings.noRecentRecord',
+  'askIntelligenceStrings.severityNotAssessed',
+  'askIntelligenceStrings.snapshotNotSeries',
+  'askIntelligenceStrings.source',
+  'askIntelligenceStrings.subnationalScope',
+  'askIntelligenceStrings.eventKind.ARMED_CLASH',
+  'askIntelligenceStrings.eventKind.EXPLOSION_REMOTE_VIOLENCE',
+  'askIntelligenceStrings.eventKind.VIOLENCE_AGAINST_CIVILIANS',
+  'askIntelligenceStrings.eventKind.SIEGE_OR_ENCIRCLEMENT',
+  'askIntelligenceStrings.eventKind.AERIAL_OR_NAVAL_ACTION',
+  'askIntelligenceStrings.eventKind.CEASEFIRE_VIOLATION',
+  'askIntelligenceStrings.eventKind.EVENT_TYPE_NOT_CLASSIFIED',
+  'askIntelligenceStrings.parties',
+  'askIntelligenceStrings.cited',
+  'askIntelligenceStrings.lead.imihigo()',
+  'askIntelligenceStrings.lead.cpi()',
+  'askIntelligenceStrings.lead.procurement()',
   'dict.askAi.askingAboutGeography',
   'dict.askAi.geographyBasis',
   'dict.askAi.geographyOutranked',

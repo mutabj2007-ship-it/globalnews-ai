@@ -1,6 +1,7 @@
 import type { JSX } from 'react';
 import type { AnalysisSourceRef, LanguageCode, SummaryStatement } from '@globalnews-ai/shared';
 import { AskAnswerProse } from './AskAnswerProse';
+import { resolveAskLocale } from '@/lib/ask/askLocale';
 
 /**
  * ═══ ASK INLINE EVIDENCE CITATIONS + INFERENCE LABEL R1 ═══════════════════
@@ -68,7 +69,13 @@ export function AskCitedBrief({
       source={paragraphs.join('\n\n')}
       statements={statements}
       sources={sources}
-      language={language}
+      /*
+        R4 · PHASE B — this component's `language` prop is `LanguageCode` and is PINNED by
+        accepted dock specs, while the renderer below takes a `DisplayLocale`. The two sets
+        overlap but are not the same: `LanguageCode` carries source languages the interface
+        has never been contracted to render. `resolveAskLocale` is the one declared crossing.
+      */
+      language={resolveAskLocale(language)}
     />
   );
 }

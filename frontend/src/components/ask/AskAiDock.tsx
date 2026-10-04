@@ -1,6 +1,10 @@
 'use client';
 
-import { askLanguageDisposition, resolveAskLocale } from '@/lib/ask/askLocale';
+import {
+  askLanguageDisposition,
+  askLocaleForLegacyCatalogue,
+  resolveAskLocale,
+} from '@/lib/ask/askLocale';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties, FormEvent } from 'react';
 import { usePathname } from 'next/navigation';
@@ -30,6 +34,7 @@ import { GLOBAL_ASK_OPEN_EVENT, type GlobalAskOpenDetail } from '@/lib/ask/openG
 import { GLOBAL_ASK_SUBMIT_EVENT, type GlobalAskSubmitDetail } from '@/lib/ask/submitGlobalAsk';
 import { useThemePreference } from '@/lib/theme/themeStore';
 import { usePlatformGates } from '@/components/platform/PlatformGates';
+import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 
 /**
  * ═══ ASK AI — PHASE 1 ════════════════════════════════════════════════════
@@ -279,7 +284,7 @@ function GlobalAskAiDock({
      carried end to end. lib/ask/askLocale.ts is the one place a locale is resolved. */
   const askDisposition = askLanguageDisposition(resolveAskLocale(language));
   const r2Locale = askDisposition.catalogueLocale;
-  const r2s = askR2Strings(r2Locale);
+  const r2s = askShellStrings(r2Locale).askR2Strings;
 
   /*
     UNIFIED INTELLIGENCE BINDING R2C — THE CANONICAL CONVERSATION.
@@ -363,7 +368,11 @@ function GlobalAskAiDock({
       ? geographyContext !== undefined &&
         geographyContext.countryCode.toUpperCase() === contextRef.countryCode.toUpperCase()
         ? geographyContext.displayName
-        : (localisedCountryName(contextRef.countryCode.toUpperCase(), r2Locale) ??
+        : (localisedCountryName(
+            contextRef.countryCode.toUpperCase(),
+            /* `LanguageCode` boundary: the one declared crossing, not a cast. */
+            askLocaleForLegacyCatalogue(r2Locale),
+          ) ??
           contextRef.countryCode.toUpperCase())
       : '';
   const isPending = r2.pending !== null;

@@ -5,7 +5,7 @@ import { AskR2TurnView } from '@/components/ask-frame/AskR2TurnView';
 import { ASK_SAVABLE_ANSWER_STATES } from '@/components/ask-frame/AskTurnSave';
 import { askR2Strings } from './askR2Strings';
 import { askR2View } from './askR2View';
-import { askIntelligenceView } from './askIntelligenceView';
+import { askIntelligenceStrings, askIntelligenceView } from './askIntelligenceView';
 
 /**
  * ASK INTELLIGENCE BINDING — LIVE ACCEPTANCE REPAIR R1: what the reader sees for the live
@@ -199,7 +199,7 @@ describe('A — a retained-record answer (G2, G3, G4, G9): zero AI, stated truth
           disclosures: ['RETAINED_NOT_CURRENT'],
         }),
       ]),
-      'en',
+      askIntelligenceStrings('en'),
       0,
     )!;
     expect(cpi.lead).toEqual([
@@ -218,7 +218,7 @@ describe('A — a retained-record answer (G2, G3, G4, G9): zero AI, stated truth
           disclosures: ['RETAINED_NOT_CURRENT', 'SNAPSHOT_NOT_CHANGE_SERIES'],
         }),
       ]),
-      'en',
+      askIntelligenceStrings('en'),
       0,
     )!;
     expect(ted.lead[0]).toBe(
@@ -280,7 +280,7 @@ describe('C — retained Conflict records as concise structured observations (G1
           ],
         }),
       ]),
-      'en',
+      askIntelligenceStrings('en'),
       3,
     )!;
     const [row] = view.sections[0].rows;
@@ -300,7 +300,7 @@ describe('C — retained Conflict records as concise structured observations (G1
   it('a record without retained detail shows its event type, never a raw citation string', () => {
     const view = askIntelligenceView(
       payload('CURRENT_REPORTING', 'x', [contribution({})]),
-      'en',
+      askIntelligenceStrings('en'),
       1,
     )!;
     expect(view.sections[0].rows[0]).toMatchObject({
@@ -387,7 +387,7 @@ describe('GOVERNED RETAINED GAP REPAIR R1 — G9, the never-blank card, and the 
           disclosures: ['RETAINED_NOT_CURRENT'],
         }),
       ]),
-      'en',
+      askIntelligenceStrings('en'),
       0,
     )!;
     expect(view.lead).toEqual([

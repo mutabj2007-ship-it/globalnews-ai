@@ -5,6 +5,18 @@ import { briefingStrings, type BriefingStrings } from '@/lib/ask/briefingStrings
 import { ASK_NAV_STRINGS, type AskNavStrings } from '@/lib/ask/askNavStrings';
 import { askRecordStrings } from '@/lib/ask/askModuleRef';
 import { getDictionary, type Dictionary } from '@/lib/i18n/dictionaries';
+import {
+  askContextStrings,
+  askCopyStrings,
+  askEvidenceTableStrings,
+  askRecentReportingStrings,
+  type AskContextStrings,
+  type AskCopyStrings,
+  type AskEvidenceTableStrings,
+  type AskRecentReportingStrings,
+} from '@/lib/ask/askSurfaceStrings';
+import { askGovernedCopy, type AskGovernedCopy } from '@/lib/ask/askGovernedConversation';
+import { askIntelligenceStrings, type AskIntelligenceStrings } from '@/lib/ask/askIntelligenceView';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -56,6 +68,14 @@ export interface AskShellSource {
   readonly briefingStrings: BriefingStrings;
   readonly askNavStrings: AskNavStrings;
   readonly askRecordStrings: ReturnType<typeof askRecordStrings>;
+  /** Recovered from inside components in Phase B; see `askSurfaceStrings.ts`. */
+  readonly askCopyStrings: AskCopyStrings;
+  readonly askRecentReportingStrings: AskRecentReportingStrings;
+  readonly askEvidenceTableStrings: AskEvidenceTableStrings;
+  readonly askContextStrings: AskContextStrings;
+  /** Already exported, but resolved per locale inside their own modules until Phase B. */
+  readonly askGovernedCopy: AskGovernedCopy;
+  readonly askIntelligenceStrings: AskIntelligenceStrings;
   readonly dict: AskShellDictionary;
 }
 
@@ -83,6 +103,12 @@ export function askShellSource(): AskShellSource {
     briefingStrings: briefingStrings('en'),
     askNavStrings: ASK_NAV_STRINGS.en,
     askRecordStrings: askRecordStrings('en'),
+    askCopyStrings: askCopyStrings('en'),
+    askRecentReportingStrings: askRecentReportingStrings('en'),
+    askEvidenceTableStrings: askEvidenceTableStrings('en'),
+    askContextStrings: askContextStrings('en'),
+    askGovernedCopy: askGovernedCopy('en'),
+    askIntelligenceStrings: askIntelligenceStrings('en'),
     dict: dictionaryProjection(),
   };
 }
@@ -103,6 +129,12 @@ export function askShellPolish(): AskShellSource {
     briefingStrings: briefingStrings('pl'),
     askNavStrings: ASK_NAV_STRINGS.pl,
     askRecordStrings: askRecordStrings('pl'),
+    askCopyStrings: askCopyStrings('pl'),
+    askRecentReportingStrings: askRecentReportingStrings('pl'),
+    askEvidenceTableStrings: askEvidenceTableStrings('pl'),
+    askContextStrings: askContextStrings('pl'),
+    askGovernedCopy: askGovernedCopy('pl'),
+    askIntelligenceStrings: askIntelligenceStrings('pl'),
     dict: (() => {
       const pl = getDictionary('pl');
       return {

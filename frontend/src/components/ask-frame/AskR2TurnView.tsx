@@ -1,11 +1,11 @@
 'use client';
+import type { DisplayLocale } from '@globalnews-ai/shared';
 
 import { isolatedAuto, isolatedLtr } from '@/lib/ask/askDirection';
 import type { StoryContext } from '@globalnews-ai/shared';
 import { AskCompactResult } from '@/components/ask/AskCompactResult';
 import { AskIntelligenceBasis } from './AskIntelligenceBasis';
 import { askGovernedConversation } from '@/lib/ask/askGovernedConversation';
-import { askR2Strings, type AskR2Locale } from '@/lib/ask/askR2Strings';
 import { askR2View, failedTurnCopy, type AskR2View } from '@/lib/ask/askR2View';
 import { openFullAnalysisHref, type AskR2Turn } from '@/lib/ask/useAskR2Conversation';
 import { localisedCountryName } from '@/lib/map/geography/displayName';
@@ -14,6 +14,8 @@ import { AskTurnBrief } from './AskTurnBrief';
 import { AskTurnCopy } from './AskTurnCopy';
 import { AskRecentReporting } from './AskRecentReporting';
 import { AskAnswerProse } from '@/components/ask/AskAnswerProse';
+import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
+import { askLocaleForLegacyCatalogue } from '@/lib/ask/askLocale';
 
 /**
  * ASK R2 CONSOLIDATED INTEGRATION R1 · GATE G — ONE ASK R2 TURN, AS D25 DRAWS IT.
@@ -77,7 +79,7 @@ export function AskR2TurnView({
   storyBookmarks = false,
 }: {
   readonly turn: AskR2Turn;
-  readonly locale: AskR2Locale;
+  readonly locale: DisplayLocale;
   readonly context: StoryContext | undefined;
   readonly onRunDeeper?: (question: string) => void;
   /** The Open-full-analysis target itself: no link back to the page it is on. */
@@ -96,7 +98,7 @@ export function AskR2TurnView({
    */
   readonly storyBookmarks?: boolean;
 }): JSX.Element {
-  const s = askR2Strings(locale);
+  const s = askShellStrings(locale).askR2Strings;
   const payload = turn.payload ?? null;
 
   if (payload === null) {
@@ -121,7 +123,13 @@ export function AskR2TurnView({
     payload,
     s,
     locale,
-    (iso3) => localisedCountryName(iso3, locale) ?? iso3,
+    /*
+      R4 · PHASE B — `localisedCountryName` takes a `LanguageCode`, the SOURCE-intelligence
+      set, which cannot express `de` or `pt` at all. `askLocaleForLegacyCatalogue` is the one
+      declared crossing between that set and the seven display locales, so the substitution
+      is a named function a spec can assert on rather than a cast at the call site.
+    */
+    (iso3) => localisedCountryName(iso3, askLocaleForLegacyCatalogue(locale)) ?? iso3,
     turn.question,
   );
   const operationId = turn.operation?.operationId;
@@ -131,7 +139,11 @@ export function AskR2TurnView({
     cannot be shown) leads with a plain-language answer; its governance state becomes restrained
     status and provenance; the evidence stays below. Null for every other turn (unchanged).
   */
-  const governed = askGovernedConversation(payload, locale, turn.question);
+  const governed = askGovernedConversation(
+    payload,
+    askShellStrings(locale).askGovernedCopy,
+    turn.question,
+  );
   /* PUBLIC BETA HARDENING R1A — a deterministic computation's calculation card IS its answer:
      no second, empty Answer container is drawn beneath it. */
   const computedAnswer = view.badge === 'calc' && payload.computation != null;
@@ -155,9 +167,15 @@ export function AskR2TurnView({
       {payload.relationship != null && payload.relationship.countries.length === 2 && (
         <p data-ask="relationship" className="-mt-1 mb-3 text-[13px] leading-[1.5] text-[#9fb4cc]">
           {s.r3.relationshipScope(
-            localisedCountryName(payload.relationship.countries[0], locale) ??
+            localisedCountryName(
               payload.relationship.countries[0],
-            localisedCountryName(payload.relationship.countries[1], locale) ??
+              askLocaleForLegacyCatalogue(locale),
+            ) ??
+              payload.relationship.countries[0],
+            localisedCountryName(
+              payload.relationship.countries[1],
+              askLocaleForLegacyCatalogue(locale),
+            ) ??
               payload.relationship.countries[1],
             payload.relationship.relations
               .map((r) => s.r3.relations[r])
@@ -556,7 +574,8 @@ export function AskR2TurnView({
             <AskCompactResult
               response={payload.analysis}
               question={turn.question}
-              language={locale}
+              /* The accepted dock boundary is `LanguageCode`; one declared crossing. */
+              language={askLocaleForLegacyCatalogue(locale)}
               context={context}
               showFullAnalysisLink={false}
               storyBookmarks={storyBookmarks}

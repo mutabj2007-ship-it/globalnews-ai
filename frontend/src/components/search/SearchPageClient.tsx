@@ -33,6 +33,7 @@ import { resolveInitialLanguage } from '@/lib/i18n/languages';
 import { getDictionary, type Dictionary } from '@/lib/i18n/dictionaries';
 import { AdaptiveTextarea } from '@/components/ui/AdaptiveTextarea';
 import { SEARCH_COMPOSER_GEOMETRY } from './searchComposerGeometry';
+import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 
 interface SearchPageClientProps {
   /**
@@ -234,7 +235,7 @@ export function SearchPageClient({ initialLanguage = 'en' }: SearchPageClientPro
      carried end to end. lib/ask/askLocale.ts is the one place a locale is resolved. */
   const askDisposition = askLanguageDisposition(resolveAskLocale(language));
   const r2Locale = askDisposition.catalogueLocale;
-  const r2s = askR2Strings(r2Locale);
+  const r2s = askShellStrings(r2Locale).askR2Strings;
   /*
     R4 · THE REQUEST CARRIES WHAT THE READER SELECTED, NOT WHAT THE CHROME RENDERS.
 

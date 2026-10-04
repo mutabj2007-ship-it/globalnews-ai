@@ -13,6 +13,7 @@ import {
 } from '@/lib/ask/askRecentGrouping';
 import { askContinuityStrings } from '@/lib/ask/askContinuityStrings';
 import type { AskLocale } from '@/lib/ask/askStrings';
+import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -33,7 +34,7 @@ import type { AskLocale } from '@/lib/ask/askStrings';
  * worse one, because it claims their work is gone.
  */
 export function AskRecentClient({ locale }: { readonly locale: AskLocale }): JSX.Element {
-  const t = askContinuityStrings(locale);
+  const t = askShellStrings(locale).askContinuityStrings;
   /*
     THE LOAD AND THE MOMENT IT LOADED ARE ONE PIECE OF STATE.
 
