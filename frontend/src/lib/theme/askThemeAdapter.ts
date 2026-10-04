@@ -324,8 +324,12 @@ function rule(
   if (u.variants.includes('group-hover')) target = `.group:hover ${target}`;
   if (u.prop === 'placeholder' || u.variants.includes('placeholder')) target += '::placeholder';
   if (u.prop === 'divide') target += ' > :not([hidden]) ~ :not([hidden])';
-  /* White text on an action fill stays white: the fill becomes the light action colour. */
-  if (u.prop === 'text' && token === 'var(--gt-ink)')
+  /* White text on an action fill stays white: the fill becomes the light action colour.
+     R4 closeout — that holds for EVERY near-white text, not only the ones that map to ink: a
+     pale-blue near-white (#e6f5ff, the Ask button's label) maps to the accent, so on the
+     enabled Ask button (bg-[#0a6bd6] → the accent fill) it was painted accent on accent and
+     the label disappeared in Light. */
+  if (u.prop === 'text' && (token === 'var(--gt-ink)' || isNearWhite(u.value)))
     target += keepWhiteOn.map((c) => `:not(.${escapeClass(c)})`).join('');
   /* TRUST R1 §16 — near-white text on an element that paints its OWN gradient fill (the
      NavBar Sign In button) keeps its colour: gradient stops are not remapped, so recolouring
