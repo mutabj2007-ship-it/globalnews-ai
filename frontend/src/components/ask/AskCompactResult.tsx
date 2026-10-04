@@ -6,7 +6,14 @@ import {
   resolveEvidenceState,
   safeExternalHref,
 } from '@globalnews-ai/shared';
-import type { AnalysisApiResponse, LanguageCode, StoryContext } from '@globalnews-ai/shared';
+import type {
+  AnalysisApiResponse,
+  DisplayLocale,
+  LanguageCode,
+  StoryContext,
+} from '@globalnews-ai/shared';
+import { askDictionary } from '@/lib/ask/shell/askDictionary';
+import { askComparisonCoverageLines } from '@/lib/ask/askComparisonCoverage';
 import { AnalysisModeBadge } from '@/components/search/AnalysisModeBadge';
 import { EvidenceFreshnessNotice } from '@/components/search/EvidenceFreshnessNotice';
 import {
@@ -70,7 +77,7 @@ export const COMPACT_SOURCE_LIMIT = 4;
  * ("consumers and prices" / "konsumenci i ceny"). Wording only: each item is a
  * word the reader typed, and nothing is composed from analysis dimensions.
  */
-function formatFocus(focus: readonly string[], language: LanguageCode): string {
+function formatFocus(focus: readonly string[], language: LanguageCode | DisplayLocale): string {
   return new Intl.ListFormat(language, { style: 'long', type: 'conjunction' }).format(focus);
 }
 
@@ -94,6 +101,8 @@ export function sourceDateLabel(
   basis: 'publisher' | 'observed' | undefined,
   language: LanguageCode,
   t: { sourceDatePublished: string; sourceDateObserved: string; sourceDateUnknownBasis: string },
+  /** R4 — the reader's DisplayLocale on the standalone Ask path (month names, numerals). */
+  locale?: DisplayLocale,
 ): string | null {
   /* The same UTC wording the Ask answer already uses ("8 Sep 2026, 11:04 UTC"). */
   /*
@@ -101,7 +110,7 @@ export function sourceDateLabel(
     own locale and formatted through `Intl` since the direction work landed, so the clamp did
     nothing but deny five languages their own month names and numerals.
   */
-  const date = formatUtc(publishedAt, resolveAskLocale(language));
+  const date = formatUtc(publishedAt, locale ?? resolveAskLocale(language));
   if (date === null) return null;
   const template =
     basis === 'publisher'
@@ -116,6 +125,14 @@ interface AskCompactResultProps {
   readonly response: AnalysisApiResponse;
   readonly question: string;
   readonly language?: LanguageCode;
+  /**
+   * R4 · CTO LOCALIZATION CONVERGENCE — the reader's DisplayLocale on the standalone Ask path.
+   * When present, every label on this card (and every child it renders) comes from the one Ask
+   * locale authority (askDictionary): Claude L's qualified overlay, never the two-catalogue
+   * getDictionary that answers English for fr / de / es / pt / ar. Absent (the platform dock,
+   * Home) → exactly the released behaviour, keyed by `language`.
+   */
+  readonly locale?: DisplayLocale;
   /**
    * The context the question was ASKED with — not a fresh read of the
    * store. The transition must reproduce the request that produced this
@@ -151,6 +168,7 @@ export function AskCompactResult({
   response,
   question,
   language = 'en',
+  locale,
   context,
   onStartNewTopic,
   newTopicStarted = false,
@@ -158,8 +176,10 @@ export function AskCompactResult({
   storyBookmarks = true,
   comparisonTable = null,
 }: AskCompactResultProps): JSX.Element {
-  const dictionary = getDictionary(language);
+  const dictionary = locale === undefined ? getDictionary(language) : askDictionary(locale);
   const t = dictionary.askAi;
+  /* the locale every formatter and child reads: the reader's own, never collapsed to English */
+  const uiLocale: DisplayLocale = locale ?? resolveAskLocale(language);
 
   /*
    * FAIL CLOSED. `buildBriefModel` is called only when an analysis is
@@ -222,9 +242,9 @@ export function AskCompactResult({
       resolveEvidenceState(response.retrievalContext, response.articles.length)) ===
     'degraded-fallback';
   /* ANCHORING R1 — an ambiguous country is asked about, never reported as "no evidence". */
-  const ambiguousCountry = resolveAmbiguousCountryQuestion(response.retrievalContext, language);
+  const ambiguousCountry = resolveAmbiguousCountryQuestion(response.retrievalContext, language, locale);
   /* ASK R2 ALPHA ENABLEMENT R1 — asked, not searched (MC-055 / MC-070). */
-  const askedNotSearched = resolveAskedNotSearched(response.retrievalContext, language);
+  const askedNotSearched = resolveAskedNotSearched(response.retrievalContext, language, locale);
   const noAnswerMessage = ambiguousCountry
     ? ambiguousCountry.sentence
     : askedNotSearched
@@ -237,11 +257,12 @@ export function AskCompactResult({
   return (
     <div data-ask="compact-result" className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <AnalysisModeBadge provenance={response.provenance} language={language} />
+        <AnalysisModeBadge provenance={response.provenance} language={language} locale={locale} />
         <EvidenceFreshnessNotice
           retrievalContext={response.retrievalContext}
           articleCount={response.articles.length}
           language={language}
+          locale={locale}
         />
         {telemetry.retrievedArticleCount === null &&
         telemetry.reportingClusterCount === null ? null : (
@@ -268,10 +289,13 @@ export function AskCompactResult({
           className="min-w-0 rounded-xl border border-border-strong px-3 py-2"
         >
           <p className="text-xs font-medium text-ink-primary">
-            {askShellStrings(resolveAskLocale(language)).askContextStrings.coverageChecked}
+            {askShellStrings(uiLocale).askContextStrings.coverageChecked}
           </p>
           <ul className="mt-2 space-y-2 text-xs leading-relaxed text-ink-secondary">
-            {comparisonCoverageLines(response.retrievalContext.comparisonCoverage, language).map(
+            {(locale === undefined
+              ? comparisonCoverageLines(response.retrievalContext.comparisonCoverage, language)
+              : askComparisonCoverageLines(response.retrievalContext.comparisonCoverage, locale)
+            ).map(
               (line, index) => (
                 <li key={response.retrievalContext.comparisonCoverage?.[index].iso3}>{line}</li>
               ),
@@ -297,7 +321,7 @@ export function AskCompactResult({
               )}
               {/* D.1 — the current turn's focus, in the reader's own words. */}
               {(response.retrievalContext.conversationSubject.focus ?? []).length > 0
-                ? ` · ${formatFocus(focusForDisplay(response.retrievalContext.conversationSubject), language)}`
+                ? ` · ${formatFocus(focusForDisplay(response.retrievalContext.conversationSubject), uiLocale)}`
                 : null}
             </span>
             {onStartNewTopic ? (
@@ -336,7 +360,7 @@ export function AskCompactResult({
                 '{focus}',
                 formatFocus(
                   focusForDisplay(response.retrievalContext.conversationSubject),
-                  language,
+                  uiLocale,
                 ),
               )}
             </p>
@@ -344,7 +368,12 @@ export function AskCompactResult({
         </div>
       ) : null}
 
-      <EventAnchorNotice retrievalContext={response.retrievalContext} language={language} compact />
+      <EventAnchorNotice
+        retrievalContext={response.retrievalContext}
+        language={language}
+        locale={locale}
+        compact
+      />
 
       {analysis?.relationalComposition ? (
         <div
@@ -424,6 +453,7 @@ export function AskCompactResult({
               statements={analysis?.summaryStatements}
               sources={sources}
               language={language}
+              locale={locale}
             />
           ) : null}
 
@@ -433,7 +463,7 @@ export function AskCompactResult({
               table={comparisonTable}
               sources={sources}
               /* The dock boundary is `LanguageCode`; one declared crossing to a UI locale. */
-              language={resolveAskLocale(language)}
+              language={uiLocale}
             />
           ) : null}
 
@@ -480,6 +510,7 @@ export function AskCompactResult({
                             source.publishedAtBasis,
                             language,
                             t,
+                            locale,
                           );
                           return label === null ? null : (
                             <span

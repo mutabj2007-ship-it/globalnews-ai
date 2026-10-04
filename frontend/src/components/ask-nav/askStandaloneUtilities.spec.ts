@@ -64,7 +64,10 @@ describe('J — Settings stays inside standalone Ask, in the active language', (
       'resolveAskLocale(cookies().get(LANGUAGE_COOKIE_NAME)?.value)',
     );
     expect(code(settingsPage)).toMatch(
-      /<AskContinuityHeader locale=\{chrome\} surface="settings" \/>\s*<AskClearedBoundary>\s*<AccountSettingsBody language=\{askLocaleForLegacyCatalogue\(chrome\)\} chrome="standalone" \/>/,
+      /* R4 · CTO LOCALIZATION CONVERGENCE — the body now reads the reader's DisplayLocale
+         (`locale`) through the Ask locale authority, inside the page's own direction scope;
+         the legacy crossing that collapsed de / pt to English is gone. */
+      /<AskContinuityHeader locale=\{chrome\} surface="settings" \/>\s*<AskClearedBoundary>[\s\S]*?<div className="contents" \{\.\.\.askDirectionProps\(chrome\)\}>\s*<AccountSettingsBody locale=\{chrome\} chrome="standalone" \/>/,
     );
     expect(code(settingsPage)).not.toMatch(/NavBar|Footer/);
   });

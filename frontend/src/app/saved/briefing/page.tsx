@@ -1,4 +1,5 @@
-import { askLanguageDisposition, askLocaleForLegacyCatalogue } from '@/lib/ask/askLocale';
+import { askLanguageDisposition } from '@/lib/ask/askLocale';
+import { askDirectionProps } from '@/lib/ask/askDirection';
 import { resolveAskLocale } from '@/lib/ask/askLocale';
 import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
@@ -43,11 +44,14 @@ export default function BriefingPage({
       <AskNavProvider>
         <AskNavShell language={chrome} selected={locale} />
         <AskContinuityHeader locale={chrome} surface="saved" />
-        <BriefingDetailClient
-          id={typeof searchParams.id === 'string' ? searchParams.id : ''}
-          requestedVersion={requestedVersion}
-          locale={askLocaleForLegacyCatalogue(locale)}
-        />
+        {/* R4 · the detail is outside the nav shell's direction scope: Arabic laid it out LTR */}
+        <div className="contents" {...askDirectionProps(locale)}>
+          <BriefingDetailClient
+            id={typeof searchParams.id === 'string' ? searchParams.id : ''}
+            requestedVersion={requestedVersion}
+            locale={locale}
+          />
+        </div>
       </AskNavProvider>
     </AskThemedSurface>
   );

@@ -7,14 +7,17 @@ import {
   CircleSlash,
   Clock3,
 } from 'lucide-react';
-import type { AnalysisProvenance, LanguageCode } from '@globalnews-ai/shared';
+import type { AnalysisProvenance, DisplayLocale, LanguageCode } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { askDictionary } from '@/lib/ask/shell/askDictionary';
 
 interface AnalysisModeBadgeProps {
   provenance: AnalysisProvenance;
   className?: string;
   /** Milestone #47 — defaults to 'en', so every pre-M47 caller renders exactly as before. */
   language?: LanguageCode;
+  /** R4 — the reader's DisplayLocale on the standalone Ask path: copy from askDictionary. */
+  locale?: DisplayLocale;
   /**
    * H-ALPHA-1B — OPT-IN, DEFAULT `text-[10px]`, which is this badge's
    * released size. Every existing caller omits it and renders
@@ -59,8 +62,15 @@ interface BadgeVisual {
  * milestone. Presentation-only localization — never re-derives which
  * state is shown, only which pre-written label string represents it.
  */
-function resolveBadgeVisual(provenance: AnalysisProvenance, language: LanguageCode): BadgeVisual {
-  const t = getDictionary(language).analysisModeBadge;
+const badgeCopy = (language: LanguageCode, locale?: DisplayLocale) =>
+  (locale === undefined ? getDictionary(language) : askDictionary(locale)).analysisModeBadge;
+
+function resolveBadgeVisual(
+  provenance: AnalysisProvenance,
+  language: LanguageCode,
+  locale?: DisplayLocale,
+): BadgeVisual {
+  const t = badgeCopy(language, locale);
 
   if (provenance.status === 'success') {
     return provenance.analysisMode === 'live-ai'
@@ -117,11 +127,12 @@ export function AnalysisModeBadge({
   provenance,
   className = '',
   language = 'en',
+  locale,
   sizeClass = 'text-[10px]',
 }: AnalysisModeBadgeProps): JSX.Element {
-  const visual = resolveBadgeVisual(provenance, language);
+  const visual = resolveBadgeVisual(provenance, language, locale);
   const Icon = visual.icon;
-  const t = getDictionary(language).analysisModeBadge;
+  const t = badgeCopy(language, locale);
 
   return (
     <span

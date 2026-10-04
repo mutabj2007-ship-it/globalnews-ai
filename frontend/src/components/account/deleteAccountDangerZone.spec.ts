@@ -140,10 +140,10 @@ describe('deletion is reachable only through the dedicated settings surface', ()
       '<AccountSettingsBody language="en" chrome="platform" />',
     );
     expect(settingsRouteSource).toContain(
-      /* R4 · the standalone settings chrome reads one resolved disposition. The property
-         asserted — the settings route is the ONLY file that renders the danger zone — is
-         unchanged. */
-      '<AccountSettingsBody language={chrome} chrome="standalone" />',
+      /* R4 · the standalone settings body reads the reader's DisplayLocale through the Ask locale
+         authority (CTO localization convergence). The property asserted — the settings route is
+         the ONLY file that renders the danger zone — is unchanged. */
+      '<AccountSettingsBody locale={chrome} chrome="standalone" />',
     );
     expect(settingsRouteSource).not.toContain('DeleteAccountDangerZone');
   });

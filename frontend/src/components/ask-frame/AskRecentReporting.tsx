@@ -1,7 +1,6 @@
 import type { AskCompanionTopic, AskRecentReporting as RecentReporting } from '@/lib/api/askV2Api';
 import { safeExternalHref, type DisplayLocale } from '@globalnews-ai/shared';
-import { localisedCountryName } from '@/lib/map/geography/displayName';
-import { askLocaleForLegacyCatalogue } from '@/lib/ask/askLocale';
+import { askCountryName } from '@/lib/ask/askCountryName';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 import { askFormatDate } from '@/lib/ask/askDirection';
 
@@ -43,9 +42,7 @@ export function AskRecentReporting({
   readonly locale: DisplayLocale;
 }): JSX.Element {
   const t = askShellStrings(locale).askRecentReportingStrings;
-  const place =
-    localisedCountryName(reporting.country, askLocaleForLegacyCatalogue(locale)) ??
-    reporting.country;
+  const place = askCountryName(reporting.country, locale) ?? reporting.country;
   const title = (reporting.topic === undefined ? t.title : t.topic[reporting.topic])(
     place,
     reporting.windowDays,

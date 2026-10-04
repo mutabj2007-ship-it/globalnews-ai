@@ -11,7 +11,7 @@ import { askRecordStrings, dashboardModuleContext } from '@/lib/ask/askModuleRef
 import { askCompareRef, dashboardCompareContext } from '@/lib/ask/askSelectionRef';
 import { resolveAskStrings, type AskLocale } from '@/lib/ask/askStrings';
 import { sourceLanguageFor, type DisplayLocale } from '@globalnews-ai/shared';
-import { askLanguageDisposition, askLocaleForLegacyCatalogue } from '@/lib/ask/askLocale';
+import { askLanguageDisposition } from '@/lib/ask/askLocale';
 import { askSevenStrings } from '@/lib/ask/askSevenStrings';
 import { askDirectionProps, askForeignCopyProps, isolatedAuto } from '@/lib/ask/askDirection';
 import { useRotatingExample } from '@/lib/ask/useRotatingExample';
@@ -28,7 +28,7 @@ import { revokeAnalysisConsent } from '@/lib/analysis/analysisComputeConsent';
 import { ASK_SIGN_IN_HREF, keepQuestion, readKeptQuestion } from '@/lib/ask/askKeptQuestion';
 import { authReturnNotice, type GuestNotice } from '@/lib/ask/askGuestTrial';
 import type { AskShellMenuControl } from '@/lib/ask/askShellMenu';
-import { localisedCountryName } from '@/lib/map/geography/displayName';
+import { askCountryName } from '@/lib/ask/askCountryName';
 import { LoadingStages } from '@/components/search/LoadingStages';
 import { AskR2TurnView } from './AskR2TurnView';
 import { AskSourcesColumn } from './AskSourcesColumn';
@@ -203,7 +203,7 @@ export function AskFrameScreen({
           lastR2.payload,
           r2s,
           interfaceLocale,
-          (iso) => localisedCountryName(iso, askLocaleForLegacyCatalogue(interfaceLocale)) ?? iso,
+          (iso) => askCountryName(iso, interfaceLocale) ?? iso,
         )
       : null;
   const showR2 = r2.availability === 'r2' || opened !== null;
@@ -590,10 +590,8 @@ export function AskFrameScreen({
                   {/* TRUST R1 — a country-only context (Map → Ask) names its place; it had an empty title. */}
                   {context.title ||
                     (context.countryCode
-                      ? (localisedCountryName(
-                          context.countryCode,
-                          askLocaleForLegacyCatalogue(interfaceLocale),
-                        ) ?? context.countryCode)
+                      ? (askCountryName(context.countryCode, interfaceLocale) ??
+                        context.countryCode)
                       : '')}
                 </span>
                 <button

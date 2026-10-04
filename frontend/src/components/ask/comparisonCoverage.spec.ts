@@ -27,8 +27,13 @@ describe('Ask coverage presentation', () => {
   it('renders all coverage members in compact results with wrapping and no acquisition', () => {
     const source = readFileSync(join(__dirname, 'AskCompactResult.tsx'), 'utf8');
     expect(source).toContain('data-ask="coverage-checked"');
+    /* R4 · the platform path keeps the shared formatter; the standalone Ask path formats the same
+       members in the reader's DisplayLocale (askComparisonCoverageLines). Both render every member. */
     expect(source).toContain(
-      'comparisonCoverageLines(response.retrievalContext.comparisonCoverage, language).map',
+      'comparisonCoverageLines(response.retrievalContext.comparisonCoverage, language)',
+    );
+    expect(source).toContain(
+      'askComparisonCoverageLines(response.retrievalContext.comparisonCoverage, locale)',
     );
     expect(source).toContain('min-w-0');
     expect(source).not.toMatch(/\bfetch\s*\(|\banalyzeNews\s*\(/u);

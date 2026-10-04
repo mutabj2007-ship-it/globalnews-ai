@@ -6,7 +6,8 @@ import { Footer } from '@/components/layout/Footer';
 import { DeleteAccountDangerZone } from '@/components/account/DeleteAccountDangerZone';
 import { useAccount } from '@/lib/hooks/useAccount';
 import { getDictionary } from '@/lib/i18n/dictionaries';
-import type { LanguageCode } from '@globalnews-ai/shared';
+import type { DisplayLocale, LanguageCode } from '@globalnews-ai/shared';
+import { askDictionary } from '@/lib/ask/shell/askDictionary';
 
 /**
  * ACCOUNT DESTRUCTIVE-ACTION SAFETY — the dedicated settings surface the
@@ -18,7 +19,8 @@ import type { LanguageCode } from '@globalnews-ai/shared';
  * the deletion action was moved into. Nothing else was built here.
  */
 export function AccountSettingsBody({
-  language,
+  language = 'en',
+  locale,
   chrome,
 }: {
   /**
@@ -26,7 +28,14 @@ export function AccountSettingsBody({
    * active language cookie (app/account/settings/page.tsx). Platform mode passes 'en', the
    * default this surface has always rendered there.
    */
-  readonly language: LanguageCode;
+  readonly language?: LanguageCode;
+  /**
+   * R4 · CTO LOCALIZATION CONVERGENCE — the reader's DisplayLocale on the standalone Ask shell.
+   * Its labels then come from the one Ask locale authority (askDictionary: Claude L's qualified
+   * overlay) instead of the two-catalogue getDictionary, which answered English for fr / de / es /
+   * pt / ar. Platform mode omits it and renders exactly as before.
+   */
+  readonly locale?: DisplayLocale;
   /** 'platform' renders NavBar + Footer exactly as before; 'standalone' the body only. */
   readonly chrome: 'platform' | 'standalone';
 }): JSX.Element {
@@ -43,7 +52,7 @@ export function AccountSettingsBody({
     for a signed-in caller. ALPHA VISUAL ACCEPTANCE REPAIR R1 — the language is now provided
     by the server wrapper instead of a hard-coded English dictionary.
   */
-  const dictionary = getDictionary(language);
+  const dictionary = locale === undefined ? getDictionary(language) : askDictionary(locale);
   const t = dictionary.accountSettings;
 
   return (

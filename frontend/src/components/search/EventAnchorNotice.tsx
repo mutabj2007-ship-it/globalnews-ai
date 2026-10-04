@@ -1,6 +1,25 @@
-import type { AnalysisRetrievalContext, EventAnchorDisclosure, LanguageCode } from '@globalnews-ai/shared';
+import type {
+  AnalysisRetrievalContext,
+  DisplayLocale,
+  EventAnchorDisclosure,
+  LanguageCode,
+} from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { localisedCountryName } from '@/lib/map/geography/displayName';
+import { askDictionary } from '@/lib/ask/shell/askDictionary';
+import { askCountryName } from '@/lib/ask/askCountryName';
+
+/*
+  R4 · LOCALIZATION CONVERGENCE — on the standalone Ask path the caller passes the reader's
+  DisplayLocale and the copy comes from the one Ask locale authority (askDictionary), country
+  names from the DisplayLocale formatter. Without it (platform / Home) nothing changes.
+*/
+/* en / pl keep their own curated country tables (byte-identical); the five newer locales have none */
+const cldrNamed = (locale?: DisplayLocale): locale is DisplayLocale =>
+  locale !== undefined && locale !== 'en' && locale !== 'pl';
+
+const copyOf = (language: LanguageCode, locale?: DisplayLocale) =>
+  (locale === undefined ? getDictionary(language) : askDictionary(locale)).eventAnchor;
 
 /**
  * ASK R2 ALPHA ENABLEMENT R1 — questions the backend ASKED about instead of searching:
@@ -12,14 +31,18 @@ import { localisedCountryName } from '@/lib/map/geography/displayName';
 export function resolveAskedNotSearched(
   ctx: AnalysisRetrievalContext,
   language: LanguageCode,
+  locale?: DisplayLocale,
 ):
   | { code: string; heading: string; body: string; sentence: string; places: readonly string[] }
   | undefined {
   if (ctx.retrievalOutcome !== 'CLARIFICATION_REQUIRED') return undefined;
-  const copy = getDictionary(language).eventAnchor;
+  const copy = copyOf(language, locale);
   if (ctx.clarificationReason === 'NO_PRIOR_SUBJECT') {
     const places = (ctx.clarificationCandidates ?? []).map(
-      (iso3) => localisedCountryName(iso3, language) ?? iso3,
+      (iso3) =>
+        (locale === undefined
+          ? localisedCountryName(iso3, language)
+          : askCountryName(iso3, locale)) ?? iso3,
     );
     /* The place is shown beside the sentence (a chip), never inflected into it. */
     return {
@@ -82,9 +105,15 @@ export function resolveAskedNotSearched(
 
 type Copy = ReturnType<typeof getDictionary>['eventAnchor'];
 
-function countryLabel(ctx: AnalysisRetrievalContext, copy: Copy): string | undefined {
+function countryLabel(
+  ctx: AnalysisRetrievalContext,
+  copy: Copy,
+  locale?: DisplayLocale,
+): string | undefined {
   const iso3 = ctx.eventAnchor?.countryIso3;
   if (iso3 === undefined) return undefined;
+  /* R4 — on the Ask path the country is named by the DisplayLocale formatter (category B) */
+  if (cldrNamed(locale)) return askCountryName(iso3, locale) ?? ctx.countryName ?? iso3;
   return (copy.countryNames as Record<string, string>)[iso3] ?? ctx.countryName ?? iso3;
 }
 
@@ -107,11 +136,12 @@ export interface EventAnchorLine {
 export function resolveEventAnchorLines(
   ctx: AnalysisRetrievalContext,
   language: LanguageCode,
+  locale?: DisplayLocale,
 ): EventAnchorLine[] {
   const anchor = ctx.eventAnchor;
   if (anchor === undefined) return [];
-  const copy = getDictionary(language).eventAnchor;
-  const country = countryLabel(ctx, copy) ?? '';
+  const copy = copyOf(language, locale);
+  const country = countryLabel(ctx, copy, locale) ?? '';
   const lines: EventAnchorLine[] = [];
   for (const code of ORDER) {
     if (!anchor.disclosures.includes(code)) continue;
@@ -156,13 +186,17 @@ export function resolveEventAnchorLines(
 export function resolveAmbiguousCountryQuestion(
   ctx: AnalysisRetrievalContext,
   language: LanguageCode,
+  locale?: DisplayLocale,
 ): { question: string; candidates: string[]; sentence: string } | undefined {
   if (ctx.retrievalOutcome !== 'CLARIFICATION_REQUIRED' || ctx.clarificationReason !== 'AMBIGUOUS_COUNTRY') {
     return undefined;
   }
-  const copy = getDictionary(language).eventAnchor;
+  const copy = copyOf(language, locale);
   const names = copy.countryNamesFull as Record<string, string>;
-  const candidates = (ctx.clarificationCandidates ?? []).map((iso3) => names[iso3] ?? iso3);
+  const candidates = (ctx.clarificationCandidates ?? []).map(
+    (iso3) =>
+      (cldrNamed(locale) ? (askCountryName(iso3, locale) ?? names[iso3]) : names[iso3]) ?? iso3,
+  );
   return {
     question: copy.ambiguousCountryQuestion,
     candidates,
@@ -174,10 +208,13 @@ export function resolveAmbiguousCountryQuestion(
 export function EventAnchorNotice({
   retrievalContext,
   language,
+  locale,
   compact = false,
 }: {
   retrievalContext: AnalysisRetrievalContext;
   language: LanguageCode;
+  /** R4 — the reader's DisplayLocale on the standalone Ask path (see copyOf). */
+  locale?: DisplayLocale;
   /**
    * INLINE CITATIONS R1 B3 — PRESENTATION ONLY. One line of short fragments
    * ("Evidence note · Cause not established · …") with the full sentences one
@@ -186,9 +223,9 @@ export function EventAnchorNotice({
    */
   compact?: boolean;
 }): JSX.Element | null {
-  const lines = resolveEventAnchorLines(retrievalContext, language);
+  const lines = resolveEventAnchorLines(retrievalContext, language, locale);
   if (lines.length === 0) return null;
-  const copy = getDictionary(language).eventAnchor;
+  const copy = copyOf(language, locale);
   if (compact) {
     return (
       <section data-event-anchor="notice" data-event-anchor-variant="compact" role="note" aria-label={copy.heading}>

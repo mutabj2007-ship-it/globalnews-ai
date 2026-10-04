@@ -1,5 +1,7 @@
 import { Radio, Archive, FlaskConical, CircleOff } from 'lucide-react';
-import type { AnalysisRetrievalContext, LanguageCode } from '@globalnews-ai/shared';
+import type { AnalysisRetrievalContext, DisplayLocale, LanguageCode } from '@globalnews-ai/shared';
+import { askDictionary } from '@/lib/ask/shell/askDictionary';
+import { askRelativeTime } from '@/lib/ask/askRelativeTime';
 import { formatRelativeTime, formatUtcClock } from '@/lib/formatRelativeTime';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { displayRetrievalContext } from '@/components/search/evidenceDisplay';
@@ -78,6 +80,8 @@ export function resolveRetrievalContextText(
   rawRetrievalContext: AnalysisRetrievalContext,
   language: LanguageCode = 'en',
   articleCount?: number,
+  /** R4 — the reader's DisplayLocale on the standalone Ask path: copy from askDictionary. */
+  locale?: DisplayLocale,
 ): RetrievalContextText {
   /* PR #40 R2 F3 — labelled through the one evidence-state display authority. */
   const retrievalContext = displayRetrievalContext(rawRetrievalContext, articleCount);
@@ -91,7 +95,8 @@ export function resolveRetrievalContextText(
     canonicalLocation,
   } = retrievalContext;
 
-  const t = getDictionary(language).retrievalContextStatus;
+  const dictionary = locale === undefined ? getDictionary(language) : askDictionary(locale);
+  const t = dictionary.retrievalContextStatus;
 
   const BADGE_LABEL: Record<AnalysisRetrievalContext['dataMode'], string> = {
     live: t.liveReporting,
@@ -135,8 +140,13 @@ export function resolveRetrievalContextText(
       : retrievalContext.newestArticlePublishedAtBasis === 'observed'
         ? t.newestStoredArticleObserved
         : t.newestStoredArticleUnverified;
+  /* R4 \u2014 en / pl keep the released wording; fr \u2026 ar use CLDR's own word order (askRelativeTime) */
+  const relative = (iso: string): string =>
+    locale === undefined || locale === 'en' || locale === 'pl'
+      ? formatRelativeTime(iso, language)
+      : askRelativeTime(iso, locale);
   const freshnessLine = newestArticlePublishedAt
-    ? `${freshnessPrefix} ${formatRelativeTime(newestArticlePublishedAt, language)} \u00b7 ${formatUtcClock(newestArticlePublishedAt)}`
+    ? `${freshnessPrefix} ${relative(newestArticlePublishedAt)} \u00b7 ${formatUtcClock(newestArticlePublishedAt)}`
     : undefined;
 
   // Milestone #28: when this query's country/city came from fuzzy

@@ -8,7 +8,7 @@ import { AskIntelligenceBasis } from './AskIntelligenceBasis';
 import { askGovernedConversation } from '@/lib/ask/askGovernedConversation';
 import { askR2View, failedTurnCopy, type AskR2View } from '@/lib/ask/askR2View';
 import { openFullAnalysisHref, type AskR2Turn } from '@/lib/ask/useAskR2Conversation';
-import { localisedCountryName } from '@/lib/map/geography/displayName';
+import { askCountryName } from '@/lib/ask/askCountryName';
 import { AskTurnSave } from './AskTurnSave';
 import { AskTurnBrief } from './AskTurnBrief';
 import { AskTurnCopy } from './AskTurnCopy';
@@ -144,13 +144,9 @@ export function AskR2TurnView({
     payload,
     s,
     locale,
-    /*
-      R4 · PHASE B — `localisedCountryName` takes a `LanguageCode`, the SOURCE-intelligence
-      set, which cannot express `de` or `pt` at all. `askLocaleForLegacyCatalogue` is the one
-      declared crossing between that set and the seven display locales, so the substitution
-      is a named function a spec can assert on rather than a cast at the call site.
-    */
-    (iso3) => localisedCountryName(iso3, askLocaleForLegacyCatalogue(locale)) ?? iso3,
+    /* R4 · LOCALIZATION CONVERGENCE (category B) — the country named in the reader's own
+       DisplayLocale; the legacy crossing gave German and Portuguese readers English names. */
+    (iso3) => askCountryName(iso3, locale) ?? iso3,
     turn.question,
   );
   const operationId = turn.operation?.operationId;
@@ -188,15 +184,9 @@ export function AskR2TurnView({
       {payload.relationship != null && payload.relationship.countries.length === 2 && (
         <p data-ask="relationship" className="-mt-1 mb-3 text-[13px] leading-[1.5] text-[#9fb4cc]">
           {s.r3.relationshipScope(
-            localisedCountryName(
+            askCountryName(payload.relationship.countries[0], locale) ??
               payload.relationship.countries[0],
-              askLocaleForLegacyCatalogue(locale),
-            ) ??
-              payload.relationship.countries[0],
-            localisedCountryName(
-              payload.relationship.countries[1],
-              askLocaleForLegacyCatalogue(locale),
-            ) ??
+            askCountryName(payload.relationship.countries[1], locale) ??
               payload.relationship.countries[1],
             payload.relationship.relations
               .map((r) => s.r3.relations[r])
@@ -605,8 +595,10 @@ export function AskR2TurnView({
             <AskCompactResult
               response={payload.analysis}
               question={turn.question}
-              /* The accepted dock boundary is `LanguageCode`; one declared crossing. */
+              /* The accepted dock boundary is `LanguageCode` (category C: kept for the props that
+                 still take it); every label on the card reads the reader's own `locale`. */
               language={askLocaleForLegacyCatalogue(locale)}
+              locale={locale}
               context={context}
               showFullAnalysisLink={false}
               storyBookmarks={storyBookmarks}

@@ -1,5 +1,10 @@
 import type { JSX } from 'react';
-import type { AnalysisSourceRef, LanguageCode, SummaryStatement } from '@globalnews-ai/shared';
+import type {
+  AnalysisSourceRef,
+  DisplayLocale,
+  LanguageCode,
+  SummaryStatement,
+} from '@globalnews-ai/shared';
 import { AskAnswerProse } from './AskAnswerProse';
 import { resolveAskLocale } from '@/lib/ask/askLocale';
 
@@ -58,11 +63,14 @@ export function AskCitedBrief({
   statements,
   sources,
   language,
+  locale,
 }: {
   readonly paragraphs: readonly string[];
   readonly statements: readonly SummaryStatement[] | undefined;
   readonly sources: readonly AnalysisSourceRef[];
   readonly language: LanguageCode;
+  /** R4 — the reader's DisplayLocale on the standalone Ask path (never collapsed to EN). */
+  readonly locale?: DisplayLocale;
 }): JSX.Element {
   return (
     <AskAnswerProse
@@ -75,7 +83,7 @@ export function AskCitedBrief({
         overlap but are not the same: `LanguageCode` carries source languages the interface
         has never been contracted to render. `resolveAskLocale` is the one declared crossing.
       */
-      language={resolveAskLocale(language)}
+      language={locale ?? resolveAskLocale(language)}
     />
   );
 }

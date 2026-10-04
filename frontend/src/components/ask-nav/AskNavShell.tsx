@@ -475,6 +475,7 @@ export function AskNavShell({
             {controlTheme !== undefined && (
               <ThemeControl
                 language={language as LanguageCode}
+                locale={language}
                 initial={controlTheme}
                 tone="surface"
               />
@@ -547,6 +548,10 @@ export function AskNavShell({
           aria-label={s.navAriaLabel}
           data-ask-nav="drawer"
           data-ask-nav-audience={isLoading ? 'pending' : audience}
+          /* R4 · the drawer is a SIBLING of the header, so it never inherited the header's
+             direction: an Arabic reader's menu laid out left-to-right. Same authority. */
+          lang={shellDirection.lang}
+          dir={shellDirection.dir}
           className={styles.drawer}
         >
           <div className={styles.drawerHead}>
@@ -585,6 +590,7 @@ export function AskNavShell({
               <div className="flex min-h-[52px] items-center" data-ask-nav="theme">
                 <ThemeControl
                   language={language as LanguageCode}
+                  locale={language}
                   initial={controlTheme}
                   tone="surface"
                 />

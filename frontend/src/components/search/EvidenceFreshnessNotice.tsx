@@ -1,5 +1,5 @@
 import { Archive, CircleOff, FlaskConical } from 'lucide-react';
-import type { AnalysisRetrievalContext, LanguageCode } from '@globalnews-ai/shared';
+import type { AnalysisRetrievalContext, DisplayLocale, LanguageCode } from '@globalnews-ai/shared';
 import { resolveRetrievalContextText } from '@/components/search/RetrievalContextStatus';
 import { displayEvidenceState, displayRetrievalContext } from '@/components/search/evidenceDisplay';
 
@@ -30,10 +30,13 @@ const ICON = { live: Archive, cached: Archive, unavailable: CircleOff, mock: Fla
 export function EvidenceFreshnessNotice({
   retrievalContext,
   language,
+  locale,
   articleCount,
 }: {
   retrievalContext: AnalysisRetrievalContext;
   language: LanguageCode;
+  /** R4 — the reader's DisplayLocale on the standalone Ask path. */
+  locale?: DisplayLocale;
   /** The rendered response's article count, for legacy payloads without a stamped state. */
   articleCount?: number;
 }): JSX.Element | null {
@@ -46,6 +49,7 @@ export function EvidenceFreshnessNotice({
     mode === shown.dataMode ? shown : { ...shown, dataMode: mode },
     language,
     articleCount,
+    locale,
   );
   const Icon = ICON[mode];
 

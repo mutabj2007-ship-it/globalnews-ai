@@ -1,4 +1,4 @@
-import { askLanguageDisposition, askLocaleForLegacyCatalogue } from '@/lib/ask/askLocale';
+import { askLanguageDisposition } from '@/lib/ask/askLocale';
 import { resolveAskLocale } from '@/lib/ask/askLocale';
 import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
@@ -48,7 +48,7 @@ export default function AskRecentPage(): JSX.Element {
         <AskNavShell language={chrome} selected={locale} />
         <AskContinuityHeader locale={chrome} surface="recent" />
         <AskClearedBoundary>
-          <AskRecentClient locale={askLocaleForLegacyCatalogue(locale)} />
+          <AskRecentClient locale={locale} />
         </AskClearedBoundary>
       </AskNavProvider>
     </AskThemedSurface>

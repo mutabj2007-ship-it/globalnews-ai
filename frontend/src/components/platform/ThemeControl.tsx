@@ -11,8 +11,9 @@ import {
   type ReactNode,
 } from 'react';
 import { Clock, Monitor, Moon, Sun } from 'lucide-react';
-import type { LanguageCode } from '@globalnews-ai/shared';
+import type { DisplayLocale, LanguageCode } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { askDictionary } from '@/lib/ask/shell/askDictionary';
 import { THEME_PREFERENCES, isValidClockTime, type ThemePreference } from '@/lib/theme/theme';
 import { setThemePreference, useThemePreference, useThemeSchedule } from '@/lib/theme/themeStore';
 
@@ -63,15 +64,18 @@ const ICONS: Record<ThemePreference, typeof Sun> = {
  */
 export function ThemeControl({
   language,
+  locale,
   initial,
   tone = 'chrome',
 }: {
   readonly language: LanguageCode;
+  /** R4 — the reader's DisplayLocale on the standalone Ask shell: labels from askDictionary. */
+  readonly locale?: DisplayLocale;
   readonly initial: ThemePreference;
   /** TRUST R1 — `chrome` on the dark Home header; `surface` on a themed header (standalone Ask). */
   readonly tone?: 'chrome' | 'surface';
 }): JSX.Element {
-  const t = getDictionary(language).homeR1.theme;
+  const t = (locale === undefined ? getDictionary(language) : askDictionary(locale)).homeR1.theme;
   const preference = useThemePreference(initial);
   const schedule = useThemeSchedule();
   const [open, setOpen] = useState(false);

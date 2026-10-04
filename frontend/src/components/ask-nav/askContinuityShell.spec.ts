@@ -31,9 +31,10 @@ const dock = read('components', 'ask', 'AskAiDock.tsx');
 describe('Recent and Saved use the standalone Ask navigation, never the platform NavBar', () => {
   it.each([
     /* R4 · the client's own locale expression differs per surface: AskRecentClient takes the
-       five-member legacy AskLocale (so the crossing is named), SavedClient takes the two-member
-       catalogue locale. Carried as data rather than branched on inside the assertion. */
-    ['/ask/recent', recentPage, 'AskRecentClient', 'recent', 'askLocaleForLegacyCatalogue\\(locale\\)'],
+       reader's DisplayLocale itself (CTO localization convergence removed the legacy crossing
+       that collapsed de / pt to English), SavedClient takes the disposition's catalogue locale.
+       Carried as data rather than branched on inside the assertion. */
+    ['/ask/recent', recentPage, 'AskRecentClient', 'recent', 'locale'],
     ['/saved', savedPage, 'SavedClient', 'saved', 'chrome'],
   ])('%s', (_route, page, client, surface, clientLocale) => {
     const body = code(page);

@@ -12,7 +12,7 @@ import {
   type AskRecentGroup,
 } from '@/lib/ask/askRecentGrouping';
 import { askContinuityStrings } from '@/lib/ask/askContinuityStrings';
-import type { AskLocale } from '@/lib/ask/askStrings';
+import type { DisplayLocale } from '@globalnews-ai/shared';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 import { askDirectionProps } from '@/lib/ask/askDirection';
 
@@ -34,7 +34,7 @@ import { askDirectionProps } from '@/lib/ask/askDirection';
  * session expired is not a smaller failure than an error — it is a different and
  * worse one, because it claims their work is gone.
  */
-export function AskRecentClient({ locale }: { readonly locale: AskLocale }): JSX.Element {
+export function AskRecentClient({ locale }: { readonly locale: DisplayLocale }): JSX.Element {
   const t = askShellStrings(locale).askContinuityStrings;
   /*
     THE LOAD AND THE MOMENT IT LOADED ARE ONE PIECE OF STATE.
