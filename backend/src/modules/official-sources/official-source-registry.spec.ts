@@ -41,9 +41,21 @@ function buildEntry(overrides: Partial<OfficialSourceEntry> = {}): OfficialSourc
   instead: an entry that appears without being added here, with its authorising round,
   fails — which is the property the lock actually defended.
 */
-const REVIEWED_REGISTRATIONS: ReadonlyArray<{ id: string; authorisedBy: string }> = [
-  { id: 'eurostat', authorisedBy: 'MAIN-ECONOMY-CANONICAL-CLOSEOUT-R1 §2.2' },
-  { id: 'rw-nisr', authorisedBy: 'MAIN-EAST-AFRICA-SOURCE-RIGHTS-REGISTRY-CLOSEOUT-R1 ruling F' },
+/*
+  `authorityClass` and `rightsNull` are per registration, declared HERE, so a class or a null
+  rights binding cannot appear in the registry without this reviewed list saying so. pl-sejm is
+  the first GOVERNMENT entry and the first deliberately rights-null one (E1 SEJM-RIGHTS-AND-HOST-
+  ADMISSION-R1 §B6: `rights: null` is the refusal, stated out loud; registration is host security only).
+*/
+const REVIEWED_REGISTRATIONS: ReadonlyArray<{
+  id: string;
+  authorisedBy: string;
+  authorityClass: OfficialSourceEntry['authorityClass'];
+  rightsNull: boolean;
+}> = [
+  { id: 'eurostat', authorisedBy: 'MAIN-ECONOMY-CANONICAL-CLOSEOUT-R1 §2.2', authorityClass: 'OFFICIAL_STATISTICS', rightsNull: false },
+  { id: 'rw-nisr', authorisedBy: 'MAIN-EAST-AFRICA-SOURCE-RIGHTS-REGISTRY-CLOSEOUT-R1 ruling F', authorityClass: 'OFFICIAL_STATISTICS', rightsNull: false },
+  { id: 'pl-sejm', authorisedBy: 'E1 SEJM-RIGHTS-AND-HOST-ADMISSION-R1', authorityClass: 'GOVERNMENT', rightsNull: true },
 ];
 
 describe('E-4a · every registry entry is a reviewed registration, and NONE is enabled', () => {
@@ -73,10 +85,10 @@ describe('E-4a · every registry entry is a reviewed registration, and NONE is e
   });
 
   it('each reviewed registration is present, classed, and carries its authorising round', () => {
-    for (const { id, authorisedBy } of REVIEWED_REGISTRATIONS) {
+    for (const { id, authorisedBy, authorityClass } of REVIEWED_REGISTRATIONS) {
       const entry = getOfficialSourceById(id);
       expect(entry).toBeDefined();
-      expect(entry?.authorityClass).toBe('OFFICIAL_STATISTICS');
+      expect(entry?.authorityClass).toBe(authorityClass);
       // The entry itself must cite the round that authorised it, not just this test.
       expect(entry?.provenanceNote).toContain(authorisedBy.split(' ')[0]);
     }
@@ -95,9 +107,16 @@ describe('E-4a · every registry entry is a reviewed registration, and NONE is e
     expect(OFFICIAL_SOURCES.length).toBeGreaterThan(0);
 
     for (const entry of OFFICIAL_SOURCES) {
-      expect(entry.rights).not.toBeNull();
-      expect(entry.rights?.rightsAuthorityId).toBeTruthy();
-      expect(entry.rights?.rightsRecordKey).toBeTruthy();
+      /* A null binding is admitted ONLY where the reviewed registration declares it — never by
+         default. Every other entry must carry a key. */
+      const reviewed = REVIEWED_REGISTRATIONS.find((r) => r.id === entry.id);
+      if (reviewed?.rightsNull === true) {
+        expect(entry.rights).toBeNull();
+      } else {
+        expect(entry.rights).not.toBeNull();
+        expect(entry.rights?.rightsAuthorityId).toBeTruthy();
+        expect(entry.rights?.rightsRecordKey).toBeTruthy();
+      }
       /* no grade, no instrument, no permission anywhere in the entry itself */
       expect(JSON.stringify(entry)).not.toMatch(/E-5|rightsClass|instrument/);
     }
@@ -122,7 +141,7 @@ describe('E-4a · every registry entry is a reviewed registration, and NONE is e
     expect(getOfficialSourceById('eurostat')?.name).toBe('Eurostat');
     expect(getOfficialSourceById('rw-nisr')?.name).toBe('National Institute of Statistics of Rwanda');
     expect(getOfficialSourcesForCountry('KE')).toHaveLength(0);
-    expect(getOfficialSourcesByClass('GOVERNMENT')).toHaveLength(0);
+    expect(getOfficialSourcesByClass('GOVERNMENT').map((s) => s.id)).toEqual(['pl-sejm']);
 
     /* Derived, not typed out — the defect Main ruled on was a hand-written count beside a
        list that no longer matched it. */
