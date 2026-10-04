@@ -4,7 +4,12 @@ import { askRequestContext } from './ask-request-context';
 import type { AskRequest } from './ask-compute.contract';
 import { conversationOf } from './ask-v2.service';
 import { readConversationalTurn } from './conversation/conversation-state';
-import { validateStoredArtifact, type PriorArtifact } from './conversation/conversation-artifact';
+import {
+  SERVER_ARTIFACT_KINDS,
+  validateStoredArtifact,
+  type PriorArtifact,
+} from './conversation/conversation-artifact';
+import { ANSWER_RECORD_KINDS } from '../ask-router/semantic-ir/prior-claim';
 import { executionContractOf } from './execution-contract';
 import { routeAskR2 } from '../ask-router/ask-r2-route';
 import { specialistRegistryFixture } from '../ask-router/frozen-c/fixtures/specialist-registry.fixture';
@@ -455,5 +460,43 @@ describe('R4 ALPHA — interpreter-first (FR / DE / ES / PT / AR): the same deci
   it('the same verdict over an earlier REASONING answer → no current evidence planned (R-5)', () => {
     const r = route('Est-ce toujours vrai maintenant ?', 'fr', recheck, 'MODEL_REASONING');
     expect(r.semantic.turn.freshness).toBe('NONE');
+  });
+});
+
+describe('R4 ALPHA — R-3 scope: answer records bind only explicit answer references', () => {
+  it('the router’s answer-record kinds equal the artifact authority’s server kinds', () => {
+    expect([...ANSWER_RECORD_KINDS].sort()).toEqual([...SERVER_ARTIFACT_KINDS].sort());
+  });
+
+  it('after a news answer, generic anaphora keeps following the READER’s subject (R3 continuity)', async () => {
+    const c = conversation();
+    await c.ask("What has changed in Kenya's economy?");
+    const t = await c.ask('How does this affect ordinary households?');
+    expect(t.payload.diagnostics.job.discourseReference).toBe('NONE');
+    expect(t.analysisCalls).toHaveLength(1);
+    /* the landed continuity routing still receives the previous USER question */
+    expect(t.analysisCalls[0][3]).toBe("What has changed in Kenya's economy?");
+  });
+
+  it('the same stable question asked again in the thread is the same plan (stored answers reusable)', async () => {
+    const { adapter } = harness();
+    const q = 'Why do strong institutions sometimes decay slowly and then suddenly?';
+    const record = validateStoredArtifact({
+      kind: 'REASONED_ANSWER',
+      provenance: 'MODEL_REASONING',
+      label: q,
+      components: ['A point.'],
+      scope: { question: q, job: 'EXPLANATION', countries: [], relation: null, freshness: 'NONE' },
+    });
+    expect(record).not.toBeNull();
+    const plain = { question: q, language: 'en', intent: 'ask' } as AskRequest;
+    const withRecord = {
+      ...plain,
+      priorArtifact: { ...(record as NonNullable<typeof record>), sourceOperationId: 'op-1' },
+    } as AskRequest;
+    const ctx = { accountId: 'user-1', ipScope: 'ip:v4:203.0.113.7' } as never;
+    const a = await askRequestContext.run(ctx, () => adapter.prepare(plain));
+    const b = await askRequestContext.run(ctx, () => adapter.prepare(withRecord));
+    expect(b.revision).toBe(a.revision);
   });
 });

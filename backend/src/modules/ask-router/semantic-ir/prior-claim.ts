@@ -73,6 +73,16 @@ export function attributionIsAnaphoric(text: string, language: string): boolean 
   return false;
 }
 
+/*
+  R4 ALPHA R-3 SCOPE — the kinds of the server's ANSWER RECORDS (ask-v2 conversation-artifact.ts
+  SERVER_ARTIFACT_KINDS; equality asserted in ask-r2-execution.alpha-defects.spec.ts). An answer
+  record is bound ONLY by a turn that explicitly refers to the assistant's earlier answer
+  (self-attribution, claim validity). Generic anaphora ("How does this affect households?") keeps
+  following the READER's subject exactly as before answers were recorded; only model-emitted
+  structures (frameworks, plans, diagnoses) are bound by it.
+*/
+export const ANSWER_RECORD_KINDS: readonly string[] = ['SOURCED_REPORT', 'REASONED_ANSWER'];
+
 /** The turn asks only whether an earlier answer's claim (still) holds. */
 export function readClaimValidity(text: string, language: string): boolean {
   if (language === 'pl') return PL_CLAIM_VALIDITY.test(text.trim());

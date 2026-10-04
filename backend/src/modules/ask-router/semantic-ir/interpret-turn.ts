@@ -38,6 +38,7 @@ import { maskTimeDeterminers } from './time-determiners';
 import { instructionSpans, maskInstructions } from './instruction-frames';
 import { readPersistenceQuestion } from './persistence';
 import {
+  ANSWER_RECORD_KINDS,
   attributionIsAnaphoric,
   readCausalSelfAttribution,
   readClaimValidity,
@@ -448,7 +449,11 @@ export function interpretTurn(input: TurnInterpretationInput): {
   const objective: ObjectiveState | null =
     ownObjective ?? (carried === null ? null : { ...carried, inherited: true });
   const choiceSet = input.conversation?.choiceSet ?? [];
-  const artifact = input.conversation?.artifact ?? input.priorWork;
+  /* R4 ALPHA R-3 SCOPE — `anyWork` is any bindable earlier answer; `artifact` is only a structure the
+     model built (an answer record is bound solely by the explicit answer-reference forms below) */
+  const anyWork = input.conversation?.artifact ?? input.priorWork;
+  const artifact =
+    anyWork !== undefined && ANSWER_RECORD_KINDS.includes(anyWork.kind) ? undefined : anyWork;
   const boundedStateHasWork =
     artifact !== undefined ||
     choiceSet.length > 0 ||
@@ -508,7 +513,7 @@ export function interpretTurn(input: TurnInterpretationInput): {
 
   /* a reference to this conversation's earlier work (a status word inside it is not world-time) */
   const referencesWork =
-    (input.priorWork !== undefined || artifact !== undefined) &&
+    artifact !== undefined &&
     (referencesPriorWork(readerText, lang) || evaluationKind === 'ARTIFACT_COMPONENT_EVALUATION');
 
   /* §7 MIXED from the SET of clause intents (punctuation was only the segmentation hint) */
@@ -843,7 +848,8 @@ export function interpretTurn(input: TurnInterpretationInput): {
     namedPlace,
     statedPeriod: reading.statedTime !== undefined && !historicalOverride,
     fresh,
-    hasPriorWork: input.priorWork !== undefined || artifact !== undefined,
+    hasPriorWork: artifact !== undefined,
+    hasAnswerRecord: anyWork !== undefined,
     publicEvent,
     requestYear: year,
     reportRequest,
@@ -1129,7 +1135,7 @@ export function interpretTurn(input: TurnInterpretationInput): {
     The form is structural (prior-claim.ts); the provenance is the server's record of the earlier
     answer (R-3), never inferred from the reader's words.
   */
-  const priorBound = input.priorWork !== undefined || artifact !== undefined;
+  const priorBound = anyWork !== undefined;
   const claimValidity = readClaimValidity(readerText, lang);
   const selfAttribution =
     referencesOwnPriorStatement(readerText, lang) || readCausalSelfAttribution(readerText, lang);

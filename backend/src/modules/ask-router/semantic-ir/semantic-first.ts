@@ -9,6 +9,7 @@ import type { ObjectiveState } from './objective-state';
 import { toBilateralRelationship, type RoleAssignment, type RoledEntity } from './roles';
 import { CURRENT_TEMPORAL_ROLES, type InterpretedClauseKind } from './semantic-interpreter';
 import { segmentTurn } from './segmentation';
+import { ANSWER_RECORD_KINDS } from './prior-claim';
 import {
   completenessOf,
   SEMANTIC_IR_VERSION,
@@ -98,6 +99,11 @@ export function interpretSemanticFirstTurn(input: TurnInterpretationInput): {
   const candidates = readLocalizedEntityCandidates(readerText, lang);
   const states = candidates.filter((c) => c.type === 'COUNTRY' || c.type === 'TERRITORY');
   const artifact = input.conversation?.artifact ?? input.priorWork;
+  /* R4 ALPHA R-3 SCOPE — a server ANSWER RECORD is bound only by a claim reference
+     (ARTIFACT_PROPOSITION); ARTIFACT / ARTIFACT_COMPONENT keep binding model-built structures only,
+     exactly as the EN / PL composition (interpret-turn.ts) */
+  const structureArtifact =
+    artifact !== undefined && ANSWER_RECORD_KINDS.includes(artifact.kind) ? undefined : artifact;
   const boundedStateHasWork =
     artifact !== undefined ||
     (input.conversation?.choiceSet?.length ?? 0) > 0 ||
@@ -325,7 +331,11 @@ export function interpretSemanticFirstTurn(input: TurnInterpretationInput): {
   */
   const discourseReference =
     priorRef?.resolved === true ||
-    (semantic?.reference !== undefined && semantic.reference !== 'NONE' && boundedStateHasWork)
+    (semantic?.reference !== undefined &&
+      semantic.reference !== 'NONE' &&
+      boundedStateHasWork &&
+      ((semantic.reference !== 'ARTIFACT' && semantic.reference !== 'ARTIFACT_COMPONENT') ||
+        structureArtifact !== undefined))
       ? 'PRIOR_WORK'
       : 'NONE';
   const jobReading: JobReading = {

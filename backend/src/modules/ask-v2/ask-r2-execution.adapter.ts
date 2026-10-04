@@ -608,7 +608,10 @@ export function planRevision(
     ...(request.conversation?.officialSourcesOnly === true ? ['conversation:official-only'] : []),
     ...(request.conversation?.constraintOnly === true ? ['conversation:constraint-only'] : []),
     /* CTO R4 — the answer builds on this conversation's earlier work. Omitted when absent. */
-    ...(request.priorArtifact === undefined
+    /* R4 ALPHA R-3 — every answered turn now leaves a record: it is part of THIS plan's identity only
+       when the route actually refers to it (otherwise the same question in the same thread is the
+       same plan, and its stored answer is reused) */
+    ...(request.priorArtifact === undefined || route.job.discourseReference !== 'PRIOR_WORK'
       ? []
       : [`artifact:${artifactIdentity(request.priorArtifact)}`]),
   ]);
@@ -1892,7 +1895,10 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     /* CTO R4 — the job's rules, the conversation's earlier work and the answer's ceiling */
     const ceiling = completionCeilingFor(route.job);
     const horizon = route.job.temporal.find((t) => t.role === 'PLAN_HORIZON')?.days;
-    const jobRules = jobRulesFor(route.job, request.priorArtifact !== undefined, horizon);
+    /* R4 ALPHA R-3 — the earlier work reaches the model only when the turn refers to it */
+    const usesPriorWork =
+      request.priorArtifact !== undefined && route.job.discourseReference === 'PRIOR_WORK';
+    const jobRules = jobRulesFor(route.job, usesPriorWork, horizon);
     /* 3 · controls, in order, each failing closed — identical to the reporting path. */
     draft.askR2Enabled = await this.switches.isEnabled('ASK_R2_ENABLED');
     if (!draft.askR2Enabled) throw new AskExecutionRefused('ASK_R2_DISABLED');
@@ -1960,7 +1966,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         ...(who.priorQuestion ? { priorQuestion: who.priorQuestion } : {}),
         /* CTO R4 — trusted job rules; the earlier work as delimited data; the job's ceiling */
         ...(jobRules === '' ? {} : { jobRules }),
-        ...(request.priorArtifact === undefined
+        ...(!usesPriorWork || request.priorArtifact === undefined
           ? {}
           : { priorWork: artifactPromptBlock(request.priorArtifact) }),
         ...(ceiling === GENERAL_BACKGROUND_MAX_COMPLETION_TOKENS

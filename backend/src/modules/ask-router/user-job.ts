@@ -1,3 +1,4 @@
+import { readCausalSelfAttribution } from './semantic-ir/prior-claim';
 import { yearRoles } from './advisory-requirement';
 import { readEvaluationKind } from './decision-objective';
 import { plTolerant, PlTolerantRegExp } from './pl-tolerant';
@@ -542,6 +543,9 @@ export interface JobContext {
   readonly fresh: boolean;
   /** The conversation holds work this assistant already produced (an artifact). */
   readonly hasPriorWork: boolean;
+  /** R4 ALPHA R-3 — the thread holds a server record of an earlier ANSWER (bindable only by an
+   *  explicit reference to the assistant's answer, never by generic anaphora). */
+  readonly hasAnswerRecord?: boolean;
   /** A public event named (war, election…): current affairs, not concept. */
   readonly publicEvent: boolean;
   /** CTO R4 third pass — the request year, so a stated year is read as a time ROLE. */
@@ -646,7 +650,8 @@ export function readUserJob(question: string, language: string, ctx: JobContext)
     pronoun, so it does not need — and must not inherit — that guard. The guard itself is left
     exactly as it was, still protecting the genuinely ambiguous pronoun case.
   */
-  const ownStatement = referencesOwnPriorStatement(text, lang);
+  const ownStatement =
+    referencesOwnPriorStatement(text, lang) || readCausalSelfAttribution(text, lang);
   const reference =
     referencesPriorWork(text, lang) ||
     ownStatement ||
@@ -657,7 +662,9 @@ export function readUserJob(question: string, language: string, ctx: JobContext)
     !ctx.publicEvent &&
     (lang === 'pl' ? PL_ANAPHORA : EN_ANAPHORA).test(text);
   const discourseReference: DiscourseReference =
-    (reference || anaphora) && ctx.hasPriorWork ? 'PRIOR_WORK' : 'NONE';
+    ((reference || anaphora) && ctx.hasPriorWork) || (ownStatement && ctx.hasAnswerRecord === true)
+      ? 'PRIOR_WORK'
+      : 'NONE';
 
   /*
     1a · EARLIER WORK RE-EXAMINED AGAINST THE PRESENT — both halves survive.
