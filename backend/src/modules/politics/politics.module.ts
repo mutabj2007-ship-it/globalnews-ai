@@ -16,15 +16,14 @@ export class PoliticsReadService {
       throw new BadRequestException('Invalid Politics read bounds');
     }
     try {
-      const [rows, inventory] = await Promise.all([
-        this.repository.current(subjectId === undefined ? {} : { subjectId }, limit + 1),
-        this.repository.inventory(),
-      ]);
+      const rows = await this.repository.current(subjectId === undefined ? {} : { subjectId }, limit + 1);
+      // CTO user-facing withheld ruling: readers see ONE uniform "no qualifying evidence" state (rendered from
+      // NOT_ASSESSED by the reader copy), never the withholding reason and never a ledger-wide withheld flag or
+      // count; the exact reason stays internal (`repository.absenceReason`, operator/audit only).
       return {
         observations: rows.slice(0, limit), truncated: rows.length > limit,
-        absence: rows.length ? null : inventory.withheld ? 'EVIDENCE_WITHHELD' : 'NOT_ASSESSED',
+        absence: rows.length ? null : 'NOT_ASSESSED',
         acquisition: 'RETAINED_ONLY',
-        coverage: { checkedCaptures: inventory.identities, admittedObservations: inventory.admitted, withheld: inventory.withheld },
       };
     } catch {
       // An unreadable store is NOT_ASSESSED: never "nothing happened", never a reader-visible 500.

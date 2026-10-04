@@ -28,6 +28,28 @@ export interface PoliticsCapture {
     ownership: OwnershipThresholds;
     sustainedMobilisation?: EditorialDetermination;
   };
+  /**
+   * CTO ruling (retraction/reinstatement): a retracted claim stays retracted until an EXPLICIT,
+   * accountable reinstatement names the retraction it reverses. Present only on the revision that
+   * directly follows a RETRACTION; never inferred from chronology. Operator/audit data, never projected.
+   */
+  reinstatement?: {
+    reinstatesRevisionOrdinal: number;
+    reviewer: string;
+    reviewedAt: string;
+    rationale: string;
+  };
+}
+
+/** Shape-only check of an explicit reinstatement; whether it is REQUIRED depends on the predecessor (store). */
+export function assertReinstatementIsAccountable(capture: PoliticsCapture): void {
+  const r = capture.reinstatement;
+  if (r === undefined) return;
+  const rev = capture.observation.revision;
+  requireEvidence(rev.revisionOrdinal > 0 && rev.revisionKind !== undefined && rev.revisionKind !== 'RETRACTION');
+  requireEvidence(Number.isInteger(r.reinstatesRevisionOrdinal) && r.reinstatesRevisionOrdinal === rev.revisionOrdinal - 1);
+  requireEvidence(nonempty(r.reviewer) && !/^(system|auto|ai|model)$/i.test(r.reviewer.trim()) && nonempty(r.rationale));
+  requireEvidence(date(r.reviewedAt) >= date(rev.recordedAt));
 }
 
 const nonempty = (s: string | undefined): boolean => typeof s === 'string' && s.trim().length > 0;
