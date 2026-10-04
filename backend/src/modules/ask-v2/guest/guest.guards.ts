@@ -99,3 +99,28 @@ export class GuestFirstWriteGuard implements CanActivate {
     return true;
   }
 }
+
+/**
+ * T5 PART B — `POST /ask-v2/guest/forget`. Same-origin and the non-simple
+ * `x-requested-with` header (a cross-site form cannot send it), and never for a signed-in
+ * reader (one browser, one principal; account data is never in reach of this route). The
+ * guest-bound CSRF check runs in the handler whenever a guest token is presented, because the
+ * route must ALSO succeed — idempotently — when no live guest exists any more.
+ */
+@Injectable()
+export class GuestForgetGuard implements CanActivate {
+  constructor(
+    private readonly guests: GuestSessionService,
+    private readonly sessions: SessionService,
+  ) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest<GuestRequest>();
+    if (!this.guests.originAllowed(request)) throw new ForbiddenException('Origin not allowed.');
+    if (request.headers['x-requested-with'] !== 'globalnews-ask') {
+      throw new ForbiddenException('CSRF validation failed.');
+    }
+    if (await signedIn(request, this.sessions)) throw guestRefusal('SIGNED_IN_USE_ACCOUNT');
+    return true;
+  }
+}

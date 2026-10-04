@@ -3,16 +3,22 @@ import { ConfigService } from '@nestjs/config';
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { Request, Response } from 'express';
 import { PrismaService } from '../../../database/prisma.service';
+import { Prisma } from '../../../generated/prisma/client';
 import {
   HOST_COOKIE_PREFIX,
   resolveAuthCookieNames,
   buildCsrfCookieOptions,
+  clearAuthCookies,
 } from '../../auth/cookie.util';
 import { resolveFrontendOrigin } from '../../../security/cors-startup-validator';
 import { ComputeMeterService } from '../../compute-controls/compute-meter.service';
 import { OperationalSwitchService } from '../../compute-controls/operational-switch.service';
 import { dayBucket, guestIssuanceScope } from '../../compute-controls/compute-scopes';
-import { resolveGuestTrialConfig, type GuestTrialConfig } from './guest-trial.config';
+import {
+  GUEST_ANSWER_ALLOWANCE,
+  resolveGuestTrialConfig,
+  type GuestTrialConfig,
+} from './guest-trial.config';
 import { guestRefusal } from './ask-principal';
 
 /**
@@ -35,6 +41,21 @@ import { guestRefusal } from './ask-principal';
 
 export const GUEST_COOKIE_BASE = 'gna_guest';
 
+/**
+ * T5 PART B — the CONFIGURED guest data policy, published on `GET /ask-v2/guest/status` so the
+ * notices state real values instead of hard-coded "3 / 7 days / 24 hours". Read-only; it reveals
+ * none of the spending or abuse limits.
+ */
+export interface GuestDataPolicy {
+  readonly allowance: number;
+  /** Absolute session lifetime from creation (hours, ≤ 168). Nothing extends it. */
+  readonly sessionLifetimeH: number;
+  /** Physical deletion by the always-on sweep runs this long AFTER `expiresAt` (hours). */
+  readonly purgeGraceH: number;
+  /** The sweep runs at least this often (seconds); deletion can lag `purgeAfter` by one tick. */
+  readonly sweepIntervalS: number;
+}
+
 export interface ResolvedGuest {
   readonly id: string;
   readonly expiresAt: Date;
@@ -54,6 +75,49 @@ export class GuestSessionService {
   /** The resolved guest configuration, validated against the live outer ceilings. */
   trialConfig(): GuestTrialConfig {
     return resolveGuestTrialConfig((name) => this.config.get<string>(name), this.meter.config);
+  }
+
+  /** T5 PART B — the configured guest data policy (see GuestDataPolicy). */
+  policy(): GuestDataPolicy {
+    const { sessionLifetimeH, purgeGraceH, sweepIntervalS } = this.trialConfig().lifetimes;
+    return { allowance: GUEST_ANSWER_ALLOWANCE, sessionLifetimeH, purgeGraceH, sweepIntervalS };
+  }
+
+  /** When the always-on sweep becomes ENTITLED to delete a session (expiry + grace). */
+  purgeAfter(expiresAt: Date): Date {
+    return new Date(expiresAt.getTime() + this.trialConfig().lifetimes.purgeGraceH * 3_600_000);
+  }
+
+  /**
+   * T5 PART B — "delete my guest data now". Physically deletes the guest session behind
+   * `tokenHash` with the SAME cascade the maintenance sweep uses (threads, turns, operations,
+   * stored results, slots, claims). Only an ACTIVE session is deleted (expired-but-unpurged
+   * counts: its rows still exist). A CLAIMED session's conversations already belong to an
+   * account and are not guest data — nothing is deleted. Account rows are never addressed: the
+   * delete is keyed by the guest session id only, and claimed rows carry `guestSessionId: null`.
+   *
+   * Refused while an answer is in progress (a RESERVED slot), exactly like a claim, so a running
+   * execution never loses its rows mid-flight. Per-IP and pool meter rows are NOT refunded:
+   * they are counters, not the guest's content, and refunding them would let delete-and-retry
+   * bypass the shared bounds. Idempotent: a second call finds nothing and deletes nothing.
+   */
+  async forget(tokenHash: string): Promise<{ readonly deleted: boolean }> {
+    return this.prisma.$transaction(
+      async (tx) => {
+        const row = await tx.guestSession.findUnique({
+          where: { tokenHash },
+          select: { id: true, status: true },
+        });
+        if (row === null || row.status !== 'ACTIVE') return { deleted: false };
+        const inFlight = await tx.guestSlot.count({
+          where: { guestSessionId: row.id, state: 'RESERVED' },
+        });
+        if (inFlight > 0) throw guestRefusal('GUEST_ANSWER_IN_PROGRESS');
+        const gone = await tx.guestSession.deleteMany({ where: { id: row.id, status: 'ACTIVE' } });
+        return { deleted: gone.count === 1 };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
   }
 
   cookieName(): string {
@@ -184,6 +248,12 @@ export class GuestSessionService {
       this.cookieName(),
       secure ? { path: '/', secure: true, sameSite: 'lax' } : { path: '/' },
     );
+  }
+
+  /** T5 PART B — clear BOTH guest cookies (token and its bound CSRF value) after `forget`. */
+  clearGuestCookies(response: Pick<Response, 'clearCookie'>): void {
+    this.clearCookie(response);
+    clearAuthCookies(response, ['csrf']);
   }
 
   /** Origin check for guest mutations: the request must come from the product's own origin. */

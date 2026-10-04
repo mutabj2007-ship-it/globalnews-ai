@@ -3,6 +3,7 @@ import {
   Controller,
   ForbiddenException,
   Get,
+  HttpCode,
   Param,
   Post,
   Query,
@@ -25,7 +26,12 @@ import { guestPrincipal } from './ask-principal';
 import { GUEST_ANSWER_ALLOWANCE } from './guest-trial.config';
 import { GuestSessionService } from './guest-session.service';
 import { GuestClaimService } from './guest-claim.service';
-import { GuestFirstWriteGuard, GuestWriteGuard, RequireGuestGuard } from './guest.guards';
+import {
+  GuestFirstWriteGuard,
+  GuestForgetGuard,
+  GuestWriteGuard,
+  RequireGuestGuard,
+} from './guest.guards';
 
 type GuestRequest = Request & { guest?: { id: string; tokenHash: string } };
 
@@ -67,11 +73,14 @@ export class AskV2GuestController {
     if (raw && (await this.sessions.validateSession(raw).catch(() => null))) {
       return { signedIn: true, available: false };
     }
+    /* T5 Part B — the configured lifetime / deletion grace, so copy never hard-codes them. */
+    const policy = this.guests.policy();
     const guest = await this.guests.resolve(request);
     if (guest === null) {
       return {
         signedIn: false,
         available: await this.ask.guestTrialAvailable(),
+        policy,
         session: null,
         allowance: GUEST_ANSWER_ALLOWANCE,
         remaining: GUEST_ANSWER_ALLOWANCE,
@@ -85,7 +94,8 @@ export class AskV2GuestController {
     return {
       signedIn: false,
       available: a.available,
-      session: { expiresAt: guest.expiresAt },
+      policy,
+      session: { expiresAt: guest.expiresAt, purgeAfter: this.guests.purgeAfter(guest.expiresAt) },
       allowance: a.allowance,
       remaining: a.remaining,
       committed: a.committed,
@@ -151,5 +161,40 @@ export class AskV2GuestController {
   async claim(@Req() request: GuestRequest, @Body() dto: ClaimGuestThreadDto) {
     await this.claims.createClaim(request.guest!.id, dto.threadId);
     return { claimed: true };
+  }
+
+  /**
+   * T5 PART B — "delete my guest data now". Deletes the CALLER's own guest session with the
+   * sweep's cascade (threads, turns, operations, stored results, slots, claims) and clears the
+   * guest and CSRF cookies. Idempotent: with no live guest cookie it deletes nothing and still
+   * answers `{ forgotten: true, deleted: false }`. Gated like every guest route (Ask V2 off ⇒
+   * 404) but NOT by the guest switch: the switch gates new work, and a guest must be able to
+   * delete what it already has while the trial is off. Never reaches account data.
+   */
+  @Post('forget')
+  @HttpCode(200)
+  @UseGuards(GuestForgetGuard)
+  async forget(@Req() request: GuestRequest, @Res({ passthrough: true }) response: Response) {
+    const raw = this.guests.rawTokenFrom(request);
+    if (raw === undefined) {
+      /* Nothing to delete. A malformed leftover cookie is cleared; the CSRF cookie is left alone. */
+      if (request.cookies?.[this.guests.cookieName()] !== undefined) {
+        this.guests.clearCookie(response);
+      }
+      return { forgotten: true, deleted: false };
+    }
+    const tokenHash = GuestSessionService.hashToken(raw);
+    const header = request.headers['x-csrf-token'];
+    const cookie = request.cookies?.[resolveAuthCookieNames().csrf] as string | undefined;
+    if (
+      typeof header !== 'string' ||
+      header !== cookie ||
+      !this.guests.csrfMatches(tokenHash, header)
+    ) {
+      throw new ForbiddenException('CSRF validation failed.');
+    }
+    const { deleted } = await this.guests.forget(tokenHash);
+    this.guests.clearGuestCookies(response);
+    return { forgotten: true, deleted };
   }
 }
