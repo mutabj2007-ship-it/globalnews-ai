@@ -289,10 +289,10 @@ describe('ASYMMETRY · "is it still true now?" keeps both halves, in both langua
   });
 });
 
-describe('ASYMMETRY · the residual, and exactly where it lives (NOT in F’s grant)', () => {
+describe('ASYMMETRY · the residual F reported — CLOSED at the route (Claude Code reconciliation)', () => {
   /*
-    Six of the eight pure references ask for no news. Two Polish phrasings still do, and the cause
-    is ONE envelope field that F cannot reach:
+    AS F DELIVERED IT: six of the eight pure references asked for no news. Two Polish phrasings
+    still did, and the cause was ONE envelope field that F could not reach:
 
         EN "Why did you say inflation is easing?"        classifiers.queryIntent = EXPLANATION
         PL "Dlaczego powiedziałeś, że inflacja spada?"   classifiers.queryIntent = CURRENT_EVENT
@@ -307,10 +307,17 @@ describe('ASYMMETRY · the residual, and exactly where it lives (NOT in F’s gr
     the plan are now identical in EN and PL, asserted above. The classifier is another lane's file
     and frozen C may not be touched by anyone, so the residual is reported, pinned here, and left.
 
-    THIS TEST ASSERTS THE RESIDUAL ON PURPOSE. If the classifier is corrected, it fails and names
-    the reason — which is what should happen, rather than the behaviour drifting unnoticed.
+    THE CLOSURE (Claude Code, integration review; frozen C and the classifier untouched): the
+    route already frames a reasoning turn for frozen C — envelope queryIntent EXPLANATION, no
+    stated time — whenever the decision says `reasoning`. F's gate aligned the job, the IR and the
+    temporal verdict but not that decision flag, so the Polish turn fell through to the landed
+    classifier's CURRENT_EVENT. The decision now carries `reasoning || referenceClauseOnly`, and the
+    two Polish turns take the same route as the English ones. The CTO's condition for tolerating
+    the classifier asymmetry ("final IR / routing / provider behaviour correct") is therefore met:
+    the landed classifier still reads CURRENT_EVENT (non-authoritative diagnostic asymmetry), but
+    it no longer reaches the planner.
   */
-  it('the two Polish phrasings still reach the planner with queryIntent CURRENT_EVENT', () => {
+  it('the two Polish phrasings now reach the planner framed as EXPLANATION — no news', () => {
     for (const [id, lang, turn] of [
       ['PL-presrep', 'pl', 'Dlaczego powiedziałeś, że inflacja spada?'],
       ['PL-event', 'pl', 'Dlaczego powiedziałeś, że Fed utrzyma stopy?'],
@@ -318,11 +325,12 @@ describe('ASYMMETRY · the residual, and exactly where it lives (NOT in F’s gr
       const r = route(turn, lang, true) as unknown as {
         envelope?: { classifiers?: { queryIntent?: string } };
       };
-      expect([id, r.envelope?.classifiers?.queryIntent]).toEqual([id, 'CURRENT_EVENT']);
+      expect([id, r.envelope?.classifiers?.queryIntent]).toEqual([id, 'EXPLANATION']);
+      expect([id, needsNews(r as never)]).toEqual([id, false]);
     }
   });
 
-  it('their IR is nonetheless correct — the contradiction is confined to the plan', () => {
+  it('their IR is correct — and now so is the plan', () => {
     for (const [id, lang, turn] of [
       ['PL-presrep', 'pl', 'Dlaczego powiedziałeś, że inflacja spada?'],
       ['PL-event', 'pl', 'Dlaczego powiedziałeś, że Fed utrzyma stopy?'],
@@ -334,11 +342,11 @@ describe('ASYMMETRY · the residual, and exactly where it lives (NOT in F’s gr
     }
   });
 
-  it('six of the eight pure references ask for no news, and the two that do are only these', () => {
+  it('all eight pure references ask for no news, in EN and PL alike', () => {
     const asking = PURE_PAST.filter(([, lang, turn]) => needsNews(route(turn, lang, true))).map(
       ([id]) => id,
     );
-    expect(asking).toEqual(['PL-presrep', 'PL-event']);
+    expect(asking).toEqual([]);
   });
 });
 

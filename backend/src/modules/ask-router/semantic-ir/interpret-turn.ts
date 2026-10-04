@@ -1291,7 +1291,12 @@ export function interpretTurn(input: TurnInterpretationInput): {
       broadHeadlines,
       relationship: relationshipAny,
       relationshipReasoning,
-      reasoning,
+      /* the fourth place the single-clause prior-work reference must travel (Claude Code
+         reconciliation of F's gate): the route plans from `reasoning`, and without it a Polish
+         reported clause in the present tense reached frozen C as a current event and fetched news
+         although the job, the IR freshness and the temporal verdict all said "explain our earlier
+         claim". The route then frames it exactly as the English turn: EXPLANATION, no news. */
+      reasoning: reasoning || referenceClauseOnly,
       job,
       decisionObjective,
       currentEvidenceNeeded:
