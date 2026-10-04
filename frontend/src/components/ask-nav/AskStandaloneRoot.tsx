@@ -24,9 +24,14 @@ export function AskStandaloneRoot({
   /** TRUST R1 — the reader's theme cookie, read by the root page (no flash). */
   readonly theme: ThemePreference;
 }): JSX.Element {
-  /* R4 · the shell's own labels are the EN/PL catalogue's (`askNavStrings` is a TOTAL record
-     over two locales); the frame renders in the reader's locale and discloses the difference.
-     One disposition, so the two cannot drift apart. */
+  /*
+    R4 · PHASE B — this note used to read that the shell's labels come from the EN/PL
+    catalogue while the frame renders in the reader's locale, "and discloses the difference".
+    That difference is what the Product Owner rejected: a French hero over an English
+    application. There is no longer a second interface locale — `catalogueLocale` IS the
+    reader's locale — so the shell and the frame render in one language by construction
+    rather than by two values being kept in step.
+  */
   const disposition = askLanguageDisposition(locale);
   return (
     <AskThemedPage theme={theme} root="standalone">

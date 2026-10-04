@@ -7,6 +7,7 @@ import { askBookmarkReopenHref, filterBookmarks } from '@/lib/ask/askRecentGroup
 import { formattingProfileFor, type DisplayLocale } from '@globalnews-ai/shared';
 import { SavedBriefings } from './SavedBriefings';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
+import { askDirectionProps } from '@/lib/ask/askDirection';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -63,8 +64,19 @@ export function SavedClient({ locale }: { readonly locale: DisplayLocale }): JSX
     );
   }, []);
 
+  const direction = askDirectionProps(locale);
   return (
-    <main data-saved="surface" className="min-h-screen bg-void px-4 py-8 md:px-8">
+    /*
+      R4 · PHASE B — Recent and Saved are part of the localized Ask surface the P0
+      correction named, so each carries its own `lang`/`dir` scope from the shared
+      contract's direction table rather than inheriting the document's.
+    */
+    <main
+      data-saved="surface"
+      lang={direction.lang}
+      dir={direction.dir}
+      className="min-h-screen bg-void px-4 py-8 md:px-8"
+    >
       <header className="mx-auto max-w-3xl">
         <h1 className="font-display text-[26px] font-semibold text-ink-primary">{t.savedTitle}</h1>
         <p className="mt-1 text-[13.5px] text-ink-tertiary">{t.savedIntro}</p>

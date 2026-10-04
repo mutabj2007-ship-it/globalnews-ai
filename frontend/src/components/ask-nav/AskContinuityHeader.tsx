@@ -6,6 +6,7 @@ import { useAskNav } from './AskNavShell';
 import styles from './askNav.module.css';
 import type { DisplayLocale } from '@globalnews-ai/shared';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
+import { askDirectionProps } from '@/lib/ask/askDirection';
 
 /**
  * STANDALONE CONTINUITY SHELL CLOSURE — the phone / 768-portrait header of the two
@@ -38,6 +39,7 @@ export function AskContinuityHeader({
   const { open, setOpen } = useAskNav();
   const nav = askShellStrings(locale).askNavStrings;
   const t = askShellStrings(locale).askContinuityStrings;
+  const direction = askDirectionProps(locale);
   /* ALPHA VISUAL ACCEPTANCE REPAIR R1 — Help & feedback and Settings are standalone surfaces too. */
   const title =
     surface === 'recent'
@@ -49,7 +51,18 @@ export function AskContinuityHeader({
           : nav.settings;
 
   return (
-    <header data-ask-continuity="phone-header" className={styles.continuityHeader}>
+    /*
+      R4 · PHASE B — the phone header is part of the localized Ask surface, so it carries its
+      own `lang`/`dir` scope from the shared contract's direction table. Before this, an
+      Arabic reader on a phone got an RTL thread under an LTR header.
+    */
+    <header
+      data-ask-continuity="phone-header"
+      lang={direction.lang}
+      dir={direction.dir}
+      data-ask-continuity-dir={direction.dir}
+      className={styles.continuityHeader}
+    >
       <button
         type="button"
         data-ask="shell-menu"

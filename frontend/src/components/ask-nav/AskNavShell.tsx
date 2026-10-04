@@ -33,6 +33,7 @@ import {
 } from '@/lib/askNavModel';
 import styles from './askNav.module.css';
 import { askProductName, askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
+import { askDirectionProps } from '@/lib/ask/askDirection';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -241,6 +242,8 @@ export function AskNavShell({
   const wasOpen = useRef(false);
 
   const s = askShellStrings(language).askNavStrings;
+  /* R4 · PHASE B — the shell's own direction scope. See the note at the header below. */
+  const shellDirection = askDirectionProps(language);
   const audience: AskMenuAudience = user === null ? 'signed-out' : 'signed-in';
   const items = askMenuFor(audience);
   const utilities = askUtilitiesFor(audience);
@@ -420,8 +423,25 @@ export function AskNavShell({
 
   return (
     <>
+      {/*
+        R4 · PHASE B — ARABIC RTL ACROSS THE WHOLE LOCALIZED SURFACE, NOT JUST THE FRAME.
+
+        The Ask FRAME has carried a `lang`/`dir` scope since the direction work landed
+        (`AskFrameScreen`), but this shell sits OUTSIDE it — and this shell is where every
+        defect the Product Owner named by hand lives: New question, Recent, Saved,
+        Help & feedback, Settings, Account, the language menu. An Arabic reader got RTL
+        answers under a left-to-right navigation bar, which is the mixed-direction version of
+        the mixed-language defect.
+
+        Both values come from `askDirectionProps`, which reads the shared contract's own
+        direction table. Nothing here decides a direction; a component that computed its own
+        would be the second authority the shared contract exists to prevent.
+      */}
       <header
         data-ask-nav="shell"
+        lang={shellDirection.lang}
+        dir={shellDirection.dir}
+        data-ask-nav-dir={shellDirection.dir}
         data-ask-nav-audience={isLoading ? 'pending' : audience}
         className={`${styles.shell} sticky top-0 z-50 h-[62px] items-center border-b border-[#0a2744] bg-[rgba(2,15,32,0.96)] backdrop-blur-[10px]`}
       >
