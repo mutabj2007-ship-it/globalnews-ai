@@ -120,7 +120,8 @@ describe('Article Metadata Hygiene R1 — the shared boundaries apply it', () =>
       }),
     } as unknown as Response);
 
-    return new GNewsProvider({ get: jest.fn().mockReturnValue('test-key') } as never);
+    /* T1 — 'test-key' is now a recognised placeholder (not configured); use a non-placeholder fixture. */
+    return new GNewsProvider({ get: jest.fn().mockReturnValue('gnews-spec-fixture-key-7f3a') } as never);
   }
 
   it('GNews — the Namibia description reaches summary as prose only', async () => {

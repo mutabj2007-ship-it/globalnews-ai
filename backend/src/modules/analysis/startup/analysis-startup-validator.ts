@@ -1,3 +1,4 @@
+import { describeUnusableCredential } from '../../../security/placeholder-credential';
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { AnalysisConfigService } from '../config/analysis-config.service';
 import { isUsableOpenAiApiKey } from '../providers/provider.tokens';
@@ -69,10 +70,7 @@ export class AnalysisStartupValidator implements OnApplicationBootstrap {
     }
 
     if (!isUsableOpenAiApiKey(config.openAiApiKey)) {
-      const reason =
-        config.openAiApiKey === undefined || config.openAiApiKey === ''
-          ? 'OPENAI_API_KEY is missing or empty.'
-          : 'OPENAI_API_KEY is whitespace-only.';
+      const reason = describeUnusableCredential('OPENAI_API_KEY', config.openAiApiKey);
 
       // Never log the key's value — only the fact that it's unusable.
       this.logger.error(

@@ -1,3 +1,4 @@
+import { isUsableApiCredential } from '../../../security/placeholder-credential';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { familyOfHost, hostOf, type EvidenceCandidate } from '../evidence/evidence-candidate';
@@ -126,7 +127,8 @@ export class XRecentSearchProvider implements SocialSearchProvider {
 
   private token(): string | undefined {
     const value = this.config.get<string>('X_API_BEARER_TOKEN')?.trim();
-    return value === undefined || value.length === 0 ? undefined : value;
+    /* T1 — a placeholder token is not configured. */
+    return isUsableApiCredential(value) ? value : undefined;
   }
 
   configured(): boolean {
@@ -230,7 +232,8 @@ export class YouTubeSearchProvider implements SocialSearchProvider {
 
   private key(): string | undefined {
     const value = this.config.get<string>('YOUTUBE_API_KEY')?.trim();
-    return value === undefined || value.length === 0 ? undefined : value;
+    /* T1 — a placeholder key is not configured. */
+    return isUsableApiCredential(value) ? value : undefined;
   }
 
   configured(): boolean {

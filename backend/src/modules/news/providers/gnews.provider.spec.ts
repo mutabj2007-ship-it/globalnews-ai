@@ -62,7 +62,7 @@ describe('GNewsProvider', () => {
         }),
       );
 
-      const provider = new GNewsProvider(makeConfig('test-key') as never);
+      const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
       const articles = await provider.search('Ceuta');
 
       expect(articles).toHaveLength(1);
@@ -95,7 +95,7 @@ describe('GNewsProvider', () => {
         }),
       );
 
-      const provider = new GNewsProvider(makeConfig('test-key') as never);
+      const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
       const articles = await provider.topHeadlines();
 
       expect(articles).toHaveLength(1);
@@ -107,7 +107,7 @@ describe('GNewsProvider', () => {
     it('returns an empty array when GNews has no matching articles', async () => {
       global.fetch = jest.fn().mockResolvedValue(jsonResponse({ totalArticles: 0, articles: [] }));
 
-      const provider = new GNewsProvider(makeConfig('test-key') as never);
+      const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
       const articles = await provider.search('an extremely unlikely query string');
 
       expect(articles).toEqual([]);
@@ -124,7 +124,7 @@ describe('GNewsProvider', () => {
 
     it('throws a controlled error on rate limiting (429)', async () => {
       global.fetch = jest.fn().mockResolvedValue(jsonResponse({}, 429));
-      const provider = new GNewsProvider(makeConfig('test-key') as never);
+      const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
 
       await expect(provider.topHeadlines()).rejects.toThrow('rate limit');
     });
@@ -134,7 +134,7 @@ describe('GNewsProvider', () => {
       abortError.name = 'AbortError';
       const fetchMock = jest.fn().mockRejectedValue(abortError);
       global.fetch = fetchMock;
-      const provider = new GNewsProvider(makeConfig('test-key') as never);
+      const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
 
       const [first, second] = await Promise.allSettled([
         provider.search('Rwanda'),
@@ -156,7 +156,7 @@ describe('GNewsProvider', () => {
     it('one 429 stops concurrently queued different searches from issuing another upstream request', async () => {
       const fetchMock = jest.fn().mockResolvedValue(jsonResponse({}, 429));
       global.fetch = fetchMock;
-      const provider = new GNewsProvider(makeConfig('test-key') as never);
+      const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
 
       const [first, second] = await Promise.allSettled([
         provider.search('Rwanda'),
@@ -214,7 +214,7 @@ describe('GNewsProvider', () => {
     it('Y — 401 and 403 no longer produce the same message', async () => {
       const messageFor = async (status: number): Promise<string> => {
         global.fetch = jest.fn().mockResolvedValue(jsonResponse({}, status));
-        const provider = new GNewsProvider(makeConfig('test-key') as never);
+        const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
         return provider
           .topHeadlines()
           .then(() => '')
@@ -227,7 +227,7 @@ describe('GNewsProvider', () => {
     it('carries a machine-readable kind for every mapped failure', async () => {
       const kindFor = async (status: number): Promise<unknown> => {
         global.fetch = jest.fn().mockResolvedValue(jsonResponse({}, status));
-        const provider = new GNewsProvider(makeConfig('test-key') as never);
+        const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
         return provider
           .topHeadlines()
           .then(() => undefined)
@@ -247,11 +247,11 @@ describe('GNewsProvider', () => {
       abortError.name = 'AbortError';
 
       global.fetch = jest.fn().mockRejectedValue(abortError);
-      const timeoutProvider = new GNewsProvider(makeConfig('test-key') as never);
+      const timeoutProvider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
       await expect(timeoutProvider.topHeadlines()).rejects.toMatchObject({ kind: 'timeout' });
 
       global.fetch = jest.fn().mockRejectedValue(new Error('ECONNREFUSED'));
-      const downProvider = new GNewsProvider(makeConfig('test-key') as never);
+      const downProvider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
       await expect(downProvider.topHeadlines()).rejects.toMatchObject({ kind: 'unreachable' });
     });
 
@@ -263,21 +263,21 @@ describe('GNewsProvider', () => {
           throw new Error('Unexpected token');
         },
       } as unknown as Response);
-      const provider = new GNewsProvider(makeConfig('test-key') as never);
+      const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
 
       await expect(provider.topHeadlines()).rejects.toThrow('malformed');
     });
 
     it('throws a controlled error when the response shape is unexpected', async () => {
       global.fetch = jest.fn().mockResolvedValue(jsonResponse({ notArticles: [] }));
-      const provider = new GNewsProvider(makeConfig('test-key') as never);
+      const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
 
       await expect(provider.topHeadlines()).rejects.toThrow('expected shape');
     });
 
     it('throws a controlled error when the network request itself fails', async () => {
       global.fetch = jest.fn().mockRejectedValue(new Error('getaddrinfo ENOTFOUND'));
-      const provider = new GNewsProvider(makeConfig('test-key') as never);
+      const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
 
       await expect(provider.topHeadlines()).rejects.toThrow('Failed to reach GNews');
     });
@@ -286,7 +286,7 @@ describe('GNewsProvider', () => {
   describe('provider health', () => {
     it('reports "ok" when GNews responds successfully', async () => {
       global.fetch = jest.fn().mockResolvedValue(jsonResponse({ articles: [] }));
-      const provider = new GNewsProvider(makeConfig('test-key') as never);
+      const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
 
       const status = await provider.health();
       expect(status.status).toBe('ok');
@@ -294,7 +294,7 @@ describe('GNewsProvider', () => {
 
     it('reports "degraded" (not thrown) when GNews is reachable but errors', async () => {
       global.fetch = jest.fn().mockResolvedValue(jsonResponse({}, 500));
-      const provider = new GNewsProvider(makeConfig('test-key') as never);
+      const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
 
       const status = await provider.health();
       expect(status.status).toBe('degraded');
@@ -307,7 +307,7 @@ describe('GNewsProvider', () => {
      */
     it('a quota failure marks the provider throttled without inventing a health state', async () => {
       global.fetch = jest.fn().mockResolvedValue(jsonResponse({}, 403));
-      const provider = new GNewsProvider(makeConfig('test-key') as never);
+      const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
 
       const status = await provider.health();
 
@@ -317,7 +317,7 @@ describe('GNewsProvider', () => {
 
     it('a rate-limit failure marks the provider throttled too', async () => {
       global.fetch = jest.fn().mockResolvedValue(jsonResponse({}, 429));
-      const provider = new GNewsProvider(makeConfig('test-key') as never);
+      const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
 
       expect((await provider.health()).rateLimitState).toBe('throttled');
     });
@@ -329,7 +329,7 @@ describe('GNewsProvider', () => {
      */
     it('a non-throttle failure leaves rateLimitState ABSENT rather than claiming "ok"', async () => {
       global.fetch = jest.fn().mockResolvedValue(jsonResponse({}, 500));
-      const provider = new GNewsProvider(makeConfig('test-key') as never);
+      const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
 
       expect(await provider.health()).not.toHaveProperty('rateLimitState');
     });
@@ -343,7 +343,7 @@ describe('GNewsProvider', () => {
     it('search() defaults to lang=en with no options, preserving pre-Milestone-#47 behavior', async () => {
       const fetchMock = jest.fn().mockResolvedValue(jsonResponse({ articles: [] }));
       global.fetch = fetchMock;
-      const provider = new GNewsProvider(makeConfig('test-key') as never);
+      const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
 
       await provider.search('NATO');
 
@@ -353,7 +353,7 @@ describe('GNewsProvider', () => {
     it('search() honors an explicit lang option', async () => {
       const fetchMock = jest.fn().mockResolvedValue(jsonResponse({ articles: [] }));
       global.fetch = fetchMock;
-      const provider = new GNewsProvider(makeConfig('test-key') as never);
+      const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
 
       await provider.search('NATO', { lang: 'fr' });
 
@@ -363,7 +363,7 @@ describe('GNewsProvider', () => {
     it('topHeadlines() sends both lang and q when provided', async () => {
       const fetchMock = jest.fn().mockResolvedValue(jsonResponse({ articles: [] }));
       global.fetch = fetchMock;
-      const provider = new GNewsProvider(makeConfig('test-key') as never);
+      const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
 
       await provider.topHeadlines({ lang: 'pl', q: 'NATO' });
 
@@ -375,7 +375,7 @@ describe('GNewsProvider', () => {
     it('topHeadlines() with no options sends no lang param at all — NOT forced to "en" (matches GNews\'s own "Any" default for this endpoint)', async () => {
       const fetchMock = jest.fn().mockResolvedValue(jsonResponse({ articles: [] }));
       global.fetch = fetchMock;
-      const provider = new GNewsProvider(makeConfig('test-key') as never);
+      const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
 
       await provider.topHeadlines();
 
@@ -385,7 +385,7 @@ describe('GNewsProvider', () => {
     it('REGRESSION: category() still defaults to lang=en unchanged — buildUrl() no longer injecting a blanket default did not silently alter this method', async () => {
       const fetchMock = jest.fn().mockResolvedValue(jsonResponse({ articles: [] }));
       global.fetch = fetchMock;
-      const provider = new GNewsProvider(makeConfig('test-key') as never);
+      const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
 
       await provider.category('world');
 
@@ -407,7 +407,7 @@ describe('GNewsProvider', () => {
           ],
         }),
       );
-      const provider = new GNewsProvider(makeConfig('test-key') as never);
+      const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
 
       const articles = await provider.search('x');
 
@@ -422,7 +422,7 @@ describe('GNewsProvider', () => {
           ],
         }),
       );
-      const provider = new GNewsProvider(makeConfig('test-key') as never);
+      const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
 
       const articles = await provider.search('x');
 
@@ -442,7 +442,7 @@ describe('GNewsProvider', () => {
           ],
         }),
       );
-      const provider = new GNewsProvider(makeConfig('test-key') as never);
+      const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
 
       const articles = await provider.search('x');
 
@@ -462,7 +462,7 @@ describe('GNewsProvider', () => {
           ],
         }),
       );
-      const provider = new GNewsProvider(makeConfig('test-key') as never);
+      const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
 
       const articles = await provider.search('x');
 
@@ -519,7 +519,7 @@ describe('GNewsProvider', () => {
           ],
         }),
       );
-      const provider = new GNewsProvider(makeConfig('test-key') as never);
+      const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
 
       const articles = await provider.topHeadlines({ lang: 'en' });
 
@@ -570,7 +570,7 @@ describe('GNewsProvider', () => {
           ],
         }),
       );
-      const provider = new GNewsProvider(makeConfig('test-key') as never);
+      const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
 
       const articles = await provider.topHeadlines({ lang: 'pl' });
 
@@ -587,7 +587,7 @@ describe('GNewsProvider', () => {
           ],
         }),
       );
-      const provider = new GNewsProvider(makeConfig('test-key') as never);
+      const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
 
       const articles = await provider.topHeadlines();
 
@@ -603,7 +603,7 @@ describe('GNewsProvider', () => {
           ],
         }),
       );
-      const provider = new GNewsProvider(makeConfig('test-key') as never);
+      const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
 
       const articles = await provider.topHeadlines({ lang: 'en' });
 
@@ -619,7 +619,7 @@ describe('GNewsProvider', () => {
           ],
         }),
       );
-      const provider = new GNewsProvider(makeConfig('test-key') as never);
+      const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
 
       const articles = await provider.topHeadlines({ lang: 'en' });
 
@@ -638,7 +638,7 @@ describe('GNewsProvider', () => {
           ],
         }),
       );
-      const provider = new GNewsProvider(makeConfig('test-key') as never);
+      const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
 
       const articles = await provider.topHeadlines({ lang: 'en' });
 
@@ -661,7 +661,7 @@ describe('Query-limit correction — GNews search q ≤200-code-point backstop',
   it('a short query passes through unchanged', async () => {
     const fetchMock = jest.fn().mockResolvedValue(jsonResponse({ articles: [] }));
     global.fetch = fetchMock;
-    const provider = new GNewsProvider(makeConfig('test-key') as never);
+    const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
 
     await provider.search('Rwanda');
 
@@ -672,7 +672,7 @@ describe('Query-limit correction — GNews search q ≤200-code-point backstop',
   it('a query over 200 code points is bounded to exactly 200, never sent to GNews unbounded', async () => {
     const fetchMock = jest.fn().mockResolvedValue(jsonResponse({ articles: [] }));
     global.fetch = fetchMock;
-    const provider = new GNewsProvider(makeConfig('test-key') as never);
+    const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
     const longQuery = 'a'.repeat(400);
 
     await provider.search(longQuery);
@@ -686,7 +686,7 @@ describe('Query-limit correction — GNews search q ≤200-code-point backstop',
   it('a query of exactly 200 code points is sent unchanged (boundary case)', async () => {
     const fetchMock = jest.fn().mockResolvedValue(jsonResponse({ articles: [] }));
     global.fetch = fetchMock;
-    const provider = new GNewsProvider(makeConfig('test-key') as never);
+    const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
     const exactQuery = 'a'.repeat(200);
 
     await provider.search(exactQuery);
@@ -698,7 +698,7 @@ describe('Query-limit correction — GNews search q ≤200-code-point backstop',
   it('truncates by Unicode code point, never splitting a surrogate pair (an emoji straddling the 200th position stays intact rather than becoming a malformed lone surrogate)', async () => {
     const fetchMock = jest.fn().mockResolvedValue(jsonResponse({ articles: [] }));
     global.fetch = fetchMock;
-    const provider = new GNewsProvider(makeConfig('test-key') as never);
+    const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
     // Code point 200 (0-indexed 199) is a globe emoji, outside the
     // Basic Multilingual Plane — represented as a surrogate PAIR in
     // UTF-16. A naive .slice(0, 200) would split this pair and
@@ -741,7 +741,7 @@ describe('Query-limit correction — GNews search q ≤200-code-point backstop',
         ],
       }),
     );
-    const provider = new GNewsProvider(makeConfig('test-key') as never);
+    const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
 
     const articles = await provider.search('Ceuta', { lang: 'en', limit: 5 });
 

@@ -8,6 +8,8 @@
  * factory in news.module.ts. Nothing in NewsService or NewsController
  * changes.
  */
+import { isUsableApiCredential } from '../../../security/placeholder-credential';
+
 export const NEWS_PROVIDERS = Symbol('NEWS_PROVIDERS');
 
 /**
@@ -57,7 +59,8 @@ export const FALLBACK_NEWS_PROVIDERS = Symbol('FALLBACK_NEWS_PROVIDERS');
  * inconsistency as well as backing the new startup guard.
  */
 export function isUsableGNewsApiKey(value: string | undefined): boolean {
-  return typeof value === 'string' && value.trim().length > 0;
+  /* T1 — also rejects placeholders such as the .env.example `replace_with_your_gnews_key`. */
+  return isUsableApiCredential(value);
 }
 
 /**
