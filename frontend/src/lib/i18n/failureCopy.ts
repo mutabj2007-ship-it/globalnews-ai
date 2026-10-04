@@ -128,3 +128,12 @@ const FAILURE_COPY: Partial<Record<LanguageCode, FailureCopy>> = { en, pl };
 export function getFailureCopy(language: LanguageCode): FailureCopy {
   return FAILURE_COPY[language] ?? en;
 }
+
+/**
+ * T2 · whether this catalogue AUTHORS `locale` (rather than serving its English default). Used by
+ * the global error boundary, which replaces the root layout and so cannot read the effective
+ * locale from `<html lang>`: it resolves the reader's stored choice against this catalogue.
+ */
+export function hasFailureCopy(locale: string): locale is LanguageCode {
+  return (FAILURE_COPY as Partial<Record<string, FailureCopy>>)[locale] !== undefined;
+}

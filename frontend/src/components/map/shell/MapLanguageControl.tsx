@@ -3,6 +3,7 @@
 import type { DisplayLocale } from '@globalnews-ai/shared';
 import { LANGUAGE_NATIVE_LABELS, SELECTABLE_LOCALES } from '@/lib/i18n/languages';
 import { BAND_ACTIVE, BAND_AVAILABLE } from '@/lib/map/spatial/controlBands';
+import { useRequestedDisplayLocale } from '@/lib/i18n/useRequestedDisplayLocale';
 
 /**
  * CHECKPOINT F — MAP-GLOBAL-LANGUAGE-CONTROL-1.
@@ -59,6 +60,9 @@ export function MapLanguageControl({
   label,
   className = '',
 }: MapLanguageControlProps): JSX.Element {
+  /* T2 · `value` is the surface's EFFECTIVE locale; the active chip is the reader's REQUESTED one,
+     so a declared English fallback neither shows EN as the choice nor makes EN unselectable. */
+  const selected = useRequestedDisplayLocale(value);
   return (
     <div
       data-gn="hud-language"
@@ -68,7 +72,7 @@ export function MapLanguageControl({
     >
       {/* R4 · the contracted seven, from the one deployment registry. */}
       {SELECTABLE_LOCALES.map((code) => {
-        const active = code === value;
+        const active = code === selected;
 
         return (
           <button
@@ -88,10 +92,10 @@ export function MapLanguageControl({
             onClick={() => {
               /*
                 Re-selecting the current language is a no-op HERE, mirroring
-                NavBar's own `if (next === language) return;` guard. Without it
+                NavBar's own `if (next === selectedLocale) return;` guard. Without it
                 every click would write the cookie and refresh the route.
               */
-              if (code === value) return;
+              if (code === selected) return;
               onChange(code);
             }}
             /*

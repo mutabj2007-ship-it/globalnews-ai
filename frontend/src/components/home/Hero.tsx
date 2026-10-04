@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, type FormEvent, type ChangeEvent, type KeyboardEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import type { LanguageCode, NewsArticle, NewsDataMode } from '@globalnews-ai/shared';
-import { resolveInitialLanguage, persistLanguageSelection, readLanguageCookie } from '@/lib/i18n/languages';
+import { reconcileStoredDisplayLocale } from '@/lib/i18n/displayLocale';
 import { resolveLiveStatus } from '@/lib/liveStatus';
 import { useHeroFocus } from '@/components/home/HeroFocusProvider';
 import { IntelligenceContextCard } from '@/components/home/IntelligenceContextCard';
@@ -260,12 +260,13 @@ export function Hero({
    * localStorage during render would make the server and client first
    * renders disagree and produce a hydration mismatch.
    */
+  /*
+    T2 · the same reconciliation LanguageSync runs, through the one display-locale authority: an
+    explicit stored choice always wins (a Polish browser can no longer overwrite a stored fr–ar
+    choice), and a refresh happens only when the server rendered without the reader's choice.
+  */
   useEffect(() => {
-    const effectiveServerLanguage = readLanguageCookie() ?? 'en';
-    const resolved = resolveInitialLanguage();
-
-    if (resolved !== effectiveServerLanguage) {
-      persistLanguageSelection(resolved);
+    if (reconcileStoredDisplayLocale()) {
       router.refresh();
     }
   }, [router]);

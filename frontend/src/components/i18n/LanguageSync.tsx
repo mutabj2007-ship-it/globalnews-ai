@@ -3,11 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-import {
-  persistLanguageSelection,
-  readLanguageCookie,
-  resolveInitialLanguage,
-} from '@/lib/i18n/languages';
+import { reconcileStoredDisplayLocale } from '@/lib/i18n/displayLocale';
 
 /**
  * CHECKPOINT I — LANGUAGE-PERSISTENCE-ON-REFRESH.
@@ -50,12 +46,16 @@ import {
 export function LanguageSync(): null {
   const router = useRouter();
 
+  /*
+    T2 · GLOBAL LANGUAGE FOUNDATION — the reconciliation now runs through the one display-locale
+    authority. It validated both stores against ACTIVE_LANGUAGES (en|pl), so a stored fr–ar
+    choice was rejected, browser detection ran, and a Polish browser OVERWROTE the reader's
+    explicit choice with 'pl'. Now: a valid stored cookie is the choice and is never overwritten;
+    a cleared cookie is restored from the localStorage mirror; browser detection (over all seven)
+    runs only when nothing is stored. See `reconcileDisplayLocale` for the pure decision.
+  */
   useEffect(() => {
-    const effectiveServerLanguage = readLanguageCookie() ?? 'en';
-    const resolved = resolveInitialLanguage();
-
-    if (resolved !== effectiveServerLanguage) {
-      persistLanguageSelection(resolved);
+    if (reconcileStoredDisplayLocale()) {
       router.refresh();
     }
   }, [router]);

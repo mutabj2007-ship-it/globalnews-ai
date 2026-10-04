@@ -17,7 +17,16 @@ export function middleware(request: NextRequest): NextResponse {
   /* Explicit static read: the one variable, through the one predicate. */
   const standalone = standaloneAskRoot({ GNA_PUBLIC_ROOT: process.env.GNA_PUBLIC_ROOT });
   if (routeGateDecision(standalone, request.nextUrl.pathname) === 'PASS') {
-    return NextResponse.next();
+    /*
+      T2 · GLOBAL LANGUAGE FOUNDATION — the request PATH is forwarded to the Server Components as
+      a request header so the root layout can resolve the same surface the page renders and set
+      `<html lang>` / `<html dir>` from that surface's EFFECTIVE locale. Path only; nothing is
+      read from the Host, the query, cookies or the body. The name is pinned against
+      `SURFACE_PATH_HEADER` (lib/i18n/documentLocale.server.ts) by surfaceLocale.spec.ts.
+    */
+    const forwarded = new Headers(request.headers);
+    forwarded.set('x-gna-pathname', request.nextUrl.pathname);
+    return NextResponse.next({ request: { headers: forwarded } });
   }
   const root = request.nextUrl.clone();
   root.pathname = '/';

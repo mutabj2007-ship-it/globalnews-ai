@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import type { LanguageCode } from '@globalnews-ai/shared';
 import { FailureSurface } from '@/components/layout/FailureSurface';
 import { getFailureCopy } from '@/lib/i18n/failureCopy';
-import { readLanguageCookie } from '@/lib/i18n/languages';
+import { documentRenderLanguage } from '@/lib/i18n/languages';
 
 /**
  * MVP FAILURE FLOOR — THE ROUTE-SEGMENT ERROR BOUNDARY.
@@ -29,7 +29,7 @@ import { readLanguageCookie } from '@/lib/i18n/languages';
  * failure than a mismatch, and neither the recovery route nor the retry
  * depends on which language won.
  *
- * `readLanguageCookie` is the RELEASED reader — the same function Hero uses —
+ * `documentRenderLanguage` (T2) reads the EFFECTIVE locale the root layout set on <html lang> —
  * so there is no second cookie parser anywhere in this lane.
  *
  * ── THE ERROR OBJECT IS NOT PUT ON SCREEN ─────────────────────────────────
@@ -48,7 +48,7 @@ export default function RouteError({
   const [language, setLanguage] = useState<LanguageCode>('en');
 
   useEffect(() => {
-    setLanguage(readLanguageCookie() ?? 'en');
+    setLanguage(documentRenderLanguage());
   }, []);
 
   const copy = getFailureCopy(language).error;

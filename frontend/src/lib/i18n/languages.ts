@@ -1,5 +1,6 @@
 import type { LanguageCode, DisplayLocale } from '@globalnews-ai/shared';
-import { DISPLAY_LOCALES, DISPLAY_LOCALE_META, isDisplayLocale } from '@globalnews-ai/shared';
+import { DISPLAY_LOCALES, DISPLAY_LOCALE_META, directionFor, isDisplayLocale } from '@globalnews-ai/shared';
+import { DISPLAY_LOCALE_COOKIE, parseDisplayLocale, persistDisplayLocale } from './displayLocale';
 
 /**
  * Milestone #47 — every language the shared LanguageCode type knows
@@ -130,139 +131,94 @@ export const LANGUAGE_NATIVE_LABELS: Record<LanguageCode | DisplayLocale, string
   ) as Record<DisplayLocale, string>),
 };
 
-/** Milestone #47 — only 'ar' is right-to-left among the planned seven languages. */
+/**
+ * Milestone #47 — only 'ar' is right-to-left among the planned seven languages.
+ *
+ * T2 · DERIVED FROM THE SHARED META TABLE for every LanguageCode that is also a display locale,
+ * so the direction has one source (`directionFor`). `sw`/`rw` are source languages with no
+ * display meta and are LTR.
+ */
 export const LANGUAGE_DIRECTION: Record<LanguageCode, 'ltr' | 'rtl'> = {
-  en: 'ltr',
-  pl: 'ltr',
+  en: directionFor('en'),
+  pl: directionFor('pl'),
   sw: 'ltr',
-  fr: 'ltr',
-  es: 'ltr',
-  ar: 'rtl',
+  fr: directionFor('fr'),
+  es: directionFor('es'),
+  ar: directionFor('ar'),
   rw: 'ltr',
 };
 
-const STORAGE_KEY = 'globalnews-ai:language';
+/**
+ * Milestone #47 (correction round 2) — the cookie a Server Component reads. T2: the name is
+ * owned by the display-locale authority (`displayLocale.ts`) and re-exported here UNCHANGED, so
+ * every existing stored preference survives.
+ */
+export const LANGUAGE_COOKIE_NAME = DISPLAY_LOCALE_COOKIE;
 
 /**
- * Milestone #47 (correction round 2) — a DISTINCT, cookie-safe name
- * from STORAGE_KEY. Cookie names may not contain ":" reliably across
- * all browsers/proxies, so this is deliberately a different physical
- * string from the localStorage key — the two remain the SAME logical
- * preference (one call in persistLanguageSelection writes both), just
- * stored under two different keys appropriate to their two different
- * storage mechanisms. localStorage's key is intentionally left
- * unchanged (STORAGE_KEY) so no existing stored preference is lost for
- * users who already have one set.
+ * Membership in ACTIVE_LANGUAGES — the SOURCE/retrieval set (`['en','pl']`).
+ *
+ * T2 · NOT A DISPLAY GATE ANY MORE. Every route and the root layout now read the reader's locale
+ * through the display-locale authority (`displayLocale.server.ts` + the effective-locale rule).
+ * This predicate is RETAINED only because three HUMANITARIAN-protected route files that T2 may
+ * not edit still import it (`app/page.tsx`, `app/humanitarian/page.tsx`,
+ * `app/humanitarian/compact/page.tsx`); `displayLocaleAuthority.spec.ts` asserts no other
+ * non-test file imports it. The patch for those files is specified in the T2 dossier.
  */
-export const LANGUAGE_COOKIE_NAME = 'globalnews-ai-language';
-
 export function isActiveLanguageCode(value: string): value is LanguageCode {
   return (ACTIVE_LANGUAGES as string[]).includes(value);
 }
 
 /**
- * Milestone #47 — deterministic browser-language detection, no AI call.
- * Reads navigator.language (e.g. "pl-PL", "en-US"), takes only the base
- * language subtag (before any "-"), and checks it against the ACTIVE
- * (production-supported) language list — never the full planned list,
- * so a browser reporting "fr-FR" or "ar" does not silently select an
- * unimplemented language; it falls through to English.
+ * The language the CURRENT DOCUMENT renders in, as a `LanguageCode`-typed value — for client
+ * components that need the rendered language after mount (Search, Map callbacks, error pages).
+ *
+ * T2 · This is the EFFECTIVE locale, read from `<html lang>`, which the root layout sets from the
+ * surface's effective-locale decision. It is deliberately NOT the stored preference: a client
+ * that re-derived the language from the cookie would undo a declared English fallback and render
+ * a mixed-language page. `de`/`pt` (not LanguageCodes) and anything unrecognised read as 'en'.
  */
-export function detectBrowserLanguage(): LanguageCode {
-  if (typeof navigator === 'undefined' || !navigator.language) return 'en';
-  const base = navigator.language.split('-')[0]?.toLowerCase();
-  return base && isActiveLanguageCode(base) ? base : 'en';
+export function documentRenderLanguage(): LanguageCode & DisplayLocale {
+  if (typeof document === 'undefined') return 'en';
+  const rendered = parseDisplayLocale(document.documentElement?.lang);
+  switch (rendered) {
+    case 'pl':
+    case 'fr':
+    case 'es':
+    case 'ar':
+      return rendered;
+    default:
+      return 'en';
+  }
 }
 
 /**
- * Milestone #47 — resolution order: explicit stored override > browser-
- * supported language > English fallback, exactly as specified. Reads
- * localStorage directly (no database, no account system) and validates
- * the stored value is still one of the ACTIVE languages before trusting
- * it (defensive against a stale/invalid value from an earlier build).
+ * Milestone #47 — kept as the name H's SearchPageClient calls on mount.
+ *
+ * T2 · It no longer reads localStorage or browser language (that path rejected fr–ar and let a
+ * Polish browser overwrite a stored French choice). It returns the document's EFFECTIVE render
+ * language, which is exactly what the server rendered the surface in, so the client agrees with
+ * the server and with `<html lang>` by construction.
  */
 export function resolveInitialLanguage(): LanguageCode {
-  if (typeof window !== 'undefined') {
-    try {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
-      if (stored && isActiveLanguageCode(stored)) {
-        return stored;
-      }
-    } catch {
-      // localStorage can throw (private browsing, disabled storage) —
-      // fall through to browser detection rather than failing the page.
-    }
-  }
-  return detectBrowserLanguage();
+  return documentRenderLanguage();
 }
 
 /**
- * Milestone #47 (correction round 2) — reads the language cookie
- * directly from `document.cookie` (client-side only). Used to
- * determine what language the LAST Server Component render actually
- * used (see Hero.tsx's sync effect), so the client can decide whether
- * a refresh is actually needed instead of always refreshing. Returns
- * `undefined` for an absent, malformed, or unsupported value — the
- * caller is responsible for applying the SAME 'en' default page.tsx
- * itself applies, so the two stay in agreement.
- */
-export function readLanguageCookie(): LanguageCode | undefined {
-  if (typeof document === 'undefined') return undefined;
-  const match = document.cookie
-    .split('; ')
-    .find((entry) => entry.startsWith(`${LANGUAGE_COOKIE_NAME}=`));
-  const value = match?.split('=')[1];
-  return value && isActiveLanguageCode(value) ? value : undefined;
-}
-
-/**
- * Milestone #47 (homepage feed language correction) — now ALSO writes
- * a cookie (under LANGUAGE_COOKIE_NAME, a distinct, cookie-safe name —
- * see its own doc comment) alongside the existing, unchanged
- * localStorage write (under STORAGE_KEY). This is the smallest
- * mechanism that lets a Server Component (which cannot read
- * window/localStorage) learn the user's language preference on the
- * NEXT request, without introducing a database, account system, or a
- * second independent preference store. `path=/` so it's sent on every
- * route (including /search); `SameSite=Lax` and no `Secure` flag
- * forced (works over plain http:// in local dev, and is upgraded
- * automatically when served over https:// in production); a one-year
- * `max-age` mirrors localStorage's effectively-permanent persistence.
- * Never contains anything beyond one of the validated LanguageCode
- * strings.
- */
-/**
- * R4 · accepts any contracted display locale.
- *
- * The cookie is a string and always was; the narrow parameter type was the only thing
- * preventing a reader from storing `de` or `pt`. Server reads still guard the value with
- * their own predicate, so widening what may be WRITTEN does not widen what any surface
- * claims it can RENDER.
+ * The ONE writer, re-exported under its historical name so every selector keeps working.
+ * Accepts any display locale; a LanguageCode that is not a display locale (sw, rw) is ignored —
+ * it is not a UI choice.
  */
 export function persistLanguageSelection(language: LanguageCode | DisplayLocale): void {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, language);
-  } catch {
-    // Best-effort only — a failed write should never break the UI.
-  }
-  try {
-    document.cookie = `${LANGUAGE_COOKIE_NAME}=${language}; path=/; max-age=31536000; SameSite=Lax`;
-  } catch {
-    // Best-effort only, matching the localStorage write above — a
-    // failed cookie write degrades to "homepage feed uses English",
-    // never breaks the page.
-  }
+  if (isDisplayLocale(language)) persistDisplayLocale(language);
 }
 
 /**
  * R4 · THE ONE CROSSING FROM A STORED/REPRESENTABLE CODE TO A DISPLAY LOCALE.
  *
- * Cookie values and `LanguageCode` values are not display locales — `sw` and `rw` have no
- * display counterpart — so the crossing is named here rather than cast at each control. An
- * unrecognised value resolves to `'en'`, which is a resolution and not a clamp: a value the
+ * An unrecognised value resolves to `'en'`, which is a resolution and not a clamp: a value the
  * contract does not contain is not a request for a locale.
  */
 export function displayLocaleOf(value: string | undefined | null): DisplayLocale {
-  return isDisplayLocale(value) ? value : 'en';
+  return parseDisplayLocale(value) ?? 'en';
 }
