@@ -179,8 +179,9 @@ describe('interpreter-first — a validated verdict maps onto the SAME routing f
     valid(r, q, 'de');
   });
 
-  it('MIXED (verbatim parts) → both components kept; the current part named', () => {
+  it('MIXED (the shared layer’s clauses, classified) → both components kept; the current part named', () => {
     const q = 'Explique o que é a taxa Selic e diga quanto ela está hoje.';
+    expect(route(q, 'pt').semantic.clauses).toHaveLength(2);
     const r = route(
       q,
       'pt',
@@ -188,15 +189,12 @@ describe('interpreter-first — a validated verdict maps onto the SAME routing f
         job: 'MIXED',
         needsCurrentEvidence: true,
         temporalRole: 'CURRENT_STATE',
-        segments: [
-          { start: 0, end: q.indexOf(' e diga'), kind: 'STABLE' },
-          { start: q.indexOf('diga'), end: q.length - 1, kind: 'CURRENT' },
-        ],
+        clauses: ['STABLE', 'CURRENT'],
       }),
     );
     expect(r.knowledgeRequirement).toBe('MIXED_REFERENCE_CURRENT');
     expect(r.semantic.turn.freshness).toBe('MIXED');
-    expect(r.currentEvidenceNeeded).toEqual(['diga quanto ela está hoje']);
+    expect(r.currentEvidenceNeeded).toEqual(['e diga quanto ela está hoje.']);
     valid(r, q, 'pt');
   });
 
@@ -252,23 +250,19 @@ describe('interpreter-first contract — closed, verbatim, self-consistent', () 
     depth: 'STANDARD',
     transformation: null,
     confidence: 'HIGH',
-    parts: [
-      { text: 'Explique o que é a taxa Selic', kind: 'STABLE' },
-      { text: 'diga quanto ela está hoje', kind: 'CURRENT' },
+    clauses: [
+      { id: 0, kind: 'STABLE' },
+      { id: 1, kind: 'CURRENT' },
     ],
     relation: null,
     reference: 'NONE',
     objective: null,
   };
 
-  it('accepts a consistent answer and maps its verbatim parts to spans', () => {
-    const r = parse(base);
-    expect(r?.segments?.map((s) => q.slice(s.start, s.end))).toEqual([
-      'Explique o que é a taxa Selic',
-      'diga quanto ela está hoje',
-    ]);
+  it('accepts a consistent answer: one kind per GIVEN clause', () => {
+    expect(parse(base)?.clauses).toEqual(['STABLE', 'CURRENT']);
   });
-  it('rejects a self-contradicting answer as a whole (temporal role vs currentness)', () => {
+  it('rejects a self-contradicting answer as a whole (temporal role / clause kinds vs currentness)', () => {
     expect(parse({ ...base, temporalRole: 'NONE' })).toBeNull();
     expect(
       parse({ ...base, job: 'MIXED', needsCurrentEvidence: false, temporalRole: 'NONE' }),
@@ -276,22 +270,25 @@ describe('interpreter-first contract — closed, verbatim, self-consistent', () 
     expect(
       parse({
         ...base,
-        parts: [
-          { text: 'Explique o que é a taxa Selic', kind: 'STABLE' },
-          { text: 'diga quanto ela está hoje', kind: 'STABLE' },
+        clauses: [
+          { id: 0, kind: 'STABLE' },
+          { id: 1, kind: 'STABLE' },
         ],
       }),
     ).toBeNull();
   });
-  it('a part that is not the reader’s words is never accepted as a part', () => {
-    const r = parse({
-      ...base,
-      parts: [
-        { text: 'Explain the Selic rate', kind: 'STABLE' },
-        { text: 'and today', kind: 'CURRENT' },
-      ],
-    });
-    expect(r?.segments).toBeUndefined();
+  it('RULING B — with two or more clauses the classification is mandatory; it cannot merge them away', () => {
+    expect(parse({ ...base, clauses: undefined })).toBeNull();
+    expect(parse({ ...base, clauses: [{ id: 0, kind: 'CURRENT' }] })).toBeNull();
+    expect(
+      parse({
+        ...base,
+        clauses: [
+          { id: 0, kind: 'NOW' },
+          { id: 1, kind: 'CURRENT' },
+        ],
+      }),
+    ).toBeNull();
   });
   it('an objective must be the reader’s own words (this turn or an earlier turn) — invented text is dropped', () => {
     expect(parse({ ...base, objective: { text: 'lowest inflation' } })?.objective).toBeNull();
@@ -311,7 +308,6 @@ describe('interpreter-first contract — closed, verbatim, self-consistent', () 
       JSON.stringify({
         ...base,
         job: 'RELATIONSHIP_ANALYSIS',
-        parts: [],
         relation: {
           actorA: 'COUNTRY:IRN',
           actorB: 'CITY:CH:Geneva',
@@ -351,7 +347,6 @@ describe('interpreter contract — one place never holds two roles', () => {
         depth: 'STANDARD',
         transformation: null,
         confidence: 'HIGH',
-        parts: [],
         relation: {
           actorA: 'COUNTRY:POL',
           actorB: 'COUNTRY:LTU',
@@ -369,53 +364,152 @@ describe('interpreter contract — one place never holds two roles', () => {
   });
 });
 
-describe('run-3 pre-freeze — parts tolerate end punctuation; a CURRENT part never erases another part', () => {
-  it('a part echoed with "?" for "," is still the reader’s words, and MIXED survives', () => {
+describe('CTO RUN-3 STRUCTURAL RULINGS A–D', () => {
+  const sem = (o: Partial<SemanticResolution>): SemanticResolution => verdict(o);
+
+  it('B — one shared layer: FR–AR turns are segmented before interpretation (boundaries only)', () => {
+    const cases: Array<[Lang, string, number]> = [
+      ['de', 'Wie funktioniert der Bundesrat, und was wird dort diese Woche beschlossen?', 2],
+      ['fr', 'Comment fonctionne le Sénat ? Et qui le préside aujourd’hui ?', 2],
+      ['es', 'Explica qué es la inflación subyacente y cuánto subió el mes pasado', 2],
+      ['pt', 'Como funciona o Copom; quando é a próxima reunião?', 2],
+      ['ar', 'اشرح لي كيف يعمل البنك المركزي، وما آخر قرار اتخذه؟', 2],
+      ['fr', 'Pourquoi la France et l’Allemagne coopèrent-elles autant ?', 1],
+      ['de', 'Wie haben sich die Mieten in Berlin und München entwickelt?', 1],
+    ];
+    for (const [lang, q, n] of cases)
+      expect({ q, n: route(q, lang).semantic.clauses.length }).toEqual({ q, n });
+  });
+
+  it('B — a CURRENT clause beside a stable one survives as MIXED (the stable half is never erased)', () => {
     const q = 'Wie funktioniert der Bundesrat, und was wird dort diese Woche beschlossen?';
-    const ir = route(q, 'de').semantic;
-    const v = parseSemanticFirstResolution(
-      JSON.stringify({
+    const r = route(
+      q,
+      'de',
+      sem({
         job: 'EXPLANATION',
         needsCurrentEvidence: true,
         temporalRole: 'CURRENT_STATE',
+        clauses: ['STABLE', 'CURRENT'],
+      }),
+    );
+    expect(r.knowledgeRequirement).toBe('MIXED_REFERENCE_CURRENT');
+    expect(r.semantic.turn.freshness).toBe('MIXED');
+    valid(r, q, 'de');
+  });
+
+  it('B — an EN / PL turn keeps exactly its deterministic segmentation', () => {
+    expect(
+      route('Explain how the ECB sets rates — and what did it decide this week?', 'en').semantic
+        .clauses.length,
+    ).toBe(2);
+  });
+
+  it('A — an object or venue named as an actor is demoted; the two governed actors stand', () => {
+    const q = 'Pourquoi le Gabon et la Guinée équatoriale se disputent-ils un îlot ?';
+    const ir = route(q, 'fr').semantic;
+    const v = parseSemanticFirstResolution(
+      JSON.stringify({
+        job: 'RELATIONSHIP_ANALYSIS',
+        needsCurrentEvidence: false,
+        temporalRole: 'HISTORICAL',
         depth: 'STANDARD',
         transformation: null,
         confidence: 'HIGH',
-        parts: [
-          { text: 'Wie funktioniert der Bundesrat?', kind: 'STABLE' },
-          { text: 'und was wird dort diese Woche beschlossen?', kind: 'CURRENT' },
-        ],
-        relation: null,
+        relation: {
+          actorA: 'COUNTRY:GAB',
+          actorB: 'COUNTRY:GNQ',
+          type: 'TERRITORIAL_DISPUTE',
+          object: 'COUNTRY:GAB',
+          venue: 'COUNTRY:GNQ',
+        },
         reference: 'NONE',
         objective: null,
       }),
       ir,
       q,
     );
-    expect(v?.segments).toHaveLength(2);
-    const r = route(q, 'de', v!);
-    expect(r.knowledgeRequirement).toBe('MIXED_REFERENCE_CURRENT');
-  });
-  it('a CURRENT part beside an unclassified (OTHER) ask keeps both components', () => {
-    const q = 'Est-ce prudent d’aller au Niger en ce moment, et quels vaccins faut-il ?';
-    const cut = q.indexOf(', et');
-    const r = route(q, 'fr', {
-      path: 'SEMANTIC',
-      job: 'CURRENT_REPORTING',
-      needsCurrentEvidence: true,
-      depth: 'STANDARD',
-      transformation: null,
-      confidence: 'HIGH',
-      temporalRole: 'CURRENT_STATE',
-      segments: [
-        { start: 0, end: cut, kind: 'CURRENT' },
-        { start: cut + 2, end: q.length, kind: 'OTHER' },
-      ],
-      relation: null,
-      reference: 'NONE',
-      objective: null,
+    expect(v?.relation).toEqual({
+      actorA: 'COUNTRY:GAB',
+      actorB: 'COUNTRY:GNQ',
+      type: 'TERRITORIAL_DISPUTE',
+      object: null,
+      venue: null,
     });
-    expect(r.knowledgeRequirement).toBe('MIXED_REFERENCE_CURRENT');
-    expect(r.semantic.turn.freshness).toBe('MIXED');
+    const r = route(q, 'fr', v!);
+    expect(r.relationship?.countries).toEqual(['GAB', 'GNQ']);
+  });
+
+  it('A — fewer than two valid actors: no relation is invented (unresolved)', () => {
+    const q = 'Pourquoi le Gabon revendique-t-il un îlot ?';
+    const ir = route(q, 'fr').semantic;
+    const v = parseSemanticFirstResolution(
+      JSON.stringify({
+        job: 'EXPLANATION',
+        needsCurrentEvidence: false,
+        temporalRole: 'NONE',
+        depth: 'STANDARD',
+        transformation: null,
+        confidence: 'HIGH',
+        relation: {
+          actorA: 'COUNTRY:GAB',
+          actorB: 'COUNTRY:GNQ',
+          type: null,
+          object: null,
+          venue: null,
+        },
+        reference: 'NONE',
+        objective: null,
+      }),
+      ir,
+      q,
+    );
+    expect(v?.relation).toBeUndefined();
+  });
+
+  it('C — an event the reader does not identify, read only with LOW confidence → one focused question', () => {
+    const q = 'Et qu’est-il ressorti des pourparlers ?';
+    const r = route(
+      q,
+      'fr',
+      sem({
+        job: 'CURRENT_REPORTING',
+        needsCurrentEvidence: true,
+        temporalRole: 'RECENT',
+        confidence: 'LOW',
+      }),
+    );
+    expect(r.semanticClarification).toBe(true);
+    expect(news(r)).toBe(false);
+  });
+
+  it('C — an identified recent event between named parties follows the verdict (current evidence)', () => {
+    const q = 'Qu’est-il ressorti des pourparlers entre le Maroc et l’Algérie à Genève ?';
+    const r = route(
+      q,
+      'fr',
+      sem({
+        job: 'CURRENT_REPORTING',
+        needsCurrentEvidence: true,
+        temporalRole: 'RECENT',
+        confidence: 'MEDIUM',
+      }),
+    );
+    expect(r.semanticClarification).not.toBe(true);
+    expect(news(r)).toBe(true);
+  });
+
+  it('D — "since X up to now" in ONE clause is CHANGE_ANALYSIS with current evidence, never MIXED', () => {
+    const q = 'Wie hat sich die Arbeitslosigkeit in Spanien seit 2020 bis heute verändert?';
+    const r = route(
+      q,
+      'de',
+      sem({ job: 'MIXED', needsCurrentEvidence: true, temporalRole: 'SINCE_PAST_TO_PRESENT' }),
+    );
+    expect(r.job.job).toBe('CHANGE_ANALYSIS');
+    expect(r.knowledgeRequirement).not.toBe('MIXED_REFERENCE_CURRENT');
+    expect(r.semantic.turn.freshness).toBe('CURRENT');
+    expect(news(r)).toBe(true);
+    valid(r, q, 'de');
   });
 });

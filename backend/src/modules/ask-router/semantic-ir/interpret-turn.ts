@@ -28,7 +28,8 @@ import {
   temporallyPastOnly,
   type TemporalSemantics,
 } from '../temporal-semantics';
-import { explanatoryClauseForm, splitClauses, stableClauseForm } from '../clause-intent';
+import { explanatoryClauseForm, stableClauseForm } from '../clause-intent';
+import { segmentTurn } from './segmentation';
 import { readEvaluationKind } from '../decision-objective';
 import type { QualifiedReading } from '../normalization/qualified-reading';
 import { readCurrentnessMarkers, type CurrentnessMarker } from './currentness';
@@ -201,7 +202,8 @@ function readClauses(
 ): ClauseReading[] {
   /* defect 3 — clauses are segmented and time-read on the masked time text (same length); the
      currentness markers read the reader's own words (they report a masked determiner as WEAK) */
-  const parts = splitClauses(text, lang);
+  /* CTO RUN-3 RULING B — the ONE shared seven-language segmentation layer (EN / PL: the same splitter) */
+  const parts = segmentTurn(text, lang).map((sp) => text.slice(sp.start, sp.end));
   let cursor = 0;
   return parts.map((part, id) => {
     const at = text.indexOf(part, cursor);
@@ -644,7 +646,15 @@ export function interpretTurn(input: TurnInterpretationInput): {
   }
   /* no interpreter verdict → a focused clarification (governed fallback) */
   const semanticClarification =
-    (freshnessWeak || injected.length > 0) && resolution?.path === 'FALLBACK';
+    ((freshnessWeak || injected.length > 0) && resolution?.path === 'FALLBACK') ||
+    /* CTO RUN-3 RULING C — an event the reader does not identify (no place, no state to inherit it
+       from) that the interpreter can only read with LOW confidence: one focused question */
+    (freshnessWeak &&
+      resolution?.path === 'SEMANTIC' &&
+      resolution.needsCurrentEvidence === true &&
+      resolution.confidence === 'LOW' &&
+      candidates.length === 0 &&
+      !boundedStateHasWork);
 
   /* the decision family (§18): a choice resolved against the bounded state */
   if (choiceQuestion && !advisoryFamily) {

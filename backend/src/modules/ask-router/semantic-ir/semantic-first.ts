@@ -8,6 +8,7 @@ import type { LocalizedLanguage } from './localized-country-names';
 import type { ObjectiveState } from './objective-state';
 import { toBilateralRelationship, type RoleAssignment, type RoledEntity } from './roles';
 import { CURRENT_TEMPORAL_ROLES, type InterpretedClauseKind } from './semantic-interpreter';
+import { segmentTurn } from './segmentation';
 import {
   completenessOf,
   SEMANTIC_IR_VERSION,
@@ -112,8 +113,19 @@ export function interpretSemanticFirstTurn(input: TurnInterpretationInput): {
   const completeness = completenessOf(conflicts, unresolvedFields);
 
   const semantic = r?.path === 'SEMANTIC' ? r : undefined;
+  /*
+    CTO RUN-3 RULING C — an event the reader does not identify ("what came out of the talks?" with no
+    parties, place, time or conversation subject) cannot be answered from news or from timeless
+    knowledge: the interpreter marks it LOW confidence and the reader is asked one focused question.
+  */
+  const unidentifiedCurrentEvent =
+    semantic !== undefined &&
+    semantic.needsCurrentEvidence === true &&
+    semantic.confidence === 'LOW' &&
+    candidates.length === 0 &&
+    !boundedStateHasWork;
   /* the one call was required and produced no valid verdict: the focused clarification */
-  const semanticClarification = r?.path === 'FALLBACK';
+  const semanticClarification = r?.path === 'FALLBACK' || unidentifiedCurrentEvent;
 
   /* ══ ROLES — only from the validated verdict (ids Stage A resolved; only states act) ═══════ */
   const rel = semantic?.relation ?? null;
@@ -150,40 +162,44 @@ export function interpretSemanticFirstTurn(input: TurnInterpretationInput): {
     rolesIncomplete: false,
   };
 
-  /* ══ CLAUSES — the interpreter's verbatim parts, else the whole turn ════════════════════ */
+  /* ══ CLAUSES — the shared seven-language segmentation layer (RULING B), classified by the one
+     interpreter call; one clause = the whole turn ══════════════════════════════════════════ */
   const needs = semantic?.needsCurrentEvidence === true;
   const role = semantic?.temporalRole ?? 'NONE';
-  const segments = semantic?.segments;
-  const clauses: IrClause[] =
-    segments !== undefined && segments.length >= 2
-      ? segments.map((s, i) => clauseOf(i, s.start, s.end, s.kind))
-      : [
-          clauseOf(
-            0,
-            0,
-            readerText.length,
-            semantic === undefined
-              ? null
-              : needs
-                ? 'CURRENT'
-                : role === 'HISTORICAL'
-                  ? 'HISTORICAL'
-                  : 'STABLE',
-          ),
-        ];
-  const kinds = segments?.map((s) => s.kind) ?? [];
+  const spans = segmentTurn(readerText, lang);
+  const singleKind: InterpretedClauseKind | null =
+    semantic === undefined
+      ? null
+      : needs
+        ? 'CURRENT'
+        : role === 'HISTORICAL'
+          ? 'HISTORICAL'
+          : 'STABLE';
+  const given =
+    semantic?.clauses !== undefined && semantic.clauses.length === spans.length
+      ? semantic.clauses
+      : undefined;
+  const kinds: (InterpretedClauseKind | null)[] = spans.map((_, i) =>
+    given !== undefined
+      ? given[i]
+      : spans.length === 1
+        ? singleKind
+        : semantic === undefined
+          ? null
+          : 'OTHER',
+  );
+  const clauses: IrClause[] = spans.map((sp, i) => clauseOf(i, sp.start, sp.end, kinds[i]));
+  /*
+    MIXED (RULING D): only when DISTINCT clauses coexist — a CURRENT clause beside any other clause
+    (stable, historical, or an unclassified ask such as advice: a current clause never erases the
+    other half). One clause is never MIXED, whatever its temporal role: "since X up to now" is ONE
+    change analysis (CHANGE_ANALYSIS, SINCE_PAST_TO_PRESENT), its present endpoint needing evidence.
+  */
   const mixed =
-    needs &&
-    (semantic?.job === 'MIXED' ||
-      /* a CURRENT part beside ANY other part (stable, historical or an unclassified ask such as
-         advice) keeps BOTH components — a current part never erases the other half (the EN / PL
-         mixedUnresolved invariant) */
-      (kinds.includes('CURRENT') && kinds.some((k) => k !== 'CURRENT')) ||
-      role === 'HISTORICAL_AND_CURRENT');
-  const currentParts =
-    segments !== undefined && segments.some((s) => s.kind === 'CURRENT')
-      ? segments.filter((s) => s.kind === 'CURRENT').map((s) => readerText.slice(s.start, s.end))
-      : [readerText];
+    needs && clauses.length >= 2 && kinds.includes('CURRENT') && kinds.some((k) => k !== 'CURRENT');
+  const currentParts = kinds.some((k) => k === 'CURRENT')
+    ? spans.filter((_, i) => kinds[i] === 'CURRENT').map((sp) => readerText.slice(sp.start, sp.end))
+    : [readerText];
 
   /* ══ OBJECTIVE — the reader's own words (this turn, an earlier turn, or the bounded state) ═ */
   const verbatim = semantic?.objective ?? null;
@@ -204,7 +220,16 @@ export function interpretSemanticFirstTurn(input: TurnInterpretationInput): {
         : null;
 
   /* ══ DECISION — the same families the EN / PL composition decides ═══════════════════════ */
-  const job: UserJob | null = semantic?.job ?? null;
+  /* RULING D — a "MIXED" label on a turn that is not two coexisting clauses is not MIXED: a present
+     endpoint over a past period is a change analysis; anything else current is current reporting */
+  const job: UserJob | null =
+    semantic?.job === 'MIXED' && !mixed
+      ? needs
+        ? role === 'SINCE_PAST_TO_PRESENT' || role === 'HISTORICAL_AND_CURRENT'
+          ? 'CHANGE_ANALYSIS'
+          : 'CURRENT_REPORTING'
+        : 'EXPLANATION'
+      : (semantic?.job ?? null);
   const advisory = semantic !== undefined && job !== null && ADVISORY_JOBS.has(job);
   const decision = advisory && job === 'DECISION_SUPPORT';
   const decisionObjective = decision
@@ -218,7 +243,7 @@ export function interpretSemanticFirstTurn(input: TurnInterpretationInput): {
     !needs &&
     !advisory; /* incl. a historical / conceptual relationship */
   let knowledge: KnowledgeRequirementReading;
-  if (semantic === undefined)
+  if (semantic === undefined || unidentifiedCurrentEvent)
     knowledge = {
       requirement: null,
       reason: semanticClarification
@@ -383,7 +408,7 @@ export function interpretSemanticFirstTurn(input: TurnInterpretationInput): {
       broadHeadlines: false,
       relationship,
       relationshipReasoning,
-      reasoning: reasoning || semantic === undefined,
+      reasoning: reasoning || semantic === undefined || unidentifiedCurrentEvent,
       job: jobReading,
       decisionObjective,
       currentEvidenceNeeded:

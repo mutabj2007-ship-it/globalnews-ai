@@ -92,6 +92,7 @@ const KEYS_EN_PL = new Set([
   'reference',
 ]);
 const KEYS_FIRST = new Set([
+  'clauses',
   'job',
   'needsCurrentEvidence',
   'temporalRole',

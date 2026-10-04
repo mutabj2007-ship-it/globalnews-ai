@@ -273,3 +273,33 @@ describe('CTO RUN-3 §5 — a GENERIC policy question is conceptual, never the p
     expect(readPersistenceQuestion(q, lang)).toBeNull();
   });
 });
+
+describe('CTO RUN-3 RULING C — EN / PL: an unidentified event outcome', () => {
+  const low: SemanticResolution = {
+    path: 'SEMANTIC',
+    job: 'CURRENT_REPORTING',
+    needsCurrentEvidence: true,
+    depth: 'STANDARD',
+    transformation: null,
+    confidence: 'LOW',
+    clauses: ['CURRENT'],
+    relation: null,
+    reference: 'NONE',
+  };
+  it('no parties, place, time or conversation scope → one focused question, not news', () => {
+    const pending = route('So what came out of the talks?', 'en');
+    if (!pending.semantic.resolution.needsSemanticResolution)
+      return; /* deterministic path: nothing to rule */
+    const r = route('So what came out of the talks?', 'en', { semanticResolution: low });
+    expect(r.semanticClarification).toBe(true);
+  });
+  it('the same words with an inherited conversation scope follow the verdict', () => {
+    const work = { kind: 'BRIEFING', label: 'US–Iran talks in Oman' };
+    const r = route('So what came out of the talks?', 'en', {
+      semanticResolution: low,
+      priorWork: work,
+      conversation: { artifact: work },
+    });
+    expect(r.semanticClarification).not.toBe(true);
+  });
+});
