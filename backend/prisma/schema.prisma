@@ -1054,6 +1054,7 @@ model SnapshotRetrieval {
   observations         MarketObservation[]
   energyObservations   EnergyObservation[]
   conflictObservations ConflictObservation[]
+  politicsObservations PoliticsObservation[]
 
   /// R2 · S-3 — THE COMPOSITE KEY AN OBSERVATION REFERENCES.
   ///
@@ -1280,6 +1281,57 @@ model ConflictObservation {
   @@index([occurredOn])
   @@index([countryIso3, occurredOn])
   @@index([authority])
+}
+
+/// POLITICS INTEL R1 — retained Politics evidence, append-only, patterned on ConflictObservation.
+///
+/// Rows are written ONLY by `PoliticsObservationRepository.append`, which runs the full governed
+/// producer (`producePoliticsObservation`) first. There is no public write route. The canonical
+/// record is the shared `DomainObservation` carried in the JSON columns; the scalar columns are
+/// index projections bound at write, never reconstructed into the record. `review` is operator
+/// data (reviewer, rationale, rights instrument) and is never returned to a reader or to retrieval.
+model PoliticsObservation {
+  id                  String    @id @default(uuid())
+  observationKey      String
+  upstreamAuthority   String
+  upstreamId          String
+  subjectType         String
+  subjectId           String
+  observationKind     String
+  claim               Json
+  temporal            Json
+  provenance          Json
+  sourceReference     Json
+  attributeAuthorship Json
+  revision            Json
+  /// The publisher's own publishedAt / sourceUpdatedAt strings, verbatim (canonical record).
+  publication         Json
+  revisionOrdinal     Int       @default(0)
+  publishedAt         DateTime
+  sourceUpdatedAt     DateTime?
+  artifactSha256      String
+  review              Json
+
+  /// REQUIRED link to the SAME shared retained-capture store Conflict uses: no observation exists
+  /// without its retained, admitted artifact, whose content address equals `artifactSha256`.
+  snapshotRetrievalId   String
+  snapshotAdmissibility String
+  snapshotRetrieval     SnapshotRetrieval @relation(fields: [snapshotRetrievalId, snapshotAdmissibility], references: [retrievalId, admissibility])
+
+  /// Index projections. effectiveOn = occurredAt when the source states it, else publication.
+  /// countryIso3 only when a PRIMARY official record scopes it (its own jurisdiction); never text.
+  effectiveOn   DateTime
+  retrievedAt   DateTime
+  temporalBasis String
+  language      String
+  countryIso3   String?
+  ingestedAt    DateTime  @default(now())
+
+  @@unique([observationKey, revisionOrdinal])
+  @@unique([upstreamAuthority, upstreamId, revisionOrdinal])
+  @@index([countryIso3, effectiveOn])
+  @@index([subjectType, subjectId])
+  @@index([effectiveOn])
 }
 
 model MarketObservation {
