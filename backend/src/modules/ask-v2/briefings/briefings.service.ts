@@ -5,7 +5,11 @@ import {
   UnauthorizedException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { ALL_ISO3_CODES } from '@globalnews-ai/shared';
+import {
+  ALL_ISO3_CODES,
+  BRIEFING_UNAVAILABLE_SPECIALIST_EVIDENCE,
+  briefingPreservesEvidence,
+} from '@globalnews-ai/shared';
 import { PrismaService } from '../../../database/prisma.service';
 import { Prisma } from '../../../generated/prisma/client';
 import { readStoryMaterialVersion } from '../../stories/story-relation.read';
@@ -115,6 +119,11 @@ export class BriefingsService {
     });
     if (!turn) throw new NotFoundException();
     const stored = turn.operation?.status === 'COMPLETED' ? turn.operation.storedResult : null;
+    /* CTO Politics ruling (briefings) — the snapshot cannot carry governed specialist evidence, so an answer
+       that rests on it is refused BEFORE any write (create and addVersion both pass here first). */
+    if (stored && !briefingPreservesEvidence(stored.payload)) {
+      throw new UnprocessableEntityException({ code: BRIEFING_UNAVAILABLE_SPECIALIST_EVIDENCE });
+    }
     const snapshot = stored ? briefingSnapshotOf(stored.payload) : null;
     if (!stored || !snapshot) {
       throw new UnprocessableEntityException({ code: 'BRIEFING_TURN_NOT_SAVEABLE' });

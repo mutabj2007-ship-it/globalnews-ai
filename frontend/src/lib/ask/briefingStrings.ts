@@ -43,6 +43,8 @@ export interface BriefingStrings {
   readonly unavailable: string;
   readonly signedOut: string;
   readonly noSourcedAnswer: string;
+  /** Save is withheld: the briefing path cannot yet preserve this answer's specialist evidence (shared check). */
+  readonly unavailableForEvidence: string;
 }
 
 const EN: BriefingStrings = {
@@ -85,6 +87,7 @@ const EN: BriefingStrings = {
   unavailable: 'Briefings are not available right now.',
   signedOut: 'Sign in to see your briefings.',
   noSourcedAnswer: 'This version has no sourced answer.',
+  unavailableForEvidence: 'Briefing unavailable for this evidence-backed answer',
 };
 
 const PL: BriefingStrings = {
@@ -128,6 +131,7 @@ const PL: BriefingStrings = {
   unavailable: 'Briefingi są teraz niedostępne.',
   signedOut: 'Zaloguj się, aby zobaczyć swoje briefingi.',
   noSourcedAnswer: 'Ta wersja nie ma odpowiedzi opartej na źródłach.',
+  unavailableForEvidence: 'Briefing niedostępny dla tej odpowiedzi opartej na dowodach',
 };
 
 export function briefingStrings(locale: AskLocale | string): BriefingStrings {

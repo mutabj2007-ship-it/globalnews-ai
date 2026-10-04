@@ -242,3 +242,6 @@ export * from './energy/observation';
 export * from './conflict/validation';
 export * from './home-suggestions';
 export * from './my-intelligence';
+
+/* CTO Politics ruling (briefings) — the shared 'can the briefing path preserve this evidence?' check. */
+export * from './briefing-evidence';

@@ -9,10 +9,20 @@ import {
   type AskV2BriefingSummary,
   type AskV2Operation,
 } from '@/lib/api/askV2Api';
+import { briefingPreservesEvidence } from '@globalnews-ai/shared';
 import { briefingStrings, briefingsAvailable } from '@/lib/ask/briefingStrings';
 import { ASK_SAVABLE_ANSWER_STATES } from './AskTurnSave';
 import { briefingHref } from '@/components/ask/BriefingViews';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
+
+/**
+ * CTO Politics ruling (briefings) — Save is offered only when the briefing path can preserve this answer's
+ * evidence (the SHARED check the server also enforces). Decided from the payload the answer already carries.
+ */
+export function briefingWithheldForEvidence(operation: AskV2Operation | undefined): boolean {
+  const payload = askR2PayloadOf(operation);
+  return payload !== null && payload !== undefined && !briefingPreservesEvidence(payload);
+}
 
 /** How many of the reader's briefings the "add as next version" list offers. */
 export const BRIEFING_MENU_LIMIT = 5;
@@ -64,6 +74,18 @@ export function AskTurnBrief({
   }, [eligible]);
 
   if (!eligible || !available) return null;
+
+  if (briefingWithheldForEvidence(operation)) {
+    return (
+      <span
+        data-ask="brief-unavailable"
+        role="status"
+        className="inline-flex min-h-[32px] items-center rounded-[8px] border border-[#1d4a73] px-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-[#8299b4] opacity-70"
+      >
+        {t.unavailableForEvidence}
+      </span>
+    );
+  }
 
   async function toggleMenu(): Promise<void> {
     const next = !open;
