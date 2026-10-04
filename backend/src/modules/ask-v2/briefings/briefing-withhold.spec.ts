@@ -1,8 +1,8 @@
 import { UnprocessableEntityException } from '@nestjs/common';
 import {
-  BRIEFING_SNAPSHOT_CARRIES_SPECIALIST_EVIDENCE,
-  BRIEFING_UNAVAILABLE_SPECIALIST_EVIDENCE,
-  answerUsesSpecialistEvidence,
+  BRIEFING_SNAPSHOT_CARRIES_GOVERNED_EVIDENCE,
+  BRIEFING_UNAVAILABLE_GOVERNED_EVIDENCE,
+  answerUsesGovernedEvidence,
   briefingPreservesEvidence,
 } from '@globalnews-ai/shared';
 import { BriefingsService } from './briefings.service';
@@ -36,12 +36,12 @@ const contribution = (contributorId: string, status: string, observations: unkno
 
 describe('briefingPreservesEvidence (shared, pure)', () => {
   it('the snapshot does not carry specialist evidence today', () => {
-    expect(BRIEFING_SNAPSHOT_CARRIES_SPECIALIST_EVIDENCE).toBe(false);
+    expect(BRIEFING_SNAPSHOT_CARRIES_GOVERNED_EVIDENCE).toBe(false);
   });
   it.each(['POLITICS', 'CONFLICT', 'MARKET_PROCUREMENT', 'ECONOMY_CPI', 'IMIHIGO'])(
     'an answer that USED %s evidence cannot be preserved',
     (id) => {
-      expect(answerUsesSpecialistEvidence(payload([contribution(id, 'USED')]))).toBe(true);
+      expect(answerUsesGovernedEvidence(payload([contribution(id, 'USED')]))).toBe(true);
       expect(briefingPreservesEvidence(payload([contribution(id, 'USED')]))).toBe(false);
     },
   );
@@ -86,7 +86,7 @@ describe('BriefingsService refuses an answer whose evidence the briefing cannot 
     const { svc, writes } = service(payload([contribution(id, 'USED')]));
     const err = await svc.create('u1', { turnId: 't1' }).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(UnprocessableEntityException);
-    expect((err as UnprocessableEntityException).getResponse()).toEqual({ code: BRIEFING_UNAVAILABLE_SPECIALIST_EVIDENCE });
+    expect((err as UnprocessableEntityException).getResponse()).toEqual({ code: BRIEFING_UNAVAILABLE_GOVERNED_EVIDENCE });
     expect(writes.briefingCreate).not.toHaveBeenCalled();
     expect(writes.versionCreate).not.toHaveBeenCalled();
   });
@@ -94,7 +94,7 @@ describe('BriefingsService refuses an answer whose evidence the briefing cannot 
   it('addVersion: specialist evidence → refused, nothing written', async () => {
     const { svc, writes } = service(payload([contribution('POLITICS', 'USED')]));
     const err = await svc.addVersion('u1', 'b1', 't1').catch((e: unknown) => e);
-    expect((err as UnprocessableEntityException).getResponse()).toEqual({ code: BRIEFING_UNAVAILABLE_SPECIALIST_EVIDENCE });
+    expect((err as UnprocessableEntityException).getResponse()).toEqual({ code: BRIEFING_UNAVAILABLE_GOVERNED_EVIDENCE });
     expect(writes.versionCreate).not.toHaveBeenCalled();
   });
 
