@@ -614,8 +614,9 @@ describe('B2 — Public Legal Surfaces dictionary sections', () => {
     }
     /* TRUST R1 §12 — the Privacy Notice was rewritten from the code inventory and carries its own
        revision date (a CANDIDATE: the controller-specific review is still pending). */
-    expect(en.privacyPage.lastUpdatedDate).toBe('3 October 2026');
-    expect(pl.privacyPage.lastUpdatedDate).toBe('3 października 2026');
+    /* T5 Part B — revised again (guest data, retention dependency); PENDING_PO_LEGAL_APPROVAL. */
+    expect(en.privacyPage.lastUpdatedDate).toBe('4 October 2026');
+    expect(pl.privacyPage.lastUpdatedDate).toBe('4 października 2026');
   });
 
   it('M66.10B — the Source Policy carries its OWN approved publication date: "20 August 2026" (EN) and "20 sierpnia 2026" (PL)', () => {

@@ -156,6 +156,16 @@ export const footerLinkGroups: FooterLinkGroup[] = [
         because frontend/src/app/third-party-notices/page.tsx exists.
       */
       { href: '/third-party-notices', label: 'Third-Party Notices' },
+      /*
+        STAGE 2 · T5 PART B — THE FIFTH LEGAL DESTINATION (D10). /cookies is a real App Router
+        page (frontend/src/app/cookies/page.tsx) that was reachable only from /privacy and the Ask
+        composer. Its label is NOT a `footer.linkLabels` dictionary key: `dict.footer` is part of
+        H's Ask-shell source, so a new key there would make the protected fr–ar Ask catalogues
+        incomplete. Footer.tsx reads it from the `consent` catalogue instead
+        (consent.footer.cookies, en/pl; PENDING_PO_LEGAL_APPROVAL). The tripwire specs are updated
+        in the same change.
+      */
+      { href: '/cookies', label: 'Cookies' },
     ],
   },
 ];

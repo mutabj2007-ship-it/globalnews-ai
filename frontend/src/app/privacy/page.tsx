@@ -6,6 +6,8 @@ import { THEME_COOKIE_NAME, parseThemePreference } from '@/lib/theme/theme';
 import { Footer } from '@/components/layout/Footer';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { surfaceLocale } from '@/lib/i18n/displayLocale.server';
+import { effectiveWithin } from '@/lib/i18n/surfaceLocale';
+import { GuestDataSection } from '@/components/consent/GuestDataSection';
 import { buildPageMetadata } from '@/lib/seo/metadata';
 import { COOKIES_PAGE } from '@/lib/privacy/cookiesPageStrings';
 
@@ -42,8 +44,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function PrivacyPage(): Promise<JSX.Element> {
-  const language = surfaceLocale('privacy').language;
+  const surface = surfaceLocale('privacy');
+  const language = surface.language;
   const t = getDictionary(language).privacyPage;
+  /* T5 Part B — the guest-data section's catalogue (`consent`) authors en/pl only; in any other
+     locale the T2 rule already renders this whole surface in English with the declared notice. */
+  const consentLocale = effectiveWithin(surface, ['en', 'pl']);
 
   return (
     /* TRUST R1 §16 — the legal pages take the same theme as the Standalone surfaces (read from the
@@ -66,6 +72,9 @@ export default async function PrivacyPage(): Promise<JSX.Element> {
               </section>
             ))}
           </div>
+          {/* T5 Part B — the measured guest contract, this browser's guest dates/quota, and
+              "Delete my guest data now" (one status read on mount; never mints a session). */}
+          <GuestDataSection locale={consentLocale} />
           {/* TRUST R1 §12 — the detailed Cookies & similar technologies notice and settings. */}
           <p className="mt-8 text-sm">
             <a
@@ -73,7 +82,7 @@ export default async function PrivacyPage(): Promise<JSX.Element> {
               data-privacy="cookies-link"
               className="text-signal underline-offset-2 hover:underline"
             >
-              {COOKIES_PAGE[language === 'pl' ? 'pl' : 'en'].title}
+              {COOKIES_PAGE[consentLocale].title}
             </a>
           </p>
         </main>

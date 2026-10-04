@@ -25083,7 +25083,7 @@
      }
     },
     "privacyPage.lastUpdatedDate": {
-     "en": "3 October 2026",
+     "en": "4 October 2026",
      "locales": {
       "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
       "de": "CANDIDATE_PROVENANCE_UNKNOWN",
@@ -25110,7 +25110,7 @@
       },
       {
        "heading": "Using Ask without an account",
-       "body": "You can ask a few questions as a guest. When you send your first guest question we set a guest cookie and store your questions and the answers on our servers as one guest conversation. It lasts up to 7 days and is then deleted within about 24 hours. To limit abuse of the free questions we count guest questions per network using a pseudonymous identifier that changes every day and is derived from your network address with a secret key. The address itself is not stored in our limit records, and the identifiers are deleted within about a week."
+       "body": "You can ask a few questions as a guest. When you send your first guest question we set a guest cookie and store your guest conversations (your questions and the answers) on our servers. A guest session lasts at most 7 days and is never extended; it is then deleted automatically, as described under “Your guest data” below, where you can also delete it at once. “Sign in to continue” moves all guest conversations from this browser to your account; signing in any other way moves none of them, and they stay visible in this browser after you sign out until they are deleted. To limit abuse of the free questions we count guest questions per network using a pseudonymous identifier that changes every day and is derived from your network address with a secret key. The address itself is not stored in our limit records. When those identifiers are deleted is explained under “How long information is kept”."
       },
       {
        "heading": "Signing in with Google",
@@ -25138,11 +25138,11 @@
       },
       {
        "heading": "Your choices",
-       "body": "You can delete your account in account settings, which removes the data listed above. You can clear your search history. You can change or remove your language and appearance settings at any time. A copy-of-your-data (export) feature does not exist yet; a request path will be published together with the contact address above."
+       "body": "You can delete your account in account settings, which removes the data listed above. You can delete your guest conversations from this browser at any time under “Your guest data” below or on the Cookies page. You can clear your search history. You can change or remove your language and appearance settings at any time. A copy-of-your-data (export) feature does not exist yet; a request path will be published together with the contact address above."
       },
       {
        "heading": "How long information is kept",
-       "body": "These are our Beta retention periods (our own policy, not legal minimums). Guest conversations: up to 7 days plus about 24 hours. Account conversations: 12 months after their last activity, unless you delete them sooner or saved an answer from them. Support messages: 24 months after the case is resolved. Detailed usage and compute records: 90 days. Guest limit identifiers: about a week. Ask diagnostics: 30 days. Sign-in sessions: 30 days."
+       "body": "These are our Beta retention periods (our own policy, not legal minimums). Guest conversations: at most 7 days from your first guest question, then deleted automatically by a guest clean-up that always runs while the service is running (the exact times are under “Your guest data” below), or at once when you delete them. Ask diagnostics: 30 days, deleted by their own clean-up. Sign-in sessions: expire after 30 days. The following periods are our target policy and are applied by a separate scheduled clean-up; that clean-up is switched off unless we turn it on as an operational decision, and while it is off these records are not deleted automatically when the period ends: account conversations 12 months after their last activity (unless you delete them sooner or saved an answer from them; deleting your account always deletes them), support messages 24 months after the case is resolved, detailed usage and compute records 90 days, guest limit identifiers about a week after the day they count."
       },
       {
        "heading": "Changes to this notice",
@@ -36186,6 +36186,280 @@
     }
    }
   },
+  "consent": {
+   "source": "frontend/src/lib/consent/consentStrings.ts",
+   "kind": "MODULE",
+   "englishKeys": 26,
+   "gapCounts": {
+    "fr": 26,
+    "de": 26,
+    "es": 26,
+    "pt": 26,
+    "ar": 26
+   },
+   "keys": {
+    "footer.cookies": {
+     "en": "Cookies",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "forget.action": {
+     "en": "Delete my guest data now",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "forget.busy": {
+     "en": "An answer is still being prepared. Try again in a minute.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "forget.cancel": {
+     "en": "Cancel",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "forget.confirm": {
+     "en": "Delete every guest conversation from this browser? This cannot be undone.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "forget.confirmAction": {
+     "en": "Yes, delete",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "forget.done": {
+     "en": "Your guest data was deleted from our servers and the guest cookies were removed.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "forget.failed": {
+     "en": "The deletion did not go through and nothing was changed. Please try again.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "forget.nothing": {
+     "en": "There was no guest data to delete for this browser.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "forget.working": {
+     "en": "Deleting…",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "guest.claim": {
+     "en": "“Sign in to continue” moves all guest conversations from this browser to your account, not only the one you were in. Guest answers you have left do not carry over.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "guest.cookie": {
+     "en": "Your first guest question sets a guest cookie (gna_guest) and a security cookie (gna_csrf). The guest session lasts at most {lifetimeDays} days from that moment and is never extended — not by using Ask and not by signing in.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "guest.deleteNow": {
+     "en": "You can delete your guest conversations from this browser at any time with “Delete my guest data now”. It deletes them from our servers immediately and removes both guest cookies. The daily network counters that limit abuse of free questions hold no questions or answers and are kept for their own period.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "guest.heading": {
+     "en": "Your guest data",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "guest.intro": {
+     "en": "You can use Ask without an account. This is exactly what happens to what you send as a guest.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "guest.plainSignIn": {
+     "en": "Signing in any other way moves nothing. Guest conversations stay with this browser, are not added to your account, and are visible again in this browser after you sign out, until they are deleted. On a shared device, delete them before you leave.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "guest.questions": {
+     "en": "Without signing in you can get {allowance} answers. A question we cannot answer does not use one of them.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "guest.storage": {
+     "en": "Your guest questions and answers are stored on our servers, not only in your browser, until the guest session ends. They are then deleted automatically within about {purgeGraceH} hours. This guest clean-up runs whenever the service is running and does not depend on any other setting.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "panel.active": {
+     "en": "This browser has a guest session. It ends on {expiresAt}; its conversations are deleted automatically from {purgeAfter}.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "panel.loading": {
+     "en": "Checking this browser for guest data…",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "panel.none": {
+     "en": "This browser has no active guest session. An ended guest session is deleted automatically within about {purgeGraceH} hours.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "panel.signedIn": {
+     "en": "You are signed in, so guest controls are not shown. If you used Ask as a guest in this browser before signing in, sign out to see or delete that guest data.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "panel.unavailable": {
+     "en": "Guest information for this browser cannot be shown right now.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "quota.cooldown": {
+     "en": "Guest questions are paused until {cooldownUntil}",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "quota.exhausted": {
+     "en": "All {allowance} guest answers used",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "quota.remaining": {
+     "en": "{remaining} of {allowance} guest answers left",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    }
+   }
+  },
   "trustReasons": {
    "source": "frontend/src/lib/trustReasonLabels.ts",
    "kind": "MODULE",
@@ -36770,24 +37044,24 @@
    "namespacesIncomplete": 5
   },
   "fr": {
-   "pendingKeys": 3525,
-   "namespacesIncomplete": 60
+   "pendingKeys": 3551,
+   "namespacesIncomplete": 61
   },
   "de": {
-   "pendingKeys": 3525,
-   "namespacesIncomplete": 60
+   "pendingKeys": 3551,
+   "namespacesIncomplete": 61
   },
   "es": {
-   "pendingKeys": 3525,
-   "namespacesIncomplete": 60
+   "pendingKeys": 3551,
+   "namespacesIncomplete": 61
   },
   "pt": {
-   "pendingKeys": 3525,
-   "namespacesIncomplete": 60
+   "pendingKeys": 3551,
+   "namespacesIncomplete": 61
   },
   "ar": {
-   "pendingKeys": 3525,
-   "namespacesIncomplete": 60
+   "pendingKeys": 3551,
+   "namespacesIncomplete": 61
   }
  },
  "surfaces": {
@@ -36805,6 +37079,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:analysisFrame",
      "dict:analysisModeBadge",
      "dict:analysisResultView",
@@ -36850,6 +37125,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:analysisFrame",
      "dict:analysisModeBadge",
      "dict:analysisResultView",
@@ -36895,6 +37171,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:analysisFrame",
      "dict:analysisModeBadge",
      "dict:analysisResultView",
@@ -36940,6 +37217,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:analysisFrame",
      "dict:analysisModeBadge",
      "dict:analysisResultView",
@@ -36985,6 +37263,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:analysisFrame",
      "dict:analysisModeBadge",
      "dict:analysisResultView",
@@ -37061,6 +37340,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:accountSettings"
     ]
    },
@@ -37075,6 +37355,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:accountSettings"
     ]
    },
@@ -37089,6 +37370,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:accountSettings"
     ]
    },
@@ -37103,6 +37385,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:accountSettings"
     ]
    },
@@ -37117,6 +37400,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:accountSettings"
     ]
    }
@@ -37135,6 +37419,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:analysisResultView",
      "dict:analysisWorkspace",
      "dict:analysisModeBadge",
@@ -37160,6 +37445,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:analysisResultView",
      "dict:analysisWorkspace",
      "dict:analysisModeBadge",
@@ -37185,6 +37471,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:analysisResultView",
      "dict:analysisWorkspace",
      "dict:analysisModeBadge",
@@ -37210,6 +37497,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:analysisResultView",
      "dict:analysisWorkspace",
      "dict:analysisModeBadge",
@@ -37235,6 +37523,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:analysisResultView",
      "dict:analysisWorkspace",
      "dict:analysisModeBadge",
@@ -37264,6 +37553,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:analysisResultView",
      "dict:analysisWorkspace",
      "dict:analysisModeBadge",
@@ -37291,6 +37581,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:analysisResultView",
      "dict:analysisWorkspace",
      "dict:analysisModeBadge",
@@ -37318,6 +37609,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:analysisResultView",
      "dict:analysisWorkspace",
      "dict:analysisModeBadge",
@@ -37345,6 +37637,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:analysisResultView",
      "dict:analysisWorkspace",
      "dict:analysisModeBadge",
@@ -37372,6 +37665,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:analysisResultView",
      "dict:analysisWorkspace",
      "dict:analysisModeBadge",
@@ -37403,6 +37697,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "conflict",
      "dict:map"
     ]
@@ -37418,6 +37713,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "conflict",
      "dict:map"
     ]
@@ -37433,6 +37729,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "conflict",
      "dict:map"
     ]
@@ -37448,6 +37745,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "conflict",
      "dict:map"
     ]
@@ -37463,6 +37761,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "conflict",
      "dict:map"
     ]
@@ -37526,6 +37825,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "market"
     ]
    },
@@ -37540,6 +37840,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "market"
     ]
    },
@@ -37554,6 +37855,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "market"
     ]
    },
@@ -37568,6 +37870,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "market"
     ]
    },
@@ -37582,6 +37885,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "market"
     ]
    }
@@ -37605,6 +37909,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "humanitarian"
     ]
    },
@@ -37619,6 +37924,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "humanitarian"
     ]
    },
@@ -37633,6 +37939,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "humanitarian"
     ]
    },
@@ -37647,6 +37954,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "humanitarian"
     ]
    },
@@ -37661,6 +37969,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "humanitarian"
     ]
    }
@@ -37923,6 +38232,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:analysisResultView",
      "dict:analysisWorkspace",
      "dict:analysisModeBadge",
@@ -37949,6 +38259,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:analysisResultView",
      "dict:analysisWorkspace",
      "dict:analysisModeBadge",
@@ -37975,6 +38286,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:analysisResultView",
      "dict:analysisWorkspace",
      "dict:analysisModeBadge",
@@ -38001,6 +38313,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:analysisResultView",
      "dict:analysisWorkspace",
      "dict:analysisModeBadge",
@@ -38027,6 +38340,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:analysisResultView",
      "dict:analysisWorkspace",
      "dict:analysisModeBadge",
@@ -38057,6 +38371,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:support"
     ]
    },
@@ -38071,6 +38386,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:support"
     ]
    },
@@ -38085,6 +38401,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:support"
     ]
    },
@@ -38099,6 +38416,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:support"
     ]
    },
@@ -38113,6 +38431,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:support"
     ]
    }
@@ -38136,6 +38455,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "history"
     ]
    },
@@ -38150,6 +38470,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "history"
     ]
    },
@@ -38164,6 +38485,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "history"
     ]
    },
@@ -38178,6 +38500,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "history"
     ]
    },
@@ -38192,6 +38515,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "history"
     ]
    }
@@ -38210,6 +38534,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:privacyPage",
      "cookiesPage"
     ]
@@ -38225,6 +38550,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:privacyPage",
      "cookiesPage"
     ]
@@ -38240,6 +38566,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:privacyPage",
      "cookiesPage"
     ]
@@ -38255,6 +38582,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:privacyPage",
      "cookiesPage"
     ]
@@ -38270,6 +38598,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:privacyPage",
      "cookiesPage"
     ]
@@ -38289,6 +38618,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:termsPage"
     ]
    },
@@ -38303,6 +38633,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:termsPage"
     ]
    },
@@ -38317,6 +38648,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:termsPage"
     ]
    },
@@ -38331,6 +38663,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:termsPage"
     ]
    },
@@ -38345,6 +38678,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:termsPage"
     ]
    }
@@ -38363,6 +38697,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "cookiesPage"
     ]
    },
@@ -38377,6 +38712,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "cookiesPage"
     ]
    },
@@ -38391,6 +38727,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "cookiesPage"
     ]
    },
@@ -38405,6 +38742,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "cookiesPage"
     ]
    },
@@ -38419,6 +38757,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "cookiesPage"
     ]
    }
@@ -38437,6 +38776,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:sourcePolicyPage"
     ]
    },
@@ -38451,6 +38791,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:sourcePolicyPage"
     ]
    },
@@ -38465,6 +38806,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:sourcePolicyPage"
     ]
    },
@@ -38479,6 +38821,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:sourcePolicyPage"
     ]
    },
@@ -38493,6 +38836,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:sourcePolicyPage"
     ]
    }
@@ -38511,6 +38855,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:thirdPartyNoticesPage"
     ]
    },
@@ -38525,6 +38870,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:thirdPartyNoticesPage"
     ]
    },
@@ -38539,6 +38885,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:thirdPartyNoticesPage"
     ]
    },
@@ -38553,6 +38900,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:thirdPartyNoticesPage"
     ]
    },
@@ -38567,6 +38915,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:thirdPartyNoticesPage"
     ]
    }
@@ -38585,6 +38934,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:analysisResultView",
      "dict:analysisWorkspace",
      "dict:analysisModeBadge",
@@ -38610,6 +38960,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:analysisResultView",
      "dict:analysisWorkspace",
      "dict:analysisModeBadge",
@@ -38635,6 +38986,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:analysisResultView",
      "dict:analysisWorkspace",
      "dict:analysisModeBadge",
@@ -38660,6 +39012,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:analysisResultView",
      "dict:analysisWorkspace",
      "dict:analysisModeBadge",
@@ -38685,6 +39038,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:analysisResultView",
      "dict:analysisWorkspace",
      "dict:analysisModeBadge",
@@ -38714,6 +39068,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:admin"
     ]
    },
@@ -38728,6 +39083,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:admin"
     ]
    },
@@ -38742,6 +39098,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:admin"
     ]
    },
@@ -38756,6 +39113,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:admin"
     ]
    },
@@ -38770,6 +39128,7 @@
      "dict:askAi",
      "dict:presentationRibbon",
      "returnStrings",
+     "consent",
      "dict:admin"
     ]
    }
@@ -38831,7 +39190,8 @@
      "dict:authError",
      "dict:askAi",
      "dict:presentationRibbon",
-     "returnStrings"
+     "returnStrings",
+     "consent"
     ]
    },
    "de": {
@@ -38844,7 +39204,8 @@
      "dict:authError",
      "dict:askAi",
      "dict:presentationRibbon",
-     "returnStrings"
+     "returnStrings",
+     "consent"
     ]
    },
    "es": {
@@ -38857,7 +39218,8 @@
      "dict:authError",
      "dict:askAi",
      "dict:presentationRibbon",
-     "returnStrings"
+     "returnStrings",
+     "consent"
     ]
    },
    "pt": {
@@ -38870,7 +39232,8 @@
      "dict:authError",
      "dict:askAi",
      "dict:presentationRibbon",
-     "returnStrings"
+     "returnStrings",
+     "consent"
     ]
    },
    "ar": {
@@ -38883,7 +39246,8 @@
      "dict:authError",
      "dict:askAi",
      "dict:presentationRibbon",
-     "returnStrings"
+     "returnStrings",
+     "consent"
     ]
    }
   }

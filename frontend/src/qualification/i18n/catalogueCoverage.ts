@@ -15,6 +15,7 @@ import { resolveSecStrings } from '@/lib/security/securityStrings';
 import { getFailureCopy } from '@/lib/i18n/failureCopy';
 import { returnStringsFor } from '@/lib/navigation/returnStrings';
 import { COOKIES_PAGE } from '@/lib/privacy/cookiesPageStrings';
+import { CONSENT_STRINGS, authoredConsentStrings } from '@/lib/consent/consentStrings';
 import { TRUST_REASON_LABELS, TRUST_REASON_LABELS_PL } from '@/lib/trustReasonLabels';
 import { briefingStrings } from '@/lib/ask/briefingStrings';
 import { askShellCoverage, askShellKeyPaths } from '@/lib/ask/shell/askShellCatalogue';
@@ -235,6 +236,11 @@ const MODULES: readonly NamespaceCoverage[] = [
   moduleNamespace('returnStrings', 'frontend/src/lib/navigation/returnStrings.ts', returnStringsFor('en'), enPlOnly(returnStringsFor)),
   moduleNamespace('cookiesPage', 'frontend/src/lib/privacy/cookiesPageStrings.ts', COOKIES_PAGE.en, (l) =>
     (COOKIES_PAGE as Partial<Record<DisplayLocale, unknown>>)[l],
+  ),
+  /* T5 Part B — guest-data / consent notices: en/pl drafts (PENDING_PO_LEGAL_APPROVAL); no
+     fr/de/es/pt/ar copy exists, so every key is a gap there and the surfaces fall back (declared). */
+  moduleNamespace('consent', 'frontend/src/lib/consent/consentStrings.ts', CONSENT_STRINGS.en, (l) =>
+    authoredConsentStrings(l),
   ),
   moduleNamespace('trustReasons', 'frontend/src/lib/trustReasonLabels.ts', TRUST_REASON_LABELS, (l) =>
     l === 'pl' ? TRUST_REASON_LABELS_PL : undefined,

@@ -36,6 +36,8 @@ const PLATFORM_CHROME: readonly string[] = [
   'dict:presentationRibbon',
   'returnStrings',
   'askShell',
+  /* T5 Part B — the Footer's /cookies label comes from the `consent` catalogue. */
+  'consent',
 ];
 
 /** The standalone Ask chrome (AskNavShell / AskContinuityHeader), owned by H. */
@@ -100,9 +102,9 @@ export const SURFACE_NAMESPACES: Readonly<Record<SurfaceId, readonly string[]>> 
     ]),
   support: uniq(PLATFORM_CHROME, ASK_CHROME, ['dict:support']),
   history: uniq(PLATFORM_CHROME, ['history']),
-  privacy: uniq(PLATFORM_CHROME, ['dict:privacyPage', 'cookiesPage']),
+  privacy: uniq(PLATFORM_CHROME, ['dict:privacyPage', 'cookiesPage', 'consent']),
   terms: uniq(PLATFORM_CHROME, ['dict:termsPage']),
-  cookies: uniq(PLATFORM_CHROME, ['cookiesPage']),
+  cookies: uniq(PLATFORM_CHROME, ['cookiesPage', 'consent']),
   sourcePolicy: uniq(PLATFORM_CHROME, ['dict:sourcePolicyPage']),
   thirdPartyNotices: uniq(PLATFORM_CHROME, ['dict:thirdPartyNoticesPage']),
   workspace: uniq(PLATFORM_CHROME, ANALYSIS, ['dict:todayWorkspace', 'dict:today']),
