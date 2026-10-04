@@ -76,9 +76,15 @@ describe('A — clause intent: MIXED emerges from the SET of clause intents', ()
     ['Why does inflation matter for savers, and what is the inflation rate in Chile today?', 'en'],
     ['Wiem, co oznacza recesja w teorii. Czy Niemcy są teraz w recesji?', 'pl'],
     ['Co właściwie robi bank centralny, a co NBP zmienił w tym tygodniu?', 'pl'],
-    ['Jak zmieniła się polityka migracyjna Szwecji od 2015 roku do dziś?', 'pl'],
   ] as const)('%s → MIXED', (q, lang) => {
     expect(cls(q, lang)).toBe('MIXED');
+  });
+  /* CTO RUN-3 STRUCTURAL RULING D supersedes the earlier MIXED expectation: "since X up to now" in
+     ONE clause is one change analysis whose present endpoint needs current evidence — not MIXED */
+  it('Jak zmieniła się polityka migracyjna Szwecji od 2015 roku do dziś? → current evidence (ruling D), not MIXED', () => {
+    expect(cls('Jak zmieniła się polityka migracyjna Szwecji od 2015 roku do dziś?', 'pl')).toBe(
+      'EVIDENCE',
+    );
   });
 });
 

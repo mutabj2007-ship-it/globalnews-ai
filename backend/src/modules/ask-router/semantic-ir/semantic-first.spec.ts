@@ -512,4 +512,29 @@ describe('CTO RUN-3 STRUCTURAL RULINGS A–D', () => {
     expect(news(r)).toBe(true);
     valid(r, q, 'de');
   });
+
+  it('D — EN / PL read the same one-clause change span exactly as the interpreter-first path does', () => {
+    for (const [q, lang] of [
+      ['How has unemployment in Spain changed since 2015 up to now?', 'en'],
+      ['How has the relationship between India and China evolved since 2020 until today?', 'en'],
+      ['Jak zmieniło się bezrobocie w Hiszpanii od 2015 roku do dziś?', 'pl'],
+    ] as const) {
+      const r = route(q, lang);
+      expect(r.job.job).toBe('CHANGE_ANALYSIS');
+      expect(r.knowledgeRequirement).not.toBe('MIXED_REFERENCE_CURRENT');
+      expect(r.semantic.turn.freshness).toBe('CURRENT');
+      expect(r.semantic.turn.temporalRole).toBe('SINCE_PAST_TO_PRESENT');
+      expect(news(r)).toBe(true);
+      valid(r, q, lang);
+    }
+  });
+
+  it('D — distinct clauses (a past state AND the present state) stay MIXED', () => {
+    const q = 'What was unemployment in Spain in 2015, and what is it now?';
+    const r = route(q, 'en');
+    expect(r.semantic.clauses.length).toBe(2);
+    expect(r.semantic.turn.freshness).toBe('MIXED');
+    expect(r.job.job).toBe('MIXED');
+    valid(r, q, 'en');
+  });
 });

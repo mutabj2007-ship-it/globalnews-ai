@@ -967,7 +967,39 @@ export function interpretTurn(input: TurnInterpretationInput): {
                   'scoped as current reporting by its time, event, inherited scope or prior subject',
               }
             : formJob;
-  const job: JobReading = { ...resolvedJob, currentnessEvidence };
+  /*
+    CTO RUN-3 STRUCTURAL RULING D (EN / PL) — "since X up to now" asked in ONE clause is ONE change
+    analysis over a past → present span, not a MIXED turn: the past baseline and the present endpoint
+    are the two ends of a single question, and the present endpoint needs current evidence. It is
+    read exactly as the interpreter-first path reads it (semantic-first.ts): current reporting
+    evidence, job CHANGE_ANALYSIS, temporal role SINCE_PAST_TO_PRESENT. MIXED stays for turns whose
+    DISTINCT clauses ask different things.
+  */
+  const changeSpanOnly =
+    clauses.length < 2 &&
+    temporalSemantics.currentness === 'HISTORICAL_AND_CURRENT' &&
+    /* only a past → present SPAN ("since 2015 up to now"); a past point compared with today stays
+       as it was (not covered by the ruling) */
+    temporalSemantics.spans.some((s) => s.role === 'SINCE_PAST_TO_PRESENT') &&
+    knowledge.requirement === 'MIXED_REFERENCE_CURRENT' &&
+    resolvedJob.job === 'MIXED' &&
+    !advisory &&
+    !referencesWork;
+  if (changeSpanOnly)
+    knowledge = {
+      requirement: 'CURRENT_REPORTING',
+      reason: 'one change analysis: a past baseline to the present endpoint (ruling D)',
+    };
+  const job: JobReading =
+    changeSpanOnly
+      ? {
+          ...resolvedJob,
+          job: 'CHANGE_ANALYSIS',
+          freshness: 'CURRENT',
+          evidence: 'CURRENT_REPORTING',
+          currentnessEvidence,
+        }
+      : { ...resolvedJob, currentnessEvidence };
 
   /* §18 — the objective: this turn's own, else the conversation's (reader's words), else a
      DECISION_CRITERIA artifact; "best for what?" only when none exists */
@@ -1106,7 +1138,9 @@ export function interpretTurn(input: TurnInterpretationInput): {
       temporalRole:
         mixed && temporalSemantics.currentness === 'HISTORICAL_AND_CURRENT'
           ? 'HISTORICAL_AND_CURRENT'
-          : explicitCurrent
+          : changeSpanOnly
+            ? 'SINCE_PAST_TO_PRESENT'
+            : explicitCurrent
             ? (clauses.find((c) => c.kind === 'CURRENT')?.clause.temporalRole ?? 'CURRENT_STATE')
             : temporalRoleOf(temporalSemantics),
       confidence: job.confidence,
