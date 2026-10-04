@@ -522,9 +522,27 @@ describe('country relevance — M66.14B prepared-text optimization preserves sem
         won on COUNTRIES declaration order. Sudan is no longer relevant to it at
         all, which is why the relevant-count drops to 1.
   */
-  const GOLDEN: Record<'en' | 'pl', string> = {
+  const GOLDEN_AFTER_SOUTH_SUDAN: Record<'en' | 'pl', string> = {
     en: 'KE:90:1|DE:85:1|PL:95:2|-|JP:85:1|BR:85:1|-|IN:85:1|CA:90:2|-|FR:85:1|AU:85:1|-|TD:60:1|-|-|SS:80:1|MK:70:1|-|-|-|-|KE:65:1|CI:60:1|IE:90:1|NZ:90:1',
     pl: 'KE:90:1|DE:85:1|PL:95:2|-|JP:85:1|BR:85:1|-|IN:85:1|CA:90:2|-|FR:85:1|AU:85:1|-|TD:60:1|-|-|SS:80:1|MK:70:1|PL:60:1|FR:60:2|-|-|KE:65:1|CI:60:1|IE:90:1|NZ:90:1',
+  };
+
+  /*
+    LAYER 4 — CURRENT, after the CTO-authorized LAYER-4 RE-BASELINE (R4 post-run-3, Claude G
+    Stage-A coverage: governed official / UN names added to COUNTRY_ALIASES — "Republic of Korea",
+    "Cabo Verde", "Viet Nam", "Lao PDR", "Syrian Arab Republic", …).
+
+    One class, one article, audited by the guard below and by nothing else:
+      [23] 'The Republic of Korea and Cote d Ivoire met'   CI:60:1 -> KR:60:2
+    "Republic of Korea" now resolves to South Korea (previously no country), so KR becomes relevant
+    with the same 60 title score as Côte d'Ivoire and wins the 60–60 tie; Côte d'Ivoire stays
+    relevant (count 1 -> 2), its score unchanged. MEASURED before re-baselining: of all 21,422
+    article x country x language results, exactly these 2 (EN and PL) changed — evidence in
+    R4_PARALLEL/CLAUDE_CODE/evidence/G-RELEVANCE-DELTA.diff.
+  */
+  const GOLDEN: Record<'en' | 'pl', string> = {
+    en: 'KE:90:1|DE:85:1|PL:95:2|-|JP:85:1|BR:85:1|-|IN:85:1|CA:90:2|-|FR:85:1|AU:85:1|-|TD:60:1|-|-|SS:80:1|MK:70:1|-|-|-|-|KE:65:1|KR:60:2|IE:90:1|NZ:90:1',
+    pl: 'KE:90:1|DE:85:1|PL:95:2|-|JP:85:1|BR:85:1|-|IN:85:1|CA:90:2|-|FR:85:1|AU:85:1|-|TD:60:1|-|-|SS:80:1|MK:70:1|PL:60:1|FR:60:2|-|-|KE:65:1|KR:60:2|IE:90:1|NZ:90:1',
   };
 
   const expected = (encoded: string) => {
@@ -593,7 +611,10 @@ describe('country relevance — M66.14B prepared-text optimization preserves sem
       // no re-baseline can ever be silent.
       //   pre-Correction-A: 500212da806b577d1c1e2c871c55927af627314fffb66d3927a598828e8dbd48
       //   post-Correction-A: 054a50b289b57e04ff0db73c92480ed25690f806fa006f277e3283e93235a827
-      '4a19aa38005f9411bdfa397b015da7b6596f3da284d19d5e261c8dfe9d47f575',
+      //   post-Madagascar (layer 3): 4a19aa38005f9411bdfa397b015da7b6596f3da284d19d5e261c8dfe9d47f575
+      //   LAYER 4 (CTO-authorized, Claude G governed official names): the delta is exactly the KR rows
+      //   of article 23 in each language — see the LAYER 4 guard and G-RELEVANCE-DELTA.diff.
+      'ea059da59cb8c687e16bc43ac4ec4a5ac131a7d7a843c3d651b970be275f1f6b',
     );
   });
 
@@ -617,7 +638,7 @@ describe('country relevance — M66.14B prepared-text optimization preserves sem
     articles in both languages — is UNCHANGED and still passes, which is the
     second, independent statement that Madagascar wins nothing it should not.
   */
-  it('THE OLD DIGEST STILL HOLDS over the pre-Madagascar registry — the delta is only the new rows', () => {
+  it('THE OLD DIGEST STILL HOLDS over the pre-Madagascar registry — the delta is only the new rows (+ LAYER 4)', () => {
     const hash = createHash('sha256');
     let comparisons = 0;
 
@@ -635,7 +656,10 @@ describe('country relevance — M66.14B prepared-text optimization preserves sem
 
     expect(comparisons).toBe(CORPUS.length * (SOVEREIGN_COUNTRIES.length - 1) * 4);
     expect(hash.digest('hex')).toBe(
-      '630690c80472f5f3f939fe3787966ab9b2a198619d2f3eae9db5da64b723b3d4',
+      // pre-Madagascar registry, before LAYER 4: 630690c80472f5f3f939fe3787966ab9b2a198619d2f3eae9db5da64b723b3d4
+      // LAYER 4 (CTO-authorized): the same 195 countries; the delta is exactly the KR rows of
+      // article 23 (the governed "Republic of Korea" alias) — still no Madagascar row involved.
+      '0fe890b51bb15c91f5e9fd1a5322e7f60527ffaa8256828b2b1e3307df5d3f26',
     );
   });
 
@@ -651,7 +675,9 @@ describe('country relevance — M66.14B prepared-text optimization preserves sem
     */
     expect(SOVEREIGN_COUNTRIES).toHaveLength(196);
     /* TRUST R1 — plus the explicitly included territories, each typed and attached to its state. */
-    expect(TERRITORIES.map((t) => [t.iso3, t.status, t.partOf ?? null, t.codeSource ?? 'ISO'])).toEqual([
+    expect(
+      TERRITORIES.map((t) => [t.iso3, t.status, t.partOf ?? null, t.codeSource ?? 'ISO']),
+    ).toEqual([
       ['GRL', 'AUTONOMOUS_TERRITORY', 'DNK', 'ISO'],
       /* CTO map rulings: neutral status, no partOf inferred, user-assigned codes marked non-ISO. */
       ['ESH', 'DISPUTED_TERRITORY', null, 'ISO'],
@@ -699,12 +725,14 @@ describe('country relevance — M66.14B prepared-text optimization preserves sem
         const wasResult = expected(before[index]);
         const isResult = expected(encoded);
 
-        expect({ language, index, winner: isResult.winner, count: isResult.relevantCount }).toEqual({
-          language,
-          index,
-          winner: wasResult.winner,
-          count: wasResult.relevantCount,
-        });
+        expect({ language, index, winner: isResult.winner, count: isResult.relevantCount }).toEqual(
+          {
+            language,
+            index,
+            winner: wasResult.winner,
+            count: wasResult.relevantCount,
+          },
+        );
         expect(isResult.score).toBeGreaterThan(wasResult.score);
       });
     }
@@ -720,7 +748,7 @@ describe('country relevance — M66.14B prepared-text optimization preserves sem
 
     for (const language of ['en', 'pl'] as const) {
       const before = GOLDEN_AFTER_CITIES[language].split('|');
-      const after = GOLDEN[language].split('|');
+      const after = GOLDEN_AFTER_SOUTH_SUDAN[language].split('|');
 
       expect(after).toHaveLength(before.length);
 
@@ -756,12 +784,14 @@ describe('country relevance — M66.14B prepared-text optimization preserves sem
           index,
           expected: true,
         });
-        expect({ language, index, winner: isResult.winner, count: isResult.relevantCount }).toEqual({
-          language,
-          index,
-          winner: wasResult.winner,
-          count: wasResult.relevantCount,
-        });
+        expect({ language, index, winner: isResult.winner, count: isResult.relevantCount }).toEqual(
+          {
+            language,
+            index,
+            winner: wasResult.winner,
+            count: wasResult.relevantCount,
+          },
+        );
         // +25 exactly — the authorized summary-demonym weight, not a range.
         expect(isResult.score - wasResult.score).toBe(25);
       });
@@ -777,7 +807,7 @@ describe('country relevance — M66.14B prepared-text optimization preserves sem
 
     for (const language of ['en', 'pl'] as const) {
       const layer1 = PRE_CORRECTION_GOLDEN[language].split('|');
-      const layer3 = GOLDEN[language].split('|');
+      const layer3 = GOLDEN_AFTER_SOUTH_SUDAN[language].split('|');
 
       layer3.forEach((encoded, index) => {
         if (MOVED.has(index)) {
@@ -787,6 +817,40 @@ describe('country relevance — M66.14B prepared-text optimization preserves sem
         expect({ language, index, encoded }).toEqual({ language, index, encoded: layer1[index] });
       });
     }
+  });
+
+  it('LAYER 4 — layer-3 -> layer-4 moves exactly ONE article: KR becomes relevant to "The Republic of Korea and Cote d Ivoire met"', () => {
+    const REPUBLIC_OF_KOREA_INDEX = 23;
+    let changes = 0;
+
+    for (const language of ['en', 'pl'] as const) {
+      const before = GOLDEN_AFTER_SOUTH_SUDAN[language].split('|');
+      const after = GOLDEN[language].split('|');
+
+      expect(after).toHaveLength(before.length);
+
+      after.forEach((encoded, index) => {
+        if (encoded === before[index]) {
+          return;
+        }
+        changes += 1;
+        expect({ language, index }).toEqual({ language, index: REPUBLIC_OF_KOREA_INDEX });
+
+        const wasResult = expected(before[index]);
+        const isResult = expected(encoded);
+        // The governed alias adds a country; it removes none and changes no score.
+        expect({ language, was: wasResult.winner, is: isResult.winner }).toEqual({
+          language,
+          was: 'CI',
+          is: 'KR',
+        });
+        expect(isResult.relevantCount).toBe(wasResult.relevantCount + 1);
+        expect(isResult.score).toBe(wasResult.score);
+      });
+    }
+
+    // Non-vacuous, and exactly the one article in both languages.
+    expect(changes).toBe(2);
   });
 
   it('articleMentionsCity is untouched — containsWholePhrase keeps its public behaviour', () => {
@@ -897,9 +961,21 @@ describe('G2 Correction A — a curated city resolves its own country, and nothi
   */
   it('SUCCESSFUL MATCHES — a city in the TITLE scores as a country reference in the title', () => {
     const cases: Array<[string, string, CountryMeta]> = [
-      ['Kyiv says talks on the grain corridor will resume next week', 'Negotiators are expected to meet again.', ukraine],
-      ['Berlin coalition agrees on a new energy subsidy package', 'The measure takes effect in January.', germany],
-      ['Beijing reports stronger third-quarter exports', 'Demand rose across south-east Asia.', china],
+      [
+        'Kyiv says talks on the grain corridor will resume next week',
+        'Negotiators are expected to meet again.',
+        ukraine,
+      ],
+      [
+        'Berlin coalition agrees on a new energy subsidy package',
+        'The measure takes effect in January.',
+        germany,
+      ],
+      [
+        'Beijing reports stronger third-quarter exports',
+        'Demand rose across south-east Asia.',
+        china,
+      ],
       ['Tokyo signals it is ready to act on the currency', 'Traders expect intervention.', japan],
       ['New Delhi unveils a rail investment plan', 'The programme will run for five years.', india],
     ];
@@ -918,11 +994,17 @@ describe('G2 Correction A — a curated city resolves its own country, and nothi
 
   it('SUCCESSFUL MATCH — a city in the SUMMARY scores exactly as a country name there would', () => {
     const withCity = scoreCountryRelevance(
-      { title: 'Farmers block motorways in a widening protest', summary: 'Demonstrations spread from Paris to the south.' },
+      {
+        title: 'Farmers block motorways in a widening protest',
+        summary: 'Demonstrations spread from Paris to the south.',
+      },
       france,
     );
     const withName = scoreCountryRelevance(
-      { title: 'Farmers block motorways in a widening protest', summary: 'Demonstrations spread from France to the south.' },
+      {
+        title: 'Farmers block motorways in a widening protest',
+        summary: 'Demonstrations spread from France to the south.',
+      },
       france,
     );
 
@@ -934,20 +1016,28 @@ describe('G2 Correction A — a curated city resolves its own country, and nothi
   it('BOTH SPELLINGS the repository curates resolve the same country', () => {
     for (const city of ['Kyiv', 'Kiev']) {
       expect(
-        scoreCountryRelevance({ title: `${city} confirms the schedule`, summary: 'Officials gave no further detail.' }, ukraine)
-          .isRelevant,
+        scoreCountryRelevance(
+          { title: `${city} confirms the schedule`, summary: 'Officials gave no further detail.' },
+          ukraine,
+        ).isRelevant,
       ).toBe(true);
     }
   });
 
   it('A CITY NEVER RESOLVES A COUNTRY THAT DOES NOT OWN IT', () => {
-    const article = { title: 'Berlin coalition agrees on a new energy subsidy package', summary: 'The measure takes effect in January.' };
+    const article = {
+      title: 'Berlin coalition agrees on a new energy subsidy package',
+      summary: 'The measure takes effect in January.',
+    };
 
     // Germany owns 'berlin'. Nobody else may claim it.
     expect(scoreCountryRelevance(article, germany).isRelevant).toBe(true);
 
     for (const other of [ukraine, france, unitedStates, china, japan]) {
-      expect({ iso2: other.iso2, relevant: scoreCountryRelevance(article, other).isRelevant }).toEqual({
+      expect({
+        iso2: other.iso2,
+        relevant: scoreCountryRelevance(article, other).isRelevant,
+      }).toEqual({
         iso2: other.iso2,
         relevant: false,
       });
@@ -957,7 +1047,10 @@ describe('G2 Correction A — a curated city resolves its own country, and nothi
   it('WHOLE-PHRASE ONLY — a city may not match as a substring of a longer word', () => {
     expect(
       scoreCountryRelevance(
-        { title: 'Parisian bakeries report a quiet summer', summary: 'Trade groups described the season as slow.' },
+        {
+          title: 'Parisian bakeries report a quiet summer',
+          summary: 'Trade groups described the season as slow.',
+        },
         france,
       ).isRelevant,
     ).toBe(false);
@@ -982,7 +1075,10 @@ describe('G2 Correction A — a curated city resolves its own country, and nothi
 
   it('NO THRESHOLD MOVED — a summary-only reference still scores 30 and is still not relevant', () => {
     const result = scoreCountryRelevance(
-      { title: 'Exports rebound in the third quarter', summary: 'Officials in Berlin welcomed the figures.' },
+      {
+        title: 'Exports rebound in the third quarter',
+        summary: 'Officials in Berlin welcomed the figures.',
+      },
       germany,
     );
 
@@ -1020,7 +1116,10 @@ describe('G2 Correction A — person-name collisions are rejected, and only thos
 
     expect(
       scoreCountryRelevance(
-        { title: 'Irving Berlin retrospective opens', summary: 'The singer’s catalogue is performed in full.' },
+        {
+          title: 'Irving Berlin retrospective opens',
+          summary: 'The singer’s catalogue is performed in full.',
+        },
         germany,
       ).isRelevant,
     ).toBe(false);
@@ -1029,7 +1128,10 @@ describe('G2 Correction A — person-name collisions are rejected, and only thos
   it('REJECTED — the city as a FORENAME, with or without person context', () => {
     expect(
       scoreCountryRelevance(
-        { title: 'Paris Hilton launches a new venture', summary: 'The actress described it as a long-term project.' },
+        {
+          title: 'Paris Hilton launches a new venture',
+          summary: 'The actress described it as a long-term project.',
+        },
         france,
       ).isRelevant,
     ).toBe(false);
@@ -1066,14 +1168,25 @@ describe('G2 Correction A — person-name collisions are rejected, and only thos
   */
   it('REJECTED — organisation and monument names built on a city, exactly like personal names', () => {
     const cases: Array<[string, string, CountryMeta]> = [
-      ['Berlin Wall anniversary marked across the city', 'Ceremonies ran through the afternoon.', germany],
+      [
+        'Berlin Wall anniversary marked across the city',
+        'Ceremonies ran through the afternoon.',
+        germany,
+      ],
       ['Tokyo Olympics venues find new tenants', 'Operators confirmed the leases.', byIso2('JP')],
       ['Moscow Exchange extends trading hours', 'The change applies from Monday.', russia],
-      ['Kigali Coffee Co. opens new location', 'The cafe chain expanded to a third city.', byIso2('RW')],
+      [
+        'Kigali Coffee Co. opens new location',
+        'The cafe chain expanded to a third city.',
+        byIso2('RW'),
+      ],
     ];
 
     for (const [title, summary, country] of cases) {
-      expect({ title, relevant: scoreCountryRelevance({ title, summary }, country).isRelevant }).toEqual({
+      expect({
+        title,
+        relevant: scoreCountryRelevance({ title, summary }, country).isRelevant,
+      }).toEqual({
         title,
         relevant: false,
       });
@@ -1083,13 +1196,20 @@ describe('G2 Correction A — person-name collisions are rejected, and only thos
   it('NON-VACUOUS — every city rejected above still resolves under clear locative use', () => {
     const cases: Array<[string, string, CountryMeta]> = [
       ['Berlin coalition agrees on the energy package', 'It takes effect in January.', germany],
-      ['Tokyo signals it is ready to act on the currency', 'Traders expect intervention.', byIso2('JP')],
+      [
+        'Tokyo signals it is ready to act on the currency',
+        'Traders expect intervention.',
+        byIso2('JP'),
+      ],
       ['Moscow confirmed the agreement on Tuesday', 'Both sides issued statements.', russia],
       ['Kigali hosts the regional summit', 'Officials gathered for two days.', byIso2('RW')],
     ];
 
     for (const [title, summary, country] of cases) {
-      expect({ title, relevant: scoreCountryRelevance({ title, summary }, country).isRelevant }).toEqual({
+      expect({
+        title,
+        relevant: scoreCountryRelevance({ title, summary }, country).isRelevant,
+      }).toEqual({
         title,
         relevant: true,
       });
@@ -1114,7 +1234,10 @@ describe('G2 Correction A — person-name collisions are rejected, and only thos
   it('THE COUNTRY-NAME SURNAME GUARD IS UNTOUCHED — it still fires exactly as before', () => {
     // The pre-existing isLikelySurnameOnlyMention() path, unchanged by this work.
     const result = scoreCountryRelevance(
-      { title: 'Local team wins the final', summary: 'The student Ryan Chad scored twice in the second half.' },
+      {
+        title: 'Local team wins the final',
+        summary: 'The student Ryan Chad scored twice in the second half.',
+      },
       byIso2('TD'),
     );
 
@@ -1146,9 +1269,9 @@ describe('G2 Correction B — the resolver end to end', () => {
     });
 
     it('CORRECTION A — a curated CITY still resolves its own country', () => {
-      expect(resolve('Kyiv says talks on grain corridor resume', 'Negotiators meet next week.')).toBe(
-        'UA',
-      );
+      expect(
+        resolve('Kyiv says talks on grain corridor resume', 'Negotiators meet next week.'),
+      ).toBe('UA');
       expect(resolve('Berlin coalition agrees on energy subsidies', 'It starts in January.')).toBe(
         'DE',
       );
@@ -1170,7 +1293,11 @@ describe('G2 Correction B — the resolver end to end', () => {
   describe('SAFE DEMONYMS RESOLVE', () => {
     it('a Tier 1 demonym in the title resolves at exactly 45', () => {
       const cases: Array<[string, string, string]> = [
-        ['Ukrainian forces repel an overnight drone strike', 'Air defences intercepted most.', 'UA'],
+        [
+          'Ukrainian forces repel an overnight drone strike',
+          'Air defences intercepted most.',
+          'UA',
+        ],
         ['Pakistani regulators publish the final guidance', 'It applies from Monday.', 'PK'],
         ['Kenyan operators expand the payments framework', 'The rollout begins next month.', 'KE'],
         ['Australian firms face new emissions reporting', 'The rules start in July.', 'AU'],
@@ -1201,7 +1328,9 @@ describe('G2 Correction B — the resolver end to end', () => {
     it('a demonym in the SUMMARY ALONE is not enough — 25 is below the threshold', () => {
       // Deliberately conservative: a passing nationality mention must not put a
       // marker on a map by itself.
-      expect(resolve('Quarterly figures published', 'Ukrainian officials welcomed them.')).toBeNull();
+      expect(
+        resolve('Quarterly figures published', 'Ukrainian officials welcomed them.'),
+      ).toBeNull();
     });
   });
 
@@ -1213,9 +1342,9 @@ describe('G2 Correction B — the resolver end to end', () => {
     });
 
     it('Ukrainian refugees settle in Poland -> Poland', () => {
-      expect(resolve('Ukrainian refugees settle in Poland', 'Councils said housing is stretched.')).toBe(
-        'PL',
-      );
+      expect(
+        resolve('Ukrainian refugees settle in Poland', 'Councils said housing is stretched.'),
+      ).toBe('PL');
     });
 
     it('the ranking is structural, not incidental — a place scores 60, a demonym 45', () => {
@@ -1253,14 +1382,16 @@ describe('G2 Correction B — the resolver end to end', () => {
     });
 
     it('the same longest-name rule fixes Congo and Guinea, which share the defect', () => {
-      expect(resolve('DR Congo announces mining reform', 'Officials confirmed the timetable.')).toBe(
-        'CD',
+      expect(
+        resolve('DR Congo announces mining reform', 'Officials confirmed the timetable.'),
+      ).toBe('CD');
+      expect(resolve('Papua New Guinea signs the accord', 'The prime minister attended.')).toBe(
+        'PG',
       );
-      expect(resolve('Papua New Guinea signs the accord', 'The prime minister attended.')).toBe('PG');
       // And the shorter names still work on their own.
-      expect(resolve('Guinea holds the vote in October', 'The commission published the roll.')).toBe(
-        'GN',
-      );
+      expect(
+        resolve('Guinea holds the vote in October', 'The commission published the roll.'),
+      ).toBe('GN');
     });
   });
 
@@ -1281,28 +1412,36 @@ describe('G2 Correction B — the resolver end to end', () => {
     });
 
     it('NON-VACUOUS — the same demonyms resolve when NOT in a compound', () => {
-      expect(resolve('German factories report a second monthly decline', 'Output fell.')).toBe('DE');
-      expect(resolve('Russian output steadies after the cut', 'Producers confirmed it.')).toBe('RU');
+      expect(resolve('German factories report a second monthly decline', 'Output fell.')).toBe(
+        'DE',
+      );
+      expect(resolve('Russian output steadies after the cut', 'Producers confirmed it.')).toBe(
+        'RU',
+      );
       expect(resolve('Indian officials described the milestone', 'It is on schedule.')).toBe('IN');
     });
   });
 
   describe('CTO RULE — capitalisation protects against lexical false positives', () => {
     it('nail polish... -> unresolved', () => {
-      expect(resolve('Nail polish sales rebound in the quarter', 'Retailers saw demand.')).toBeNull();
+      expect(
+        resolve('Nail polish sales rebound in the quarter', 'Retailers saw demand.'),
+      ).toBeNull();
     });
 
     it('an afghan (the blanket) -> unresolved', () => {
-      expect(resolve('An afghan was draped over the sofa', 'The auction listed textiles.')).toBeNull();
+      expect(
+        resolve('An afghan was draped over the sofa', 'The auction listed textiles.'),
+      ).toBeNull();
     });
 
     it('NON-VACUOUS — capitalised, the same words resolve', () => {
       expect(resolve('Polish border works enter a second phase', 'Contractors confirmed.')).toBe(
         'PL',
       );
-      expect(resolve('Afghan officials confirmed the crossing', 'Traffic resumed on Tuesday.')).toBe(
-        'AF',
-      );
+      expect(
+        resolve('Afghan officials confirmed the crossing', 'Traffic resumed on Tuesday.'),
+      ).toBe('AF');
     });
 
     it("an ISO code is only a code when written as one — 'in', 'can', 'and', 'are' are not countries", () => {
@@ -1343,7 +1482,10 @@ describe('G2 Correction B — the resolver end to end', () => {
 
     it('EQUAL competing demonym evidence resolves to NOTHING — declaration order never decides', () => {
       expect(
-        resolve('Indian students face new Canadian visa rules', 'The change takes effect in March.'),
+        resolve(
+          'Indian students face new Canadian visa rules',
+          'The change takes effect in March.',
+        ),
       ).toBeNull();
     });
 
@@ -1386,11 +1528,24 @@ describe('G2 Correction B — the resolver end to end', () => {
 
       expect(table).not.toBeNull();
 
-      for (const banned of ["'korean'", "'congolese'", "'guinean'", "'dominican'", "'american'", "'georgian'", "'english'"]) {
+      for (const banned of [
+        "'korean'",
+        "'congolese'",
+        "'guinean'",
+        "'dominican'",
+        "'american'",
+        "'georgian'",
+        "'english'",
+      ]) {
         expect({ banned, present: table![0].includes(banned) }).toEqual({ banned, present: false });
       }
 
-      for (const required of ["'south korean'", "'north korean'", "'south sudanese'", "'papua new guinean'"]) {
+      for (const required of [
+        "'south korean'",
+        "'north korean'",
+        "'south sudanese'",
+        "'papua new guinean'",
+      ]) {
         expect({ required, present: table![0].includes(required) }).toEqual({
           required,
           present: true,
@@ -1457,12 +1612,17 @@ describe('Milestone 27 — a city inside a proper name may not establish geograp
 
   it('THE CONTRAST — the same city, both ways, in one test', () => {
     // Locative: Kigali is doing the work of a place.
-    expect(resolve('Kigali marks anniversary with a national ceremony', 'The capital city held the event.')).toBe(
-      'RW',
-    );
+    expect(
+      resolve(
+        'Kigali marks anniversary with a national ceremony',
+        'The capital city held the event.',
+      ),
+    ).toBe('RW');
 
     // Proper name: Kigali is part of a company's name.
-    expect(resolve('Kigali Coffee Co. opens new location', 'The cafe chain expanded to a third city.')).toBeNull();
+    expect(
+      resolve('Kigali Coffee Co. opens new location', 'The cafe chain expanded to a third city.'),
+    ).toBeNull();
   });
 
   it('THE MILESTONE 27 CORPUS still qualifies — every legitimate Kigali fixture', () => {
@@ -1484,7 +1644,11 @@ describe('Milestone 27 — a city inside a proper name may not establish geograp
       ['person', 'Paris Hilton launches a new venture', 'It is a long-term project.'],
       ['organisation', 'Kigali Coffee Co. opens new location', 'The chain expanded again.'],
       ['organisation', 'Moscow Exchange extends trading hours', 'The change applies Monday.'],
-      ['monument', 'Berlin Wall anniversary marked across the city', 'Ceremonies ran all afternoon.'],
+      [
+        'monument',
+        'Berlin Wall anniversary marked across the city',
+        'Ceremonies ran all afternoon.',
+      ],
       ['event', 'Tokyo Olympics venues find new tenants', 'Operators confirmed the leases.'],
     ];
 
@@ -1513,21 +1677,21 @@ describe('Milestone 27 — a city inside a proper name may not establish geograp
     });
 
     it('Addis Ababa hosts ... remains valid', () => {
-      expect(resolve('Addis Ababa hosts the continental summit', 'Leaders met for three days.')).toBe(
-        'ET',
-      );
+      expect(
+        resolve('Addis Ababa hosts the continental summit', 'Leaders met for three days.'),
+      ).toBe('ET');
     });
 
     it('in Addis Ababa ... remains valid', () => {
-      expect(resolve('The signing took place in Addis Ababa', 'Both parties confirmed the terms.')).toBe(
-        'ET',
-      );
+      expect(
+        resolve('The signing took place in Addis Ababa', 'Both parties confirmed the terms.'),
+      ).toBe('ET');
     });
 
     it('a geographic preposition still overrides an adjacent capitalised word', () => {
-      expect(resolve('Talks continue in Paris Thursday', 'Delegates met through the evening.')).toBe(
-        'FR',
-      );
+      expect(
+        resolve('Talks continue in Paris Thursday', 'Delegates met through the evening.'),
+      ).toBe('FR');
     });
   });
 
@@ -1543,7 +1707,9 @@ describe('Milestone 27 — a city inside a proper name may not establish geograp
     SHOULD FAIL and be converted. That is the intended signal.
   */
   it('KNOWN LIMITATION — a fully title-cased headline fails closed rather than guessing', () => {
-    expect(resolve('Kigali Marks Anniversary With National Ceremony', 'Officials attended.')).toBeNull();
+    expect(
+      resolve('Kigali Marks Anniversary With National Ceremony', 'Officials attended.'),
+    ).toBeNull();
 
     // Sentence case — the same story — resolves.
     expect(resolve('Kigali marks anniversary with national ceremony', 'Officials attended.')).toBe(
