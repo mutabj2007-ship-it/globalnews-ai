@@ -56,9 +56,13 @@ import { semanticReaderText } from '../ask-router/semantic-ir/interpret-turn';
 import {
   artifactIdentity,
   artifactPromptBlock,
+  serverArtifact,
   splitArtifact,
+  withScope,
+  type ArtifactScope,
   type ConversationArtifact,
 } from './conversation/conversation-artifact';
+import { executionContractOf, type ExecutionContract } from './execution-contract';
 import {
   answerStateBeforeExecution,
   deriveAnswerState,
@@ -192,6 +196,112 @@ const PLAN_VALIDITY_MS = 15 * 60 * 1000;
 function retrievalLanguageOf(language: AskRequest['language']): LanguageCode {
   return language === 'de' || language === 'pt' ? 'en' : language;
 }
+/**
+ * R4 ALPHA R-1 / R-5 — the execution contract's answer rules travel through the EXISTING governed
+ * prompt boundary: trusted rules to the system prompt, delimited data to the user message.
+ */
+function withContractRules(
+  governed: { readonly rules: string; readonly data: string },
+  contract: ExecutionContract,
+): { governed?: { rules: string; data: string } } {
+  const rules = [governed.rules, contract.answerRules].filter((r) => r !== '').join('\n\n');
+  const data = [governed.data, contract.answerData].filter((d) => d !== '').join('\n\n');
+  return rules === '' ? {} : { governed: { rules, data } };
+}
+
+/**
+ * R4 ALPHA R-3 — the original semantic scope of an answered turn, from the route that answered it
+ * (codes and the composed question only — never model text).
+ */
+function scopeOfRoute(route: AskR2Route): ArtifactScope {
+  const states = route.semantic.entities
+    .filter((e) => (e.type === 'COUNTRY' || e.type === 'TERRITORY') && e.iso3 !== null)
+    .map((e) => e.iso3 as string);
+  return {
+    question: route.source.rawQuestion,
+    job: route.job.job,
+    countries: [...new Set([...(route.relationship?.countries ?? []), ...states])],
+    relation: route.relationship?.relations[0] ?? null,
+    freshness: route.semantic.turn.freshness,
+  };
+}
+
+/** Up to n sentences of authored text, as short claim points (prompt data, never evidence). */
+function leadingSentences(text: string, n: number): string[] {
+  return text
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((t) => t.replace(/^[#>*\-\s\d.]+/, '').trim())
+    .filter((t) => t.length > 0)
+    .slice(0, n);
+}
+
+/**
+ * R4 ALPHA R-3 — EVERY ANSWERED TURN BECOMES REFERABLE CONVERSATION WORK, through the one artifact
+ * authority. A model-emitted structure keeps its content and gains the server's scope; otherwise the
+ * server records what the answer was: an answer from sourced reporting (its claim points + evidence
+ * references), a truthful "no qualifying reporting" answer, or a reasoning answer. A clarification,
+ * an unavailability or a refusal answered nothing and records nothing.
+ */
+function answerMemory(
+  route: AskR2Route,
+  answer: AnswerDecision,
+  analysis: AnalysisApiResponse | null,
+  backgroundText: string | null,
+  modelArtifact: ConversationArtifact | null,
+  artifactUsed: ConversationArtifact | null = null,
+): ConversationArtifact | null {
+  if (answer.state === 'CLARIFICATION_REQUIRED' || answer.state === 'CAPABILITY_UNAVAILABLE')
+    return null;
+  /* An answer that EXPLAINS earlier sourced work ("Why did you say that?") makes no new claim and
+     retrieves nothing: the conversation's claim stays the one the sourced answer made, so a later
+     "Is it still true now?" re-verifies THAT claim, in THAT scope (R-5) — not the explanation. */
+  if (
+    analysis === null &&
+    route.job.discourseReference === 'PRIOR_WORK' &&
+    artifactUsed !== null &&
+    artifactUsed.provenance === 'SOURCED_REPORTING'
+  ) {
+    const { sourceOperationId: _carried, ...referent } = artifactUsed as ConversationArtifact & {
+      sourceOperationId?: string;
+    };
+    void _carried;
+    return referent;
+  }
+  const scope = scopeOfRoute(route);
+  if (modelArtifact !== null && analysis === null) return withScope(modelArtifact, scope);
+  const label = route.source.rawQuestion;
+  if (analysis !== null) {
+    const result = analysis.analysis;
+    const points =
+      result === null
+        ? ['No qualifying reporting was found for this question at the time it was asked.']
+        : [
+            ...(typeof result.headline === 'string' ? [result.headline] : []),
+            ...(Array.isArray(result.keyFacts) ? result.keyFacts.map((k) => k?.claim) : []),
+          ].filter((p): p is string => typeof p === 'string');
+    return serverArtifact({
+      kind: 'SOURCED_REPORT',
+      provenance: 'SOURCED_REPORTING',
+      label,
+      components: [
+        ...points,
+        ...(backgroundText === null ? [] : leadingSentences(backgroundText, 2)),
+      ],
+      scope,
+      evidenceRefs: (Array.isArray(analysis.articles) ? analysis.articles : []).map((a) => a?.id),
+    });
+  }
+  if (backgroundText !== null)
+    return serverArtifact({
+      kind: 'REASONED_ANSWER',
+      provenance: 'MODEL_REASONING',
+      label,
+      components: leadingSentences(backgroundText, 4),
+      scope,
+    });
+  return null;
+}
+
 function answerLanguageOf(language: AskRequest['language']): { answerLanguage?: DisplayLocale } {
   return retrievalLanguageOf(language) === language ? {} : { answerLanguage: language };
 }
@@ -267,7 +377,13 @@ export function routeFor(
       /* CTO R4 — this conversation's earlier work (memory, never scope or evidence) */
       ...(request.priorArtifact === undefined
         ? {}
-        : { priorWork: { kind: request.priorArtifact.kind, label: request.priorArtifact.label } }),
+        : {
+            priorWork: {
+              kind: request.priorArtifact.kind,
+              label: request.priorArtifact.label,
+              provenance: request.priorArtifact.provenance,
+            },
+          }),
       ...(semanticResolution === undefined ? {} : { semanticResolution }),
     },
     deps,
@@ -841,13 +957,30 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         route,
         operationId,
         this.observeAnswer(
-          { state: 'CLARIFICATION_REQUIRED', basis: 'INTERPRETATION_UNRESOLVED', missingRoles: [] },
+          {
+            state: 'CLARIFICATION_REQUIRED',
+            /* R4 ALPHA R-4 — a reference to an earlier answer this thread does not hold */
+            basis:
+              route.priorReferenceUnresolved === true
+                ? 'PRIOR_REFERENCE_UNRESOLVED'
+                : 'INTERPRETATION_UNRESOLVED',
+            missingRoles: [],
+          },
           draft,
         ),
         null,
         false,
       );
     }
+
+    /* CTO R4 ALPHA R-1 — ONE execution contract from the authoritative route: execution never
+       re-derives the turn's meaning from raw text after interpretation (execution-contract.ts) */
+    const contract = executionContractOf({
+      question: request.question,
+      language: request.language,
+      route,
+      ...(request.priorArtifact === undefined ? {} : { priorArtifact: request.priorArtifact }),
+    });
 
     if (route.knowledgeRequirement === 'DECISION_SUPPORT' && route.decisionObjective === null) {
       return this.result(
@@ -886,6 +1019,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         draft,
         'UNAVAILABLE',
         semanticRun,
+        contract.stableQuestion ?? undefined,
       );
     }
 
@@ -1096,13 +1230,16 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
          is still a call that happened — the number an operator needs is attempts. */
       draft.providerCallCount = 1;
       response = await this.analyze(
-        request.question,
+        /* R4 ALPHA R-1 — what reporting is retrieved for, decided by the route (the composed
+           question, a MIXED turn's current part, or the bound earlier answer's own scope) */
+        contract.retrievalQuestion,
         retrievalLanguageOf(request.language),
         /* R2B — the SERVER-RESOLVED story (built from the retained row), never client text. */
         request.context?.kind === 'STORY' ? request.context.storyContext : undefined,
         /* ASK R3 CONTINUITY — the landed path routes a follow-up by the PRIOR USER question
-           (never the prior AI answer); the model still receives this turn's own question. */
-        who.priorQuestion ?? undefined,
+           (never the prior AI answer); the model still receives this turn's own question.
+           R4 ALPHA R-1 — never once the IR resolved the subject itself (a second interpreter). */
+        contract.usePriorQuestion ? (who.priorQuestion ?? undefined) : undefined,
         /* selection — R2D. */
         undefined,
         /* R2B — the SERVER-RESOLVED geography (ISO3 + registry name), never client text. */
@@ -1113,7 +1250,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
             usage = { promptTokens: u.promptTokens, completionTokens: u.completionTokens };
           },
           ...answerLanguageOf(request.language),
-          ...(governed.rules === '' ? {} : { governed }),
+          ...withContractRules(governed, contract),
           /* BETA-ASK-005 — the router's bounded publication window (server request instant). */
           ...(route.reportingWindow === null
             ? {}
@@ -1127,13 +1264,14 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
           /* PUBLIC BETA HARDENING R1B — an open-ended world-headlines request is retrieved as
              headlines. A plain Ask only: deep / report work keeps its own path. */
           ...(route.broadHeadlines && request.intent === 'ask' ? { broadHeadlines: true } : {}),
-          /* R3 §14 / PO-02 — only reports about the relationship itself are evidence for it. */
-          ...(route.relationship === null
+          /* R3 §14 / PO-02 — only reports about the relationship itself are evidence for it.
+             R4 ALPHA R-5 — a re-verified earlier answer keeps that answer's two-sided scope. */
+          ...(contract.relationship === null
             ? {}
             : {
                 relationship: {
-                  countries: [...route.relationship.countries],
-                  relations: [...route.relationship.relations],
+                  countries: [...contract.relationship.countries],
+                  relations: [...contract.relationship.relations],
                 },
               }),
         },
@@ -1188,6 +1326,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         operationId,
         draft,
         noEvidence ? 'NO_EVIDENCE' : 'UNAVAILABLE',
+        undefined,
+        contract.stableQuestion ?? undefined,
       );
     }
     if ((outcome !== 'SUCCESS' && !noEvidence) || response === null) {
@@ -1259,6 +1399,16 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       draft.promptTokens = measured.promptTokens;
       draft.completionTokens = measured.completionTokens;
     }
+    /*
+      CTO R4 ALPHA R-2 — MIXED MEANS BOTH JOBS ARE ANSWERED. Live defect 364492e4: the two-part
+      composition ran only when the current part FAILED; a successful retrieval let current reporting
+      stand in for the explanatory half. Now the explanatory part is answered by reasoning beside the
+      sourced current part, whatever the retrieval returned. Its own controls; its own model call.
+    */
+    const stable =
+      contract.kind === 'MIXED_CURRENT_PART' && contract.stableQuestion !== null
+        ? await this.answerStablePart(request, route, contract.stableQuestion, draft)
+        : null;
     return this.result(
       plan,
       route,
@@ -1266,7 +1416,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       this.observeAnswer(answer, draft),
       response,
       aiExecuted,
-      null,
+      stable,
       corroboration === null || verification === undefined
         ? null
         : {
@@ -1281,6 +1431,15 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
                 : { family: corroboration.fact.family, value: corroboration.fact.value },
           },
       contributions,
+      null,
+      null,
+      null,
+      null,
+      contract.kind === 'MIXED_CURRENT_PART'
+        ? stable === null
+          ? 'UNAVAILABLE'
+          : 'ANSWERED'
+        : null,
     );
   }
 
@@ -1642,6 +1801,81 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       : { verdict, calls: 1, source: 'SEMANTIC', tokens };
   }
 
+  /**
+   * R4 ALPHA R-2 — the explanatory part of a MIXED turn whose current part was SOURCED: one bounded
+   * call to the background provider, behind the same controls as every background answer (breaker,
+   * meter, guest scope). Returns the authored text (paragraphs, headings and lists as written), or
+   * null when it was declined or failed — the sourced current part then still stands, and the
+   * answer says the explanatory part is missing (never silently).
+   */
+  private async answerStablePart(
+    request: Readonly<AskRequest>,
+    route: AskR2Route,
+    stableQuestion: string,
+    draft: AskObservationDraft,
+  ): Promise<string | null> {
+    const who = askRequestContext.getStore();
+    if (who === undefined) return null;
+    const ceiling = completionCeilingFor(route.job);
+    const provider = this.background.id;
+    const permit = await this.breaker.permit(provider);
+    if (!permit.allowed) return null;
+    const guest = await this.resolveGuestComputeScope(who);
+    const reservation = await this.meter.reserve({
+      accountId: who.accountId,
+      ipScope: who.ipScope,
+      ...(guest === undefined ? {} : { guest }),
+      provider,
+      estimatedUnits: estimateBackgroundUnits(
+        stableQuestion.length,
+        this.meter.config.outputWeight,
+        ceiling,
+      ),
+    });
+    if (!reservation.admitted) {
+      await this.breaker.record(provider, 'REFUSAL', permit.trial);
+      return null;
+    }
+    let usage: { promptTokens: number; completionTokens: number } | null = null;
+    let outcome: BreakerOutcome = 'FAILURE';
+    let text: string | null = null;
+    try {
+      draft.providerCallCount += 1;
+      const out = await this.background.answerBackground({
+        question: stableQuestion,
+        responseLanguage: request.language,
+        maxModelAttempts: ASK_MODEL_MAX_ATTEMPTS,
+        usageSink: (u) => {
+          usage = { promptTokens: u.promptTokens, completionTokens: u.completionTokens };
+        },
+      });
+      text = out.text === null ? null : splitArtifact(out.text).text;
+      outcome = text === null ? 'REFUSAL' : 'SUCCESS';
+    } catch (error) {
+      outcome =
+        (error as { failureReason?: unknown })?.failureReason === 'provider-timeout' ||
+        /timeout|timed out|deadline/i.test((error as Error)?.message ?? '')
+          ? 'TIMEOUT'
+          : 'FAILURE';
+    } finally {
+      const used = usage as { promptTokens: number; completionTokens: number } | null;
+      await this.meter.settle(
+        reservation.reservationId,
+        used === null
+          ? null
+          : used.promptTokens + this.meter.config.outputWeight * used.completionTokens,
+        text === null && outcome === 'REFUSAL' ? 'NO_EVIDENCE' : outcome,
+      );
+      await this.breaker.record(provider, outcome, permit.trial);
+      if (used !== null) {
+        draft.promptTokens = (draft.promptTokens ?? 0) + used.promptTokens;
+        draft.completionTokens = (draft.completionTokens ?? 0) + used.completionTokens;
+      }
+    }
+    if (text !== null) draft.modelInvocationCount += 1;
+    return text;
+  }
+
   private async executeBackground(
     request: Readonly<AskRequest>,
     plan: Readonly<AskPlan>,
@@ -1652,6 +1886,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     partialCurrent?: 'UNAVAILABLE' | 'NO_EVIDENCE',
     /** CTO R4 — the semantic classification that preceded this answer (UNRESOLVED questions). */
     semantic?: ClassifierRun,
+    /** R4 ALPHA R-2 — a MIXED turn's explanatory part: what this reasoning call answers */
+    stableQuestion?: string,
   ): Promise<ExecutionResult> {
     /* CTO R4 — the job's rules, the conversation's earlier work and the answer's ceiling */
     const ceiling = completionCeilingFor(route.job);
@@ -1713,7 +1949,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
          A partial answer (R3 §6) already made the reporting attempt: this is the second call. */
       draft.providerCallCount = partialCurrent === undefined ? 1 : draft.providerCallCount + 1;
       const out = await this.background.answerBackground({
-        question: request.question,
+        question: stableQuestion ?? request.question,
         responseLanguage: request.language,
         maxModelAttempts: ASK_MODEL_MAX_ATTEMPTS,
         usageSink: (u) => {
@@ -2047,6 +2283,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         (ConversationArtifact & { readonly sourceOperationId?: string }) | null;
       readonly classifier: ClassifierRun | null;
     } | null = null,
+    /** R4 ALPHA R-2 — set only when the execution contract split a MIXED turn: the stable part's outcome */
+    mixedStable: 'ANSWERED' | 'UNAVAILABLE' | null = null,
   ): ExecutionResult {
     this.logger.log(
       `ask-r2 operation=${operationId} class=${route.plan.questionClass} terminal=${route.plan.terminalState} ` +
@@ -2105,6 +2343,19 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
               },
             }
           : {}),
+        /* R4 ALPHA R-2 — a MIXED turn whose current part was sourced: the explanatory part is the
+           reasoning beside it (`background`), the current part is the sourced `analysis`; the
+           guidance names both, and says when the explanatory part could not be produced */
+        ...(mixedStable !== null && analysis !== null && partialCurrent === null
+          ? {
+              guidance: {
+                kind: 'MIXED_REFERENCE_CURRENT',
+                currentEvidenceNeeded: route.currentEvidenceNeeded,
+                currentPart: 'SOURCED',
+                stablePart: mixedStable,
+              },
+            }
+          : {}),
         /* R3 §14 — the two-sided scope of a relationship question (both countries, the relation) */
         ...(route.relationship === null ? {} : { relationship: route.relationship }),
         /* CTO R4 — conceptual / conversational work done by reasoning is labelled as such (zero
@@ -2126,8 +2377,24 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
               },
             }
           : {}),
-        /* CTO R4 — this answer's conversation memory (model reasoning; never evidence) */
-        ...(r4?.artifact == null ? {} : { artifact: r4.artifact }),
+        /* CTO R4 — this answer's conversation memory (never evidence). R4 ALPHA R-3 — EVERY
+           answered turn registers one, with its original scope (answerMemory above). */
+        ...((): { artifact?: ConversationArtifact } => {
+          /* the answer never depends on the memory: a record that cannot be derived is omitted */
+          try {
+            const memory = answerMemory(
+              route,
+              answer,
+              analysis,
+              backgroundText,
+              r4?.artifact ?? null,
+              r4?.artifactUsed ?? null,
+            );
+            return memory === null ? {} : { artifact: memory };
+          } catch {
+            return r4?.artifact == null ? {} : { artifact: r4.artifact };
+          }
+        })(),
         /* CTO R4 §21 — the job diagnostics (CTO / Admin; not rendered to readers) */
         diagnostics: {
           job: {

@@ -137,8 +137,28 @@ export function interpretSemanticFirstTurn(input: TurnInterpretationInput): {
     semantic.confidence === 'LOW' &&
     candidates.length === 0 &&
     !boundedStateHasWork;
+  /*
+    CTO R4 ALPHA DEFECT RULING R-4 / R-5 — the interpreter-first equivalent of the EN / PL
+    prior-claim decision (interpret-turn.ts), driven by the one verdict, not by a regex bank:
+      R-4  the verdict points back at an earlier ANSWER (ARTIFACT / ARTIFACT_COMPONENT /
+           ARTIFACT_PROPOSITION) but this thread holds no bindable earlier answer → clarification;
+      R-5  it re-examines a CLAIM (ARTIFACT_PROPOSITION) whose earlier answer was model reasoning
+           → not a news-verifiable fact: no current evidence is planned for it.
+  */
+  const pointsBackToAnswer =
+    semantic !== undefined &&
+    (semantic.reference === 'ARTIFACT' ||
+      semantic.reference === 'ARTIFACT_COMPONENT' ||
+      semantic.reference === 'ARTIFACT_PROPOSITION');
+  const priorReferenceUnresolved =
+    pointsBackToAnswer && artifact === undefined && priorRef?.resolved !== true;
+  const priorClaimIsReasoning =
+    semantic?.reference === 'ARTIFACT_PROPOSITION' &&
+    artifact !== undefined &&
+    input.priorWork?.provenance !== 'SOURCED_REPORTING';
   /* the one call was required and produced no valid verdict: the focused clarification */
-  const semanticClarification = r?.path === 'FALLBACK' || unidentifiedCurrentEvent;
+  const semanticClarification =
+    r?.path === 'FALLBACK' || unidentifiedCurrentEvent || priorReferenceUnresolved;
 
   /* ══ ROLES — only from the validated verdict (ids Stage A resolved; only states act) ═══════ */
   const rel = semantic?.relation ?? null;
@@ -177,7 +197,7 @@ export function interpretSemanticFirstTurn(input: TurnInterpretationInput): {
 
   /* ══ CLAUSES — the shared seven-language segmentation layer (RULING B), classified by the one
      interpreter call; one clause = the whole turn ══════════════════════════════════════════ */
-  const needs = semantic?.needsCurrentEvidence === true;
+  const needs = semantic?.needsCurrentEvidence === true && !priorClaimIsReasoning;
   const role = semantic?.temporalRole ?? 'NONE';
   const spans = segmentTurn(readerText, lang);
   const singleKind: InterpretedClauseKind | null =
@@ -445,6 +465,7 @@ export function interpretSemanticFirstTurn(input: TurnInterpretationInput): {
           ? relationship.countries[0]
           : null,
       semanticClarification,
+      priorReferenceUnresolved,
     },
   };
 }

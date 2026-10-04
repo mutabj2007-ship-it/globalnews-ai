@@ -88,6 +88,9 @@ export const OBSERVED_ARTIFACT_KINDS: ReadonlySet<string> = new Set([
   'RECOMMENDATION',
   'PLAN',
   'SUMMARY',
+  /* R4 ALPHA R-3 — server-derived records of answered turns (conversation-artifact.ts) */
+  'SOURCED_REPORT',
+  'REASONED_ANSWER',
 ]);
 
 /*

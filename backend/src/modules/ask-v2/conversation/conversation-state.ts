@@ -13,7 +13,16 @@ import {
   type KnowledgeRequirement,
 } from '../../ask-router/knowledge-requirement';
 import { readDecisionSupport } from '../../ask-router/decision-support';
-import { readRequestAct, readTemporalRoles, readTransformation } from '../../ask-router/user-job';
+import {
+  readRequestAct,
+  readTemporalRoles,
+  readTransformation,
+  referencesOwnPriorStatement,
+} from '../../ask-router/user-job';
+import {
+  readCausalSelfAttribution,
+  readClaimValidity,
+} from '../../ask-router/semantic-ir/prior-claim';
 import {
   conversationObjectiveState,
   readChoiceSet,
@@ -1005,7 +1014,18 @@ function step(
 ): ConversationalTurn {
   const f = readTurn(question, lang);
   const applied = applyTurn(prev, question, f);
-  const continues = !applied.trace.reset && applied.trace.carried.includes('job');
+  /*
+    R4 ALPHA R-5 — a turn about the ASSISTANT'S earlier answer ("Is it still true now?", "Why did you
+    say that?") is resolved by the router against that answer (prior work, R-3), never by wrapping it
+    in the reader's earlier subject: "Between India and China (trade): Is it still true now?" no
+    longer has the claim-validity form, so the earlier claim was never re-examined.
+  */
+  const aboutEarlierAnswer =
+    readClaimValidity(question, lang) ||
+    referencesOwnPriorStatement(question, lang) ||
+    readCausalSelfAttribution(question, lang);
+  const continues =
+    !applied.trace.reset && applied.trace.carried.includes('job') && !aboutEarlierAnswer;
   const constraintOnly =
     isConstraintStatement(f) &&
     f.countries.length === 0 &&

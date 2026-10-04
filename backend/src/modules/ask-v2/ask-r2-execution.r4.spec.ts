@@ -198,6 +198,15 @@ describe('R4 — Prime Moment journey through the adapter: zero news, one reason
       components: ['peak capability', 'peak recognition', 'overextension', 'complacency'],
       provenance: 'MODEL_REASONING',
       citable: false,
+      /* R4 ALPHA R-3 — the model's structure keeps its content and gains the server's scope */
+      scope: {
+        question:
+          'indicate how a prime moment of someone can lead him to losing whatever he had in life',
+        job: 'DEEP_CONCEPTUAL_ANALYSIS',
+        countries: [],
+        relation: null,
+        freshness: 'NONE',
+      },
     });
     expect(p.guidance?.kind).toBe('CONCEPTUAL_ANALYSIS');
     expect(p.diagnostics.job).toMatchObject({

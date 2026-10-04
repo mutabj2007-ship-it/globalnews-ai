@@ -399,7 +399,9 @@ export function askR2View(
   /* R3 §12 — "best for what?" offers objectives, never places; §23 a noted constraint offers none */
   const objectiveAsk = basis === 'DECISION_OBJECTIVE_MISSING';
   const candidates =
-    basis === 'NO_PRIOR_SUBJECT' || basis === 'CONSTRAINT_NOTED'
+    basis === 'NO_PRIOR_SUBJECT' ||
+    basis === 'CONSTRAINT_NOTED' ||
+    basis === 'PRIOR_REFERENCE_UNRESOLVED'
       ? []
       : objectiveAsk
         ? (payload.answer.candidates ?? []).map((o) => s.r3.objectives[o] ?? o)
@@ -407,6 +409,8 @@ export function askR2View(
   let lead: string | null = null;
   let suggestion: string | null = null;
   if (basis === 'NO_PRIOR_SUBJECT') lead = s.noPriorSubject;
+  /* R4 ALPHA R-4 — a reference to an earlier answer this conversation does not hold */
+  else if (basis === 'PRIOR_REFERENCE_UNRESOLVED') lead = s.r4.priorReferenceUnresolved;
   else if (basis === 'CONSTRAINT_NOTED') lead = s.r3.constraintNoted;
   else if (objectiveAsk) lead = s.r3.decisionObjectiveMissing;
   else if (badge === 'clar' && candidates.length === 0) {

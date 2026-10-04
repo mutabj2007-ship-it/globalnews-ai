@@ -101,7 +101,12 @@ export interface AskRouteContext {
    * from an earlier answer in this owner-verified thread). Its presence lets "that idea", "which
    * part", "turn that into…" resolve to it. Conversation memory, never evidence or scope.
    */
-  readonly priorWork?: { readonly kind: string; readonly label: string };
+  readonly priorWork?: {
+    readonly kind: string;
+    readonly label: string;
+    /** R4 ALPHA R-3 / R-5 — model reasoning, or an answer that stood on sourced reporting */
+    readonly provenance?: 'MODEL_REASONING' | 'SOURCED_REPORTING';
+  };
   /**
    * CTO R4 fifth pass — the objective the READER stated earlier in this thread (bounded semantic
    * state from their own words, newest wins). A decision with no objective of its own uses it
@@ -217,6 +222,9 @@ export interface AskR2Route {
    * governed outcome is a focused clarification, never a confident route.
    */
   readonly semanticClarification?: boolean;
+  /** R4 ALPHA R-4 — the clarification is because the turn refers to an earlier answer this thread
+   *  does not hold (implies semanticClarification). */
+  readonly priorReferenceUnresolved?: boolean;
   readonly outcome: NormalizationOutcome;
   readonly source: EnvelopeSource;
   readonly envelope: AskQuestionEnvelope;
@@ -879,6 +887,7 @@ export function routeAskR2(
     temporalSemantics,
     semantic,
     semanticClarification: d.semanticClarification,
+    priorReferenceUnresolved: d.priorReferenceUnresolved,
     outcome,
     source,
     envelope,

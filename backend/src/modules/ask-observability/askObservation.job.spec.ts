@@ -11,7 +11,10 @@ import {
 import { TRANSFORMATIONS, USER_JOBS } from '../ask-router/user-job';
 import { IR_CONFLICTS } from '../ask-router/semantic-ir/semantic-turn-ir';
 import { RELATION_KINDS } from '../ask-router/bilateral-relationship';
-import { ARTIFACT_KINDS } from '../ask-v2/conversation/conversation-artifact';
+import {
+  ARTIFACT_KINDS,
+  SERVER_ARTIFACT_KINDS,
+} from '../ask-v2/conversation/conversation-artifact';
 
 /**
  * CTO R4 closeout — the observation's job vocabularies are COPIES (the observability module reaches
@@ -25,8 +28,11 @@ describe('R4 — observed job vocabularies equal their authorities', () => {
   it('transformations = TRANSFORMATIONS', () => {
     expect([...OBSERVED_TRANSFORMATIONS].sort()).toEqual([...TRANSFORMATIONS].sort());
   });
-  it('artifact kinds = ARTIFACT_KINDS', () => {
-    expect([...OBSERVED_ARTIFACT_KINDS].sort()).toEqual([...ARTIFACT_KINDS].sort());
+  /* R4 ALPHA R-3 — the authority now holds the model kinds AND the server-derived answer records */
+  it('artifact kinds = ARTIFACT_KINDS + SERVER_ARTIFACT_KINDS', () => {
+    expect([...OBSERVED_ARTIFACT_KINDS].sort()).toEqual(
+      [...ARTIFACT_KINDS, ...SERVER_ARTIFACT_KINDS].sort(),
+    );
   });
   it('CTO R4 semantic IR — conflict / relation vocabularies equal their authorities', () => {
     expect([...OBSERVED_SEMANTIC_CONFLICTS].sort()).toEqual([...IR_CONFLICTS].sort());

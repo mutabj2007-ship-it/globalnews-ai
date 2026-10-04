@@ -589,22 +589,56 @@ describe('ASK GENERAL BACKGROUND EXECUTION R1 — REFERENCE_BACKGROUND_ONLY, zer
       The invariant this block exists for is unchanged and still asserted: the current-evidence
       path, never the background provider, never background text, never citable model memory.
     */
+    /*
+      CTO R4 ALPHA DEFECT RULING R-2 — SUPERSEDED WITH UPDATED CONTRACT PROOF. "Never the background
+      provider" was the pre-R-2 contract: a MIXED question whose current part was sourced let current
+      reporting stand in for the explanatory half (live defect 364492e4). Now BOTH jobs are answered:
+      the current part is retrieved for the CURRENT clause (its sibling clause as context) and the
+      explanatory part is answered by reasoning for the STABLE clause only. What this block exists
+      for still holds: the sourced part is the analysis, the reasoning part is labelled background,
+      model memory is never citable, and no silent fallback replaces either half.
+    */
     it.each([
-      'What is NATO and what is it doing in Poland today?',
-      'What is inflation and what is the inflation rate today?',
-    ])('%s → current reporting, never the background provider', async (q) => {
-      const { adapter, calls } = harness({});
-      const plan = await adapter.prepare(req(q));
-      expect(plan.contract).toMatch(/:CURRENT_REPORTING:EXECUTABLE$/);
-      expect(plan.contract).not.toMatch(/:REFERENCE_BACKGROUND_ONLY$/);
-      const result = await inRequest(() => adapter.execute(req(q), plan, 'op-1'));
-      const payload = JSON.parse(result.payloadJson);
-      expect(payload.answer.state).toBe('CURRENT_REPORTING');
-      expect(payload.background).toBeNull();
-      expect(payload.modelPriorCitable).toBe(false);
-      expect(calls.background).toEqual([]);
-      expect(calls.analysis).toHaveLength(1);
-    });
+      [
+        'What is NATO and what is it doing in Poland today?',
+        'What is NATO',
+        'what is it doing in Poland today?',
+      ],
+      [
+        'What is inflation and what is the inflation rate today?',
+        'What is inflation',
+        'what is the inflation rate today?',
+      ],
+    ])(
+      '%s → the current part sourced AND the stable part answered (R-2)',
+      async (q, stablePart, currentPart) => {
+        const { adapter, calls } = harness({});
+        const plan = await adapter.prepare(req(q));
+        expect(plan.contract).toMatch(/:CURRENT_REPORTING:EXECUTABLE$/);
+        expect(plan.contract).not.toMatch(/:REFERENCE_BACKGROUND_ONLY$/);
+        const result = await inRequest(() => adapter.execute(req(q), plan, 'op-1'));
+        const payload = JSON.parse(result.payloadJson);
+        expect(payload.answer.state).toBe('CURRENT_REPORTING');
+        expect(payload.modelPriorCitable).toBe(false);
+        /* the current part is what reporting was retrieved for — never the raw whole question */
+        expect(calls.analysis).toHaveLength(1);
+        expect(String(calls.analysis[0][0])).toContain(currentPart);
+        expect(String(calls.analysis[0][0])).not.toBe(q);
+        /* the explanatory part is answered by reasoning — the stable clause only */
+        expect(calls.background).toHaveLength(1);
+        expect((calls.background[0] as unknown as [{ question: string }])[0].question).toBe(
+          stablePart,
+        );
+        expect(payload.background?.text).toEqual(expect.any(String));
+        expect(payload.guidance).toEqual(
+          expect.objectContaining({
+            kind: 'MIXED_REFERENCE_CURRENT',
+            currentPart: 'SOURCED',
+            stablePart: 'ANSWERED',
+          }),
+        );
+      },
+    );
 
     it('a current question that IS executable reaches Reporting, never the background provider', async () => {
       const q = 'What is happening in Kenya?';

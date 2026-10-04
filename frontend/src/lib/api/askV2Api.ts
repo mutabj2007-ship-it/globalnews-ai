@@ -222,7 +222,10 @@ export interface AskR2Payload {
       | 'CONVERSATION_WORK';
     readonly currentEvidenceNeeded: readonly string[];
     readonly objective?: string;
-    readonly currentPart?: 'UNAVAILABLE' | 'NO_EVIDENCE';
+    /** R3 §6 — the current part could not be verified; R4 ALPHA R-2 — or it was SOURCED */
+    readonly currentPart?: 'UNAVAILABLE' | 'NO_EVIDENCE' | 'SOURCED';
+    /** R4 ALPHA R-2 — a MIXED answer's explanatory part, beside a sourced current part */
+    readonly stablePart?: 'ANSWERED' | 'UNAVAILABLE';
   };
   readonly continuation?: {
     readonly readerQuestion: string;

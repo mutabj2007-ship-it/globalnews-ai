@@ -51,7 +51,7 @@ import { askRequestContext } from './ask-request-context';
 import { isReusableStoredPayload } from './stored-result-reuse';
 import { inheritedConversationCountry, PLACE_LOOKBACK } from './conversation/conversation-place';
 import { readConversationalTurn, type ConversationalTurn } from './conversation/conversation-state';
-import { validateArtifact, type PriorArtifact } from './conversation/conversation-artifact';
+import { validateStoredArtifact, type PriorArtifact } from './conversation/conversation-artifact';
 import { isSubjectFollowUp } from '../analysis/anchor/conversation-subject.util';
 import { isAnaphoricFollowUp } from '../analysis/anchor/event-anchor.util';
 import { ComputeMeterService } from '../compute-controls/compute-meter.service';
@@ -212,7 +212,8 @@ async function priorArtifactIn(
   for (const t of turns) {
     const payload = t.operation?.storedResult?.payload as
       Record<string, unknown> | null | undefined;
-    const artifact = validateArtifact(payload?.artifact);
+    /* R4 ALPHA R-3 — a stored answer's memory: model-emitted or server-derived (bounded either way) */
+    const artifact = validateStoredArtifact(payload?.artifact);
     if (artifact !== null) return { ...artifact, sourceOperationId: t.operationId };
   }
   return undefined;

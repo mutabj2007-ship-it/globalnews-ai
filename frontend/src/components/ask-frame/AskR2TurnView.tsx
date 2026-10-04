@@ -484,24 +484,37 @@ export function AskR2TurnView({
               )}
             </div>
           )}
-          {payload.guidance != null && payload.guidance.currentEvidenceNeeded.length > 0 && (
-            <div
-              data-ask="guidance-current-gap"
-              data-ask-partial={payload.guidance.currentPart ?? undefined}
-              className="rounded-[8px] border border-[#5a4a2a] bg-[#17130c] px-3 py-2.5 text-[13px] leading-[1.45] text-[#c9b27a]"
-            >
-              <p className="font-bold">
-                {payload.guidance.currentPart != null
-                  ? s.r3.partialCurrent[payload.guidance.currentPart]
-                  : s.guidanceCurrentGap}
+          {/* R4 ALPHA R-2 — a MIXED answer whose current part was SOURCED has no current gap to
+              name; if its explanatory part could not be produced, that is said instead */}
+          {payload.guidance?.currentPart === 'SOURCED' &&
+            payload.guidance.stablePart === 'UNAVAILABLE' && (
+              <p
+                data-ask="mixed-stable-unavailable"
+                className="text-[13px] leading-[1.45] text-[#c9b27a]"
+              >
+                {s.r4.mixedStableUnavailable}
               </p>
-              <ul className="list-disc ps-5">
-                {payload.guidance.currentEvidenceNeeded.map((clause) => (
-                  <li key={clause}>{clause}</li>
-                ))}
-              </ul>
-            </div>
-          )}
+            )}
+          {payload.guidance != null &&
+            payload.guidance.currentPart !== 'SOURCED' &&
+            payload.guidance.currentEvidenceNeeded.length > 0 && (
+              <div
+                data-ask="guidance-current-gap"
+                data-ask-partial={payload.guidance.currentPart ?? undefined}
+                className="rounded-[8px] border border-[#5a4a2a] bg-[#17130c] px-3 py-2.5 text-[13px] leading-[1.45] text-[#c9b27a]"
+              >
+                <p className="font-bold">
+                  {payload.guidance.currentPart != null
+                    ? s.r3.partialCurrent[payload.guidance.currentPart]
+                    : s.guidanceCurrentGap}
+                </p>
+                <ul className="list-disc ps-5">
+                  {payload.guidance.currentEvidenceNeeded.map((clause) => (
+                    <li key={clause}>{clause}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           {view.badge === 'insuf' && (
             <p className="text-[19px] font-bold leading-[1.2] md:text-[22px]">
               {view.searchLimited ? s.limitedTitle : s.insufficientTitle}
@@ -513,6 +526,18 @@ export function AskR2TurnView({
               {s.limitedNote}
             </p>
           )}
+          {/* R4 ALPHA R-2 — MIXED: the explanatory part (model reasoning, never a source) beside the
+              sourced current part below; the authored text is kept as written (paragraphs, lists) */}
+          {payload.analysis !== null &&
+            payload.background != null &&
+            payload.guidance?.kind === 'MIXED_REFERENCE_CURRENT' && (
+              <div data-ask="mixed-stable" className="flex flex-col gap-1.5">
+                <p className={EYEBROW}>{s.r4.mixedStableTitle}</p>
+                <p className="whitespace-pre-wrap text-[16px] leading-[1.55]">
+                  {payload.background.text}
+                </p>
+              </div>
+            )}
           {payload.analysis !== null && (
             <AskCompactResult
               response={payload.analysis}

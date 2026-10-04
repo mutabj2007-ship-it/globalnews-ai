@@ -170,6 +170,12 @@ export interface AskR2Strings {
     readonly workNoteTitle: string;
     readonly workNoteBody: string;
     readonly framework: string;
+    /** R4 ALPHA R-2 — a MIXED answer: the explanatory part (model reasoning) beside the sourced current part */
+    readonly mixedStableTitle: string;
+    /** R4 ALPHA R-2 — the explanatory part could not be produced; the sourced current part stands */
+    readonly mixedStableUnavailable: string;
+    /** R4 ALPHA R-4 — the turn refers to an earlier answer this conversation does not hold */
+    readonly priorReferenceUnresolved: string;
   };
   /** ALPHA ENABLEMENT R1 (MC-070) — a continuation (“And Kenya?”) with nothing to continue; the place stays a chip. */
   readonly noPriorSubject: string;
@@ -399,6 +405,11 @@ const EN: AskR2Strings = {
     workNoteBody:
       'Built from the earlier answers in this conversation. It is reasoning, not current sourced data: check any figure before you rely on it.',
     framework: 'Framework',
+    mixedStableTitle: 'Explanation · model reasoning (not a source)',
+    mixedStableUnavailable:
+      'The explanatory part of your question could not be answered right now; the current part below is from sourced reporting.',
+    priorReferenceUnresolved:
+      'I can’t find an earlier answer in this conversation that this refers to. Which answer or statement do you mean?',
   },
   r3: {
     continuationJobNote: 'continuing what you are working on in this conversation',
@@ -702,6 +713,11 @@ const PL: AskR2Strings = {
     workNoteBody:
       'Zbudowane na wcześniejszych odpowiedziach w tej rozmowie. To rozumowanie, a nie bieżące dane ze źródeł: sprawdź każdą liczbę, zanim na niej polegasz.',
     framework: 'Ramy',
+    mixedStableTitle: 'Wyjaśnienie · rozumowanie modelu (nie źródło)',
+    mixedStableUnavailable:
+      'Nie udało się teraz odpowiedzieć na część wyjaśniającą pytania; bieżąca część poniżej pochodzi ze źródeł.',
+    priorReferenceUnresolved:
+      'Nie znajduję w tej rozmowie wcześniejszej odpowiedzi, do której to się odnosi. O którą odpowiedź lub stwierdzenie chodzi?',
   },
   r3: {
     continuationJobNote: 'kontynuacja tego, nad czym pracujesz w tej rozmowie',
