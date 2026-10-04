@@ -103,13 +103,26 @@ export function interpretSemanticFirstTurn(input: TurnInterpretationInput): {
     (input.conversation?.choiceSet?.length ?? 0) > 0 ||
     input.conversation?.objective != null ||
     input.priorQuestion !== undefined;
+  /*
+    CLAUDE F · R4 (C-3) — the reference the CALLER resolved against bounded state.
+
+    Measured at 782b175: `readConversationalTurn` returns null for all five of these languages, so
+    `boundedStateHasWork` was false, `PRIOR_WORK_REFERENCE` never entered `unresolvedFields`, the
+    one bounded call was never asked to resolve a reference, and the line at the bottom of this
+    function then forced `discourseReference` back to 'NONE' even when a verdict had named one.
+    Five of the seven display languages could not refer to their own earlier work at all, and no
+    interpreter, however good, could have changed that. `readInterpreterFirstContainer` supplies
+    the container; this reads what the resolver made of it.
+  */
+  const priorRef = input.priorReference;
 
   /* the deterministic interpretation: nothing about meaning was read — every routing-material
      field is unresolved, so the ONE bounded call is required (never a guess) */
   const conflicts: IrConflict[] = ['JOB_UNRESOLVED'];
   const unresolvedFields: IrMaterialField[] = ['JOB', 'FRESHNESS', 'EVIDENCE', 'MIXED'];
   if (states.length >= 2) unresolvedFields.push('ACTOR_ROLES', 'RELATIONSHIP');
-  if (boundedStateHasWork) unresolvedFields.push('PRIOR_WORK_REFERENCE');
+  if (boundedStateHasWork || priorRef?.needsInterpretation === true)
+    unresolvedFields.push('PRIOR_WORK_REFERENCE');
   const completeness = completenessOf(conflicts, unresolvedFields);
 
   const semantic = r?.path === 'SEMANTIC' ? r : undefined;
@@ -284,8 +297,15 @@ export function interpretSemanticFirstTurn(input: TurnInterpretationInput): {
       ...(role === 'HISTORICAL' ? { frame: 'HISTORY' as const } : {}),
     };
 
+  /*
+    CLAUDE F · R4 — a RESOLVED reference is a reference. `boundedStateHasWork` is kept as the
+    fallback for the paths that have no resolver outcome yet, so nothing that worked before
+    changes; what is new is that a resolution carrying a source turn is no longer overruled by a
+    container the EN/PL readers could not build.
+  */
   const discourseReference =
-    semantic?.reference !== undefined && semantic.reference !== 'NONE' && boundedStateHasWork
+    priorRef?.resolved === true ||
+    (semantic?.reference !== undefined && semantic.reference !== 'NONE' && boundedStateHasWork)
       ? 'PRIOR_WORK'
       : 'NONE';
   const jobReading: JobReading = {
@@ -379,7 +399,12 @@ export function interpretSemanticFirstTurn(input: TurnInterpretationInput): {
       artifact: artifact?.kind ?? null,
       objective: objective !== null,
       choiceSet: (input.conversation?.choiceSet?.length ?? 0) > 0,
-      target: boundedStateHasWork ? (semantic?.reference ?? 'NONE') : 'NONE',
+      target:
+        priorRef?.resolved === true
+          ? priorRef.target
+          : boundedStateHasWork
+            ? (semantic?.reference ?? 'NONE')
+            : 'NONE',
       confidence: semantic === undefined ? 'LOW' : 'MEDIUM',
     },
     objective,

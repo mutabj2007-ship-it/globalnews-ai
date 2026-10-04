@@ -53,6 +53,16 @@ export interface SemanticResolution {
     readonly venue: string | null;
   } | null;
   readonly reference?: IrReferenceTarget;
+  /**
+   * CLAUDE F · R4 (F-5) — the interpreter AFFIRMS that the turn refers to something present in the
+   * earlier work it was shown.
+   *
+   * Separate from `reference` on purpose: a model asked to pick from a closed list will pick from a
+   * closed list, so naming a target is not evidence that the thing referred to was ever said. This
+   * is the only signal that separates a faithful paraphrase from a claim never made — neither
+   * shares a token with the artifact's components. Absent reads as NOT affirmed.
+   */
+  readonly referenceGrounded?: boolean;
   /* ── interpreter-first only (FR / DE / ES / PT / AR) ── */
   readonly temporalRole?: IrTemporalRole;
 
@@ -73,6 +83,7 @@ const REFERENCE_TARGETS: readonly IrReferenceTarget[] = [
   'NONE',
   'ARTIFACT',
   'ARTIFACT_COMPONENT',
+  'ARTIFACT_PROPOSITION',
   'CHOICE_SET',
   'PORTABLE_SUBJECT',
 ];
@@ -194,9 +205,15 @@ export const SEMANTIC_FIRST_INTERPRETER_SYSTEM =
   'venue; a place being disputed is the object;\n' +
   `"reference": one of ${REFERENCE_TARGETS.join(', ')} — ARTIFACT: the earlier model work as a ` +
   'whole ("that", "turn it into…", "summarise it"); ARTIFACT_COMPONENT: one part of that work ' +
-  '("the second point", "that step", "the risk you mentioned"); CHOICE_SET: options the user ' +
+  '("the second point", "that step", "the risk you mentioned"); ARTIFACT_PROPOSITION: a claim the ' +
+  'assistant is said to have made ("why did you say X", "why did you recommend Y", "what did you ' +
+  'mean when you called it Z"); CHOICE_SET: options the user ' +
   'named in an earlier turn ("which one", "between them"); PORTABLE_SUBJECT: the subject of the ' +
   'user\'s earlier turn ("and what about the deal?"); NONE: the turn refers back to nothing;\n' +
+  '"referenceGrounded": true ONLY if the thing the turn refers to is actually present in the ' +
+  'EARLIER WORK block above — the same claim, component or option, in any wording. false if the ' +
+  'turn attributes something that is not there. Answer false when unsure: a wrong true makes the ' +
+  'assistant agree it said something it never said;\n' +
   '"objective": null, or {"text": the criterion the user wants a choice judged by, copied EXACTLY ' +
   'from the turn or, when it was stated before, from one of the earlier user turns listed} — ' +
   'whenever the user asks to choose / decide / recommend among options.';
@@ -426,6 +443,8 @@ function parseReference(v: Record<string, unknown>, out: MutableResolution): voi
     (REFERENCE_TARGETS as readonly string[]).includes(v.reference)
   )
     out.reference = v.reference as IrReferenceTarget;
+  /* CLAUDE F · R4 — only an explicit boolean true affirms grounding; anything else is "not affirmed" */
+  if (v.referenceGrounded === true) out.referenceGrounded = true;
 }
 
 /** Validate the interpreter's raw JSON against the closed schema AND the IR it was asked about. */

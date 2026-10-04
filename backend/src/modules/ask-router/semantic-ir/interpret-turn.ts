@@ -49,6 +49,7 @@ import {
   type IrEvidence,
   type IrFreshness,
   type IrMaterialField,
+  type IrReferenceTarget,
   type IrReferences,
   type IrTemporalRole,
   type SemanticTurnIR,
@@ -79,9 +80,32 @@ import type { SemanticResolution } from './semantic-interpreter';
  */
 
 /* ── the bounded conversation state the interpretation may use (§17) ───────────────────────── */
+/**
+ * CLAUDE F · R4 — the resolved prior-work reference, as a PROJECTION rather than the resolver's own
+ * union.
+ *
+ * The resolver lives in `ask-v2/conversation/prior-reference.ts` and `ask-router` must not import
+ * from `ask-v2` (the dependency runs the other way). Re-declaring the four-state union here would
+ * be the second hand-written copy that drifts, so this carries only what the composition actually
+ * branches on. The caller computes the outcome and projects it; the single source of the decision
+ * stays in one file.
+ */
+export interface ResolvedReferenceProjection {
+  readonly resolved: boolean;
+  readonly target: IrReferenceTarget;
+  /** the turn that produced the referenced work. Present whenever `resolved`. */
+  readonly sourceOperationId?: string;
+  /** bounded state could not decide; the one interpretation must be asked */
+  readonly needsInterpretation: boolean;
+  /** it points backwards and cannot be grounded; the governed focused clarification */
+  readonly unresolvable: boolean;
+}
+
 export interface BoundedConversationState {
   /** the latest ConversationArtifact's KIND and label (model work — never an objective) */
   readonly artifact?: { readonly kind: string; readonly label: string };
+  /** CLAUDE F · R4 — WHICH TURN produced that artifact. A reference must be traceable to one. */
+  readonly artifactSourceOperationId?: string;
   /** the newest objective the READER stated (their words only) */
   readonly objective?: ObjectiveState | null;
   /** the options the reader named */
@@ -102,6 +126,8 @@ export interface TurnInterpretationInput {
   readonly requestInstant?: string;
   readonly priorWork?: { readonly kind: string; readonly label: string };
   readonly conversation?: BoundedConversationState;
+  /** CLAUDE F · R4 — the prior-work reference the caller resolved against bounded state */
+  readonly priorReference?: ResolvedReferenceProjection;
   /** CTO R4 fifth pass (compat) — a conversation objective as text */
   readonly conversationObjective?: string;
   /** the 0-based ordinal of this reader turn in the thread (objective provenance) */
@@ -990,14 +1016,94 @@ export function interpretTurn(input: TurnInterpretationInput): {
       requirement: 'CURRENT_REPORTING',
       reason: 'one change analysis: a past baseline to the present endpoint (ruling D)',
     };
-  const job: JobReading =
-    changeSpanOnly
+  /*
+    CLAUDE F · A SINGLE-CLAUSE PRIOR-WORK REFERENCE IS NOT A CURRENT ASK — the companion to
+    ruling D, built on the same clause count and the same reasoning.
+
+    Ruling D above says a past→present span "asked in ONE clause is ONE change analysis … MIXED
+    stays for turns whose DISTINCT clauses ask different things", and it deliberately stands aside
+    when the turn references earlier work (`!referencesWork`). This is that left-aside case.
+
+    THE DEFECT IT CLOSES, measured on beaa095 with F's 05 applied. "Why did you say X?" where the
+    reported clause carries present or future tense:
+
+      EN  "Why did you say inflation is easing?"            EXPLANATION, no news
+      PL  "Dlaczego powiedziałeś, że inflacja spada?"       MIXED, news      ← asymmetric
+      EN  "Why did you say the Fed would hold rates?"       EXPLANATION, no news
+      PL  "Dlaczego powiedziałeś, że Fed utrzyma stopy?"    MIXED, news      ← asymmetric
+
+    Polish marks those reported clauses in a way the knowledge requirement reads as currentness and
+    English does not, so the same question asked in two product languages took two different routes
+    and one of them went looking for news. The reader asked why we said something; they did not ask
+    what is true today.
+
+    THE GATE IS THE CLAUSE COUNT, which is why it is language-independent and cannot be gamed by
+    tense. The attribution and the present tense are the SAME clause here, so nothing in the turn
+    asks about now. When the reader does add that ask it is a second clause — "You said inflation
+    was easing — is it still true now?" segments in two, this gate does not fire, and the reference
+    AND the current evidence both survive. Measured: every pure reference probed segments to one
+    clause in both languages; every "is it still true now?" to two or more.
+
+    `fresh` is still never overridden in `user-job.ts`: F's accepted 05 is untouched, and this
+    decision is made here, in the composition, where the clause segmentation lives.
+  */
+  const referenceClauseOnly =
+    clauses.length < 2 &&
+    /*
+      THE READER'S OWN VERDICT, not this file's `referencesWork`. That local flag is computed from
+      `referencesPriorWork` alone — the reader that does not know the self-attribution family
+      exists, which is the defect F's 05 fixed one layer down. Using it here would make this gate
+      blind to exactly the turns it is for.
+
+      (Noted for Claude Code, not taken in a reconciliation round: the nine other `referencesWork`
+      call sites in this file still read the narrow definition, so the self-attribution family is
+      invisible to them too. Widening that flag is a larger change than this round should make.)
+    */
+    resolvedJob.discourseReference === 'PRIOR_WORK' &&
+    resolvedJob.job === 'MIXED' &&
+    /*
+      TWO THINGS OUTRANK THE CLAUSE COUNT, and beaa095's own defects spec is why.
+
+      A single clause CAN carry a real present-state ask: "Does this plan still hold up right now?",
+      "Is that advice still sound given what happened lately?" are one clause, reference earlier
+      work, and are exactly the defect-2 case — earlier work re-examined against the present, which
+      must keep its currentness. The first version of this gate fired on them and took it away,
+      which `semantic-ir.defects.spec.ts` caught.
+
+      So the gate stands down when the turn carries an EXPLICIT present-state marker of its own
+      (`strongCurrent`), and when an accepted interpreter verdict says current evidence is needed.
+      The second is the defect-2 invariant itself: an accepted "current" verdict is applied on every
+      escalated branch, and a reference reading is not allowed to be the one branch that ignores it.
+
+      What is left for the gate is the case it was built for: the only present tense in the turn is
+      inside the REPORTED clause — "why did you say inflation IS easing" — with no marker of the
+      reader's own and no verdict asking for the present.
+    */
+    !strongCurrent &&
+    resolution?.needsCurrentEvidence !== true &&
+    !advisory &&
+    !changeSpanOnly;
+  if (referenceClauseOnly)
+    knowledge = {
+      requirement: 'STABLE_REFERENCE',
+      reason:
+        'one clause, attributing a claim to this conversation: answered from the earlier work, not from the news (prior-work reference companion to ruling D)',
+    };
+  const job: JobReading = changeSpanOnly
+    ? {
+        ...resolvedJob,
+        job: 'CHANGE_ANALYSIS',
+        freshness: 'CURRENT',
+        evidence: 'CURRENT_REPORTING',
+        currentnessEvidence,
+      }
+    : referenceClauseOnly
       ? {
           ...resolvedJob,
-          job: 'CHANGE_ANALYSIS',
-          freshness: 'CURRENT',
-          evidence: 'CURRENT_REPORTING',
-          currentnessEvidence,
+          job: 'EXPLANATION',
+          freshness: 'NONE',
+          evidence: 'NONE',
+          currentnessEvidence: [],
         }
       : { ...resolvedJob, currentnessEvidence };
 
@@ -1045,6 +1151,11 @@ export function interpretTurn(input: TurnInterpretationInput): {
     !placeReference &&
     !advisory &&
     !reasoning &&
+    /* CLAUDE F — a single-clause prior-work reference asks nothing about now, so nothing about now
+       is planned. Without this the job above read EXPLANATION while the IR still carried CURRENT
+       and the plan still requested news: the same internal contradiction an earlier review
+       returned, one layer further on. */
+    !referenceClauseOnly &&
     !(unresolvedEligible && semanticJob?.needsCurrentEvidence !== true);
   /* advice / a decision with a time-anchored part keeps BOTH components (the current part is named
      as needing current sourced evidence) */
@@ -1141,8 +1252,8 @@ export function interpretTurn(input: TurnInterpretationInput): {
           : changeSpanOnly
             ? 'SINCE_PAST_TO_PRESENT'
             : explicitCurrent
-            ? (clauses.find((c) => c.kind === 'CURRENT')?.clause.temporalRole ?? 'CURRENT_STATE')
-            : temporalRoleOf(temporalSemantics),
+              ? (clauses.find((c) => c.kind === 'CURRENT')?.clause.temporalRole ?? 'CURRENT_STATE')
+              : temporalRoleOf(temporalSemantics),
       confidence: job.confidence,
     },
     clauses: clauses.map((c) => c.clause),
@@ -1185,7 +1296,19 @@ export function interpretTurn(input: TurnInterpretationInput): {
       decisionObjective,
       currentEvidenceNeeded:
         ('currentClauses' in knowledge ? knowledge.currentClauses : undefined) ?? [],
-      temporalSemantics,
+      /*
+        CLAUDE F — for a single-clause prior-work reference the detected currentness belongs to the
+        REPORTED CLAIM, not to the turn. "Dlaczego powiedziałeś, że inflacja spada?" marks the
+        present in Polish grammar because the claim is in the present tense; the question is still
+        why we said it. The spans are kept for diagnostics and only the aggregate verdict is
+        cleared, so nothing reading the spans loses information.
+
+        This is the last of the three places the signal travels: the job, the IR freshness and the
+        plan. Leaving any one unaligned is how an EXPLANATION ends up fetching news.
+      */
+      temporalSemantics: referenceClauseOnly
+        ? { ...temporalSemantics, currentness: 'NONE' }
+        : temporalSemantics,
       typedGeographyOverride,
       semanticClarification,
     },

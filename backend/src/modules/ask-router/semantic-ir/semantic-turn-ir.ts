@@ -48,7 +48,19 @@ export type IrClauseJob =
   | 'CONTEXT_STATEMENT'
   | 'UNRESOLVED';
 export type IrReferenceTarget =
-  'NONE' | 'ARTIFACT' | 'ARTIFACT_COMPONENT' | 'CHOICE_SET' | 'PORTABLE_SUBJECT';
+  | 'NONE'
+  | 'ARTIFACT'
+  | 'ARTIFACT_COMPONENT'
+  /**
+   * CLAUDE F · R4 (F-5) — a PROPOSITION the assistant asserted: "why did you say X", "why did you
+   * recommend Y". Distinct from ARTIFACT_COMPONENT, which is one of the ≤ 8 names the artifact
+   * declared: a claim need never have been one of those names. Distinct from ARTIFACT because the
+   * executor must behave differently — ARTIFACT asks for work to be operated on, this asks for the
+   * reasoning behind a claim already made, and that may never become a request for current evidence.
+   */
+  | 'ARTIFACT_PROPOSITION'
+  | 'CHOICE_SET'
+  | 'PORTABLE_SUBJECT';
 export type IrConflict =
   /** a stable question frame + an explicit current marker (the frame lost; confirm) */
   | 'STABLE_SHAPE_WITH_CURRENT_MARKER'
