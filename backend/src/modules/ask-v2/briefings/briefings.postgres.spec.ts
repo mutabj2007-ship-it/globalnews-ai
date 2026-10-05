@@ -63,6 +63,8 @@ live('R2 · D1 durable briefings — live PostgreSQL, HTTP, privacy, zero AI on 
     timeWindowDays: 7,
   });
   let summary = 'Kenya held its policy rate; Tanzania cut [1][2].';
+  /* EAST AFRICA P0 · A — the governed specialist basis the answer was built on. */
+  let intelligence: unknown = null;
   const payload = () => ({
     schema: 'ask-r2-result/1',
     answer: { state: 'CURRENT_REPORTING' },
@@ -99,6 +101,7 @@ live('R2 · D1 durable briefings — live PostgreSQL, HTTP, privacy, zero AI on 
       },
     },
     background: null,
+    intelligence,
   });
   const http = () => request(app.getHttpServer());
   const as = (who: 'a' | 'b') => [`${SESSION_COOKIE_NAME}=${who}`, `${CSRF_COOKIE_NAME}=csrf`];
@@ -158,6 +161,7 @@ live('R2 · D1 durable briefings — live PostgreSQL, HTTP, privacy, zero AI on 
       SAND_CHARGING_ENABLED: 'false',
     };
     summary = 'Kenya held its policy rate; Tanzania cut [1][2].';
+    intelligence = null;
     prepare.mockReset();
     execute.mockReset();
     prepare.mockImplementation(async () => plan());
@@ -218,6 +222,81 @@ live('R2 · D1 durable briefings — live PostgreSQL, HTTP, privacy, zero AI on 
     expect(v.coverageGaps).toEqual(['No official statement from Uganda']);
     const b = await db.briefing.findUniqueOrThrow({ where: { id: res.body.id } });
     expect(b.scope).toMatchObject({ kind: 'ASK_QUESTION', countryCode: 'KEN', language: 'en' });
+  });
+
+  it('EAST AFRICA P0 · A — the specialist intelligence basis survives save → reload → reopen', async () => {
+    const SPECIALIST = {
+      considered: ['ECONOMY_CPI', 'CONFLICT'],
+      contributions: [
+        {
+          contributorId: 'ECONOMY_CPI',
+          domain: 'economic',
+          status: 'USED',
+          applicability: 'SUPPLEMENTARY',
+          observations: [
+            {
+              reference: 'NISR:CPI:2026-08',
+              kind: 'CPI_HEADLINE',
+              label: 'Urban CPI, year on year',
+              value: '6.1',
+              unit: '%',
+              period: '2026-08',
+              geography: 'RWA',
+              source: { name: 'NISR', url: 'https://statistics.gov.rw/cpi', licence: null },
+              retainedAt: '2026-09-12T06:00:00Z',
+            },
+          ],
+          temporalBasis: 'RETAINED_PERIODIC',
+          geographyBasis: 'RWA',
+          disclosures: ['RETAINED_NOT_CURRENT'],
+          degradationReason: null,
+        },
+        {
+          contributorId: 'CONFLICT',
+          domain: 'security',
+          status: 'NO_MATCH',
+          applicability: 'CONTEXT',
+          observations: [],
+          temporalBasis: 'NONE',
+          geographyBasis: 'RWA',
+          disclosures: [],
+          degradationReason: null,
+        },
+      ],
+    };
+    intelligence = SPECIALIST;
+    const turnId = await completedTurn(ids.a, 'How is inflation in Rwanda affecting traders?');
+    const { body } = await save('a', turnId).expect(201);
+    const before = { prepare: prepare.mock.calls.length, execute: execute.mock.calls.length };
+    // Reopen after the source result is gone: only the saved snapshot can answer.
+    await db.storedResult.deleteMany({ where: { userId: ids.a } });
+    const v = await http()
+      .get(`/ask-v2/briefings/${body.id}/versions/1`)
+      .set('Cookie', as('a'))
+      .expect(200);
+    expect(v.body.blocks.intelligence).toEqual(SPECIALIST);
+    // Reporting citations are kept beside it, unchanged.
+    expect(v.body.evidenceRefs.map((r: { id: string }) => r.id)).toEqual(['a1', 'a2']);
+    // Reopening ran nothing: no plan, no execution, no provider, no recompute.
+    expect(v.body.aiExecuted).toBe(false);
+    expect(prepare.mock.calls.length).toBe(before.prepare);
+    expect(execute.mock.calls.length).toBe(before.execute);
+    const again = await http()
+      .get(`/ask-v2/briefings/${body.id}/versions/1`)
+      .set('Cookie', as('a'))
+      .expect(200);
+    expect(again.body.blocks).toEqual(v.body.blocks);
+  });
+
+  it('EAST AFRICA P0 · A — a reporting-only briefing records that no specialist was used', async () => {
+    const turnId = await completedTurn(ids.a, 'Compare Kenya and Tanzania interest rates');
+    const { body } = await save('a', turnId).expect(201);
+    const v = await http()
+      .get(`/ask-v2/briefings/${body.id}/versions/1`)
+      .set('Cookie', as('a'))
+      .expect(200);
+    expect(v.body.blocks).toHaveProperty('intelligence', null);
+    expect(v.body.evidenceRefs).toHaveLength(2);
   });
 
   it('reopening a version runs nothing and survives the StoredResult being deleted', async () => {
