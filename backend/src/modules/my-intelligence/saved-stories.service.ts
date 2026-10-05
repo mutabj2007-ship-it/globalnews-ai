@@ -10,6 +10,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { ArticlePersistenceService } from '../news/persistence/article-persistence.service';
 import { computeArticleRef, isArticleRef } from '../news/identity/article-ref.util';
 import { isWriteConflict } from '../follows/follows.service';
+import { ownerExemptionApplies } from '../owner-access/alpha-owner-entitlement';
 
 /** Bounded retries of a serializable save that lost a write conflict. */
 const MAX_SAVE_ATTEMPTS = 5;
@@ -149,7 +150,7 @@ export class SavedStoriesService {
             if (already) return already;
 
             const count = await tx.savedStory.count({ where: { userId } });
-            if (count >= MAX_SAVED_STORIES) {
+            if (count >= MAX_SAVED_STORIES && !ownerExemptionApplies(userId, 'saved-cap')) {
               throw new ConflictException(`Saved Stories is limited to ${MAX_SAVED_STORIES} stories.`);
             }
 

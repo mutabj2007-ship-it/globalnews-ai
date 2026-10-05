@@ -22,6 +22,7 @@ import {
   providerScope,
   withDeadline,
 } from './compute-scopes';
+import { ownerExemptionApplies } from '../owner-access/alpha-owner-entitlement';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -212,6 +213,11 @@ export class ComputeMeterService {
         },
       );
     }
+    /* PHONE-FIRST HOME CORRECTION R1 · §2 — the verified Alpha owner's PRODUCT day budgets are
+       still charged (cost stays visible to administrators) but carry no ceiling. Global/provider
+       ceilings, per-request size and concurrency below are unchanged for the owner too. */
+    const ownerUncapped =
+      input.accountId !== null && input.guest === undefined && ownerExemptionApplies(input.accountId, 'ask-account-day');
     if (input.accountId !== null) {
       steps.push({
         control: newAccount ? 'new-account-day' : 'account-day',
@@ -219,7 +225,7 @@ export class ComputeMeterService {
         scope: accountScope(input.accountId),
         bucket: day,
         units: estimate,
-        ceiling: newAccount ? cfg.newAccountUnitsPerDay : cfg.accountUnitsPerDay,
+        ceiling: ownerUncapped ? Number.POSITIVE_INFINITY : newAccount ? cfg.newAccountUnitsPerDay : cfg.accountUnitsPerDay,
         charge: 'units',
       });
     }
@@ -229,7 +235,7 @@ export class ComputeMeterService {
       scope: input.ipScope,
       bucket: day,
       units: estimate,
-      ceiling: cfg.ipUnitsPerDay,
+      ceiling: ownerUncapped ? Number.POSITIVE_INFINITY : cfg.ipUnitsPerDay,
       charge: 'units',
     });
     steps.push({

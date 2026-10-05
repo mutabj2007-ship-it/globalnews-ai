@@ -1,4 +1,6 @@
 import { HumanitarianReadModule } from './modules/humanitarian/humanitarian-read.module';
+import { OwnerAccessModule } from './modules/owner-access/owner-access.module';
+import { HomeEditorialModule } from './modules/home-editorial/home-editorial.module';
 import { AskV2Module } from './modules/ask-v2/ask-v2.module';
 import { SecurityModule } from './modules/security/security.module';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
@@ -238,6 +240,10 @@ import {
     */
     ...humanitarianModuleImports(HUMANITARIAN_PROVISIONING),
     HumanitarianReadModule,
+    // PHONE-FIRST HOME CORRECTION R1 — Alpha owner entitlement (§2) and the business/conflict
+    // Home editorial read + persisted story search (§5–§7, §11).
+    OwnerAccessModule,
+    HomeEditorialModule,
   ],
   controllers: [AppController],
   providers: [

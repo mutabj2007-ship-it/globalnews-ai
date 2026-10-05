@@ -10,6 +10,7 @@ import {
 import { PrismaService } from '../../database/prisma.service';
 import { isArticleRef } from '../news/identity/article-ref.util';
 import { StoryIdentityService } from './story-identity.service';
+import { ownerExemptionApplies } from '../owner-access/alpha-owner-entitlement';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -165,7 +166,7 @@ export class DiscussionService {
     if (prior) return commentView(prior, userId);
 
     const recent = await this.prisma.storyComment.count({ where: { userId, createdAt: { gte: new Date(Date.now() - COMMENT_RATE_WINDOW_MS) } } });
-    if (recent >= COMMENT_RATE_LIMIT) throw new HttpException('COMMENT_RATE_LIMITED', HttpStatus.TOO_MANY_REQUESTS);
+    if (recent >= COMMENT_RATE_LIMIT && !ownerExemptionApplies(userId, 'discussion-rate')) throw new HttpException('COMMENT_RATE_LIMITED', HttpStatus.TOO_MANY_REQUESTS);
 
     const { story } = await this.identity.ensureStoryForArticle({ articleRef: input.articleRef, url: input.url });
     if (story.discussionLockedAt !== null) throw new ConflictException('DISCUSSION_LOCKED');

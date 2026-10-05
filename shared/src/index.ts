@@ -242,3 +242,4 @@ export * from './energy/observation';
 export * from './conflict/validation';
 export * from './home-suggestions';
 export * from './my-intelligence';
+export * from './home-editorial';

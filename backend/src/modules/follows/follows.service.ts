@@ -3,6 +3,7 @@ import type { CountryFollowListResponse, CountryFollowView } from '@globalnews-a
 import { PrismaService } from '../../database/prisma.service';
 import { TelemetryService } from '../telemetry/telemetry.service';
 import { FOLLOW_LIST_LIMIT, MAX_COUNTRY_FOLLOWS } from './follows.constants';
+import { ownerExemptionApplies } from '../owner-access/alpha-owner-entitlement';
 
 /**
  * R1/T3 — the country-follow service.
@@ -203,7 +204,7 @@ export class FollowsService {
 
         const count = await tx.countryFollow.count({ where: { userId } });
 
-        if (count >= MAX_COUNTRY_FOLLOWS) {
+        if (count >= MAX_COUNTRY_FOLLOWS && !ownerExemptionApplies(userId, 'follow-cap')) {
           // A resource bound, stated as a conflict rather than a payment
           // or permission problem, because that is what it is.
           throw new HttpException(
