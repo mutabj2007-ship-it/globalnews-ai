@@ -1,0 +1,1595 @@
+[
+ {
+  "module": "admin",
+  "path": "backend/src/modules/admin",
+  "imported_in_app_module": "yes (backend/src/app.module.ts:147), unconditional",
+  "classification": [
+   "controller/live-route",
+   "dormant"
+  ],
+  "evidence": "All 6 controllers carry AdminPlatformEnabledGuard -> 404 unless ADMIN_PLATFORM_ENABLED=true (admin-platform.guard.ts:31); .env.example:478 false; docker-compose default false",
+  "controllers": [
+   "AdminController",
+   "AdminReadonlyController",
+   "AdminGlobalReachController",
+   "AdminAskIntelligenceController",
+   "AdminOperationsController"
+  ],
+  "routes": [
+   "GET /admin/me",
+   "GET /admin/system/health",
+   "GET /admin/news/providers",
+   "GET /admin/analytics/usage",
+   "GET /admin/analytics/coverage-geography",
+   "GET /admin/alpha-review",
+   "GET /admin/users",
+   "GET /admin/ai/ask-intelligence",
+   "GET /admin/operations",
+   "POST /admin/operations/switches/:name (CSRF)",
+   "GET /admin/global-reach/{summary,countries-governed,validated-local-baseline,countries-partial,coverage-gaps,unverified,publishers-by-country,language-coverage,last-verification}"
+  ],
+  "guards": [
+   "AdminPlatformEnabledGuard",
+   "RequireAuthGuard",
+   "AdminGuard",
+   "CsrfGuard (writes)"
+  ],
+  "env_flags": [
+   "ADMIN_PLATFORM_ENABLED (default OFF (code requires exact 'true'; unset => off); trim+lowercase compare)"
+  ],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [],
+  "prisma_models": [
+   "AnalysisRun",
+   "Article",
+   "ArticleCountry",
+   "AskAccessCounter",
+   "AskObservation",
+   "CircuitBreakerState",
+   "ComputeMeter",
+   "ComputeOperation",
+   "ConflictObservation",
+   "CountryFollow",
+   "EnergyObservation",
+   "MarketObservation",
+   "OperationalSwitchAudit",
+   "ProductEvent",
+   "SecurityObservation",
+   "User"
+  ],
+  "ask_reachability": "reads AskObservation/ComputeMeter/OperationalSwitch for admin Ask dashboard; POST switches toggles ASK_PUBLIC_COMPUTE_ENABLED/ASK_R2_ENABLED/ASK_GUEST_TRIAL_ENABLED DB rows",
+  "frontend_consumers": [
+   "frontend/src/app/admin/*",
+   "frontend/src/lib/admin/*",
+   "rewrite /api/admin/:path*"
+  ],
+  "user_usefulness": "admin-only; 404 by default",
+  "notes": "Also registers AdminStoriesController (stories module) and AdminSupportController (support module) on /admin/*"
+ },
+ {
+  "module": "analysis",
+  "path": "backend/src/modules/analysis",
+  "imported_in_app_module": "yes (backend/src/app.module.ts:117)",
+  "classification": [
+   "controller/live-route",
+   "internal-service",
+   "provider"
+  ],
+  "evidence": "POST /analysis/news live (analysis.controller.ts:66). AnalysisService is consumed by ask-v2 adapter (ask-r2-execution.adapter.ts:562,628) and support-ai (support-ai.service.ts:9). NO active frontend caller: analyzeNews() only reached from useAskConversation (no callers) and AnalysisFrameClient (not mounted).",
+  "controllers": [
+   "AnalysisController"
+  ],
+  "routes": [
+   "POST /analysis/news (Throttle 5/60s, AnalysisRateLimitGuard)"
+  ],
+  "guards": [
+   "AnalysisRateLimitGuard",
+   "ThrottlerGuard"
+  ],
+  "env_flags": [
+   "OPENAI_API_KEY (absent => MockAnalysisProvider)",
+   "OPENAI_MODEL (gpt-4o-mini)",
+   "AI_EXECUTION_MODE (forced production when NODE_ENV=production; else 'development' unless 'production')",
+   "ANALYSIS_MAX_ARTICLES=8",
+   "ANALYSIS_MAX_ARTICLE_CHARS=1200",
+   "ANALYSIS_TIMEOUT_MS=20000",
+   "ANALYSIS_CACHE_TTL_SECONDS=300",
+   "ANALYSIS_RETRY_ATTEMPTS=2",
+   "ANALYSIS_RETRY_BASE_DELAY_MS=300",
+   "ANALYSIS_MAX_COMPLETION_TOKENS=2000",
+   "ANALYSIS_TOTAL_BUDGET_MS"
+  ],
+  "schedulers": [],
+  "producers": [
+   "SearchHistoryEntry via HistoryService.recordExplicitQuestion (analysis.controller.ts:84, signed-in only)",
+   "Article/ArticleCountry via NewsService persistence"
+  ],
+  "external_providers": [
+   "api.openai.com/v1/chat/completions (openai-analysis.provider.ts:282, general-background.provider.ts:325)"
+  ],
+  "prisma_models": [
+   "(via news) Article",
+   "ArticleCountry",
+   "(via history) SearchHistoryEntry"
+  ],
+  "ask_reachability": "IS the shared engine: ask-v2 adapter calls AnalysisService.analyzeNews; analysis imports ask-router/bilateral-relationship, global-reach/source-pack.registry, geo-gazetteer, news/*",
+  "frontend_consumers": [
+   "frontend/src/lib/api/analysisApi.ts:323 (analyzeNews) -- callers: lib/ask/useAskConversation.ts (0 callers), components/analysis-frame/AnalysisFrameClient.tsx (0 mounts)"
+  ],
+  "user_usefulness": "Indirect only (through ask-v2). Direct route has no live frontend consumer at 5513275f.",
+  "notes": ""
+ },
+ {
+  "module": "ask-intelligence",
+  "path": "backend/src/modules/ask-intelligence",
+  "imported_in_app_module": "no (imported by AskV2Module ask-v2.module.ts imports)",
+  "classification": [
+   "internal-service",
+   "retained-read"
+  ],
+  "evidence": "AskSpecialistReadCoordinator reads Economy (EconomyObservationReadService), ConflictObservationRepository, MarketReadRepository, Rwanda NISR geo authority; injected into ask-r2-execution.adapter.ts:75 and ask-context.resolver.ts",
+  "controllers": [],
+  "routes": [],
+  "guards": [],
+  "env_flags": [],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [],
+  "prisma_models": [
+   "ConflictObservation",
+   "MarketObservation",
+   "SnapshotRetrieval (via economy/market repos)"
+  ],
+  "ask_reachability": "part of ask-v2 path (specialist contributors)",
+  "frontend_consumers": [
+   "none directly"
+  ],
+  "user_usefulness": "indirect via Ask V2 only",
+  "notes": "Duplicate provider instances: ConflictObservationRepository and MarketReadRepository are re-provided here (not imported from their modules)."
+ },
+ {
+  "module": "ask-observability",
+  "path": "backend/src/modules/ask-observability",
+  "imported_in_app_module": "no (imported by AskV2Module, admin)",
+  "classification": [
+   "internal-service",
+   "producer"
+  ],
+  "evidence": "AskObservationService writes AskObservation/AskAccessCounter per Ask request; AskObservationRetentionService opportunistic sweep (ASK_OBSERVATION_RETENTION_SWEEP_INTERVAL_MS, 30-day) on write path",
+  "controllers": [],
+  "routes": [],
+  "guards": [],
+  "env_flags": [
+   "ASK_OBSERVATION_* constants (code)"
+  ],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [],
+  "prisma_models": [
+   "AskAccessCounter",
+   "AskObservation"
+  ],
+  "ask_reachability": "ask-v2 only",
+  "frontend_consumers": [
+   "admin Ask Intelligence screen"
+  ],
+  "user_usefulness": "admin/telemetry",
+  "notes": ""
+ },
+ {
+  "module": "ask-router",
+  "path": "backend/src/modules/ask-router",
+  "imported_in_app_module": "no -- NOT a Nest module (pure library)",
+  "classification": [
+   "internal-service"
+  ],
+  "evidence": "routeAskR2 (ask-r2-route.ts:566) called only by ask-v2/ask-r2-execution.adapter.ts:244; interpretTurn (semantic-ir/interpret-turn.ts:353) builds SemanticTurnIR; also imported by ask-intelligence, analysis (bilateral-relationship only), ask-v2 conversation/*",
+  "controllers": [],
+  "routes": [],
+  "guards": [],
+  "env_flags": [],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [],
+  "prisma_models": [],
+  "ask_reachability": "ROUTING AUTHORITY for Ask V2 (SemanticTurnIR). Analysis uses only bilateral-relationship helper.",
+  "frontend_consumers": [
+   "none"
+  ],
+  "user_usefulness": "indirect via Ask V2",
+  "notes": "frozen-c/corpus/baseline-facts.ts:202 asserts ASK_EXECUTION_PORT is bound to UNWIRED -- stale vs ask-v2.module.ts:62"
+ },
+ {
+  "module": "ask-v2",
+  "path": "backend/src/modules/ask-v2",
+  "imported_in_app_module": "yes (backend/src/app.module.ts:136), unconditional (routes 404 by guard)",
+  "classification": [
+   "controller/live-route",
+   "dormant",
+   "scheduler",
+   "producer",
+   "internal-service"
+  ],
+  "evidence": "AskV2EnabledGuard throws 404 unless ASK_V2_ENABLED==='true' (ask-v2.controller.ts:61); ASK_EXECUTION_PORT bound to AskR2ExecutionAdapter (ask-v2.module.ts:62); AI additionally needs ASK_R2_ENABLED + ASK_PUBLIC_COMPUTE_ENABLED env 'true' AND OperationalSwitch DB row enabled (operational-switch.service.ts:117). GuestMaintenanceService setInterval runs on boot regardless of ASK_V2_ENABLED (guest-maintenance.service.ts:64-69).",
+  "controllers": [
+   "AskV2Controller",
+   "AskV2GuestController",
+   "BriefingsController"
+  ],
+  "routes": [
+   "GET /ask-v2/continuation",
+   "GET /ask-v2/threads",
+   "GET /ask-v2/threads/:id",
+   "GET /ask-v2/operations/:id",
+   "GET /ask-v2/bookmarks",
+   "POST /ask-v2/bookmarks",
+   "DELETE /ask-v2/bookmarks/:turnId",
+   "POST /ask-v2/threads",
+   "POST /ask-v2/threads/:id/turns",
+   "POST /ask-v2/threads/:id/quote",
+   "POST /ask-v2/operations/:id/{accept,reserve,execute,release}",
+   "GET /ask-v2/guest/status",
+   "POST /ask-v2/guest/threads",
+   "GET /ask-v2/guest/threads",
+   "GET /ask-v2/guest/threads/:id",
+   "GET /ask-v2/guest/operations/:id",
+   "POST /ask-v2/guest/threads/:id/turns",
+   "POST /ask-v2/guest/claim",
+   "GET /ask-v2/briefings",
+   "POST /ask-v2/briefings",
+   "GET /ask-v2/briefings/:id",
+   "GET /ask-v2/briefings/:id/versions/:version",
+   "POST /ask-v2/briefings/:id/versions",
+   "DELETE /ask-v2/briefings/:id"
+  ],
+  "guards": [
+   "AskV2EnabledGuard",
+   "RequireAuthGuard (account routes)",
+   "CsrfGuard (mutations)",
+   "RequireGuestGuard/GuestWriteGuard/GuestFirstWriteGuard (guest)",
+   "BriefingsEnabledGuard"
+  ],
+  "env_flags": [
+   "ASK_V2_ENABLED (default OFF (code requires exact 'true'; unset => off); root .env.example:704 false)",
+   "ASK_R2_ENABLED (env 'true' AND DB row)",
+   "ASK_PUBLIC_COMPUTE_ENABLED (env 'true' AND DB row)",
+   "ASK_GUEST_TRIAL_ENABLED (env 'true' AND DB row)",
+   "ASK_BRIEFINGS_ENABLED (default OFF (code requires exact 'true'; unset => off))",
+   "SAND_LEDGER_ENABLED (default OFF (code requires exact 'true'; unset => off))",
+   "SAND_CHARGING_ENABLED (literal const false, ask-compute.contract.ts:12)",
+   "ASK_GUEST_* lifetimes (ASK_GUEST_SWEEP_INTERVAL_S=900 etc.)",
+   "ASK_SOCIAL_X_ENABLED/ASK_SOCIAL_YOUTUBE_ENABLED (news social, used by Ask)"
+  ],
+  "schedulers": [
+   "GuestMaintenanceService: setTimeout 30s + setInterval ASK_GUEST_SWEEP_INTERVAL_S (900s) -- deletes/updates GuestClaim/GuestSlot/ComputeReservation/GuestSession; skipped only when NODE_ENV=test"
+  ],
+  "producers": [
+   "AskThread/AskTurn/ComputeOperation/StoredResult/AskBookmark/Briefing/BriefingVersion/GuestSession/GuestSlot/GuestClaim/SandLedgerEntry writes"
+  ],
+  "external_providers": [
+   "via AnalysisService: api.openai.com, gnews.io, GDELT DOC, RSS, X, YouTube (when enabled)"
+  ],
+  "prisma_models": [
+   "AskBookmark",
+   "AskThread",
+   "AskTurn",
+   "Briefing",
+   "BriefingVersion",
+   "ComputeOperation",
+   "GuestClaim",
+   "GuestSession",
+   "GuestSlot",
+   "SandLedgerEntry",
+   "StoredResult"
+  ],
+  "ask_reachability": "IS the Ask path. Imports AnalysisModule, NewsModule, ComputeControlsModule, SpecialistModule, AskObservabilityModule, AskIntelligenceModule, GuestCoreModule; uses ask-router; briefings read stories/story-relation.read",
+  "frontend_consumers": [
+   "frontend/src/lib/api/askV2Api.ts (all routes)",
+   "lib/ask/useAskR2Conversation.ts",
+   "components/ask-frame/AskFrameScreen.tsx (/ and /ask)",
+   "components/search/SearchPageClient.tsx",
+   "components/my-intelligence/MyIntelligenceClient.tsx",
+   "components/ask/AskAiDock.tsx",
+   "components/ask/SavedClient.tsx,SavedBriefings.tsx (/saved)",
+   "components/ask/AskRecentClient.tsx (/ask/recent)",
+   "rewrite /api/ask-v2/:path* (next.config.mjs:144)"
+  ],
+  "user_usefulness": "PRIMARY user capability (the only Ask engine wired to the UI) but 404/unavailable unless ASK_V2_ENABLED=true; Alpha value UNKNOWN at 5513275f (last documented check 2026-09-26: unset)",
+  "notes": ""
+ },
+ {
+  "module": "auth",
+  "path": "backend/src/modules/auth",
+  "imported_in_app_module": "yes (backend/src/app.module.ts:132)",
+  "classification": [
+   "controller/live-route",
+   "provider"
+  ],
+  "evidence": "Google OAuth/OIDC",
+  "controllers": [
+   "AuthController"
+  ],
+  "routes": [
+   "GET /auth/google",
+   "GET /auth/google/callback",
+   "POST /auth/signout (RequireAuth+CSRF)"
+  ],
+  "guards": [
+   "RequireAuthGuard",
+   "CsrfGuard"
+  ],
+  "env_flags": [
+   "OAUTH_CLIENT_ID",
+   "OAUTH_CLIENT_SECRET",
+   "OAUTH_FLOW_SECRET",
+   "PUBLIC_BACKEND_ORIGIN",
+   "PUBLIC_OAUTH_CALLBACK_BASE",
+   "FRONTEND_ORIGIN"
+  ],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [
+   "oauth2.googleapis.com/token, accounts.google.com (google-oidc.util.ts:78)"
+  ],
+  "prisma_models": [
+   "Session",
+   "User",
+   "UserIdentity"
+  ],
+  "ask_reachability": "auth.service imports ask-v2 guest claim (guest->account continuation)",
+  "frontend_consumers": [
+   "rewrite /api/auth/:path*",
+   "components/navigation/AccountControl.tsx"
+  ],
+  "user_usefulness": "yes (sign-in)",
+  "notes": ""
+ },
+ {
+  "module": "compute-controls",
+  "path": "backend/src/modules/compute-controls",
+  "imported_in_app_module": "no (imported by AskV2Module, GuestCoreModule, AdminModule)",
+  "classification": [
+   "internal-service"
+  ],
+  "evidence": "ComputeMeterService, CircuitBreakerService, OperationalSwitchService (boot logs switch states, operational-switch.service.ts:164)",
+  "controllers": [],
+  "routes": [],
+  "guards": [],
+  "env_flags": [
+   "ASK_PUBLIC_COMPUTE_ENABLED",
+   "ASK_R2_ENABLED",
+   "ASK_GUEST_TRIAL_ENABLED",
+   "ASK_FLAG_CACHE_MS=5000",
+   "ASK_*_UNITS_PER_* / ASK_BREAKER_* / ASK_CONCURRENT_* knobs (compute-controls.config.ts)",
+   "ASK_RATE_LIMIT_ID_SECRET"
+  ],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [],
+  "prisma_models": [
+   "CircuitBreakerState",
+   "ComputeMeter",
+   "ComputeReservation",
+   "OperationalSwitch",
+   "OperationalSwitchAudit"
+  ],
+  "ask_reachability": "ask-v2 budget/kill-switch authority",
+  "frontend_consumers": [
+   "admin operations"
+  ],
+  "user_usefulness": "indirect",
+  "notes": ""
+ },
+ {
+  "module": "conflict-claim",
+  "path": "backend/src/modules/conflict-claim",
+  "imported_in_app_module": "yes (backend/src/app.module.ts:214)",
+  "classification": [
+   "internal-service"
+  ],
+  "evidence": "onModuleInit registers CONFLICT_CLAIM_DEFINITION into SpecialistClaimRegistry (conflict-claim.module.ts:64); no route",
+  "controllers": [],
+  "routes": [],
+  "guards": [],
+  "env_flags": [],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [],
+  "prisma_models": [],
+  "ask_reachability": "registry is consumed by ask-r2-execution.adapter (specialist-claim.registry import)",
+  "frontend_consumers": [
+   "none"
+  ],
+  "user_usefulness": "indirect via Ask V2",
+  "notes": ""
+ },
+ {
+  "module": "conflict-observation",
+  "path": "backend/src/modules/conflict-observation",
+  "imported_in_app_module": "yes (backend/src/app.module.ts:99)",
+  "classification": [
+   "controller/live-route",
+   "retained-read"
+  ],
+  "evidence": "GET routes read ConflictObservation rows; ConflictObservationProducer is a registered provider but only invoked by backend/src/tooling/ucdp-candidate-alpha-r1.ts (operator script)",
+  "controllers": [
+   "ConflictObservationController"
+  ],
+  "routes": [
+   "GET /conflict/observations (30/60s)",
+   "GET /conflict/observations/:observationKey/evidence (60/60s)"
+  ],
+  "guards": [],
+  "env_flags": [
+   "ALPHA_UCDP_CANDIDATE_R1_APPLY (tooling only)"
+  ],
+  "schedulers": [],
+  "producers": [
+   "ConflictObservationProducer (tooling-invoked only)"
+  ],
+  "external_providers": [
+   "ucdp.uu.se (tooling script fetch only, tooling/ucdp-candidate-alpha-r1.ts:65)"
+  ],
+  "prisma_models": [
+   "ConflictObservation",
+   "SnapshotPin",
+   "SnapshotRetrieval"
+  ],
+  "ask_reachability": "YES: ConflictObservationRepository re-provided in AskIntelligenceModule",
+  "frontend_consumers": [
+   "components/conflict/ConflictDashboard.tsx:98 fetch /conflict-data/observations (rewrite next.config.mjs:235)",
+   "lib/conflict/evidenceDetail.ts"
+  ],
+  "user_usefulness": "public page /conflict (noindex) and /map; both redirected to / in Standalone mode (default)",
+  "notes": ""
+ },
+ {
+  "module": "data-retention",
+  "path": "backend/src/modules/data-retention",
+  "imported_in_app_module": "yes (backend/src/app.module.ts:69)",
+  "classification": [
+   "scheduler",
+   "dormant"
+  ],
+  "evidence": "setInterval sweep only if RETENTION_SWEEP_ENABLED==='true' (retention-policy.ts:83, data-retention.service.ts:42)",
+  "controllers": [],
+  "routes": [],
+  "guards": [],
+  "env_flags": [
+   "RETENTION_SWEEP_ENABLED (default OFF (code requires exact 'true'; unset => off))",
+   "RETENTION_SWEEP_INTERVAL_HOURS=6",
+   "RETENTION_ACCOUNT_CONVERSATION_DAYS=365",
+   "RETENTION_SUPPORT_RESOLVED_DAYS=730",
+   "RETENTION_USAGE_DAYS=90",
+   "RETENTION_RATE_LIMIT_GRACE_DAYS=7",
+   "RETENTION_SWEEP_BATCH=500"
+  ],
+  "schedulers": [
+   "setInterval(intervalMs) + setTimeout 60s -- OFF by default"
+  ],
+  "producers": [],
+  "external_providers": [],
+  "prisma_models": [
+   "AnalysisRun",
+   "AskThread",
+   "ComputeMeter",
+   "ComputeOperation",
+   "ComputeReservation",
+   "ProductEvent",
+   "StoredResult",
+   "SupportTicket"
+  ],
+  "ask_reachability": "none",
+  "frontend_consumers": [
+   "none"
+  ],
+  "user_usefulness": "none (ops)",
+  "notes": ""
+ },
+ {
+  "module": "economy",
+  "path": "backend/src/modules/economy",
+  "imported_in_app_module": "yes (backend/src/app.module.ts:81)",
+  "classification": [
+   "controller/live-route",
+   "retained-read",
+   "unbound-substrate"
+  ],
+  "evidence": "GET route reads retained NISR CPI snapshot (RetainedNisrCpiReader -> SnapshotRetrieval). producers/eurostat-economy.producer.ts: ECONOMY_PRODUCER_ENABLED = false as const (line 64), no runtime importer",
+  "controllers": [
+   "EconomyController"
+  ],
+  "routes": [
+   "GET /economy/observations/rw-nisr-cpi (30/60s)"
+  ],
+  "guards": [],
+  "env_flags": [
+   "ECONOMY_PRODUCER_ENABLED (literal const false)"
+  ],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [],
+  "prisma_models": [
+   "SnapshotRetrieval",
+   "SnapshotPayload (via official-data)"
+  ],
+  "ask_reachability": "YES: EconomyModule imported by AskIntelligenceModule; EconomyObservationReadService used by AskSpecialistReadCoordinator",
+  "frontend_consumers": [
+   "lib/economy/economyObservationRead.ts -> app/economy-visual-preview/* (preview, noindex)",
+   "rewrite /economy/:path*"
+  ],
+  "user_usefulness": "preview page only; redirected in Standalone mode",
+  "notes": ""
+ },
+ {
+  "module": "election",
+  "path": "backend/src/modules/election",
+  "imported_in_app_module": "yes (backend/src/app.module.ts:82)",
+  "classification": [
+   "controller/live-route",
+   "retained-read",
+   "dormant",
+   "preview/test-only"
+  ],
+  "evidence": "Reads admitted bundle file data/<sha>.json; returns READER_DISABLED unless process.env.ELECTION_EVIDENCE_READ_ENABLED==='true' (election-read.service.ts:97). election-capture.cli.ts / election-admit.cli.ts are operator CLIs.",
+  "controllers": [
+   "ElectionController"
+  ],
+  "routes": [
+   "GET /election/evidence/ke (30/60s)"
+  ],
+  "guards": [],
+  "env_flags": [
+   "ELECTION_EVIDENCE_READ_ENABLED (default OFF (code requires exact 'true'; unset => off); .env.example:716 false)"
+  ],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [
+   "election-capture.cli.ts (operator CLI, not runtime)"
+  ],
+  "prisma_models": [],
+  "ask_reachability": "no",
+  "frontend_consumers": [
+   "lib/evidence/retainedReaders.ts:106 -> app/election-visual-preview/* (preview, noindex)"
+  ],
+  "user_usefulness": "preview only; disabled by default",
+  "notes": ""
+ },
+ {
+  "module": "energy",
+  "path": "backend/src/modules/energy",
+  "imported_in_app_module": "yes (backend/src/app.module.ts:91)",
+  "classification": [
+   "controller/live-route",
+   "retained-read"
+  ],
+  "evidence": "GET /energy/observations reads EnergyObservation (energy-read.repository.ts:149); producer = tooling/energy-eurostat-alpha-r1.ts",
+  "controllers": [
+   "EnergyReadController"
+  ],
+  "routes": [
+   "GET /energy/observations"
+  ],
+  "guards": [],
+  "env_flags": [
+   "GN_ALPHA_PRODUCT_OWNER_REVIEW (=== 'YES' reveals review rows)",
+   "ALPHA_ENERGY_EUROSTAT_R1_APPLY (tooling)"
+  ],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [
+   "ec.europa.eu Eurostat (tooling only)"
+  ],
+  "prisma_models": [
+   "EnergyObservation"
+  ],
+  "ask_reachability": "NO (not imported by ask-intelligence/ask-v2/analysis)",
+  "frontend_consumers": [
+   "lib/energy/energyReadModel.ts -> app/energy/page.tsx (noindex)"
+  ],
+  "user_usefulness": "/energy page; redirected in Standalone mode",
+  "notes": ""
+ },
+ {
+  "module": "follows",
+  "path": "backend/src/modules/follows",
+  "imported_in_app_module": "yes (backend/src/app.module.ts:156)",
+  "classification": [
+   "controller/live-route"
+  ],
+  "evidence": "authenticated country follows",
+  "controllers": [
+   "FollowsController"
+  ],
+  "routes": [
+   "GET /follows/countries",
+   "POST /follows/countries (CSRF)",
+   "DELETE /follows/countries/:countryCode (CSRF)"
+  ],
+  "guards": [
+   "RequireAuthGuard",
+   "CsrfGuard"
+  ],
+  "env_flags": [],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [],
+  "prisma_models": [
+   "CountryFollow"
+  ],
+  "ask_reachability": "no",
+  "frontend_consumers": [
+   "components/home/useCountryFollows.ts",
+   "components/my-intelligence/MiFollowing.tsx",
+   "rewrite /api/follows"
+  ],
+  "user_usefulness": "platform-mode Home/My Intelligence only; those pages not in Standalone allowlist",
+  "notes": ""
+ },
+ {
+  "module": "geo",
+  "path": "backend/src/modules/geo",
+  "imported_in_app_module": "yes (backend/src/app.module.ts:116)",
+  "classification": [
+   "controller/live-route",
+   "internal-service"
+  ],
+  "evidence": "Pure gazetteer resolver; no Prisma",
+  "controllers": [
+   "GeoController"
+  ],
+  "routes": [
+   "GET /geo/map-feed",
+   "POST /geo/map-feed/batch",
+   "GET /geo/search",
+   "GET /geo/place",
+   "GET /geo/children",
+   "GET /geo/search-index",
+   "GET /geo/gazetteer"
+  ],
+  "guards": [],
+  "env_flags": [],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [],
+  "prisma_models": [],
+  "ask_reachability": "geo-gazetteer/geo-resolver used as library by ask-router, ask-intelligence, analysis",
+  "frontend_consumers": [
+   "lib/api/mapFeedApi.ts",
+   "lib/api/geoNavigatorApi.ts",
+   "rewrite /geo/:path*"
+  ],
+  "user_usefulness": "map (platform mode)",
+  "notes": ""
+ },
+ {
+  "module": "global-reach",
+  "path": "backend/src/modules/global-reach",
+  "imported_in_app_module": "no (imported by AdminModule)",
+  "classification": [
+   "internal-service",
+   "dormant",
+   "unbound-substrate"
+  ],
+  "evidence": "GlobalReachService used by AdminGlobalReachController; GlobalReachAcquisitionService has no injector and is gated GLOBAL_REACH_ACQUISITION_ACTIVE!=='true' (global-reach-acquisition.service.ts:37); source-pack.registry used by analysis compound-retrieval-plan",
+  "controllers": [],
+  "routes": [],
+  "guards": [],
+  "env_flags": [
+   "GLOBAL_REACH_ACQUISITION_ACTIVE (default OFF (code requires exact 'true'; unset => off))",
+   "GLOBAL_REACH_SOURCE_ALLOWLIST (empty)"
+  ],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [],
+  "prisma_models": [],
+  "ask_reachability": "analysis imports source-pack.registry",
+  "frontend_consumers": [
+   "admin global-reach screens"
+  ],
+  "user_usefulness": "admin only",
+  "notes": ""
+ },
+ {
+  "module": "history",
+  "path": "backend/src/modules/history",
+  "imported_in_app_module": "yes (backend/src/app.module.ts:134)",
+  "classification": [
+   "controller/live-route"
+  ],
+  "evidence": "GET/DELETE only; entries written solely by POST /analysis/news (analysis.controller.ts:84) which has no live frontend caller",
+  "controllers": [
+   "HistoryController"
+  ],
+  "routes": [
+   "GET /history",
+   "DELETE /history (CSRF)"
+  ],
+  "guards": [
+   "RequireAuthGuard",
+   "CsrfGuard"
+  ],
+  "env_flags": [],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [],
+  "prisma_models": [
+   "SearchHistoryEntry"
+  ],
+  "ask_reachability": "written by analysis route only; ask-v2 never writes SearchHistoryEntry",
+  "frontend_consumers": [
+   "app/history/page.tsx:38 accountFetch('/history')",
+   "rewrite /api/history"
+  ],
+  "user_usefulness": "page reachable in Standalone, but no live producer -> stale/empty for new activity",
+  "notes": ""
+ },
+ {
+  "module": "humanitarian",
+  "path": "backend/src/modules/humanitarian",
+  "imported_in_app_module": "partial: HumanitarianReadModule yes (backend/src/app.module.ts:237); HumanitarianModule (boot) spread via humanitarianModuleImports(HUMANITARIAN_PROVISIONING) = [] because HUMANITARIAN_PROVISIONING = undefined (humanitarian.registration.ts:84)",
+  "classification": [
+   "controller/live-route",
+   "dormant",
+   "unbound-substrate"
+  ],
+  "evidence": "GET /humanitarian/observations returns constant humanitarianReadAbsence('NOT_ASSESSED') (humanitarian-read.module.ts); COPERNICUS_PRODUCER_ENABLED = false as const (copernicus-ems.producer.ts:83); intake/retained/producers have no runtime importer",
+  "controllers": [
+   "HumanitarianReadController"
+  ],
+  "routes": [
+   "GET /humanitarian/observations (constant absence)"
+  ],
+  "guards": [],
+  "env_flags": [
+   "COPERNICUS_PRODUCER_ENABLED (literal false)",
+   "HUMANITARIAN_PROVISIONING (code constant undefined)"
+  ],
+  "schedulers": [
+   "HumanitarianAuthorityBootstrap.onModuleInit (NOT loaded)"
+  ],
+  "producers": [],
+  "external_providers": [
+   "Copernicus EMS (producer disabled)"
+  ],
+  "prisma_models": [],
+  "ask_reachability": "no",
+  "frontend_consumers": [
+   "lib/humanitarian/humanitarianRead.ts -> app/humanitarian/* (noindex)"
+  ],
+  "user_usefulness": "page renders an absence; redirected in Standalone mode",
+  "notes": ""
+ },
+ {
+  "module": "market-ingest",
+  "path": "backend/src/modules/market-ingest",
+  "imported_in_app_module": "MarketReadModule yes (backend/src/app.module.ts:90); scheduler/adapters/producer not in any Nest module",
+  "classification": [
+   "controller/live-route",
+   "retained-read",
+   "unbound-substrate"
+  ],
+  "evidence": "MarketReadRepository reads MarketObservation + TED procurement SnapshotRetrieval; market-ingest.scheduler.ts, market-provider-registry.ts, market-retained.producer.ts, adapters/ted.adapter.ts, adapters/eurostat-market.adapter.ts: no runtime importer outside module (tooling/ted-market-procurement-alpha-r1.ts uses ted-procurement-retained)",
+  "controllers": [
+   "MarketReadController"
+  ],
+  "routes": [
+   "GET /market/observations (30/60s)",
+   "GET /market/procurement (30/60s)"
+  ],
+  "guards": [],
+  "env_flags": [
+   "ALPHA_TED_MARKET_R1_APPLY (tooling)",
+   "TED_MARKET_ALPHA_R1_LIMIT (tooling)"
+  ],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [
+   "ted.europa.eu, ec.europa.eu (adapters unbound; tooling script only)"
+  ],
+  "prisma_models": [
+   "MarketIngestLease",
+   "MarketIngestRun",
+   "MarketObservation",
+   "SnapshotPin",
+   "SnapshotRetrieval"
+  ],
+  "ask_reachability": "YES: MarketReadRepository in AskIntelligenceModule",
+  "frontend_consumers": [
+   "lib/market/mktReadModel.ts, mktProcurementRead.ts -> app/market/* (noindex)",
+   "rewrite /market-data/:path*"
+  ],
+  "user_usefulness": "/market page; redirected in Standalone mode",
+  "notes": ""
+ },
+ {
+  "module": "my-intelligence",
+  "path": "backend/src/modules/my-intelligence",
+  "imported_in_app_module": "yes (backend/src/app.module.ts:157)",
+  "classification": [
+   "controller/live-route"
+  ],
+  "evidence": "authenticated saved stories + interests feed",
+  "controllers": [
+   "SavedStoriesController",
+   "MyIntelligenceController"
+  ],
+  "routes": [
+   "GET /users/me/saved/stories",
+   "POST /users/me/saved/stories (CSRF)",
+   "DELETE /users/me/saved/stories/:articleRef (CSRF)",
+   "GET /users/me/intelligence/feed",
+   "GET /users/me/intelligence/interests",
+   "PUT /users/me/intelligence/interests (CSRF)"
+  ],
+  "guards": [
+   "RequireAuthGuard",
+   "CsrfGuard"
+  ],
+  "env_flags": [],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [],
+  "prisma_models": [
+   "Article",
+   "CountryFollow",
+   "SavedStory",
+   "User",
+   "UserIntelligenceInterest"
+  ],
+  "ask_reachability": "no",
+  "frontend_consumers": [
+   "lib/myIntelligence/myIntelligenceApi.ts",
+   "lib/myIntelligence/savedStoriesStore.ts",
+   "components/ask/AskCompactResult.tsx"
+  ],
+  "user_usefulness": "/my-intelligence page not in Standalone allowlist; saved stories store used by bookmark component",
+  "notes": "Re-provides ArticlePersistenceService (second instance)"
+ },
+ {
+  "module": "news",
+  "path": "backend/src/modules/news",
+  "imported_in_app_module": "yes (backend/src/app.module.ts:72)",
+  "classification": [
+   "controller/live-route",
+   "provider",
+   "producer",
+   "internal-service",
+   "dormant"
+  ],
+  "evidence": "Provider selection: GNews (key), GDELT DOC (GDELT_DOC_ENABLED), RSS (RSS_FEEDS_ENABLED), Mock fallback; persists Article/ArticleCountry; StoryCompareController 404 unless COMPARE_READ_ENABLED",
+  "controllers": [
+   "NewsController",
+   "CountryNewsController",
+   "StoryCompareController"
+  ],
+  "routes": [
+   "GET /news/search",
+   "GET /news/top-headlines",
+   "GET /news/top-headlines/retained",
+   "GET /news/category/:category",
+   "GET /news/providers/health",
+   "GET /news/country/:countryCode",
+   "POST /news/stories/resolve (404 unless COMPARE_READ_ENABLED)"
+  ],
+  "guards": [],
+  "env_flags": [
+   "GNEWS_API_KEY",
+   "GNEWS_FEED_TIER=delayed",
+   "GNEWS_PROVIDER_DISPLAY_NAME",
+   "COUNTRY_NEWS_CACHE_TTL_SECONDS=300",
+   "GDELT_DOC_ENABLED (default OFF (code requires exact 'true'; unset => off))",
+   "RSS_FEEDS_ENABLED (default OFF (code requires exact 'true'; unset => off))",
+   "RSS_FEED_SOURCES",
+   "COMPARE_READ_ENABLED (default OFF (code requires exact 'true'; unset => off))",
+   "ASK_SOCIAL_X_ENABLED + X_API_BEARER_TOKEN (default OFF (code requires exact 'true'; unset => off))",
+   "ASK_SOCIAL_YOUTUBE_ENABLED + YOUTUBE_API_KEY (default OFF (code requires exact 'true'; unset => off))"
+  ],
+  "schedulers": [],
+  "producers": [
+   "Article/ArticleCountry (article-persistence.service)",
+   "triggers StoryAlertObserver (stories) after commit"
+  ],
+  "external_providers": [
+   "gnews.io (gnews.provider.ts:450)",
+   "api.gdeltproject.org/api/v2/doc (gdelt-doc.provider.ts:574)",
+   "publisher RSS hosts in feed-source-registry (rss-feed.provider.ts:283)",
+   "api.x.com (social-search.providers.ts)",
+   "www.googleapis.com/youtube (social-search.providers.ts)"
+  ],
+  "prisma_models": [
+   "Article",
+   "ArticleCountry"
+  ],
+  "ask_reachability": "YES: NewsModule imported by AskV2Module and AnalysisModule",
+  "frontend_consumers": [
+   "lib/api/newsApi.ts (top-headlines, retained); searchNews()/fetchByCategory() have 0 callers",
+   "lib/api/countryApi.ts",
+   "lib/api/compareApi.ts (HomeR1Compare, gated GNA_* flags)",
+   "lib/homeFeed.ts",
+   "rewrite /news/:path*"
+  ],
+  "user_usefulness": "Home (platform mode) + map; in Standalone root no direct news route consumer",
+  "notes": ""
+ },
+ {
+  "module": "official-data",
+  "path": "backend/src/modules/official-data",
+  "imported_in_app_module": "no (library; RetainedNisrCpiReader provided in EconomyModule; boot assertion in main.ts:13/72)",
+  "classification": [
+   "internal-service",
+   "dormant",
+   "unbound-substrate"
+  ],
+  "evidence": "assertNisrDocumentProducerIsRunnable returns DORMANT_NOT_RUNNABLE since rw-nisr enabled:false; safe-wire-fetch/official-data-transport.node have no runtime instantiation (dormant transport)",
+  "controllers": [],
+  "routes": [],
+  "guards": [],
+  "env_flags": [],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [
+   "statistics.gov.rw (dormant transport)"
+  ],
+  "prisma_models": [
+   "SnapshotPayload",
+   "SnapshotPin",
+   "SnapshotRetrieval",
+   "SnapshotTombstone"
+  ],
+  "ask_reachability": "via economy reader",
+  "frontend_consumers": [
+   "none"
+  ],
+  "user_usefulness": "indirect (economy)",
+  "notes": ""
+ },
+ {
+  "module": "official-sources",
+  "path": "backend/src/modules/official-sources",
+  "imported_in_app_module": "no (library)",
+  "classification": [
+   "internal-service"
+  ],
+  "evidence": "OFFICIAL_SOURCES registry; entries enabled:false (official-source-registry.ts:68,163); used by economy, official-data boot, security provenance",
+  "controllers": [],
+  "routes": [],
+  "guards": [],
+  "env_flags": [],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [],
+  "prisma_models": [],
+  "ask_reachability": "none",
+  "frontend_consumers": [
+   "none"
+  ],
+  "user_usefulness": "none directly",
+  "notes": ""
+ },
+ {
+  "module": "politics",
+  "path": "backend/src/modules/politics",
+  "imported_in_app_module": "yes (backend/src/app.module.ts:71)",
+  "classification": [
+   "controller/live-route",
+   "retained-read",
+   "preview/test-only"
+  ],
+  "evidence": "POLITICS_RETAINED_CAPTURES = [] (politics.retained.ts:9) -> route always returns absence NOT_ASSESSED; no DB",
+  "controllers": [
+   "PoliticsReadController"
+  ],
+  "routes": [
+   "GET /politics/observations"
+  ],
+  "guards": [],
+  "env_flags": [],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [],
+  "prisma_models": [],
+  "ask_reachability": "no",
+  "frontend_consumers": [
+   "lib/politics/politicsReadModel.ts -> app/politics-visual-preview/* (preview)"
+  ],
+  "user_usefulness": "preview page renders empty ledger",
+  "notes": ""
+ },
+ {
+  "module": "readiness",
+  "path": "backend/src/modules/readiness",
+  "imported_in_app_module": "no (types-only contract)",
+  "classification": [
+   "unbound-substrate"
+  ],
+  "evidence": "provider-readiness.contract.ts has no importer outside its dir",
+  "controllers": [],
+  "routes": [],
+  "guards": [],
+  "env_flags": [],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [],
+  "prisma_models": [],
+  "ask_reachability": "none",
+  "frontend_consumers": [
+   "none"
+  ],
+  "user_usefulness": "none",
+  "notes": ""
+ },
+ {
+  "module": "reference-providers",
+  "path": "backend/src/modules/reference-providers",
+  "imported_in_app_module": "no",
+  "classification": [
+   "unbound-substrate"
+  ],
+  "evidence": "reference-provider-registry.ts + wikipedia/wikipedia-summary.ts have no importer anywhere in backend/src (non-spec)",
+  "controllers": [],
+  "routes": [],
+  "guards": [],
+  "env_flags": [],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [
+   "en.wikipedia.org, pl.wikipedia.org (declared, unreachable)"
+  ],
+  "prisma_models": [],
+  "ask_reachability": "none",
+  "frontend_consumers": [
+   "none"
+  ],
+  "user_usefulness": "none",
+  "notes": ""
+ },
+ {
+  "module": "security",
+  "path": "backend/src/modules/security",
+  "imported_in_app_module": "SecurityModule yes (backend/src/app.module.ts:215); SecurityProducerModule NOT imported anywhere",
+  "classification": [
+   "controller/live-route",
+   "unbound-substrate"
+  ],
+  "evidence": "GET /security/observations/:countryCode returns constant NOT_ASSESSED (security-public-content.ts publicSecurityRead); SecurityProducerService/SecurityObservationRepository unreachable",
+  "controllers": [
+   "SecurityController"
+  ],
+  "routes": [
+   "GET /security/observations/:countryCode (constant absence)"
+  ],
+  "guards": [],
+  "env_flags": [],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [],
+  "prisma_models": [
+   "SecurityObservation",
+   "SecurityProjectionCompletion",
+   "SecurityProjectionMember",
+   "SecurityProjectionRun"
+  ],
+  "ask_reachability": "no",
+  "frontend_consumers": [
+   "lib/api/securityApi.ts exists but has 0 importers"
+  ],
+  "user_usefulness": "none (no consumer)",
+  "notes": ""
+ },
+ {
+  "module": "signals",
+  "path": "backend/src/modules/signals",
+  "imported_in_app_module": "yes (backend/src/app.module.ts:127)",
+  "classification": [
+   "internal-service",
+   "unbound-substrate",
+   "dormant"
+  ],
+  "evidence": "SignalsService exported but injected nowhere (only app.module.ts comment); GDELT GEO provider selected if GDELT_ENABLED true (code default false; root .env.example:280 sets true); EventRegistry needs flag+key",
+  "controllers": [],
+  "routes": [],
+  "guards": [],
+  "env_flags": [
+   "GDELT_ENABLED (code: off unless 'true'; .env.example=true)",
+   "GDELT_GEO_API_BASE_URL",
+   "GDELT_REQUEST_TIMEOUT_MS=8000",
+   "EVENT_REGISTRY_ENABLED (default OFF (code requires exact 'true'; unset => off))",
+   "EVENT_REGISTRY_API_KEY",
+   "EVENT_REGISTRY_BASE_URL"
+  ],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [
+   "api.gdeltproject.org/api/v2/geo/geo (gdelt.provider.ts:312)",
+   "eventregistry.org (event-registry.provider.ts:301) -- both unreachable (no consumer)"
+  ],
+  "prisma_models": [],
+  "ask_reachability": "no",
+  "frontend_consumers": [
+   "none"
+  ],
+  "user_usefulness": "none",
+  "notes": ""
+ },
+ {
+  "module": "situation",
+  "path": "backend/src/modules/situation",
+  "imported_in_app_module": "yes (backend/src/app.module.ts:192)",
+  "classification": [
+   "unbound-substrate"
+  ],
+  "evidence": "No controller; SituationService exported, no injector; identity port bound to UNWIRED_SITUATION_IDENTITY_PORT (throws)",
+  "controllers": [],
+  "routes": [],
+  "guards": [],
+  "env_flags": [],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [],
+  "prisma_models": [
+   "Situation",
+   "SituationCluster",
+   "SituationClusterMember",
+   "SituationShadowDecision",
+   "SituationSnapshot"
+  ],
+  "ask_reachability": "no",
+  "frontend_consumers": [
+   "none"
+  ],
+  "user_usefulness": "none",
+  "notes": ""
+ },
+ {
+  "module": "source-packs",
+  "path": "backend/src/modules/source-packs",
+  "imported_in_app_module": "no (data only: eu27 JSON manifests)",
+  "classification": [
+   "unbound-substrate"
+  ],
+  "evidence": "eu27/countries/*.json referenced only as manifestPath strings in global-reach/data/regional-admission.json and CI; runtime uses global-reach/data/p-canonical-packs.json",
+  "controllers": [],
+  "routes": [],
+  "guards": [],
+  "env_flags": [],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [],
+  "prisma_models": [],
+  "ask_reachability": "none",
+  "frontend_consumers": [
+   "none"
+  ],
+  "user_usefulness": "none",
+  "notes": ""
+ },
+ {
+  "module": "specialist",
+  "path": "backend/src/modules/specialist",
+  "imported_in_app_module": "no (imported by ConflictClaimModule and AskV2Module)",
+  "classification": [
+   "internal-service"
+  ],
+  "evidence": "SpecialistClaimRegistry singleton; CONFLICT registered at init; consumed by ask-r2-execution.adapter",
+  "controllers": [],
+  "routes": [],
+  "guards": [],
+  "env_flags": [],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [],
+  "prisma_models": [],
+  "ask_reachability": "ask-v2",
+  "frontend_consumers": [
+   "none"
+  ],
+  "user_usefulness": "indirect",
+  "notes": ""
+ },
+ {
+  "module": "stories",
+  "path": "backend/src/modules/stories",
+  "imported_in_app_module": "StoriesModule yes (backend/src/app.module.ts:158); StoryObservationModule (@Global) yes (backend/src/app.module.ts:159)",
+  "classification": [
+   "controller/live-route",
+   "dormant",
+   "producer"
+  ],
+  "evidence": "Discussion/Alerts routes 404 unless DISCUSSION_READ_ENABLED / DISCUSSION_WRITE_ENABLED / ALERTS_IN_APP_ENABLED==='true' (story-gates.ts:24-30); StoryAlertObserver runs on every Article persistence (DB-only, joins stories with active alerts)",
+  "controllers": [
+   "DiscussionController",
+   "AlertsController",
+   "AdminStoriesController"
+  ],
+  "routes": [
+   "GET /discussion/articles/:articleRef",
+   "POST /discussion/counts",
+   "POST /discussion/comments",
+   "POST /discussion/comments/:id/edit",
+   "DELETE /discussion/comments/:id",
+   "POST /discussion/comments/:id/report",
+   "GET /alerts",
+   "POST /alerts",
+   "POST /alerts/by-article",
+   "GET /alerts/inbox",
+   "POST /alerts/inbox/read-all",
+   "POST /alerts/events/:id/read",
+   "POST /alerts/:id/:op",
+   "GET /admin/stories/by-article/:articleRef",
+   "POST /admin/stories/merge",
+   "POST /admin/stories/:id/split",
+   "POST /admin/stories/backfill",
+   "GET /admin/stories/discussion/reports",
+   "POST /admin/stories/discussion/comments/:id/moderate",
+   "POST /admin/stories/:id/discussion/lock"
+  ],
+  "guards": [
+   "DiscussionReadGate",
+   "DiscussionWriteGate",
+   "AlertsInAppGate",
+   "RequireAuthGuard",
+   "CsrfGuard",
+   "Admin guards"
+  ],
+  "env_flags": [
+   "DISCUSSION_READ_ENABLED (default OFF (code requires exact 'true'; unset => off))",
+   "DISCUSSION_WRITE_ENABLED (default OFF (code requires exact 'true'; unset => off), requires READ)",
+   "ALERTS_IN_APP_ENABLED (default OFF (code requires exact 'true'; unset => off))"
+  ],
+  "schedulers": [],
+  "producers": [
+   "StoryArticle/StoryIdentityEvent/StoryAlertEvent via StoryAlertObserver"
+  ],
+  "external_providers": [],
+  "prisma_models": [
+   "Article",
+   "Story",
+   "StoryAlert",
+   "StoryAlertEvent",
+   "StoryArticle",
+   "StoryComment",
+   "StoryCommentReport",
+   "StoryIdentityEvent",
+   "StoryModerationAction",
+   "UserInboxCursor"
+  ],
+  "ask_reachability": "briefings.service reads story-relation.read",
+  "frontend_consumers": [
+   "lib/stories/stageBApi.ts -> components/home/r1/stageb/* (HomeR1Page; requires GNA_PUBLIC_ROOT=platform + GNA_HOME_R1 + GNA_HOME_CARD_ACTIONS + GNA_DISCUSSION_*/GNA_ALERTS_IN_APP)"
+  ],
+  "user_usefulness": "dormant by default (both backend and frontend flags off)",
+  "notes": ""
+ },
+ {
+  "module": "support",
+  "path": "backend/src/modules/support",
+  "imported_in_app_module": "yes (backend/src/app.module.ts:152)",
+  "classification": [
+   "controller/live-route",
+   "provider"
+  ],
+  "evidence": "Support tickets; SupportAiService calls AnalysisService only if SUPPORT_AI_ENABLED==='true' (support-ai.service.ts:240)",
+  "controllers": [
+   "SupportController",
+   "AdminSupportController"
+  ],
+  "routes": [
+   "POST /support/tickets (CSRF, 5/60s)",
+   "GET /support/tickets",
+   "GET /support/tickets/:reference",
+   "POST /support/tickets/:reference/messages (CSRF)",
+   "GET /admin/support/tickets",
+   "GET /admin/support/tickets/:reference",
+   "POST /admin/support/tickets/:reference/messages",
+   "POST /admin/support/tickets/:reference/status"
+  ],
+  "guards": [
+   "RequireAuthGuard",
+   "CsrfGuard",
+   "Admin guards"
+  ],
+  "env_flags": [
+   "SUPPORT_AI_ENABLED (false)",
+   "SUPPORT_AI_TIMEOUT_MS=20000",
+   "SUPPORT_AI_MAX_CONCURRENT=2",
+   "SUPPORT_AI_PER_USER_LIMIT=5",
+   "SUPPORT_AI_PER_USER_WINDOW=900000"
+  ],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [],
+  "prisma_models": [
+   "SupportMessage",
+   "SupportTicket"
+  ],
+  "ask_reachability": "SupportAiService -> AnalysisService (non-Ask exception)",
+  "frontend_consumers": [
+   "app/support/*",
+   "rewrite /api/support"
+  ],
+  "user_usefulness": "yes (/support in Standalone allowlist)",
+  "notes": "app.module.ts:148-151 comment says SupportModule 'declares no controller and no provider' -- stale; it registers 2 controllers + 3 providers"
+ },
+ {
+  "module": "telemetry",
+  "path": "backend/src/modules/telemetry",
+  "imported_in_app_module": "yes (backend/src/app.module.ts:163); TelemetryInterceptor as APP_INTERCEPTOR",
+  "classification": [
+   "controller/live-route",
+   "producer"
+  ],
+  "evidence": "POST /events public write; TelemetryInterceptor persists AnalysisRun only for POST */analysis/news (telemetry.interceptor.ts:31,40)",
+  "controllers": [
+   "TelemetryController"
+  ],
+  "routes": [
+   "POST /events (20/60s)"
+  ],
+  "guards": [],
+  "env_flags": [],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [],
+  "prisma_models": [
+   "AnalysisRun",
+   "ProductEvent"
+  ],
+  "ask_reachability": "observes analysis route only; ask-v2 traffic not recorded as AnalysisRun",
+  "frontend_consumers": [
+   "no frontend caller of POST /events found"
+  ],
+  "user_usefulness": "none user-facing; admin analytics read AnalysisRun/ProductEvent",
+  "notes": ""
+ },
+ {
+  "module": "users",
+  "path": "backend/src/modules/users",
+  "imported_in_app_module": "yes (backend/src/app.module.ts:133)",
+  "classification": [
+   "controller/live-route"
+  ],
+  "evidence": "account profile",
+  "controllers": [
+   "UsersController"
+  ],
+  "routes": [
+   "GET /users/me",
+   "POST /users/me/seen (CSRF)",
+   "DELETE /users/me (CSRF)"
+  ],
+  "guards": [
+   "RequireAuthGuard",
+   "CsrfGuard"
+  ],
+  "env_flags": [],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [],
+  "prisma_models": [
+   "User"
+  ],
+  "ask_reachability": "none",
+  "frontend_consumers": [
+   "components/navigation/AccountControl.tsx",
+   "components/account/DeleteAccountDangerZone.tsx",
+   "rewrite /api/users"
+  ],
+  "user_usefulness": "yes",
+  "notes": ""
+ },
+ {
+  "module": "watch",
+  "path": "backend/src/modules/watch",
+  "imported_in_app_module": "no (no Nest module)",
+  "classification": [
+   "dormant",
+   "unbound-substrate"
+  ],
+  "evidence": "WATCH_RUNTIME_ACTIVE = false (watch-runtime.policy.ts:2); watch-runtime.ts no importer",
+  "controllers": [],
+  "routes": [],
+  "guards": [],
+  "env_flags": [
+   "WATCH_RUNTIME_ACTIVE (literal false)"
+  ],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [],
+  "prisma_models": [
+   "Article",
+   "User",
+   "WatchObservation",
+   "WatchRun",
+   "WatchSubscription"
+  ],
+  "ask_reachability": "none",
+  "frontend_consumers": [
+   "frontend lib/map/monetization/watchRuntimeGate.ts (const false)"
+  ],
+  "user_usefulness": "none",
+  "notes": ""
+ },
+ {
+  "module": "health (top-level)",
+  "path": "backend/src/health",
+  "imported_in_app_module": "yes (backend/src/app.module.ts:70)",
+  "classification": [
+   "controller/live-route"
+  ],
+  "evidence": "liveness/readiness",
+  "controllers": [
+   "HealthController"
+  ],
+  "routes": [
+   "GET /health (SkipThrottle)",
+   "GET /health/ready (60/60s)"
+  ],
+  "guards": [],
+  "env_flags": [],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [],
+  "prisma_models": [],
+  "ask_reachability": "none",
+  "frontend_consumers": [
+   "admin SystemHealthScreen"
+  ],
+  "user_usefulness": "ops",
+  "notes": ""
+ },
+ {
+  "module": "app (top-level)",
+  "path": "backend/src/app.controller.ts",
+  "imported_in_app_module": "yes (controllers: [AppController])",
+  "classification": [
+   "controller/live-route"
+  ],
+  "evidence": "root",
+  "controllers": [
+   "AppController"
+  ],
+  "routes": [
+   "GET /"
+  ],
+  "guards": [],
+  "env_flags": [],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [],
+  "prisma_models": [],
+  "ask_reachability": "none",
+  "frontend_consumers": [],
+  "user_usefulness": "none",
+  "notes": ""
+ },
+ {
+  "module": "database (top-level)",
+  "path": "backend/src/database",
+  "imported_in_app_module": "yes (PrismaModule)",
+  "classification": [
+   "internal-service"
+  ],
+  "evidence": "PrismaService",
+  "controllers": [],
+  "routes": [],
+  "guards": [],
+  "env_flags": [
+   "DATABASE_URL",
+   "DB_POOL_MAX=10"
+  ],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [],
+  "prisma_models": [],
+  "ask_reachability": "none",
+  "frontend_consumers": [],
+  "user_usefulness": "infra",
+  "notes": ""
+ },
+ {
+  "module": "security (top-level, not modules/security)",
+  "path": "backend/src/security",
+  "imported_in_app_module": "providers in AppModule",
+  "classification": [
+   "internal-service"
+  ],
+  "evidence": "Startup validators (CORS, TRUST_PROXY, PUBLIC_BACKEND_ORIGIN, PUBLIC_OAUTH_CALLBACK_BASE, auth secrets), EgressDeclarationReporter",
+  "controllers": [],
+  "routes": [],
+  "guards": [],
+  "env_flags": [
+   "FRONTEND_ORIGIN",
+   "TRUST_PROXY=false",
+   "PUBLIC_BACKEND_ORIGIN",
+   "PUBLIC_OAUTH_CALLBACK_BASE",
+   "OAUTH_*"
+  ],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [],
+  "prisma_models": [],
+  "ask_reachability": "none",
+  "frontend_consumers": [],
+  "user_usefulness": "infra",
+  "notes": ""
+ },
+ {
+  "module": "observability (top-level)",
+  "path": "backend/src/observability",
+  "imported_in_app_module": "APP_INTERCEPTOR/APP_FILTER/middleware",
+  "classification": [
+   "internal-service"
+  ],
+  "evidence": "LoggingInterceptor, GlobalExceptionFilter, RequestIdMiddleware",
+  "controllers": [],
+  "routes": [],
+  "guards": [],
+  "env_flags": [],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [],
+  "prisma_models": [],
+  "ask_reachability": "none",
+  "frontend_consumers": [],
+  "user_usefulness": "infra",
+  "notes": ""
+ },
+ {
+  "module": "tooling (top-level)",
+  "path": "backend/src/tooling",
+  "imported_in_app_module": "no (operator scripts)",
+  "classification": [
+   "producer",
+   "preview/test-only"
+  ],
+  "evidence": "energy-eurostat-alpha-r1.ts, ted-market-procurement-alpha-r1.ts, ucdp-candidate-alpha-r1.ts write retained rows when *_APPLY env set",
+  "controllers": [],
+  "routes": [],
+  "guards": [],
+  "env_flags": [
+   "ALPHA_ENERGY_EUROSTAT_R1_APPLY",
+   "ALPHA_TED_MARKET_R1_APPLY",
+   "ALPHA_UCDP_CANDIDATE_R1_APPLY"
+  ],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [
+   "ec.europa.eu",
+   "ted.europa.eu",
+   "ucdp.uu.se"
+  ],
+  "prisma_models": [
+   "EnergyObservation",
+   "SnapshotPayload",
+   "SnapshotPin",
+   "SnapshotRetrieval"
+  ],
+  "ask_reachability": "none",
+  "frontend_consumers": [],
+  "user_usefulness": "operator only",
+  "notes": ""
+ },
+ {
+  "module": "qualification / shared-vocabulary / config (top-level)",
+  "path": "backend/src/{qualification,shared-vocabulary,config}",
+  "imported_in_app_module": "no",
+  "classification": [
+   "preview/test-only"
+  ],
+  "evidence": "spec files only",
+  "controllers": [],
+  "routes": [],
+  "guards": [],
+  "env_flags": [],
+  "schedulers": [],
+  "producers": [],
+  "external_providers": [],
+  "prisma_models": [],
+  "ask_reachability": "none",
+  "frontend_consumers": [],
+  "user_usefulness": "none",
+  "notes": ""
+ }
+]

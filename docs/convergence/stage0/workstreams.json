@@ -1,0 +1,836 @@
+{
+ "generated": "2026-10-04",
+ "authority": {
+  "alpha": "5513275ff731936a07c01e937b92c263ba6d6cf9",
+  "production": "a9cf8a8969eae5cff19def63fc6dfb6a67815518",
+  "main": "5149276ff916b23100656e6d784975d3c89f6c02"
+ },
+ "lanes": [
+  {
+   "id": "R4-semantic",
+   "ref": "origin/handoff/r4-semantic-baseline-5699eb7",
+   "tip": "5699eb70",
+   "date": "2026-10-04T13:40:12+02:00",
+   "merge_base": "5513275f",
+   "ahead": 2,
+   "behind": 0,
+   "files": [
+    "backend/src/modules/ask-observability/ask-observation.contract.ts",
+    "backend/src/modules/ask-observability/askObservation.job.spec.ts",
+    "backend/src/modules/ask-router/ask-r2-route.ts",
+    "backend/src/modules/ask-router/semantic-ir/interpret-turn.ts",
+    "backend/src/modules/ask-router/semantic-ir/prior-claim.ts",
+    "backend/src/modules/ask-router/semantic-ir/semantic-first.ts",
+    "backend/src/modules/ask-router/user-job.ts",
+    "backend/src/modules/ask-v2/ask-r2-execution.adapter.spec.ts",
+    "backend/src/modules/ask-v2/ask-r2-execution.adapter.ts",
+    "backend/src/modules/ask-v2/ask-r2-execution.alpha-defects.spec.ts",
+    "backend/src/modules/ask-v2/ask-r2-execution.r4.spec.ts",
+    "backend/src/modules/ask-v2/ask-v2.service.ts",
+    "backend/src/modules/ask-v2/conversation/conversation-artifact.ts",
+    "backend/src/modules/ask-v2/conversation/conversation-state.ts",
+    "backend/src/modules/ask-v2/execution-contract.ts",
+    "frontend/src/components/ask-frame/AskR2TurnView.tsx",
+    "frontend/src/lib/api/askV2Api.ts",
+    "frontend/src/lib/ask/askR2Strings.ts",
+    "frontend/src/lib/ask/askR2View.ts"
+   ],
+   "log": [
+    {
+     "sha": "5699eb70",
+     "date": "2026-10-04",
+     "subject": "fix(ask): scope R-3 answer records to explicit answer references"
+    },
+    {
+     "sha": "da9c0e55",
+     "date": "2026-10-04",
+     "subject": "fix(ask): R4 Alpha live semantic defects — R-1..R-5 structural repairs"
+    }
+   ],
+   "final": "IMMUTABLE by naming (handoff/); no 'final/immutable/PROPOSED' text in commits. Baseline that H checkpoint builds on (5699eb70 is ancestor of ea724fa4).",
+   "shortstat": "19 files, +1507 -100",
+   "areas": {
+    "backend/src/modules/ask-v2": 8,
+    "backend/src/modules/ask-router": 5,
+    "backend/src/modules/ask-observability": 2,
+    "frontend/src/lib/ask": 2,
+    "frontend/src/components/ask-frame": 1,
+    "frontend/src/lib/api": 1
+   },
+   "file_count": 19
+  },
+  {
+   "id": "H-answer-reading-l10n",
+   "ref": "origin/checkpoint/r4-h-answer-reading-ea724fa-pre-l",
+   "tip": "ea724fa4",
+   "date": "2026-10-04T14:01:31+00:00",
+   "merge_base": "5513275f",
+   "ahead": 11,
+   "behind": 0,
+   "includes": "origin/handoff/r4-semantic-baseline-5699eb7 (2 commits) + 9 H commits",
+   "files_total_vs_alpha": 76,
+   "files": [
+    "frontend/src/app/account/settings/page.tsx",
+    "frontend/src/app/globals.css",
+    "frontend/src/components/ask-frame/AskDeepConfirm.tsx",
+    "frontend/src/components/ask-frame/AskFrameScreen.tsx",
+    "frontend/src/components/ask-frame/AskIntelligenceBasis.tsx",
+    "frontend/src/components/ask-frame/AskR2TurnView.tsx",
+    "frontend/src/components/ask-frame/AskRecentReporting.tsx",
+    "frontend/src/components/ask-frame/AskSourcesColumn.tsx",
+    "frontend/src/components/ask-frame/AskTurnBrief.tsx",
+    "frontend/src/components/ask-frame/AskTurnCopy.tsx",
+    "frontend/src/components/ask-frame/AskTurnSave.tsx",
+    "frontend/src/components/ask-frame/askCenteredComposer.spec.ts",
+    "frontend/src/components/ask-frame/askChatUx.spec.ts",
+    "frontend/src/components/ask-frame/askDashboard.module.css",
+    "frontend/src/components/ask-frame/askReadingHierarchy.spec.ts",
+    "frontend/src/components/ask-nav/AskContinuityHeader.tsx",
+    "frontend/src/components/ask-nav/AskNavShell.tsx",
+    "frontend/src/components/ask-nav/AskShellFrame.tsx",
+    "frontend/src/components/ask-nav/AskStandaloneRoot.tsx",
+    "frontend/src/components/ask-nav/askNavShell.spec.ts",
+    "frontend/src/components/ask-nav/askStandaloneUtilities.spec.ts",
+    "frontend/src/components/ask/AskAiDock.tsx",
+    "frontend/src/components/ask/AskAnswerProse.tsx",
+    "frontend/src/components/ask/AskCitedBrief.tsx",
+    "frontend/src/components/ask/AskCompactResult.tsx",
+    "frontend/src/components/ask/AskEvidenceTable.tsx",
+    "frontend/src/components/ask/AskRecentClient.tsx",
+    "frontend/src/components/ask/BriefingDetailClient.tsx",
+    "frontend/src/components/ask/BriefingViews.tsx",
+    "frontend/src/components/ask/SavedBriefings.tsx",
+    "frontend/src/components/ask/SavedClient.tsx",
+    "frontend/src/components/my-intelligence/MyIntelligenceClient.tsx",
+    "frontend/src/components/search/SearchPageClient.tsx",
+    "frontend/src/lib/ask/askAnswerMarkdown.spec.ts",
+    "frontend/src/lib/ask/askAnswerMarkdown.ts",
+    "frontend/src/lib/ask/askComputedResultShell.spec.ts",
+    "frontend/src/lib/ask/askGovernedConversation.spec.ts",
+    "frontend/src/lib/ask/askGovernedConversation.ts",
+    "frontend/src/lib/ask/askIntelligenceView.spec.ts",
+    "frontend/src/lib/ask/askIntelligenceView.ts",
+    "frontend/src/lib/ask/askLiveAcceptanceRepair.spec.ts",
+    "frontend/src/lib/ask/askLocale.ts",
+    "frontend/src/lib/ask/askNavStrings.ts",
+    "frontend/src/lib/ask/askR2View.ts",
+    "frontend/src/lib/ask/askSevenLanguage.spec.ts",
+    "frontend/src/lib/ask/askSevenStrings.ts",
+    "frontend/src/lib/ask/askSurfaceStrings.ts",
+    "frontend/src/lib/ask/shell/askShellCatalogue.ts",
+    "frontend/src/lib/ask/shell/askShellCoverage.spec.ts",
+    "frontend/src/lib/ask/shell/askShellDeclaredFallbacks.ts",
+    "frontend/src/lib/ask/shell/askShellOverlay.spec.ts",
+    "frontend/src/lib/ask/shell/askShellOverlay.ts",
+    "frontend/src/lib/ask/shell/askShellRtl.spec.ts",
+    "frontend/src/lib/ask/shell/askShellSource.ts",
+    "frontend/src/lib/ask/shell/locales/ar.ts",
+    "frontend/src/lib/ask/shell/locales/de.ts",
+    "frontend/src/lib/ask/shell/locales/es.ts",
+    "frontend/src/lib/ask/shell/locales/fr.ts",
+    "frontend/src/lib/ask/shell/locales/pt.ts"
+   ],
+   "files_scope": "5699eb70..ea724fa4 (H-only)",
+   "log": [
+    {
+     "sha": "ea724fa4",
+     "date": "2026-10-04",
+     "subject": "fix(ask-ui): PHASE B/C — draft the hero subtitle, the last English line in the French capture"
+    },
+    {
+     "sha": "dbaab7bf",
+     "date": "2026-10-04",
+     "subject": "feat(ask-ui): PHASE C — the answer is the page, and the light theme is readable"
+    },
+    {
+     "sha": "b3ffc9ad",
+     "date": "2026-10-04",
+     "subject": "fix(ask-ui): PHASE B — Arabic RTL across the whole Ask surface, not just the frame"
+    },
+    {
+     "sha": "2294be0c",
+     "date": "2026-10-04",
+     "subject": "fix(ask-ui): PHASE B — remove the EN/PL clamp, and the eighty keys it was hiding"
+    },
+    {
+     "sha": "0089fda6",
+     "date": "2026-10-04",
+     "subject": "feat(ask-ui): PHASE B — selectedLocale drives the whole Ask shell, and the gap is in writing"
+    },
+    {
+     "sha": "c5910b42",
+     "date": "2026-10-04",
+     "subject": "fix(ask-ui): PHASE B — the overlay could not see ten of the keys it was accounting for"
+    },
+    {
+     "sha": "c01fe100",
+     "date": "2026-10-04",
+     "subject": "fix(ask-ui): reconcile phase A onto the 5699eb7 semantic baseline — the mixed path renders safely too"
+    },
+    {
+     "sha": "34b99d22",
+     "date": "2026-10-04",
+     "subject": "feat(ask-ui): PHASE B scaffold — the seven-language shell overlay mechanism"
+    },
+    {
+     "sha": "23a2b67a",
+     "date": "2026-10-04",
+     "subject": "fix(ask-ui): PHASE A — render the answer's own structure instead of printing its markup"
+    }
+   ],
+   "final": "IMMUTABLE checkpoint by naming; explicitly PRE-Claude-L: commit msg says manifest 'Revision 4: 559 keys, 530 in L's scope' reissued to Claude L; 469 keys per locale still English by declaration; FR/DE/ES/PT/AR shell locales await Claude L.",
+   "shortstat": "76 files vs alpha (+6767 -447); 59 H-only",
+   "areas": {
+    "frontend/src/lib/ask": 26,
+    "frontend/src/components/ask-frame": 13,
+    "frontend/src/components/ask": 10,
+    "frontend/src/components/ask-nav": 6,
+    "frontend/src/app/account": 1,
+    "frontend/src/app/globals.css": 1,
+    "frontend/src/components/my-intelligence": 1,
+    "frontend/src/components/search": 1
+   },
+   "file_count": 59
+  },
+  {
+   "id": "Politics-R1-integration",
+   "ref": "origin/specialist/politics-r1-integration-d920893",
+   "tip": "d9208933",
+   "date": "2026-10-04T11:38:44+02:00",
+   "merge_base": "4e380da4",
+   "ahead": 3,
+   "behind": 1,
+   "behind_detail": "missing 5513275f only (touches ask-frame/askCenteredComposer.spec.ts, askDashboard.module.css — no overlap)",
+   "files": [
+    "backend/prisma/migrations/20261004120000_politics_observation_store/DOWN.sql",
+    "backend/prisma/migrations/20261004120000_politics_observation_store/migration.sql",
+    "backend/prisma/schema.prisma",
+    "backend/src/modules/politics/politics-no-person-channel.spec.ts",
+    "backend/src/modules/politics/politics-observation.live-postgres.spec.ts",
+    "backend/src/modules/politics/politics-observation.repository.ts",
+    "backend/src/modules/politics/politics.module.ts",
+    "backend/src/modules/politics/politics.retained.ts",
+    "backend/src/modules/politics/politics.spec.ts",
+    "shared/src/politics/retained.spec.ts",
+    "shared/src/politics/retained.ts"
+   ],
+   "log": [
+    {
+     "sha": "d9208933",
+     "date": "2026-10-04",
+     "subject": "fix(politics): Prisma-canonical names for two >63-char identifiers (zero schema drift)"
+    },
+    {
+     "sha": "4fec7cf8",
+     "date": "2026-10-04",
+     "subject": "test(politics): enforce no person channel by absence (CTO security ruling)"
+    },
+    {
+     "sha": "95aa85de",
+     "date": "2026-10-04",
+     "subject": "feat(politics): retained Politics evidence store feeding shared retrieval (R1)"
+    }
+   ],
+   "final": "Not marked final; SHA-suffixed specialist ref (treat as frozen). Commit: 'No provider, no fetch, no deploy, no Alpha migration.' Adds Prisma migration 20261004120000_politics_observation_store + schema.prisma change.",
+   "shortstat": "11 files, +894 -31",
+   "areas": {
+    "backend/src/modules/politics": 6,
+    "backend/prisma/migrations": 2,
+    "shared/src/politics": 2,
+    "backend/prisma/schema.prisma": 1
+   },
+   "file_count": 11
+  },
+  {
+   "id": "Politics-R1-base",
+   "ref": "origin/specialist/politics-r1-base-4e380da",
+   "tip": "4e380da4",
+   "date": "2026-10-04T10:29:56+02:00",
+   "merge_base": "4e380da4",
+   "ahead": 0,
+   "behind": 1,
+   "files": [],
+   "final": "Base marker only = alpha~1; no own work.",
+   "areas": {},
+   "file_count": 0
+  },
+  {
+   "id": "Humanitarian-R1-convergence",
+   "ref": "origin/integration/humanitarian-data-r1-convergence",
+   "tip": "05e6c23e",
+   "date": "2026-10-02T09:23:13+02:00",
+   "merge_base": "58f80fd4 (= origin/rollback/alpha-pre-home-discussions-alerts-r1)",
+   "ahead": 31,
+   "behind": 84,
+   "files": [
+    "backend/src/app.module.ts",
+    "backend/src/modules/ask-intelligence/ask-contribution.contract.ts",
+    "backend/src/modules/ask-intelligence/governed-answer.ts",
+    "backend/src/modules/ask-intelligence/humanitarian-disclosure-chain.spec.ts",
+    "backend/src/modules/ask-intelligence/humanitarian-specialist.adapter.ts",
+    "backend/src/modules/ask-intelligence/humanitarian-specialist.c-h3.spec.ts",
+    "backend/src/modules/ask-intelligence/humanitarian-specialist.lane-c-corpus.spec.ts",
+    "backend/src/modules/humanitarian/analysis-workspace.contract.spec.ts",
+    "backend/src/modules/humanitarian/humanitarian-cross-surface.spec.ts",
+    "backend/src/modules/humanitarian/humanitarian-read.module.ts",
+    "backend/src/modules/humanitarian/humanitarian-read.spec.ts",
+    "backend/src/modules/humanitarian/humanitarian-reader-read.ts",
+    "backend/src/modules/humanitarian/humanitarian-retained-corpus.spec.ts",
+    "backend/src/modules/humanitarian/humanitarian-retained-corpus.ts",
+    "backend/src/modules/humanitarian/operational/humanitarian-operational.contract.ts",
+    "backend/src/modules/humanitarian/operational/humanitarian-operational.controller.ts",
+    "backend/src/modules/humanitarian/operational/humanitarian-operational.module.ts",
+    "backend/src/modules/humanitarian/operational/humanitarian-operational.mount.ts",
+    "backend/src/modules/humanitarian/operational/humanitarian-operational.readiness.ts",
+    "backend/src/modules/humanitarian/operational/humanitarian-operational.service.ts",
+    "backend/src/modules/humanitarian/operational/humanitarianOperational.spec.ts",
+    "backend/src/modules/humanitarian/operational/humanitarianOperationalE1.spec.ts",
+    "backend/src/modules/humanitarian/operational/humanitarianOperationalMount.spec.ts",
+    "backend/src/modules/humanitarian/operational/humanitarianOperationalReadiness.spec.ts",
+    "backend/src/modules/humanitarian/reader-clearance.ruling.spec.ts",
+    "backend/src/modules/humanitarian/reader-clearance.ruling.ts",
+    "backend/src/modules/humanitarian/source-activation.ruling.spec.ts",
+    "backend/src/modules/humanitarian/source-activation.ruling.ts",
+    "backend/src/modules/my-intelligence/my-intelligence-feed.service.ts",
+    "backend/src/modules/my-intelligence/my-intelligence-humanitarian.spec.ts",
+    "backend/src/modules/my-intelligence/my-intelligence-humanitarian.ts",
+    "backend/src/modules/my-intelligence/my-intelligence.module.ts",
+    "frontend/src/app/humanitarian/compact/page.tsx",
+    "frontend/src/app/humanitarian/page.tsx",
+    "frontend/src/app/page.tsx",
+    "frontend/src/components/home/reva/HomeHumanitarian.tsx",
+    "frontend/src/components/humanitarian/HumDrawer.tsx",
+    "frontend/src/components/humanitarian/HumanitarianCompactScreen.tsx",
+    "frontend/src/components/humanitarian/HumanitarianScreen.tsx",
+    "frontend/src/components/humanitarian/drawers/AnalysisWorkspace.tsx",
+    "frontend/src/components/my-intelligence/MiHumanitarianNewSince.tsx",
+    "frontend/src/components/my-intelligence/MyIntelligenceClient.tsx",
+    "frontend/src/components/my-intelligence/computeActionClosure.spec.ts",
+    "frontend/src/components/my-intelligence/interestSelectionHookR1.spec.ts",
+    "frontend/src/components/my-intelligence/useMyIntelligenceData.ts",
+    "frontend/src/components/pwa/humanitarianCacheResilience.spec.ts",
+    "frontend/src/lib/humanitarian/humCrossSurface.spec.ts",
+    "frontend/src/lib/humanitarian/humHomeProjection.spec.ts",
+    "frontend/src/lib/humanitarian/humHomeProjection.ts",
+    "frontend/src/lib/humanitarian/humHomeRead.ts",
+    "frontend/src/lib/humanitarian/humReadPresentation.spec.ts",
+    "frontend/src/lib/humanitarian/humReadPresentation.ts",
+    "frontend/src/lib/humanitarian/humReaderRuling.ts",
+    "frontend/src/lib/humanitarian/humStrings.ts",
+    "frontend/src/lib/humanitarian/humWorkspace.spec.ts",
+    "frontend/src/lib/humanitarian/humWorkspace.ts",
+    "frontend/src/lib/humanitarian/humanitarianRead.spec.ts",
+    "frontend/src/lib/humanitarian/humanitarianRead.ts",
+    "frontend/src/lib/humanitarian/humanitarianReadLabel.ts",
+    "frontend/src/lib/humanitarian/humanitarianReadStates.spec.ts",
+    "frontend/src/lib/i18n/dictionaries/humanitarianEn.ts",
+    "frontend/src/lib/i18n/dictionaries/humanitarianLanguage.spec.ts",
+    "frontend/src/lib/i18n/dictionaries/humanitarianLanguageR2Labels.spec.ts",
+    "frontend/src/lib/i18n/dictionaries/humanitarianPl.ts",
+    "frontend/src/lib/i18n/dictionaries/humanitarianVocabulary.spec.ts",
+    "qualification/humanitarian/ask-expectations-lane-c/.gitignore",
+    "qualification/humanitarian/ask-expectations-lane-c/CHANGED-EXPECTATIONS.md",
+    "qualification/humanitarian/ask-expectations-lane-c/CONVERGENCE.md",
+    "qualification/humanitarian/ask-expectations-lane-c/CROSS-DOMAIN-ASK.md",
+    "qualification/humanitarian/ask-expectations-lane-c/DEFECTS-FOUND.md",
+    "qualification/humanitarian/ask-expectations-lane-c/DISCLOSURE-GUARD.md",
+    "qualification/humanitarian/ask-expectations-lane-c/E1-COMPLIANCE.md",
+    "qualification/humanitarian/ask-expectations-lane-c/HANDOFF.md",
+    "qualification/humanitarian/ask-expectations-lane-c/README.md",
+    "qualification/humanitarian/ask-expectations-lane-c/SHA256SUMS.txt",
+    "qualification/humanitarian/ask-expectations-lane-c/SPECIALIST-BINDING.md",
+    "qualification/humanitarian/ask-expectations-lane-c/STANDALONE-ASK.md",
+    "qualification/humanitarian/ask-expectations-lane-c/corpus/corpus.ts",
+    "qualification/humanitarian/ask-expectations-lane-c/docs/00-README.md",
+    "qualification/humanitarian/ask-expectations-lane-c/docs/01-CONFLICTS.md",
+    "qualification/humanitarian/ask-expectations-lane-c/docs/02-LIMITS.md",
+    "qualification/humanitarian/ask-expectations-lane-c/docs/03-DEFECTS-FOUND.md",
+    "qualification/humanitarian/ask-expectations-lane-c/docs/04-INTEGRATION.md",
+    "qualification/humanitarian/ask-expectations-lane-c/docs/05-CHANGED-PROBES.md",
+    "qualification/humanitarian/ask-expectations-lane-c/evidence/corpus-run.txt",
+    "qualification/humanitarian/ask-expectations-lane-c/evidence/determinism.txt",
+    "qualification/humanitarian/ask-expectations-lane-c/evidence/mutation-run.txt",
+    "qualification/humanitarian/ask-expectations-lane-c/evidence/portable-run.txt",
+    "qualification/humanitarian/ask-expectations-lane-c/evidence/probe-run.txt",
+    "qualification/humanitarian/ask-expectations-lane-c/expectations/ADAPTER-SEAM.md",
+    "qualification/humanitarian/ask-expectations-lane-c/expectations/binding.reference.mjs",
+    "qualification/humanitarian/ask-expectations-lane-c/expectations/export.ts",
+    "qualification/humanitarian/ask-expectations-lane-c/expectations/humanitarian-ask-expectations.json",
+    "qualification/humanitarian/ask-expectations-lane-c/expectations/run-against-adapter.mjs",
+    "qualification/humanitarian/ask-expectations-lane-c/fixtures/store.fixture.ts",
+    "qualification/humanitarian/ask-expectations-lane-c/package.json",
+    "qualification/humanitarian/ask-expectations-lane-c/probes/mutations.mjs",
+    "qualification/humanitarian/ask-expectations-lane-c/probes/node-ambient.d.ts",
+    "qualification/humanitarian/ask-expectations-lane-c/probes/probe.mjs",
+    "qualification/humanitarian/ask-expectations-lane-c/probes/run-corpus.ts",
+    "qualification/humanitarian/ask-expectations-lane-c/src/binding.ts",
+    "qualification/humanitarian/ask-expectations-lane-c/src/crossdomain.ts",
+    "qualification/humanitarian/ask-expectations-lane-c/src/disclosure.ts",
+    "qualification/humanitarian/ask-expectations-lane-c/src/index.ts",
+    "qualification/humanitarian/ask-expectations-lane-c/src/ports.ts",
+    "qualification/humanitarian/ask-expectations-lane-c/src/reader.ts",
+    "qualification/humanitarian/ask-expectations-lane-c/tsconfig.json",
+    "qualification/humanitarian/cross-surface/records.json",
+    "shared/src/humanitarian/__fixtures__/humanitarian-language-cases.json",
+    "shared/src/humanitarian/analysis-brief.spec.ts",
+    "shared/src/humanitarian/analysis-brief.ts",
+    "shared/src/humanitarian/analysis-cross-domain.spec.ts",
+    "shared/src/humanitarian/analysis-cross-domain.ts",
+    "shared/src/humanitarian/analysis-workspace.spec.ts",
+    "shared/src/humanitarian/analysis-workspace.ts",
+    "shared/src/humanitarian/language-cases.json",
+    "shared/src/humanitarian/language.spec.ts",
+    "shared/src/humanitarian/language.ts",
+    "shared/src/humanitarian/observation.spec.ts",
+    "shared/src/humanitarian/observation.ts",
+    "shared/src/humanitarian/retained-evidence.spec.ts",
+    "shared/src/humanitarian/retained-evidence.ts",
+    "shared/src/humanitarian/retained-read.convergence.spec.ts",
+    "shared/src/humanitarian/retained-read.ts",
+    "shared/src/index.ts",
+    "shared/src/my-intelligence.ts"
+   ],
+   "log": [
+    {
+     "sha": "05e6c23e",
+     "date": "2026-10-02",
+     "subject": "fix(humanitarian): keep the Home projection out of the Humanitarian page's read graph"
+    },
+    {
+     "sha": "50ce1292",
+     "date": "2026-10-02",
+     "subject": "feat(humanitarian): My Intelligence consumer of lane A's delta feed + cross-surface proof"
+    },
+    {
+     "sha": "5dbef3c1",
+     "date": "2026-10-02",
+     "subject": "feat(humanitarian): Home consumer of the one retained corpus (H brief behind G's gate)"
+    },
+    {
+     "sha": "f84e5c0f",
+     "date": "2026-10-02",
+     "subject": "feat(humanitarian): F Admin operational wiring R2 — mounted under a checked condition, readiness derived from E1"
+    },
+    {
+     "sha": "be5087be",
+     "date": "2026-10-02",
+     "subject": "test(humanitarian): consume lane C R2 Ask corpus/probes/mutations against the canonical adapter"
+    },
+    {
+     "sha": "68b3e4fa",
+     "date": "2026-10-02",
+     "subject": "fix(humanitarian): USED Ask contribution carries all six E1 required disclosures (D-1)"
+    },
+    {
+     "sha": "bfc537ab",
+     "date": "2026-10-02",
+     "subject": "feat(humanitarian): converge lane A R2 bounded change feed onto Main's retained cache"
+    },
+    {
+     "sha": "9745b175",
+     "date": "2026-10-02",
+     "subject": "feat(humanitarian): G R2 reader display gate — E1's Ask disclosure ruling at the reader hop"
+    },
+    {
+     "sha": "2f9ecede",
+     "date": "2026-10-02",
+     "subject": "fix(humanitarian): align H R2 store-state label with canonical 'retained' terminology"
+    },
+    {
+     "sha": "6368a8dc",
+     "date": "2026-10-02",
+     "subject": "feat(humanitarian): analysis workspace completion R2 — Main's record, cross-domain, bounded brief"
+    }
+   ],
+   "final": "Not final; mutable integration/ branch, 84 behind alpha. Contains embedded lane L (EN/PL humanitarian language qualification R1/R2, Co-Authored-By Claude L) and E1 rulings (source admission/rights R1, reader clearance R2, GDACS → RIGHTS_CONFIRMATION_REQUIRED). Commits repeatedly state 'no merge, no deploy'.",
+   "shortstat": "126 files, +22474 -88",
+   "overlap_with_alpha_drift_since_mb": [
+    "backend/src/app.module.ts",
+    "frontend/src/app/page.tsx",
+    "frontend/src/components/my-intelligence/MyIntelligenceClient.tsx",
+    "shared/src/index.ts",
+    "shared/src/my-intelligence.ts"
+   ],
+   "areas": {
+    "qualification/humanitarian/ask-expectations-lane-c": 42,
+    "backend/src/modules/humanitarian": 21,
+    "shared/src/humanitarian": 16,
+    "frontend/src/lib/humanitarian": 14,
+    "backend/src/modules/ask-intelligence": 6,
+    "frontend/src/components/my-intelligence": 5,
+    "frontend/src/lib/i18n": 5,
+    "backend/src/modules/my-intelligence": 4,
+    "frontend/src/components/humanitarian": 4,
+    "frontend/src/app/humanitarian": 2,
+    "backend/src/app.module.ts": 1,
+    "frontend/src/app/page.tsx": 1,
+    "frontend/src/components/home": 1,
+    "frontend/src/components/pwa": 1,
+    "qualification/humanitarian/cross-surface": 1,
+    "shared/src/index.ts": 1,
+    "shared/src/my-intelligence.ts": 1
+   },
+   "file_count": 126
+  }
+ ],
+ "non_lanes": {
+  "claude_L_language": "NO remote branch matches lang|locale|i18n|l10n|claude-l. Only qualif match: origin/fix/ask-general-background-r1-qualification-tests (65c317e7, 2026-09-29, 0 ahead / 196 behind — fully merged, not L). Claude L work exists only embedded in integration/humanitarian-data-r1-convergence (1182a02d L R1, 2dc5f161 L R2) and as a pending deliverable referenced by checkpoint ea724fa4 (manifest Rev 4).",
+  "E1_security_rights": "NO dedicated E1 branch. security-named refs are fully merged/stale: origin/feature/datafed-humanitarian-security-r1 (07140faf, 2026-09-23, 0/603), origin/fix/beta-retrieval-health-security-r1 (6d9a2d84, 2026-09-22, 0/634). E1 rulings live inside humanitarian integration (f0f20ba1, d0de0728, aabf7b6b, 1edc3b91) and in alpha itself (782b175f 'close E1 security P1s on the interpreter verdict')."
+ },
+ "collisions": [
+  {
+   "path": "frontend/src/components/ask-frame/AskR2TurnView.tsx",
+   "lanes": [
+    "R4-semantic",
+    "H-answer-reading-l10n"
+   ],
+   "note": "sequential (H built on 5699eb7) — not a merge conflict"
+  },
+  {
+   "path": "frontend/src/lib/ask/askR2View.ts",
+   "lanes": [
+    "R4-semantic",
+    "H-answer-reading-l10n"
+   ],
+   "note": "sequential — not a merge conflict"
+  },
+  {
+   "path": "frontend/src/components/my-intelligence/MyIntelligenceClient.tsx",
+   "lanes": [
+    "H-answer-reading-l10n",
+    "Humanitarian-R1-convergence"
+   ],
+   "note": "REAL collision; also changed on alpha since humanitarian merge-base"
+  }
+ ],
+ "safe_zones": {
+  "docs": "ENTIRE docs/ tree (no lane touches docs/; docs/convergence/ does not yet exist at 5513275f)",
+  "frontend_components_untouched": [
+   "account",
+   "admin",
+   "analysis-frame",
+   "auth",
+   "bookmark",
+   "conflict",
+   "delivery",
+   "economy",
+   "election",
+   "energy",
+   "i18n",
+   "layout",
+   "map",
+   "market",
+   "navigation",
+   "platform",
+   "politics",
+   "presentation",
+   "privacy",
+   "security",
+   "seo",
+   "specialist",
+   "support",
+   "today",
+   "ui"
+  ],
+  "backend_modules_untouched": [
+   "admin",
+   "analysis",
+   "auth",
+   "compute-controls",
+   "conflict-claim",
+   "conflict-observation",
+   "data-retention",
+   "economy",
+   "election",
+   "energy",
+   "follows",
+   "geo",
+   "global-reach",
+   "history",
+   "market-ingest",
+   "news",
+   "official-data",
+   "official-sources",
+   "readiness",
+   "reference-providers",
+   "security",
+   "signals",
+   "situation",
+   "source-packs",
+   "specialist",
+   "stories",
+   "support",
+   "telemetry",
+   "users",
+   "watch"
+  ],
+  "shared_src_untouched": "everything except shared/src/politics/, shared/src/humanitarian/, shared/src/index.ts, shared/src/my-intelligence.ts",
+  "other": [
+   "scripts/",
+   "data/",
+   ".github/",
+   "root files except none"
+  ],
+  "caution": [
+   "backend/prisma/schema.prisma + migrations (Politics)",
+   "frontend/src/lib/i18n (Humanitarian dictionaries)",
+   "frontend/src/lib/ask/** and components/ask*/ (H)",
+   "backend/src/modules/ask-v2, ask-router, ask-observability (R4)",
+   "backend/src/app.module.ts, frontend/src/app/page.tsx (Humanitarian)"
+  ]
+ },
+ "production_delta": {
+  "range": "a9cf8a89..5513275f",
+  "prod_is_ancestor": true,
+  "commits_ahead": 928,
+  "merges": 81,
+  "files": 1962,
+  "insertions": 422610,
+  "deletions": 8551,
+  "by_toplevel": {
+   "frontend": 797,
+   "backend": 767,
+   "docs": 242,
+   "shared": 85,
+   "scripts": 49,
+   ".github": 13,
+   "data": 3,
+   "other_root": 6
+  },
+  "top_areas": {
+   "docs/beta": 217,
+   "backend/src/modules/analysis": 106,
+   "backend/src/modules/ask-v2": 88,
+   "frontend/src/components/home": 86,
+   "backend/src/modules/ask-router": 75,
+   "frontend/src/components/map": 74,
+   "frontend/src/lib/ask": 58,
+   "backend/src/modules/news": 53,
+   "frontend/src/lib/map": 52,
+   "backend/prisma/migrations": 41
+  },
+  "deployed_sha_doc_claims": [
+   {
+    "file": "docs/ALPHA_PRODUCTION_PARITY_MATRIX.md",
+    "line": 14,
+    "claim": "Deployed Alpha candidate = commit 2c4b6ce (tree 654be554)",
+    "note": "2026-09-17; L1 governed Production baseline C911-V1 = fc162e2; 'Live deployment commit UNVERIFIED' (lines 24-28, Railway deploy ids d1d564d3…, 241e7157…). Neither fc162e2 nor 2c4b6ce is an ancestor of production-c908."
+   },
+   {
+    "file": "docs/BETA-LAUNCH-CONVERGENCE-R1.md",
+    "line": "5,20-22",
+    "claim": "Alpha integration head & backend deployed = df664f58; frontend deployed = d49bd5a9; Production HOLD"
+   },
+   {
+    "file": "docs/beta/BETA-PREFLIGHT-AUDIT-R1.md",
+    "line": "346-347",
+    "claim": "Alpha backend deployed df664f58…; frontend d49bd5a9… (reproduced from authority §1)"
+   },
+   {
+    "file": "docs/beta/HOME-FINAL-REPORT-R1.md",
+    "line": "19-28",
+    "claim": "Alpha frontend Railway deployment 39c4a7cc-… SUCCESS (no commit SHA)"
+   },
+   {
+    "file": "docs/beta/HOME-FINAL-REPORT-R2.md",
+    "line": "~22-28",
+    "claim": "Alpha frontend Railway deployment 7c7637c6-… SUCCESS (no commit SHA)"
+   },
+   {
+    "file": "ALPHA-DATA-CONVERGENCE-MATRIX.md",
+    "line": "5,311",
+    "claim": "watched release daf2bd97 (release/alpha-m08-integrated-r1, now moved to 6d8b736d); production on HOLD, no Railway change"
+   }
+  ],
+  "no_doc_mentions": [
+   "5513275",
+   "a9cf8a8",
+   "c908/C908",
+   "production-c908"
+  ]
+ },
+ "release_rollback": [
+  {
+   "ref": "origin/release/alpha-c903-final",
+   "sha": "26c50c1ccefe1388425faccaf4cb01cc1d3d981a",
+   "date": "2026-09-12T21:09:25+02:00",
+   "subject": "release: finalize frozen C903 alpha candidate",
+   "ancestor_of_5513275f": false
+  },
+  {
+   "ref": "origin/release/alpha-c905-final",
+   "sha": "0d8ab961c84ed3221f2a5eb5050700e6f1942403",
+   "date": "2026-09-12T22:23:04+00:00",
+   "subject": "release: MAIN-C905-FINAL-ALPHA-CORRECTION source handoff",
+   "ancestor_of_5513275f": false
+  },
+  {
+   "ref": "origin/release/alpha-c907-r1-validation",
+   "sha": "0d8ab961c84ed3221f2a5eb5050700e6f1942403",
+   "date": "2026-09-12T22:23:04+00:00",
+   "subject": "release: MAIN-C905-FINAL-ALPHA-CORRECTION source handoff",
+   "ancestor_of_5513275f": false
+  },
+  {
+   "ref": "origin/release/alpha-c907-r1-frozen",
+   "sha": "c9473e323ab1c3dab91864b62e2e61d0bad2b553",
+   "date": "2026-09-13T00:00:00+00:00",
+   "subject": "C907 R1 — Alpha-validation candidate (frozen)",
+   "ancestor_of_5513275f": true
+  },
+  {
+   "ref": "origin/release/alpha-c907-r2-final-static",
+   "sha": "3afa7435afad1fceec5de53c67a84ffe2c6200ee",
+   "date": "2026-09-13T04:00:00+00:00",
+   "subject": "C907 R2 — Alpha build-packaging correction (final static candidate)",
+   "ancestor_of_5513275f": true
+  },
+  {
+   "ref": "origin/release/alpha-c907-r2-lint1",
+   "sha": "b9ab621cc7446f8b0f5fd4e9ef58ad1b314db07b",
+   "date": "2026-09-13T05:30:00+00:00",
+   "subject": "C907 R2 LINT1 — next lint blocker correction",
+   "ancestor_of_5513275f": true
+  },
+  {
+   "ref": "origin/release/alpha-c907-r2-mobile1",
+   "sha": "8016dd6b772a9cbd6289bc39411b3f8f4e2fed8e",
+   "date": "2026-09-13T08:30:00+00:00",
+   "subject": "C907 R2 MOBILE1 — H mobile Spatial R2 correction",
+   "ancestor_of_5513275f": true
+  },
+  {
+   "ref": "origin/release/alpha-c907-r2-ask-analysis1",
+   "sha": "643bfdb5faf6db8bbbb57ef444d6c4866f1f049c",
+   "date": "2026-09-13T14:00:00+00:00",
+   "subject": "C907 R2 ASK+ANALYSIS1 — Ask AI Rev A + Alpha budget/precision convergence",
+   "ancestor_of_5513275f": true
+  },
+  {
+   "ref": "origin/release/alpha-c907-r2-pre-user1",
+   "sha": "14713b5e81e3e1598907b7882d74085dcb0a0073",
+   "date": "2026-09-14T07:16:29+02:00",
+   "subject": "release(alpha): pre-user SEO and peer-tail convergence",
+   "ancestor_of_5513275f": true
+  },
+  {
+   "ref": "origin/release/alpha-c907-r2-natural-source1",
+   "sha": "e3e7fcb28f3877b40e65689aff0a84beec4e23e7",
+   "date": "2026-09-14T07:19:18+02:00",
+   "subject": "release(alpha): trigger deployment of accepted pre-user convergence",
+   "ancestor_of_5513275f": true
+  },
+  {
+   "ref": "origin/release/alpha-c907-r2-retrieval-resilience1",
+   "sha": "e3e7fcb28f3877b40e65689aff0a84beec4e23e7",
+   "date": "2026-09-14T07:19:18+02:00",
+   "subject": "release(alpha): trigger deployment of accepted pre-user convergence",
+   "ancestor_of_5513275f": true
+  },
+  {
+   "ref": "origin/release/production-c908",
+   "sha": "a9cf8a8969eae5cff19def63fc6dfb6a67815518",
+   "date": "2026-09-14T07:26:44+02:00",
+   "subject": "release(production): C908 pre-user convergence",
+   "ancestor_of_5513275f": true
+  },
+  {
+   "ref": "origin/release/alpha-b5-previsual-1",
+   "sha": "7674c5d0b7d79632a1246dc5ad31738c360d80ff",
+   "date": "2026-09-18T01:43:29+02:00",
+   "subject": "feat(seo): B5.1 — Alpha-only noindex from the Railway environment id",
+   "ancestor_of_5513275f": true
+  },
+  {
+   "ref": "origin/release/alpha-b5-previsual-mapquota1",
+   "sha": "d71bbcb4179403392cc48d52a03f02ee22f4fa1f",
+   "date": "2026-09-18T06:36:28+02:00",
+   "subject": "fix(map): R2 — country retrieval requires an explicit country action",
+   "ancestor_of_5513275f": true
+  },
+  {
+   "ref": "origin/release/alpha-b5-previsual-hudorigin1",
+   "sha": "866e8c2718cb12067c2982d0d781e316157758e5",
+   "date": "2026-09-18T08:07:47+02:00",
+   "subject": "fix(map): R3.2 — HUD origin isolation; chrome interaction is not geography",
+   "ancestor_of_5513275f": true
+  },
+  {
+   "ref": "origin/release/alpha-b5-previsual-nonexecmap1",
+   "sha": "fbd37fbbb9f1268442381ddc07364b7fe9eb6eaf",
+   "date": "2026-09-18T09:38:48+02:00",
+   "subject": "fix(map): R5 — the global corpus becomes non-executing",
+   "ancestor_of_5513275f": true
+  },
+  {
+   "ref": "origin/release/alpha-b5-previsual-zoom1",
+   "sha": "f36695ae4c288eccb5ab00a79f2d4bcf9e056edb",
+   "date": "2026-09-18T15:49:40+02:00",
+   "subject": "fix(map): MAP-ZOOM-IN-CONTROL-1 — the world view can be zoomed again",
+   "ancestor_of_5513275f": true
+  },
+  {
+   "ref": "origin/release/alpha-m08-integrated-r1",
+   "sha": "6d8b736d9bb59adc2dd8d87e604853c60c2f66a9",
+   "date": "2026-09-30T03:50:56+02:00",
+   "subject": "merge(alpha): Ask Public Beta B1 — remove the reader-visible Sand fixture (#73)",
+   "ancestor_of_5513275f": true
+  },
+  {
+   "ref": "origin/release/ask-public-beta-r1",
+   "sha": "6ba220f7a05a4851f30d972a3123ce3205699edd",
+   "date": "2026-10-01T10:40:54+02:00",
+   "subject": "fix(ask): evidence false-merge guard R1G — evidence deletion fails closed",
+   "ancestor_of_5513275f": true
+  },
+  {
+   "ref": "origin/rollback/alpha-pre-home-discussions-alerts-r1",
+   "sha": "58f80fd4108d3472e5433c7a50e19295788f2544",
+   "date": "2026-10-01T21:03:22+02:00",
+   "subject": "fix(frontend): R2I standalone platform route gate (central middleware)",
+   "ancestor_of_5513275f": true
+  },
+  {
+   "ref": "origin/release/alpha-home-discussions-alerts-paid-r1-candidate",
+   "sha": "6044c1642ab80274d5ed41f59f7f578a9929ae81",
+   "date": "2026-10-01T22:30:18+02:00",
+   "subject": "Merge 58f80fd (Unified Intelligence Binding R2B–R2I) into Home/Discussions/Alerts R1",
+   "ancestor_of_5513275f": true
+  },
+  {
+   "ref": "origin/release/alpha-trust-r1-cd7abbc",
+   "sha": "cd7abbcbb878bfd28467baede0f70c0b577bad61",
+   "date": "2026-10-03T02:45:07+02:00",
+   "subject": "fix(ask): a country-only context chip (Map → Ask) names its place",
+   "ancestor_of_5513275f": true
+  },
+  {
+   "ref": "origin/release/alpha-trust-r2-c72820f",
+   "sha": "c72820f178f3fc299afc987d2b10d889b93e9c78",
+   "date": "2026-10-03T06:26:00+02:00",
+   "subject": "Revert \"fix(ask): a dropped connection on the first guest send is a failed send, not 'the service is busy'\"",
+   "ancestor_of_5513275f": true
+  },
+  {
+   "ref": "origin/release/alpha-trust-r3-8f44abd",
+   "sha": "8f44abd805e9f94176c3afbeb888eaabd3ca65ec",
+   "date": "2026-10-03T09:02:09+02:00",
+   "subject": "test(ask): the comparability spec lives with Ask, outside the Economy module boundary (ECON-DATA-1 Gate 6)",
+   "ancestor_of_5513275f": true
+  },
+  {
+   "ref": "origin/release/alpha-trust-r3-livefix-c7e8c03",
+   "sha": "c7e8c0348193447141a1120d5cbc39a030b24ced",
+   "date": "2026-10-03T10:14:31+02:00",
+   "subject": "fix(ask): R3 live defects L-1…L-4 — relationship authority, portable subject, network copy, two-sided scope",
+   "ancestor_of_5513275f": true
+  },
+  {
+   "ref": "origin/release/alpha-r4-search-conversation-5513275",
+   "sha": "5513275ff731936a07c01e937b92c263ba6d6cf9",
+   "date": "2026-10-04T10:55:25+02:00",
+   "subject": "fix(ask-ui): centre the entry composer on portrait tablets (CTO-adopted)",
+   "ancestor_of_5513275f": true
+  }
+ ]
+}
