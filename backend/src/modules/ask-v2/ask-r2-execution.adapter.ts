@@ -63,6 +63,7 @@ import {
   type ConversationArtifact,
 } from './conversation/conversation-artifact';
 import { executionContractOf, type ExecutionContract } from './execution-contract';
+import { createHash } from 'node:crypto';
 import {
   answerStateBeforeExecution,
   deriveAnswerState,
@@ -271,6 +272,8 @@ function answerMemory(
   backgroundText: string | null,
   modelArtifact: ConversationArtifact | null,
   artifactUsed: ConversationArtifact | null = null,
+  /** SHARED GOVERNED RE-CHECK — references to the governed observations this answer USED (no news). */
+  governedRefs: readonly string[] = [],
 ): ConversationArtifact | null {
   if (answer.state === 'CLARIFICATION_REQUIRED' || answer.state === 'CAPABILITY_UNAVAILABLE')
     return null;
@@ -281,7 +284,7 @@ function answerMemory(
     analysis === null &&
     route.job.discourseReference === 'PRIOR_WORK' &&
     artifactUsed !== null &&
-    artifactUsed.provenance === 'SOURCED_REPORTING'
+    (artifactUsed.provenance === 'SOURCED_REPORTING' || artifactUsed.provenance === 'GOVERNED_RECORDS')
   ) {
     const { sourceOperationId: _carried, ...referent } = artifactUsed as ConversationArtifact & {
       sourceOperationId?: string;
@@ -300,6 +303,22 @@ function answerMemory(
     referent === undefined
       ? scopeOfRoute(route, analysis)
       : { ...referent, job: route.job.job, freshness: route.semantic.turn.freshness };
+  /* SHARED GOVERNED RE-CHECK — an answer that stood on governed retained records and on no news
+     reporting records THOSE references (the existing evidence linkage), so a later "Is that still
+     true now?" re-checks the governed records in this scope rather than re-reasoning or searching news */
+  if (analysis === null && governedRefs.length > 0) {
+    const components =
+      modelArtifact?.components ?? (backgroundText === null ? [] : leadingSentences(backgroundText, 4));
+    if (components.length > 0)
+      return serverArtifact({
+        kind: 'GOVERNED_RECORD_ANSWER',
+        provenance: 'GOVERNED_RECORDS',
+        label: route.source.rawQuestion,
+        components,
+        scope,
+        evidenceRefs: governedRefs,
+      });
+  }
   if (modelArtifact !== null && analysis === null) return withScope(modelArtifact, scope);
   const label = route.source.rawQuestion;
   if (analysis !== null) {
@@ -332,6 +351,18 @@ function answerMemory(
       scope,
     });
   return null;
+}
+
+/** SHARED GOVERNED RE-CHECK — bounded references to the governed observations an answer USED (no store). */
+function governedEvidenceRefs(set: AskContributionSet): string[] {
+  return set.contributions
+    .filter((c) => c.status === 'USED' && c.contributorId !== 'GEOGRAPHY')
+    .flatMap((c) =>
+      c.observations.map(
+        (o) => `GOV:${c.contributorId}:${createHash('sha256').update(o.reference).digest('hex').slice(0, 32)}`,
+      ),
+    )
+    .slice(0, 8);
 }
 
 function answerLanguageOf(language: AskRequest['language']): { answerLanguage?: DisplayLocale } {
@@ -1198,6 +1229,20 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       return this.executeGovernedRecord(plan, route, operationId, draft, request.context);
     }
     /*
+      SHARED GOVERNED RE-CHECK — "Is that still true now?" about an earlier answer that stood on GOVERNED
+      records: the governed records in THAT answer's scope (inherited, EARLIER_TURN) are re-read now. Some
+      current governed record → one background answer bound by the re-check rules (zero news); none → the
+      truthful governed-unavailable answer (zero AI). Never a generic news search, never mere re-reasoning.
+    */
+    if (contract.kind === 'GOVERNED_RECHECK') {
+      const current = await this.readIntelligence(route, request.context);
+      const used = current.contributions.some(
+        (c) => c.status === 'USED' && c.contributorId !== 'GEOGRAPHY' && c.observations.length > 0,
+      );
+      if (!used) return this.executeGovernedRecord(plan, route, operationId, draft, request.context);
+      return this.executeBackground(request, plan, route, operationId, draft, undefined, undefined, undefined, contract);
+    }
+    /*
       R3 §23 — "Only official sources." holds for the conversation. Governed official records
       were answered above; news reporting is not an official source, so a turn that would need it
       is told so (zero AI) instead of silently answered from news. Background / advisory answers
@@ -2005,6 +2050,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     semantic?: ClassifierRun,
     /** R4 ALPHA R-2 — a MIXED turn's explanatory part: what this reasoning call answers */
     stableQuestion?: string,
+    /** SHARED GOVERNED RE-CHECK — the contract whose rules bind this answer (governed prompt boundary). */
+    contract?: ExecutionContract,
   ): Promise<ExecutionResult> {
     /* CTO R4 — the job's rules, the conversation's earlier work and the answer's ceiling */
     const ceiling = completionCeilingFor(route.job);
@@ -2023,7 +2070,11 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       usesPriorWork &&
       route.semantic.references.target === 'ARTIFACT_PROPOSITION' &&
       route.semantic.turn.freshness === 'NONE' &&
-      request.priorArtifact?.provenance !== 'SOURCED_REPORTING';
+      request.priorArtifact?.provenance !== 'SOURCED_REPORTING' &&
+      /* SHARED GOVERNED RE-CHECK — the current governed records of the bound scope WERE read for
+         this answer (GOVERNED_RECHECK_RULES); saying nothing current was checked would be false.
+         Their retained, dated, not-current-reporting basis is disclosed by the governed rules. */
+      contract?.kind !== 'GOVERNED_RECHECK';
     const jobRules = [
       jobRulesFor(route.job, usesPriorWork, horizon),
       recheckUnverified ? RECHECK_UNVERIFIED_RULE : '',
@@ -2070,7 +2121,10 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
        model, zero provider. LIVE ACCEPTANCE REPAIR R1 (B): read first, so the one background
        call is bound by them. */
     const contributions = await this.readIntelligence(route, request.context);
-    const governed = governedPrompt(contributions);
+    const governed =
+      contract === undefined
+        ? governedPrompt(contributions)
+        : (withContractRules(governedPrompt(contributions), contract).governed ?? governedPrompt(contributions));
 
     /* 4 · ONE call to the dedicated background provider. No articles, no retrieval. */
     let usage: { promptTokens: number; completionTokens: number } | null = null;
@@ -2529,6 +2583,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
               backgroundText,
               r4?.artifact ?? null,
               r4?.artifactUsed ?? null,
+              governedEvidenceRefs(intelligence),
             );
             return memory === null ? {} : { artifact: memory };
           } catch {

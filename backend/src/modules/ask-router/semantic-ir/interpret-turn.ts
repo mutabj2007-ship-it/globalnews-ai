@@ -141,7 +141,7 @@ export interface TurnInterpretationInput {
   readonly priorWork?: {
     readonly kind: string;
     readonly label: string;
-    readonly provenance?: 'MODEL_REASONING' | 'SOURCED_REPORTING';
+    readonly provenance?: 'MODEL_REASONING' | 'SOURCED_REPORTING' | 'GOVERNED_RECORDS';
   };
   readonly conversation?: BoundedConversationState;
   /** CLAUDE F · R4 — the prior-work reference the caller resolved against bounded state */
@@ -1164,7 +1164,15 @@ export function interpretTurn(input: TurnInterpretationInput): {
     !priorBound;
   const claimRecheck = claimValidity && priorBound && !advisory && !changeSpanOnly;
   const claimRecheckCurrent = claimRecheck && input.priorWork?.provenance === 'SOURCED_REPORTING';
-  const claimRecheckReasoning = claimRecheck && !claimRecheckCurrent;
+  /* SHARED GOVERNED RE-CHECK — an earlier answer that stood on governed retained records is re-checked
+     against the CURRENT governed records in its own scope: never news, never mere re-reasoning */
+  const claimRecheckGoverned = claimRecheck && input.priorWork?.provenance === 'GOVERNED_RECORDS';
+  const claimRecheckReasoning = claimRecheck && !claimRecheckCurrent && !claimRecheckGoverned;
+  if (claimRecheckGoverned)
+    knowledge = {
+      requirement: 'STABLE_REFERENCE',
+      reason: 'R-5: the earlier answer stood on governed records, re-checked against the current governed records in its scope (not news)',
+    };
   if (claimRecheckCurrent)
     knowledge = {
       requirement: 'CURRENT_REPORTING',
@@ -1205,6 +1213,18 @@ export function interpretTurn(input: TurnInterpretationInput): {
           discourseReference: 'PRIOR_WORK',
           currentnessEvidence: [...currentnessEvidence, 'PRIOR_CLAIM_RECHECK'],
         }
+      : claimRecheckGoverned
+        ? /* SHARED GOVERNED RE-CHECK — about the earlier answer (PRIOR_WORK), re-checked against the
+             CURRENT governed records by the executor; no news is planned (evidence NONE). The turn's own
+             currentness ("now") is kept, so the re-check is a current check, not mere re-reasoning. */
+          {
+            ...resolvedJob,
+            job: 'EXPLANATION',
+            freshness: 'NONE',
+            evidence: 'NONE',
+            discourseReference: 'PRIOR_WORK',
+            currentnessEvidence: [...currentnessEvidence, 'PRIOR_CLAIM_RECHECK'],
+          }
       : claimRecheckReasoning
         ? {
             ...resolvedJob,
@@ -1284,6 +1304,8 @@ export function interpretTurn(input: TurnInterpretationInput): {
       !referenceClauseOnly &&
       /* R-5 — an earlier REASONING answer is re-examined by reasoning: nothing about now is planned */
       !claimRecheckReasoning &&
+      /* SHARED GOVERNED RE-CHECK — re-checked against governed records, never news */
+      !claimRecheckGoverned &&
       !(unresolvedEligible && semanticJob?.needsCurrentEvidence !== true));
   /* advice / a decision with a time-anchored part keeps BOTH components (the current part is named
      as needing current sourced evidence) */
@@ -1427,7 +1449,9 @@ export function interpretTurn(input: TurnInterpretationInput): {
          reported clause in the present tense reached frozen C as a current event and fetched news
          although the job, the IR freshness and the temporal verdict all said "explain our earlier
          claim". The route then frames it exactly as the English turn: EXPLANATION, no news. */
-      reasoning: (reasoning || referenceClauseOnly || claimRecheckReasoning) && !answerRequestBound,
+      reasoning:
+        (reasoning || referenceClauseOnly || claimRecheckReasoning || claimRecheckGoverned) &&
+        !answerRequestBound,
       job,
       decisionObjective,
       currentEvidenceNeeded:
