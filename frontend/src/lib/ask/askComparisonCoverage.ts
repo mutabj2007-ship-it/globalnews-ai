@@ -4,6 +4,7 @@ import {
   type DisplayLocale,
 } from '@globalnews-ai/shared';
 import { askCountryName } from './askCountryName';
+import { ASK_COMPARISON_COVERAGE_L_R6 } from './shell/askDictionaryAdditionsL';
 
 /**
  * R4 · CTO LOCALIZATION CONVERGENCE — the "coverage checked" lines of a comparison answer, in the
@@ -35,10 +36,10 @@ export interface AskComparisonCoverageCopy {
   readonly line: string;
 }
 
-/** L_RETURNED only. Empty until Claude L returns the additive manifest. */
+/** L_RETURNED only: Claude L's R6 delivery, transcribed verbatim (askDictionaryAdditionsL.ts). */
 export const ASK_COMPARISON_COVERAGE_COPY: Readonly<
   Partial<Record<Exclude<DisplayLocale, 'en' | 'pl'>, AskComparisonCoverageCopy>>
-> = {};
+> = ASK_COMPARISON_COVERAGE_L_R6;
 
 const fill = (template: string, values: Record<string, string | number>): string =>
   template.replace(/\{(\w+)\}/g, (m, k: string) => (k in values ? String(values[k]) : m));

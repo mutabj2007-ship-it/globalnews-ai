@@ -7,6 +7,11 @@ import { askDictionary } from './askDictionary';
 import { askShellStrings } from './askShellCatalogue';
 import { ASK_SHELL_DICTIONARY_NAMESPACES } from './askShellSource';
 import { ASK_DICTIONARY_ADDITIONS, C55_REUSE_ENGLISH } from './askDictionaryAdditions';
+import {
+  ASK_COMPARISON_COVERAGE_L_R6,
+  ASK_DICTIONARY_ADDITIONS_L_R6,
+  ASK_DICTIONARY_CANONICAL_ALIASES,
+} from './askDictionaryAdditionsL';
 import { askRelativeTime } from '../askRelativeTime';
 import { askCountryName } from '../askCountryName';
 import { localisedCountryName } from '@/lib/map/geography/displayName';
@@ -113,5 +118,62 @@ describe('askLocaleForLegacyCatalogue — every remaining caller is classified (
       .map((f) => relative(SRC, f).replace(/\\/g, '/'))
       .filter((f) => f !== 'lib/ask/askLocale.ts');
     expect(callers.sort()).toEqual(Object.keys(CATEGORY_C).sort());
+  });
+});
+
+describe('L R6 — the additive 50, integrated as L delivered them (one authority per string)', () => {
+  const leafKeys = (t: unknown, p = '', out: string[] = []): string[] => {
+    if (typeof t === 'string') out.push(p);
+    else if (t !== null && typeof t === 'object')
+      for (const [k, v] of Object.entries(t)) leafKeys(v, p === '' ? k : `${p}.${k}`, out);
+    return out;
+  };
+
+  it('35 dictionary keys + 8 comparison templates per locale, none blank; 7 resolved as aliases', () => {
+    for (const locale of NEW) {
+      const keys = leafKeys(ASK_DICTIONARY_ADDITIONS_L_R6[locale]);
+      expect(keys).toHaveLength(35);
+      for (const k of keys)
+        expect(String(at(ASK_DICTIONARY_ADDITIONS_L_R6[locale], k)).trim()).not.toBe('');
+      expect(Object.keys(ASK_COMPARISON_COVERAGE_L_R6[locale]).sort()).toEqual([
+        'gap',
+        'line',
+        'liveUnavailable',
+        'localityNotEstablished',
+        'qualifying',
+        'rateLimited',
+        'retained',
+        'timedOut',
+      ]);
+    }
+    expect(Object.keys(ASK_DICTIONARY_CANONICAL_ALIASES)).toHaveLength(7);
+    /* 35 + 7 + 8 = the 50 L qualified */
+  });
+
+  it('the 7 aliases are NOT copies: each reads the already-qualified shell key, whose English is identical', () => {
+    const enShell = askShellStrings('en');
+    for (const [key, shellKey] of Object.entries(ASK_DICTIONARY_CANONICAL_ALIASES)) {
+      expect(at(getDictionary('en'), key)).toBe(at(enShell, shellKey));
+      for (const locale of NEW) {
+        expect(at(askDictionary(locale), key)).toBe(at(askShellStrings(locale), shellKey));
+        expect(at(ASK_DICTIONARY_ADDITIONS_L_R6[locale], key)).toBeUndefined();
+      }
+    }
+  });
+
+  it('every L R6 key reaches the reader through askDictionary', () => {
+    for (const locale of NEW)
+      for (const key of leafKeys(ASK_DICTIONARY_ADDITIONS_L_R6[locale]))
+        expect(at(askDictionary(locale), key)).toBe(at(ASK_DICTIONARY_ADDITIONS_L_R6[locale], key));
+  });
+
+  it('evidence semantics: no "proof" word anywhere in L’s 50', () => {
+    const all = NEW.flatMap((l) => [
+      ...leafKeys(ASK_DICTIONARY_ADDITIONS_L_R6[l]).map((k) =>
+        String(at(ASK_DICTIONARY_ADDITIONS_L_R6[l], k)),
+      ),
+      ...Object.values(ASK_COMPARISON_COVERAGE_L_R6[l]),
+    ]);
+    expect(all.filter((v) => /\b(?:preuves?|Beweis\w*|pruebas?|provas?)\b/iu.test(v))).toEqual([]);
   });
 });
