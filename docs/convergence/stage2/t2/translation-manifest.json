@@ -163,13 +163,13 @@
   "dict:admin": {
    "source": "frontend/src/lib/i18n/dictionaries/{en,pl,adminEn,adminPl,supportEn,supportPl,myIntelligenceEn,myIntelligencePl,homeR1En,homeR1Pl,homeRevaEn,homeRevaPl}.ts",
    "kind": "DICTIONARY",
-   "englishKeys": 578,
+   "englishKeys": 624,
    "gapCounts": {
-    "fr": 562,
-    "de": 562,
-    "es": 562,
-    "pt": 562,
-    "ar": 562
+    "fr": 608,
+    "de": 608,
+    "es": 608,
+    "pt": 608,
+    "ar": 608
    },
    "keys": {
     "admin.access.forbiddenBody": {
@@ -4480,6 +4480,466 @@
       "es": "CANDIDATE_PROVENANCE_UNKNOWN",
       "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
       "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+     }
+    },
+    "admin.screens.storyInspection.attemptsNote": {
+     "en": "Every attempt, including failures. A failure is never an insufficient-evidence Brief.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.attemptsTitle": {
+     "en": "Generation attempts",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.briefNote": {
+     "en": "Derived exactly as the public read derives it. Generation availability is the server’s own statement.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.briefTitle": {
+     "en": "Brief state",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.emptyAttempts": {
+     "en": "No generation has been attempted for this story.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.emptyMembers": {
+     "en": "No article is recorded for this story.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.emptyVersions": {
+     "en": "No Brief version has been generated for this story.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.identityNote": {
+     "en": "An alias id always resolves to its surviving story. The material version is continuity only and never the Brief staleness key.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.identityTitle": {
+     "en": "Canonical identity",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.invalidInput": {
+     "en": "That is neither a story id nor an article reference.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.labels.addedAt": {
+     "en": "Added",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.labels.aliasIds": {
+     "en": "Alias ids",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.labels.articleRef": {
+     "en": "Article reference",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.labels.articleUrl": {
+     "en": "Article address",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.labels.asOf": {
+     "en": "Evidence as of",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.labels.currentEvidenceRevision": {
+     "en": "Current evidence revision",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.labels.evidenceRevision": {
+     "en": "Evidence revision",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.labels.failureCode": {
+     "en": "Failure code",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.labels.failureKind": {
+     "en": "Failure kind",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.labels.finishedAt": {
+     "en": "Finished",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.labels.generatedAt": {
+     "en": "Generated",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.labels.generationAvailable": {
+     "en": "Generation available",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.labels.leaseExpiresAt": {
+     "en": "Lease expires",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.labels.materialVersion": {
+     "en": "Material version",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.labels.no": {
+     "en": "No",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.labels.none": {
+     "en": "None",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.labels.operationId": {
+     "en": "Operation",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.labels.sourceHost": {
+     "en": "Source host",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.labels.sourceOperationId": {
+     "en": "Source operation",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.labels.startedAt": {
+     "en": "Started",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.labels.state": {
+     "en": "State",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.labels.status": {
+     "en": "Status",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.labels.storyId": {
+     "en": "Story id",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.labels.version": {
+     "en": "Version",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.labels.yes": {
+     "en": "Yes",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.lookupAction": {
+     "en": "Inspect",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.lookupHint": {
+     "en": "Paste a canonical story id (UUID) or an article reference (64 hex characters).",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.lookupLabel": {
+     "en": "Story to inspect",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.membersNote": {
+     "en": "The evidence set whose revision decides staleness. Syndicated copies are not independent corroboration.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.membersTitle": {
+     "en": "Articles in this story",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.noSelection": {
+     "en": "Choose a story to inspect.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.noStory": {
+     "en": "This article is not part of any story yet. Nothing was created by looking it up.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.purpose": {
+     "en": "The operational truth behind a public story and its Brief, by canonical identity: the same records the public visual Home shows. Read-only; nothing here runs or changes anything.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.title": {
+     "en": "Story inspection",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.versionsNote": {
+     "en": "Immutable and append-only. The source operation links each version to the governed Ask run that produced it.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "admin.screens.storyInspection.versionsTitle": {
+     "en": "Brief versions",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
      }
     },
     "admin.screens.support.auditRequirement": {
@@ -28757,13 +29217,13 @@
   "dict:visual": {
    "source": "frontend/src/lib/i18n/dictionaries/{en,pl,adminEn,adminPl,supportEn,supportPl,myIntelligenceEn,myIntelligencePl,homeR1En,homeR1Pl,homeRevaEn,homeRevaPl}.ts",
    "kind": "DICTIONARY",
-   "englishKeys": 129,
+   "englishKeys": 137,
    "gapCounts": {
-    "fr": 129,
-    "de": 129,
-    "es": 129,
-    "pt": 129,
-    "ar": 129
+    "fr": 137,
+    "de": 137,
+    "es": 137,
+    "pt": 137,
+    "ar": 137
    },
    "keys": {
     "visual.brief.alert": {
@@ -29066,6 +29526,16 @@
       "ar": "MISSING"
      }
     },
+    "visual.brief.inspectInAdmin": {
+     "en": "Inspect in Admin",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
     "visual.brief.insufficientNote": {
      "en": "The check ran, and the evidence did not support a verified brief.",
      "locales": {
@@ -29356,16 +29826,6 @@
       "ar": "MISSING"
      }
     },
-    "visual.brief.unresolvedBody": {
-     "en": "This page cannot look up the brief for this story yet. Below is the reporting we hold, as reported.",
-     "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
-     }
-    },
     "visual.brief.versionLine": {
      "en": "GlobalNewsAI brief · v{version}",
      "locales": {
@@ -29478,6 +29938,26 @@
     },
     "visual.map.askAboutNote": {
      "en": "Adds {country} to Ask as context. Nothing runs until you press Send.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.askNoRegionScope": {
+     "en": "Ask has no regional scope for it.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.askRegionScope": {
+     "en": "Ask can search this as a region.",
      "locales": {
       "fr": "MISSING",
       "de": "MISSING",
@@ -29667,7 +30147,7 @@
      }
     },
     "visual.map.regionMeaning.eac": {
-     "en": "The East African Community, by treaty membership. GlobalNewsAI has no separate EAC scope: Ask answers EAC questions over its East Africa scope, which also includes non-members.",
+     "en": "The member states of the East African Community, by treaty — a different group from the GlobalNewsAI East Africa scope.",
      "locales": {
       "fr": "MISSING",
       "de": "MISSING",
@@ -29677,7 +30157,7 @@
      }
     },
     "visual.map.regionMeaning.eastAfrica": {
-     "en": "GlobalNewsAI’s East Africa monitoring scope: {count} countries, set by GlobalNewsAI. Ask can search this region as a whole.",
+     "en": "The 11 countries GlobalNewsAI covers as East Africa. This is not the UN \"Eastern Africa\" region and not the East African Community (8 member states). Which countries actually have current data is shown separately.",
      "locales": {
       "fr": "MISSING",
       "de": "MISSING",
@@ -29687,7 +30167,7 @@
      }
     },
     "visual.map.regionMeaning.eu": {
-     "en": "The European Union: {count} member states. Ask has no regional scope for it.",
+     "en": "The 27 member states of the European Union. Not \"Europe\" as a whole. Which countries actually have current data is shown separately.",
      "locales": {
       "fr": "MISSING",
       "de": "MISSING",
@@ -29697,7 +30177,7 @@
      }
     },
     "visual.map.regionMeaning.europe": {
-     "en": "Europe as a geographic region (UN M49) — not the European Union. Ask has no regional scope for it.",
+     "en": "Europe as a geographic region (UN M49). Not the European Union.",
      "locales": {
       "fr": "MISSING",
       "de": "MISSING",
@@ -29707,7 +30187,7 @@
      }
     },
     "visual.map.regionMeaning.middleEast": {
-     "en": "GlobalNewsAI’s Middle East monitoring scope: {count} countries, set by GlobalNewsAI — not an agreed geographic definition. Ask has no regional scope for it.",
+     "en": "The 16 countries GlobalNewsAI monitors under \"Middle East\". There is no agreed geographic membership of the Middle East; this is the product’s monitoring scope, not a geographic definition. Which countries actually have current data is shown separately.",
      "locales": {
       "fr": "MISSING",
       "de": "MISSING",
@@ -29777,6 +30257,66 @@
      }
     },
     "visual.map.regionNames.world": {
+     "en": "World",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.regionScopeLabel.eac": {
+     "en": "East African Community",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.regionScopeLabel.eastAfrica": {
+     "en": "GlobalNewsAI East Africa scope",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.regionScopeLabel.eu": {
+     "en": "European Union (EU-27)",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.regionScopeLabel.europe": {
+     "en": "Europe (UN M49)",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.regionScopeLabel.middleEast": {
+     "en": "GlobalNewsAI Middle East monitoring scope",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.regionScopeLabel.world": {
      "en": "World",
      "locales": {
       "fr": "MISSING",
@@ -38440,27 +38980,27 @@
    "qualifiedInAskScope": 0
   },
   "fr": {
-   "pendingKeys": 3515,
+   "pendingKeys": 3569,
    "namespacesIncomplete": 62,
    "qualifiedInAskScope": 174
   },
   "de": {
-   "pendingKeys": 3515,
+   "pendingKeys": 3569,
    "namespacesIncomplete": 62,
    "qualifiedInAskScope": 174
   },
   "es": {
-   "pendingKeys": 3515,
+   "pendingKeys": 3569,
    "namespacesIncomplete": 62,
    "qualifiedInAskScope": 174
   },
   "pt": {
-   "pendingKeys": 3515,
+   "pendingKeys": 3569,
    "namespacesIncomplete": 62,
    "qualifiedInAskScope": 174
   },
   "ar": {
-   "pendingKeys": 3515,
+   "pendingKeys": 3569,
    "namespacesIncomplete": 62,
    "qualifiedInAskScope": 174
   }

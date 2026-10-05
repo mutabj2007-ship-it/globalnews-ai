@@ -188,6 +188,15 @@ export const PROVENANCE = {
   'admin-08.evidenceExport': 'C',
   'admin-08.correlationId': 'A', //     X-Request-Id exists; retrieval does not
 
+  // ── Story inspection (PUBLIC VISUAL CONVERGENCE) ────────────────────
+  // Every field is read from a live Admin endpoint on the frozen engineering baseline:
+  // GET /admin/stories/by-article/:articleRef and GET /admin/stories/:storyId/brief.
+  'stories.identity': 'A',
+  'stories.briefState': 'A',
+  'stories.versions': 'A',
+  'stories.attempts': 'A',
+  'stories.members': 'A',
+
   // ── Settings ──────────────────────────────────────────────────────
   'settings.localisation': 'A', //      real, presentation-layer facts
   'settings.taxInvoicing': 'C',

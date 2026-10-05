@@ -50,6 +50,11 @@ export const ADMIN_ROUTES = {
   /* ADMIN OPERATIONS R1 — the incident surface. Numbered after the artifact's last
      entry, like Ask Intelligence before it, rather than renumbering the design's rows. */
   operations: '/admin/operations',
+
+  /* PUBLIC VISUAL CONVERGENCE — the Story inspection surface (PUBLIC-ENGINEERING-CONTRACT: Admin
+     opens the operational truth behind any public story / Brief by canonical identity). Under News,
+     appended rather than renumbering; a query (?storyId= / ?articleRef=), not a dynamic segment. */
+  newsStories: '/admin/news/stories',
 } as const;
 
 export type AdminRouteKey = keyof typeof ADMIN_ROUTES;
@@ -76,6 +81,11 @@ export const ADMIN_API = {
   /* R1 — a GET returning aggregates. Still nothing that changes state, so the read-only
      meaning of this object is unchanged. */
   askIntelligence: '/admin/ai/ask-intelligence',
+
+  /* PUBLIC VISUAL CONVERGENCE — the story family: GET by-article/:articleRef (canonical resolution,
+     Admin-guarded, not behind STORY_BRIEF_ENABLED) and GET :storyId/brief (Brief inspection).
+     Both reads, zero compute; the path segments are appended at the call site. */
+  stories: '/admin/stories',
 } as const;
 
 /**

@@ -1,10 +1,19 @@
 /**
  * COMPACT VISUAL PRODUCT R1 — the Story Brief adapter against the REAL R1 contract
- * (EA-STORY-BRIEF-01). Fixtures live ONLY in this spec (S-7).
+ * (EA-STORY-BRIEF-01) on PUBLIC-ENGINEERING-BASELINE-R1 (647668c). Fixtures live ONLY in this spec.
+ *
+ * The Discussion client is mocked so that ANY use of it fails the test: Brief identity must never
+ * depend on Discussion (CTO baseline §2 / final convergence §3).
  */
 jest.mock('@/lib/api/accountFetch', () => ({ accountFetch: jest.fn() }));
-jest.mock('@/lib/stories/stageBApi', () => ({ fetchThread: jest.fn() }));
+jest.mock('@/lib/stories/stageBApi', () => ({
+  fetchThread: jest.fn(() => {
+    throw new Error('Discussion must not be used to resolve Story identity');
+  }),
+}));
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { accountFetch } from '@/lib/api/accountFetch';
 import { fetchThread } from '@/lib/stories/stageBApi';
 import { parseStoryBriefView, readStoryBrief, requestStoryBrief, resolveStoryId, storyBriefRunsInFlightForTests } from './storyBriefApi';
@@ -99,16 +108,38 @@ describe('server → presentation state mapping (strict)', () => {
   });
 });
 
-describe('identity: articleRef → canonical story, read-only', () => {
-  it('without discussion.read the page cannot resolve the id and makes NO request', async () => {
-    await expect(resolveStoryId(REF, { discussionRead: false })).resolves.toEqual({ ok: false, reason: 'UNRESOLVED' });
+describe('identity: GET /stories/by-article/:articleRef — canonical, read-only, NO Discussion', () => {
+  it('resolves { articleRef, storyId, materialVersion } through the frozen contract', async () => {
+    fetchMock.mockResolvedValueOnce(response(200, { articleRef: REF, storyId: STORY, materialVersion: 3 }));
+    await expect(resolveStoryId(REF)).resolves.toEqual({ ok: true, value: { articleRef: REF, storyId: STORY, materialVersion: 3 } });
+    expect(fetchMock).toHaveBeenCalledWith(`/stories/by-article/${REF}`);
+  });
+  it('REGRESSION: Brief resolution works with Discussion OFF — the Discussion client is never touched', async () => {
+    fetchMock.mockResolvedValueOnce(response(200, { articleRef: REF, storyId: STORY, materialVersion: 1 }));
+    fetchMock.mockResolvedValueOnce(response(200, server()));
+    const resolved = await resolveStoryId(REF);
+    if (!resolved.ok) throw new Error('not resolved');
+    await expect(readStoryBrief(resolved.value.storyId)).resolves.toMatchObject({ ok: true, value: { state: 'NONE' } });
     expect(threadMock).not.toHaveBeenCalled();
   });
-  it('resolves through the public thread read; an unclustered article is NO_STORY', async () => {
-    threadMock.mockResolvedValueOnce({ ok: true, value: { articleRef: REF, storyId: STORY, briefVersion: 1, locked: false, count: 0, comments: [] } });
-    await expect(resolveStoryId(REF, { discussionRead: true })).resolves.toEqual({ ok: true, value: STORY });
-    threadMock.mockResolvedValueOnce({ ok: true, value: { articleRef: REF, storyId: null, briefVersion: null, locked: false, count: 0, comments: [] } });
-    await expect(resolveStoryId(REF, { discussionRead: true })).resolves.toEqual({ ok: false, reason: 'NO_STORY' });
+  it('an unclustered article is NO_STORY; the gate OFF is OFF; a malformed ref never reaches the network', async () => {
+    fetchMock.mockResolvedValueOnce(response(200, { articleRef: REF, storyId: null, materialVersion: null }));
+    await expect(resolveStoryId(REF)).resolves.toEqual({ ok: false, reason: 'NO_STORY' });
+    fetchMock.mockResolvedValueOnce(response(404, { message: 'Not Found' }));
+    await expect(resolveStoryId(REF)).resolves.toEqual({ ok: false, reason: 'OFF' });
+    fetchMock.mockClear();
+    await expect(resolveStoryId('not-a-ref')).resolves.toEqual({ ok: false, reason: 'INVALID' });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+  it('a response for a different article is never accepted', async () => {
+    fetchMock.mockResolvedValueOnce(response(200, { articleRef: 'b'.repeat(64), storyId: STORY, materialVersion: 1 }));
+    await expect(resolveStoryId(REF)).resolves.toEqual({ ok: false, reason: 'FAILED' });
+  });
+  it('no runtime module of the visual reaches Discussion to learn story identity', () => {
+    const src = (p: string): string => readFileSync(join(__dirname, '..', '..', p), 'utf8');
+    expect(src('lib/api/storyBriefApi.ts')).not.toMatch(/stageBApi|fetchThread|\/discussion\//);
+    expect(src('components/visual/VisualBriefPanel.tsx')).not.toMatch(/fetchThread|resolveStoryId\(ref, \{/);
+    expect(src('components/visual/VisualBriefPanel.tsx')).toContain('await resolveStoryId(ref);');
   });
 });
 

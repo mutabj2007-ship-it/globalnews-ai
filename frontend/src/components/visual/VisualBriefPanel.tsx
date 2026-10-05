@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState, type JSX } from 'react';
-import { ArrowLeft, Bell, BellRing, ExternalLink, MessagesSquare, X } from 'lucide-react';
+import { ArrowLeft, Bell, BellRing, ExternalLink, MessagesSquare, ShieldCheck, X } from 'lucide-react';
 import { safeExternalHref, type LanguageCode } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { formatObservationalTime } from '@/lib/formatRelativeTime';
@@ -9,7 +9,7 @@ import { pluralWithForms } from '@/lib/i18n/pluralize';
 import { fill } from '@/components/home/reva/homeRevaModel';
 import { useHomeSession } from '@/components/home/reva/HomeSession';
 import { accountSignInUrl } from '@/lib/api/accountLinks';
-import { readStoryBrief, requestStoryBrief, resolveStoryId } from '@/lib/api/storyBriefApi';
+import { readStoryBrief, requestStoryBrief, resolveStoryId, type CanonicalStoryIdentity } from '@/lib/api/storyBriefApi';
 import type { BriefResult, BriefRunIntent, StoryBriefFailureKind, StoryBriefView, StoryId } from '@/lib/storyBrief/storyBriefView';
 import {
   closeVisualBrief,
@@ -23,6 +23,7 @@ import { openAlertSetup, openAlertsCentre, openDiscussion, useStageB, type Story
 import { publishStoryContext } from '@/lib/ask/storyContextStore';
 import { openGlobalAsk } from '@/lib/ask/openGlobalAsk';
 import { VISUAL_HOME_HREF } from '@/lib/visual/visualNav';
+import { adminStoryHref, useVisualAdminInspect } from '@/lib/visual/visualAdminInspect';
 import { VisualBriefStateView, type VisualBriefActions } from './VisualBriefStateView';
 
 /**
@@ -38,13 +39,14 @@ import { VisualBriefStateView, type VisualBriefActions } from './VisualBriefStat
  * HIERARCHY: Brief → evidence → Discussion → follow / Ask.
  *
  * TRUTH (EA-STORY-BRIEF-01, CTO §5–§6):
- *   · Opening reads: articleRef → canonical story (read-only) → GET the Brief (ZERO compute).
+ *   · Opening reads: articleRef → canonical story through GET /stories/by-article (read-only, no
+ *     Discussion dependency) → GET the Brief (ZERO compute).
  *     Reopening is the same read. Nothing on open can generate.
  *   · Generation (POST) only from an explicit action — the card's Read brief press when no Brief
  *     exists, Refresh on a STALE Brief, or Try again on a retryable failure — and only when the
  *     server says `generationAvailable` AND the reader is signed in. Guests read existing Briefs
  *     and never generate (Beta policy). Discuss never generates.
- *   · Gate OFF (404), an unresolvable story, or no story record: the panel says which, and shows
+ *   · Gate OFF (404) or no story record: the panel says which, and shows
  *     the reporting the page already holds — never a fabricated Brief.
  *
  * ADMIN LINKAGE: the panel carries the canonical ids it actually used (story id, articleRef,
@@ -86,8 +88,11 @@ export function VisualBriefPanel({
   const { user, isLoading } = useHomeSession();
   const signedIn = !isLoading && user !== null;
   const wide = useWide();
+  /* Alpha / Admin only: decided by the existing Admin identity read, signed-in readers only. */
+  const adminInspect = useVisualAdminInspect(panel.kind === 'brief' && !isLoading && user !== null);
   const [load, setLoad] = useState<Load>({ kind: 'reading' });
-  const [storyId, setStoryId] = useState<StoryId | null>(null);
+  const [identity, setIdentity] = useState<CanonicalStoryIdentity | null>(null);
+  const storyId: StoryId | null = identity?.storyId ?? null;
   const [busy, setBusy] = useState(false);
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const headingRef = useRef<HTMLHeadingElement | null>(null);
@@ -123,21 +128,22 @@ export function VisualBriefPanel({
     if (ref === null) return undefined;
     let live = true;
     setLoad({ kind: 'reading' });
-    setStoryId(null);
+    setIdentity(null);
     void (async () => {
-      const resolved = await resolveStoryId(ref, { discussionRead });
+      /* Canonical resolution — independent of Discussion (PUBLIC-ENGINEERING-BASELINE-R1 §2). */
+      const resolved = await resolveStoryId(ref);
       if (!live) return;
       if (!resolved.ok) {
         apply(resolved);
         return;
       }
-      setStoryId(resolved.value);
-      apply(await readStoryBrief(resolved.value));
+      setIdentity(resolved.value);
+      apply(await readStoryBrief(resolved.value.storyId));
     })();
     return () => {
       live = false;
     };
-  }, [ref, discussionRead, apply]);
+  }, [ref, apply]);
 
   /*
    * The card's Read brief press IS the explicit request (CTO §6). Once the read says NONE, a
@@ -249,6 +255,7 @@ export function VisualBriefPanel({
         data-visual-brief-mode={wide ? 'beside' : 'overlay'}
         data-article-ref={story.articleRef}
         data-story-id={storyId ?? undefined}
+        data-material-version={identity?.materialVersion ?? undefined}
         data-evidence-revision={view?.currentEvidenceRevision}
         data-brief-version={briefVersion}
         className="fixed bottom-0 end-0 top-0 z-[61] flex w-full flex-col bg-[var(--gt-card)] text-[var(--gt-ink)] shadow-[0_0_40px_-12px_rgba(0,0,0,0.45)] min-[600px]:w-[min(600px,calc(100vw-48px))] min-[900px]:w-[520px] min-[1200px]:top-[60px] min-[1200px]:border-s min-[1200px]:border-[var(--gt-line)] min-[1200px]:shadow-none"
@@ -276,6 +283,16 @@ export function VisualBriefPanel({
             </button>
           )}
           <span className="min-w-0 flex-1 truncate font-mono text-[0.75rem] font-semibold uppercase tracking-[0.1em] text-[var(--gt-link)]">{t.label}</span>
+          {adminInspect && (
+            <a
+              href={adminStoryHref({ storyId, articleRef: story.articleRef })}
+              data-visual-admin-inspect=""
+              className="inline-flex min-h-[44px] items-center gap-1 rounded-[0.5rem] border border-[var(--gt-line)] px-2 text-[0.8125rem] font-semibold text-[var(--gt-ink2)] hover:border-[var(--gt-act)]"
+            >
+              <ShieldCheck aria-hidden="true" className="h-4 w-4" />
+              {t.inspectInAdmin}
+            </a>
+          )}
           <button
             type="button"
             onClick={() => closeVisualBrief()}
@@ -416,7 +433,7 @@ function UnavailableNotice({
   readonly language: LanguageCode;
 }): JSX.Element {
   const t = getDictionary(language).visual.brief;
-  const body = reason === 'OFF' ? t.unavailableBody : reason === 'UNRESOLVED' ? t.unresolvedBody : reason === 'NO_STORY' ? t.noStoryBody : t.readFailedBody;
+  const body = reason === 'OFF' ? t.unavailableBody : reason === 'NO_STORY' ? t.noStoryBody : t.readFailedBody;
   return (
     <div data-visual-brief-state="UNAVAILABLE" data-visual-brief-reason={reason} className="rounded-[0.625rem] border border-[var(--gt-line)] bg-[var(--gt-sunk)] p-4">
       <p className="text-[0.9375rem] font-semibold">{t.unavailableTitle}</p>

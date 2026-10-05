@@ -2,7 +2,7 @@ import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { createElement as h } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { EAST_AFRICA_MEMBERS, EU27_MEMBERS, MIDDLE_EAST_MEMBERS } from '@globalnews-ai/shared';
+import { EAST_AFRICA_MEMBERS, EU27_MEMBERS, MIDDLE_EAST_MEMBERS, productCoverageScope } from '@globalnews-ai/shared';
 import { routeGateDecision, STANDALONE_ALLOWLIST } from '@/lib/routing/standaloneRouteGate';
 import { VISUAL_CLICK_CONTRACT } from '@/lib/visual/visualClickContract';
 import { VISUAL_REGIONS } from '@/lib/visual/visualRegions';
@@ -163,7 +163,7 @@ describe('prototype runtime, SAMPLE data and browser storage are excluded (H0/21
   });
 });
 
-describe('regions carry their DECLARED meaning (EA-REGION-AUTHORITY-01)', () => {
+describe('regions carry their DECLARED meaning (PUBLIC-ENGINEERING-BASELINE-R1)', () => {
   const region = (id: string) => VISUAL_REGIONS.find((r) => r.id === id)!;
   it('counts are read from the shared product-governed lists, not restated', () => {
     expect(region('eastAfrica').memberCount).toBe(EAST_AFRICA_MEMBERS.length);
@@ -172,17 +172,34 @@ describe('regions carry their DECLARED meaning (EA-REGION-AUTHORITY-01)', () => 
     expect(region('eac').memberCount).toBeNull();
     expect(region('europe').memberCount).toBeNull();
   });
-  it('only East Africa is an Ask retrieval region — matching the backend source', () => {
-    expect(VISUAL_REGIONS.filter((r) => r.askRetrieval).map((r) => r.id)).toEqual(['eastAfrica']);
+  it('Ask retrieval scopes are EAC and East Africa, separately — matching the backend source (CTO R-1)', () => {
+    expect(VISUAL_REGIONS.filter((r) => r.askRetrieval).map((r) => r.id).sort()).toEqual(['eac', 'eastAfrica']);
     const backend = readFileSync(join(SRC, '..', '..', 'backend', 'src', 'modules', 'analysis', 'region', 'declared-regions.ts'), 'utf8');
-    expect(backend).toContain('export const DECLARED_REGIONS: readonly DeclaredRegion[] = [EAST_AFRICA];');
+    expect(backend).toContain('export const DECLARED_REGIONS: readonly DeclaredRegion[] = [EAST_AFRICAN_COMMUNITY, EAST_AFRICA];');
   });
-  it('Middle East is product-governed, Europe is M49 and not the EU, EAC discloses the East Africa scope', () => {
-    expect(region('middleEast').membership).toBe('PRODUCT_GOVERNED');
+  it('product scopes speak with the shared authority: English label + disclosure ARE PRODUCT_COVERAGE_SCOPES (CTO R-2)', () => {
+    const pairs = [
+      ['eastAfrica', 'region:east-africa'],
+      ['middleEast', 'region:middle-east'],
+      ['eu', 'region:european-union'],
+    ] as const;
+    for (const [id, scopeId] of pairs) {
+      const scope = productCoverageScope(scopeId)!;
+      expect(region(id).productScope).toBe(scopeId);
+      expect(region(id).membership).toBe('PRODUCT_GOVERNED');
+      expect(visualEn.map.regionScopeLabel[id]).toBe(scope.scopeLabel);
+      expect(visualEn.map.regionMeaning[id]).toBe(scope.disclosure);
+    }
+    expect(visualEn.map.regionScopeLabel.middleEast).toBe('GlobalNewsAI Middle East monitoring scope');
+    expect(visualEn.map.regionMeaning.middleEast).toMatch(/no agreed geographic membership/);
+  });
+  it('Europe is M49 and not the EU; the EAC is its treaty members, not the East Africa scope; no stale f0e08de copy', () => {
     expect(region('europe').membership).toBe('UN_M49');
-    expect(visualEn.map.regionMeaning.middleEast).toMatch(/not an agreed geographic definition/);
-    expect(visualEn.map.regionMeaning.europe).toMatch(/not the European Union/);
-    expect(visualEn.map.regionMeaning.eac).toMatch(/East Africa scope/);
+    expect(region('eac').productScope).toBeNull();
+    expect(visualEn.map.regionMeaning.europe).toMatch(/Not the European Union/);
+    expect(visualEn.map.regionMeaning.eac).toMatch(/different group from the GlobalNewsAI East Africa scope/);
+    const all = JSON.stringify([visualEn.map, visualPl.map]);
+    expect(all).not.toMatch(/no separate EAC scope|over its East Africa scope|nie ma osobnego zakresu EAC/);
   });
   it('no region Watch is offered: the unavailable state is said', () => {
     expect(visualEn.map.regionWatch).toMatch(/not available/);
@@ -221,5 +238,39 @@ describe('the shared WorldMap change is additive and defaulted', () => {
     expect(map).toContain('  frame,\n  trackHostResize = false,');
     const callers = filesUnder('components').filter((f) => f.endsWith('.tsx') && !f.startsWith(join('components', 'visual')));
     for (const file of callers) expect(read(file)).not.toMatch(/<WorldMap[\s\S]{0,400}?\b(frame|trackHostResize)=/);
+  });
+});
+
+describe('Alpha Admin linkage: "Inspect in Admin" is Admin-only and canonical', () => {
+  const panel = stripComments(read('components/visual/VisualBriefPanel.tsx'));
+  const hook = stripComments(read('lib/visual/visualAdminInspect.ts'));
+  it('renders ONLY when the Admin identity check allows it — never for an ordinary reader', () => {
+    expect(panel).toMatch(/\{adminInspect && \(\s*<a\s/);
+    expect(panel).toContain("useVisualAdminInspect(panel.kind === 'brief' && !isLoading && user !== null)");
+    expect(hook).toContain("hasCapability(me.capabilities, 'news.manage')");
+    expect(hook).toMatch(/if \(!response\.ok\) return false;/);
+    expect(hook).toContain('return active && allowed;');
+  });
+  it('uses the existing Admin identity read and the declared Admin route — no hardcoded /admin path', () => {
+    expect(hook).toContain('accountFetch(ADMIN_API.me)');
+    expect(hook).toContain('ADMIN_ROUTES.newsStories');
+    expect(hook).not.toMatch(/['"\x60]\/admin/);
+  });
+  it('links with the canonical id the panel holds (storyId, else articleRef) and the panel carries all four', () => {
+    expect(panel).toContain('adminStoryHref({ storyId, articleRef: story.articleRef })');
+    for (const attr of ['data-article-ref', 'data-story-id', 'data-material-version', 'data-evidence-revision', 'data-brief-version']) expect(panel).toContain(attr);
+  });
+});
+
+describe('Admin story inspection lives in the EXISTING Admin application', () => {
+  it('a thin Server Component page under the Admin shell, reading only through the sanctioned hook', () => {
+    const page = read('app/admin/news/stories/page.tsx');
+    const screen = stripComments(read('components/admin/screens/StoryInspectionScreen.tsx'));
+    expect(page).not.toContain("'use client'");
+    expect(page).toContain("from '@/components/admin/screens/StoryInspectionScreen'");
+    expect(screen).toContain('useAdminResource<StoryInspectionData>(`${ADMIN_API.stories}/${storyId}/brief`)');
+    expect(screen).toContain('useAdminResource<{ story: { storyId: string } | null }>(`${ADMIN_API.stories}/by-article/${articleRef}`)');
+    expect(screen).toContain("can('news.manage')");
+    expect(screen).not.toMatch(/accountFetch|method:\s*'POST'/);
   });
 });

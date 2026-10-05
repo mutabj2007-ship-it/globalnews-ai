@@ -97,6 +97,16 @@ describe('F1.b — provenance registry', () => {
       'operations.history',
       'operations.switchState',
       'settings.localisation',
+      /*
+        PUBLIC VISUAL CONVERGENCE — five new A entries. Every Story inspection field is read from a
+        live Admin endpoint on the frozen engineering baseline (GET /admin/stories/by-article and
+        GET /admin/stories/:storyId/brief).
+      */
+      'stories.attempts',
+      'stories.briefState',
+      'stories.identity',
+      'stories.members',
+      'stories.versions',
     ]);
   });
 

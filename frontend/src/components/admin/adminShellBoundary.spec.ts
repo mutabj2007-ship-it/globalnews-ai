@@ -130,7 +130,8 @@ describe('F1.b — the /admin/me client boundary', () => {
     const pages = files(APP_ADMIN).filter((file) => file.endsWith('page.tsx'));
     /* TWENTY-ONE — the twenty design pages plus the Ask operations page R1 adds. */
     /* ADMIN OPERATIONS R1 — twenty-two: the incident controls page. */
-    expect(pages).toHaveLength(22);
+    /* PUBLIC VISUAL CONVERGENCE — twenty-three: the Story inspection page. */
+    expect(pages).toHaveLength(23);
 
     pages.forEach((file) => {
       const source = readFileSync(file, 'utf-8');

@@ -44,9 +44,11 @@ describe('F1.b — the twenty-route Admin manifest', () => {
     R1` adds one, by name, and the count is asserted here so that adding a twenty-second
     stays a deliberate, reviewable act rather than an edit nobody notices.
   */
-  it('declares exactly twenty-two routes, all distinct', () => {
-    expect(ALL_ADMIN_ROUTES).toHaveLength(22);
-    expect(new Set(ALL_ADMIN_ROUTES).size).toBe(22);
+  /* PUBLIC VISUAL CONVERGENCE — twenty-three: /admin/news/stories, the Story inspection the CTO's
+     final convergence names (public story → the same Admin record). Counted, not absorbed. */
+  it('declares exactly twenty-three routes, all distinct', () => {
+    expect(ALL_ADMIN_ROUTES).toHaveLength(23);
+    expect(new Set(ALL_ADMIN_ROUTES).size).toBe(23);
   });
 
   it('reproduces the approved route map verbatim', () => {
@@ -74,6 +76,8 @@ describe('F1.b — the twenty-route Admin manifest', () => {
       '/admin/settings',
       /* ADMIN OPERATIONS R1 — the incident surface, appended rather than renumbering. */
       '/admin/operations',
+      /* PUBLIC VISUAL CONVERGENCE — Story inspection, appended rather than renumbering. */
+      '/admin/news/stories',
     ]);
   });
 
@@ -126,6 +130,8 @@ describe('F1.b — the twenty-route Admin manifest', () => {
       'askIntelligence',
       'me',
       'newsProviders',
+      /* PUBLIC VISUAL CONVERGENCE — the story family (by-article + :storyId/brief), both reads. */
+      'stories',
       'systemHealth',
       'users',
     ]);

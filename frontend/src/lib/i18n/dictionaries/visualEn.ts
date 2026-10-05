@@ -10,6 +10,17 @@
  * Seven-locale Home chrome is NOT here: production Home is EN/PL (lib/i18n/languages.ts) and the
  * fr/de/es/pt/ar Home values need a Claude L qualification pass (H0 dependency D-8).
  */
+import { productCoverageScope, type ProductCoverageScope } from '@globalnews-ai/shared';
+
+function scope(id: string): ProductCoverageScope {
+  const found = productCoverageScope(id);
+  if (found === undefined) throw new Error(`missing product coverage scope ${id}`);
+  return found;
+}
+const SCOPE_EAST_AFRICA = scope('region:east-africa');
+const SCOPE_MIDDLE_EAST = scope('region:middle-east');
+const SCOPE_EU = scope('region:european-union');
+
 export const visualEn = {
   previewBanner: 'Preview of the new GlobalNewsAI Home. The current Home is unchanged.',
   nav: {
@@ -52,15 +63,30 @@ export const visualEn = {
       eu: 'European Union',
       middleEast: 'Middle East',
     },
-    /* Each region's DECLARED meaning (EA-REGION-AUTHORITY-01). Never one meaning for all. */
+    /*
+      Each region's DECLARED meaning (PUBLIC-ENGINEERING-BASELINE-R1, 647668c). For the three
+      PRODUCT-GOVERNED scopes the English label and disclosure ARE the shared authority
+      (PRODUCT_COVERAGE_SCOPES), read here rather than reworded; the spec pins the equality.
+      World, the EAC and Europe are not product scopes and carry their geographic meaning.
+    */
+    regionScopeLabel: {
+      world: 'World',
+      eastAfrica: SCOPE_EAST_AFRICA.scopeLabel,
+      eac: 'East African Community',
+      europe: 'Europe (UN M49)',
+      eu: SCOPE_EU.scopeLabel,
+      middleEast: SCOPE_MIDDLE_EAST.scopeLabel,
+    },
     regionMeaning: {
       world: 'The whole world. No regional scope.',
-      eastAfrica: 'GlobalNewsAI’s East Africa monitoring scope: {count} countries, set by GlobalNewsAI. Ask can search this region as a whole.',
-      eac: 'The East African Community, by treaty membership. GlobalNewsAI has no separate EAC scope: Ask answers EAC questions over its East Africa scope, which also includes non-members.',
-      europe: 'Europe as a geographic region (UN M49) — not the European Union. Ask has no regional scope for it.',
-      eu: 'The European Union: {count} member states. Ask has no regional scope for it.',
-      middleEast: 'GlobalNewsAI’s Middle East monitoring scope: {count} countries, set by GlobalNewsAI — not an agreed geographic definition. Ask has no regional scope for it.',
+      eastAfrica: SCOPE_EAST_AFRICA.disclosure,
+      eac: 'The member states of the East African Community, by treaty — a different group from the GlobalNewsAI East Africa scope.',
+      europe: 'Europe as a geographic region (UN M49). Not the European Union.',
+      eu: SCOPE_EU.disclosure,
+      middleEast: SCOPE_MIDDLE_EAST.disclosure,
     },
+    askRegionScope: 'Ask can search this as a region.',
+    askNoRegionScope: 'Ask has no regional scope for it.',
     regionWatch: 'Watching a region is not available yet.',
     framingNote: 'These buttons frame the map. They do not filter stories.',
     expand: 'Expand map',
@@ -97,10 +123,11 @@ export const visualEn = {
     label: 'GlobalNewsAI brief',
     dialogAria: 'Brief: {title}',
     close: 'Close brief',
+    /* Alpha / Admin only — rendered solely for an Admin holding news.manage. */
+    inspectInAdmin: 'Inspect in Admin',
     back: 'Back',
     unavailableTitle: 'No GlobalNewsAI brief for this story yet',
     unavailableBody: 'Story briefs are not switched on yet. Below is the reporting we hold, as reported.',
-    unresolvedBody: 'This page cannot look up the brief for this story yet. Below is the reporting we hold, as reported.',
     noStoryBody: 'This article is not yet part of a GlobalNewsAI story, so no brief exists for it. Below is the reporting we hold.',
     readFailedBody: 'The brief could not be loaded. Nothing was run. Below is the reporting we hold.',
     reportingHeading: 'Reporting we hold',

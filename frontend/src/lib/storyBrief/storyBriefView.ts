@@ -136,10 +136,9 @@ export type BriefResult<T> =
       readonly ok: false;
       /**
        * OFF         the Story Brief capability is not served (gate off → 404)
-       * UNRESOLVED  this page cannot learn the story's canonical id (see storyBriefApi.ts)
        * NO_STORY    the article is not (yet) part of any canonical story
        */
-      readonly reason: 'OFF' | 'UNRESOLVED' | 'NO_STORY' | 'SIGNED_OUT' | 'NOT_FOUND' | 'RATE_LIMITED' | 'INVALID' | 'FAILED';
+      readonly reason: 'OFF' | 'NO_STORY' | 'SIGNED_OUT' | 'NOT_FOUND' | 'RATE_LIMITED' | 'INVALID' | 'FAILED';
     };
 
 /**

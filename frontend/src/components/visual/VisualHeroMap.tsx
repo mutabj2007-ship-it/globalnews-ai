@@ -137,11 +137,13 @@ export function VisualHeroMap({ language }: { readonly language: LanguageCode })
         data-visual-region-meaning={activePreset.id}
         data-region-membership={activePreset.membership}
         data-region-ask-retrieval={activePreset.askRetrieval ? 'declared' : 'none'}
+        data-region-product-scope={activePreset.productScope ?? undefined}
         aria-live="polite"
         className="text-[0.8125rem] leading-snug text-white"
       >
-        <span className="font-semibold">{t.regionNames[activePreset.id]}: </span>
-        {fill(t.regionMeaning[activePreset.id], { count: activePreset.memberCount ?? '' })}
+        <span className="font-semibold">{t.regionScopeLabel[activePreset.id]}: </span>
+        {t.regionMeaning[activePreset.id]}
+        {activePreset.id === 'world' ? null : <> {activePreset.askRetrieval ? t.askRegionScope : t.askNoRegionScope}</>}
       </p>
       <p className="text-[0.75rem] leading-snug text-[var(--gt-hdrInk)] opacity-75">
         {t.framingNote} {activePreset.id === 'world' ? null : t.regionWatch}

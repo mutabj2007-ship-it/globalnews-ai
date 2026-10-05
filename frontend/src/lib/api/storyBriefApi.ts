@@ -1,5 +1,4 @@
 import { accountFetch } from '@/lib/api/accountFetch';
-import { fetchThread } from '@/lib/stories/stageBApi';
 import {
   STORY_BRIEF_CONCLUSIONS,
   STORY_BRIEF_FAILURE_KINDS,
@@ -31,12 +30,14 @@ import {
  * In R1 the production generator is `UnavailableStoryBriefGenerator` (`generationAvailable:false`),
  * so no surface offers generation and nothing is ever spent.
  *
- * IDENTITY. The endpoints take the CANONICAL story id. The Home feed carries only the governed
- * `articleRef`, and the one public, read-only response that resolves articleRef → canonical story
- * on this checkpoint is the Discussion thread read (`storyIdentity.resolveByArticleRef`, a lookup
- * that never creates a story), served only under discussion.read. Without it this page cannot
- * learn the id and says so (UNRESOLVED) — it never guesses or derives one. A dedicated public
- * resolver is recorded as a backend dependency for the engineering lane.
+ * IDENTITY (PUBLIC-ENGINEERING-BASELINE-R1, 647668c). The endpoints take the CANONICAL story id;
+ * the Home feed carries the governed `articleRef`. The frozen contract resolves one to the other:
+ *
+ *   GET /api/stories/by-article/:articleRef → { articleRef, storyId, materialVersion }
+ *
+ * read-only, zero compute, nothing created by reading, an alias resolved to its survivor, and NO
+ * Discussion dependency — Read brief works with Discussion OFF. (The earlier temporary lookup
+ * through the Discussion thread read is removed.) The id is never guessed or derived here.
  *
  * PARSING is strict and one-way: an unrecognised server shape is FAILED, never a guessed state.
  * No browser storage is ever a Brief source (S-8). No fixture is imported here (S-7).
@@ -45,17 +46,35 @@ import {
 const BRIEF_PATH = (storyId: string): string => `/stories/${encodeURIComponent(storyId)}/brief`;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** articleRef → canonical story id, through the public read-only thread resolution. */
-export async function resolveStoryId(
-  articleRef: string,
-  capability: { readonly discussionRead: boolean },
-): Promise<BriefResult<StoryId>> {
-  if (!capability.discussionRead) return { ok: false, reason: 'UNRESOLVED' };
-  const thread = await fetchThread(articleRef);
-  if (!thread.ok) return { ok: false, reason: thread.reason === 'OFF' ? 'UNRESOLVED' : thread.reason === 'LOCKED' ? 'FAILED' : thread.reason };
-  const id = thread.value.storyId;
-  if (id === null) return { ok: false, reason: 'NO_STORY' };
-  return UUID.test(id) ? { ok: true, value: id as StoryId } : { ok: false, reason: 'INVALID' };
+const RESOLVE_PATH = (articleRef: string): string => `/stories/by-article/${encodeURIComponent(articleRef)}`;
+const ARTICLE_REF = /^[0-9a-f]{64}$/;
+
+/** The canonical identity the frozen contract returns for an article. */
+export interface CanonicalStoryIdentity {
+  readonly articleRef: string;
+  readonly storyId: StoryId;
+  /** Story.briefVersion — continuity only (alerts, Discussion), NEVER the Brief staleness key. */
+  readonly materialVersion: number | null;
+}
+
+/** articleRef → canonical story, through GET /stories/by-article/:articleRef. No Discussion. */
+export async function resolveStoryId(articleRef: string): Promise<BriefResult<CanonicalStoryIdentity>> {
+  if (!ARTICLE_REF.test(articleRef)) return { ok: false, reason: 'INVALID' };
+  try {
+    const response = await accountFetch(RESOLVE_PATH(articleRef));
+    if (response.status === 404) return { ok: false, reason: 'OFF' };
+    if (response.status === 429) return { ok: false, reason: 'RATE_LIMITED' };
+    if (response.status === 400) return { ok: false, reason: 'INVALID' };
+    if (!response.ok) return { ok: false, reason: 'FAILED' };
+    const body = (await response.json()) as { articleRef?: unknown; storyId?: unknown; materialVersion?: unknown } | null;
+    if (body === null || body.articleRef !== articleRef) return { ok: false, reason: 'FAILED' };
+    if (body.storyId === null) return { ok: false, reason: 'NO_STORY' };
+    if (typeof body.storyId !== 'string' || !UUID.test(body.storyId)) return { ok: false, reason: 'INVALID' };
+    const materialVersion = typeof body.materialVersion === 'number' ? body.materialVersion : null;
+    return { ok: true, value: { articleRef, storyId: body.storyId as StoryId, materialVersion } };
+  } catch {
+    return { ok: false, reason: 'FAILED' };
+  }
 }
 
 async function call(storyId: StoryId, method: 'GET' | 'POST'): Promise<BriefResult<StoryBriefView>> {
