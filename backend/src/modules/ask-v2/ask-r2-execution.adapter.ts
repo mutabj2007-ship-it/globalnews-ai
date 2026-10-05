@@ -279,7 +279,17 @@ function answerMemory(
     void _carried;
     return referent;
   }
-  const scope = scopeOfRoute(route);
+  /*
+    R4 ALPHA SMOKE REPAIR R1-B (CTO) — a turn answered FROM an earlier answer ("Why did you say
+    that?", a reasoning re-check) is about THAT answer's subject: its record keeps the referent's
+    scope (its question and countries), so the next follow-up stays on the same conversational
+    chain instead of on the anaphoric words "Why did you say that?" with no subject at all.
+  */
+  const referent = route.job.discourseReference === 'PRIOR_WORK' ? artifactUsed?.scope : undefined;
+  const scope: ArtifactScope =
+    referent === undefined
+      ? scopeOfRoute(route)
+      : { ...referent, job: route.job.job, freshness: route.semantic.turn.freshness };
   if (modelArtifact !== null && analysis === null) return withScope(modelArtifact, scope);
   const label = route.source.rawQuestion;
   if (analysis !== null) {
@@ -1026,10 +1036,22 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       the current part (BROADENING_OFFERED: its constraint cannot be transported), the stable part is
       still answered by reasoning and the current part is named as not verified — the same partial
       answer a failed retrieval gets. No reporting attempt was made, so none is counted.
+
+      R4 ALPHA SMOKE REPAIR R1-A (CTO) — the SAME rule when frozen C cannot carry the current
+      part's constraint at all and offers no broadening: a CAPABILITY_UNAVAILABLE terminal whose
+      refusal is CONSTRAINT_UNTRANSPORTABLE (Alpha op efe6d76d: "…and what is the Fed doing this
+      week?" — the TIME constraint "this week" cannot be transported). The whole mixed turn used to
+      collapse to "capability unavailable" with the explanatory part unanswered. Now the stable
+      clause is answered and the current part — its constraint kept in the guidance's named current
+      clause — is stated as not verified: nothing is broadened, nothing about "this week" is
+      invented, no retrieval runs. Other capability gaps keep their terminal exactly as before.
     */
+    const untransportableCurrentPart =
+      route.plan.terminalState === 'CAPABILITY_UNAVAILABLE' &&
+      route.plan.refusals.includes('CONSTRAINT_UNTRANSPORTABLE');
     if (
       route.knowledgeRequirement === 'MIXED_REFERENCE_CURRENT' &&
-      route.plan.terminalState === 'BROADENING_OFFERED'
+      (route.plan.terminalState === 'BROADENING_OFFERED' || untransportableCurrentPart)
     ) {
       return this.executeBackground(
         request,

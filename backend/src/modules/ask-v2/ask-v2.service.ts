@@ -184,15 +184,24 @@ export function conversationOf(turn: ConversationalTurn | null): Pick<AskRequest
       };
 }
 
-/** CTO R4 — how far back the conversation's earlier WORK is looked for (the most recent wins). */
-const ARTIFACT_LOOKBACK = 3;
+/*
+  R4 ALPHA SMOKE REPAIR R1-B (CTO) — "that / it" follows the reader's LATEST TURN, never the latest
+  turn that happened to store an answer. This looked back over the last 3 turns and returned the
+  first stored record, so a turn that answered nothing (Alpha op efe6d76d: CAPABILITY_UNAVAILABLE)
+  was skipped and "Why did you say that?" bound to the answer BEFORE it (Chile, op e5e381e4); the
+  re-check and the official-evidence turn then inherited that wrong scope. Now only the latest turn
+  is read: its own record (R-3; a turn that explained earlier work carries that referent in its own
+  record, so valid chains are kept), or nothing — and with nothing bindable the reference resolves
+  to the R-4 truthful clarification, never to an older answer.
+*/
+const ARTIFACT_LOOKBACK = 1;
 
 /**
  * CTO R4 — the most recent earlier work in this owner-verified thread: a validated
  * ConversationArtifact read from a durable stored answer (never regenerated, never client input).
  * `beforeSequence` limits it to turns before the one being executed, so quote and execute agree.
  */
-async function priorArtifactIn(
+export async function priorArtifactIn(
   tx: Tx,
   threadId: string,
   beforeSequence?: number,
