@@ -191,11 +191,15 @@ const byId = (set: { contributions: readonly { contributorId: string }[] }, id: 
     | undefined;
 
 describe('1/2 — Conflict: natural selection, security served THROUGH Conflict', () => {
-  it('"How serious is the situation in eastern DRC?" consults Conflict without the reader naming it', async () => {
+  /* STAGE 2 · T3 — SUPERSEDED WITH UPDATED PROOF: the bare "How serious is the situation in
+     eastern DRC?" is a country + generic noun (no security facet) and no longer selects Conflict
+     (contributor-selection.domain-leak.spec.ts). The proof keeps its intent with an
+     armed-conflict question that still never names the module. */
+  it('"How serious is the fighting in eastern DRC?" consults Conflict without the reader naming it', async () => {
     const { c, calls } = coordinator({
       conflict: [conflictRow('e1', '2026-09-27'), conflictRow('e2', '2026-09-20')],
     });
-    const set = await c.read(route('How serious is the situation in eastern DRC?'), NOW);
+    const set = await c.read(route('How serious is the fighting in eastern DRC?'), NOW);
     expect(set.considered.map((s) => s.contributorId)).toEqual(['CONFLICT']);
     const conflict = byId(set, 'CONFLICT')!;
     expect(conflict.status).toBe('USED');
@@ -217,7 +221,7 @@ describe('1/2 — Conflict: natural selection, security served THROUGH Conflict'
   it('no matching retained record → NO_MATCH, never a false contribution', async () => {
     const { c } = coordinator({ conflict: [] });
     const conflict = byId(
-      await c.read(route('How serious is the situation in eastern DRC?'), NOW),
+      await c.read(route('How serious is the fighting in eastern DRC?'), NOW),
       'CONFLICT',
     )!;
     expect(conflict.status).toBe('NO_MATCH');
@@ -436,7 +440,10 @@ describe('8/9 — Humanitarian reality, multi-contributor', () => {
 
   it('Conflict + Humanitarian coexist; only the real one carries observations', async () => {
     const { c } = coordinator({ conflict: [conflictRow('e1', '2026-09-27')] });
-    const set = await c.read(route('What is the humanitarian situation in eastern DRC?'), NOW);
+    const set = await c.read(
+      route('What is the humanitarian situation and the fighting in eastern DRC?'),
+      NOW,
+    );
     expect(set.considered.map((s) => s.contributorId)).toEqual(['CONFLICT', 'HUMANITARIAN']);
     expect(
       set.contributions.filter((x) => x.status === 'USED').map((x) => x.contributorId),
@@ -461,7 +468,10 @@ describe('10/11/12 — no specialist where none applies', () => {
 describe('13 — failure and degradation never take the Ask down', () => {
   it('a failing read is DEGRADED, the others continue', async () => {
     const { c } = coordinator({ conflict: 'throw' });
-    const set = await c.read(route('What is the humanitarian situation in eastern DRC?'), NOW);
+    const set = await c.read(
+      route('What is the humanitarian situation and the fighting in eastern DRC?'),
+      NOW,
+    );
     expect(byId(set, 'CONFLICT')).toMatchObject({
       status: 'DEGRADED',
       degradationReason: 'READ_FAILED',
@@ -473,7 +483,7 @@ describe('13 — failure and degradation never take the Ask down', () => {
     jest.useFakeTimers();
     try {
       const { c } = coordinator({ conflict: 'hang' });
-      const pending = c.read(route('How serious is the situation in eastern DRC?'), NOW);
+      const pending = c.read(route('How serious is the fighting in eastern DRC?'), NOW);
       await jest.advanceTimersByTimeAsync(READ_TIMEOUT_MS + 1);
       expect(byId(await pending, 'CONFLICT')).toMatchObject({
         status: 'DEGRADED',

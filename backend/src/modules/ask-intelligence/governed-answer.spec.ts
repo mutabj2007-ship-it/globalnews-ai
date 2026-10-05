@@ -378,8 +378,11 @@ describe('C — Conflict records as concise structured observations (evidence un
       );
       return { c, evidenceDetails };
     };
+    /* STAGE 2 · T3 — the live G1 wording is a country + generic noun and no longer selects
+       Conflict; the batched-detail proof reads an armed-conflict question instead. */
+    const G1_CONFLICT = 'How serious is the fighting in eastern DRC?';
     const ok = make('ok');
-    const set1 = await ok.c.read(route(G.G1), NOW);
+    const set1 = await ok.c.read(route(G1_CONFLICT), NOW);
     expect(ok.evidenceDetails).toHaveBeenCalledTimes(1);
     expect(ok.evidenceDetails.mock.calls[0][0]).toEqual(['k1', 'k2']);
     const conflict = set1.contributions.find((x) => x.contributorId === 'CONFLICT')!;
@@ -387,7 +390,7 @@ describe('C — Conflict records as concise structured observations (evidence un
     expect(conflict.disclosures).toContain('SUBNATIONAL_SCOPE_NOT_APPLIED');
 
     const bad = make('throw');
-    const set2 = await bad.c.read(route(G.G1), NOW);
+    const set2 = await bad.c.read(route(G1_CONFLICT), NOW);
     const degradedDetail = set2.contributions.find((x) => x.contributorId === 'CONFLICT')!;
     expect(degradedDetail.status).toBe('USED');
     expect(degradedDetail.observations[0].detail?.place).toBeNull();
