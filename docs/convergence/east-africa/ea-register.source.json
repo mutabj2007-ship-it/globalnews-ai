@@ -5,7 +5,7 @@
  "integrationHead": {
   "branch": "integration/r4-east-africa-convergence-r1",
   "note": "R4 + EAST AFRICA CONVERGENCE (CTO authority, 2026-10-05). Local; not pushed; not deployed. First parent = corrected live R4 db98d957 (= 81a5034 + seven-language persistence repair, LIVE on Alpha backend dff69371); second parent = accepted EA checkpoint ea3edd3.",
-  "checkpoint": "e3ffacd",
+  "checkpoint": "ca199f1 (PUBLIC-CONVERGENCE-CHECKPOINT-AE-R1 = f0e08de, pushed)",
   "lineage": [
    "db98d957 corrected R4 base (81a5034 + 5b89bdd cherry-pick; Alpha backend LIVE, Production NOT deployed)",
    "bf6ee3c merge ea3edd3 (T1 T2 T3 T4 T5A/B, afeedc9, d1a7939, register) — textual resolutions only",
@@ -15,7 +15,13 @@
    "593067c region authority matrix (EA-REGION-AUTHORITY-01)",
    "f0f12ec Settings measured as the Ask surface R4 made it (no false fallback)",
    "9a9a81d T2 manifest: QUALIFIED_IN_ASK_SCOPE (L work 3560 -> 3386 per locale)",
-   "e3ffacd canonical Story Brief R1 (EA-STORY-BRIEF-01; generation BLOCKED on spend authority)"
+   "e3ffacd canonical Story Brief R1 (EA-STORY-BRIEF-01; generation BLOCKED on spend authority)",
+   "f0e08de register refresh = PUBLIC-CONVERGENCE-CHECKPOINT-AE-R1 (pushed; visual intake)",
+   "0fab206 EAC own governed retrieval scope (R-1 CLOSED)",
+   "ad8e5a8 product coverage scopes: one label + disclosure authority (R-2 CLOSED; R-3 comment fixed)",
+   "182a12d Story Brief: signed-in generation through the governed Ask path (story-brief module)",
+   "e6351a2 Admin Story Brief inspection by canonical identity (CTO §8)",
+   "ca199f1 public ↔ Admin identity contract; regional Watch pinned unavailable (R-5)"
   ]
  },
  "outsideThisBranch": [
@@ -201,7 +207,7 @@
    "migration": "none",
    "deployed": "NO",
    "live": "NOT_RUN",
-   "blocker": "askSevenLanguage H-4 (inherited from EA): H root-dir spec contradicts T2 + CTO RTL ruling (SPEC-T2-H-3) — spec decision pending."
+   "blocker": "askSevenLanguage H-4: CTO ruled SUPERSEDED (T2 + SPEC-T2-H-3 + Arabic RTL ruling) — spec rewrite pending (blocked in this session by a tooling permission denial on reading the spec file)."
   },
   {
    "id": "P1-BRF-01",
@@ -363,25 +369,37 @@
    "id": "EA-REGION-AUTHORITY-01",
    "requirement": "5-layer region authority matrix (East Africa, EAC, Europe, EU, Middle East)",
    "owner": "Claude Code (EA controller)",
-   "commit": "593067c (EA-REGION-AUTHORITY-MATRIX.md)",
+   "commit": "593067c + 0fab206 (R-1 EAC scope) + ad8e5a8 (R-2 scope labels) + ca199f1 (R-5 Watch pinned)",
    "focusedTest": "n/a (read-only measurement)",
    "regression": "n/a",
    "migration": "none",
    "deployed": "n/a",
    "live": "n/a",
-   "blocker": "R-1 EAC questions answered over the EA-11 scope; R-2 region:middle-east id = contested geography AND product scope; R-5 no product-region Watch path — CTO/PO decisions"
+   "blocker": "R-1 CLOSED (EAC 8 own retrieval scope); R-2 CLOSED (GlobalNewsAI Middle East monitoring scope label/disclosure authority); R-3 comment fixed; R-5 recorded: region Watch UNAVAILABLE (pinned), story follow = Alerts; R-7 drift copies open (engineering, low)."
   },
   {
    "id": "EA-STORY-BRIEF-01",
    "requirement": "Canonical story-owned Brief (Design R1): persisted, versioned, zero-compute reopen, stale on evidence change, Discussion per version",
    "owner": "Claude Code (EA controller)",
-   "commit": "e3ffacd",
-   "focusedTest": "story-brief rules/structure + real-PG (zero-compute reopen, PARTIAL/INSUFFICIENT per revision, append-only trigger, concurrent dedup, PROVIDER_DEGRADED != INSUFFICIENT, lease expiry, merge, comment anchoring)",
+   "commit": "e3ffacd + 182a12d (governed generation) + e6351a2 (Admin inspection)",
+   "focusedTest": "story-brief 54 + Admin inspection: real-PG governed run (real AskV2Service/adapter/meter/breaker/switches): one metered op in requester history, zero-compute reopen, account-day → BUDGET_REFUSED, switch off → CAPABILITY_UNAVAILABLE, retry = new op",
    "regression": "stories + briefings PG 145/145; full gate 0 new",
    "migration": "20261006100000_story_brief_r1 (additive; DOWN refuses once a Brief exists)",
    "deployed": "no (STORY_BRIEF_ENABLED default OFF)",
    "live": "NOT deployed",
-   "blocker": "Generation BLOCKED: spend authority for shared Brief compute (owner/quota/guest/refresh limit) — UnavailableStoryBriefGenerator records CAPABILITY_UNAVAILABLE."
+   "blocker": "none for engineering; Alpha integration acceptance before enabling. Limitations: English Brief; STORY context = founding article; §11 materiality classes not classified."
+  },
+  {
+   "id": "PUBLIC-ENGINEERING-CONTRACT",
+   "requirement": "CTO §8–§10: Admin and public visual consume the same canonical identities; one Ask; no visual-only state",
+   "owner": "Claude Code (EA / integration controller)",
+   "commit": "ca199f1 (PUBLIC-ENGINEERING-CONTRACT.md) + e6351a2",
+   "focusedTest": "Admin inspection = public view identities (real PG); watch-region-capability.spec",
+   "regression": "see baseline gate",
+   "migration": "none",
+   "deployed": "no",
+   "live": "NOT deployed",
+   "blocker": "Truth-binding review of the visual lane after it reconciles onto the frozen baseline."
   }
  ]
 }

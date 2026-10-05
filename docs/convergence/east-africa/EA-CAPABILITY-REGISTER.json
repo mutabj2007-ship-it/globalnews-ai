@@ -5,7 +5,7 @@
   "integrationHead": {
     "branch": "integration/r4-east-africa-convergence-r1",
     "note": "R4 + EAST AFRICA CONVERGENCE (CTO authority, 2026-10-05). Local; not pushed; not deployed. First parent = corrected live R4 db98d957 (= 81a5034 + seven-language persistence repair, LIVE on Alpha backend dff69371); second parent = accepted EA checkpoint ea3edd3.",
-    "checkpoint": "e3ffacd",
+    "checkpoint": "ca199f1 (PUBLIC-CONVERGENCE-CHECKPOINT-AE-R1 = f0e08de, pushed)",
     "lineage": [
       "db98d957 corrected R4 base (81a5034 + 5b89bdd cherry-pick; Alpha backend LIVE, Production NOT deployed)",
       "bf6ee3c merge ea3edd3 (T1 T2 T3 T4 T5A/B, afeedc9, d1a7939, register) — textual resolutions only",
@@ -15,7 +15,13 @@
       "593067c region authority matrix (EA-REGION-AUTHORITY-01)",
       "f0f12ec Settings measured as the Ask surface R4 made it (no false fallback)",
       "9a9a81d T2 manifest: QUALIFIED_IN_ASK_SCOPE (L work 3560 -> 3386 per locale)",
-      "e3ffacd canonical Story Brief R1 (EA-STORY-BRIEF-01; generation BLOCKED on spend authority)"
+      "e3ffacd canonical Story Brief R1 (EA-STORY-BRIEF-01; generation BLOCKED on spend authority)",
+      "f0e08de register refresh = PUBLIC-CONVERGENCE-CHECKPOINT-AE-R1 (pushed; visual intake)",
+      "0fab206 EAC own governed retrieval scope (R-1 CLOSED)",
+      "ad8e5a8 product coverage scopes: one label + disclosure authority (R-2 CLOSED; R-3 comment fixed)",
+      "182a12d Story Brief: signed-in generation through the governed Ask path (story-brief module)",
+      "e6351a2 Admin Story Brief inspection by canonical identity (CTO §8)",
+      "ca199f1 public ↔ Admin identity contract; regional Watch pinned unavailable (R-5)"
     ]
   },
   "outsideThisBranch": [
