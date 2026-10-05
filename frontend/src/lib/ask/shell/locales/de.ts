@@ -228,6 +228,7 @@ export const deShellOverlay: ShellLocaleOverlay = {
         HUMANITARIAN: "Humanitäre Informationen",
         IMIHIGO: "Gespeicherte NISR-Imihigo-Bewertung",
         MARKET_PROCUREMENT: "Gespeicherte EU-Vergabebekanntmachungen (TED)",
+        POLITICS: "Gespeicherte amtliche Datensätze zur Politik",
       },
       currentReports: "Aktuelle Berichte",
       eventKind: {
@@ -266,6 +267,7 @@ export const deShellOverlay: ShellLocaleOverlay = {
       retainedNote: {
         RETAINED_EVALUATION_CYCLE: "Gespeicherte Bewertung des angezeigten abgeschlossenen Zyklus — nicht der heutige Zustand.",
         RETAINED_EVENT_RECORD: "Gespeicherte Ereignisdatensätze, von der Quelle datiert — keine aktuelle Berichterstattung.",
+        RETAINED_OFFICIAL_RECORD: "Gespeicherte amtliche Datensätze, jeder mit seinem eigenen Datum angezeigt — keine aktuelle Berichterstattung.",
         RETAINED_PUBLICATION: "Gespeicherter Snapshot der am angezeigten Datum veröffentlichten Bekanntmachungen — nicht aktuell.",
         RETAINED_STATISTICAL_RELEASE: "Gespeicherte amtliche Veröffentlichung für den angezeigten Referenzzeitraum — jetzt nicht erneut geprüft.",
       },
@@ -728,6 +730,7 @@ export const deShellOverlay: ShellLocaleOverlay = {
         pattern: "Es existiert eine neuere Version ({0}). Diese Version bleibt so erhalten, wie sie gespeichert wurde.",
       },
       unavailable: "Briefings sind derzeit nicht verfügbar.",
+      unavailableForEvidence: "Briefing für diese belegbasierte Antwort nicht verfügbar",
       updateAvailable: "Seit der letzten Version sind neue Belege zur verfolgten Story hinzugekommen.",
       version: {
         kind: "pattern",

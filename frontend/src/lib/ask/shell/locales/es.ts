@@ -228,6 +228,7 @@ export const esShellOverlay: ShellLocaleOverlay = {
         HUMANITARIAN: "Inteligencia humanitaria",
         IMIHIGO: "Evaluación Imihigo del NISR conservada",
         MARKET_PROCUREMENT: "Anuncios de contratación de la UE conservados (TED)",
+        POLITICS: "Registros oficiales conservados del ámbito político",
       },
       currentReports: "Reportes actuales",
       eventKind: {
@@ -266,6 +267,7 @@ export const esShellOverlay: ShellLocaleOverlay = {
       retainedNote: {
         RETAINED_EVALUATION_CYCLE: "Evaluación conservada del ciclo cerrado indicado — no la situación de hoy.",
         RETAINED_EVENT_RECORD: "Registros de eventos conservados, fechados por la fuente — no reportes actuales.",
+        RETAINED_OFFICIAL_RECORD: "Registros oficiales conservados, cada uno mostrado con su propia fecha — no reportes actuales.",
         RETAINED_PUBLICATION: "Instantánea conservada de los anuncios publicados en la fecha indicada — no actual.",
         RETAINED_STATISTICAL_RELEASE: "Publicación oficial conservada para el periodo de referencia indicado — no vuelta a comprobar ahora.",
       },
@@ -728,6 +730,7 @@ export const esShellOverlay: ShellLocaleOverlay = {
         pattern: "Existe una versión más reciente ({0}). Esta versión se conserva tal como se guardó.",
       },
       unavailable: "Los informes no están disponibles ahora.",
+      unavailableForEvidence: "Informe no disponible para esta respuesta respaldada por evidencia",
       updateAvailable: "Se ha incorporado nueva evidencia al tema seguido desde la última versión.",
       version: {
         kind: "pattern",

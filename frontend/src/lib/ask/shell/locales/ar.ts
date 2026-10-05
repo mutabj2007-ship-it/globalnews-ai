@@ -240,6 +240,7 @@ export const arShellOverlay: ShellLocaleOverlay = {
         HUMANITARIAN: "المعلومات الإنسانية",
         IMIHIGO: "تقييم Imihigo المحفوظ من NISR",
         MARKET_PROCUREMENT: "إعلانات مشتريات الاتحاد الأوروبي المحفوظة (TED)",
+        POLITICS: "سجلات رسمية محفوظة في الشأن السياسي",
       },
       currentReports: "تقارير حالية",
       eventKind: {
@@ -282,6 +283,7 @@ export const arShellOverlay: ShellLocaleOverlay = {
       retainedNote: {
         RETAINED_EVALUATION_CYCLE: "تقييم محفوظ للدورة المنقضية المعروضة — لا حالة اليوم.",
         RETAINED_EVENT_RECORD: "سجلات أحداث محفوظة مؤرَّخة من المصدر — لا تقارير حالية.",
+        RETAINED_OFFICIAL_RECORD: "سجلات رسمية محفوظة، كل منها معروض بتاريخه الخاص — لا تقارير حالية.",
         RETAINED_PUBLICATION: "لقطة محفوظة للإعلانات المنشورة في التاريخ المعروض — غير حالية.",
         RETAINED_STATISTICAL_RELEASE: "إصدار رسمي محفوظ لفترة الإسناد المعروضة — لم يُعَد التحقق منه الآن.",
       },
@@ -780,6 +782,7 @@ export const arShellOverlay: ShellLocaleOverlay = {
         pattern: "توجد نسخة أحدث ({0}). وتُحفظ هذه النسخة كما حُفظت.",
       },
       unavailable: "الموجزات غير متوفرة حاليًا.",
+      unavailableForEvidence: "الموجز غير متوفر لهذه الإجابة المستندة إلى الأدلة",
       updateAvailable: "انضمّت أدلة جديدة إلى الموضوع المتابَع منذ آخر نسخة.",
       version: {
         kind: "pattern",
