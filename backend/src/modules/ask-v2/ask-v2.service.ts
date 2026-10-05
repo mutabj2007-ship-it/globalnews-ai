@@ -23,6 +23,7 @@ import {
   ExecutionResult,
   fingerprint,
   hashIdentity,
+  type Language,
   returnLabel,
   requiresExplicitAcceptance,
   safeReturnPath,
@@ -679,7 +680,7 @@ export class AskV2Service {
         id,
         language: thread.language,
         returnPath: thread.returnPath,
-        returnLabel: returnLabel(thread.language as 'en' | 'pl'),
+        returnLabel: returnLabel(thread.language as Language),
         turns,
         nextAfter: turns.length === 100 ? turns[turns.length - 1].sequence : null,
       };
