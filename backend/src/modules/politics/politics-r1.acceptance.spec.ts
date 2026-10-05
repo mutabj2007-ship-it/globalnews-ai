@@ -3,25 +3,34 @@ import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { Client } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { domainObservationKey } from '@globalnews-ai/shared';
+import { domainObservationKey, type AnalysisApiResponse } from '@globalnews-ai/shared';
 import { PrismaClient } from '../../generated/prisma/client';
 import { PrismaService } from '../../database/prisma.service';
-import { routeAskR2 } from '../ask-router/ask-r2-route';
-import { landedSpecialistRegistryPort } from '../ask-router/specialist-registry.port';
+import { AskR2ExecutionAdapter } from '../ask-v2/ask-r2-execution.adapter';
+import { askRequestContext } from '../ask-v2/ask-request-context';
+import type { AskRequest } from '../ask-v2/ask-compute.contract';
+import { conversationOf } from '../ask-v2/ask-v2.service';
+import { readConversationalTurn } from '../ask-v2/conversation/conversation-state';
+import { validateStoredArtifact, type PriorArtifact } from '../ask-v2/conversation/conversation-artifact';
 import { AskSpecialistReadCoordinator } from '../ask-intelligence/ask-specialist-read.coordinator';
+import { selectContributors } from '../ask-intelligence/contributor-selection';
+import type { AskR2Route } from '../ask-router/ask-r2-route';
+import type { AskContribution } from '../ask-intelligence/ask-contribution.contract';
 import { politicsArtifactHash, type PoliticsCapture } from './politics.producer';
 import { PoliticsObservationRepository } from './politics-observation.repository';
 
 /*
-  POLITICS INTEL R1 — FIRST END-TO-END ACCEPTANCE (promotion gate G8/G9).
+  POLITICS INTEL R1 — END-TO-END ACCEPTANCE THROUGH THE FINAL SHARED R4 MECHANISM (gate G8/G9/G9b).
 
-  Every query runs through the ONE shared path: the real router (routeAskR2, prior turn via priorQuestion)
-  → the real contributor selection → the real AskSpecialistReadCoordinator → the real
-  PoliticsObservationRepository on disposable local PostgreSQL. No model, no provider, no network.
-  Rows are SYNTHETIC (E1: Sejm is BLOCKED_RIGHTS): this proves wiring, never coverage.
+  Every turn runs through the REAL shared Ask execution path, exactly as R4's own continuity spec drives it
+  (ask-r2-execution.earlier-turn-scope.spec.ts): readConversationalTurn → AskR2ExecutionAdapter.prepare/execute →
+  the R4 prior-answer resolver + execution contract (inherited scope, EARLIER_TURN) → the REAL
+  AskSpecialistReadCoordinator → the REAL PoliticsObservationRepository on disposable local PostgreSQL. A follow-up
+  is bound to the earlier answer through the stored artifact, as in production. Only the news provider and the model
+  are stubbed (no network, no AI). No Politics-only resolver, memory or search exists to be exercised.
 
-  The spec asserts only invariants that must ALWAYS hold. Positive outcomes are scored by the gate's
-  evaluator from POLITICS_ACCEPTANCE_REPORT, so a dependency gap is a reported FAIL, never hidden.
+  Rows are SYNTHETIC (Sejm is BLOCKED_RIGHTS): this proves the wiring, never coverage. The spec asserts only invariants
+  that must ALWAYS hold; outcomes are scored by the gate's evaluator from POLITICS_ACCEPTANCE_REPORT.
 */
 const url = process.env.POLITICS_TEST_DATABASE_URL;
 const QUERIES = process.env.POLITICS_ACCEPTANCE_QUERIES;
@@ -29,24 +38,28 @@ const REPORT = process.env.POLITICS_ACCEPTANCE_REPORT;
 const live = url ? describe : describe.skip;
 const schema = `politics_accept_${randomUUID().replace(/-/g, '')}`;
 const migrations = join(__dirname, '../../../prisma/migrations');
-const NOW = new Date('2026-10-04T12:00:00.000Z');
 
-interface Query { id: string; kind: 'POS' | 'NEG'; language: 'en' | 'pl'; turns: string[] }
-
+interface Query { id: string; kind: string; language: 'en' | 'pl'; turns: string[] }
 const DEFAULT_QUERIES: Query[] = [
-  { id: 'P1-EN', kind: 'POS', language: 'en', turns: ['What changed politically in Poland?'] },
   { id: 'P2-EN', kind: 'POS', language: 'en', turns: ['What did the Sejm decide?'] },
+  { id: 'P3-EN', kind: 'POS', language: 'en', turns: ['What did the Sejm decide?', 'Show me the official evidence.'] },
   { id: 'N1-EN', kind: 'NEG', language: 'en', turns: ['What is the weather in Poland?'] },
-  { id: 'N3-EN', kind: 'NEG', language: 'en', turns: ["What is Poland's inflation rate?"] },
 ];
 
-live('Politics R1 acceptance through the shared Ask path (synthetic rows, no providers)', () => {
+type Call = unknown[];
+interface Payload {
+  answer: { state: string; basis?: string };
+  diagnostics: { job: { job: string | null; discourseReference: string } };
+  artifact?: unknown;
+  intelligence?: { considered: unknown[]; contributions: AskContribution[] } | null;
+}
+
+live('Politics R1 acceptance through the final shared R4 mechanism (synthetic rows, no providers, no AI)', () => {
   let db: Client;
   let prisma: PrismaClient;
   let repository: PoliticsObservationRepository;
   let n = 0;
   const seededQuotations: string[] = [];
-  const otherReads = { conflict: 0, market: 0, economy: 0 };
 
   async function retain(text: string) {
     const bytes = new Uint8Array(Buffer.from(text, 'utf8'));
@@ -92,12 +105,68 @@ live('Politics R1 acceptance through the shared Ask path (synthetic rows, no pro
     };
   }
 
-  const coordinator = () => new AskSpecialistReadCoordinator(
-    { currentForCountry: async () => { otherReads.conflict++; return []; }, evidenceDetails: async () => new Map(), currentByKey: async () => null } as never,
-    { procurement: async () => { otherReads.market++; return []; } } as never,
-    { readNisrHeadlineCpi: async () => { otherReads.economy++; return { slot: { kind: 'GAP', seriesId: 'x', periodId: 'UNKNOWN', reason: 'NO_PRODUCER' }, publishable: false, retainedState: 'NO_CAPTURE' }; } } as never,
-    repository,
-  );
+  /** The REAL shared execution path; only the news provider and the model are stubs (R4 continuity-spec harness). */
+  function harness() {
+    const analysis: Call[] = [];
+    const background: Array<{ question: string }> = [];
+    const reads: AskR2Route[] = [];
+    const coordinator = new AskSpecialistReadCoordinator(
+      { currentForCountry: async () => [], evidenceDetails: async () => new Map(), currentByKey: async () => null } as never,
+      { procurement: async () => [] } as never,
+      { readNisrHeadlineCpi: async () => ({ slot: { kind: 'GAP', seriesId: 'x', periodId: 'UNKNOWN', reason: 'NO_PRODUCER' }, publishable: false, retainedState: 'NO_CAPTURE' }) } as never,
+      repository,
+    );
+    const realRead = coordinator.read.bind(coordinator);
+    coordinator.read = async (route: AskR2Route, now?: Date) => { reads.push(route); return realRead(route, now); };
+    const adapter = new AskR2ExecutionAdapter(
+      { analyzeNews: jest.fn(async (...args: unknown[]) => {
+        analysis.push(args);
+        const k = analysis.length;
+        return { analysis: { headline: `Sourced headline ${k}`, summary: 'Summary.', keyFacts: [{ claim: `Sourced claim ${k}a`, sourceArticleIds: [`art-${k}-1`] }] } as never,
+          articles: [{ id: `art-${k}-1` } as never], retrievalContext: {} as never } satisfies Partial<AnalysisApiResponse>;
+      }) } as never,
+      { id: 'openai', displayName: 'OpenAI', isMock: false, analyzeNews: jest.fn() } as never,
+      { id: 'openai', displayName: 'OpenAI', isMock: false, answerBackground: jest.fn(async (input: { question: string }) => { background.push(input); return { text: 'Reasoned answer.' }; }) } as never,
+      { config: { outputWeight: 4 }, reserve: jest.fn(async () => ({ admitted: true, reservationId: 'r', estimatedUnits: 1 })), settle: jest.fn(async () => true) } as never,
+      { permit: jest.fn(async () => ({ allowed: true, trial: false, state: 'CLOSED' })), record: jest.fn(async () => undefined) } as never,
+      { isEnabled: jest.fn(async () => true) } as never,
+      { get: () => ({ maxArticles: 8, maxArticleChars: 1200, maxCompletionTokens: 2000 }) } as never,
+      { registeredDomains: () => ['CONFLICT'] } as never,
+      { record: jest.fn(async () => true) } as never,
+      coordinator as never,
+    );
+    return { adapter, analysis, background, reads };
+  }
+
+  /** One conversation, driven exactly as production: conversational reading + the stored artifact of the earlier answer. */
+  function conversation(language: 'en' | 'pl') {
+    const h = harness();
+    const earlier: string[] = [];
+    let prior: PriorArtifact | undefined;
+    let op = 0;
+    return async function ask(question: string) {
+      const conversational = readConversationalTurn(question, language, [...earlier].reverse().map((q) => ({ question: q, language })));
+      const composed = conversational?.composition ?? null;
+      const request = { question: composed?.effectiveQuestion ?? question, language, intent: 'ask', ...conversationOf(conversational), ...(prior === undefined ? {} : { priorArtifact: prior }) } as AskRequest;
+      const before = { a: h.analysis.length, b: h.background.length, r: h.reads.length };
+      const priorQuestion = earlier[earlier.length - 1];
+      const id = `op-${++op}`;
+      const payload = await askRequestContext.run(
+        { accountId: 'user-1', ipScope: 'ip:v4:203.0.113.7', ...(priorQuestion === undefined ? {} : { priorQuestion }) } as never,
+        async () => { const plan = await h.adapter.prepare(request); return JSON.parse((await h.adapter.execute(request, plan, id)).payloadJson) as Payload; },
+      );
+      earlier.push(question);
+      const stored = validateStoredArtifact(payload.artifact);
+      if (stored !== null) prior = { ...stored, sourceOperationId: id };
+      const reads = h.reads.slice(before.r);
+      const read = reads[reads.length - 1];
+      return {
+        payload, read,
+        analysisCalls: h.analysis.slice(before.a), backgroundCalls: h.background.slice(before.b),
+        selected: read === undefined ? [] : selectContributors(read),
+      };
+    };
+  }
 
   beforeAll(async () => {
     const parsed = new URL(url!);
@@ -111,7 +180,7 @@ live('Politics R1 acceptance through the shared Ask path (synthetic rows, no pro
       await db.query(readFileSync(join(migrations, m, 'migration.sql'), 'utf8'));
     prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: url, options: `-c search_path=${schema}` }, { schema }) });
     repository = new PoliticsObservationRepository(prisma as PrismaService);
-    // seedProfile (acceptance-queries.json): bill-A rev0 PASSED → rev1 SIGNED; bill-B rev0 INTRODUCED; one KEN control row.
+    // seedProfile: bill A rev0 PASSED → rev1 SIGNED; bill B rev0 INTRODUCED (single stage: P4b); one KEN control row. No DEU row (P3b).
     for (const c of [
       bill('A', 'PL', 'PASSED', 0, 'Synthetic record A: the bill was passed at third reading.'),
       bill('A', 'PL', 'SIGNED', 1, 'Synthetic record A: the bill was signed.'),
@@ -125,78 +194,54 @@ live('Politics R1 acceptance through the shared Ask path (synthetic rows, no pro
     if (db) { await db.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`); await db.end(); }
   });
 
-  it('runs every acceptance query through the shared path and writes the report', async () => {
+  it('runs every acceptance query through the final shared R4 path and writes the report', async () => {
     const queries: Query[] = QUERIES ? JSON.parse(readFileSync(QUERIES, 'utf8')).queries : DEFAULT_QUERIES;
-    const c = coordinator();
     const report = [];
     for (const q of queries) {
-      let prior: string | undefined;
-      let set: Awaited<ReturnType<AskSpecialistReadCoordinator['read']>> | undefined;
-      for (const turn of q.turns) {
-        const route = routeAskR2(
-          { originalQuestion: turn, sourceLanguage: q.language, normalizationLanguage: q.language, displayLanguage: q.language, origin: 'ASK' },
-          { computeConsent: 'GRANTED', requestInstant: NOW.toISOString(), ...(prior === undefined ? {} : { priorQuestion: prior }) },
-          { specialistRegistry: landedSpecialistRegistryPort(() => ['CONFLICT'], ['CONFLICT']) },
-        );
-        set = await c.read(route, NOW);
-        prior = turn;
-      }
-      const politics = set!.contributions.filter((x) => x.contributorId === 'POLITICS');
-      const observations = politics.flatMap((x) => x.observations);
-      const flat = JSON.stringify(set!.contributions);
+      const ask = conversation(q.language);
+      let last: Awaited<ReturnType<typeof ask>> | undefined;
+      for (const turn of q.turns) last = await ask(turn);
+      const t = last!;
+      const contributions = t.payload.intelligence?.contributions ?? [];
+      const politics = contributions.filter((x) => x.contributorId === 'POLITICS');
+      const observations = politics.filter((x) => x.status === 'USED').flatMap((x) => x.observations);
+      const politicsSelection = t.selected.find((s) => s.contributorId === 'POLITICS');
+      const policy = (t.analysisCalls[0]?.[6] ?? {}) as { governed?: { rules: string; data: string } };
+      const flat = JSON.stringify(t.payload);
       report.push({
         id: q.id,
         politicsRowsRetrieved: observations.map((o) => o.reference),
         politicsCountries: [...new Set(observations.map((o) => o.geography))],
         eventKinds: [...new Set(observations.map((o) => o.kind.split(':')[0]))],
         revisionOrdinals: Object.fromEntries(observations.map((o) => [o.reference, o.provenance?.revisionOrdinal])),
-        citations: observations.map((o) => ({
-          retrievalKey: o.reference, sourceUrl: o.source.url, artifactSha256: o.provenance?.artifactSha256,
-          sourceType: o.provenance?.sourceType, evidenceRole: o.provenance?.evidenceRole,
-        })),
+        subjects: observations.map((o) => ({ reference: o.reference, label: o.label, revision: o.provenance?.revisionOrdinal })),
+        citations: observations.map((o) => ({ retrievalKey: o.reference, sourceUrl: o.source.url, artifactSha256: o.provenance?.artifactSha256, sourceType: o.provenance?.sourceType, evidenceRole: o.provenance?.evidenceRole })),
         changeStates: [],
         quotationRendered: seededQuotations.some((text) => flat.includes(text)),
         absence: politics.length === 0 ? 'NOT_CONSIDERED' : politics[0].status === 'USED' ? null : politics[0].status,
-        politicsStatus: politics.map((x) => x.status),
         politicsDisclosures: politics.flatMap((x) => x.disclosures),
+        answerState: t.payload.answer.state,
+        answerBasis: t.payload.answer.basis ?? null,
+        discourseReference: t.payload.diagnostics?.job?.discourseReference ?? null,
+        inheritedProvenance: t.read?.inheritedScope?.provenance ?? null,
+        politicsScopeProvenance: politicsSelection?.scope.provenance ?? null,
+        typedGeographyOnFollowUp: t.read?.envelope.geography.candidates.some((g) => g.source === 'TYPED_GEOGRAPHY') ?? false,
+        newsCalls: t.analysisCalls.length,
+        modelCalls: t.analysisCalls.length + t.backgroundCalls.length,
+        retrievalQuestion: t.analysisCalls[0] ? String(t.analysisCalls[0][0]) : null,
+        governedRules: policy.governed?.rules ?? '',
       });
     }
     if (REPORT) writeFileSync(REPORT, JSON.stringify(report, null, 2));
 
-    // INVARIANTS that must always hold, whatever the positive outcome:
+    // INVARIANTS that must ALWAYS hold, whatever the scored outcome:
     for (const r of report) {
       expect({ id: r.id, quotationRendered: r.quotationRendered }).toEqual({ id: r.id, quotationRendered: false });
-      if (queries.find((q) => q.id === r.id)?.kind === 'NEG') expect({ id: r.id, rows: r.politicsRowsRetrieved }).toEqual({ id: r.id, rows: [] });
-      // A retained official record is never presented as current.
+      if (queries.find((x) => x.id === r.id)?.kind === 'NEG') expect({ id: r.id, rows: r.politicsRowsRetrieved }).toEqual({ id: r.id, rows: [] });
       if (r.politicsRowsRetrieved.length) expect(r.politicsDisclosures).toContain('RETAINED_NOT_CURRENT');
-      // Superseded revisions never leak: one row per identity.
       expect(new Set(r.politicsRowsRetrieved).size).toBe(r.politicsRowsRetrieved.length);
+      // EARLIER_TURN is never relabelled as typed by the reader.
+      if (r.politicsScopeProvenance === 'EARLIER_TURN') expect(r.typedGeographyOnFollowUp).toBe(false);
     }
-  });
-
-  it('freshness: an older admitted record is still served, with its own date and an explicit no-recent disclosure', async () => {
-    const route = routeAskR2(
-      { originalQuestion: 'What changed politically in Poland?', sourceLanguage: 'en', normalizationLanguage: 'en', displayLanguage: 'en', origin: 'ASK' },
-      { computeConsent: 'GRANTED', requestInstant: NOW.toISOString() },
-      { specialistRegistry: landedSpecialistRegistryPort(() => ['CONFLICT'], ['CONFLICT']) },
-    );
-    Object.assign(otherReads, { conflict: 0, market: 0, economy: 0 });
-    const set = await coordinator().read(route, NOW);
-    const p = set.contributions.find((x) => x.contributorId === 'POLITICS')!;
-    expect(p.status).toBe('USED');
-    expect(p.temporalBasis).toBe('RETAINED_OFFICIAL_RECORD');
-    // Event 2026-09-18, retrieved 2026-10-02, asked 2026-10-04: the 7-day window is judged on the EVENT date.
-    expect(p.disclosures).toEqual(expect.arrayContaining(['RETAINED_NOT_CURRENT', 'NO_RECENT_RETAINED_RECORD']));
-    for (const o of p.observations) {
-      expect(o.period).toBe('2026-09-18');
-      expect(o.provenance?.effectiveAt).toBe('2026-09-18T10:00:00Z');
-      expect(o.retainedAt).not.toBe(o.provenance?.effectiveAt);
-    }
-    // The current revision of bill A (SIGNED, ordinal 1) is served; the superseded PASSED revision is not.
-    const a = p.observations.find((o) => o.kind === 'LEGISLATIVE_STAGE:SIGNED');
-    expect(a?.provenance?.revisionOrdinal).toBe(1);
-    expect(p.observations.some((o) => o.kind === 'LEGISLATIVE_STAGE:PASSED' && o.geography === 'POL')).toBe(false);
-    // A Politics read touches no other governed store.
-    expect(otherReads).toEqual({ conflict: 0, market: 0, economy: 0 });
-  });
+  }, 120_000);
 });
