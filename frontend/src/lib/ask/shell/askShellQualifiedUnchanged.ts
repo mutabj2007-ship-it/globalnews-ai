@@ -102,3 +102,23 @@ export const ASK_SHELL_QUALIFIED_UNCHANGED: Readonly<
 export function qualifiedUnchangedFor(locale: DisplayLocale): readonly string[] {
   return ASK_SHELL_QUALIFIED_UNCHANGED[locale] ?? [];
 }
+
+/**
+ * The same fact for Claude L's R6 ADDITIVE keys (outside the shell tree; see `askShellAdditive`):
+ * values byte-identical to their English source IN L'S OWN DELIVERY (e.g. German "System").
+ * Qualified, not fallback. Derived mechanically from L's files; askShellAdditive.provenance.spec.ts
+ * recomputes it from the vendored delivery and fails if the two ever differ.
+ */
+export const ASK_SHELL_ADDITIVE_QUALIFIED_UNCHANGED: Readonly<
+  Partial<Record<DisplayLocale, readonly string[]>>
+> = Object.freeze({
+  fr: Object.freeze([] as string[]),
+  de: Object.freeze(['dict.homeR1.theme.system', 'askComparisonCoverage.line']),
+  es: Object.freeze(['askComparisonCoverage.line']),
+  pt: Object.freeze(['askComparisonCoverage.line']),
+  ar: Object.freeze(['askComparisonCoverage.line']),
+});
+
+export function additiveQualifiedUnchangedFor(locale: DisplayLocale): readonly string[] {
+  return ASK_SHELL_ADDITIVE_QUALIFIED_UNCHANGED[locale] ?? [];
+}

@@ -874,5 +874,74 @@ export const frShellOverlay: ShellLocaleOverlay = {
       },
     },
   },
+  /*
+    CLAUDE L · R6 RENDERED SURFACE · THE ADDITIVE KEYS (CTO single-source ruling). Ask-reachable
+    strings OUTSIDE the shell tree, served through askShellCatalogue like every other overlay value.
+    Generated from L's delivery, never retyped: provenance/claude-l-r6/R6-RENDERED-50-fr.json
+    sha256 d6e1597fd045f164463e13408ba02499517a6a8b4c8a56cb03dd0834e94460ee (askShellAdditive.provenance.spec.ts re-verifies both).
+    The 7 keys L reused verbatim from the 527 are not here: askDictionary resolves them FROM the
+    qualified shell key (one authority, not a copy).
+  */
+  additive: {
+    dict: {
+      retrievalContextStatus: {
+        newestStoredArticlePublished: "Article enregistré le plus récent, publié le :",
+        newestStoredArticleObserved: "Article enregistré le plus récent, repéré par un agrégateur d’actualité (et non son heure de publication) :",
+        newestStoredArticleUnverified: "Article enregistré le plus récent (base temporelle non vérifiée) :",
+      },
+      eventAnchor: {
+        heading: "Ce que les reportages sur l’événement établissent",
+        interpretedFromEvidence: "Interprété comme {country} d’après les éléments de l’événement.",
+        fromSelectedContext: "Pays issu de votre sélection : {country}.",
+        crossBorderNotEstablished: "Les reportages disponibles n’établissent pas encore d’impact direct de l’événement lui-même sur les pays voisins.",
+        causeNotEstablished: "Les reportages disponibles n’établissent pas ce qui a causé l’événement.",
+        contextSeparated: "Certains reportages venant du même lieu ne sont présentés qu’à titre de contexte distinct : il n’est pas établi qu’ils soient causés par l’événement ni liés à lui.",
+        contextClaimsWithheld: "Les affirmations sur les effets qui ne s’appuyaient que sur ce contexte distinct ont été retenues.",
+        stateAmbiguousCountry: "QUEL PAYS ? · LE NOM CORRESPOND À PLUSIEURS",
+        stateAmbiguousCountryBody: "Le lieu mentionné dans cette question désigne plusieurs pays, et ni la question ni les reportages n’ont permis de déterminer lequel vous visez. Aucune réponse n’a été produite plutôt que de choisir le pays à votre place.",
+        ambiguousCountryQuestion: "Quel pays voulez-vous dire ?",
+        stateNoPriorSubject: "AUCUNE QUESTION PRÉCÉDENTE À POURSUIVRE",
+        noPriorSubjectQuestion: "Il n’y a aucune question précédente à poursuivre. Que souhaitez-vous savoir sur ce lieu ?",
+        statePersonalUnavailable: "PAS ENCORE DISPONIBLE",
+        compactHeading: "Note sur les éléments",
+        compactShowDetails: "Afficher ce que cela signifie",
+        short: {
+          interpretedFromEvidence: "Interprété comme {country} d’après les reportages",
+          fromSelectedContext: "Pays issu de votre sélection : {country}",
+          crossBorderNotEstablished: "Aucun impact direct établi sur les pays voisins",
+          causeNotEstablished: "Cause non établie",
+          contextSeparated: "Contexte du même lieu tenu à part",
+          contextClaimsWithheld: "Effets appuyés sur le seul contexte : retenus",
+        },
+      },
+      analysisResultView: {
+        briefWithheldHeading: "Synthèse exécutive indisponible",
+        briefWithheldBody: "La synthèse de cet ensemble d’éléments ne satisfaisait pas à l’exigence de structure et a été retenue au lieu d’être affichée. Tout ce qui suit a été validé indépendamment et n’est pas affecté.",
+      },
+      homeR1: {
+        theme: {
+          label: "Thème",
+          light: "Clair",
+          dark: "Sombre",
+          system: "Système",
+          systemNote: "Suit le réglage de votre appareil",
+          scheduled: "Programmé",
+          scheduledNote: "Clair le jour, sombre la nuit, selon l’horloge de cet appareil",
+          lightFrom: "Clair à partir de",
+          darkFrom: "Sombre à partir de",
+        },
+      },
+    },
+    comparisonCoverage: {
+      gap: "lacune de couverture : aucun élément admissible",
+      retained: "reportages conservés : {count} ; collecte en direct actuelle non établie",
+      qualifying: "reportages admissibles : {count} (en direct : {live}, conservés : {retained})",
+      liveUnavailable: " La collecte en direct était indisponible.",
+      rateLimited: " Le débit d’un fournisseur de sources a été limité.",
+      timedOut: " Un fournisseur de sources a dépassé le délai.",
+      localityNotEstablished: " La localité de l’éditeur n’est pas établie ; le cadrage par les médias nationaux ne peut pas être établi.",
+      line: "{name} : {evidence}.{notes}",
+    },
+  },
   functions: buildStructural(STRUCTURAL),
 };

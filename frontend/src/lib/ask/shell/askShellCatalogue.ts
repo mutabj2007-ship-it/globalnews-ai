@@ -6,6 +6,7 @@ import {
   shellFallbacks,
   shellKeyPaths,
   shellPathWithoutMarker,
+  type ShellAdditiveOverlay,
   type ShellLocaleOverlay,
   type ShellQualification,
 } from '@/lib/ask/shell/askShellOverlay';
@@ -135,6 +136,17 @@ export function askShellStrings(locale: DisplayLocale): AskShellSource {
     of a name the ruling says has exactly one.
   */
   return brandCanonical(mergeShell(askShellSource(), OVERLAYS[locale], locale));
+}
+
+/**
+ * R4 + EAST AFRICA CONVERGENCE · CTO SINGLE-SOURCE RULING — the Ask-reachable strings OUTSIDE the
+ * shell tree (Claude L's R6 additive delivery: product-dictionary keys an Ask surface renders, and
+ * the comparison-coverage templates), read from the SAME locale overlay files through this SAME
+ * module. EN/PL have none: their catalogues are authored. A locale without an `additive` block is
+ * English for those keys, which the rendered-surface acceptance test reports.
+ */
+export function askShellAdditive(locale: DisplayLocale): ShellAdditiveOverlay | undefined {
+  return OVERLAYS[locale]?.additive;
 }
 
 /**

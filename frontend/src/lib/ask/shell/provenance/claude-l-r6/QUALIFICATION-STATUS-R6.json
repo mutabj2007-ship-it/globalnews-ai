@@ -1,0 +1,64 @@
+{
+ "agent": "Claude L",
+ "report": "QUALIFICATION STATUS — R6 RENDERED SURFACE 50",
+ "answers": "FROM_CLAUDE_CODE/00-ADDITIVE-MANIFEST-FOR-CLAUDE-L.md",
+ "status_token": "LINGUISTICALLY_QUALIFIED_BY_CLAUDE_L",
+ "scope": {
+  "additive_keys": 50,
+  "delivered": 50,
+  "blank": 0,
+  "previously_qualified_ask_shell_keys": 527,
+  "reopened": 0,
+  "ask_shell_total_after_this_round": 577
+ },
+ "locales": {
+  "fr": {
+   "keys": 50,
+   "delivered": 50,
+   "blank": 0,
+   "status": "LINGUISTICALLY_QUALIFIED_BY_CLAUDE_L"
+  },
+  "de": {
+   "keys": 50,
+   "delivered": 50,
+   "blank": 0,
+   "status": "LINGUISTICALLY_QUALIFIED_BY_CLAUDE_L"
+  },
+  "es": {
+   "keys": 50,
+   "delivered": 50,
+   "blank": 0,
+   "status": "LINGUISTICALLY_QUALIFIED_BY_CLAUDE_L"
+  },
+  "pt-BR": {
+   "keys": 50,
+   "delivered": 50,
+   "blank": 0,
+   "status": "LINGUISTICALLY_QUALIFIED_BY_CLAUDE_L"
+  },
+  "ar": {
+   "keys": 50,
+   "delivered": 50,
+   "blank": 0,
+   "status": "LINGUISTICALLY_QUALIFIED_BY_CLAUDE_L"
+  }
+ },
+ "per_group": {
+  "stored-reporting freshness": 3,
+  "event-evidence note": 28,
+  "withheld brief": 2,
+  "theme menu": 9,
+  "comparison coverage": 8
+ },
+ "provenance": {
+  "authored_in_this_round": 43,
+  "reused_verbatim_from_the_527": 7
+ },
+ "validation": {
+  "checks": 44,
+  "positive_controls": 6,
+  "result": "ALL CHECKS PASS",
+  "script": "validate50.py",
+  "report": "VALIDATION-REPORT-R6.txt"
+ }
+}

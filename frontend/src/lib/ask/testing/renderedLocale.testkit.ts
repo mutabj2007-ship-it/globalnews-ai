@@ -7,10 +7,12 @@ import { fixture } from '@/components/analysis-frame/frameFixtures';
 import { ASK_PRODUCT_NAME } from '../askBrand';
 import { ASK_SHELL_PROPER_NOUNS } from '../shell/askShellSource';
 import { askShellStrings } from '../shell/askShellCatalogue';
-import { qualifiedUnchangedFor } from '../shell/askShellQualifiedUnchanged';
+import {
+  additiveQualifiedUnchangedFor,
+  qualifiedUnchangedFor,
+} from '../shell/askShellQualifiedUnchanged';
 import { askCountryName } from '../askCountryName';
 import { askDictionary } from '../shell/askDictionary';
-import { ASK_L_R6_QUALIFIED_UNCHANGED } from '../shell/askDictionaryAdditionsL';
 
 /** The countries the fixtures name: in each locale their CLDR name is DATA (a proper noun). */
 export const FIXTURE_COUNTRIES = ['KEN', 'RWA', 'COD', 'COG', 'TZA', 'POL'];
@@ -44,7 +46,7 @@ export function declaredUnchanged(locale: DisplayLocale): Set<string> {
   }
   /* L R6: values L delivered identical to English for THIS locale (e.g. German "System") */
   if (locale !== 'en' && locale !== 'pl') {
-    for (const key of ASK_L_R6_QUALIFIED_UNCHANGED[locale]) {
+    for (const key of additiveQualifiedUnchangedFor(locale)) {
       if (!key.startsWith('dict.')) continue;
       const v = valueAt(askDictionary(locale), key.slice(5));
       if (typeof v === 'string') out.add(v.trim());

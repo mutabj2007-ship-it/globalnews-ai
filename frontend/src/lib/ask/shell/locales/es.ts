@@ -874,5 +874,74 @@ export const esShellOverlay: ShellLocaleOverlay = {
       },
     },
   },
+  /*
+    CLAUDE L · R6 RENDERED SURFACE · THE ADDITIVE KEYS (CTO single-source ruling). Ask-reachable
+    strings OUTSIDE the shell tree, served through askShellCatalogue like every other overlay value.
+    Generated from L's delivery, never retyped: provenance/claude-l-r6/R6-RENDERED-50-es.json
+    sha256 88450153d3899cd06c34315d3111ccb739568a124bf69cabe36f728cc09fc95d (askShellAdditive.provenance.spec.ts re-verifies both).
+    The 7 keys L reused verbatim from the 527 are not here: askDictionary resolves them FROM the
+    qualified shell key (one authority, not a copy).
+  */
+  additive: {
+    dict: {
+      retrievalContextStatus: {
+        newestStoredArticlePublished: "Artículo guardado más reciente, publicado:",
+        newestStoredArticleObserved: "Artículo guardado más reciente, visto por un agregador de noticias (no su hora de publicación):",
+        newestStoredArticleUnverified: "Artículo guardado más reciente (base temporal sin verificar):",
+      },
+      eventAnchor: {
+        heading: "Lo que establecen los reportes sobre el evento",
+        interpretedFromEvidence: "Interpretado como {country} a partir de la evidencia del evento.",
+        fromSelectedContext: "País tomado de tu selección: {country}.",
+        crossBorderNotEstablished: "Los reportes disponibles todavía no establecen un impacto directo del evento mismo en los países vecinos.",
+        causeNotEstablished: "Los reportes disponibles no establecen qué causó el evento.",
+        contextSeparated: "Algunos reportes del mismo lugar se muestran solo como contexto aparte: no está establecido que el evento los haya causado ni que estén relacionados con él.",
+        contextClaimsWithheld: "Las afirmaciones sobre efectos que solo se apoyaban en ese contexto aparte se retuvieron.",
+        stateAmbiguousCountry: "¿QUÉ PAÍS? · EL NOMBRE COINCIDE CON VARIOS",
+        stateAmbiguousCountryBody: "El lugar de esta pregunta nombra más de un país, y ni la pregunta ni los reportes aclararon a cuál te refieres. No se produjo ninguna respuesta en lugar de elegir el país por ti.",
+        ambiguousCountryQuestion: "¿A qué país te refieres?",
+        stateNoPriorSubject: "NO HAY PREGUNTA ANTERIOR QUE CONTINUAR",
+        noPriorSubjectQuestion: "No hay ninguna pregunta anterior que continuar. ¿Qué te gustaría saber sobre este lugar?",
+        statePersonalUnavailable: "TODAVÍA NO DISPONIBLE",
+        compactHeading: "Nota sobre la evidencia",
+        compactShowDetails: "Mostrar qué significa esto",
+        short: {
+          interpretedFromEvidence: "Interpretado como {country} según los reportes",
+          fromSelectedContext: "País de tu selección: {country}",
+          crossBorderNotEstablished: "Sin impacto directo establecido en países vecinos",
+          causeNotEstablished: "Causa no establecida",
+          contextSeparated: "Contexto del mismo lugar mantenido aparte",
+          contextClaimsWithheld: "Afirmaciones de efectos solo contextuales retenidas",
+        },
+      },
+      analysisResultView: {
+        briefWithheldHeading: "Resumen ejecutivo no disponible",
+        briefWithheldBody: "El resumen de este conjunto de evidencia no cumplía el requisito estructural y se retuvo en lugar de mostrarse. Todo lo que sigue se validó de forma independiente y no está afectado.",
+      },
+      homeR1: {
+        theme: {
+          label: "Tema",
+          light: "Claro",
+          dark: "Oscuro",
+          system: "Sistema",
+          systemNote: "Sigue la configuración de tu dispositivo",
+          scheduled: "Programado",
+          scheduledNote: "Claro de día, oscuro de noche, según el reloj de este dispositivo",
+          lightFrom: "Claro desde",
+          darkFrom: "Oscuro desde",
+        },
+      },
+    },
+    comparisonCoverage: {
+      gap: "laguna de cobertura: sin evidencia admisible",
+      retained: "reportes conservados: {count}; recuperación en vivo actual no establecida",
+      qualifying: "reportes admisibles: {count} (en vivo: {live}, conservados: {retained})",
+      liveUnavailable: " La recuperación en vivo no estaba disponible.",
+      rateLimited: " Un proveedor de fuentes tuvo límite de solicitudes.",
+      timedOut: " Un proveedor de fuentes agotó el tiempo.",
+      localityNotEstablished: " La localidad del editor no está establecida; el encuadre de los medios nacionales no puede establecerse.",
+      line: "{name}: {evidence}.{notes}",
+    },
+  },
   functions: buildStructural(STRUCTURAL),
 };

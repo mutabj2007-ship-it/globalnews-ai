@@ -3,15 +3,10 @@ import { join, relative } from 'path';
 import type { DisplayLocale } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { fr, de, es, pt, ar } from '@/lib/i18n/recovered/recoveredCatalogue';
-import { askDictionary } from './askDictionary';
-import { askShellStrings } from './askShellCatalogue';
+import { ASK_DICTIONARY_CANONICAL_ALIASES, askDictionary } from './askDictionary';
+import { askShellAdditive, askShellStrings } from './askShellCatalogue';
 import { ASK_SHELL_DICTIONARY_NAMESPACES } from './askShellSource';
 import { ASK_DICTIONARY_ADDITIONS, C55_REUSE_ENGLISH } from './askDictionaryAdditions';
-import {
-  ASK_COMPARISON_COVERAGE_L_R6,
-  ASK_DICTIONARY_ADDITIONS_L_R6,
-  ASK_DICTIONARY_CANONICAL_ALIASES,
-} from './askDictionaryAdditionsL';
 import { askRelativeTime } from '../askRelativeTime';
 import { askCountryName } from '../askCountryName';
 import { localisedCountryName } from '@/lib/map/geography/displayName';
@@ -121,6 +116,13 @@ describe('askLocaleForLegacyCatalogue — every remaining caller is classified (
   });
 });
 
+/* CTO single-source ruling: L's R6 values live in the locale overlays' `additive` block and are
+   read through askShellAdditive (askShellCatalogue), never from a separate runtime table. */
+const L_R6_DICT = (l: (typeof NEW)[number]) => askShellAdditive(l)?.dict;
+const L_R6_CMP = (l: (typeof NEW)[number]): Readonly<Record<string, string>> => ({
+  ...askShellAdditive(l)?.comparisonCoverage,
+});
+
 describe('L R6 — the additive 50, integrated as L delivered them (one authority per string)', () => {
   const leafKeys = (t: unknown, p = '', out: string[] = []): string[] => {
     if (typeof t === 'string') out.push(p);
@@ -131,11 +133,11 @@ describe('L R6 — the additive 50, integrated as L delivered them (one authorit
 
   it('35 dictionary keys + 8 comparison templates per locale, none blank; 7 resolved as aliases', () => {
     for (const locale of NEW) {
-      const keys = leafKeys(ASK_DICTIONARY_ADDITIONS_L_R6[locale]);
+      const keys = leafKeys(L_R6_DICT(locale));
       expect(keys).toHaveLength(35);
       for (const k of keys)
-        expect(String(at(ASK_DICTIONARY_ADDITIONS_L_R6[locale], k)).trim()).not.toBe('');
-      expect(Object.keys(ASK_COMPARISON_COVERAGE_L_R6[locale]).sort()).toEqual([
+        expect(String(at(L_R6_DICT(locale), k)).trim()).not.toBe('');
+      expect(Object.keys(L_R6_CMP(locale)).sort()).toEqual([
         'gap',
         'line',
         'liveUnavailable',
@@ -156,23 +158,23 @@ describe('L R6 — the additive 50, integrated as L delivered them (one authorit
       expect(at(getDictionary('en'), key)).toBe(at(enShell, shellKey));
       for (const locale of NEW) {
         expect(at(askDictionary(locale), key)).toBe(at(askShellStrings(locale), shellKey));
-        expect(at(ASK_DICTIONARY_ADDITIONS_L_R6[locale], key)).toBeUndefined();
+        expect(at(L_R6_DICT(locale), key)).toBeUndefined();
       }
     }
   });
 
   it('every L R6 key reaches the reader through askDictionary', () => {
     for (const locale of NEW)
-      for (const key of leafKeys(ASK_DICTIONARY_ADDITIONS_L_R6[locale]))
-        expect(at(askDictionary(locale), key)).toBe(at(ASK_DICTIONARY_ADDITIONS_L_R6[locale], key));
+      for (const key of leafKeys(L_R6_DICT(locale)))
+        expect(at(askDictionary(locale), key)).toBe(at(L_R6_DICT(locale), key));
   });
 
   it('evidence semantics: no "proof" word anywhere in L’s 50', () => {
     const all = NEW.flatMap((l) => [
-      ...leafKeys(ASK_DICTIONARY_ADDITIONS_L_R6[l]).map((k) =>
-        String(at(ASK_DICTIONARY_ADDITIONS_L_R6[l], k)),
+      ...leafKeys(L_R6_DICT(l)).map((k) =>
+        String(at(L_R6_DICT(l), k)),
       ),
-      ...Object.values(ASK_COMPARISON_COVERAGE_L_R6[l]),
+      ...Object.values(L_R6_CMP(l)),
     ]);
     expect(all.filter((v) => /\b(?:preuves?|Beweis\w*|pruebas?|provas?)\b/iu.test(v))).toEqual([]);
   });

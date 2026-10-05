@@ -4,7 +4,8 @@ import {
   type DisplayLocale,
 } from '@globalnews-ai/shared';
 import { askCountryName } from './askCountryName';
-import { ASK_COMPARISON_COVERAGE_L_R6 } from './shell/askDictionaryAdditionsL';
+import { askShellAdditive } from './shell/askShellCatalogue';
+import type { ShellComparisonCoverageCopy } from './shell/askShellOverlay';
 
 /**
  * R4 · CTO LOCALIZATION CONVERGENCE — the "coverage checked" lines of a comparison answer, in the
@@ -12,34 +13,15 @@ import { ASK_COMPARISON_COVERAGE_L_R6 } from './shell/askDictionaryAdditionsL';
  *
  * The shared `comparisonCoverageLines` carries its own English and Polish sentences and nothing
  * else; it is used by the Ask answer card only and is left byte-identical. For fr / de / es / pt /
- * ar the sentences are Claude L's (ASK_COMPARISON_COVERAGE_COPY, delivered through the additive
- * manifest — never authored here) and the country is named by the DisplayLocale formatter. A
+ * ar the sentences are Claude L's (R6 additive delivery, held in the locale overlay's
+ * `additive.comparisonCoverage` and served by askShellAdditive — the one Ask resolver path; never
+ * authored here) and the country is named by the DisplayLocale formatter. A
  * locale without L's copy keeps the shared English and is reported by the rendered-surface
  * acceptance test, never hidden.
  */
-export interface AskComparisonCoverageCopy {
-  /** "coverage gap: no qualifying evidence" */
-  readonly gap: string;
-  /** "retained/stored reports: {count}; current live retrieval not established" */
-  readonly retained: string;
-  /** "qualifying reports: {count} (live: {live}, retained: {retained})" */
-  readonly qualifying: string;
-  /** " Live retrieval was unavailable." */
-  readonly liveUnavailable: string;
-  /** " A source provider was rate-limited." */
-  readonly rateLimited: string;
-  /** " A source provider timed out." */
-  readonly timedOut: string;
-  /** " Publisher locality is not established; national media framing cannot be established." */
-  readonly localityNotEstablished: string;
-  /** "{name}: {evidence}.{notes}" — the line itself, so punctuation and order are L's */
-  readonly line: string;
-}
 
-/** L_RETURNED only: Claude L's R6 delivery, transcribed verbatim (askDictionaryAdditionsL.ts). */
-export const ASK_COMPARISON_COVERAGE_COPY: Readonly<
-  Partial<Record<Exclude<DisplayLocale, 'en' | 'pl'>, AskComparisonCoverageCopy>>
-> = ASK_COMPARISON_COVERAGE_L_R6;
+/** The template shape (owned by the overlay contract, so the overlays can type it). */
+export type AskComparisonCoverageCopy = ShellComparisonCoverageCopy;
 
 const fill = (template: string, values: Record<string, string | number>): string =>
   template.replace(/\{(\w+)\}/g, (m, k: string) => (k in values ? String(values[k]) : m));
@@ -49,7 +31,7 @@ export function askComparisonCoverageLines(
   locale: DisplayLocale,
 ): string[] {
   const copy =
-    locale === 'en' || locale === 'pl' ? undefined : ASK_COMPARISON_COVERAGE_COPY[locale];
+    locale === 'en' || locale === 'pl' ? undefined : askShellAdditive(locale)?.comparisonCoverage;
   if (copy === undefined) return comparisonCoverageLines(coverage, locale === 'pl' ? 'pl' : 'en');
   return coverage.map((member) => {
     const count = member.finalQualifyingEvidenceCount;

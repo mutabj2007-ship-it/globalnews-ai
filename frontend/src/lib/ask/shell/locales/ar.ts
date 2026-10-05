@@ -926,5 +926,74 @@ export const arShellOverlay: ShellLocaleOverlay = {
       },
     },
   },
+  /*
+    CLAUDE L · R6 RENDERED SURFACE · THE ADDITIVE KEYS (CTO single-source ruling). Ask-reachable
+    strings OUTSIDE the shell tree, served through askShellCatalogue like every other overlay value.
+    Generated from L's delivery, never retyped: provenance/claude-l-r6/R6-RENDERED-50-ar.json
+    sha256 04125b3682aea3905430b6f9b4d227d7b1498eb818df3f65d992ba4d919b78a0 (askShellAdditive.provenance.spec.ts re-verifies both).
+    The 7 keys L reused verbatim from the 527 are not here: askDictionary resolves them FROM the
+    qualified shell key (one authority, not a copy).
+  */
+  additive: {
+    dict: {
+      retrievalContextStatus: {
+        newestStoredArticlePublished: "أحدث مقال مخزَّن، نُشر في:",
+        newestStoredArticleObserved: "أحدث مقال مخزَّن، رصده مجمِّع أخبار (وليس وقت نشره):",
+        newestStoredArticleUnverified: "أحدث مقال مخزَّن (أساس الوقت غير متحقَّق منه):",
+      },
+      eventAnchor: {
+        heading: "ما تُثبته التقارير عن الحدث",
+        interpretedFromEvidence: "فُسِّر المكان بأنه {country} استنادًا إلى أدلة الحدث.",
+        fromSelectedContext: "الدولة مأخوذة من اختيارك: {country}.",
+        crossBorderNotEstablished: "لا تُثبت التقارير المتاحة بعد وجود أثر مباشر للحدث نفسه على الدول المجاورة.",
+        causeNotEstablished: "لا تُثبت التقارير المتاحة سبب وقوع الحدث.",
+        contextSeparated: "تُعرض بعض التقارير من المكان نفسه كسياق منفصل فقط: فلم يثبت أن الحدث سببها ولا أنها مرتبطة به.",
+        contextClaimsWithheld: "احتُجزت العبارات المتعلقة بالآثار التي لم يدعمها سوى ذلك السياق المنفصل.",
+        stateAmbiguousCountry: "أي دولة؟ · الاسم ينطبق على أكثر من واحدة",
+        stateAmbiguousCountryBody: "يشير المكان الوارد في هذا السؤال إلى أكثر من دولة، ولم يحدد السؤال ولا التقارير أيّها تقصد. ولم تُنتَج إجابة بدلًا من اختيار الدولة عنك.",
+        ambiguousCountryQuestion: "أي دولة تقصد؟",
+        stateNoPriorSubject: "لا يوجد سؤال سابق للمتابعة",
+        noPriorSubjectQuestion: "لا يوجد سؤال سابق للمتابعة. ما الذي تريد معرفته عن هذا المكان؟",
+        statePersonalUnavailable: "غير متوفر بعد",
+        compactHeading: "ملاحظة على الأدلة",
+        compactShowDetails: "إظهار معنى ذلك",
+        short: {
+          interpretedFromEvidence: "فُسِّر بأنه {country} حسب التقارير",
+          fromSelectedContext: "الدولة من اختيارك: {country}",
+          crossBorderNotEstablished: "لا أثر مباشر مُثبت على الدول المجاورة",
+          causeNotEstablished: "السبب غير ثابت",
+          contextSeparated: "سياق المكان نفسه مفصول",
+          contextClaimsWithheld: "آثار مستندة إلى السياق وحده: محتجزة",
+        },
+      },
+      analysisResultView: {
+        briefWithheldHeading: "الملخّص التنفيذي غير متوفر",
+        briefWithheldBody: "لم يستوفِ الملخّص الخاص بمجموعة الأدلة هذه الشرط البنيوي، فاحتُجز بدلًا من عرضه. وكل ما يلي تم التحقق منه بصورة مستقلة وغير متأثر.",
+      },
+      homeR1: {
+        theme: {
+          label: "المظهر",
+          light: "فاتح",
+          dark: "داكن",
+          system: "النظام",
+          systemNote: "يتبع إعداد جهازك",
+          scheduled: "مجدول",
+          scheduledNote: "فاتح في النهار، داكن في الليل، بحسب ساعة هذا الجهاز",
+          lightFrom: "فاتح من",
+          darkFrom: "داكن من",
+        },
+      },
+    },
+    comparisonCoverage: {
+      gap: "ثغرة في التغطية: لا أدلة مقبولة",
+      retained: "تقارير محفوظة: {count}؛ لم يثبت جلب حيّ حالي",
+      qualifying: "تقارير مقبولة: {count} (حيّة: {live}، محفوظة: {retained})",
+      liveUnavailable: " كان الجلب الحيّ غير متوفر.",
+      rateLimited: " أحد مزوّدي المصادر مُقيَّد بحدّ الطلبات.",
+      timedOut: " انتهت مدة الانتظار لدى أحد مزوّدي المصادر.",
+      localityNotEstablished: " لم تثبت محلية الناشر؛ ولا يمكن إثبات التأطير الإعلامي الوطني.",
+      line: "{name}: {evidence}.{notes}",
+    },
+  },
   functions: buildStructural(STRUCTURAL),
 };

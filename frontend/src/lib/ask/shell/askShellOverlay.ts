@@ -236,6 +236,43 @@ function readPath(source: unknown, path: string): unknown {
 export interface ShellLocaleOverlay {
   readonly data?: ShellOverlay;
   readonly functions?: Readonly<Record<string, (...args: never[]) => string>>;
+  /**
+   * Ask-reachable strings that live OUTSIDE the shell tree (Claude L's R6 additive delivery).
+   * They are not part of the shell's key shape or its manifest, so `mergeShell` never sees them;
+   * `askShellCatalogue` serves them to the two readers that render them. Same file, same
+   * authority, same resolver module as the shell overlay: no second runtime table.
+   */
+  readonly additive?: ShellAdditiveOverlay;
+}
+
+/**
+ * The comparison answer's "coverage checked" lines. Named placeholders (`{count}`, `{live}`,
+ * `{retained}`, `{name}`, `{evidence}`, `{notes}`) are filled by `askComparisonCoverageLines`.
+ */
+export interface ShellComparisonCoverageCopy {
+  /** "coverage gap: no qualifying evidence" */
+  readonly gap: string;
+  /** "retained/stored reports: {count}; current live retrieval not established" */
+  readonly retained: string;
+  /** "qualifying reports: {count} (live: {live}, retained: {retained})" */
+  readonly qualifying: string;
+  /** " Live retrieval was unavailable." */
+  readonly liveUnavailable: string;
+  /** " A source provider was rate-limited." */
+  readonly rateLimited: string;
+  /** " A source provider timed out." */
+  readonly timedOut: string;
+  /** " Publisher locality is not established; national media framing cannot be established." */
+  readonly localityNotEstablished: string;
+  /** "{name}: {evidence}.{notes}" — the line itself, so punctuation and order are L's */
+  readonly line: string;
+}
+
+export interface ShellAdditiveOverlay {
+  /** Product-dictionary keys an Ask surface renders (read by `askDictionary`). */
+  readonly dict: ShellOverlay;
+  /** The comparison-coverage templates (read by `askComparisonCoverageLines`). */
+  readonly comparisonCoverage: ShellComparisonCoverageCopy;
 }
 
 /**

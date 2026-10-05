@@ -1,11 +1,22 @@
 import type { DisplayLocale } from '@globalnews-ai/shared';
 import { getDictionary, type Dictionary } from '@/lib/i18n/dictionaries';
-import { askShellStrings } from './askShellCatalogue';
+import { askShellAdditive, askShellStrings } from './askShellCatalogue';
 import { ASK_DICTIONARY_ADDITIONS } from './askDictionaryAdditions';
-import {
-  ASK_DICTIONARY_ADDITIONS_L_R6,
-  ASK_DICTIONARY_CANONICAL_ALIASES,
-} from './askDictionaryAdditionsL';
+
+/**
+ * Seven dictionary keys whose English is byte-identical to an already-qualified shell key; Claude L
+ * reused that wording verbatim in R6. They resolve FROM the shell key: one authority, not a copy.
+ * This is a structural mapping (key → key), not wording.
+ */
+export const ASK_DICTIONARY_CANONICAL_ALIASES: Readonly<Record<string, string>> = {
+  'eventAnchor.stateIdentityRequired': 'askR2Strings.signInRequired.title',
+  'eventAnchor.identityRequiredBody': 'askR2Strings.personal.SAVED_STORIES.signIn',
+  'eventAnchor.identityRequiredInterestsBody': 'askR2Strings.personal.INTERESTS.signIn',
+  'eventAnchor.identityRequiredNeutralBody': 'askR2Strings.personal.NEUTRAL.signIn',
+  'eventAnchor.personalUnavailableBody': 'askR2Strings.personal.SAVED_STORIES.notAvailable',
+  'eventAnchor.personalUnavailableInterestsBody': 'askR2Strings.personal.INTERESTS.notAvailable',
+  'eventAnchor.personalUnavailableNeutralBody': 'askR2Strings.personal.NEUTRAL.notAvailable',
+};
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -27,7 +38,9 @@ import {
  *                   (askShellStrings(locale).dict — the SAME values the Ask shell renders), and
  *                 · the additive, L-governed values for Ask-reachable keys outside the 535-key
  *                   shell: C55 reuse (askDictionaryAdditions.ts) and Claude L's R6 delivery
- *                   (askDictionaryAdditionsL.ts) — each value L-qualified, never authored here
+ *                   (the `additive.dict` block of the same locale overlay, served by
+ *                   askShellAdditive — no separate runtime table) — each value L-qualified,
+ *                   never authored here
  *                 · seven keys whose English is byte-identical to an already-qualified shell key,
  *                   resolved FROM that shell key (ASK_DICTIONARY_CANONICAL_ALIASES): one
  *                   authority, not a further copy
@@ -41,7 +54,7 @@ export function askDictionary(locale: DisplayLocale): Dictionary {
   const shell = askShellStrings(locale);
   const withShell = merge(getDictionary('en'), shell.dict);
   const withC55 = merge(withShell, ASK_DICTIONARY_ADDITIONS[locale] ?? {});
-  const withL = merge(withC55, ASK_DICTIONARY_ADDITIONS_L_R6[locale] ?? {});
+  const withL = merge(withC55, askShellAdditive(locale)?.dict ?? {});
   const aliased: Record<string, unknown> = {};
   for (const [key, shellKey] of Object.entries(ASK_DICTIONARY_CANONICAL_ALIASES)) {
     const value = valueAt(shell, shellKey);

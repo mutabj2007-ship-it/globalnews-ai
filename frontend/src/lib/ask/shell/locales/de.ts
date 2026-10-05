@@ -874,5 +874,74 @@ export const deShellOverlay: ShellLocaleOverlay = {
       },
     },
   },
+  /*
+    CLAUDE L · R6 RENDERED SURFACE · THE ADDITIVE KEYS (CTO single-source ruling). Ask-reachable
+    strings OUTSIDE the shell tree, served through askShellCatalogue like every other overlay value.
+    Generated from L's delivery, never retyped: provenance/claude-l-r6/R6-RENDERED-50-de.json
+    sha256 b4f8d00290a0dc6d624ec4bff407567211445fd7ff438713155a6d01d9bd2b7a (askShellAdditive.provenance.spec.ts re-verifies both).
+    The 7 keys L reused verbatim from the 527 are not here: askDictionary resolves them FROM the
+    qualified shell key (one authority, not a copy).
+  */
+  additive: {
+    dict: {
+      retrievalContextStatus: {
+        newestStoredArticlePublished: "Neuester gespeicherter Artikel, veröffentlicht:",
+        newestStoredArticleObserved: "Neuester gespeicherter Artikel, von einem Nachrichtenaggregator gesehen (nicht sein Veröffentlichungszeitpunkt):",
+        newestStoredArticleUnverified: "Neuester gespeicherter Artikel (Zeitgrundlage nicht geprüft):",
+      },
+      eventAnchor: {
+        heading: "Was die Berichterstattung zum Ereignis belegt",
+        interpretedFromEvidence: "Anhand der Belege zum Ereignis als {country} ausgelegt.",
+        fromSelectedContext: "Land aus Ihrer Auswahl: {country}.",
+        crossBorderNotEstablished: "Die verfügbare Berichterstattung belegt noch keine direkte Auswirkung des Ereignisses selbst auf Nachbarländer.",
+        causeNotEstablished: "Die verfügbare Berichterstattung belegt nicht, was das Ereignis verursacht hat.",
+        contextSeparated: "Ein Teil der Berichterstattung vom selben Ort wird nur als gesonderter Kontext gezeigt: dass sie durch das Ereignis verursacht oder mit ihm verbunden ist, ist nicht belegt.",
+        contextClaimsWithheld: "Aussagen über Auswirkungen, die nur durch diesen gesonderten Kontext gestützt waren, wurden zurückgehalten.",
+        stateAmbiguousCountry: "WELCHES LAND? · DER NAME PASST AUF MEHRERE",
+        stateAmbiguousCountryBody: "Der Ort in dieser Frage bezeichnet mehr als ein Land, und weder die Frage noch die Berichterstattung haben geklärt, welches Sie meinen. Es wurde keine Antwort erzeugt, anstatt das Land für Sie auszuwählen.",
+        ambiguousCountryQuestion: "Welches Land meinen Sie?",
+        stateNoPriorSubject: "KEINE FRÜHERE FRAGE ZUM FORTSETZEN",
+        noPriorSubjectQuestion: "Es gibt keine frühere Frage zum Fortsetzen. Was möchten Sie über diesen Ort wissen?",
+        statePersonalUnavailable: "NOCH NICHT VERFÜGBAR",
+        compactHeading: "Beleghinweis",
+        compactShowDetails: "Anzeigen, was das bedeutet",
+        short: {
+          interpretedFromEvidence: "Laut Berichterstattung als {country} ausgelegt",
+          fromSelectedContext: "Land aus Ihrer Auswahl: {country}",
+          crossBorderNotEstablished: "Keine direkte Auswirkung auf Nachbarländer belegt",
+          causeNotEstablished: "Ursache nicht belegt",
+          contextSeparated: "Kontext vom selben Ort gesondert gehalten",
+          contextClaimsWithheld: "Nur kontextgestützte Wirkungsaussagen zurückgehalten",
+        },
+      },
+      analysisResultView: {
+        briefWithheldHeading: "Kurzfassung nicht verfügbar",
+        briefWithheldBody: "Die Kurzfassung zu diesem Belegsatz erfüllte die strukturelle Anforderung nicht und wurde zurückgehalten statt angezeigt. Alles Folgende wurde unabhängig validiert und ist nicht betroffen.",
+      },
+      homeR1: {
+        theme: {
+          label: "Erscheinungsbild",
+          light: "Hell",
+          dark: "Dunkel",
+          system: "System",
+          systemNote: "Folgt der Einstellung Ihres Geräts",
+          scheduled: "Zeitgesteuert",
+          scheduledNote: "Tagsüber hell, nachts dunkel, nach der Uhr dieses Geräts",
+          lightFrom: "Hell ab",
+          darkFrom: "Dunkel ab",
+        },
+      },
+    },
+    comparisonCoverage: {
+      gap: "Abdeckungslücke: keine zulässigen Belege",
+      retained: "gespeicherte Berichte: {count}; aktueller Live-Abruf nicht belegt",
+      qualifying: "zulässige Berichte: {count} (live: {live}, gespeichert: {retained})",
+      liveUnavailable: " Der Live-Abruf war nicht verfügbar.",
+      rateLimited: " Ein Quellenanbieter wurde durch Ratenbegrenzung blockiert.",
+      timedOut: " Bei einem Quellenanbieter kam es zu einer Zeitüberschreitung.",
+      localityNotEstablished: " Die Verlagsregion ist nicht belegt; eine Einordnung als nationale Medien lässt sich nicht belegen.",
+      line: "{name}: {evidence}.{notes}",
+    },
+  },
   functions: buildStructural(STRUCTURAL),
 };
