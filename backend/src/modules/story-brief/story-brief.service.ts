@@ -126,6 +126,16 @@ export class StoryBriefService {
     return { story, articleRefs, leadArticle, revision: evidenceRevisionOf(articleRefs) };
   }
 
+  /**
+   * CANONICAL STORY RESOLUTION (CTO baseline §2) — articleRef → canonical story, read-only and
+   * independent of Discussion: no compute, no write (an article with no story yet stays storyless;
+   * nothing is created by reading), no user identity. An alias resolves to its survivor.
+   */
+  async resolveByArticle(articleRef: string): Promise<{ articleRef: string; storyId: string | null; materialVersion: number | null }> {
+    const story = await this.identity.resolveByArticleRef(articleRef);
+    return { articleRef, storyId: story?.storyId ?? null, materialVersion: story?.briefVersion ?? null };
+  }
+
   /** ZERO COMPUTE. Never calls the generator. */
   async read(storyId: string, now: Date = new Date()): Promise<StoryBriefView> {
     const { story, revision } = await this.evidenceOf(storyId);

@@ -115,3 +115,20 @@ describe('EA-STORY-BRIEF-01 · structural guarantees', () => {
     }
   });
 });
+
+describe('CTO §2 · canonical story resolution is independent of Discussion', () => {
+  const read = (p: string) => readFileSync(join(__dirname, p), 'utf8');
+  it('GET /stories/by-article/:articleRef is guarded only by the Story Brief gate, never a Discussion gate', () => {
+    const controller = read('story-brief.controller.ts');
+    const route = controller.slice(controller.indexOf("@Get('by-article/:articleRef')") - 200, controller.indexOf("@Get('by-article/:articleRef')"));
+    expect(route).toMatch(/@UseGuards\(StoryBriefGate\)/);
+    expect(controller).not.toMatch(/Discussion(Read|Write)Gate|DiscussionService|discussion\./);
+    expect(controller.indexOf("@Get('by-article/:articleRef')")).toBeLessThan(controller.indexOf("@Get(':storyId/brief')"));
+  });
+  it('resolution is read-only: it uses the identity READ, never a story-creating call', () => {
+    const service = read('story-brief.service.ts');
+    const body = service.slice(service.indexOf('async resolveByArticle('), service.indexOf('/** ZERO COMPUTE. Never calls the generator. */'));
+    expect(body).toMatch(/resolveByArticleRef\(/);
+    expect(body).not.toMatch(/ensureStoryForArticle|generator|create\(|update\(/);
+  });
+});

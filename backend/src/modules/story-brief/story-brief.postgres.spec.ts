@@ -279,4 +279,19 @@ live('Story Brief R1 — live PostgreSQL', () => {
     ]);
     expect(JSON.stringify(admin)).not.toContain(requester.userId);
   });
+  it('CANONICAL RESOLUTION (CTO §2): articleRef → storyId without Discussion; reading never creates a story; an alias resolves to its survivor', async () => {
+    const svc = service(new FakeGenerator());
+    const lone = await article('one.example', 'Not yet a story');
+    expect(await svc.resolveByArticle(lone.articleRef)).toEqual({ articleRef: lone.articleRef, storyId: null, materialVersion: null });
+    expect(await db.storyArticle.count({ where: { articleRef: lone.articleRef } })).toBe(0);
+    const a = await article('one.example', 'Resolved left');
+    const b = await article('two.example', 'Resolved right');
+    const { story: left } = await identity.ensureStoryForArticle(a);
+    const { story: right } = await identity.ensureStoryForArticle(b);
+    expect(await svc.resolveByArticle(a.articleRef)).toEqual({ articleRef: a.articleRef, storyId: left.storyId, materialVersion: 1 });
+    await identity.merge({ survivorId: left.storyId, mergedId: right.storyId, actorId: 'editor', reason: 'same event' });
+    const merged = await svc.resolveByArticle(b.articleRef);
+    expect(merged.storyId).toBe(left.storyId);
+    expect(merged.materialVersion).toBeGreaterThan(1);
+  });
 });
