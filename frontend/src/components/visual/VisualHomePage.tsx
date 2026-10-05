@@ -1,5 +1,5 @@
 import type { JSX } from 'react';
-import type { LanguageCode, NewsDataMode } from '@globalnews-ai/shared';
+import type { HomeEditorialResponse, HomeStoryCard, LanguageCode } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import type { HomeR1Gates } from '@/lib/platform/homeR1Gates';
 import type { ThemePreference } from '@/lib/theme/theme';
@@ -7,62 +7,71 @@ import { HomeSessionProvider } from '@/components/home/reva/HomeSession';
 import { AuthErrorBanner } from '@/components/auth/AuthErrorBanner';
 import { Footer } from '@/components/layout/Footer';
 import { HomeR1Canvas } from '@/components/home/r1/HomeR1Chrome';
-import { HomeR1Explore } from '@/components/home/r1/HomeR1Sections';
 import { StageBHost } from '@/components/home/r1/stageb/StageBHost';
 import { VisualHeader, VisualPhoneNav } from './VisualChrome';
-import { VisualHero } from './VisualHero';
 import { VisualMain } from './VisualMain';
-import { VisualStoryFeed, type VisualStory } from './VisualStoryFeed';
 import { VisualBriefPanel } from './VisualBriefPanel';
+import { HomeHeroSection } from './home/HomeHeroSection';
+import { HomeRegionRows } from './home/HomeRegionRows';
+import { HomeAskSection } from './home/HomeAskSection';
+import { OwnerAccessBar } from './home/OwnerAccessBar';
+import { degradedRows } from './home/degradedRows';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
- * COMPACT VISUAL PRODUCT R1 — THE PAGE COMPOSITION (Design R1, frames RF01–RF18)
+ * PHONE-FIRST HOME CORRECTION R1 — THE CORRECTED HOME COMPOSITION (`/visual`, Alpha)
  * ════════════════════════════════════════════════════════════════════════════
  *
- *   HEADER   navy top bar (brand · real destinations from 900 px · theme · Updates · language · account)
- *   HERO     navy card: heading, ONE Ask, examples │ the real Global Map + region meaning
- *   STORIES  "Developing stories" — up to three columns, never under 280 px
- *   EXPLORE  the registry-backed intelligence modules (the existing section, reused)
- *   FOOTER   the one shared Footer (real legal / support routes)
- *   PHONE    the light bottom bar (four real destinations), safe-area aware
- *   BRIEF    beside the feed ≥1200 · drawer 600–1199 · sheet <600
+ *   HEADER   navy top bar (unchanged)
+ *   HERO     Search stories (persisted story search) · Your world in 60 seconds (personal major
+ *            story) · the legacy GlobalNewsAI world map beside it (below it, compact, on a phone)
+ *   ROWS     East Africa · European Union · Middle East — compact legacy cards, business/conflict
+ *            only (enforced server-side before selection)
+ *   ASK      Ask GlobalNewsAI in its lower place — the same one Ask engine
+ *   FOOTER   the one shared Footer (Privacy, Cookies, Terms, Source policy, Help)
  *
- * Content max width 1360 px; gutters 12 / 16 / 24 / 32 px by width (design doc 01). Every
- * capability is the existing one, behind its existing gate: Discussion and Alerts render only
- * where Stage B says they exist; the Story Brief only where the canonical backend serves it.
+ * REMOVED from Home by Product Owner ruling: "Explore intelligence" (the module wall). The modules,
+ * their data and their standalone routes are untouched; only the Home section is gone, with no
+ * placeholder left behind.
+ *
+ * Every card uses the canonical articleRef the Story Brief, Discussion, Alerts and Admin
+ * (/admin/news/stories?articleRef=) already use — Home owns no story store.
  */
 export function VisualHomePage({
   language,
   gates,
-  stories,
-  dataMode,
+  editorial,
   examples,
   theme,
 }: {
   readonly language: LanguageCode;
   readonly gates: HomeR1Gates;
-  readonly stories: readonly VisualStory[];
-  readonly dataMode: NewsDataMode | null;
+  readonly editorial: HomeEditorialResponse | null;
   readonly examples: readonly string[];
   readonly theme: ThemePreference;
 }): JSX.Element {
-  const t = getDictionary(language).visual;
+  const t = getDictionary(language).visual.home;
+  const rows = editorial?.regions ?? degradedRows();
+  const visibleCards: HomeStoryCard[] = [
+    ...(editorial?.hero ? [editorial.hero.story, ...editorial.hero.more] : []),
+    ...rows.flatMap((r) => r.stories),
+  ];
   return (
     <HomeSessionProvider>
       <HomeR1Canvas theme={theme}>
-        <div data-visual-home="">
+        <div data-visual-home="" data-home-correction="phone-first-r1">
           <VisualHeader language={language} theme={theme} alerts={gates.alertsInApp ? { replies: gates.discussionRead } : null} />
           <VisualMain>
             <div className="mx-auto w-full max-w-[1360px] px-3 min-[360px]:px-4 min-[600px]:px-6 min-[900px]:px-8">
-              <p data-visual-preview-banner="" className="mt-3 rounded-[0.5rem] border border-[var(--gt-line)] bg-[var(--gt-card)] px-3 py-2 text-[0.8125rem] text-[var(--gt-ink2)]">
+              <p data-visual-preview-banner="" className="mt-2 rounded-[0.5rem] border border-[var(--gt-line)] bg-[var(--gt-card)] px-3 py-1.5 text-[0.75rem] text-[var(--gt-ink2)]">
                 {t.previewBanner}
               </p>
+              <OwnerAccessBar language={language} />
               <AuthErrorBanner language={language} />
-              <div className="mt-4 flex flex-col gap-8 min-[600px]:mt-6 min-[600px]:gap-10">
-                <VisualHero language={language} examples={examples} />
-                <VisualStoryFeed stories={stories} dataMode={dataMode} language={language} discussionRead={gates.discussionRead} />
-                <HomeR1Explore language={language} />
+              <div className="mt-3 flex flex-col gap-7 min-[600px]:mt-4 min-[600px]:gap-9">
+                <HomeHeroSection editorial={editorial} language={language} discussionRead={gates.discussionRead} />
+                <HomeRegionRows rows={rows} language={language} discussionRead={gates.discussionRead} />
+                <HomeAskSection language={language} examples={examples} />
               </div>
             </div>
           </VisualMain>
@@ -71,7 +80,7 @@ export function VisualHomePage({
           {(gates.discussionRead || gates.alertsInApp) && (
             <StageBHost
               language={language}
-              articleRefs={stories.map((s) => s.articleRef)}
+              articleRefs={visibleCards.slice(0, 60).map((c) => c.articleRef)}
               discussionRead={gates.discussionRead}
               discussionWrite={gates.discussionWrite}
               alertsInApp={gates.alertsInApp}

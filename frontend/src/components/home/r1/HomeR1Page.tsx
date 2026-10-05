@@ -12,7 +12,7 @@ import { HomeR1Canvas, HomeR1Header, HomeR1PhoneNav, HomeR1Rail } from './HomeR1
 import { HomeR1Hero } from './HomeR1Hero';
 import { HomeR1World60 } from './HomeR1World60';
 import { HomeR1Stories } from './HomeR1Stories';
-import { HomeR1Bridge, HomeR1Explore } from './HomeR1Sections';
+import { HomeR1Bridge } from './HomeR1Sections';
 import { HomeR1Compare } from './HomeR1Compare';
 import { StageBHost } from './stageb/StageBHost';
 
@@ -88,7 +88,8 @@ export function HomeR1Page({
                   </div>
                   <div className="mt-10 flex flex-col gap-10">
                     <HomeR1Bridge language={language} />
-                    <HomeR1Explore language={language} />
+                    {/* PHONE-FIRST HOME CORRECTION R1 — Explore intelligence removed from Home (PO ruling);
+                        HomeR1Explore and the module routes remain. */}
                   </div>
                 </div>
               </main>

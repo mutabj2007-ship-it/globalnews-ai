@@ -187,10 +187,12 @@ export class HomeEditorialService {
     const now = input.now ?? new Date();
     const q = input.q.trim().replace(/\s+/g, ' ').slice(0, STORY_SEARCH_MAX_LENGTH);
     const base: StorySearchResponse = { query: q, scope: input.scope, region: input.region, domain: input.domain, days: input.days, results: [], matched: 0, relaxed: false };
-    if (q.length < STORY_SEARCH_MIN_LENGTH) return base;
+    /* Browsing a region ("See all") needs no words; otherwise at least two characters. */
+    const browse = q.length === 0 && input.region !== null;
+    if (!browse && q.length < STORY_SEARCH_MIN_LENGTH) return base;
 
     const words = [...titleTokens(q)].slice(0, 6);
-    const terms = words.length > 0 ? words : [q.toLowerCase()];
+    const terms = browse ? [] : words.length > 0 ? words : [q.toLowerCase()];
     const countryHits = COUNTRIES.filter((c) => {
       const name = c.name.toLowerCase();
       return name === q.toLowerCase() || terms.some((t) => t.length >= 4 && name === t);

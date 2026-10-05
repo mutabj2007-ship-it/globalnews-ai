@@ -38,7 +38,7 @@ import { CATEGORY_ARTWORK, CATEGORY_ARTWORK_FALLBACK } from '@/components/home/h
  * creep back in. One component, used by both, cannot drift.
  */
 interface StoryVisualProps {
-  article: NewsArticle;
+  article: Pick<NewsArticle, 'category' | 'imageUrl'>;
   /** Aspect and radius utilities from the calling surface. */
   className: string;
   /** Accessible description used only when there is no photograph. */

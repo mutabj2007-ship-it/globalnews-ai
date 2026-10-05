@@ -174,7 +174,8 @@ export function assessHomeEligibility(input: HomeEligibilityInput): HomeEligibil
   if (!businessOk && !conflictOk) return { eligible: false, reason: 'NO_BUSINESS_OR_CONFLICT_EVIDENCE' };
 
   const domains: HomeDomain[] = [];
-  const businessScore = businessOk ? business.length + businessInTitle.length : 0;
+  /* Strength counts DISTINCTIVE terms only: "business", "firm", "company" … do not make a story weightier. */
+  const businessScore = businessOk ? business.filter((t) => !COMMON.has(t)).length + businessInTitle.filter((t) => !COMMON.has(t)).length : 0;
   const conflictScore = conflictOk ? conflictStrong.length * 2 + conflictWeak.length + matches(title, CONFLICT_STRONG).length : 0;
   if (businessOk) domains.push('business');
   if (conflictOk) domains.push('conflict');

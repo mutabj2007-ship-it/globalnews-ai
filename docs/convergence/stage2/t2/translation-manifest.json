@@ -29217,13 +29217,13 @@
   "dict:visual": {
    "source": "frontend/src/lib/i18n/dictionaries/{en,pl,adminEn,adminPl,supportEn,supportPl,myIntelligenceEn,myIntelligencePl,homeR1En,homeR1Pl,homeRevaEn,homeRevaPl}.ts",
    "kind": "DICTIONARY",
-   "englishKeys": 137,
+   "englishKeys": 207,
    "gapCounts": {
-    "fr": 137,
-    "de": 137,
-    "es": 137,
-    "pt": 137,
-    "ar": 137
+    "fr": 207,
+    "de": 207,
+    "es": 207,
+    "pt": 207,
+    "ar": 207
    },
    "keys": {
     "visual.brief.alert": {
@@ -29918,6 +29918,706 @@
     },
     "visual.hero.title": {
      "en": "What matters to you",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.askHeading": {
+     "en": "Ask GlobalNewsAI",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.askLine": {
+     "en": "For conversation, explanation, decisions and research — on any subject, not only what is on Home.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.backHome": {
+     "en": "Back to Home",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.countriesAria": {
+     "en": "Countries",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.domainBusiness": {
+     "en": "Business",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.domainConflict": {
+     "en": "Conflict",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.filterAllRegions": {
+     "en": "All three regions",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.filterAllTypes": {
+     "en": "Business and conflict",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.filterAnyTime": {
+     "en": "Any time",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.filterDays": {
+     "en": "Published",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.filterDays3": {
+     "en": "Last 3 days",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.filterDays30": {
+     "en": "Last 30 days",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.filterDays7": {
+     "en": "Last 7 days",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.filterRegion": {
+     "en": "Region",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.filterScope": {
+     "en": "Scope",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.filterType": {
+     "en": "Type",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.firstReported": {
+     "en": "First reported {date}",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.freshDeveloping": {
+     "en": "Developing",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.freshDiscussed": {
+     "en": "Discussed this week",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.freshEarlier": {
+     "en": "Earlier",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.freshNew": {
+     "en": "New",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.otherReports": {
+     "en": "+{count} other reports",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.otherReportsOne": {
+     "en": "+1 other report",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.outsideFocus": {
+     "en": "Outside Home focus",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.ownerBadge": {
+     "en": "Owner testing access · Alpha",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.ownerPreviewOn": {
+     "en": "Previewing the ordinary user experience — normal limits apply.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.ownerPreviewStart": {
+     "en": "Preview ordinary user experience",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.ownerPreviewStop": {
+     "en": "Exit preview",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.ownerUnrestricted": {
+     "en": "Ordinary product limits are lifted for your account on Alpha. Service limits still apply.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.previewBanner": {
+     "en": "Alpha preview of the corrected GlobalNewsAI Home: business and conflict developments only.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.regionEastAfrica": {
+     "en": "East Africa",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.regionEu": {
+     "en": "European Union",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.regionMiddleEast": {
+     "en": "Middle East",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.regionsHeading": {
+     "en": "Developments by region",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.resultsBrowse": {
+     "en": "{region}: all collected business and conflict stories",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.resultsCount": {
+     "en": "{count} stories",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.resultsError": {
+     "en": "Search is unavailable right now. Please try again.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.resultsFor": {
+     "en": "Results for “{query}”",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.resultsNone": {
+     "en": "No collected story matches “{query}”.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.resultsNoneAsk": {
+     "en": "Ask GlobalNewsAI about “{query}”",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.resultsNoneAskNote": {
+     "en": "Ask runs only when you press it, and is separate from search.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.resultsRelaxed": {
+     "en": "No exact match — showing stories that share the word stem.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.resultsShort": {
+     "en": "Type at least two characters.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.resultsTitle": {
+     "en": "Story search",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.rowAbout": {
+     "en": "About this region",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.rowEmpty": {
+     "en": "No qualifying business or conflict reports from this region are in the store. That is a coverage gap, not proof that nothing happened.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.rowNext": {
+     "en": "Next stories",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.rowNoneRecent": {
+     "en": "No new qualifying reports in the last 72 hours — showing earlier reporting, dated.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.rowPrev": {
+     "en": "Previous stories",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.rowRecent": {
+     "en": "{count} in the last 72 hours",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.rowSee": {
+     "en": "See all",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.rowSeeAria": {
+     "en": "See all {region} stories",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.rowSparse": {
+     "en": "Few qualifying reports right now.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.rowUnavailable": {
+     "en": "This row could not be loaded. That is a service problem, not a sign that nothing happened.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.scopeAll": {
+     "en": "Whole collected archive (all subjects, all places)",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.scopeHome": {
+     "en": "Home focus: business and conflict, three regions",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.searchButton": {
+     "en": "Search",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.searchLabel": {
+     "en": "Search stories",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.searchNote": {
+     "en": "Searches stories GlobalNewsAI has already collected. It does not run Ask or AI.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.searchPlaceholder": {
+     "en": "Search a story, country, company or topic",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.w60BecauseCountries": {
+     "en": "Because you follow {countries}",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.w60BecauseDomains": {
+     "en": "Matches your interest in {domains}",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.w60Default": {
+     "en": "Top development now",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.w60DefaultWhy": {
+     "en": "A high-impact business or conflict development. Sign in and follow countries to personalise this.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.w60Empty": {
+     "en": "No qualifying business or conflict development is in the store right now. This is a coverage state, not proof that nothing happened.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.w60Personal": {
+     "en": "Chosen for you",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.w60Title": {
+     "en": "Your world in 60 seconds",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.w60Unavailable": {
+     "en": "Stories could not be loaded just now. This is a service problem, not a sign that nothing happened.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.whatChanged": {
+     "en": "What changed",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.whyHere": {
+     "en": "Why it is here",
      "locales": {
       "fr": "MISSING",
       "de": "MISSING",
@@ -38980,27 +39680,27 @@
    "qualifiedInAskScope": 0
   },
   "fr": {
-   "pendingKeys": 3569,
+   "pendingKeys": 3639,
    "namespacesIncomplete": 62,
    "qualifiedInAskScope": 174
   },
   "de": {
-   "pendingKeys": 3569,
+   "pendingKeys": 3639,
    "namespacesIncomplete": 62,
    "qualifiedInAskScope": 174
   },
   "es": {
-   "pendingKeys": 3569,
+   "pendingKeys": 3639,
    "namespacesIncomplete": 62,
    "qualifiedInAskScope": 174
   },
   "pt": {
-   "pendingKeys": 3569,
+   "pendingKeys": 3639,
    "namespacesIncomplete": 62,
    "qualifiedInAskScope": 174
   },
   "ar": {
-   "pendingKeys": 3569,
+   "pendingKeys": 3639,
    "namespacesIncomplete": 62,
    "qualifiedInAskScope": 174
   }

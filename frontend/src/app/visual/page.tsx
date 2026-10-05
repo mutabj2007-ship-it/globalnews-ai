@@ -1,17 +1,14 @@
 import type { Metadata } from 'next';
 import type { JSX } from 'react';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { surfaceLocale } from '@/lib/i18n/displayLocale.server';
 import { getDictionary } from '@/lib/i18n/dictionaries';
-import { getHomeFeed } from '@/lib/homeFeed';
-import { allocateHomeFirstScreen } from '@/components/home/reva/worldIn60Allocation';
-import { articleRefFor } from '@/lib/identity/articleRefServer';
+import { fetchHomeEditorial } from '@/lib/api/homeEditorialApi';
 import { homeR1Gates } from '@/lib/platform/homeR1Gates';
 import { standaloneAskRoot } from '@/lib/ask/standaloneRoot';
 import { THEME_COOKIE_NAME, parseThemePreference } from '@/lib/theme/theme';
 import { VisualHomePage } from '@/components/visual/VisualHomePage';
-import type { VisualStory } from '@/components/visual/VisualStoryFeed';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -45,32 +42,16 @@ export default async function VisualHomeRoute(): Promise<JSX.Element> {
   const language = surfaceLocale('home').language;
   const dict = getDictionary(language);
   const gates = homeR1Gates();
-  const feed = await getHomeFeed(language);
-  const firstScreen = allocateHomeFirstScreen(feed);
-  const whats = firstScreen.whats;
-
-  /* One de-duplicated list from the ONE response: the first-screen stories, then the 60-second set. */
-  const seen = new Set<string>();
-  const stories: VisualStory[] = [
-    ...(whats.featured === null ? [] : [whats.featured]),
-    ...whats.inFocus,
-    ...whats.discovery,
-    ...firstScreen.worldIn60,
-  ]
-    .filter((article) => {
-      if (seen.has(article.id)) return false;
-      seen.add(article.id);
-      return true;
-    })
-    .slice(0, 12)
-    .map((article) => ({ article, articleRef: articleRefFor(article.url) }));
+  /* PHONE-FIRST HOME CORRECTION R1 — ONE retained-store read: hero + three region rows,
+     business/conflict only. The reader's own cookies go to our own backend only, so a signed-in
+     reader's hero comes from their saved follows/interests. */
+  const editorial = await fetchHomeEditorial(headers().get('cookie'));
 
   return (
     <VisualHomePage
       language={language}
       gates={gates}
-      stories={stories}
-      dataMode={feed.dataMode}
+      editorial={editorial}
       examples={dict.hero.exampleQuestions}
       theme={parseThemePreference(cookies().get(THEME_COOKIE_NAME)?.value)}
     />

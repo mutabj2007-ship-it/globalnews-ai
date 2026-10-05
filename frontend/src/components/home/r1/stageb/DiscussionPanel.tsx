@@ -127,7 +127,7 @@ export function DiscussionPanel({
   const href = safeExternalHref(story.url);
 
   return (
-    <div className="fixed inset-0 z-[70] flex justify-end bg-[var(--gt-scrim)]" data-stage-b-discussion="" onClick={(e) => e.target === e.currentTarget && closePanel()}>
+    <div className="fixed inset-0 z-[70] flex justify-end bg-[var(--gt-scrim)]" style={{ bottom: 'var(--gna-kb, 0px)' }} data-stage-b-discussion="" onClick={(e) => e.target === e.currentTarget && closePanel()}>
       <section
         role="dialog"
         aria-modal="true"
@@ -209,6 +209,7 @@ export function DiscussionPanel({
         {thread !== null && !locked && canWrite && (
           <form
             className="border-t border-[var(--gt-line)] bg-[var(--gt-card)] p-3"
+            style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
             onSubmit={(e) => {
               e.preventDefault();
               void submit();
@@ -235,7 +236,7 @@ export function DiscussionPanel({
               }}
               placeholder={t.placeholder}
               rows={3}
-              className="w-full resize-none rounded-[10px] border border-[var(--gt-line)] bg-[var(--gt-bg)] p-2.5 text-[14px] text-[var(--gt-ink)] placeholder:text-[var(--gt-ink3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--gt-act)]"
+              className="w-full resize-none rounded-[10px] border border-[var(--gt-line)] bg-[var(--gt-bg)] p-2.5 text-[16px] text-[var(--gt-ink)] placeholder:text-[var(--gt-ink3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--gt-act)]"
             />
             {notice !== null && (
               <p role={notice.tone === 'error' ? 'alert' : 'status'} className={`mt-1 text-[12.5px] ${notice.tone === 'error' ? 'text-[var(--gt-danger)]' : 'text-[var(--gt-ink2)]'}`}>
@@ -317,7 +318,7 @@ function Comment({
               <label className="sr-only" htmlFor={`edit-${c.id}`}>
                 {t.composerLabel}
               </label>
-              <textarea id={`edit-${c.id}`} value={text} maxLength={2200} onChange={(e) => setText(e.target.value)} rows={3} className="w-full rounded-[8px] border border-[var(--gt-line)] bg-[var(--gt-bg)] p-2 text-[14px]" />
+              <textarea id={`edit-${c.id}`} value={text} maxLength={2200} onChange={(e) => setText(e.target.value)} rows={3} className="w-full rounded-[8px] border border-[var(--gt-line)] bg-[var(--gt-bg)] p-2 text-[16px]" />
               <div className="mt-1 flex gap-2">
                 <button type="submit" className="min-h-[40px] rounded-full bg-[var(--gt-act)] px-4 text-[13px] font-semibold text-white">
                   {t.save}

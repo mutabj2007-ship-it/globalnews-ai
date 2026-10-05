@@ -17,6 +17,7 @@ import { AskAiDock } from '@/components/ask/AskAiDock';
 import { standaloneAskRoot } from '@/lib/ask/standaloneRoot';
 import { homeR1Gates, releaseGatesMeta } from '@/lib/platform/homeR1Gates';
 import { ReturnDepthTracker } from '@/components/navigation/ReturnDepthTracker';
+import { ViewportKeyboardSync } from '@/components/ui/ViewportKeyboardSync';
 import { SCHEDULE_BOOT_SCRIPT } from '@/lib/theme/themeSchedule';
 import './globals.css';
 
@@ -169,6 +170,11 @@ export const viewport: Viewport = {
   themeColor: '#080b12',
   width: 'device-width',
   initialScale: 1,
+  /* PHONE-FIRST HOME CORRECTION R1 · §9 — without viewport-fit=cover iOS reports every
+     env(safe-area-inset-*) as 0, so the existing safe-area paddings (phone nav, brief sheet, map
+     sheet, compare tray) did nothing on a notched iPhone. globals.css pads body left/right by the
+     inset so landscape content never sits under the notch. No maximum-scale: zoom stays allowed. */
+  viewportFit: 'cover',
 };
 
 /**
@@ -330,6 +336,8 @@ export default function RootLayout({
           request on mount and none on navigation.
         */}
         <ReturnDepthTracker />
+        {/* PHONE-FIRST HOME CORRECTION R1 — the one shared on-screen-keyboard signal (--gna-kb). Renders null. */}
+        <ViewportKeyboardSync />
         <AskAiDock
           language={language}
           displayLocale={surface.requested}

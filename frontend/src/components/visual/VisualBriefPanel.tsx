@@ -25,6 +25,7 @@ import { openGlobalAsk } from '@/lib/ask/openGlobalAsk';
 import { VISUAL_HOME_HREF } from '@/lib/visual/visualNav';
 import { adminStoryHref, useVisualAdminInspect } from '@/lib/visual/visualAdminInspect';
 import { VisualBriefStateView, type VisualBriefActions } from './VisualBriefStateView';
+import { BriefEditorialContext } from './home/BriefEditorialContext';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -259,7 +260,7 @@ export function VisualBriefPanel({
         data-evidence-revision={view?.currentEvidenceRevision}
         data-brief-version={briefVersion}
         className="fixed bottom-0 end-0 top-0 z-[61] flex w-full flex-col bg-[var(--gt-card)] text-[var(--gt-ink)] shadow-[0_0_40px_-12px_rgba(0,0,0,0.45)] min-[600px]:w-[min(600px,calc(100vw-48px))] min-[900px]:w-[520px] min-[1200px]:top-[60px] min-[1200px]:border-s min-[1200px]:border-[var(--gt-line)] min-[1200px]:shadow-none"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)', bottom: 'var(--gna-kb, 0px)' }}
       >
         <div className="flex items-center gap-2 border-b border-[var(--gt-line)] px-3 py-2">
           {evidence !== null ? (
@@ -312,6 +313,8 @@ export function VisualBriefPanel({
               <h2 ref={headingRef} tabIndex={-1} dir="auto" className="font-display text-[1.375rem] font-bold leading-snug focus:outline-none">
                 {story.title}
               </h2>
+
+              {story.editorial !== undefined && <BriefEditorialContext card={story.editorial} language={language} />}
 
               {load.kind === 'reading' ? null : load.kind === 'ready' ? (
                 <VisualBriefStateView view={load.view} language={language} actions={actions} />

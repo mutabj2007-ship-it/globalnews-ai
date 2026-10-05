@@ -47,7 +47,7 @@ function SignedInBell({ language, replies }: { readonly language: LanguageCode; 
     <button type="button" onClick={openAlertsCentre} aria-label={label} data-alerts-bell="" className="relative flex h-[44px] w-[44px] items-center justify-center rounded-full text-[var(--gt-hdrInk)] hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--gt-act)]">
       <Bell aria-hidden="true" className="h-5 w-5" />
       {unread !== null && unread > 0 && (
-        <span aria-hidden="true" data-alerts-unread={unread} className="absolute right-1.5 top-1.5 min-w-[18px] rounded-full bg-[var(--gt-amberBg)] px-1 text-center text-[10.5px] font-bold leading-[18px] text-[var(--gt-amberInk)] ring-1 ring-[var(--gt-amberBd)]">
+        <span aria-hidden="true" data-alerts-unread={unread} className="absolute right-1.5 top-1.5 min-w-[18px] rounded-full bg-[var(--gt-amber)] px-1 text-center text-[10.5px] font-bold leading-[18px] text-[var(--gt-amberOn)]">
           {unread > 99 ? '99+' : unread}
         </span>
       )}

@@ -1,7 +1,7 @@
 {
   "t2Base": "266007c930e8293638bc7971670ee0264923c18c",
   "lineRoot": "c9473e32",
-  "englishDictionaryLeaves": 2999,
+  "englishDictionaryLeaves": 3069,
   "locales": {
     "fr": {
       "recoveredLeaves": 1789,
@@ -13,7 +13,7 @@
         "EN_CHANGED_SINCE_LINE_ROOT": 15
       },
       "droppedStale": 120,
-      "missingNoCandidate": 1330
+      "missingNoCandidate": 1400
     },
     "de": {
       "recoveredLeaves": 1789,
@@ -25,7 +25,7 @@
         "EN_CHANGED_SINCE_LINE_ROOT": 15
       },
       "droppedStale": 120,
-      "missingNoCandidate": 1330
+      "missingNoCandidate": 1400
     },
     "es": {
       "recoveredLeaves": 1789,
@@ -37,7 +37,7 @@
         "EN_CHANGED_SINCE_LINE_ROOT": 15
       },
       "droppedStale": 120,
-      "missingNoCandidate": 1330
+      "missingNoCandidate": 1400
     },
     "pt": {
       "recoveredLeaves": 1789,
@@ -49,7 +49,7 @@
         "EN_CHANGED_SINCE_LINE_ROOT": 15
       },
       "droppedStale": 120,
-      "missingNoCandidate": 1330
+      "missingNoCandidate": 1400
     },
     "ar": {
       "recoveredLeaves": 1789,
@@ -61,7 +61,7 @@
         "EN_CHANGED_SINCE_LINE_ROOT": 15
       },
       "droppedStale": 120,
-      "missingNoCandidate": 1330
+      "missingNoCandidate": 1400
     }
   },
   "manifestTotals": {
@@ -71,27 +71,27 @@
       "qualifiedInAskScope": 0
     },
     "fr": {
-      "pendingKeys": 3569,
+      "pendingKeys": 3639,
       "namespacesIncomplete": 62,
       "qualifiedInAskScope": 174
     },
     "de": {
-      "pendingKeys": 3569,
+      "pendingKeys": 3639,
       "namespacesIncomplete": 62,
       "qualifiedInAskScope": 174
     },
     "es": {
-      "pendingKeys": 3569,
+      "pendingKeys": 3639,
       "namespacesIncomplete": 62,
       "qualifiedInAskScope": 174
     },
     "pt": {
-      "pendingKeys": 3569,
+      "pendingKeys": 3639,
       "namespacesIncomplete": 62,
       "qualifiedInAskScope": 174
     },
     "ar": {
-      "pendingKeys": 3569,
+      "pendingKeys": 3639,
       "namespacesIncomplete": 62,
       "qualifiedInAskScope": 174
     }

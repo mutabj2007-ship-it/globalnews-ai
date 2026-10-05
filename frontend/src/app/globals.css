@@ -292,6 +292,25 @@ body[data-ask-open='true'] [data-mobile-bottom-nav] {
 }
 
 /*
+  PHONE-FIRST HOME CORRECTION R1 · §9 — shared phone safety, every route.
+  · viewport-fit=cover (layout.tsx) makes the safe-area insets real on a notched iPhone, so in
+    landscape the page content is padded clear of the notch here (0 everywhere else).
+  · `overflow-x: clip` stops any stray wide element from creating PAGE-level horizontal scroll
+    (local rows still scroll inside their own overflow-x container). `clip`, not `hidden`: it does
+    not create a scroll container, so sticky headers keep working.
+  · text-size-adjust keeps iOS from inflating text on rotation; user zoom stays allowed.
+*/
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+body {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  overflow-x: clip;
+}
+
+/*
   ════════════════════════════════════════════════════════════════════════════
   HOME R1 · STAGE A CLOSEOUT — DUAL THEME TOKENS (CTO product amendment)
   ════════════════════════════════════════════════════════════════════════════
@@ -362,6 +381,14 @@ html:not([data-gna-schedule]) [data-gna-theme='scheduled'],
   --gt-amberBg: #FFF4E0;
   --gt-amberBd: #E0A030;
   --gt-amberInk: #8A5300;
+  /* PHONE-FIRST HOME CORRECTION R1 · §10 — the Claude Design solid ATTENTION accent (design token
+     --amber #F2B441, "Amber badge on header" pair #10213A on #F2B441, Component Library and Tokens).
+     It never reached production: only the warning family (amberBg/Bd/Ink) was mapped, so every
+     "Updated / New" marker rendered as blue or grey. Same value in every theme, as in the design
+     (its dark theme does not override --amber). Attention / material update only — warnings keep
+     the amberBg/Ink family. Contrast #10213A on #F2B441 = 8.75:1; #F2B441 on navy #0B1F3A = 8.95:1. */
+  --gt-amber: #F2B441;
+  --gt-amberOn: #10213A;
   --gt-danger: #B42318;
 }
 html[data-gna-schedule='dark'] [data-gna-theme='scheduled'],
@@ -419,6 +446,8 @@ html[data-gna-schedule='dark'] [data-gna-theme='scheduled'],
   --gt-amberBg: #2B1E08;
   --gt-amberBd: #E0A030;
   --gt-amberInk: #F5C97A;
+  --gt-amber: #F2B441;
+  --gt-amberOn: #10213A;
   --gt-danger: #FF8A80;
 }
 @media (prefers-color-scheme: dark) {
@@ -477,6 +506,8 @@ html[data-gna-schedule='dark'] [data-gna-theme='scheduled'],
     --gt-amberBg: #2B1E08;
     --gt-amberBd: #E0A030;
     --gt-amberInk: #F5C97A;
+    --gt-amber: #F2B441;
+    --gt-amberOn: #10213A;
     --gt-danger: #FF8A80;
   }
 }

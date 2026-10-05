@@ -1,7 +1,7 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
-import type { NewsArticle } from '@globalnews-ai/shared';
+import type { HomeStoryCard, NewsArticle } from '@globalnews-ai/shared';
 
 /**
  * COMPACT VISUAL PRODUCT R1 — which story's Brief panel is open, and at which section.
@@ -24,6 +24,9 @@ export interface VisualBriefStory {
   readonly publishedAt: string;
   readonly publishedAtBasis: NewsArticle['publishedAtBasis'];
   readonly category: NewsArticle['category'];
+  /** PHONE-FIRST HOME CORRECTION R1 — the Home editorial context (why it is on Home, geography,
+      other reports, freshness), when the brief was opened from the corrected Home or story search. */
+  readonly editorial?: HomeStoryCard;
 }
 
 export type VisualBriefSection = 'top' | 'discussion';

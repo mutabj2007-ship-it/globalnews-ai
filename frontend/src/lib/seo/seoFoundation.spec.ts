@@ -651,7 +651,11 @@ describe('N10/N11/N12 — routing, product contracts and providers are untouched
     /* PUBLIC VISUAL CONVERGENCE — fifty-nine: /admin/news/stories, the Admin Story inspection.
        Admin pages are noindex (the Admin layout), so no indexability classification changes; a
        query (?storyId= / ?articleRef=), not a dynamic segment, so N5 still holds. */
-    expect(pages).toHaveLength(59);
+    /* PHONE-FIRST HOME CORRECTION R1 — sixty: /stories, the persisted story search behind the
+       corrected Home's "Search stories". noindex, absent from the sitemap, outside the Standalone
+       allowlist (Production redirects it), a query (?q=&region=…) not a dynamic segment, so N5 holds. */
+    expect(pages).toHaveLength(60);
+    expect(pages).toContain('/stories');
     expect(pages).toContain('/visual');
     expect(pages).toContain('/admin/news/stories');
     expect(pages).toContain('/conflict');
