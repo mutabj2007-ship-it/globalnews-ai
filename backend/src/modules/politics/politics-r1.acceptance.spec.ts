@@ -108,7 +108,7 @@ live('Politics R1 acceptance through the final shared R4 mechanism (synthetic ro
   /** The REAL shared execution path; only the news provider and the model are stubs (R4 continuity-spec harness). */
   function harness() {
     const analysis: Call[] = [];
-    const background: Array<{ question: string }> = [];
+    const background: Array<{ question: string; governed?: { rules: string; data: string } }> = [];
     const reads: AskR2Route[] = [];
     const coordinator = new AskSpecialistReadCoordinator(
       { currentForCountry: async () => [], evidenceDetails: async () => new Map(), currentByKey: async () => null } as never,
@@ -126,7 +126,7 @@ live('Politics R1 acceptance through the final shared R4 mechanism (synthetic ro
           articles: [{ id: `art-${k}-1` } as never], retrievalContext: {} as never } satisfies Partial<AnalysisApiResponse>;
       }) } as never,
       { id: 'openai', displayName: 'OpenAI', isMock: false, analyzeNews: jest.fn() } as never,
-      { id: 'openai', displayName: 'OpenAI', isMock: false, answerBackground: jest.fn(async (input: { question: string }) => { background.push(input); return { text: 'Reasoned answer.' }; }) } as never,
+      { id: 'openai', displayName: 'OpenAI', isMock: false, answerBackground: jest.fn(async (input: { question: string; governed?: { rules: string; data: string } }) => { background.push(input); return { text: 'Reasoned answer.' }; }) } as never,
       { config: { outputWeight: 4 }, reserve: jest.fn(async () => ({ admitted: true, reservationId: 'r', estimatedUnits: 1 })), settle: jest.fn(async () => true) } as never,
       { permit: jest.fn(async () => ({ allowed: true, trial: false, state: 'CLOSED' })), record: jest.fn(async () => undefined) } as never,
       { isEnabled: jest.fn(async () => true) } as never,
@@ -229,7 +229,8 @@ live('Politics R1 acceptance through the final shared R4 mechanism (synthetic ro
         newsCalls: t.analysisCalls.length,
         modelCalls: t.analysisCalls.length + t.backgroundCalls.length,
         retrievalQuestion: t.analysisCalls[0] ? String(t.analysisCalls[0][0]) : null,
-        governedRules: policy.governed?.rules ?? '',
+        /* the rules that bound THIS turn's one model call: the news call's policy, or the background call's */
+        governedRules: [policy.governed?.rules ?? '', ...t.backgroundCalls.map((b) => b.governed?.rules ?? '')].join(' | '),
       });
     }
     if (REPORT) writeFileSync(REPORT, JSON.stringify(report, null, 2));
