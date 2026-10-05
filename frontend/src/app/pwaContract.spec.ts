@@ -574,7 +574,7 @@ describe('PWA-1 §5 — M66.13 localization is preserved exactly', () => {
       /* STANDALONE PUBLIC BETA CONVERGENCE R1 — the dock learns the server-decided root (no new element).
          R4 · CTO dock-direction ruling — and the reader's DisplayLocale (no new element either). */
       /* T2 — the declared-fallback notice (renders nothing unless the surface fell back). */
-      '<ServiceWorkerRegistrar /> <DisplayLocaleNotice locale={surface} /> {children} <ReturnDepthTracker /> <AskAiDock language={language} displayLocale={resolveAskLocale(languageCookie)} standaloneRoot={standaloneAskRoot()} />',
+      '<ServiceWorkerRegistrar /> <DisplayLocaleNotice locale={surface} /> {children} <ReturnDepthTracker /> <AskAiDock language={language} displayLocale={surface.requested} standaloneRoot={standaloneAskRoot()} />',
     );
   });
 });

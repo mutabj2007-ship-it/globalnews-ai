@@ -365,9 +365,10 @@ describe('the released navigation geometry is untouched', () => {
   it('the dock is mounted from the root layout, not injected into the NavBar', () => {
     const layout = readFileSync(join(__dirname, '..', '..', 'app', 'layout.tsx'), 'utf8');
     /* STANDALONE PUBLIC BETA CONVERGENCE R1 — the mount also carries the server-decided root. */
-    /* R4 · CTO dock-direction ruling — and the reader's DisplayLocale (launcher direction only) */
+    /* R4 · CTO dock-direction ruling — and the reader's DisplayLocale (launcher direction only),
+       read from the T2 display-locale authority (R4 + EA convergence) */
     expect(layout).toMatch(
-      /<AskAiDock\s+language=\{language\}\s+displayLocale=\{resolveAskLocale\(languageCookie\)\}\s+standaloneRoot=\{standaloneAskRoot\(\)\}\s*\/>/,
+      /<AskAiDock\s+language=\{language\}\s+displayLocale=\{surface\.requested\}\s+standaloneRoot=\{standaloneAskRoot\(\)\}\s*\/>/,
     );
     const nav = readFileSync(join(__dirname, '..', 'navigation', 'NavBar.tsx'), 'utf8');
     expect(nav).not.toMatch(/AskAiDock|askAi/);

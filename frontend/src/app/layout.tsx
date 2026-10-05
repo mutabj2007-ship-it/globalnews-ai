@@ -1,4 +1,3 @@
-import { cookies } from 'next/headers';
 import type { Metadata, Viewport } from 'next';
 import {
   Space_Grotesk,
@@ -8,8 +7,7 @@ import {
   Outfit,
   JetBrains_Mono,
 } from 'next/font/google';
-import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
-import { resolveAskLocale } from '@/lib/ask/askLocale';
+import type { LanguageCode } from '@globalnews-ai/shared';
 import { documentSurfaceLocale } from '@/lib/i18n/documentLocale.server';
 import { DisplayLocaleNotice } from '@/components/i18n/DisplayLocaleNotice';
 import { getDictionary } from '@/lib/i18n/dictionaries';
@@ -271,12 +269,15 @@ export default function RootLayout({
   */
   const surface = documentSurfaceLocale();
   /*
-    R4 + EAST AFRICA CONVERGENCE — the document is T2's (lang/dir/notice above); the Ask dock keeps
-    R4's qualified inputs: the platform two-catalogue code plus the reader's full DisplayLocale. Both
-    read the same cookie, so an effective-Arabic document and an Arabic dock agree (CTO RTL ruling).
+    R4 + EAST AFRICA CONVERGENCE — the document is T2's (lang/dir/notice above), and the Ask dock's
+    R4 inputs come from the SAME authority decision instead of a second cookie read:
+      displayLocale  the reader's requested DisplayLocale (surface.requested — the cookie validated
+                     against the seven, English when absent: what resolveAskLocale(cookie) returned)
+      language       the platform's two-catalogue code the dock's dictionary takes: Polish stays
+                     Polish, every other reader arrives as 'en' (R4's dock contract, unchanged)
+    so an effective-Arabic document and an Arabic dock agree (CTO RTL ruling).
   */
-  const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
-  const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
+  const language: LanguageCode = surface.requested === 'pl' ? 'pl' : 'en';
 
   const fontVariables = [
     displayFont.variable,
@@ -331,7 +332,7 @@ export default function RootLayout({
         <ReturnDepthTracker />
         <AskAiDock
           language={language}
-          displayLocale={resolveAskLocale(languageCookie)}
+          displayLocale={surface.requested}
           standaloneRoot={standaloneAskRoot()}
         />
       </body>

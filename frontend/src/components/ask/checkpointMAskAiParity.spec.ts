@@ -119,9 +119,10 @@ describe('M — the Alpha-only dock, and what it is gated on', () => {
     it('it is mounted in the root layout, so it is present on every route', () => {
       /* STANDALONE PUBLIC BETA CONVERGENCE R1 — still one mount in the root layout; it unmounts
          itself on /ask and on the standalone-Ask root, which own their composer. */
-      /* R4 · CTO dock-direction ruling — the one mount also carries the reader's DisplayLocale */
+      /* R4 · CTO dock-direction ruling — the one mount also carries the reader's DisplayLocale
+         (from the T2 display-locale authority; R4 + EA convergence) */
       expect(layout).toMatch(
-        /<AskAiDock\s+language=\{language\}\s+displayLocale=\{resolveAskLocale\(languageCookie\)\}\s+standaloneRoot=\{standaloneAskRoot\(\)\}\s*\/>/,
+        /<AskAiDock\s+language=\{language\}\s+displayLocale=\{surface\.requested\}\s+standaloneRoot=\{standaloneAskRoot\(\)\}\s*\/>/,
       );
     });
 
