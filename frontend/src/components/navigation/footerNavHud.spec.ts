@@ -3,6 +3,7 @@ import { join } from 'path';
 import { footerLinkGroups } from '@/lib/homeContent';
 import { primaryNavLinks } from '@/lib/navigation';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { consentFooterLinkLabels } from '@/lib/consent/consentStrings';
 
 const footerSource = readFileSync(join(__dirname, '../layout/Footer.tsx'), 'utf-8');
 const navBarSource = readFileSync(join(__dirname, 'NavBar.tsx'), 'utf-8');
@@ -154,7 +155,10 @@ describe('Dead primary-navigation and footer-link remediation (Milestone #53)', 
     // (frontend/src/app/third-party-notices/page.tsx), so the destination is
     // still never added before the page exists.
     // About/Careers/Contact/API are still routeless and still excluded by it.
+    // T5 Part B — /cookies (D10) joins; the EXACT equality is kept, and the page
+    // (frontend/src/app/cookies/page.tsx) already exists.
     expect(allFooterHrefs.sort()).toEqual([
+      '/cookies',
       '/privacy',
       '/source-policy',
       '/support',
@@ -196,8 +200,10 @@ describe('Dead primary-navigation and footer-link remediation (Milestone #53)', 
 
 describe('B2 — Public Legal Surfaces footer wiring', () => {
   it('every real footerLinkGroups href has a real, non-fallback label in both English and Polish footer.linkLabels', () => {
-    const enLinkLabels = getDictionary('en').footer.linkLabels;
-    const plLinkLabels = getDictionary('pl').footer.linkLabels;
+    // T5 Part B — /cookies is labelled from the `consent` catalogue (dict.footer feeds H's
+    // protected Ask-shell catalogues, so it cannot take a new key); Footer.tsx merges both.
+    const enLinkLabels = { ...consentFooterLinkLabels('en'), ...getDictionary('en').footer.linkLabels };
+    const plLinkLabels = { ...consentFooterLinkLabels('pl'), ...getDictionary('pl').footer.linkLabels };
     const allFooterHrefs = footerLinkGroups.flatMap((group) => group.links.map((link) => link.href));
 
     for (const href of allFooterHrefs) {

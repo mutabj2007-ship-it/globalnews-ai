@@ -1,3 +1,4 @@
+import { isUsableApiCredential } from '../../../security/placeholder-credential';
 import type { AnalysisProvider } from '../interfaces';
 
 /**
@@ -20,7 +21,8 @@ export const ANALYSIS_PROVIDER = Symbol('ANALYSIS_PROVIDER');
  * by either provider selection or startup validation.
  */
 export function isUsableOpenAiApiKey(value: string | undefined): boolean {
-  return typeof value === 'string' && value.trim().length > 0;
+  /* T1 — also rejects placeholders such as `replace_with_your_openai_key`. */
+  return isUsableApiCredential(value);
 }
 
 /**

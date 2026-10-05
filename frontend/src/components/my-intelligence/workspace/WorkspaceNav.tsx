@@ -39,7 +39,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { getDictionary } from '@/lib/i18n/dictionaries';
-import { persistLanguageSelection } from '@/lib/i18n/languages';
+import { displayLocaleOf, persistLanguageSelection } from '@/lib/i18n/languages';
+import { useRequestedDisplayLocale } from '@/lib/i18n/useRequestedDisplayLocale';
 import { MI_FOCUS, MI_SAND_FOCUS } from '../miPresentation';
 import {
   ACCOUNT_SETTINGS_HREF,
@@ -176,6 +177,8 @@ export function WorkspaceNav({
   const w = getDictionary(language).myIntelligence.workspace;
   const [open, setOpen] = useState<ReadonlySet<RailGroupId>>(initialOpenGroups);
   const router = useRouter();
+  /* T2 · the pressed language is the reader's REQUESTED one (the page may render an English fallback). */
+  const selectedLocale = useRequestedDisplayLocale(displayLocaleOf(language));
 
   const toggle = (id: RailGroupId): void =>
     setOpen((was) => {
@@ -191,7 +194,7 @@ export function WorkspaceNav({
   };
 
   const setLanguage = (next: LanguageCode): void => {
-    if (next === language) return;
+    if (next === selectedLocale) return;
     /* Presentation only: persist the preference and re-render. Nothing reruns. */
     persistLanguageSelection(next);
     router.refresh();
@@ -361,10 +364,10 @@ export function WorkspaceNav({
                     <button
                       key={code}
                       type="button"
-                      aria-pressed={language === code}
+                      aria-pressed={selectedLocale === code}
                       onClick={() => setLanguage(code)}
                       className={`${MI_FOCUS} min-h-[44px] min-w-[44px] rounded-full border px-2 text-[12px] font-bold uppercase ${
-                        language === code ? 'border-[#1b6fa8] bg-[#07304f] text-[#cfe6ff]' : 'border-[#1d3a5a] text-[#9fb4cb]'
+                        selectedLocale === code ? 'border-[#1b6fa8] bg-[#07304f] text-[#cfe6ff]' : 'border-[#1d3a5a] text-[#9fb4cb]'
                       }`}
                     >
                       {code}

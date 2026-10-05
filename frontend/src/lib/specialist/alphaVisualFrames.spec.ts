@@ -315,6 +315,9 @@ describe('no preview surface can reach an external provider', () => {
       '/components/navigation/NavBar.tsx',
       '/components/search/LanguageSelector.tsx',
       '/lib/hooks/useAccount.ts',
+      /* T2 — NavBar's language control shows the reader's REQUESTED locale: one mount effect
+         reading the stored choice (cookie/localStorage). No network, no provider. */
+      '/lib/i18n/useRequestedDisplayLocale.ts',
     ]);
   });
 });

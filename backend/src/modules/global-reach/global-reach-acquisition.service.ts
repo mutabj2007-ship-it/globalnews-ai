@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { evaluateSourceRights, measuredLocalSource } from '@globalnews-ai/shared';
+import {
+  evaluateSourceRights,
+  measuredLocalSource,
+  packEntryRightsState,
+  rightsBlockActivation,
+} from '@globalnews-ai/shared';
 import type {
   OfficialSourceRightsBinding,
   SourcePackEntry,
@@ -40,6 +45,9 @@ export class GlobalReachAcquisitionService {
       .split(',')
       .map((s) => s.trim());
     if (!allowlist.includes(sourceId)) return refuse('SOURCE_NOT_ALLOWLISTED');
+    /* T1 — the same rights gate as the feed registry: a RESTRICTED/PROHIBITED recorded
+       rights state can never be activated by configuration, and says so by name. */
+    if (rightsBlockActivation(packEntryRightsState(source))) return refuse('RIGHTS_RESTRICTED');
     if (!measuredLocalSource(source) || source.activationStatus !== 'ACTIVE')
       return refuse('SOURCE_NOT_READY');
     if (!['RSS', 'ATOM', 'API'].includes(source.transport)) return refuse('NO_NETWORK_TRANSPORT');

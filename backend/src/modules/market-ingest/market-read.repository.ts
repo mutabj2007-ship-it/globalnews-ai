@@ -38,6 +38,18 @@ export class MarketReadRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async procurement(limit = 20): Promise<readonly MarketRetainedProcurementNotice[]> {
+    return (await this.procurementMatching(() => true, limit)).notices;
+  }
+
+  /**
+   * EAST AFRICA P0 · B — notices from the newest admitted capture that satisfy `where`, with the
+   * scope filter applied BEFORE the limit (never "newest N, then filter"), plus how many notices
+   * the capture holds, so a caller can tell NO_DATA (held = 0) from NO_MATCH (held > 0).
+   */
+  async procurementMatching(
+    where: (notice: MarketRetainedProcurementNotice) => boolean,
+    limit = 20,
+  ): Promise<{ held: number; notices: readonly MarketRetainedProcurementNotice[] }> {
     const bounded = Number.isFinite(limit) ? Math.max(1, Math.min(Math.trunc(limit), 50)) : 20;
     const captures = await this.prisma.snapshotRetrieval.findMany({
       where: {
@@ -54,12 +66,13 @@ export class MarketReadRepository {
     });
     for (const capture of captures) {
       try {
-        return inspectTedProcurementCapture(capture).slice(0, bounded);
+        const all = inspectTedProcurementCapture(capture);
+        return { held: all.length, notices: all.filter(where).slice(0, bounded) };
       } catch (error) {
         if (!(error instanceof InvalidTedProcurementCapture)) throw error;
       }
     }
-    return [];
+    return { held: 0, notices: [] };
   }
 
   async latest(limit?: number): Promise<readonly MarketReadObservation[]> {

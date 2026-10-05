@@ -1,0 +1,594 @@
+{
+  "tranche": "T4",
+  "title": "One Ask engine / legacy analysis convergence \u2014 caller graph",
+  "shas": {
+    "alphaBackend": "5513275ff731936a07c01e937b92c263ba6d6cf9",
+    "alphaFrontend": "5513275ff731936a07c01e937b92c263ba6d6cf9",
+    "productionBackend": "5b714833f2a036557a022a55c646fdb101ec596e",
+    "productionFrontend": "58f80fd4108d3472e5433c7a50e19295788f2544"
+  },
+  "method": [
+    "git archive of frontend/backend/shared at each SHA (read-only, no checkout)",
+    "non-type import closure from every frontend/src/app/**/page.tsx|layout.tsx (scripts/t4 graph.mjs) + symbol-level check (analyzeNews call sites, useQuestionHistory consumers)",
+    "standalone route gate: allowlist read from each SHA's lib/routing/standaloneRouteGate.ts; Alpha=platform (all routes), Production=standalone per the gate's own comment (env not in repo: UNVERIFIED against Railway)",
+    "backend: git grep of AnalysisService.analyzeNews / HistoryService.recordExplicitQuestion / prisma.analysisRun / controller decorators at both backend SHAs"
+  ],
+  "legacyRoutes": [
+    "POST /analysis/news",
+    "GET /news/search",
+    "GET /history",
+    "DELETE /history"
+  ],
+  "callers": [
+    {
+      "id": "B1",
+      "legacyRoute": "POST /analysis/news",
+      "callerKind": "backend route (the legacy public endpoint)",
+      "file": "backend/src/modules/analysis/controller/analysis.controller.ts",
+      "alpha": {
+        "sha": "5513275f",
+        "line": 66,
+        "present": true,
+        "liveReachable": true,
+        "reachedFrom": [
+          "public HTTP"
+        ]
+      },
+      "production": {
+        "sha": "5b714833",
+        "line": 66,
+        "present": true,
+        "liveReachable": true,
+        "reachedFrom": [
+          "public HTTP"
+        ]
+      },
+      "classification": "COMPATIBILITY",
+      "justification": "Keep served and public until migration gates G1-G4 pass; now instrumented by LegacyRouteUsageInterceptor. Becomes internal-only (not deleted) at step 6."
+    },
+    {
+      "id": "B2",
+      "legacyRoute": "POST /analysis/news (engine)",
+      "callerKind": "backend internal caller",
+      "file": "backend/src/modules/ask-v2/ask-r2-execution.adapter.ts",
+      "alpha": {
+        "sha": "5513275f",
+        "line": 628,
+        "present": true,
+        "liveReachable": true,
+        "reachedFrom": [
+          "/ask-v2 operations"
+        ]
+      },
+      "production": {
+        "sha": "5b714833",
+        "line": 474,
+        "present": true,
+        "liveReachable": true,
+        "reachedFrom": [
+          "/ask-v2 operations"
+        ]
+      },
+      "classification": "INTERNALIZE",
+      "justification": "The canonical Ask V2 engine calls AnalysisService.analyzeNews in-process. Implementation detail; stays."
+    },
+    {
+      "id": "B3",
+      "legacyRoute": "POST /analysis/news (engine)",
+      "callerKind": "backend internal caller",
+      "file": "backend/src/modules/support/support-ai.service.ts",
+      "alpha": {
+        "sha": "5513275f",
+        "line": 323,
+        "present": true,
+        "liveReachable": true,
+        "reachedFrom": [
+          "/support AI"
+        ]
+      },
+      "production": {
+        "sha": "5b714833",
+        "line": 323,
+        "present": true,
+        "liveReachable": true,
+        "reachedFrom": [
+          "/support AI"
+        ]
+      },
+      "classification": "INTERNALIZE",
+      "justification": "Support AI reporting category; documented non-Ask exception (legacy-retirement.guard.spec.ts). In-process, no HTTP."
+    },
+    {
+      "id": "B4",
+      "legacyRoute": "POST /analysis/news (side effect)",
+      "callerKind": "backend history writer",
+      "file": "backend/src/modules/analysis/controller/analysis.controller.ts",
+      "alpha": {
+        "sha": "5513275f",
+        "line": 84,
+        "present": true,
+        "liveReachable": true,
+        "reachedFrom": [
+          "POST /analysis/news only"
+        ]
+      },
+      "production": {
+        "sha": "5b714833",
+        "line": 84,
+        "present": true,
+        "liveReachable": true,
+        "reachedFrom": [
+          "POST /analysis/news only"
+        ]
+      },
+      "classification": "MIGRATE",
+      "justification": "HistoryService.recordExplicitQuestion is called ONLY from the legacy route, so SearchHistoryEntry never receives Ask V2 questions. /history must move to Ask V2 threads (or Ask V2 must write history) before the route goes internal."
+    },
+    {
+      "id": "B5",
+      "legacyRoute": "POST /analysis/news (telemetry)",
+      "callerKind": "backend global interceptor",
+      "file": "backend/src/modules/telemetry/telemetry.interceptor.ts",
+      "alpha": {
+        "sha": "5513275f",
+        "line": 31,
+        "present": true,
+        "liveReachable": true,
+        "reachedFrom": [
+          "APP_INTERCEPTOR (app.module.ts:318)"
+        ]
+      },
+      "production": {
+        "sha": "5b714833",
+        "line": 31,
+        "present": true,
+        "liveReachable": true,
+        "reachedFrom": [
+          "APP_INTERCEPTOR"
+        ]
+      },
+      "classification": "MIGRATE",
+      "justification": "AnalysisRun + analysis_started/completed are recorded ONLY for POST /analysis/news; Ask V2 traffic is invisible to admin analytics. Needs an Ask V2 emitter (ask-observability) before the route goes internal."
+    },
+    {
+      "id": "B6",
+      "legacyRoute": "POST /analysis/news (telemetry read)",
+      "callerKind": "backend admin read",
+      "file": "backend/src/modules/admin/analytics/admin-analytics.service.ts",
+      "alpha": {
+        "sha": "5513275f",
+        "line": 239,
+        "present": true,
+        "liveReachable": true,
+        "reachedFrom": [
+          "GET /admin/analytics/usage"
+        ]
+      },
+      "production": {
+        "sha": "5b714833",
+        "line": 239,
+        "present": true,
+        "liveReachable": true,
+        "reachedFrom": [
+          "GET /admin/analytics/usage"
+        ]
+      },
+      "classification": "MIGRATE",
+      "justification": "Admin \"analysis runs\" panel reads AnalysisRun, which only legacy traffic writes; it will read ~0 as legacy traffic stops. Re-point to Ask V2 telemetry (or have Ask V2 write AnalysisRun)."
+    },
+    {
+      "id": "B7",
+      "legacyRoute": "GET /news/search",
+      "callerKind": "backend route",
+      "file": "backend/src/modules/news/news.controller.ts",
+      "alpha": {
+        "sha": "5513275f",
+        "line": 12,
+        "present": true,
+        "liveReachable": true,
+        "reachedFrom": [
+          "public HTTP"
+        ]
+      },
+      "production": {
+        "sha": "5b714833",
+        "line": 12,
+        "present": true,
+        "liveReachable": true,
+        "reachedFrom": [
+          "public HTTP"
+        ]
+      },
+      "classification": "COMPATIBILITY",
+      "justification": "Public, but NO frontend caller at either SHA (newsApi.searchNews has no importer). Now instrumented; REMOVE candidate once the observation window shows zero non-script traffic. NewsService.search itself stays (internal)."
+    },
+    {
+      "id": "B8",
+      "legacyRoute": "GET /news/search (service)",
+      "callerKind": "backend internal callers",
+      "file": "backend/src/modules/analysis/service/analysis.service.ts (many) + news/country/country-news.service.ts:192",
+      "alpha": {
+        "sha": "5513275f",
+        "line": 1632,
+        "present": true,
+        "liveReachable": true,
+        "reachedFrom": [
+          "AnalysisService / CountryNewsService"
+        ]
+      },
+      "production": {
+        "sha": "5b714833",
+        "line": 1548,
+        "present": true,
+        "liveReachable": true,
+        "reachedFrom": [
+          "AnalysisService / CountryNewsService"
+        ]
+      },
+      "classification": "INTERNALIZE",
+      "justification": "NewsService.search is the retrieval primitive behind Ask V2; only the HTTP wrapper is legacy."
+    },
+    {
+      "id": "B9",
+      "legacyRoute": "GET|DELETE /history",
+      "callerKind": "backend route",
+      "file": "backend/src/modules/history/history.controller.ts",
+      "alpha": {
+        "sha": "5513275f",
+        "line": 16,
+        "present": true,
+        "liveReachable": true,
+        "reachedFrom": [
+          "/history page; /my-intelligence Recent"
+        ]
+      },
+      "production": {
+        "sha": "5b714833",
+        "line": 16,
+        "present": true,
+        "liveReachable": true,
+        "reachedFrom": [
+          "/history page"
+        ]
+      },
+      "classification": "COMPATIBILITY",
+      "justification": "Auth-only read/clear of the legacy store. Keep until /history migrates to Ask V2 threads; now instrumented (GET /history, DELETE /history)."
+    },
+    {
+      "id": "F1",
+      "legacyRoute": "POST /analysis/news",
+      "callerKind": "frontend client fn (analyzeNews)",
+      "file": "frontend/src/lib/api/analysisApi.ts",
+      "alpha": {
+        "sha": "5513275f",
+        "line": 205,
+        "present": true,
+        "liveReachable": false,
+        "reachedFrom": []
+      },
+      "production": {
+        "sha": "58f80fd4",
+        "line": 205,
+        "present": true,
+        "liveReachable": false,
+        "reachedFrom": []
+      },
+      "classification": "REMOVE",
+      "justification": "Definition only. Its two importers are unmounted (F2, F3). The module stays for AnalysisApiError (F4); delete analyzeNews + fetch once F2/F3 and its client-contract specs are removed."
+    },
+    {
+      "id": "F2",
+      "legacyRoute": "POST /analysis/news",
+      "callerKind": "frontend orphan hook",
+      "file": "frontend/src/lib/ask/useAskConversation.ts",
+      "alpha": {
+        "sha": "5513275f",
+        "line": 54,
+        "present": true,
+        "liveReachable": false,
+        "reachedFrom": []
+      },
+      "production": {
+        "sha": "58f80fd4",
+        "line": 54,
+        "present": true,
+        "liveReachable": false,
+        "reachedFrom": []
+      },
+      "classification": "REMOVE",
+      "justification": "No page, layout or component reaches it (import-closure from every app/**/page.tsx|layout.tsx). Replaced by useAskR2Conversation."
+    },
+    {
+      "id": "F3",
+      "legacyRoute": "POST /analysis/news",
+      "callerKind": "frontend orphan component",
+      "file": "frontend/src/components/analysis-frame/AnalysisFrameClient.tsx",
+      "alpha": {
+        "sha": "5513275f",
+        "line": 111,
+        "present": true,
+        "liveReachable": false,
+        "reachedFrom": []
+      },
+      "production": {
+        "sha": "58f80fd4",
+        "line": 111,
+        "present": true,
+        "liveReachable": false,
+        "reachedFrom": []
+      },
+      "classification": "REMOVE",
+      "justification": "Passes analyzeNews as `analyze`; not imported by any mounted route at either SHA."
+    },
+    {
+      "id": "F4",
+      "legacyRoute": "POST /analysis/news (types only)",
+      "callerKind": "frontend mounted importer (no call)",
+      "file": "frontend/src/components/search/SearchPageClient.tsx",
+      "alpha": {
+        "sha": "5513275f",
+        "line": 8,
+        "present": true,
+        "liveReachable": true,
+        "reachedFrom": [
+          "/search",
+          "/my-intelligence"
+        ]
+      },
+      "production": {
+        "sha": "58f80fd4",
+        "line": 7,
+        "present": true,
+        "liveReachable": false,
+        "reachedFrom": []
+      },
+      "classification": "COMPATIBILITY",
+      "justification": "Imports AnalysisApiError/AnalysisApiErrorCode only for error copy; never calls analyzeNews (its runs go useAskR2Conversation -> askV2Api). PROTECTED file: keep analysisApi.ts module until it is edited by its owner. Production: /search and /my-intelligence are 307-redirected by the standalone gate."
+    },
+    {
+      "id": "F5",
+      "legacyRoute": "POST /analysis/news",
+      "callerKind": "frontend deny-list (not a caller)",
+      "file": "frontend/src/lib/askNavModel.ts",
+      "alpha": {
+        "sha": "5513275f",
+        "line": 350,
+        "present": true,
+        "liveReachable": true,
+        "reachedFrom": [
+          "ask shell"
+        ]
+      },
+      "production": {
+        "sha": "58f80fd4",
+        "line": 350,
+        "present": true,
+        "liveReachable": true,
+        "reachedFrom": [
+          "ask shell"
+        ]
+      },
+      "classification": "COMPATIBILITY",
+      "justification": "COMPUTE_ENDPOINTS: endpoints a zero-compute interaction must never call. A guard, not a caller; drop the entry when the route goes internal."
+    },
+    {
+      "id": "F6",
+      "legacyRoute": "POST /analysis/news + GET|DELETE /history",
+      "callerKind": "frontend proxy rewrite",
+      "file": "frontend/next.config.mjs",
+      "alpha": {
+        "sha": "5513275f",
+        "line": 129,
+        "present": true,
+        "liveReachable": true,
+        "reachedFrom": [
+          "/api/analysis/*, /api/history/*"
+        ]
+      },
+      "production": {
+        "sha": "58f80fd4",
+        "line": 129,
+        "present": true,
+        "liveReachable": true,
+        "reachedFrom": [
+          "/api/analysis/*, /api/history/*"
+        ]
+      },
+      "classification": "COMPATIBILITY",
+      "justification": "Same-origin proxy families. /api/analysis/* is removed in the step that makes the route internal-only (it would then 404 upstream anyway); /api/history/* stays while /history exists."
+    },
+    {
+      "id": "F7",
+      "legacyRoute": "GET /news/search",
+      "callerKind": "frontend client fn (searchNews)",
+      "file": "frontend/src/lib/api/newsApi.ts",
+      "alpha": {
+        "sha": "5513275f",
+        "line": 110,
+        "present": true,
+        "liveReachable": false,
+        "reachedFrom": []
+      },
+      "production": {
+        "sha": "58f80fd4",
+        "line": 110,
+        "present": true,
+        "liveReachable": false,
+        "reachedFrom": []
+      },
+      "classification": "REMOVE",
+      "justification": "Exported, zero importers at both SHAs (file closure reaches / and /map only because the module also exports fetchTopHeadlines)."
+    },
+    {
+      "id": "F8",
+      "legacyRoute": "GET|DELETE /history",
+      "callerKind": "frontend page",
+      "file": "frontend/src/app/history/page.tsx",
+      "alpha": {
+        "sha": "5513275f",
+        "line": 38,
+        "present": true,
+        "liveReachable": true,
+        "reachedFrom": [
+          "/history"
+        ]
+      },
+      "production": {
+        "sha": "58f80fd4",
+        "line": 38,
+        "present": true,
+        "liveReachable": true,
+        "reachedFrom": [
+          "/history (allowlisted; linked only from MiSections in /my-intelligence, so URL/bookmark only)"
+        ]
+      },
+      "classification": "MIGRATE",
+      "justification": "Shows SearchHistoryEntry, which Ask V2 never writes: stale for every question asked since Ask V2. Migrate to Ask V2 recent threads (/ask/recent) or redirect /history -> /ask/recent."
+    },
+    {
+      "id": "F9",
+      "legacyRoute": "GET /history",
+      "callerKind": "frontend hook (useQuestionHistory -> fetchQuestionHistory)",
+      "file": "frontend/src/lib/myIntelligence/hooks.ts",
+      "alpha": {
+        "sha": "5513275f",
+        "line": 144,
+        "present": true,
+        "liveReachable": true,
+        "reachedFrom": [
+          "/my-intelligence (useMyIntelligenceData.ts:153)"
+        ]
+      },
+      "production": {
+        "sha": "58f80fd4",
+        "line": 144,
+        "present": true,
+        "liveReachable": false,
+        "reachedFrom": []
+      },
+      "classification": "MIGRATE",
+      "justification": "My Intelligence \"Recent Intelligence\" panel. Live in Alpha (platform mode); /my-intelligence is 307 in Production standalone. Re-point to Ask V2 threads."
+    },
+    {
+      "id": "F10",
+      "legacyRoute": "POST /analysis/news (telemetry read, UI)",
+      "callerKind": "frontend admin analytics tab",
+      "file": "frontend/src/components/admin/screens/AnalyticsUsageTab.tsx",
+      "alpha": {
+        "sha": "5513275f",
+        "line": null,
+        "present": false,
+        "liveReachable": true,
+        "reachedFrom": [
+          "/admin/analytics"
+        ]
+      },
+      "production": {
+        "sha": "58f80fd4",
+        "line": null,
+        "present": false,
+        "liveReachable": true,
+        "reachedFrom": [
+          "/admin/analytics"
+        ]
+      },
+      "classification": "MIGRATE",
+      "justification": "Renders AnalysisRun aggregates (B6) labelled as analysis requests; legacy-only data source. (Indirect: consumes GET /admin/analytics/usage.)"
+    },
+    {
+      "id": "S1",
+      "legacyRoute": "POST /analysis/news",
+      "callerKind": "repo script (browser harness)",
+      "file": "scripts/ask-search-r1-browser.cjs",
+      "alpha": {
+        "sha": "5513275f",
+        "line": 44,
+        "present": true,
+        "liveReachable": false,
+        "reachedFrom": []
+      },
+      "production": {
+        "sha": "58f80fd4",
+        "line": 44,
+        "present": true,
+        "liveReachable": false,
+        "reachedFrom": []
+      },
+      "classification": "REMOVE",
+      "justification": "Stale Playwright harness that fulfils /analysis/news; the frontend no longer sends it. Retarget to /ask-v2 or delete."
+    },
+    {
+      "id": "S2",
+      "legacyRoute": "POST /analysis/news",
+      "callerKind": "repo script (browser harness)",
+      "file": "scripts/ask-dashboard-browser.spec.cjs",
+      "alpha": {
+        "sha": "5513275f",
+        "line": 58,
+        "present": true,
+        "liveReachable": false,
+        "reachedFrom": []
+      },
+      "production": {
+        "sha": "58f80fd4",
+        "line": 58,
+        "present": true,
+        "liveReachable": false,
+        "reachedFrom": []
+      },
+      "classification": "REMOVE",
+      "justification": "Same as S1 (lines 58 and 220)."
+    },
+    {
+      "id": "S3",
+      "legacyRoute": "POST /analysis/news",
+      "callerKind": "benchmark (manual, external caller)",
+      "file": "docs/benchmarks/m59-phase2-analysis-benchmark.js",
+      "alpha": {
+        "sha": "5513275f",
+        "line": 46,
+        "present": true,
+        "liveReachable": false,
+        "reachedFrom": []
+      },
+      "production": {
+        "sha": "58f80fd4",
+        "line": 46,
+        "present": true,
+        "liveReachable": false,
+        "reachedFrom": []
+      },
+      "classification": "REMOVE",
+      "justification": "Manual load benchmark that POSTs the public route directly. Would show up as caller=none/uaFamily=script in the new telemetry. Archive or retarget to /ask-v2."
+    }
+  ],
+  "countsByClassification": {
+    "COMPATIBILITY": 6,
+    "INTERNALIZE": 3,
+    "MIGRATE": 6,
+    "REMOVE": 7
+  },
+  "testOnlyReferences": {
+    "frontendSpecFiles": 70,
+    "frontendSpecFilesExercisingAnalyzeNews": "6-8 (heuristic: import + call)",
+    "backendSpecFiles": 6,
+    "note": "Spec references are not live callers. Most frontend specs are source guards asserting the legacy route is NOT called; the client-contract specs of analyzeNews go with F1."
+  },
+  "liveLegacyDependents": {
+    "alpha": {
+      "postAnalysisNewsFrontendCallers": 0,
+      "surfaces": [
+        "/history (GET/DELETE /history, stale legacy store)",
+        "/my-intelligence Recent Intelligence (GET /history)",
+        "/admin analytics usage (AnalysisRun legacy-only)"
+      ]
+    },
+    "production": {
+      "postAnalysisNewsFrontendCallers": 0,
+      "surfaces": [
+        "/history (direct URL only; legacy store)",
+        "/admin analytics usage (AnalysisRun legacy-only)"
+      ]
+    }
+  }
+}

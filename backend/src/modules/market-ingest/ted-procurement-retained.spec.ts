@@ -10,6 +10,7 @@ import {
   TED_MARKET_ALPHA_R1_QUERY,
   TED_MARKET_ALPHA_R1_REQUEST_PATH,
 } from './ted-procurement-retained';
+import { MarketReadRepository } from './market-read.repository';
 
 function payload(over: Record<string, unknown> = {}): Buffer {
   return Buffer.from(JSON.stringify({
@@ -145,5 +146,40 @@ describe('retained TED Market notice parser', () => {
     const badDigest = capture();
     badDigest.contentAddress = '0'.repeat(64);
     expect(() => inspectTedProcurementCapture(badDigest as any)).toThrow('CAPTURE_DIGEST_MISMATCH');
+  });
+});
+
+describe('EAST AFRICA P0 · B — the real repository filters BEFORE the limit', () => {
+  // Real parser, real repository; only Prisma is faked. 20 admitted POL notices (the governed
+  // capture ceiling), newest first.
+  const ids = Array.from({ length: 20 }, (_, i) => `${String(660200 + i)}-2026`);
+  const many = Buffer.from(JSON.stringify({
+    totalNoticeCount: ids.length,
+    timedOut: false,
+    notices: ids.map((id) => ({
+      ...JSON.parse(payload().toString()).notices[0],
+      'publication-number': id,
+      links: { html: { ENG: `https://ted.europa.eu/en/notice/-/detail/${id}` } },
+    })),
+  }));
+  const repo = (captures: unknown[]) =>
+    new MarketReadRepository({
+      snapshotRetrieval: { findMany: jest.fn(async () => captures) },
+    } as never);
+
+  it('a scope match outside the first N is still returned; held counts the whole capture', async () => {
+    const r = repo([capture({ bytes: many })]);
+    const target = ids[17];
+    const out = await r.procurementMatching((n) => n.portalReference.noticeId === target, 1);
+    expect(out.held).toBe(20);
+    expect(out.notices.map((n) => n.portalReference.noticeId)).toEqual([target]);
+    // The unfiltered dashboard read keeps its newest-first limit semantics.
+    expect((await r.procurement(5)).map((n) => n.portalReference.noticeId)).toEqual(ids.slice(0, 5));
+  });
+
+  it('no admitted capture is held = 0 (NO_DATA), distinct from no match (NO_MATCH)', async () => {
+    expect(await repo([]).procurementMatching(() => true)).toEqual({ held: 0, notices: [] });
+    const none = await repo([capture({ bytes: many })]).procurementMatching(() => false);
+    expect(none).toEqual({ held: 20, notices: [] });
   });
 });

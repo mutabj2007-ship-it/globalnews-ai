@@ -126,8 +126,9 @@ describe('M65 — the search route is language-coherent', () => {
   });
 
   it('the route reuses the SAME cookie/ACTIVE_LANGUAGES mechanism as the homepage — no second language source', () => {
-    expect(searchPageSource).toMatch(/LANGUAGE_COOKIE_NAME/);
-    expect(searchPageSource).toMatch(/isActiveLanguageCode/);
+    /* T2 — the one display-locale authority (effective-locale rule), not the EN/PL clamp. */
+    expect(searchPageSource).toMatch(/surfaceLocale\('search'\)/);
+    expect(searchPageSource).not.toMatch(/isActiveLanguageCode\(/);
   });
 
   it('the client follows a header language change instead of staying on its mount-time value', () => {

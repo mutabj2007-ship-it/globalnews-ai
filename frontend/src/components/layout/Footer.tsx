@@ -3,6 +3,7 @@ import type { LanguageCode } from '@globalnews-ai/shared';
 import { Logo } from '@/components/ui/Logo';
 import { footerLinkGroups } from '@/lib/homeContent';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { consentFooterLinkLabels } from '@/lib/consent/consentStrings';
 
 interface FooterProps {
   /** Milestone #48 — defaults to 'en', so every pre-M48 caller renders exactly as before. */
@@ -102,7 +103,16 @@ interface FooterProps {
  */
 export function Footer({ language = 'en' }: FooterProps): JSX.Element {
   const currentYear = new Date().getFullYear();
-  const t = getDictionary(language).footer;
+  const footer = getDictionary(language).footer;
+  /* T5 Part B — /cookies is labelled from the `consent` catalogue, not `dict.footer` (see the
+     /cookies entry in homeContent.ts); dictionary labels keep precedence. */
+  const t = {
+    ...footer,
+    linkLabels: {
+      ...consentFooterLinkLabels(language === 'pl' ? 'pl' : 'en'),
+      ...footer.linkLabels,
+    },
+  };
   const allLinks = footerLinkGroups.flatMap((group) => group.links);
 
   return (

@@ -20,7 +20,9 @@ import {
   MAX_GEOGRAPHY_DISPLAY_NAME_LENGTH,
   MAX_SELECTED_STORIES,
   MULTI_STORY_ACTIONS,
+  DISPLAY_LOCALES,
   resolveGovernedCountryCode,
+  type DisplayLocale,
   type LanguageCode,
   type MultiStoryAction,
 } from '@globalnews-ai/shared';
@@ -151,6 +153,16 @@ export const SUPPORTED_LANGUAGE_CODES: readonly LanguageCode[] = [
   'rw',
 ] as const;
 
+/**
+ * T2 · GLOBAL LANGUAGE FOUNDATION — the reader's DISPLAY locale, a different axis from
+ * `requestedLanguage`. `requestedLanguage` is the retrieval/answer `LanguageCode` (it cannot express
+ * `de` or `pt`, and must not be widened: retrieval has no German or Portuguese sources). The display
+ * locale is the language the reader SELECTED for the interface — any of the seven, `de` and `pt`
+ * included. It is validated against the shared contract's own list (never re-authored here) and is
+ * presentation context only: nothing in retrieval, caching or the prompt reads it.
+ */
+export const ANALYSIS_DISPLAY_LOCALES: readonly DisplayLocale[] = DISPLAY_LOCALES;
+
 export class AnalyzeNewsDto {
   @IsString()
   @IsNotEmpty()
@@ -176,6 +188,15 @@ export class AnalyzeNewsDto {
   @IsOptional()
   @IsIn(SUPPORTED_LANGUAGE_CODES)
   requestedLanguage?: LanguageCode;
+
+  /**
+   * T2 — optional, backward compatible: the reader's selected DISPLAY locale (any of the seven).
+   * Kept apart from `requestedLanguage` so `de`/`pt` are accepted without ever becoming a retrieval
+   * LanguageCode. Absent for every existing caller, whose requests are therefore unchanged.
+   */
+  @IsOptional()
+  @IsIn(ANALYSIS_DISPLAY_LOCALES as readonly string[])
+  displayLocale?: DisplayLocale;
 
   /**
    * Milestone #51 Phase B — optional, bounded story context (e.g. from

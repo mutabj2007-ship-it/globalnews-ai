@@ -654,12 +654,28 @@ describe('12 · the package is self-contained against the current lineage', () =
       lineage members, which is why they are listed separately from the five
       above: the five prove the package needed nothing new, the four record
       exactly what the accepted shared-nav round added on top.
+
+      ── T2 GLOBAL LANGUAGE FOUNDATION — languages.ts REPLACED BY THE LOCALE AUTHORITY ──
+
+      The route no longer clamps the cookie with `isActiveLanguageCode` (languages.ts);
+      it asks the one display-locale authority. Five modules replace one, all pure
+      (no fetch, no provider, no https literal) and named exactly:
+
+        lib/i18n/displayLocale.server.ts           the server read of the stored choice
+        lib/i18n/displayLocale.ts                  the validator over the seven locales
+        lib/i18n/surfaceLocale.ts                  the effective-locale rule
+        lib/i18n/surfaceRenderable.generated.ts    the measured renderable table
+        lib/i18n/fallbackNotice.ts                 the declared-fallback notice copy
     */
     expect(EXTERNAL).toEqual([
       'components/navigation/ReturnControl.tsx',
       'components/specialist/SpecialistHudLine.tsx',
       'lib/api/apiBase.ts',
-      'lib/i18n/languages.ts',
+      'lib/i18n/displayLocale.server.ts',
+      'lib/i18n/displayLocale.ts',
+      'lib/i18n/fallbackNotice.ts',
+      'lib/i18n/surfaceLocale.ts',
+      'lib/i18n/surfaceRenderable.generated.ts',
       'lib/navigation/returnDepth.ts',
       'lib/navigation/returnFallback.ts',
       'lib/navigation/returnStrings.ts',

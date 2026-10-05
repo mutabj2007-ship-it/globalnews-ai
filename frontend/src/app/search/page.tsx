@@ -1,23 +1,24 @@
 import { Suspense } from 'react';
-import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
+import type { LanguageCode } from '@globalnews-ai/shared';
 import { NavBar } from '@/components/navigation/NavBar';
 import { Footer } from '@/components/layout/Footer';
 import { SearchPageClient } from '@/components/search/SearchPageClient';
 import { LoadingStages } from '@/components/search/LoadingStages';
-import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
+import { surfaceLocale } from '@/lib/i18n/displayLocale.server';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { buildPageMetadata } from '@/lib/seo/metadata';
 
 /**
  * M65 — resolves the language exactly as the homepage and the map route
  * already do: the SAME cookie persistLanguageSelection() writes,
- * validated against the SAME ACTIVE_LANGUAGES set, always resolving to a
+ * T2: validated against the seven display locales and resolved by the
+ * effective-locale rule (surfaceLocale('search')), always resolving to a
  * concrete 'en'/'pl'. No second language mechanism.
  */
-function resolvePageLanguage(): 'en' | 'pl' {
-  const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
-  return languageCookie && isActiveLanguageCode(languageCookie) ? (languageCookie as 'en' | 'pl') : 'en';
+function resolvePageLanguage(): LanguageCode {
+  /* T2 — the display-locale authority + effective-locale rule (was the EN/PL clamp and a cast). */
+  return surfaceLocale('search').language;
 }
 
 /**

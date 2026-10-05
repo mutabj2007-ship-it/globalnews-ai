@@ -10,6 +10,8 @@ import {
 } from 'next/font/google';
 import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
 import { resolveAskLocale } from '@/lib/ask/askLocale';
+import { documentSurfaceLocale } from '@/lib/i18n/documentLocale.server';
+import { DisplayLocaleNotice } from '@/components/i18n/DisplayLocaleNotice';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { buildRootMetadataBase } from '@/lib/seo/metadata';
 import { ServiceWorkerRegistrar } from '@/components/pwa/ServiceWorkerRegistrar';
@@ -190,9 +192,8 @@ export const viewport: Viewport = {
  * not change. Only a Polish surface is added.
  */
 export async function generateMetadata(): Promise<Metadata> {
-  const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
-  const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
-  const t = getDictionary(language);
+  /* T2 — the metadata describes the surface's EFFECTIVE locale, like <html lang>. */
+  const t = getDictionary(documentSurfaceLocale().language);
   const gatesMeta = releaseGatesMeta(homeR1Gates());
 
   return {
@@ -231,9 +232,10 @@ export async function generateMetadata(): Promise<Metadata> {
  * M65 — <html lang> now reflects the user's real, persisted language
  * choice instead of a static "en".
  *
- * It reads the SAME cookie persistLanguageSelection() writes and
- * validates it against the SAME ACTIVE_LANGUAGES set page.tsx and
- * map/page.tsx already use — one language mechanism, not a second one.
+ * It reads the SAME cookie persistLanguageSelection() writes. T2: it is
+ * validated against the seven DISPLAY_LOCALES by the one display-locale
+ * authority and resolved per surface by the effective-locale rule (see
+ * lib/i18n/surfaceLocale.ts) — one language mechanism, not a second one.
  * Because this is the root layout, every route inherits the correct
  * document language, which also retires the previous client-side
  * workaround where the search page patched document.documentElement.lang
@@ -256,6 +258,23 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>): JSX.Element {
+  /*
+    T2 · GLOBAL LANGUAGE FOUNDATION — <html lang> AND <html dir> FROM THE EFFECTIVE LOCALE.
+
+    This was the EN/PL source-language gate (cookie ∈ ACTIVE_LANGUAGES, else 'en'), so a reader who
+    selected fr–ar was given lang="en" and NO dir at all, and Arabic was RTL only inside the Ask
+    frame. The surface this request renders is resolved from the path (middleware header) by the
+    same effective-locale rule the page itself uses, so the document describes exactly what is on
+    the page: the selected locale when every catalogue the surface uses is complete for it, or
+    English (ltr) with a declared notice in the selected language when it is not. Arabic, when it
+    is the effective locale, makes the WHOLE document dir="rtl".
+  */
+  const surface = documentSurfaceLocale();
+  /*
+    R4 + EAST AFRICA CONVERGENCE — the document is T2's (lang/dir/notice above); the Ask dock keeps
+    R4's qualified inputs: the platform two-catalogue code plus the reader's full DisplayLocale. Both
+    read the same cookie, so an effective-Arabic document and an Arabic dock agree (CTO RTL ruling).
+  */
   const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
   const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
 
@@ -271,7 +290,7 @@ export default function RootLayout({
   ].join(' ');
 
   return (
-    <html lang={language} className={fontVariables}>
+    <html lang={surface.document.lang} dir={surface.document.dir} className={fontVariables}>
       <head>
         {/*
           TRUST & CONVERSATIONAL EXPERIENCE R1 — Scheduled day/night theme. A self-contained,
@@ -290,6 +309,7 @@ export default function RootLayout({
           around it.
         */}
         <ServiceWorkerRegistrar />
+        <DisplayLocaleNotice locale={surface} />
         {children}
         {/*
           ASK AI — PHASE 1. Mounted here, as its own element, exactly the way

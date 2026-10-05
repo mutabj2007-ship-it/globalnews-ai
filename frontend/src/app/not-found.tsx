@@ -1,7 +1,6 @@
-import { cookies } from 'next/headers';
 import { FailureSurface } from '@/components/layout/FailureSurface';
 import { getFailureCopy } from '@/lib/i18n/failureCopy';
-import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
+import { surfaceLocale } from '@/lib/i18n/displayLocale.server';
 
 /**
  * MVP FAILURE FLOOR — NO ROUTE MATCHED.
@@ -13,10 +12,11 @@ import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages
  * thing the boundaries cannot have — `cookies()` — so the correct language is
  * chosen on the SERVER and the reader never sees an English frame first.
  *
- * The language resolution below is copied line-for-line from the one in
- * `app/layout.tsx` and `app/page.tsx`: same cookie name, same
- * `isActiveLanguageCode` guard, same `'en'` default. Three surfaces that
- * disagreed about the default would be a bug nobody would find quickly.
+ * T2 — the language comes from the one display-locale authority
+ * (`surfaceLocale('failure')`): the stored choice validated against the seven
+ * display locales and resolved by the effective-locale rule, the same rule
+ * `app/layout.tsx` uses for <html lang>. Surfaces that disagreed about the
+ * locale would be a bug nobody would find quickly.
  *
  * ── AND IT DOES NOT APOLOGIZE ─────────────────────────────────────────────
  *
@@ -26,8 +26,7 @@ import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages
  * told the product failed. The only action offered is the way home.
  */
 export default function NotFound(): JSX.Element {
-  const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
-  const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
+  const language = surfaceLocale('failure').language;
 
   const copy = getFailureCopy(language);
 

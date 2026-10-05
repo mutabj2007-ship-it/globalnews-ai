@@ -4,6 +4,7 @@ import { useAdminContext } from '../shell/AdminContext';
 import { AdminPanel } from '../primitives/AdminPanel';
 import { PlaceholderPanel } from '../primitives/PlaceholderPanel';
 import { ScreenHeading } from './SystemHealthScreen';
+import { dictionaryNamespaceLocales, endonymList } from '@/lib/i18n/catalogueLocales';
 
 /**
  * SETTINGS — the one screen with a genuinely true group.
@@ -38,7 +39,9 @@ export function SettingsScreen(): JSX.Element {
         <dl className="grid grid-cols-1 gap-2 adm-rail:grid-cols-2">
           <SettingRow
             label={screen.localisation.adminLanguages}
-            value={screen.localisation.adminLanguagesValue}
+            /* T2 — derived from the language registry (the locales the admin catalogue is
+               authored/qualified in), not the hard-coded 'English, Polski' that would go stale. */
+            value={endonymList(dictionaryNamespaceLocales('admin'))}
           />
           <SettingRow label={screen.localisation.dateFormat} value="DD.MM.YYYY" />
           <SettingRow label={screen.localisation.numberFormat} value="1 234,56" />

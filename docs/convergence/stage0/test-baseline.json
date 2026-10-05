@@ -1,0 +1,268 @@
+{
+ "commit": "5513275f",
+ "measuredAt": "2026-10-04",
+ "builds": {
+  "shared": "PASS",
+  "backend": "PASS",
+  "frontend": "PASS"
+ },
+ "suites": {
+  "backend": {
+   "suites": 439,
+   "failedSuites": 10,
+   "tests": 11868,
+   "passed": 11385,
+   "failed": 33,
+   "skipped": 450,
+   "failures": [
+    {
+     "suite": "src/modules/analysis/region/declared-regions.spec.ts",
+     "test": "TEST A \u00b7 the typed question resolves EAST AFRICA as request scope is NOT routed as one generic global provider search"
+    },
+    {
+     "suite": "src/modules/analysis/region/declared-regions.spec.ts",
+     "test": "TEST A \u00b7 the typed question resolves EAST AFRICA as request scope THE TYPED QUESTION OUTRANKS THE MAP CAMERA"
+    },
+    {
+     "suite": "src/modules/analysis/region/declared-regions.spec.ts",
+     "test": "TEST B \u00b7 a rate limit is not an empty world all five outcomes exist and the fifth is stamped by the caller"
+    },
+    {
+     "suite": "src/modules/analysis/region/declared-regions.spec.ts",
+     "test": "TEST B \u00b7 a rate limit is not an empty world RETAINED reporting is fetched for the REGION\u2019S OWN MEMBERS, never as unrelated cache"
+    },
+    {
+     "suite": "src/modules/analysis/region/declared-regions.spec.ts",
+     "test": "TEST B \u00b7 a rate limit is not an empty world retained reporting is never served without being declared"
+    },
+    {
+     "suite": "src/modules/analysis/region/declared-regions.spec.ts",
+     "test": "TEST B \u00b7 a rate limit is not an empty world the retained rung is reached only when live did NOT succeed"
+    },
+    {
+     "suite": "src/modules/analysis/region/declared-regions.spec.ts",
+     "test": "the declared region list is governed, not inferred membership comes from this module and from nothing else at request time"
+    },
+    {
+     "suite": "src/modules/analysis/service/inFlightJoinerDeadline.spec.ts",
+     "test": "REV B FINDING 1 \u2014 the in-flight joiner is bounded a joiner REJECTS on the deadline instead of waiting for an operation that never finishes"
+    },
+    {
+     "suite": "src/modules/analysis/service/inFlightJoinerDeadline.spec.ts",
+     "test": "REV B FINDING 1 \u2014 the in-flight joiner is bounded the joiner finishes inside its own budget, measured on the wall clock"
+    },
+    {
+     "suite": "src/modules/analysis/service/inFlightJoinerDeadline.spec.ts",
+     "test": "REV B FINDING 1 \u2014 the in-flight joiner is bounded bounding the joiner does NOT duplicate provider work \u2014 one shared operation, one call"
+    },
+    {
+     "suite": "src/modules/analysis/service/inFlightJoinerDeadline.spec.ts",
+     "test": "REV B FINDING 1 \u2014 the in-flight joiner is bounded a deadline is a 504, so it is reported as a timeout and not as a server fault"
+    },
+    {
+     "suite": "src/modules/analysis/service/natural-query-routing.spec.ts",
+     "test": "THE REPORTED FAILURES \u2014 measured end to end generic provider failure may consult local retained evidence but never retries a live provider"
+    },
+    {
+     "suite": "src/modules/analysis/service/natural-query-routing.spec.ts",
+     "test": "THE REPORTED FAILURES \u2014 measured end to end NQ-003 an implicit comparison asks for clarification and spends NO provider call"
+    },
+    {
+     "suite": "src/modules/official-data/canonical-admission.spec.ts",
+     "test": "R-B \u00b7 real Eurostat D-2 captures pass the governed pipeline E1-une_rt_m.body is ADMITTED, parses, and binds the governed Eurostat parser"
+    },
+    {
+     "suite": "src/modules/official-data/canonical-admission.spec.ts",
+     "test": "R-B \u00b7 real Eurostat D-2 captures pass the governed pipeline E2-prc_hicp_manr.body is ADMITTED, parses, and binds the governed Eurostat parser"
+    },
+    {
+     "suite": "src/modules/official-data/canonical-admission.spec.ts",
+     "test": "R-B \u00b7 real Eurostat D-2 captures pass the governed pipeline the captured 404 negative control is REFUSED and classified PERMANENT"
+    },
+    {
+     "suite": "src/modules/official-data/canonical-admission.spec.ts",
+     "test": "R-B \u00b7 real Eurostat D-2 captures pass the governed pipeline the same Economy bytes reach the same verdict through the Market binding"
+    },
+    {
+     "suite": "src/modules/news/news.module.spec.ts",
+     "test": "NewsModule \u2014 real NestJS DI compilation and provider registration ALL_NEWS_PROVIDERS always contains EVERY registered provider, so an inactive provider stays visible to GET /news/providers/health"
+    },
+    {
+     "suite": "src/modules/news/news.service.spec.ts",
+     "test": "NewsService uses cached database articles with provider-error provenance when a real provider fails"
+    },
+    {
+     "suite": "src/modules/news/news.service.spec.ts",
+     "test": "NewsService uses cached database articles with no-live-results provenance when a real provider returns no results"
+    },
+    {
+     "suite": "src/modules/news/news.service.spec.ts",
+     "test": "NewsService Milestone #48 \u2014 homepage news-content language containment successful live results for a requested language are used directly, with no fallback attempted at all"
+    },
+    {
+     "suite": "src/modules/news/news.service.spec.ts",
+     "test": "NewsService uses cached articles for top headlines with provider-error provenance when live provider fails"
+    },
+    {
+     "suite": "src/modules/news/news.service.spec.ts",
+     "test": "NewsService uses category-scoped cached articles with provider-error provenance when category provider fails"
+    },
+    {
+     "suite": "src/modules/news/news.service.spec.ts",
+     "test": "NewsService generic relevance gate (Milestone #36) does not persist a relevance-rejected article as accepted generic evidence"
+    },
+    {
+     "suite": "src/modules/news/news.service.spec.ts",
+     "test": "NewsService relational relevance mode (Milestone #37) does not persist an x-only or y-only article as accepted relational evidence"
+    },
+    {
+     "suite": "src/modules/news/news.service.spec.ts",
+     "test": "NewsService relational relevance mode (Milestone #37) M66.14B \u2014 country enrichment is ADDITIVE: it adds two fields and changes nothing the M37 gate depends on"
+    },
+    {
+     "suite": "src/modules/news/news.service.post-relevance-fallback.spec.ts",
+     "test": "S-G \u2014 the STORED database fallback stays reachable and truthful is used when live retrieval yields nothing relevant, and is labelled cached"
+    },
+    {
+     "suite": "src/modules/news/news.service.live-first-seen.spec.ts",
+     "test": "R0.5 \u2014 the merge disturbs nothing else preserves every provider-supplied field on an annotated article"
+    },
+    {
+     "suite": "src/modules/news/providers/gnews.provider.spec.ts",
+     "test": "GNewsProvider provider health reports \"degraded\" (not thrown) when GNews is reachable but errors"
+    },
+    {
+     "suite": "src/modules/news/providers/gnews.provider.spec.ts",
+     "test": "GNewsProvider provider health a quota failure marks the provider throttled without inventing a health state"
+    },
+    {
+     "suite": "src/modules/news/providers/gnews.provider.spec.ts",
+     "test": "GNewsProvider provider health a rate-limit failure marks the provider throttled too"
+    },
+    {
+     "suite": "src/qualification/h-handoff.qualification.spec.ts",
+     "test": "H \u2014 the read cannot compute H-G1 / H-T01: GET operations/:id calls only getOperation, and getOperation only reads"
+    },
+    {
+     "suite": "src/qualification/h-handoff.qualification.spec.ts",
+     "test": "H \u2014 the read cannot compute H-T05: another owner\u2019s id and a never-existing id take the SAME not-found"
+    }
+   ]
+  },
+  "frontend": {
+   "suites": 380,
+   "failedSuites": 13,
+   "tests": 8293,
+   "passed": 8259,
+   "failed": 21,
+   "skipped": 13,
+   "failures": [
+    {
+     "suite": "src/components/map/c911RequestEconomy.spec.ts",
+     "test": "C911-R6 -- provider request economy HOME -- one provider call, and every section reads it the homepage situation map never fetches on mount -- interaction only"
+    },
+    {
+     "suite": "src/components/map/m51PhaseB.spec.ts",
+     "test": "C. analysisApi sends optional story context correctly the POST body conditionally includes storyContext only when present \u2014 never sends an undefined/null field for ordinary requests"
+    },
+    {
+     "suite": "src/components/layout/claudeDesignFoundation.spec.ts",
+     "test": "M66.1 \u2014 the homepage receives the canvas without being reconstructed the homepage sections render inside PageCanvas"
+    },
+    {
+     "suite": "src/components/layout/claudeDesignFoundation.spec.ts",
+     "test": "M66.1 \u2014 the homepage receives the canvas without being reconstructed <main> keeps its exact bottom spacing, so the fixed bottom nav still cannot cover content"
+    },
+    {
+     "suite": "src/components/layout/claudeDesignFoundation.spec.ts",
+     "test": "M66.1 \u2014 the homepage receives the canvas without being reconstructed the section order is unchanged, and the situation map is back in its old place"
+    },
+    {
+     "suite": "src/components/layout/claudeDesignFoundation.spec.ts",
+     "test": "M66.1 \u2014 the homepage receives the canvas without being reconstructed CTO decision D5: no section width was rewritten \u2014 the canvas is the OUTER boundary only"
+    },
+    {
+     "suite": "src/components/layout/claudeDesignFoundation.spec.ts",
+     "test": "M66.1 \u2014 the homepage receives the canvas without being reconstructed the functional donor logic page.tsx owns is unchanged"
+    },
+    {
+     "suite": "src/lib/market/visualAuthorityCorrection.spec.ts",
+     "test": "preserves accepted bytes: frontend/src/components/market/MarketScreen.tsx"
+    },
+    {
+     "suite": "src/lib/market/visualAuthorityCorrection.spec.ts",
+     "test": "preserves accepted bytes: frontend/src/components/market/MarketCompactScreen.tsx"
+    },
+    {
+     "suite": "src/lib/market/visualAuthorityCorrection.spec.ts",
+     "test": "preserves accepted bytes: frontend/src/lib/market/mktContract.spec.ts"
+    },
+    {
+     "suite": "src/lib/map/mapShellRouteWiring.spec.ts",
+     "test": "THE BUILD ARG \u2014 deployment-controlled, never source-pinned the ARG is declared in the stage that runs the build"
+    },
+    {
+     "suite": "src/lib/admin/adminProvenance.spec.ts",
+     "test": "F1.b \u2014 provenance registry the A-tagged set is exactly the capabilities that genuinely exist today"
+    },
+    {
+     "suite": "src/lib/admin/adminProvenance.spec.ts",
+     "test": "F1.b \u2014 provenance registry the two fields the design over-tagged A that really are aggregations are B"
+    },
+    {
+     "suite": "src/components/admin/adminOperationalSurface.spec.ts",
+     "test": "A-1 \u2014 the news provider table separates failure from absence but that text SURVIVES where it is correct \u2014 the AI providers surface"
+    },
+    {
+     "suite": "src/components/admin/adminSupportSurface.spec.ts",
+     "test": "S3 \u2014 the admin support screen renders real data ADMIN_API stays the READ-ONLY surface \u2014 the support writes are declared separately"
+    },
+    {
+     "suite": "src/lib/evidence/visualAuthority.spec.ts",
+     "test": "visual correction preserves accepted authority frontend/src/components/politics/PoliticsScreen.tsx is identical to the accepted base"
+    },
+    {
+     "suite": "src/lib/evidence/visualAuthority.spec.ts",
+     "test": "visual correction preserves accepted authority frontend/src/components/politics/PoliticsCompactScreen.tsx is identical to the accepted base"
+    },
+    {
+     "suite": "src/lib/evidence/visualAuthority.spec.ts",
+     "test": "visual correction preserves accepted authority frontend/src/components/politics/PolParts.tsx is identical to the accepted base"
+    },
+    {
+     "suite": "src/lib/evidence/visualAuthority.spec.ts",
+     "test": "visual correction preserves accepted authority frontend/src/app/politics-visual-preview/page.tsx is identical to the accepted base"
+    },
+    {
+     "suite": "src/lib/evidence/visualAuthority.spec.ts",
+     "test": "visual correction preserves accepted authority frontend/src/app/politics-visual-preview/compact/page.tsx is identical to the accepted base"
+    },
+    {
+     "suite": "src/components/today/todayWorkspace.spec.ts",
+     "test": "the section frame is bounded, and the homepage keeps its own scroll leaves the five accepted homepage sections in place"
+    },
+    {
+     "suite": "src/components/ask/askDockGeography.spec.ts",
+     "test": "<suite failed to run>"
+    },
+    {
+     "suite": "src/lib/market/marketSyntheticHarness.spec.ts",
+     "test": "<suite failed to run>"
+    },
+    {
+     "suite": "src/lib/market/mktRetained.spec.ts",
+     "test": "<suite failed to run>"
+    }
+   ]
+  },
+  "shared": {
+   "suites": 14,
+   "failedSuites": 0,
+   "tests": 528,
+   "passed": 528,
+   "failed": 0,
+   "skipped": 0,
+   "failures": []
+  }
+ }
+}

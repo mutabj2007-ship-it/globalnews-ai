@@ -75,8 +75,16 @@ const PINNED_DOMAIN: Readonly<Record<PinnableModule, string>> = {
  * Pinnable only while that read is DISPLAYABLE.
  */
 export const ECONOMY_PINNED_KEY = 'rw-nisr-cpi';
-/** Bound on the retained procurement notices scanned for one pinned notice. */
-const PINNED_PROCUREMENT_SCAN = 100;
+/** Bound on the in-scope procurement notices one country read contributes. */
+const PROCUREMENT_LIMIT = 20;
+/** One pinned notice by its portal key: the key filter runs before this limit, so it is 1. */
+const pinnedNotice = async (market: MarketReadRepository, key: string) =>
+  (
+    await market.procurementMatching(
+      (n) => procurementPortalReferenceKey(n.portalReference) === key,
+      1,
+    )
+  ).notices[0];
 
 /** One retained procurement notice as a governed observation (shared by both reads). */
 function procurementObservation(n: MarketRetainedProcurementNotice): AskContributionObservation {
@@ -230,9 +238,7 @@ export class AskSpecialistReadCoordinator {
         return { module, observationKey: key, countryIso3: 'RWA', district: null };
       }
       case 'MARKET': {
-        const notice = (await this.market.procurement(PINNED_PROCUREMENT_SCAN)).find(
-          (n) => procurementPortalReferenceKey(n.portalReference) === key,
-        );
+        const notice = await pinnedNotice(this.market, key);
         if (notice === undefined) return null;
         return {
           module,
@@ -296,9 +302,7 @@ export class AskSpecialistReadCoordinator {
       case 'ECONOMY':
         return this.readCpi(s);
       case 'MARKET': {
-        const notice = (await this.market.procurement(PINNED_PROCUREMENT_SCAN)).find(
-          (n) => procurementPortalReferenceKey(n.portalReference) === record.observationKey,
-        );
+        const notice = await pinnedNotice(this.market, record.observationKey);
         if (notice === undefined) {
           return base(s, { status: 'NO_MATCH', temporalBasis: 'RETAINED_PUBLICATION' });
         }
@@ -366,15 +370,18 @@ export class AskSpecialistReadCoordinator {
   }
 
   private async readProcurement(s: AskContributorSelection): Promise<AskContribution> {
-    const notices = await this.market.procurement(20);
-    if (notices.length === 0) {
+    /* EAST AFRICA P0 · B — scope (buyer country) is filtered BEFORE the limit, in the read. */
+    const { held, notices: inScope } = await this.market.procurementMatching(
+      (n) => n.buyerCountryIso3 === s.scope.countryIso3,
+      PROCUREMENT_LIMIT,
+    );
+    if (held === 0) {
       return base(s, {
         status: 'NO_DATA',
         temporalBasis: 'RETAINED_PUBLICATION',
         disclosures: ['NO_RETAINED_CAPTURE'],
       });
     }
-    const inScope = notices.filter((n) => n.buyerCountryIso3 === s.scope.countryIso3);
     if (inScope.length === 0) {
       return base(s, { status: 'NO_MATCH', temporalBasis: 'RETAINED_PUBLICATION' });
     }

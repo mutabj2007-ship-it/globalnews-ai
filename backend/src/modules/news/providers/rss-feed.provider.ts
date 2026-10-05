@@ -77,6 +77,7 @@ export class RssFeedProvider implements NewsProvider {
   private lastSuccessAt: string | undefined;
   private lastRecordsRetrieved: number | undefined;
   private droppedItemCount = 0;
+  private warnedRefusedIds = false;
   private warnedUnknownIds = false;
 
   constructor(private readonly config: ConfigService) {}
@@ -90,7 +91,7 @@ export class RssFeedProvider implements NewsProvider {
    */
   private selection(): ActiveFeedSelection {
     if (!isRssFeedsEnabled(this.config.get<string>('RSS_FEEDS_ENABLED'))) {
-      return { sources: [], unknownIds: [], overridden: false };
+      return { sources: [], unknownIds: [], overridden: false, refused: [], rightsUnresolved: [] };
     }
 
     return resolveActiveFeedSources(FEED_SOURCES, this.config.get<string>('RSS_FEED_SOURCES'));
@@ -107,6 +108,17 @@ export class RssFeedProvider implements NewsProvider {
         `RSS_FEED_SOURCES names ${selection.unknownIds.length} id(s) that are not in the feed ` +
           `registry and were ignored: ${selection.unknownIds.join(', ')}. ` +
           'A mistyped id activates nothing; it does not fall back to another source.',
+      );
+    }
+
+    if (selection.refused.length > 0 && !this.warnedRefusedIds) {
+      this.warnedRefusedIds = true;
+      logWithRequestId(
+        this.logger,
+        'warn',
+        `RSS_FEED_SOURCES names ${selection.refused.length} feed(s) refused by the rights gate: ` +
+          selection.refused.map((r) => `${r.sourceId} (${r.reason})`).join(', ') +
+          '. A feed with RESTRICTED or PROHIBITED recorded rights is never activated by configuration.',
       );
     }
 
@@ -536,7 +548,9 @@ export class RssFeedProvider implements NewsProvider {
     const message = !enabled
       ? 'RSS_FEEDS_ENABLED is not set to "true". This provider is switched off.'
       : activeCount === 0
-        ? selection.overridden
+        ? selection.refused.length > 0
+          ? 'Every feed named in RSS_FEED_SOURCES was refused by the rights gate. No publisher is being fetched.'
+          : selection.overridden
           ? 'RSS_FEED_SOURCES named no id that matches the feed registry. No publisher is being fetched.'
           : 'The lane is enabled but no feed source is activated. Set RSS_FEED_SOURCES to activate specific publishers.'
         : this.activeMessage(activeCount);
@@ -547,10 +561,32 @@ export class RssFeedProvider implements NewsProvider {
       enabled,
       status: this.observedStatus(enabled, activeCount),
       message:
-        selection.unknownIds.length > 0
-          ? `${message} Ignored unrecognised id(s): ${selection.unknownIds.join(', ')}.`
-          : message,
+        message +
+        (selection.unknownIds.length > 0
+          ? ` Ignored unrecognised id(s): ${selection.unknownIds.join(', ')}.`
+          : '') +
+        (selection.refused.length > 0
+          ? ` Refused by rights gate: ${selection.refused.map((r) => `${r.sourceId} (${r.reason})`).join(', ')}.`
+          : '') +
+        (selection.rightsUnresolved.length > 0
+          ? ` Active without cleared rights: ${selection.rightsUnresolved.map((r) => `${r.sourceId} (${r.rightsState})`).join(', ')}.`
+          : ''),
       checkedAt: new Date().toISOString(),
+      ...(selection.refused.length > 0 || selection.rightsUnresolved.length > 0
+        ? {
+            sourceRights: {
+              refused: selection.refused.map(({ sourceId, reason, rightsState }) => ({
+                sourceId,
+                reason,
+                rightsState,
+              })),
+              rightsUnresolved: selection.rightsUnresolved.map(({ sourceId, rightsState }) => ({
+                sourceId,
+                rightsState,
+              })),
+            },
+          }
+        : {}),
     };
 
     /*

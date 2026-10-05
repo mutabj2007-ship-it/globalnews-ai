@@ -20,10 +20,11 @@ const liveStatusSource = readFileSync(join(__dirname, '../../lib/liveStatus.ts')
  */
 describe('M65 — language propagates coherently through the shell', () => {
   it('<html lang> is driven by the real persisted language, not a static literal', () => {
-    expect(layoutSource).toMatch(/<html lang=\{language\}/);
+    /* T2 — lang AND dir come from the EFFECTIVE surface locale (display-locale authority), not the EN/PL gate. */
+    expect(layoutSource).toMatch(/<html lang=\{surface\.document\.lang\} dir=\{surface\.document\.dir\}/);
     expect(layoutSource).not.toMatch(/<html lang="en"/);
-    expect(layoutSource).toMatch(/LANGUAGE_COOKIE_NAME/);
-    expect(layoutSource).toMatch(/isActiveLanguageCode/);
+    expect(layoutSource).toMatch(/documentSurfaceLocale\(\)/);
+    expect(layoutSource).not.toMatch(/isActiveLanguageCode\(/);
   });
 
   it('the homepage passes ONE resolved language to every shell surface it renders', () => {
@@ -72,9 +73,10 @@ describe('M65 — language propagates coherently through the shell', () => {
   });
 
   it('Hero still performs the first-visit browser-language sync, inside an effect, and still refreshes when it diverges', () => {
-    expect(heroSource).toMatch(/readLanguageCookie\(\) \?\? 'en'/);
-    expect(heroSource).toMatch(/resolveInitialLanguage\(\)/);
-    expect(heroSource).toMatch(/persistLanguageSelection\(resolved\)/);
+    /* T2 — the first-visit sync runs through the one authority: browser detection only when nothing
+       is stored, and an explicit stored choice is never overwritten. */
+    expect(heroSource).toMatch(/reconcileStoredDisplayLocale\(\)/);
+    expect(heroSource).not.toMatch(/persistLanguageSelection\(resolved\)/);
     expect(heroSource).toMatch(/router\.refresh\(\)/);
   });
 

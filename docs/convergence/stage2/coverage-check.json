@@ -1,0 +1,2191 @@
+{
+  "schemaVersion": 1,
+  "contract": "CTO R2 T1 COVERAGE TRUTHFULNESS",
+  "generator": "backend/src/modules/global-reach/coverage-check.ts",
+  "accounting": "shared/src/global-reach.ts accountSourceCoverage (one canonical system)",
+  "rule": "COVERED_LOCAL requires a LOCAL source that is ACTIVE, rights CLEARED and measured; UNVERIFIED = active and rights-cleared but unmeasured; COVERAGE_GAP otherwise. International/aggregated evidence never counts as local coverage.",
+  "activationProfile": {
+    "id": "DECLARED_GNEWS_PRIMARY_SHIPPED_DEFAULTS",
+    "assumption": "GNEWS_API_KEY holds a usable (non-placeholder) key; RSS_FEEDS_ENABLED and GDELT_DOC_ENABLED at shipped defaults (off). No deployment secret is read.",
+    "activeFeedIds": [],
+    "activeInternationalIds": [
+      "gnews"
+    ]
+  },
+  "gnews": {
+    "sourceId": "gnews",
+    "basis": "INTERNATIONAL_AGGREGATOR",
+    "rightsState": "RIGHTS_UNDER_E1_REVIEW",
+    "rightsNote": "No rights record in the repository. Whether the active GNews subscription permits production/commercial use is an open review item (PUBLIC-BETA GATE, docs/beta/HOME-R2-DEDUP-PROVIDER-DISCLOSURE-R1.md §4). Not accepted; not disabled.",
+    "activeInProfile": true,
+    "countsAsLocalCoverage": false
+  },
+  "internationalSources": [
+    {
+      "sourceId": "gnews",
+      "displayName": "GNews",
+      "basis": "INTERNATIONAL_AGGREGATOR",
+      "rightsState": "RIGHTS_UNDER_E1_REVIEW",
+      "activeInProfile": true
+    },
+    {
+      "sourceId": "gdelt-doc",
+      "displayName": "GDELT DOC 2.0",
+      "basis": "INTERNATIONAL_AGGREGATOR",
+      "rightsState": "UNRESOLVED",
+      "activeInProfile": false
+    }
+  ],
+  "feedRightsGate": {
+    "refused": [
+      {
+        "sourceId": "feed:standardmedia-ke",
+        "reason": "RIGHTS_RESTRICTED",
+        "rightsState": "RESTRICTED",
+        "evidence": "backend/source-packs/east-africa-r1/KEN.json ea-r1:ken:standard rights.status RESTRICTED (terms §§11-12 restrict automated collection and republication); G R10 ACTIVATION PROHIBITED."
+      },
+      {
+        "sourceId": "feed:wp-pl",
+        "reason": "RIGHTS_PROHIBITED",
+        "rightsState": "PROHIBITED",
+        "evidence": "G R10 ruling: ACTIVATION PROHIBITED on current published terms (recorded in b5ProviderDormancy.spec.ts); canonical eu27:pl:publisher-1 rightsStatus UNREVIEWED. The stricter recorded state is kept."
+      }
+    ],
+    "activatableWithUnresolvedRights": [
+      {
+        "sourceId": "feed:ktpress-rw",
+        "rightsState": "UNRESOLVED"
+      },
+      {
+        "sourceId": "feed:taarifa-rw",
+        "rightsState": "LIMITED_SCOPE_REVIEW"
+      },
+      {
+        "sourceId": "feed:cbk-ke",
+        "rightsState": "UNRESOLVED"
+      },
+      {
+        "sourceId": "feed:gus-pl",
+        "rightsState": "UNREVIEWED"
+      }
+    ]
+  },
+  "totals": {
+    "governedCountries": 54,
+    "coverageStates": {
+      "COVERED_LOCAL": 0,
+      "UNVERIFIED": 0,
+      "COVERAGE_GAP": 54
+    }
+  },
+  "regions": [
+    {
+      "id": "region:east-africa",
+      "label": "East Africa",
+      "memberCount": 11,
+      "coverageStates": {
+        "COVERED_LOCAL": 0,
+        "UNVERIFIED": 0,
+        "COVERAGE_GAP": 11
+      },
+      "countries": [
+        {
+          "iso2": "BI",
+          "iso3": "BDI",
+          "countryName": "Burundi",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 4,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 4 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "CD",
+          "iso3": "COD",
+          "countryName": "DR Congo",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 4,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 4 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "DJ",
+          "iso3": "DJI",
+          "countryName": "Djibouti",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 2,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 2 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 3 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "ER",
+          "iso3": "ERI",
+          "countryName": "Eritrea",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 1,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 1,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 1 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 1 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "ET",
+          "iso3": "ETH",
+          "countryName": "Ethiopia",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 4,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 4 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "KE",
+          "iso3": "KEN",
+          "countryName": "Kenya",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 5,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 1
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 6,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 5 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 6 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "RW",
+          "iso3": "RWA",
+          "countryName": "Rwanda",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 6,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 5,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 6 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 5 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "SO",
+          "iso3": "SOM",
+          "countryName": "Somalia",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 4,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 4 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "SS",
+          "iso3": "SSD",
+          "countryName": "South Sudan",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 2,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 2 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 3 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "TZ",
+          "iso3": "TZA",
+          "countryName": "Tanzania",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 4,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 4 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "UG",
+          "iso3": "UGA",
+          "countryName": "Uganda",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 4,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 4 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        }
+      ]
+    },
+    {
+      "id": "region:european-union",
+      "label": "EU-27",
+      "memberCount": 27,
+      "coverageStates": {
+        "COVERED_LOCAL": 0,
+        "UNVERIFIED": 0,
+        "COVERAGE_GAP": 27
+      },
+      "countries": [
+        {
+          "iso2": "AT",
+          "iso3": "AUT",
+          "countryName": "Austria",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 3 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "BE",
+          "iso3": "BEL",
+          "countryName": "Belgium",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 3 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "BG",
+          "iso3": "BGR",
+          "countryName": "Bulgaria",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 3 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "CY",
+          "iso3": "CYP",
+          "countryName": "Cyprus",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 3 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "CZ",
+          "iso3": "CZE",
+          "countryName": "Czechia",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 3 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "DE",
+          "iso3": "DEU",
+          "countryName": "Germany",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 1
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 3 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "DK",
+          "iso3": "DNK",
+          "countryName": "Denmark",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 3 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "ES",
+          "iso3": "ESP",
+          "countryName": "Spain",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 3 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "EE",
+          "iso3": "EST",
+          "countryName": "Estonia",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 3 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "FI",
+          "iso3": "FIN",
+          "countryName": "Finland",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 3 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "FR",
+          "iso3": "FRA",
+          "countryName": "France",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 1
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 3 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "GR",
+          "iso3": "GRC",
+          "countryName": "Greece",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 3 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "HR",
+          "iso3": "HRV",
+          "countryName": "Croatia",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 3 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "HU",
+          "iso3": "HUN",
+          "countryName": "Hungary",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 3 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "IE",
+          "iso3": "IRL",
+          "countryName": "Ireland",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 3 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "IT",
+          "iso3": "ITA",
+          "countryName": "Italy",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 3 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "LT",
+          "iso3": "LTU",
+          "countryName": "Lithuania",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 3 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "LU",
+          "iso3": "LUX",
+          "countryName": "Luxembourg",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 3 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "LV",
+          "iso3": "LVA",
+          "countryName": "Latvia",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 3 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "MT",
+          "iso3": "MLT",
+          "countryName": "Malta",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 3 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "NL",
+          "iso3": "NLD",
+          "countryName": "Netherlands",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 3 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "PL",
+          "iso3": "POL",
+          "countryName": "Poland",
+          "deepReference": true,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 2
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 3 local source(s) listed, none active",
+          "stateIndependentOfActivation": true,
+          "localSources": [
+            {
+              "sourceId": "eu27:pl:public-news",
+              "origin": "GLOBAL_REACH_PACK",
+              "domain": "NEWS_REPORTING",
+              "canonicalHost": "polskieradio.pl",
+              "active": false,
+              "rightsState": "RESTRICTED",
+              "activationBlockedByRights": true
+            },
+            {
+              "sourceId": "eu27:pl:publisher-1",
+              "origin": "GLOBAL_REACH_PACK",
+              "domain": "NEWS_REPORTING",
+              "canonicalHost": "wiadomosci.wp.pl",
+              "active": false,
+              "rightsState": "UNREVIEWED",
+              "activationBlockedByRights": false
+            },
+            {
+              "sourceId": "eu27:pl:publisher-2",
+              "origin": "GLOBAL_REACH_PACK",
+              "domain": "NEWS_REPORTING",
+              "canonicalHost": "oko.press",
+              "active": false,
+              "rightsState": "UNREVIEWED",
+              "activationBlockedByRights": false
+            },
+            {
+              "sourceId": "feed:wp-pl",
+              "origin": "FEED_REGISTRY",
+              "domain": "NEWS_REPORTING",
+              "canonicalHost": "wp.pl",
+              "active": false,
+              "rightsState": "PROHIBITED",
+              "activationBlockedByRights": true
+            },
+            {
+              "sourceId": "eu27:pl:central-bank",
+              "origin": "GLOBAL_REACH_PACK",
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "canonicalHost": "nbp.pl",
+              "active": false,
+              "rightsState": "UNREVIEWED",
+              "activationBlockedByRights": false
+            },
+            {
+              "sourceId": "eu27:pl:parliament",
+              "origin": "GLOBAL_REACH_PACK",
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "canonicalHost": "sejm.gov.pl",
+              "active": false,
+              "rightsState": "UNREVIEWED",
+              "activationBlockedByRights": false
+            },
+            {
+              "sourceId": "eu27:pl:statistics",
+              "origin": "GLOBAL_REACH_PACK",
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "canonicalHost": "stat.gov.pl",
+              "active": false,
+              "rightsState": "UNREVIEWED",
+              "activationBlockedByRights": false
+            },
+            {
+              "sourceId": "feed:gus-pl",
+              "origin": "FEED_REGISTRY",
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "canonicalHost": "stat.gov.pl",
+              "active": false,
+              "rightsState": "UNREVIEWED",
+              "activationBlockedByRights": false
+            }
+          ]
+        },
+        {
+          "iso2": "PT",
+          "iso3": "PRT",
+          "countryName": "Portugal",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 3 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "RO",
+          "iso3": "ROU",
+          "countryName": "Romania",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 3 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "SK",
+          "iso3": "SVK",
+          "countryName": "Slovakia",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 3 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "SI",
+          "iso3": "SVN",
+          "countryName": "Slovenia",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 3 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "SE",
+          "iso3": "SWE",
+          "countryName": "Sweden",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 3,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 3 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 3 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        }
+      ]
+    },
+    {
+      "id": "region:middle-east",
+      "label": "Middle East",
+      "memberCount": 16,
+      "coverageStates": {
+        "COVERED_LOCAL": 0,
+        "UNVERIFIED": 0,
+        "COVERAGE_GAP": 16
+      },
+      "countries": [
+        {
+          "iso2": "AE",
+          "iso3": "ARE",
+          "countryName": "United Arab Emirates",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 2,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 1,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 2 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 1 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "BH",
+          "iso3": "BHR",
+          "countryName": "Bahrain",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 2,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 1,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 2 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 1 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "EG",
+          "iso3": "EGY",
+          "countryName": "Egypt",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 2,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 1,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 2 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 1 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "IR",
+          "iso3": "IRN",
+          "countryName": "Iran",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 2,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 1,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 2 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 1 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "IQ",
+          "iso3": "IRQ",
+          "countryName": "Iraq",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 2,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 1,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 2 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 1 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "IL",
+          "iso3": "ISR",
+          "countryName": "Israel",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 2,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 1,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 2 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 1 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "JO",
+          "iso3": "JOR",
+          "countryName": "Jordan",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 2,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 1,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 2 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 1 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "KW",
+          "iso3": "KWT",
+          "countryName": "Kuwait",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 2,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 1,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 2 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 1 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "LB",
+          "iso3": "LBN",
+          "countryName": "Lebanon",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 2,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 1,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 2 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 1 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "OM",
+          "iso3": "OMN",
+          "countryName": "Oman",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 2,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 1,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 2 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 1 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "PS",
+          "iso3": "PSE",
+          "countryName": "Palestine",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 2,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 1,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 2 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 1 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "QA",
+          "iso3": "QAT",
+          "countryName": "Qatar",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 2,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 1,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 2 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 1 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "SA",
+          "iso3": "SAU",
+          "countryName": "Saudi Arabia",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 2,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 1,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 2 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 1 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "SY",
+          "iso3": "SYR",
+          "countryName": "Syria",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 2,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 1,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 2 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 1 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "TR",
+          "iso3": "TUR",
+          "countryName": "Turkey",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 2,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 1,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 2 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 1 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        },
+        {
+          "iso2": "YE",
+          "iso3": "YEM",
+          "countryName": "Yemen",
+          "deepReference": false,
+          "coverageState": "COVERAGE_GAP",
+          "baselineState": "UNVERIFIED",
+          "domains": [
+            {
+              "domain": "NEWS_REPORTING",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 2,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            },
+            {
+              "domain": "OFFICIAL_PUBLIC_DATA",
+              "state": "COVERAGE_GAP",
+              "listedLocalSources": 1,
+              "activeLocalSources": 0,
+              "rightsClearedLocalSources": 0,
+              "qualifiedLocalSources": 0,
+              "rightsBlockedLocalSources": 0
+            }
+          ],
+          "activeInternationalSources": [
+            {
+              "sourceId": "gnews",
+              "basis": "INTERNATIONAL_AGGREGATOR",
+              "rightsState": "RIGHTS_UNDER_E1_REVIEW"
+            }
+          ],
+          "coverageGapReason": "NEWS_REPORTING: 2 local source(s) listed, none active; OFFICIAL_PUBLIC_DATA: 1 local source(s) listed, none active",
+          "stateIndependentOfActivation": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+import { isUsableGNewsApiKey } from './provider.tokens';
 import { Injectable, Logger } from '@nestjs/common';
 import { logWithRequestId } from '../../../observability/log-with-request-id';
 import { ConfigService } from '@nestjs/config';
@@ -355,7 +356,8 @@ export class GNewsProvider implements NewsProvider {
     const apiKey = this.config.get<string>('GNEWS_API_KEY');
     const checkedAt = new Date().toISOString();
 
-    if (!apiKey) {
+    /* T1 — a placeholder (e.g. the .env.example template) is "not configured", not a key. */
+    if (!isUsableGNewsApiKey(apiKey)) {
       return {
         providerId: this.id,
         displayName: this.displayName,
@@ -408,10 +410,10 @@ export class GNewsProvider implements NewsProvider {
 
   private requireApiKey(): string {
     const apiKey = this.config.get<string>('GNEWS_API_KEY');
-    if (!apiKey) {
+    if (!isUsableGNewsApiKey(apiKey)) {
       throw new GNewsProviderError('GNEWS_API_KEY is not configured.');
     }
-    return apiKey;
+    return apiKey as string;
   }
 
   /**

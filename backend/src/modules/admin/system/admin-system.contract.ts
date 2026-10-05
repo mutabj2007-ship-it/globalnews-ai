@@ -226,6 +226,10 @@ export interface AdminNewsProvidersResponse {
     sourceType: SourceType;
     language?: string;
     enabled: boolean;
+    /** T1 — recorded rights state of the feed (never CLEARED by inference). */
+    rightsState?: string;
+    /** T1 — true when RSS_FEED_SOURCES names this feed but the rights gate refused it. */
+    activationRefused?: boolean;
   }>;
 
   /** Stored article inventory, measured from the database; null means the read failed. */

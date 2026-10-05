@@ -1048,6 +1048,17 @@ export const pl: Dictionary = {
       },
     },
     storedReportingNoticeAriaLabel: 'Powiadomienie o zapisanych relacjach',
+    sourceCoverage: {
+      ariaLabel: 'Lokalne pokrycie źródłami',
+      absentTitle: 'Luka w lokalnym pokryciu',
+      absentBody:
+        'Dla tego kraju nie działa żadne lokalne źródło wiadomości z uregulowanymi prawami. Pokazane relacje pochodzą ze źródeł międzynarodowych lub agregatorów i nie stanowią lokalnego pokrycia.',
+      unverifiedTitle: 'Lokalne pokrycie niezweryfikowane',
+      unverifiedBody:
+        'Lokalne źródło wiadomości jest aktywne, ale jego dostarczanie nie zostało zweryfikowane. Pokazane relacje mogą nie obejmować lokalnego pokrycia.',
+      localEvidencePrefix: 'Od zarejestrowanych lokalnych wydawców:',
+      ofSeparator: 'z',
+    },
     coverageQualityAriaSuffix: 'jakość materiałów',
     readFullStoryPrefix: 'Przeczytaj pełną historię:',
     askAboutStory: 'Zapytaj GlobalNews AI o to',
@@ -1373,6 +1384,10 @@ export const pl: Dictionary = {
           failed: 'Nie udało się teraz pobrać doniesień. Możesz spróbować ponownie.',
           load: 'Pobierz analizę kraju',
           reload: 'Pobierz ponownie',
+          coverageAbsent:
+            'Luka w lokalnym pokryciu: nie działa tu żadne lokalne źródło wiadomości z uregulowanymi prawami. Te relacje pochodzą ze źródeł międzynarodowych lub agregatorów.',
+          coverageUnverified:
+            'Lokalne pokrycie niezweryfikowane: lokalne źródło wiadomości jest aktywne, ale jego dostarczanie nie jest zweryfikowane.',
         },
         /* ── DESIGN REVISION 1.2 · THE RESTORED SELECTED-COUNTRY BLOCKS ─── */
         identityHeading: 'To\u017csamo\u015b\u0107',
@@ -2024,7 +2039,8 @@ export const pl: Dictionary = {
        (Claude_Output/TRUST-CONVERSATIONAL-EXPERIENCE-R1/privacy). Unknown facts are named, never invented. */
     title: 'Informacja o prywatności',
     lastUpdatedLabel: 'Ostatnia aktualizacja',
-    lastUpdatedDate: '3 października 2026',
+    /* T5 Part B — PENDING_PO_LEGAL_APPROVAL (lib/consent/consentStrings.ts LEGAL_COPY_PENDING_APPROVAL). */
+    lastUpdatedDate: '4 października 2026',
     intro:
       'Ta informacja wyjaśnia, jakie dane przetwarzają Ask GlobalNewsAI i GlobalNews AI, w jakim celu, kto je otrzymuje i co możesz z tym zrobić. Opisuje produkt tak, jak faktycznie działa dzisiaj. Jeśli jakaś kwestia nie została jeszcze ustalona, piszemy o tym wprost zamiast zgadywać.',
     sections: [
@@ -2034,7 +2050,8 @@ export const pl: Dictionary = {
       },
       {
         heading: 'Korzystanie z Zapytaj bez konta',
-        body: 'Jako gość możesz zadać kilka pytań. Gdy wysyłasz pierwsze pytanie jako gość, ustawiamy plik cookie gościa i przechowujemy Twoje pytania oraz odpowiedzi na naszych serwerach jako jedną rozmowę gościa. Trwa ona do 7 dni, a następnie jest usuwana w ciągu około 24 godzin. Aby ograniczyć nadużycia bezpłatnych pytań, liczymy pytania gości w danej sieci za pomocą pseudonimowego identyfikatora, który zmienia się codziennie i jest wyliczany z adresu sieciowego przy użyciu tajnego klucza. Sam adres nie jest zapisywany w naszych rekordach limitów, a identyfikatory są usuwane w ciągu około tygodnia.',
+        /* T5 Part B — PENDING_PO_LEGAL_APPROVAL. */
+        body: 'Jako gość możesz zadać kilka pytań. Gdy wysyłasz pierwsze pytanie jako gość, ustawiamy plik cookie gościa i przechowujemy Twoje rozmowy gościa (pytania i odpowiedzi) na naszych serwerach. Sesja gościa trwa najwyżej 7 dni i nigdy nie jest przedłużana; następnie jest automatycznie usuwana, jak opisano poniżej w części „Twoje dane gościa”, gdzie możesz też usunąć ją od razu. „Zaloguj się, aby kontynuować” przenosi na Twoje konto wszystkie rozmowy gościa z tej przeglądarki; zalogowanie w inny sposób nie przenosi żadnej z nich, a po wylogowaniu pozostają widoczne w tej przeglądarce, dopóki nie zostaną usunięte. Aby ograniczyć nadużycia bezpłatnych pytań, liczymy pytania gości w danej sieci za pomocą pseudonimowego identyfikatora, który zmienia się codziennie i jest wyliczany z adresu sieciowego przy użyciu tajnego klucza. Sam adres nie jest zapisywany w naszych rekordach limitów. Kiedy te identyfikatory są usuwane, wyjaśnia część „Jak długo przechowujemy dane”.',
       },
       {
         heading: 'Logowanie przez Google',
@@ -2062,11 +2079,13 @@ export const pl: Dictionary = {
       },
       {
         heading: 'Twoje wybory',
-        body: 'Możesz usunąć konto w ustawieniach konta, co usuwa dane wymienione powyżej. Możesz wyczyścić historię wyszukiwania. W każdej chwili możesz zmienić lub usunąć ustawienia języka i wyglądu. Funkcja pobrania kopii danych jeszcze nie istnieje; sposób zgłaszania takich wniosków zostanie opublikowany razem z adresem kontaktowym.',
+        /* T5 Part B — PENDING_PO_LEGAL_APPROVAL. */
+        body: 'Możesz usunąć konto w ustawieniach konta, co usuwa dane wymienione powyżej. Rozmowy gościa z tej przeglądarki możesz w każdej chwili usunąć w części „Twoje dane gościa” poniżej lub na stronie Pliki cookie. Możesz wyczyścić historię wyszukiwania. W każdej chwili możesz zmienić lub usunąć ustawienia języka i wyglądu. Funkcja pobrania kopii danych jeszcze nie istnieje; sposób zgłaszania takich wniosków zostanie opublikowany razem z adresem kontaktowym.',
       },
       {
         heading: 'Jak długo przechowujemy dane',
-        body: 'To nasze okresy przechowywania na czas wersji Beta (własna polityka, a nie wymogi prawne). Rozmowy gości: do 7 dni plus około 24 godziny. Rozmowy na koncie: 12 miesięcy od ostatniej aktywności, chyba że usuniesz je wcześniej lub zapisano z nich odpowiedź. Wiadomości do pomocy technicznej: 24 miesiące od rozwiązania sprawy. Szczegółowe zapisy użycia i obliczeń: 90 dni. Identyfikatory limitów gości: około tygodnia. Diagnostyka Zapytaj: 30 dni. Sesje logowania: 30 dni.',
+        /* T5 Part B — PENDING_PO_LEGAL_APPROVAL. D2. */
+        body: 'To nasze okresy przechowywania na czas wersji Beta (własna polityka, a nie wymogi prawne). Rozmowy gości: najwyżej 7 dni od pierwszego pytania gościa, a następnie automatyczne usunięcie przez czyszczenie danych gości, które działa zawsze, gdy działa usługa (dokładne terminy podaje część „Twoje dane gościa” poniżej), albo od razu, gdy je usuniesz. Diagnostyka Zapytaj: 30 dni, usuwana przez własne czyszczenie. Sesje logowania: wygasają po 30 dniach. Poniższe okresy to nasza docelowa polityka, stosowana przez osobne zaplanowane czyszczenie; jest ono wyłączone, dopóki nie włączymy go decyzją operacyjną, a gdy jest wyłączone, te zapisy nie są automatycznie usuwane po upływie okresu: rozmowy na koncie 12 miesięcy od ostatniej aktywności (chyba że usuniesz je wcześniej lub zapisano z nich odpowiedź; usunięcie konta zawsze je usuwa), wiadomości do pomocy technicznej 24 miesiące od rozwiązania sprawy, szczegółowe zapisy użycia i obliczeń 90 dni, identyfikatory limitów gości około tygodnia po dniu, którego dotyczą.',
       },
       {
         heading: 'Zmiany tej informacji',

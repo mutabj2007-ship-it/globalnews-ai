@@ -1,3 +1,4 @@
+import { isUsableApiCredential } from '../../../security/placeholder-credential';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { GeoSignal, GeoSignalQueryOptions, ProviderHealthStatus } from '@globalnews-ai/shared';
@@ -67,7 +68,8 @@ export function isEventRegistryEnabled(value: string | undefined): boolean {
  * truthy in JavaScript but is not a usable key).
  */
 export function isUsableEventRegistryApiKey(value: string | undefined): boolean {
-  return typeof value === 'string' && value.trim().length > 0;
+  /* T1 — also rejects placeholders such as `replace_with_your_event_registry_key`. */
+  return isUsableApiCredential(value);
 }
 
 /**

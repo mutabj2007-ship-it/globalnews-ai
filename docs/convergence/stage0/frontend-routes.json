@@ -1,0 +1,2442 @@
+[
+ {
+  "path": "/ (root layout)",
+  "file": "frontend/src/app/layout.tsx",
+  "kind": "layout",
+  "classification": "production-surface",
+  "classification_evidence": "Wraps every route; mounts AskAiDock (layout.tsx:311) and ReturnDepthTracker (layout.tsx:310).",
+  "alpha": "PASS",
+  "production": "PASS",
+  "language": {
+   "mechanism": "getDictionary(language) (lib/i18n/dictionaries/index.ts:17-24: en, pl only; other codes -> en); language = cookie if isActiveLanguageCode (ACTIVE_LANGUAGES ['en','pl'], languages.ts:21) else 'en' for metadata (layout.tsx:191-194)",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "html_lang": "<html lang={language}> (layout.tsx:259,273) - cookie only if en|pl, so fr/de/es/pt/ar readers get lang='en'",
+   "html_dir": "NOT SET on <html>; dir only set at Ask content scope (AskFrameScreen.tsx:432)",
+   "hardcoded_english_samples": [
+    "applicationName 'GlobalNews AI' (brand, layout.tsx:201)",
+    "appleWebApp.title 'GlobalNews' (layout.tsx:219)"
+   ]
+  },
+  "theme": {
+   "theme_scope": "No theme scope on <html>/<body>; body is bg-void (layout.tsx:283); SCHEDULE_BOOT_SCRIPT sets html[data-gna-schedule] (layout.tsx:281)",
+   "hex_literals_route_specific_closure_excl_globals_css": 255,
+   "globals_css_hex": 3191,
+   "viewport_themeColor": "#080b12 hardcoded (layout.tsx:168)"
+  },
+  "data_source": "none directly; homeR1Gates() env read (layout.tsx:195)",
+  "auth": "public",
+  "mobile_parity": "n/a",
+  "ask_integration": "Mounts global <AskAiDock language={language} standaloneRoot={standaloneAskRoot()}/> (layout.tsx:311). Dock unmounts on /ask, /admin/**, /ask/recent, /saved, and (standalone only) on /, /support, /account/settings (AskAiDock.tsx:190-205). Transport: Ask V2 (useAskR2Conversation/askV2Api).",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountLinks.ts",
+   "lib/api/askV2Api.ts",
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": [
+   "AskAiDock",
+   "submitGlobalAsk",
+   "openGlobalAsk",
+   "useAskR2Conversation",
+   "askV2Api"
+  ]
+ },
+ {
+  "path": "(error boundary)",
+  "file": "frontend/src/app/error.tsx",
+  "kind": "special:error",
+  "classification": "production-surface",
+  "classification_evidence": "Next App Router route error boundary.",
+  "alpha": "PASS",
+  "production": "PASS",
+  "language": {
+   "mechanism": "getFailureCopy(readLanguageCookie() ?? 'en') client-side (error.tsx)",
+   "locales": "UNKNOWN (failureCopy.ts catalogue not inspected in depth)",
+   "hardcoded_english_samples": []
+  },
+  "theme": {
+   "theme_scope": "NOT theme-scoped: renders dark-only (bg-void tokens / domain token modules); theme cookie ignored",
+   "hex_literals_route_specific_closure": 1,
+   "arbitrary_hex_tailwind_classes": 0,
+   "top_hex_files": "components/layout/PageCanvas.tsx=1"
+  },
+  "data_source": "static",
+  "auth": "public",
+  "mobile_parity": "n/a",
+  "ask_integration": "none (global dock still mounted by root layout)",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "(global error)",
+  "file": "frontend/src/app/global-error.tsx",
+  "kind": "special:global-error",
+  "classification": "production-surface",
+  "classification_evidence": "Replaces root layout on fatal error; supplies its own <html>.",
+  "alpha": "PASS",
+  "production": "PASS",
+  "language": {
+   "mechanism": "readLanguageCookie() + getFailureCopy (global-error.tsx:145-151); <html lang> follows same value (comment global-error.tsx:54)",
+   "locales": "UNKNOWN",
+   "hardcoded_english_samples": []
+  },
+  "theme": {
+   "theme_scope": "NOT theme-scoped: renders dark-only (bg-void tokens / domain token modules); theme cookie ignored",
+   "hex_literals_route_specific_closure": 8,
+   "arbitrary_hex_tailwind_classes": 0,
+   "top_hex_files": "app/global-error.tsx=8",
+   "note": "8 inline hex literals (global-error.tsx:62-135) - deliberate, no CSS available"
+  },
+  "data_source": "static",
+  "auth": "public",
+  "mobile_parity": "n/a",
+  "ask_integration": "none (root layout replaced, no dock)",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "(404)",
+  "file": "frontend/src/app/not-found.tsx",
+  "kind": "special:not-found",
+  "classification": "production-surface",
+  "classification_evidence": "Global 404.",
+  "alpha": "PASS",
+  "production": "PASS (but unknown platform paths in Production are 307-redirected to / by middleware before 404 can render)",
+  "language": {
+   "mechanism": "getFailureCopy(cookie if en|pl else en) (not-found.tsx)",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": []
+  },
+  "theme": {
+   "theme_scope": "NOT theme-scoped: renders dark-only (bg-void tokens / domain token modules); theme cookie ignored",
+   "hex_literals_route_specific_closure": 1,
+   "arbitrary_hex_tailwind_classes": 0,
+   "top_hex_files": "components/layout/PageCanvas.tsx=1"
+  },
+  "data_source": "static",
+  "auth": "public",
+  "mobile_parity": "n/a",
+  "ask_integration": "global dock (root layout)",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/robots.txt",
+  "file": "frontend/src/app/robots.ts",
+  "kind": "metadata-route",
+  "classification": "production-surface",
+  "classification_evidence": "INFRASTRUCTURE_FILES in standaloneRouteGate.ts:63-74; sitemap empty on Alpha (sitemap.ts isAlphaEnvironment) and lists only '/', '/source-policy', '/privacy', '/terms' (lib/seo/routes.ts:44-81)",
+  "alpha": "PASS",
+  "production": "PASS",
+  "language": {
+   "mechanism": "n/a",
+   "locales": "n/a"
+  },
+  "theme": {
+   "theme_scope": "n/a"
+  },
+  "data_source": "lib/seo/routes.ts registry",
+  "auth": "public",
+  "mobile_parity": "n/a",
+  "ask_integration": "n/a",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/sitemap.xml",
+  "file": "frontend/src/app/sitemap.ts",
+  "kind": "metadata-route",
+  "classification": "production-surface",
+  "classification_evidence": "INFRASTRUCTURE_FILES in standaloneRouteGate.ts:63-74; sitemap empty on Alpha (sitemap.ts isAlphaEnvironment) and lists only '/', '/source-policy', '/privacy', '/terms' (lib/seo/routes.ts:44-81)",
+  "alpha": "PASS",
+  "production": "PASS",
+  "language": {
+   "mechanism": "n/a",
+   "locales": "n/a"
+  },
+  "theme": {
+   "theme_scope": "n/a"
+  },
+  "data_source": "lib/seo/routes.ts registry",
+  "auth": "public",
+  "mobile_parity": "n/a",
+  "ask_integration": "n/a",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/icon.svg",
+  "file": "frontend/src/app/icon.svg",
+  "kind": "metadata-route(file)",
+  "classification": "production-surface",
+  "classification_evidence": "INFRASTRUCTURE_FILES standaloneRouteGate.ts:63-74",
+  "alpha": "PASS",
+  "production": "PASS"
+ },
+ {
+  "path": "/apple-icon.png",
+  "file": "frontend/src/app/apple-icon.png",
+  "kind": "metadata-route(file)",
+  "classification": "production-surface",
+  "classification_evidence": "INFRASTRUCTURE_FILES standaloneRouteGate.ts:63-74",
+  "alpha": "PASS",
+  "production": "PASS"
+ },
+ {
+  "path": "/",
+  "file": "frontend/src/app/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "STANDALONE_PAGES '/' (standaloneRouteGate.ts:27). page.tsx:119-121: standaloneAskRoot() -> <AskStandaloneRoot>; only GNA_PUBLIC_ROOT=platform renders the platform Home (Rev A, or HomeR1Page when GNA_HOME_R1==='true', page.tsx:158-170). Only indexable route (lib/seo/routes.ts:44-55).",
+  "alpha": "PASS - platform Home (Rev A) composition",
+  "production": "PASS - standalone Ask entry (AskStandaloneRoot)",
+  "language": {
+   "mechanism": "Production: resolveAskLocale(cookie) -> 7 DisplayLocales (en,pl,fr,de,es,pt,ar; shared/src/language/index.ts:30); chrome via askLanguageDisposition().catalogueLocale -> en|pl only (askLocale.ts:95,144-155). Alpha/platform Home: getDictionary(language) (lib/i18n/dictionaries/index.ts:17-24: en, pl only; other codes -> en); language = cookie if isActiveLanguageCode (ACTIVE_LANGUAGES ['en','pl'], languages.ts:21) else 'en' (page.tsx:110-123)",
+   "locales": {
+    "production_interface": [
+     "en",
+     "pl",
+     "fr",
+     "de",
+     "es",
+     "pt",
+     "ar"
+    ],
+    "production_chrome_catalogues": [
+     "en",
+     "pl"
+    ],
+    "alpha_home": [
+     "en",
+     "pl"
+    ]
+   },
+   "hardcoded_english_samples": "none found in page.tsx body; homeReva dictionaries homeRevaEn/homeRevaPl used"
+  },
+  "theme": {
+   "theme_scope": "ThemeScope via AskThemedSurface/AskThemedPage (light/dark/system/scheduled from globalnews-ai-theme cookie)",
+   "hex_literals_route_specific_closure": 626,
+   "arbitrary_hex_tailwind_classes": 565,
+   "top_hex_files": "components/home/homePresentation.ts=121; components/ask-frame/AskR2TurnView.tsx=101; components/my-intelligence/miPresentation.ts=58",
+   "note": "Standalone Ask root is themed (page.tsx:115-121 parseThemePreference); Alpha Rev A Home is NOT theme-scoped and carries hardcoded hex classes e.g. HomeUtilityHeader.tsx:32 border-[#0a2744] bg-[rgba(2,13,29,0.94)], HomeProductRail.tsx:161, HomeBridge.tsx:36 text-[#5abff5]; homePresentation.ts has 121 hex"
+  },
+  "data_source": "Production: none on render (Ask idle). Alpha: getHomeFeed(language) -> lib/api/newsApi fetchTopHeadlines (lib/homeFeed.ts:2; page.tsx:124); compareApi when compare gates on",
+  "auth": "public",
+  "mobile_parity": "Alpha Home: desktop utility header 'hidden ... lg:block' (HomeUtilityHeader.tsx:32) replaced by NavBar below lg (page.tsx:177-179); product rail collapse button hidden below xl (HomeProductRail.tsx:161); story elapsed-time badge hidden below lg (WhatsHappeningNow.tsx:545). No functional control lost found. Production Ask root: UNKNOWN beyond Ask frame (not exhaustively audited).",
+  "ask_integration": "Production: AskStandaloneRoot -> AskShellFrame/AskFrameScreen (Ask V2: useAskR2Conversation + askV2Api); global dock unmounted on '/' when standalone (AskAiDock.tsx:195). Alpha: HomeWelcomeHero links /ask (HomeWelcomeHero.tsx:98); HomeComposer/HeroAskField use openGlobalAsk/submitGlobalAsk; global dock mounted with launcher suppressed on '/' (AskAiDock.tsx LAUNCHER_SUPPRESSED_ROUTES).",
+  "evidence_state": "Ask turns render evidence/provenance (AskEvidenceTable, AskIntelligenceBasis, retained/live labels: askLiveRetainedProvenance). Alpha Home passes feed.dataMode to WhatsHappeningNow (page.tsx:230) -> DataModeLabel.",
+  "lib_api_in_closure": [
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts",
+   "lib/api/compareApi.ts",
+   "lib/api/askV2Api.ts",
+   "lib/api/newsApi.ts",
+   "lib/api/forwardedClient.ts"
+  ],
+  "ask_modules_in_closure": [
+   "openGlobalAsk",
+   "submitGlobalAsk",
+   "AskStandaloneRoot",
+   "AskShellFrame",
+   "askV2Api",
+   "useAskR2Conversation"
+  ]
+ },
+ {
+  "path": "/ask",
+  "file": "frontend/src/app/ask/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "STANDALONE_PAGES '/ask' (standaloneRouteGate.ts:28); noindex (ask/page.tsx:11-14).",
+  "alpha": "PASS",
+  "production": "PASS",
+  "language": {
+   "mechanism": "resolveAskLocale(cookie) -> 7 DisplayLocales (en,pl,fr,de,es,pt,ar; shared/src/language/index.ts:30); chrome via askLanguageDisposition().catalogueLocale -> en|pl only (askLocale.ts:95,144-155) (ask/page.tsx:40-44); AskFrameScreen sets lang/dir on <main> (AskFrameScreen.tsx:431-432)",
+   "locales": {
+    "interface": [
+     "en",
+     "pl",
+     "fr",
+     "de",
+     "es",
+     "pt",
+     "ar"
+    ],
+    "nav_chrome": [
+     "en",
+     "pl"
+    ]
+   },
+   "hardcoded_english_samples": [
+    "metadata title 'Ask AI — GlobalNews AI' (ask/page.tsx:12)",
+    "'Compare these stories' fallback for non-pl locales (AskFrameScreen.tsx:233)"
+   ]
+  },
+  "theme": {
+   "theme_scope": "ThemeScope via AskThemedSurface/AskThemedPage (light/dark/system/scheduled from globalnews-ai-theme cookie)",
+   "hex_literals_route_specific_closure": 337,
+   "arbitrary_hex_tailwind_classes": 290,
+   "top_hex_files": "components/ask-frame/AskR2TurnView.tsx=101; components/my-intelligence/miPresentation.ts=58; components/ask-frame/AskFrameScreen.tsx=44",
+   "note": "AskThemedPage (ask/page.tsx:48). AskR2TurnView.tsx carries 101 hex literals; AskFrameScreen.tsx 44"
+  },
+  "data_source": "lib/api/askV2Api.ts (/ask-v2, /ask-v2/threads, /ask-v2/operations/*, /ask-v2/guest/*, /ask-v2/bookmarks, /ask-v2/briefings) via /api/ask-v2 rewrite (next.config.mjs:35)",
+  "auth": "public (guest trial; server-side switches ASK_V2_ENABLED/ASK_GUEST_TRIAL_ENABLED decide)",
+  "mobile_parity": "Phone Ask is full screen (AskNavShell.tsx comment D25). No 'hidden md:*' functional control found in closure.",
+  "ask_integration": "IS the canonical Ask (AskShellFrame -> AskFrameScreen, useAskR2Conversation, askV2Api). Global dock unmounted (AskAiDock.tsx:193).",
+  "evidence_state": "Yes: AskEvidenceTable, AskIntelligenceBasis, retained-vs-live provenance (askLiveRetainedProvenance.spec), as-of labels.",
+  "lib_api_in_closure": [
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts",
+   "lib/api/askV2Api.ts"
+  ],
+  "ask_modules_in_closure": [
+   "AskShellFrame",
+   "askV2Api",
+   "useAskR2Conversation",
+   "openGlobalAsk"
+  ]
+ },
+ {
+  "path": "/ask/recent",
+  "file": "frontend/src/app/ask/recent/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "STANDALONE_SUBTREES '/ask/' (standaloneRouteGate.ts:46); noindex registry lib/seo/routes.ts:151.",
+  "alpha": "PASS",
+  "production": "PASS",
+  "language": {
+   "mechanism": "resolveAskLocale(cookie) -> 7 DisplayLocales (en,pl,fr,de,es,pt,ar; shared/src/language/index.ts:30); chrome via askLanguageDisposition().catalogueLocale -> en|pl only (askLocale.ts:95,144-155); list uses askContinuityStrings(askLocaleForLegacyCatalogue(locale)) which returns PL only for 'pl', else EN (askContinuityStrings.ts:133-135)",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": [
+    "metadata title 'Recent — Ask GlobalNews AI' (ask/recent/page.tsx:31)"
+   ]
+  },
+  "theme": {
+   "theme_scope": "ThemeScope via AskThemedSurface/AskThemedPage (light/dark/system/scheduled from globalnews-ai-theme cookie)",
+   "hex_literals_route_specific_closure": 16,
+   "arbitrary_hex_tailwind_classes": 11,
+   "top_hex_files": "components/ask-nav/AskNavShell.tsx=10; components/ask-nav/askNav.module.css=4; components/ask-nav/AskContinuityHeader.tsx=1"
+  },
+  "data_source": "askV2Api GET /ask-v2/threads (401 when signed out, per ask/recent/page.tsx:19-23)",
+  "auth": "requires session (server 401 reported in UI)",
+  "mobile_parity": "AskContinuityHeader for phone/768 (ask/recent/page.tsx:49). No hidden functional control found.",
+  "ask_integration": "Links back to Ask (thread restore); global dock unmounted (AskAiDock.tsx ASK_CONTINUITY_ROUTES).",
+  "evidence_state": "Lists conversations; retained labels in AskRecentReporting (keyword signal only).",
+  "lib_api_in_closure": [
+   "lib/api/askV2Api.ts",
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": [
+   "askV2Api"
+  ]
+ },
+ {
+  "path": "/saved",
+  "file": "frontend/src/app/saved/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "STANDALONE_PAGES '/saved' (standaloneRouteGate.ts:29).",
+  "alpha": "PASS",
+  "production": "PASS",
+  "language": {
+   "mechanism": "resolveAskLocale(cookie) -> 7 DisplayLocales (en,pl,fr,de,es,pt,ar; shared/src/language/index.ts:30); chrome via askLanguageDisposition().catalogueLocale -> en|pl only (askLocale.ts:95,144-155); SavedClient gets chrome (en|pl) (saved/page.tsx:49)",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": [
+    "metadata title 'Saved — Ask GlobalNews AI' (saved/page.tsx:29)"
+   ]
+  },
+  "theme": {
+   "theme_scope": "ThemeScope via AskThemedSurface/AskThemedPage (light/dark/system/scheduled from globalnews-ai-theme cookie)",
+   "hex_literals_route_specific_closure": 22,
+   "arbitrary_hex_tailwind_classes": 17,
+   "top_hex_files": "components/ask-nav/AskNavShell.tsx=10; components/ask/BriefingViews.tsx=6; components/ask-nav/askNav.module.css=4"
+  },
+  "data_source": "askV2Api /ask-v2/bookmarks, /ask-v2/briefings (probe)",
+  "auth": "requires session (401 surfaced)",
+  "mobile_parity": "No hidden functional control found.",
+  "ask_integration": "Opens Ask; global dock unmounted (ASK_CONTINUITY_ROUTES).",
+  "evidence_state": "Saved turns with AskEvidenceTable (keyword signal). BriefingViews links to /saved/briefing (BriefingViews.tsx:21), which Production redirects to '/' -> dead link if backend ASK_BRIEFINGS_ENABLED is on in Production.",
+  "lib_api_in_closure": [
+   "lib/api/askV2Api.ts",
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": [
+   "askV2Api"
+  ]
+ },
+ {
+  "path": "/account/settings",
+  "file": "frontend/src/app/account/settings/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "STANDALONE_PAGES '/account/settings' (standaloneRouteGate.ts:31).",
+  "alpha": "PASS - platform chrome, language FORCED 'en' (account/settings/page.tsx:27)",
+  "production": "PASS - standalone Ask shell",
+  "language": {
+   "mechanism": "Production: resolveAskLocale(cookie) -> 7 DisplayLocales (en,pl,fr,de,es,pt,ar; shared/src/language/index.ts:30); chrome via askLanguageDisposition().catalogueLocale -> en|pl only (askLocale.ts:95,144-155) -> AccountSettingsBody language=chrome. Alpha: <AccountSettingsBody language=\"en\" chrome=\"platform\"/> hardcoded (account/settings/page.tsx:27) and NavBar rendered without language prop (AccountSettingsBody.tsx:37)",
+   "locales": {
+    "production": [
+     "en",
+     "pl"
+    ],
+    "alpha": [
+     "en"
+    ]
+   },
+   "hardcoded_english_samples": [
+    "language=\"en\" literal (account/settings/page.tsx:27)"
+   ]
+  },
+  "theme": {
+   "theme_scope": "ThemeScope via AskThemedSurface/AskThemedPage (light/dark/system/scheduled from globalnews-ai-theme cookie)",
+   "hex_literals_route_specific_closure": 16,
+   "arbitrary_hex_tailwind_classes": 11,
+   "top_hex_files": "components/ask-nav/AskNavShell.tsx=10; components/ask-nav/askNav.module.css=4; components/ask-nav/AskContinuityHeader.tsx=1",
+   "note": "Themed only in Production branch; Alpha/platform branch unthemed"
+  },
+  "data_source": "lib/api/accountFetch /users/me (deleteAccount via useAccount)",
+  "auth": "requires session (signInPrompt when signed out)",
+  "mobile_parity": "No hidden functional control found.",
+  "ask_integration": "Production: none (dock unmounted, ASK_STANDALONE_UTILITY_ROUTES). Alpha: global dock mounted.",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/support",
+  "file": "frontend/src/app/support/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "STANDALONE_PAGES '/support' (standaloneRouteGate.ts:32); noindex.",
+  "alpha": "PASS - platform SupportScreen",
+  "production": "PASS - inside standalone Ask shell (support/page.tsx:83-95)",
+  "language": {
+   "mechanism": "getDictionary(currentLanguage()).support (supportEn/supportPl); request language narrowed to en|pl (support/page.tsx:75)",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic in SupportScreen.tsx"
+  },
+  "theme": {
+   "theme_scope": "ThemeScope via AskThemedSurface/AskThemedPage (light/dark/system/scheduled from globalnews-ai-theme cookie)",
+   "hex_literals_route_specific_closure": 19,
+   "arbitrary_hex_tailwind_classes": 11,
+   "top_hex_files": "components/ask-nav/AskNavShell.tsx=10; components/ask-nav/askNav.module.css=4; components/support/CategorySelect.tsx=3",
+   "note": "Themed in Production branch only"
+  },
+  "data_source": "lib/support (/support/tickets, /support/tickets/{ref}/messages) via accountFetch; /api/support rewrite",
+  "auth": "public page; ticket features require session (t.signedOut, SupportScreen.tsx:126-141)",
+  "mobile_parity": "No hidden functional control found.",
+  "ask_integration": "Production: none (dock unmounted). Alpha: global dock.",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/privacy",
+  "file": "frontend/src/app/privacy/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "STANDALONE_PAGES '/privacy' (standaloneRouteGate.ts:33-38); indexable + sitemap (lib/seo/routes.ts:56-80)",
+  "alpha": "PASS",
+  "production": "PASS",
+  "language": {
+   "mechanism": "getDictionary(language) (lib/i18n/dictionaries/index.ts:17-24: en, pl only; other codes -> en); language = cookie if isActiveLanguageCode (ACTIVE_LANGUAGES ['en','pl'], languages.ts:21) else 'en'",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none in page body"
+  },
+  "theme": {
+   "theme_scope": "ThemeScope via AskThemedSurface/AskThemedPage (light/dark/system/scheduled from globalnews-ai-theme cookie)",
+   "hex_literals_route_specific_closure": 1,
+   "arbitrary_hex_tailwind_classes": 0,
+   "top_hex_files": "components/ask-nav/AskThemedSurface.tsx=1",
+   "note": "AskThemedSurface (privacy/page.tsx)"
+  },
+  "data_source": "static (dictionary)",
+  "auth": "public",
+  "mobile_parity": "No hidden functional control.",
+  "ask_integration": "Mounts platform NavBar (links /search, /my-intelligence via AccountControl - both 307->'/' in Production: NavBar.tsx:223,353; AccountControl.tsx:258). Global AskAiDock mounted (not in any suppression set).",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts",
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/cookies",
+  "file": "frontend/src/app/cookies/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "STANDALONE_PAGES '/cookies' (standaloneRouteGate.ts:33-38); noindex",
+  "alpha": "PASS",
+  "production": "PASS",
+  "language": {
+   "mechanism": "COOKIES_PAGE[en|pl] (lib/privacy/cookiesPageStrings.ts)",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none in page body"
+  },
+  "theme": {
+   "theme_scope": "ThemeScope via AskThemedSurface/AskThemedPage (light/dark/system/scheduled from globalnews-ai-theme cookie)",
+   "hex_literals_route_specific_closure": 1,
+   "arbitrary_hex_tailwind_classes": 0,
+   "top_hex_files": "components/ask-nav/AskThemedSurface.tsx=1",
+   "note": "AskThemedSurface; hardcoded border-white/10 (cookies/page.tsx list items)"
+  },
+  "data_source": "static (dictionary)",
+  "auth": "public",
+  "mobile_parity": "No hidden functional control.",
+  "ask_integration": "Mounts platform NavBar (links /search, /my-intelligence via AccountControl - both 307->'/' in Production: NavBar.tsx:223,353; AccountControl.tsx:258). Global AskAiDock mounted (not in any suppression set).",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts",
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/terms",
+  "file": "frontend/src/app/terms/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "STANDALONE_PAGES '/terms' (standaloneRouteGate.ts:33-38); indexable + sitemap (lib/seo/routes.ts:56-80)",
+  "alpha": "PASS",
+  "production": "PASS",
+  "language": {
+   "mechanism": "getDictionary(language) (lib/i18n/dictionaries/index.ts:17-24: en, pl only; other codes -> en); language = cookie if isActiveLanguageCode (ACTIVE_LANGUAGES ['en','pl'], languages.ts:21) else 'en'",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none in page body"
+  },
+  "theme": {
+   "theme_scope": "NOT theme-scoped: renders dark-only (bg-void tokens / domain token modules); theme cookie ignored",
+   "hex_literals_route_specific_closure": 0,
+   "arbitrary_hex_tailwind_classes": 0,
+   "top_hex_files": "",
+   "note": "NOT wrapped in AskThemedSurface unlike /privacy and /cookies - theme inconsistency across legal pages"
+  },
+  "data_source": "static (dictionary)",
+  "auth": "public",
+  "mobile_parity": "No hidden functional control.",
+  "ask_integration": "Mounts platform NavBar (links /search, /my-intelligence via AccountControl - both 307->'/' in Production: NavBar.tsx:223,353; AccountControl.tsx:258). Global AskAiDock mounted (not in any suppression set).",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts",
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/source-policy",
+  "file": "frontend/src/app/source-policy/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "STANDALONE_PAGES '/source-policy' (standaloneRouteGate.ts:33-38); indexable + sitemap (lib/seo/routes.ts:56-80)",
+  "alpha": "PASS",
+  "production": "PASS",
+  "language": {
+   "mechanism": "getDictionary(language) (lib/i18n/dictionaries/index.ts:17-24: en, pl only; other codes -> en); language = cookie if isActiveLanguageCode (ACTIVE_LANGUAGES ['en','pl'], languages.ts:21) else 'en'",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none in page body"
+  },
+  "theme": {
+   "theme_scope": "NOT theme-scoped: renders dark-only (bg-void tokens / domain token modules); theme cookie ignored",
+   "hex_literals_route_specific_closure": 0,
+   "arbitrary_hex_tailwind_classes": 0,
+   "top_hex_files": "",
+   "note": "NOT theme-scoped (inconsistent with /privacy, /cookies)"
+  },
+  "data_source": "static (dictionary)",
+  "auth": "public",
+  "mobile_parity": "No hidden functional control.",
+  "ask_integration": "Mounts platform NavBar (links /search, /my-intelligence via AccountControl - both 307->'/' in Production: NavBar.tsx:223,353; AccountControl.tsx:258). Global AskAiDock mounted (not in any suppression set).",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts",
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/third-party-notices",
+  "file": "frontend/src/app/third-party-notices/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "STANDALONE_PAGES '/third-party-notices' (standaloneRouteGate.ts:33-38); noindex",
+  "alpha": "PASS",
+  "production": "PASS",
+  "language": {
+   "mechanism": "getDictionary(language) (lib/i18n/dictionaries/index.ts:17-24: en, pl only; other codes -> en); language = cookie if isActiveLanguageCode (ACTIVE_LANGUAGES ['en','pl'], languages.ts:21) else 'en'",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none in page body (dictionary-driven); third-party licence text is lang='en' by design"
+  },
+  "theme": {
+   "theme_scope": "NOT theme-scoped: renders dark-only (bg-void tokens / domain token modules); theme cookie ignored",
+   "hex_literals_route_specific_closure": 0,
+   "arbitrary_hex_tailwind_classes": 0,
+   "top_hex_files": "",
+   "note": "NOT theme-scoped; bg-black/20 on <pre>"
+  },
+  "data_source": "static (dictionary / generated notices lib/legal/thirdPartyNotices.generated)",
+  "auth": "public",
+  "mobile_parity": "No hidden functional control.",
+  "ask_integration": "Mounts platform NavBar (links /search, /my-intelligence via AccountControl - both 307->'/' in Production: NavBar.tsx:223,353; AccountControl.tsx:258). Global AskAiDock mounted (not in any suppression set).",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts",
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/history",
+  "file": "frontend/src/app/history/page.tsx",
+  "kind": "page",
+  "classification": "should-be-deleted",
+  "classification_evidence": "Allowlisted in Production (STANDALONE_PAGES '/history', standaloneRouteGate.ts:30) but AskNavShell.tsx:47-52 calls it 'the legacy Search history that must never be presented as Ask Recent' and on the PO removal list. Entries link to /search (history/page.tsx:50-56), which Production redirects to '/' dropping the query (middleware.ts:22-26).",
+  "alpha": "PASS",
+  "production": "PASS (legacy surface reachable)",
+  "language": {
+   "mechanism": "NONE - hardcoded English, client component; NavBar rendered with no language prop (history/page.tsx:60) and Footer with none (:96)",
+   "locales": [
+    "en"
+   ],
+   "hardcoded_english_samples": [
+    "'History' (history/page.tsx:62)",
+    "'Sign in to see your saved question history.' (:65)",
+    "'Clear history' (:79)"
+   ]
+  },
+  "theme": {
+   "theme_scope": "NOT theme-scoped: renders dark-only (bg-void tokens / domain token modules); theme cookie ignored",
+   "hex_literals_route_specific_closure": 0,
+   "arbitrary_hex_tailwind_classes": 0,
+   "top_hex_files": "",
+   "note": "Tailwind palette literals border-cyan-500/25, hover:border-cyan-400/60 (history/page.tsx:77,86)"
+  },
+  "data_source": "accountFetch('/history') GET/DELETE (history/page.tsx:38,46) via /api/history rewrite",
+  "auth": "requires session (client useAccount check)",
+  "mobile_parity": "No hidden control.",
+  "ask_integration": "None; re-runs question via /search link (legacy analysis). Global dock mounted.",
+  "evidence_state": "None (list of query strings only).",
+  "lib_api_in_closure": [
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/history (layout)",
+  "file": "frontend/src/app/history/layout.tsx",
+  "kind": "layout",
+  "classification": "should-be-deleted",
+  "classification_evidence": "Metadata-only layout for legacy /history (history/layout.tsx:21-36).",
+  "alpha": "PASS",
+  "production": "PASS",
+  "language": {
+   "mechanism": "getDictionary(language) (lib/i18n/dictionaries/index.ts:17-24: en, pl only; other codes -> en); language = cookie if isActiveLanguageCode (ACTIVE_LANGUAGES ['en','pl'], languages.ts:21) else 'en' - reuses homeMetaTitle for /history title (history/layout.tsx:28)",
+   "locales": [
+    "en",
+    "pl"
+   ]
+  },
+  "theme": {
+   "theme_scope": "n/a"
+  },
+  "data_source": "none",
+  "auth": "n/a",
+  "mobile_parity": "n/a",
+  "ask_integration": "n/a",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/account (layout)",
+  "file": "frontend/src/app/account/layout.tsx",
+  "kind": "layout",
+  "classification": "production-surface",
+  "classification_evidence": "Metadata-only layout; noindex via registry.",
+  "alpha": "PASS",
+  "production": "PASS",
+  "language": {
+   "mechanism": "getDictionary(language) (lib/i18n/dictionaries/index.ts:17-24: en, pl only; other codes -> en); language = cookie if isActiveLanguageCode (ACTIVE_LANGUAGES ['en','pl'], languages.ts:21) else 'en' - title reuses homeMetaTitle (account/layout.tsx:29)",
+   "locales": [
+    "en",
+    "pl"
+   ]
+  },
+  "theme": {
+   "theme_scope": "n/a"
+  },
+  "data_source": "none",
+  "auth": "n/a",
+  "mobile_parity": "n/a",
+  "ask_integration": "n/a",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/admin (layout)",
+  "file": "frontend/src/app/admin/layout.tsx",
+  "kind": "layout",
+  "classification": "production-surface",
+  "classification_evidence": "ADMIN_ROOT in STANDALONE_PAGES and '/admin/' subtree (standaloneRouteGate.ts:39,46); robots noindex (admin/layout.tsx:34).",
+  "alpha": "PASS",
+  "production": "PASS (auth-guarded)",
+  "language": {
+   "mechanism": "getDictionary(language).admin (adminEn/adminPl); recovered c55-admin{Ar,De,Es,Fr,Pt} exist but are not wired (lib/i18n/recovered/)",
+   "locales": [
+    "en",
+    "pl"
+   ]
+  },
+  "theme": {
+   "theme_scope": "Admin-specific tokens adm-* (bg-adm-void etc., AdminShell.tsx); not theme-cookie aware",
+   "hex_literals_route_specific_closure": 0
+  },
+  "data_source": "useAdminMe -> /admin/me (lib/admin)",
+  "auth": "admin (client AdminShell gate: outcome!=='authorized' -> AdminAccessState; backend enforces)",
+  "mobile_parity": "Sidebar becomes drawer below adm-rail; AdminTopBar search hidden below adm-full but is 'searchNotImplemented' (AdminTopBar.tsx:61-63); tables stack below adm-rail (AdminDataTable.tsx:546).",
+  "ask_integration": "None; global dock unmounted on /admin/** (AskAiDock.tsx:194).",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts",
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/admin",
+  "file": "frontend/src/app/admin/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "'/admin/' subtree allowlisted (standaloneRouteGate.ts:46); renders OverviewScreen inside AdminShell. Payments tabs: billing.checkout DECLARED OFF (homeR1Gates.ts:63) - screen content not audited for data presence.",
+  "alpha": "PASS",
+  "production": "PASS (admin-guarded)",
+  "language": {
+   "mechanism": "AdminShell t=getDictionary(lang).admin (en/pl) via AdminContext",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "adm-* tokens; not theme-cookie aware",
+   "hex_literals_route_specific_closure": 0
+  },
+  "data_source": "accountFetch -> /api/admin/* (backend /admin/*) via lib/admin; admin/__fixtures__/BaselineAdminDataTable.tsx imported only by specs",
+  "auth": "admin",
+  "mobile_parity": "See /admin (layout).",
+  "ask_integration": "None (dock unmounted on /admin/**)",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/admin/ai",
+  "file": "frontend/src/app/admin/ai/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "'/admin/' subtree allowlisted (standaloneRouteGate.ts:46); renders OperationsScreen tab=ai inside AdminShell. Payments tabs: billing.checkout DECLARED OFF (homeR1Gates.ts:63) - screen content not audited for data presence.",
+  "alpha": "PASS",
+  "production": "PASS (admin-guarded)",
+  "language": {
+   "mechanism": "AdminShell t=getDictionary(lang).admin (en/pl) via AdminContext",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "adm-* tokens; not theme-cookie aware",
+   "hex_literals_route_specific_closure": 0
+  },
+  "data_source": "accountFetch -> /api/admin/* (backend /admin/*) via lib/admin; admin/__fixtures__/BaselineAdminDataTable.tsx imported only by specs",
+  "auth": "admin",
+  "mobile_parity": "See /admin (layout).",
+  "ask_integration": "None (dock unmounted on /admin/**)",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/admin/ai/ask-intelligence",
+  "file": "frontend/src/app/admin/ai/ask-intelligence/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "'/admin/' subtree allowlisted (standaloneRouteGate.ts:46); renders AskIntelligenceScreen inside AdminShell. Payments tabs: billing.checkout DECLARED OFF (homeR1Gates.ts:63) - screen content not audited for data presence.",
+  "alpha": "PASS",
+  "production": "PASS (admin-guarded)",
+  "language": {
+   "mechanism": "AdminShell t=getDictionary(lang).admin (en/pl) via AdminContext",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "adm-* tokens; not theme-cookie aware",
+   "hex_literals_route_specific_closure": 0
+  },
+  "data_source": "accountFetch -> /api/admin/* (backend /admin/*) via lib/admin; admin/__fixtures__/BaselineAdminDataTable.tsx imported only by specs",
+  "auth": "admin",
+  "mobile_parity": "See /admin (layout).",
+  "ask_integration": "None (dock unmounted on /admin/**)",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/admin/ai/providers",
+  "file": "frontend/src/app/admin/ai/providers/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "'/admin/' subtree allowlisted (standaloneRouteGate.ts:46); renders OperationsScreen tab=providers inside AdminShell. Payments tabs: billing.checkout DECLARED OFF (homeR1Gates.ts:63) - screen content not audited for data presence.",
+  "alpha": "PASS",
+  "production": "PASS (admin-guarded)",
+  "language": {
+   "mechanism": "AdminShell t=getDictionary(lang).admin (en/pl) via AdminContext",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "adm-* tokens; not theme-cookie aware",
+   "hex_literals_route_specific_closure": 0
+  },
+  "data_source": "accountFetch -> /api/admin/* (backend /admin/*) via lib/admin; admin/__fixtures__/BaselineAdminDataTable.tsx imported only by specs",
+  "auth": "admin",
+  "mobile_parity": "See /admin (layout).",
+  "ask_integration": "None (dock unmounted on /admin/**)",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/admin/analytics",
+  "file": "frontend/src/app/admin/analytics/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "'/admin/' subtree allowlisted (standaloneRouteGate.ts:46); renders AnalyticsScreen tab=analytics inside AdminShell. Payments tabs: billing.checkout DECLARED OFF (homeR1Gates.ts:63) - screen content not audited for data presence.",
+  "alpha": "PASS",
+  "production": "PASS (admin-guarded)",
+  "language": {
+   "mechanism": "AdminShell t=getDictionary(lang).admin (en/pl) via AdminContext",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "adm-* tokens; not theme-cookie aware",
+   "hex_literals_route_specific_closure": 0
+  },
+  "data_source": "accountFetch -> /api/admin/* (backend /admin/*) via lib/admin; admin/__fixtures__/BaselineAdminDataTable.tsx imported only by specs",
+  "auth": "admin",
+  "mobile_parity": "See /admin (layout).",
+  "ask_integration": "None (dock unmounted on /admin/**)",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/admin/analytics/geography",
+  "file": "frontend/src/app/admin/analytics/geography/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "'/admin/' subtree allowlisted (standaloneRouteGate.ts:46); renders AnalyticsScreen tab=geography inside AdminShell. Payments tabs: billing.checkout DECLARED OFF (homeR1Gates.ts:63) - screen content not audited for data presence.",
+  "alpha": "PASS",
+  "production": "PASS (admin-guarded)",
+  "language": {
+   "mechanism": "AdminShell t=getDictionary(lang).admin (en/pl) via AdminContext",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "adm-* tokens; not theme-cookie aware",
+   "hex_literals_route_specific_closure": 0
+  },
+  "data_source": "accountFetch -> /api/admin/* (backend /admin/*) via lib/admin; admin/__fixtures__/BaselineAdminDataTable.tsx imported only by specs",
+  "auth": "admin",
+  "mobile_parity": "See /admin (layout).",
+  "ask_integration": "None (dock unmounted on /admin/**)",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/admin/audit",
+  "file": "frontend/src/app/admin/audit/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "'/admin/' subtree allowlisted (standaloneRouteGate.ts:46); renders AuditScreen inside AdminShell. Payments tabs: billing.checkout DECLARED OFF (homeR1Gates.ts:63) - screen content not audited for data presence.",
+  "alpha": "PASS",
+  "production": "PASS (admin-guarded)",
+  "language": {
+   "mechanism": "AdminShell t=getDictionary(lang).admin (en/pl) via AdminContext",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "adm-* tokens; not theme-cookie aware",
+   "hex_literals_route_specific_closure": 0
+  },
+  "data_source": "accountFetch -> /api/admin/* (backend /admin/*) via lib/admin; admin/__fixtures__/BaselineAdminDataTable.tsx imported only by specs",
+  "auth": "admin",
+  "mobile_parity": "See /admin (layout).",
+  "ask_integration": "None (dock unmounted on /admin/**)",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/admin/news",
+  "file": "frontend/src/app/admin/news/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "'/admin/' subtree allowlisted (standaloneRouteGate.ts:46); renders OperationsScreen tab=news inside AdminShell. Payments tabs: billing.checkout DECLARED OFF (homeR1Gates.ts:63) - screen content not audited for data presence.",
+  "alpha": "PASS",
+  "production": "PASS (admin-guarded)",
+  "language": {
+   "mechanism": "AdminShell t=getDictionary(lang).admin (en/pl) via AdminContext",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "adm-* tokens; not theme-cookie aware",
+   "hex_literals_route_specific_closure": 0
+  },
+  "data_source": "accountFetch -> /api/admin/* (backend /admin/*) via lib/admin; admin/__fixtures__/BaselineAdminDataTable.tsx imported only by specs",
+  "auth": "admin",
+  "mobile_parity": "See /admin (layout).",
+  "ask_integration": "None (dock unmounted on /admin/**)",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/admin/news/sources",
+  "file": "frontend/src/app/admin/news/sources/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "'/admin/' subtree allowlisted (standaloneRouteGate.ts:46); renders OperationsScreen tab=sources inside AdminShell. Payments tabs: billing.checkout DECLARED OFF (homeR1Gates.ts:63) - screen content not audited for data presence.",
+  "alpha": "PASS",
+  "production": "PASS (admin-guarded)",
+  "language": {
+   "mechanism": "AdminShell t=getDictionary(lang).admin (en/pl) via AdminContext",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "adm-* tokens; not theme-cookie aware",
+   "hex_literals_route_specific_closure": 0
+  },
+  "data_source": "accountFetch -> /api/admin/* (backend /admin/*) via lib/admin; admin/__fixtures__/BaselineAdminDataTable.tsx imported only by specs",
+  "auth": "admin",
+  "mobile_parity": "See /admin (layout).",
+  "ask_integration": "None (dock unmounted on /admin/**)",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/admin/operations",
+  "file": "frontend/src/app/admin/operations/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "'/admin/' subtree allowlisted (standaloneRouteGate.ts:46); renders IncidentControlsScreen inside AdminShell. Payments tabs: billing.checkout DECLARED OFF (homeR1Gates.ts:63) - screen content not audited for data presence.",
+  "alpha": "PASS",
+  "production": "PASS (admin-guarded)",
+  "language": {
+   "mechanism": "AdminShell t=getDictionary(lang).admin (en/pl) via AdminContext",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "adm-* tokens; not theme-cookie aware",
+   "hex_literals_route_specific_closure": 0
+  },
+  "data_source": "accountFetch -> /api/admin/* (backend /admin/*) via lib/admin; admin/__fixtures__/BaselineAdminDataTable.tsx imported only by specs",
+  "auth": "admin",
+  "mobile_parity": "See /admin (layout).",
+  "ask_integration": "None (dock unmounted on /admin/**)",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/admin/payments",
+  "file": "frontend/src/app/admin/payments/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "'/admin/' subtree allowlisted (standaloneRouteGate.ts:46); renders PaymentsScreen tab=overview inside AdminShell. Payments tabs: billing.checkout DECLARED OFF (homeR1Gates.ts:63) - screen content not audited for data presence.",
+  "alpha": "PASS",
+  "production": "PASS (admin-guarded)",
+  "language": {
+   "mechanism": "AdminShell t=getDictionary(lang).admin (en/pl) via AdminContext",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "adm-* tokens; not theme-cookie aware",
+   "hex_literals_route_specific_closure": 0
+  },
+  "data_source": "accountFetch -> /api/admin/* (backend /admin/*) via lib/admin; admin/__fixtures__/BaselineAdminDataTable.tsx imported only by specs",
+  "auth": "admin",
+  "mobile_parity": "See /admin (layout).",
+  "ask_integration": "None (dock unmounted on /admin/**)",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/admin/payments/customers",
+  "file": "frontend/src/app/admin/payments/customers/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "'/admin/' subtree allowlisted (standaloneRouteGate.ts:46); renders PaymentsScreen tab=customers inside AdminShell. Payments tabs: billing.checkout DECLARED OFF (homeR1Gates.ts:63) - screen content not audited for data presence.",
+  "alpha": "PASS",
+  "production": "PASS (admin-guarded)",
+  "language": {
+   "mechanism": "AdminShell t=getDictionary(lang).admin (en/pl) via AdminContext",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "adm-* tokens; not theme-cookie aware",
+   "hex_literals_route_specific_closure": 0
+  },
+  "data_source": "accountFetch -> /api/admin/* (backend /admin/*) via lib/admin; admin/__fixtures__/BaselineAdminDataTable.tsx imported only by specs",
+  "auth": "admin",
+  "mobile_parity": "See /admin (layout).",
+  "ask_integration": "None (dock unmounted on /admin/**)",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/admin/payments/invoices",
+  "file": "frontend/src/app/admin/payments/invoices/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "'/admin/' subtree allowlisted (standaloneRouteGate.ts:46); renders PaymentsScreen tab=invoices inside AdminShell. Payments tabs: billing.checkout DECLARED OFF (homeR1Gates.ts:63) - screen content not audited for data presence.",
+  "alpha": "PASS",
+  "production": "PASS (admin-guarded)",
+  "language": {
+   "mechanism": "AdminShell t=getDictionary(lang).admin (en/pl) via AdminContext",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "adm-* tokens; not theme-cookie aware",
+   "hex_literals_route_specific_closure": 0
+  },
+  "data_source": "accountFetch -> /api/admin/* (backend /admin/*) via lib/admin; admin/__fixtures__/BaselineAdminDataTable.tsx imported only by specs",
+  "auth": "admin",
+  "mobile_parity": "See /admin (layout).",
+  "ask_integration": "None (dock unmounted on /admin/**)",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/admin/payments/ksef",
+  "file": "frontend/src/app/admin/payments/ksef/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "'/admin/' subtree allowlisted (standaloneRouteGate.ts:46); renders PaymentsScreen tab=ksef inside AdminShell. Payments tabs: billing.checkout DECLARED OFF (homeR1Gates.ts:63) - screen content not audited for data presence.",
+  "alpha": "PASS",
+  "production": "PASS (admin-guarded)",
+  "language": {
+   "mechanism": "AdminShell t=getDictionary(lang).admin (en/pl) via AdminContext",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "adm-* tokens; not theme-cookie aware",
+   "hex_literals_route_specific_closure": 0
+  },
+  "data_source": "accountFetch -> /api/admin/* (backend /admin/*) via lib/admin; admin/__fixtures__/BaselineAdminDataTable.tsx imported only by specs",
+  "auth": "admin",
+  "mobile_parity": "See /admin (layout).",
+  "ask_integration": "None (dock unmounted on /admin/**)",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/admin/payments/traceability",
+  "file": "frontend/src/app/admin/payments/traceability/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "'/admin/' subtree allowlisted (standaloneRouteGate.ts:46); renders PaymentsScreen tab=traceability inside AdminShell. Payments tabs: billing.checkout DECLARED OFF (homeR1Gates.ts:63) - screen content not audited for data presence.",
+  "alpha": "PASS",
+  "production": "PASS (admin-guarded)",
+  "language": {
+   "mechanism": "AdminShell t=getDictionary(lang).admin (en/pl) via AdminContext",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "adm-* tokens; not theme-cookie aware",
+   "hex_literals_route_specific_closure": 0
+  },
+  "data_source": "accountFetch -> /api/admin/* (backend /admin/*) via lib/admin; admin/__fixtures__/BaselineAdminDataTable.tsx imported only by specs",
+  "auth": "admin",
+  "mobile_parity": "See /admin (layout).",
+  "ask_integration": "None (dock unmounted on /admin/**)",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/admin/payments/vat",
+  "file": "frontend/src/app/admin/payments/vat/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "'/admin/' subtree allowlisted (standaloneRouteGate.ts:46); renders PaymentsScreen tab=vat inside AdminShell. Payments tabs: billing.checkout DECLARED OFF (homeR1Gates.ts:63) - screen content not audited for data presence.",
+  "alpha": "PASS",
+  "production": "PASS (admin-guarded)",
+  "language": {
+   "mechanism": "AdminShell t=getDictionary(lang).admin (en/pl) via AdminContext",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "adm-* tokens; not theme-cookie aware",
+   "hex_literals_route_specific_closure": 0
+  },
+  "data_source": "accountFetch -> /api/admin/* (backend /admin/*) via lib/admin; admin/__fixtures__/BaselineAdminDataTable.tsx imported only by specs",
+  "auth": "admin",
+  "mobile_parity": "See /admin (layout).",
+  "ask_integration": "None (dock unmounted on /admin/**)",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/admin/settings",
+  "file": "frontend/src/app/admin/settings/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "'/admin/' subtree allowlisted (standaloneRouteGate.ts:46); renders SettingsScreen inside AdminShell. Payments tabs: billing.checkout DECLARED OFF (homeR1Gates.ts:63) - screen content not audited for data presence.",
+  "alpha": "PASS",
+  "production": "PASS (admin-guarded)",
+  "language": {
+   "mechanism": "AdminShell t=getDictionary(lang).admin (en/pl) via AdminContext",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "adm-* tokens; not theme-cookie aware",
+   "hex_literals_route_specific_closure": 0
+  },
+  "data_source": "accountFetch -> /api/admin/* (backend /admin/*) via lib/admin; admin/__fixtures__/BaselineAdminDataTable.tsx imported only by specs",
+  "auth": "admin",
+  "mobile_parity": "See /admin (layout).",
+  "ask_integration": "None (dock unmounted on /admin/**)",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/admin/support",
+  "file": "frontend/src/app/admin/support/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "'/admin/' subtree allowlisted (standaloneRouteGate.ts:46); renders SupportScreen (admin) inside AdminShell. Payments tabs: billing.checkout DECLARED OFF (homeR1Gates.ts:63) - screen content not audited for data presence.",
+  "alpha": "PASS",
+  "production": "PASS (admin-guarded)",
+  "language": {
+   "mechanism": "AdminShell t=getDictionary(lang).admin (en/pl) via AdminContext",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "adm-* tokens; not theme-cookie aware",
+   "hex_literals_route_specific_closure": 0
+  },
+  "data_source": "accountFetch -> /api/admin/* (backend /admin/*) via lib/admin; admin/__fixtures__/BaselineAdminDataTable.tsx imported only by specs",
+  "auth": "admin",
+  "mobile_parity": "See /admin (layout).",
+  "ask_integration": "None (dock unmounted on /admin/**)",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/admin/system/health",
+  "file": "frontend/src/app/admin/system/health/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "'/admin/' subtree allowlisted (standaloneRouteGate.ts:46); renders SystemHealthScreen inside AdminShell. Payments tabs: billing.checkout DECLARED OFF (homeR1Gates.ts:63) - screen content not audited for data presence.",
+  "alpha": "PASS",
+  "production": "PASS (admin-guarded)",
+  "language": {
+   "mechanism": "AdminShell t=getDictionary(lang).admin (en/pl) via AdminContext",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "adm-* tokens; not theme-cookie aware",
+   "hex_literals_route_specific_closure": 0
+  },
+  "data_source": "accountFetch -> /api/admin/* (backend /admin/*) via lib/admin; admin/__fixtures__/BaselineAdminDataTable.tsx imported only by specs",
+  "auth": "admin",
+  "mobile_parity": "See /admin (layout).",
+  "ask_integration": "None (dock unmounted on /admin/**)",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/admin/system/logs",
+  "file": "frontend/src/app/admin/system/logs/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "'/admin/' subtree allowlisted (standaloneRouteGate.ts:46); renders SystemLogsScreen inside AdminShell. Payments tabs: billing.checkout DECLARED OFF (homeR1Gates.ts:63) - screen content not audited for data presence.",
+  "alpha": "PASS",
+  "production": "PASS (admin-guarded)",
+  "language": {
+   "mechanism": "AdminShell t=getDictionary(lang).admin (en/pl) via AdminContext",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "adm-* tokens; not theme-cookie aware",
+   "hex_literals_route_specific_closure": 0
+  },
+  "data_source": "accountFetch -> /api/admin/* (backend /admin/*) via lib/admin; admin/__fixtures__/BaselineAdminDataTable.tsx imported only by specs",
+  "auth": "admin",
+  "mobile_parity": "See /admin (layout).",
+  "ask_integration": "None (dock unmounted on /admin/**)",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/admin/users",
+  "file": "frontend/src/app/admin/users/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "'/admin/' subtree allowlisted (standaloneRouteGate.ts:46); renders AnalyticsScreen tab=users inside AdminShell. Payments tabs: billing.checkout DECLARED OFF (homeR1Gates.ts:63) - screen content not audited for data presence.",
+  "alpha": "PASS",
+  "production": "PASS (admin-guarded)",
+  "language": {
+   "mechanism": "AdminShell t=getDictionary(lang).admin (en/pl) via AdminContext",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "adm-* tokens; not theme-cookie aware",
+   "hex_literals_route_specific_closure": 0
+  },
+  "data_source": "accountFetch -> /api/admin/* (backend /admin/*) via lib/admin; admin/__fixtures__/BaselineAdminDataTable.tsx imported only by specs",
+  "auth": "admin",
+  "mobile_parity": "See /admin (layout).",
+  "ask_integration": "None (dock unmounted on /admin/**)",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/admin/users/subscriptions",
+  "file": "frontend/src/app/admin/users/subscriptions/page.tsx",
+  "kind": "page",
+  "classification": "production-surface",
+  "classification_evidence": "'/admin/' subtree allowlisted (standaloneRouteGate.ts:46); renders AnalyticsScreen tab=subscriptions inside AdminShell. Payments tabs: billing.checkout DECLARED OFF (homeR1Gates.ts:63) - screen content not audited for data presence.",
+  "alpha": "PASS",
+  "production": "PASS (admin-guarded)",
+  "language": {
+   "mechanism": "AdminShell t=getDictionary(lang).admin (en/pl) via AdminContext",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "adm-* tokens; not theme-cookie aware",
+   "hex_literals_route_specific_closure": 0
+  },
+  "data_source": "accountFetch -> /api/admin/* (backend /admin/*) via lib/admin; admin/__fixtures__/BaselineAdminDataTable.tsx imported only by specs",
+  "auth": "admin",
+  "mobile_parity": "See /admin (layout).",
+  "ask_integration": "None (dock unmounted on /admin/**)",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/map",
+  "file": "frontend/src/app/map/page.tsx",
+  "kind": "page",
+  "classification": "alpha-only",
+  "classification_evidence": "Not in STANDALONE allowlist -> 307 to '/' in Production (standaloneRouteGate.ts:103-107). noindex (lib/seo/routes.ts:95-104). NEXT_PUBLIC_MAP_SHELL build flag selects legacy vs Spatial shell (map/page.tsx:99; Dockerfile:49-50).",
+  "alpha": "PASS",
+  "production": "REDIRECT 307 -> /",
+  "language": {
+   "mechanism": "getDictionary(language) (lib/i18n/dictionaries/index.ts:17-24: en, pl only; other codes -> en); language = cookie if isActiveLanguageCode (ACTIVE_LANGUAGES ['en','pl'], languages.ts:21) else 'en'; LanguageSync reconciles cookie/localStorage (map/page.tsx:195); MapPageClient also reads readLanguageCookie (MapPageClient.tsx:90-91). Arabic run boundary explicitly OPEN (map/page.tsx:120-139)",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic in MapPageClient.tsx"
+  },
+  "theme": {
+   "theme_scope": "NOT theme-scoped: renders dark-only (bg-void tokens / domain token modules); theme cookie ignored",
+   "hex_literals_route_specific_closure": 236,
+   "arbitrary_hex_tailwind_classes": 110,
+   "top_hex_files": "components/my-intelligence/miPresentation.ts=58; components/my-intelligence/MiPrimitives.tsx=23; lib/map/spatial/designRenderTokens.ts=22"
+  },
+  "data_source": "lib/api geoNavigatorApi, countryApi, mapFeedApi, newsApi, forwardedClient; ?from=conflict&domain=conflict renders ConflictDashboard spatialView (map/page.tsx:58-60)",
+  "auth": "public (bookmark/sign-in return via MapSignInReturn)",
+  "mobile_parity": "Legacy (flag off) map column 'hidden lg:col-span-2 lg:block' - the map itself is absent below lg (MapPageClient.tsx:2077); flag-on below 1024 is a documented non-map fallback (map/page.tsx:79-87). Footer hidden on compact Spatial (map/page.tsx:212).",
+  "ask_integration": "openGlobalAsk (MobileSpatialShell.tsx); global dock mounted in map mode (AskAiDock.tsx mapSurface).",
+  "evidence_state": "Yes - provenance/retained/LIVE labels across map shell (SourceCard etc.; keyword signal: provenance 134, retained 104).",
+  "lib_api_in_closure": [
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts",
+   "lib/api/geoNavigatorApi.ts",
+   "lib/api/countryApi.ts",
+   "lib/api/mapFeedApi.ts",
+   "lib/api/newsApi.ts",
+   "lib/api/forwardedClient.ts"
+  ],
+  "ask_modules_in_closure": [
+   "openGlobalAsk"
+  ]
+ },
+ {
+  "path": "/search",
+  "file": "frontend/src/app/search/page.tsx",
+  "kind": "page",
+  "classification": "alpha-only",
+  "classification_evidence": "Not allowlisted -> 307 '/' in Production; noindex userDependent (lib/seo/routes.ts:105-115). Yet linked from platform NavBar (NavBar.tsx:223,353) and /history entries.",
+  "alpha": "PASS",
+  "production": "REDIRECT 307 -> /",
+  "language": {
+   "mechanism": "getDictionary(language) (lib/i18n/dictionaries/index.ts:17-24: en, pl only; other codes -> en); language = cookie if isActiveLanguageCode (ACTIVE_LANGUAGES ['en','pl'], languages.ts:21) else 'en' (search/page.tsx:18-21 casts to 'en'|'pl'); SearchPageClient uses resolveInitialLanguage + askR2Strings (en|pl)",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "NOT theme-scoped: renders dark-only (bg-void tokens / domain token modules); theme cookie ignored",
+   "hex_literals_route_specific_closure": 611,
+   "arbitrary_hex_tailwind_classes": 472,
+   "top_hex_files": "components/ask-frame/AskR2TurnView.tsx=101; components/my-intelligence/miPresentation.ts=58; components/analysis-frame/SourcesReporting.tsx=29"
+  },
+  "data_source": "lib/api/analysisApi (analyzeNews -> /api/analysis/news), askV2Api, geoNavigatorApi",
+  "auth": "public page (analysis quota/session decided server-side: UNKNOWN)",
+  "mobile_parity": "Sources prev/next + 'n OF m' readout desktop-only by design (SourcesReporting.tsx:520-566, phone swipes); citation outlet names hidden below md (ClaimCard.tsx:165, TimelineSubView.tsx:113); retrieval label hidden below xl (AnalysisTelemetry.tsx:165).",
+  "ask_integration": "Legacy analysis path analyzeNews (lib/api/analysisApi.ts) plus Ask V2 modules (useAskR2Conversation/askV2Api) and openGlobalAsk; global dock mounted.",
+  "evidence_state": "Yes - heaviest evidence surface (evidence 673, provenance 194, TrustBadge, SourceCard, retained/LIVE labels; keyword signal).",
+  "lib_api_in_closure": [
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts",
+   "lib/api/geoNavigatorApi.ts",
+   "lib/api/askV2Api.ts",
+   "lib/api/analysisApi.ts"
+  ],
+  "ask_modules_in_closure": [
+   "openGlobalAsk",
+   "askV2Api",
+   "useAskR2Conversation",
+   "analysisApi(analyzeNews)"
+  ]
+ },
+ {
+  "path": "/my-intelligence",
+  "file": "frontend/src/app/my-intelligence/page.tsx",
+  "kind": "page",
+  "classification": "alpha-only",
+  "classification_evidence": "Not allowlisted -> 307 '/' in Production. '?state=first-visit|degraded|empty|error|signed-out' REVIEW affordance on a public URL (my-intelligence/page.tsx:25-31,41-58). Closure imports components/my-intelligence/devFixtures.ts (gated by NEXT_PUBLIC_MI_DEV_FIXTURES==='true', devFixtures.ts:30; that var is NOT a Dockerfile ARG so cannot be set in deployed builds).",
+  "alpha": "PASS",
+  "production": "REDIRECT 307 -> /",
+  "language": {
+   "mechanism": "cookie en|pl -> getDictionary().myIntelligence (myIntelligenceEn/Pl) + askR2Strings",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic in MyIntelligenceClient.tsx"
+  },
+  "theme": {
+   "theme_scope": "NOT theme-scoped: renders dark-only (bg-void tokens / domain token modules); theme cookie ignored",
+   "hex_literals_route_specific_closure": 929,
+   "arbitrary_hex_tailwind_classes": 780,
+   "top_hex_files": "components/ask-frame/AskR2TurnView.tsx=101; components/my-intelligence/workspace/WorkspaceNav.tsx=72; components/my-intelligence/workspace/WorkspaceDashboard.tsx=64",
+   "note": "Workspace components hardcode hex: WorkspaceNav.tsx 72, WorkspaceDashboard.tsx 64, WorkspaceChrome.tsx 51 (e.g. bg-[#020d1d] border-[#0a2744], WorkspaceChrome.tsx:107)"
+  },
+  "data_source": "lib/myIntelligence -> /users/me/intelligence/feed, /users/me/intelligence/interests, /users/me/saved/stories, /history; askV2Api; analysisApi; geoNavigatorApi. FIXTURE: devFixtures.ts reachable (flag-gated, default OFF).",
+  "auth": "requires session (signed-out state)",
+  "mobile_parity": "Desktop context rail 'hidden lg:flex' (WorkspaceChrome.tsx:107) has phone equivalents (selection bar MiSelection.tsx:398 lg:hidden; drawer WorkspaceNav.tsx:598). Story-title list hidden below sm (MiSelection.tsx:616).",
+  "ask_integration": "openGlobalAsk + useAskR2Conversation/askV2Api (lib/myIntelligence/hooks.ts) AND legacy analysisApi/analyzeNews (lib/myIntelligence/hooks.ts); dock mounted, launcher suppressed (AskAiDock.tsx LAUNCHER_SUPPRESSED_ROUTES).",
+  "evidence_state": "Yes (evidence/provenance/retained/LIVE keyword signal; 'Sample' meta when fixtures on).",
+  "lib_api_in_closure": [
+   "lib/api/accountLinks.ts",
+   "lib/api/askV2Api.ts",
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/apiBase.ts",
+   "lib/api/geoNavigatorApi.ts",
+   "lib/api/analysisApi.ts"
+  ],
+  "ask_modules_in_closure": [
+   "useAskR2Conversation",
+   "askV2Api",
+   "openGlobalAsk",
+   "analysisApi(analyzeNews)"
+  ]
+ },
+ {
+  "path": "/my-intelligence (layout)",
+  "file": "frontend/src/app/my-intelligence/layout.tsx",
+  "kind": "layout",
+  "classification": "alpha-only",
+  "classification_evidence": "Metadata-only layout.",
+  "alpha": "PASS",
+  "production": "REDIRECT 307 -> /",
+  "language": {
+   "mechanism": "getDictionary(lang).myIntelligence metaTitle",
+   "locales": [
+    "en",
+    "pl"
+   ]
+  },
+  "theme": {
+   "theme_scope": "n/a"
+  },
+  "data_source": "none",
+  "auth": "n/a",
+  "mobile_parity": "n/a",
+  "ask_integration": "n/a",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/saved/briefing",
+  "file": "frontend/src/app/saved/briefing/page.tsx",
+  "kind": "page",
+  "classification": "alpha-only",
+  "classification_evidence": "saved/briefing/page.tsx:17-18 'Not in the Standalone (Production) allowlist: briefings are an Alpha-only, switched-off capability'; backend ASK_BRIEFINGS_ENABLED (briefingStrings.ts:138-139).",
+  "alpha": "PASS",
+  "production": "REDIRECT 307 -> /",
+  "language": {
+   "mechanism": "resolveAskLocale(cookie) -> 7 DisplayLocales (en,pl,fr,de,es,pt,ar; shared/src/language/index.ts:30); chrome via askLanguageDisposition().catalogueLocale -> en|pl only (askLocale.ts:95,144-155); briefingStrings returns PL only for 'pl' else EN (briefingStrings.ts:133-135)",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": [
+    "metadata title 'Briefing — Ask GlobalNews AI' (saved/briefing/page.tsx:21)"
+   ]
+  },
+  "theme": {
+   "theme_scope": "ThemeScope via AskThemedSurface/AskThemedPage (light/dark/system/scheduled from globalnews-ai-theme cookie)",
+   "hex_literals_route_specific_closure": 25,
+   "arbitrary_hex_tailwind_classes": 20,
+   "top_hex_files": "components/ask-nav/AskNavShell.tsx=10; components/ask/BriefingViews.tsx=6; components/ask-nav/askNav.module.css=4"
+  },
+  "data_source": "askV2Api /ask-v2/briefings/{id}, /versions/{v}",
+  "auth": "requires session (401/404 surfaced)",
+  "mobile_parity": "No hidden functional control found.",
+  "ask_integration": "Standalone AskNavShell AND global AskAiDock both mounted ('/saved/briefing' is not in ASK_CONTINUITY_ROUTES, AskAiDock.tsx) - duplicate Ask entry points.",
+  "evidence_state": "Briefing views with AskEvidenceTable/citations (keyword signal).",
+  "lib_api_in_closure": [
+   "lib/api/askV2Api.ts",
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": [
+   "askV2Api"
+  ]
+ },
+ {
+  "path": "/conflict",
+  "file": "frontend/src/app/conflict/page.tsx",
+  "kind": "page",
+  "classification": "alpha-only",
+  "classification_evidence": "Not allowlisted -> 307 in Production; noindex (conflict/page.tsx:5-8); linked from intelligenceModules.ts:315 and miWorkspaceModel.ts:57.",
+  "alpha": "PASS",
+  "production": "REDIRECT 307 -> /",
+  "language": {
+   "mechanism": "cookie en|pl -> ConflictDashboard (getDictionary + conflictStrings); LanguageSync",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": [
+    "metadata title 'Conflict Intelligence | GlobalNews AI' (conflict/page.tsx:6)"
+   ]
+  },
+  "theme": {
+   "theme_scope": "NOT theme-scoped: renders dark-only (bg-void tokens / domain token modules); theme cookie ignored",
+   "hex_literals_route_specific_closure": 118,
+   "arbitrary_hex_tailwind_classes": 31,
+   "top_hex_files": "lib/map/spatial/designRenderTokens.ts=22; lib/map/coveragePaint.ts=12; lib/map/spatial/colourGrammar.ts=11"
+  },
+  "data_source": "lib/conflict -> /conflict-data/observations?limit=500, /conflict-data/observations/{key}/evidence; geoNavigatorApi",
+  "auth": "public",
+  "mobile_parity": "UNKNOWN (no 'hidden md:*' pattern found in closure)",
+  "ask_integration": "Global dock only (no route-specific Ask module in closure).",
+  "evidence_state": "Yes - retained observation evidence/provenance (UCDP GED keys).",
+  "lib_api_in_closure": [
+   "lib/api/accountLinks.ts",
+   "lib/api/geoNavigatorApi.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/energy",
+  "file": "frontend/src/app/energy/page.tsx",
+  "kind": "page",
+  "classification": "alpha-only",
+  "classification_evidence": "Not allowlisted -> 307; noindex (energy/page.tsx:40-43); page always renders governed retained frame, design fixtures excluded (energy/page.tsx:75-88); lib/energy/energyFixtures.ts imported by nothing non-spec.",
+  "alpha": "PASS",
+  "production": "REDIRECT 307 -> /",
+  "language": {
+   "mechanism": "cookie en|pl -> EnergyLocale; energyStrings EN+PL (energyStrings.ts:706); ScriptRun wrapper",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": [
+    "aria-label=\"Close\" (EnergyShell.tsx:815)",
+    "metadata title 'Energy Intelligence' (energy/page.tsx:41)"
+   ]
+  },
+  "theme": {
+   "theme_scope": "NOT theme-scoped: renders dark-only (bg-void tokens / domain token modules); theme cookie ignored",
+   "hex_literals_route_specific_closure": 23,
+   "arbitrary_hex_tailwind_classes": 0,
+   "top_hex_files": "lib/energy/energyTokens.ts=18; components/energy/EnergyFlowSankey.tsx=2; components/energy/EnergyShell.tsx=1",
+   "note": "Inline styles from lib/energy/energyTokens.ts (18 hex)"
+  },
+  "data_source": "readEnergyObservations -> {API}/energy/observations (lib/energy/energyReadModel.ts:6), server-side",
+  "auth": "public",
+  "mobile_parity": "UNKNOWN (inline-style layout, no Tailwind breakpoint hiding found)",
+  "ask_integration": "Global dock only.",
+  "evidence_state": "Retained frame with provenance (energyRetainedAdapter).",
+  "lib_api_in_closure": [
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/humanitarian",
+  "file": "frontend/src/app/humanitarian/page.tsx",
+  "kind": "page",
+  "classification": "alpha-only",
+  "classification_evidence": "Not allowlisted -> 307; noindex. Linked from intelligenceModules.ts:371.",
+  "alpha": "PASS",
+  "production": "REDIRECT 307 -> /",
+  "language": {
+   "mechanism": "cookie en|pl -> HumLocale; HUM_CATALOGUE = { en } ONLY (humStrings.ts:516) with visible fallback banner",
+   "locales": [
+    "en"
+   ],
+   "hardcoded_english_samples": [
+    "'A validated local-source baseline for this jurisdiction.' (HumanitarianScreen.tsx:346)",
+    "'Any sector measure with a stated method, period and precision.' (HumanitarianScreen.tsx:349)",
+    "'Local corroboration of any standing claim...' (HumanitarianScreen.tsx:352)"
+   ]
+  },
+  "theme": {
+   "theme_scope": "NOT theme-scoped: renders dark-only (bg-void tokens / domain token modules); theme cookie ignored",
+   "hex_literals_route_specific_closure": 24,
+   "arbitrary_hex_tailwind_classes": 0,
+   "top_hex_files": "lib/humanitarian/humTokens.ts=24",
+   "note": "Inline styles from lib/humanitarian/humTokens.ts (24 hex)"
+  },
+  "data_source": "readHumanitarianObservations -> {API}/humanitarian/observations (humanitarianRead.ts:11-12)",
+  "auth": "public",
+  "mobile_parity": "n/a (separate compact entry)",
+  "ask_integration": "Global dock only.",
+  "evidence_state": "Retained read; evidence keyword signal low (evidence 23).",
+  "lib_api_in_closure": [
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts",
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/humanitarian/compact",
+  "file": "frontend/src/app/humanitarian/compact/page.tsx",
+  "kind": "page",
+  "classification": "alpha-only",
+  "classification_evidence": "Not allowlisted -> 307; noindex. Phone-frame entry, not linked anywhere (orphan inspection address).",
+  "alpha": "PASS",
+  "production": "REDIRECT 307 -> /",
+  "language": {
+   "mechanism": "cookie en|pl -> HumLocale; HUM_CATALOGUE = { en } ONLY (humStrings.ts:516) with visible fallback banner",
+   "locales": [
+    "en"
+   ],
+   "hardcoded_english_samples": "UNKNOWN (compact screen not sampled)"
+  },
+  "theme": {
+   "theme_scope": "NOT theme-scoped: renders dark-only (bg-void tokens / domain token modules); theme cookie ignored",
+   "hex_literals_route_specific_closure": 24,
+   "arbitrary_hex_tailwind_classes": 0,
+   "top_hex_files": "lib/humanitarian/humTokens.ts=24",
+   "note": "Inline styles from lib/humanitarian/humTokens.ts (24 hex)"
+  },
+  "data_source": "readHumanitarianObservations -> {API}/humanitarian/observations (humanitarianRead.ts:11-12)",
+  "auth": "public",
+  "mobile_parity": "n/a (separate compact entry)",
+  "ask_integration": "Global dock only.",
+  "evidence_state": "Retained read; evidence keyword signal low (evidence 23).",
+  "lib_api_in_closure": [
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts",
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/market",
+  "file": "frontend/src/app/market/page.tsx",
+  "kind": "page",
+  "classification": "alpha-only",
+  "classification_evidence": "Not allowlisted -> 307; noindex (market/page.tsx:47-55). Linked from intelligenceModules.ts:343.",
+  "alpha": "PASS",
+  "production": "REDIRECT 307 -> /",
+  "language": {
+   "mechanism": "cookie en|pl -> MktLocale; MKT_CATALOGUE = { en } ONLY (mktStrings.ts:316)",
+   "locales": [
+    "en"
+   ],
+   "hardcoded_english_samples": [
+    "metadata title 'Market Intelligence' (market/page.tsx:48)"
+   ]
+  },
+  "theme": {
+   "theme_scope": "NOT theme-scoped: renders dark-only (bg-void tokens / domain token modules); theme cookie ignored",
+   "hex_literals_route_specific_closure": 15,
+   "arbitrary_hex_tailwind_classes": 0,
+   "top_hex_files": "lib/market/mktTokens.ts=15",
+   "note": "lib/market/mktTokens.ts (15 hex)"
+  },
+  "data_source": "readMarketObservations (/market-data/observations) + readMarketProcurement (/market-data/procurement), server-side",
+  "auth": "public",
+  "mobile_parity": "n/a (separate compact entry)",
+  "ask_integration": "Global dock only.",
+  "evidence_state": "Provenance one tap away (market/compact/page.tsx:18-32 comment); keyword signal provenance 14.",
+  "lib_api_in_closure": [
+   "lib/api/apiBase.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/market/compact",
+  "file": "frontend/src/app/market/compact/page.tsx",
+  "kind": "page",
+  "classification": "alpha-only",
+  "classification_evidence": "Not allowlisted -> 307; noindex (market/page.tsx:47-55). Orphan phone-frame entry.",
+  "alpha": "PASS",
+  "production": "REDIRECT 307 -> /",
+  "language": {
+   "mechanism": "cookie en|pl -> MktLocale; MKT_CATALOGUE = { en } ONLY (mktStrings.ts:316)",
+   "locales": [
+    "en"
+   ],
+   "hardcoded_english_samples": [
+    "metadata title 'Market Intelligence' (market/page.tsx:48)"
+   ]
+  },
+  "theme": {
+   "theme_scope": "NOT theme-scoped: renders dark-only (bg-void tokens / domain token modules); theme cookie ignored",
+   "hex_literals_route_specific_closure": 15,
+   "arbitrary_hex_tailwind_classes": 0,
+   "top_hex_files": "lib/market/mktTokens.ts=15",
+   "note": "lib/market/mktTokens.ts (15 hex)"
+  },
+  "data_source": "readMarketObservations (/market-data/observations) + readMarketProcurement (/market-data/procurement), server-side",
+  "auth": "public",
+  "mobile_parity": "n/a (separate compact entry)",
+  "ask_integration": "Global dock only.",
+  "evidence_state": "Provenance one tap away (market/compact/page.tsx:18-32 comment); keyword signal provenance 14.",
+  "lib_api_in_closure": [
+   "lib/api/apiBase.ts",
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/market (loading)",
+  "file": "frontend/src/app/market/loading.tsx",
+  "kind": "special:loading",
+  "classification": "alpha-only",
+  "classification_evidence": "Suspense loading UI for /market.",
+  "alpha": "PASS",
+  "production": "REDIRECT 307 -> / (parent route)",
+  "language": {
+   "mechanism": "NONE - hardcoded",
+   "locales": [
+    "en"
+   ],
+   "hardcoded_english_samples": [
+    "'Loading market observations' (market/loading.tsx:44)"
+   ]
+  },
+  "theme": {
+   "theme_scope": "not themed",
+   "hex_literals": 1,
+   "note": "color '#8b94a1' inline (market/loading.tsx:37)"
+  },
+  "data_source": "static",
+  "auth": "public",
+  "mobile_parity": "n/a",
+  "ask_integration": "n/a",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/market/compact (loading)",
+  "file": "frontend/src/app/market/compact/loading.tsx",
+  "kind": "special:loading",
+  "classification": "alpha-only",
+  "classification_evidence": "Suspense loading UI for /market.",
+  "alpha": "PASS",
+  "production": "REDIRECT 307 -> / (parent route)",
+  "language": {
+   "mechanism": "NONE - hardcoded",
+   "locales": [
+    "en"
+   ],
+   "hardcoded_english_samples": [
+    "'Loading market observations' (market/loading.tsx:44)"
+   ]
+  },
+  "theme": {
+   "theme_scope": "not themed",
+   "hex_literals": 1,
+   "note": "color '#8b94a1' inline (market/loading.tsx:37)"
+  },
+  "data_source": "static",
+  "auth": "public",
+  "mobile_parity": "n/a",
+  "ask_integration": "n/a",
+  "evidence_state": "n/a",
+  "lib_api_in_closure": [],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/imihigo",
+  "file": "frontend/src/app/imihigo/page.tsx",
+  "kind": "page",
+  "classification": "alpha-only",
+  "classification_evidence": "Not allowlisted -> 307; noindex; linked from homeRevaModel.ts:102 and miWorkspaceModel.ts:69. ",
+  "alpha": "PASS",
+  "production": "REDIRECT 307 -> /",
+  "language": {
+   "mechanism": "Own inline en/pl copy in ImihigoScreen.tsx (lines ~27-32); locale = cookie==='pl'?'pl':'en' (imihigo/page.tsx:15) - bypasses isActiveLanguageCode",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": [
+    "metadata title 'Imihigo Intelligence — retained NISR evaluation' (imihigo/page.tsx:10)"
+   ]
+  },
+  "theme": {
+   "theme_scope": "NOT theme-scoped: renders dark-only (bg-void tokens / domain token modules); theme cookie ignored",
+   "hex_literals_route_specific_closure": 1,
+   "arbitrary_hex_tailwind_classes": 1,
+   "top_hex_files": "components/specialist/SpecialistHudLine.tsx=1"
+  },
+  "data_source": "STATIC bundled JSON: lib/imihigo/retained.json + authorities.json (retainedReader.ts:1-2) - a retained NISR 2024/2025 capture, not a live read",
+  "auth": "public",
+  "mobile_parity": "compact variant",
+  "ask_integration": "Global dock only.",
+  "evidence_state": "Yes - sourceUrl, pdfPage, quote provenance in retained.json; revision label.",
+  "lib_api_in_closure": [],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/imihigo/compact",
+  "file": "frontend/src/app/imihigo/compact/page.tsx",
+  "kind": "page",
+  "classification": "alpha-only",
+  "classification_evidence": "Not allowlisted -> 307; noindex; linked from homeRevaModel.ts:102 and miWorkspaceModel.ts:69. Compact re-renders ImihigoPage with compact='1' (imihigo/compact/page.tsx:4-6); also reachable as /imihigo?compact=1.",
+  "alpha": "PASS",
+  "production": "REDIRECT 307 -> /",
+  "language": {
+   "mechanism": "Own inline en/pl copy in ImihigoScreen.tsx (lines ~27-32); locale = cookie==='pl'?'pl':'en' (imihigo/page.tsx:15) - bypasses isActiveLanguageCode",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": [
+    "metadata title 'Imihigo Intelligence — retained NISR evaluation' (imihigo/page.tsx:10)"
+   ]
+  },
+  "theme": {
+   "theme_scope": "NOT theme-scoped: renders dark-only (bg-void tokens / domain token modules); theme cookie ignored",
+   "hex_literals_route_specific_closure": 1,
+   "arbitrary_hex_tailwind_classes": 1,
+   "top_hex_files": "components/specialist/SpecialistHudLine.tsx=1"
+  },
+  "data_source": "STATIC bundled JSON: lib/imihigo/retained.json + authorities.json (retainedReader.ts:1-2) - a retained NISR 2024/2025 capture, not a live read",
+  "auth": "public",
+  "mobile_parity": "compact variant",
+  "ask_integration": "Global dock only.",
+  "evidence_state": "Yes - sourceUrl, pdfPage, quote provenance in retained.json; revision label.",
+  "lib_api_in_closure": [],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/delivery-visual-preview",
+  "file": "frontend/src/app/delivery-visual-preview/page.tsx",
+  "kind": "page",
+  "classification": "preview",
+  "classification_evidence": "Self-declared temporary: 'This module is DELETED when /delivery opens' (delivery-visual-preview/page.tsx:32). Not linked anywhere. Not allowlisted -> 307 in Production; noindex.",
+  "alpha": "PASS (public, no auth)",
+  "production": "REDIRECT 307 -> /",
+  "language": {
+   "mechanism": "cookie en|pl -> deliveryStrings EN+PL (deliveryStrings.ts:141)",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "NOT theme-scoped: renders dark-only (bg-void tokens / domain token modules); theme cookie ignored",
+   "hex_literals_route_specific_closure": 4,
+   "arbitrary_hex_tailwind_classes": 1,
+   "top_hex_files": "lib/delivery/deliveryPreview.ts=3; components/specialist/SpecialistHudLine.tsx=1"
+  },
+  "data_source": "none (provider-free, no fetch: page comment :27-30). Filename-level preview modules in closure: app/delivery-visual-preview/page.tsx, components/delivery/DeliveryPreviewScreen.tsx, lib/delivery/deliveryPreview.ts",
+  "auth": "public",
+  "mobile_parity": "separate /compact entry",
+  "ask_integration": "None route-specific; global dock mounted.",
+  "evidence_state": "Governed absence / retained frame",
+  "lib_api_in_closure": [],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/delivery-visual-preview/compact",
+  "file": "frontend/src/app/delivery-visual-preview/compact/page.tsx",
+  "kind": "page",
+  "classification": "preview",
+  "classification_evidence": "Same; :32. Not linked. Not allowlisted -> 307 in Production; noindex.",
+  "alpha": "PASS (public, no auth)",
+  "production": "REDIRECT 307 -> /",
+  "language": {
+   "mechanism": "cookie en|pl -> deliveryStrings EN+PL (deliveryStrings.ts:141)",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "NOT theme-scoped: renders dark-only (bg-void tokens / domain token modules); theme cookie ignored",
+   "hex_literals_route_specific_closure": 4,
+   "arbitrary_hex_tailwind_classes": 1,
+   "top_hex_files": "lib/delivery/deliveryPreview.ts=3; components/specialist/SpecialistHudLine.tsx=1"
+  },
+  "data_source": "none. Filename-level preview modules in closure: app/delivery-visual-preview/compact/page.tsx, components/delivery/DeliveryPreviewScreen.tsx, lib/delivery/deliveryPreview.ts",
+  "auth": "public",
+  "mobile_parity": "separate /compact entry",
+  "ask_integration": "None route-specific; global dock mounted.",
+  "evidence_state": "Governed absence / retained frame",
+  "lib_api_in_closure": [],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/economy-visual-preview",
+  "file": "frontend/src/app/economy-visual-preview/page.tsx",
+  "kind": "page",
+  "classification": "preview",
+  "classification_evidence": "'Alpha visual preview' (title :25); linked from intelligenceModules.ts:305, miWorkspaceModel.ts:54. Not allowlisted -> 307 in Production; noindex.",
+  "alpha": "PASS (public, no auth)",
+  "production": "REDIRECT 307 -> /",
+  "language": {
+   "mechanism": "cookie en|pl -> economy strings catalogue has 7 locales (strings.ts:1131-1139) but page clamps to en|pl via isActiveLanguageCode",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": [
+    "'What we know' (EconomyScreen.tsx:298)",
+    "'What we cannot conclude yet' (EconomyScreen.tsx:304)"
+   ]
+  },
+  "theme": {
+   "theme_scope": "NOT theme-scoped: renders dark-only (bg-void tokens / domain token modules); theme cookie ignored",
+   "hex_literals_route_specific_closure": 21,
+   "arbitrary_hex_tailwind_classes": 0,
+   "top_hex_files": "components/economy/econTokens.ts=19; components/economy/EconomyScreen.tsx=2",
+   "note": "Economy: econTokens.ts 19 hex + inline '#5BE3A8'/'#D9A441' (EconomyScreen.tsx:298,304)"
+  },
+  "data_source": "readEconomyObservations -> {API}/economy/observations/rw-nisr-cpi (economyObservationRead.ts:125-138); 'No fixture fallback' (page :18). Filename-level preview modules in closure: app/economy-visual-preview/page.tsx, components/economy/AlphaVisualPreview.tsx, lib/specialist/previewScope.ts",
+  "auth": "public",
+  "mobile_parity": "separate /compact entry",
+  "ask_integration": "None route-specific; global dock mounted.",
+  "evidence_state": "Governed absence / retained frame",
+  "lib_api_in_closure": [
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/economy-visual-preview/compact",
+  "file": "frontend/src/app/economy-visual-preview/compact/page.tsx",
+  "kind": "page",
+  "classification": "preview",
+  "classification_evidence": "'Alpha visual preview, compact' (:27). Not allowlisted -> 307 in Production; noindex.",
+  "alpha": "PASS (public, no auth)",
+  "production": "REDIRECT 307 -> /",
+  "language": {
+   "mechanism": "cookie en|pl -> economy strings catalogue has 7 locales (strings.ts:1131-1139) but page clamps to en|pl via isActiveLanguageCode",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": [
+    "'What we know' (EconomyScreen.tsx:298)",
+    "'What we cannot conclude yet' (EconomyScreen.tsx:304)"
+   ]
+  },
+  "theme": {
+   "theme_scope": "NOT theme-scoped: renders dark-only (bg-void tokens / domain token modules); theme cookie ignored",
+   "hex_literals_route_specific_closure": 21,
+   "arbitrary_hex_tailwind_classes": 0,
+   "top_hex_files": "components/economy/econTokens.ts=19; components/economy/EconomyScreen.tsx=2",
+   "note": "Economy: econTokens.ts 19 hex + inline '#5BE3A8'/'#D9A441' (EconomyScreen.tsx:298,304)"
+  },
+  "data_source": "same economy read. Filename-level preview modules in closure: app/economy-visual-preview/compact/page.tsx, components/economy/AlphaVisualPreview.tsx, lib/specialist/previewScope.ts",
+  "auth": "public",
+  "mobile_parity": "separate /compact entry",
+  "ask_integration": "None route-specific; global dock mounted.",
+  "evidence_state": "Governed absence / retained frame",
+  "lib_api_in_closure": [
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/election-visual-preview",
+  "file": "frontend/src/app/election-visual-preview/page.tsx",
+  "kind": "page",
+  "classification": "preview",
+  "classification_evidence": "'provider-free preview' (:13); linked from homeRevaModel.ts:101, miWorkspaceModel.ts:68. Not allowlisted -> 307 in Production; noindex.",
+  "alpha": "PASS (public, no auth)",
+  "production": "REDIRECT 307 -> /",
+  "language": {
+   "mechanism": "cookie en|pl -> electionStrings EN+PL (electionStrings.ts:190)",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "NOT theme-scoped: renders dark-only (bg-void tokens / domain token modules); theme cookie ignored",
+   "hex_literals_route_specific_closure": 4,
+   "arbitrary_hex_tailwind_classes": 1,
+   "top_hex_files": "lib/election/electionPreview.ts=3; components/specialist/SpecialistHudLine.tsx=1"
+  },
+  "data_source": "readElection -> {API}/election/evidence/ke?locale= (lib/evidence/retainedReaders.ts). Filename-level preview modules in closure: app/election-visual-preview/page.tsx, components/election/ElectionPreviewScreen.tsx, lib/election/electionPreview.ts",
+  "auth": "public",
+  "mobile_parity": "separate /compact entry",
+  "ask_integration": "None route-specific; global dock mounted.",
+  "evidence_state": "Governed absence / retained frame",
+  "lib_api_in_closure": [
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/election-visual-preview/compact",
+  "file": "frontend/src/app/election-visual-preview/compact/page.tsx",
+  "kind": "page",
+  "classification": "preview",
+  "classification_evidence": "(:13). Not allowlisted -> 307 in Production; noindex.",
+  "alpha": "PASS (public, no auth)",
+  "production": "REDIRECT 307 -> /",
+  "language": {
+   "mechanism": "cookie en|pl -> electionStrings EN+PL (electionStrings.ts:190)",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "NOT theme-scoped: renders dark-only (bg-void tokens / domain token modules); theme cookie ignored",
+   "hex_literals_route_specific_closure": 4,
+   "arbitrary_hex_tailwind_classes": 1,
+   "top_hex_files": "lib/election/electionPreview.ts=3; components/specialist/SpecialistHudLine.tsx=1"
+  },
+  "data_source": "same. Filename-level preview modules in closure: app/election-visual-preview/compact/page.tsx, components/election/ElectionPreviewScreen.tsx, lib/election/electionPreview.ts",
+  "auth": "public",
+  "mobile_parity": "separate /compact entry",
+  "ask_integration": "None route-specific; global dock mounted.",
+  "evidence_state": "Governed absence / retained frame",
+  "lib_api_in_closure": [
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/politics-visual-preview",
+  "file": "frontend/src/app/politics-visual-preview/page.tsx",
+  "kind": "page",
+  "classification": "preview",
+  "classification_evidence": "'ALPHA PRODUCT OWNER VISUAL PREVIEW. NOT THE POLITICS ROUTE' (:12); linked from intelligenceModules.ts:284, miWorkspaceModel.ts:53. Not allowlisted -> 307 in Production; noindex.",
+  "alpha": "PASS (public, no auth)",
+  "production": "REDIRECT 307 -> /",
+  "language": {
+   "mechanism": "cookie en|pl -> POL_CATALOGUE {en, pl} (politicsStrings.ts:239)",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "NOT theme-scoped: renders dark-only (bg-void tokens / domain token modules); theme cookie ignored",
+   "hex_literals_route_specific_closure": 1,
+   "arbitrary_hex_tailwind_classes": 1,
+   "top_hex_files": "components/specialist/SpecialistHudLine.tsx=1"
+  },
+  "data_source": "readPoliticsObservations -> {API}/politics/observations?limit=100. Filename-level preview modules in closure: app/politics-visual-preview/page.tsx",
+  "auth": "public",
+  "mobile_parity": "separate /compact entry",
+  "ask_integration": "None route-specific; global dock mounted.",
+  "evidence_state": "Governed absence / retained frame",
+  "lib_api_in_closure": [
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/politics-visual-preview/compact",
+  "file": "frontend/src/app/politics-visual-preview/compact/page.tsx",
+  "kind": "page",
+  "classification": "preview",
+  "classification_evidence": "(:11). Not allowlisted -> 307 in Production; noindex.",
+  "alpha": "PASS (public, no auth)",
+  "production": "REDIRECT 307 -> /",
+  "language": {
+   "mechanism": "cookie en|pl -> POL_CATALOGUE {en, pl} (politicsStrings.ts:239)",
+   "locales": [
+    "en",
+    "pl"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "NOT theme-scoped: renders dark-only (bg-void tokens / domain token modules); theme cookie ignored",
+   "hex_literals_route_specific_closure": 0,
+   "arbitrary_hex_tailwind_classes": 0,
+   "top_hex_files": ""
+  },
+  "data_source": "same. Filename-level preview modules in closure: app/politics-visual-preview/compact/page.tsx",
+  "auth": "public",
+  "mobile_parity": "separate /compact entry",
+  "ask_integration": "None route-specific; global dock mounted.",
+  "evidence_state": "Governed absence / retained frame",
+  "lib_api_in_closure": [
+   "lib/api/apiBase.ts"
+  ],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/security-visual-preview",
+  "file": "frontend/src/app/security-visual-preview/page.tsx",
+  "kind": "page",
+  "classification": "preview",
+  "classification_evidence": "'ALPHA PRODUCT OWNER VISUAL PREVIEW. NOT A GOVERNED ROUTE' (:11); linked from intelligenceModules.ts:203. Not allowlisted -> 307 in Production; noindex.",
+  "alpha": "PASS (public, no auth)",
+  "production": "REDIRECT 307 -> /",
+  "language": {
+   "mechanism": "cookie en|pl -> SEC_CATALOGUE = { en } ONLY, disclosed (securityStrings.ts:7,125)",
+   "locales": [
+    "en"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "NOT theme-scoped: renders dark-only (bg-void tokens / domain token modules); theme cookie ignored",
+   "hex_literals_route_specific_closure": 0,
+   "arbitrary_hex_tailwind_classes": 0,
+   "top_hex_files": ""
+  },
+  "data_source": "none (no fetch). Filename-level preview modules in closure: app/security-visual-preview/page.tsx",
+  "auth": "public",
+  "mobile_parity": "separate /compact entry",
+  "ask_integration": "None route-specific; global dock mounted.",
+  "evidence_state": "Governed absence / retained frame (no evidence: SEC_NOT_ASSESSED)",
+  "lib_api_in_closure": [],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/security-visual-preview/compact",
+  "file": "frontend/src/app/security-visual-preview/compact/page.tsx",
+  "kind": "page",
+  "classification": "preview",
+  "classification_evidence": "(:10). Not allowlisted -> 307 in Production; noindex.",
+  "alpha": "PASS (public, no auth)",
+  "production": "REDIRECT 307 -> /",
+  "language": {
+   "mechanism": "cookie en|pl -> SEC_CATALOGUE = { en } ONLY, disclosed (securityStrings.ts:7,125)",
+   "locales": [
+    "en"
+   ],
+   "hardcoded_english_samples": "none found by heuristic"
+  },
+  "theme": {
+   "theme_scope": "NOT theme-scoped: renders dark-only (bg-void tokens / domain token modules); theme cookie ignored",
+   "hex_literals_route_specific_closure": 0,
+   "arbitrary_hex_tailwind_classes": 0,
+   "top_hex_files": ""
+  },
+  "data_source": "none. Filename-level preview modules in closure: app/security-visual-preview/compact/page.tsx",
+  "auth": "public",
+  "mobile_parity": "separate /compact entry",
+  "ask_integration": "None route-specific; global dock mounted.",
+  "evidence_state": "Governed absence / retained frame (no evidence: SEC_NOT_ASSESSED)",
+  "lib_api_in_closure": [],
+  "ask_modules_in_closure": []
+ },
+ {
+  "path": "/workspace",
+  "file": "frontend/src/app/workspace/page.tsx",
+  "kind": "page",
+  "classification": "should-be-deleted",
+  "classification_evidence": "Static placeholder: non-functional 'Analyze' button with no handler and unbound input (workspace/page.tsx:273-285); 'Today's Intelligence' placeholders 'will appear here once the analysis pipeline is connected' (:140-156); registry flags it 'FLAGGED FOR MAIN... STATIC capability list' (lib/seo/routes.ts:225-236). Only referenced by StoryBookmark sign-in return list (StoryBookmark.tsx:44). Not allowlisted -> 307 in Production.",
+  "alpha": "PASS",
+  "production": "REDIRECT 307 -> /",
+  "language": {
+   "mechanism": "NONE - entire page hardcoded English; NavBar/Footer rendered without language (workspace/page.tsx:252,418); only metadata localized",
+   "locales": [
+    "en"
+   ],
+   "hardcoded_english_samples": [
+    "'Understand the world, not just the headlines.' (workspace/page.tsx:261)",
+    "'Analyze' (:284)",
+    "'Rwanda Intelligence preview' (:393)"
+   ]
+  },
+  "theme": {
+   "theme_scope": "NOT themed; hardcoded Tailwind palette (bg-slate-950, text-slate-100, sky-400/500, white/10 ...)",
+   "tailwind_palette_literals_in_page": 65,
+   "hex_literals_in_page": 0
+  },
+  "data_source": "static arrays in file",
+  "auth": "public",
+  "mobile_parity": "Process-step arrows hidden below sm (decorative, :361)",
+  "ask_integration": "None (fake input/button does nothing); global dock mounted.",
+  "evidence_state": "None.",
+  "lib_api_in_closure": [
+   "lib/api/accountBase.ts",
+   "lib/api/accountLinks.ts",
+   "lib/api/apiBase.ts",
+   "lib/api/accountFetch.ts",
+   "lib/api/sessionHint.ts"
+  ],
+  "ask_modules_in_closure": []
+ }
+]

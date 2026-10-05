@@ -167,7 +167,8 @@ describe('Hero three-zone recomposition (M60 Phase 2 — search/ask left, domina
   });
 
   it('the mount-time language sync stays inside an effect and still refreshes the Server Component feed — no render-time localStorage read', () => {
-    expect(source).toMatch(/useEffect\(\(\) => \{\s*\n\s*const effectiveServerLanguage = readLanguageCookie\(\) \?\? 'en';/);
+    /* T2 — the sync now runs through the one display-locale authority (stored choice wins). */
+    expect(source).toMatch(/useEffect\(\(\) => \{\s*\n\s*if \(reconcileStoredDisplayLocale\(\)\) \{/);
     expect(source).toMatch(/router\.refresh\(\);/);
   });
 

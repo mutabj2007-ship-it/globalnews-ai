@@ -1360,6 +1360,23 @@ export const en = {
       },
     },
     storedReportingNoticeAriaLabel: 'Stored reporting notice',
+    /*
+      T1 COVERAGE TRUTHFULNESS — the canonical local-source coverage fact
+      (CountryNewsResponse.sourceCoverage). Shown only when no rights-cleared
+      local news source is active, so international/aggregated reporting is
+      never presented as local coverage.
+    */
+    sourceCoverage: {
+      ariaLabel: 'Local source coverage',
+      absentTitle: 'Local coverage gap',
+      absentBody:
+        'No rights-cleared local news source is active for this country. Reports shown come from international or aggregated sources and are not local coverage.',
+      unverifiedTitle: 'Local coverage unverified',
+      unverifiedBody:
+        'A local news source is active, but its delivery has not been verified. Reports shown may not include local coverage.',
+      localEvidencePrefix: 'From registered local publishers:',
+      ofSeparator: 'of',
+    },
     coverageQualityAriaSuffix: 'coverage quality',
     readFullStoryPrefix: 'Read the full story:',
     askAboutStory: 'Ask GlobalNews AI about this',
@@ -1769,6 +1786,11 @@ export const en = {
           failed: 'Could not retrieve reporting just now. You can try again.',
           load: 'Load country intelligence',
           reload: 'Retrieve again',
+          /* T1 — one sentence per non-covered state of sourceCoverage.notice. */
+          coverageAbsent:
+            'Local coverage gap: no rights-cleared local news source is active here. These reports come from international or aggregated sources.',
+          coverageUnverified:
+            'Local coverage unverified: a local news source is active but its delivery is not verified.',
         },
         /* ── DESIGN REVISION 1.2 · THE RESTORED SELECTED-COUNTRY BLOCKS ─── */
         identityHeading: 'Identity',
@@ -2674,7 +2696,8 @@ export const en = {
        (Claude_Output/TRUST-CONVERSATIONAL-EXPERIENCE-R1/privacy). Unknown facts are named, never invented. */
     title: 'Privacy Notice',
     lastUpdatedLabel: 'Last updated',
-    lastUpdatedDate: '3 October 2026',
+    /* T5 Part B — PENDING_PO_LEGAL_APPROVAL (lib/consent/consentStrings.ts LEGAL_COPY_PENDING_APPROVAL). */
+    lastUpdatedDate: '4 October 2026',
     intro:
       'This notice explains what information Ask GlobalNewsAI and GlobalNews AI handle, why, who receives it and what you can do about it. It describes the product as the code actually works today. Where a fact has not been decided yet, this page says so instead of guessing.',
     sections: [
@@ -2684,7 +2707,8 @@ export const en = {
       },
       {
         heading: 'Using Ask without an account',
-        body: 'You can ask a few questions as a guest. When you send your first guest question we set a guest cookie and store your questions and the answers on our servers as one guest conversation. It lasts up to 7 days and is then deleted within about 24 hours. To limit abuse of the free questions we count guest questions per network using a pseudonymous identifier that changes every day and is derived from your network address with a secret key. The address itself is not stored in our limit records, and the identifiers are deleted within about a week.',
+        /* T5 Part B — PENDING_PO_LEGAL_APPROVAL. */
+        body: 'You can ask a few questions as a guest. When you send your first guest question we set a guest cookie and store your guest conversations (your questions and the answers) on our servers. A guest session lasts at most 7 days and is never extended; it is then deleted automatically, as described under “Your guest data” below, where you can also delete it at once. “Sign in to continue” moves all guest conversations from this browser to your account; signing in any other way moves none of them, and they stay visible in this browser after you sign out until they are deleted. To limit abuse of the free questions we count guest questions per network using a pseudonymous identifier that changes every day and is derived from your network address with a secret key. The address itself is not stored in our limit records. When those identifiers are deleted is explained under “How long information is kept”.',
       },
       {
         heading: 'Signing in with Google',
@@ -2712,11 +2736,13 @@ export const en = {
       },
       {
         heading: 'Your choices',
-        body: 'You can delete your account in account settings, which removes the data listed above. You can clear your search history. You can change or remove your language and appearance settings at any time. A copy-of-your-data (export) feature does not exist yet; a request path will be published together with the contact address above.',
+        /* T5 Part B — PENDING_PO_LEGAL_APPROVAL. */
+        body: 'You can delete your account in account settings, which removes the data listed above. You can delete your guest conversations from this browser at any time under “Your guest data” below or on the Cookies page. You can clear your search history. You can change or remove your language and appearance settings at any time. A copy-of-your-data (export) feature does not exist yet; a request path will be published together with the contact address above.',
       },
       {
         heading: 'How long information is kept',
-        body: 'These are our Beta retention periods (our own policy, not legal minimums). Guest conversations: up to 7 days plus about 24 hours. Account conversations: 12 months after their last activity, unless you delete them sooner or saved an answer from them. Support messages: 24 months after the case is resolved. Detailed usage and compute records: 90 days. Guest limit identifiers: about a week. Ask diagnostics: 30 days. Sign-in sessions: 30 days.',
+        /* T5 Part B — PENDING_PO_LEGAL_APPROVAL. D2: what the always-on guest clean-up guarantees vs what needs the scheduled retention clean-up (RETENTION_SWEEP_ENABLED, default off). */
+        body: 'These are our Beta retention periods (our own policy, not legal minimums). Guest conversations: at most 7 days from your first guest question, then deleted automatically by a guest clean-up that always runs while the service is running (the exact times are under “Your guest data” below), or at once when you delete them. Ask diagnostics: 30 days, deleted by their own clean-up. Sign-in sessions: expire after 30 days. The following periods are our target policy and are applied by a separate scheduled clean-up; that clean-up is switched off unless we turn it on as an operational decision, and while it is off these records are not deleted automatically when the period ends: account conversations 12 months after their last activity (unless you delete them sooner or saved an answer from them; deleting your account always deletes them), support messages 24 months after the case is resolved, detailed usage and compute records 90 days, guest limit identifiers about a week after the day they count.',
       },
       {
         heading: 'Changes to this notice',

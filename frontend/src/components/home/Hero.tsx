@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, type FormEvent, type ChangeEvent, type KeyboardEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import type { LanguageCode, NewsArticle, NewsDataMode } from '@globalnews-ai/shared';
-import { resolveInitialLanguage, persistLanguageSelection, readLanguageCookie } from '@/lib/i18n/languages';
+import { reconcileStoredDisplayLocale } from '@/lib/i18n/displayLocale';
 import { resolveLiveStatus } from '@/lib/liveStatus';
 import { useHeroFocus } from '@/components/home/HeroFocusProvider';
 import { IntelligenceContextCard } from '@/components/home/IntelligenceContextCard';
@@ -78,8 +78,10 @@ interface HeroProps {
  *
  * ── FUNCTIONAL TRUTH, COMPLETELY UNCHANGED ────────────────────────────────
  *
- *   - handleSubmit still routes to /search?q=<encodeURIComponent(query)>, which
- *     is what reaches analysisApi -> POST /analysis/news;
+ *   - handleSubmit still routes to /search?q=<encodeURIComponent(query)>. Since
+ *     UNIFIED INTELLIGENCE BINDING, /search (SearchPageClient) runs the question on
+ *     the canonical Ask V2 engine (useAskR2Conversation -> askV2Api); it no longer
+ *     reaches analysisApi -> POST /analysis/news (STAGE 2 / T4, measured);
  *   - the 1000-char cap mirroring AnalyzeNewsDto, Enter / Shift+Enter, the
  *     auto-growing textarea and the aria-describedby character count are all
  *     byte-identical in behaviour;
@@ -260,12 +262,13 @@ export function Hero({
    * localStorage during render would make the server and client first
    * renders disagree and produce a hydration mismatch.
    */
+  /*
+    T2 · the same reconciliation LanguageSync runs, through the one display-locale authority: an
+    explicit stored choice always wins (a Polish browser can no longer overwrite a stored fr–ar
+    choice), and a refresh happens only when the server rendered without the reader's choice.
+  */
   useEffect(() => {
-    const effectiveServerLanguage = readLanguageCookie() ?? 'en';
-    const resolved = resolveInitialLanguage();
-
-    if (resolved !== effectiveServerLanguage) {
-      persistLanguageSelection(resolved);
+    if (reconcileStoredDisplayLocale()) {
       router.refresh();
     }
   }, [router]);

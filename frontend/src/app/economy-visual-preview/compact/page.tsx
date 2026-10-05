@@ -1,8 +1,7 @@
 import type { Metadata } from 'next';
 import type { JSX } from 'react';
-import { cookies } from 'next/headers';
 import { ScriptRun } from '@/lib/typography/runBoundary';
-import { LANGUAGE_COOKIE_NAME, SELECTABLE_LOCALES, isActiveLanguageCode } from '@/lib/i18n/languages';
+import { surfaceLocale } from '@/lib/i18n/displayLocale.server';
 import type { EconomyLocale } from '@/lib/economy/strings';
 import { EconomyCompactScreen } from '@/components/economy/compact/EconomyCompactScreen';
 import { economySubjectFromRead } from '@/lib/economy/economyRetainedSubject';
@@ -43,9 +42,9 @@ function economyLocale(): EconomyLocale {
     This is the same two-step `/market` already uses. It is not an Economy mechanism: both
     surfaces read the one decision the platform made in `app/layout.tsx`.
   */
-  const cookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
-  const active = cookie && isActiveLanguageCode(cookie) ? cookie : 'en';
-  return SELECTABLE_LOCALES.find((l) => l === active) ?? 'en';
+  /* T2 — the effective locale under the effective-locale rule: all seven are expressible here,
+     and the surface renders a locale only when every Economy catalogue is complete for it. */
+  return surfaceLocale('economy').effective;
 }
 
 export default async function EconomyVisualPreviewCompactPage(): Promise<JSX.Element> {

@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { LanguageCode } from '@globalnews-ai/shared';
-import { getFailureCopy } from '@/lib/i18n/failureCopy';
-import { readLanguageCookie } from '@/lib/i18n/languages';
+import { getFailureCopy, hasFailureCopy } from '@/lib/i18n/failureCopy';
+import { readStoredDisplayLocale } from '@/lib/i18n/displayLocale';
 
 /**
  * MVP FAILURE FLOOR — THE LAST RESORT.
@@ -50,7 +50,7 @@ import { readLanguageCookie } from '@/lib/i18n/languages';
  * ── LANGUAGE ──────────────────────────────────────────────────────────────
  *
  * Same rule as `error.tsx`: English on the first render, corrected from the
- * released `readLanguageCookie` after mount, so the client's first output
+ * T2 stored display-locale choice after mount, so the client's first output
  * cannot disagree with the server's. `<html lang>` follows the same value.
  */
 
@@ -145,7 +145,11 @@ export default function GlobalError({
   const [language, setLanguage] = useState<LanguageCode>('en');
 
   useEffect(() => {
-    setLanguage(readLanguageCookie() ?? 'en');
+    /* T2 — this boundary REPLACES the root layout, so there is no effective <html lang> to read:
+       the reader's stored choice (validated against the seven) is resolved against the failure
+       catalogue itself, English when it does not author that locale. */
+    const stored = readStoredDisplayLocale();
+    setLanguage(stored !== undefined && hasFailureCopy(stored) ? stored : 'en');
   }, []);
 
   const copy = getFailureCopy(language);

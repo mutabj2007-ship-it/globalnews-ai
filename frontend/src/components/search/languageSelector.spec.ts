@@ -735,7 +735,8 @@ describe('M66.11 — architecture scope', () => {
   it('re-selecting the current language remains a complete no-op, via the EXISTING NavBar guard', () => {
     // Deliberately not re-implemented inside the component: duplicating the
     // rule would give it two homes and two chances to drift.
-    expect(navCode).toMatch(/if \(next === language\) return;/);
+    /* T2 — the guard compares against the REQUESTED locale (useRequestedDisplayLocale). */
+    expect(navCode).toMatch(/if \(next === selectedLocale\) return;/);
     expect(code).not.toMatch(/next === value|code === value \) return/);
   });
 

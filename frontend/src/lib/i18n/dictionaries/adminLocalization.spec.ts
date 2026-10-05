@@ -38,7 +38,6 @@ const IDENTICAL_BY_DESIGN = new Set([
   'screens.payments.ksefStatusValue',
   'screens.payments.tabs.ksef',
   'screens.settings.groups.ksef',
-  'screens.settings.localisation.adminLanguagesValue',
   'screens.systemHealth.statuses.HEALTHY',
   'screens.systemHealth.statuses.DEGRADED',
   'screens.systemHealth.statuses.FAILING',

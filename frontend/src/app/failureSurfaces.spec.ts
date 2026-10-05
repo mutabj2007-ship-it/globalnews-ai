@@ -55,7 +55,8 @@ describe('Failure floor — all three App Router surfaces exist and are wired', 
     // Comment-stripped: not-found.tsx's own header EXPLAINS why it has no
     // directive, and the prose must not be able to fail the guard.
     expect(notFoundCode).not.toMatch(/'use client'/);
-    expect(notFoundCode).toMatch(/import \{ cookies \} from 'next\/headers'/);
+    /* T2 — the request-scoped read now happens inside the server-only display-locale authority. */
+    expect(notFoundCode).toMatch(/import \{ surfaceLocale \} from '@\/lib\/i18n\/displayLocale\.server'/);
   });
 
   it('accepts the error and reset props Next actually passes', () => {
@@ -113,7 +114,8 @@ describe('Failure floor — global-error.tsx depends on NOTHING that can fail wi
   it('imports only what is erased or trivially small', () => {
     const imports = globalErrorSource.match(/^import .*$/gm) ?? [];
     for (const line of imports) {
-      expect(line).toMatch(/from 'react'|@globalnews-ai\/shared|failureCopy|i18n\/languages/);
+      /* T2 — i18n/displayLocale is the import-free (shared-only) stored-choice validator. */
+      expect(line).toMatch(/from 'react'|@globalnews-ai\/shared|failureCopy|i18n\/languages|i18n\/displayLocale'/);
     }
     // The heavy dictionary is exactly what must NOT be pulled in here.
     expect(globalErrorCode).not.toMatch(/getDictionary|dictionaries/);
@@ -153,9 +155,12 @@ describe('Failure floor — the error object never reaches the page', () => {
 });
 
 describe('Failure floor — language', () => {
-  it('reuses the RELEASED cookie reader rather than parsing document.cookie again', () => {
+  it('reuses the ONE display-locale authority rather than parsing document.cookie again', () => {
+    /* T2 — error.tsx reads the EFFECTIVE locale the root layout set on <html lang>;
+       global-error.tsx (which replaces the layout) reads the validated stored choice. */
+    expect(errorCode).toMatch(/import \{ documentRenderLanguage \} from '@\/lib\/i18n\/languages'/);
+    expect(globalErrorCode).toMatch(/import \{ readStoredDisplayLocale \} from '@\/lib\/i18n\/displayLocale'/);
     for (const code of [errorCode, globalErrorCode]) {
-      expect(code).toMatch(/import \{ readLanguageCookie \} from '@\/lib\/i18n\/languages'/);
       expect(code).not.toMatch(/document\.cookie/);
     }
   });
@@ -163,16 +168,16 @@ describe('Failure floor — language', () => {
   it('starts both boundaries at English so the client cannot disagree with the server', () => {
     for (const code of [errorCode, globalErrorCode]) {
       expect(code).toMatch(/useState<LanguageCode>\('en'\)/);
-      expect(code).toMatch(/useEffect\(\(\) => \{\s*setLanguage\(readLanguageCookie\(\) \?\? 'en'\);\s*\}, \[\]\);/);
     }
+    /* T2 — corrected after mount, never during render. */
+    expect(errorCode).toMatch(/useEffect\(\(\) => \{\s*setLanguage\(documentRenderLanguage\(\)\);\s*\}, \[\]\);/);
+    expect(globalErrorCode).toMatch(/useEffect\(\(\) => \{[\s\S]*?setLanguage\(stored !== undefined && hasFailureCopy\(stored\) \? stored : 'en'\);\s*\}, \[\]\);/);
   });
 
-  it('resolves not-found on the server exactly the way layout.tsx does', () => {
-    const rule =
-      /const language = languageCookie && isActiveLanguageCode\(languageCookie\) \? languageCookie : 'en';/;
-    expect(notFoundCode).toMatch(rule);
-    expect(codeOnly(layoutSource)).toMatch(rule);
-    expect(notFoundCode).toMatch(/cookies\(\)\.get\(LANGUAGE_COOKIE_NAME\)\?\.value/);
+  it('resolves not-found on the server through the same authority layout.tsx uses', () => {
+    /* T2 — both go through the display-locale authority + effective-locale rule. */
+    expect(notFoundCode).toMatch(/const language = surfaceLocale\('failure'\)\.language;/);
+    expect(codeOnly(layoutSource)).toMatch(/const surface = documentSurfaceLocale\(\);/);
   });
 
   it('hardcodes no English chrome in any of the three surfaces', () => {

@@ -1,9 +1,8 @@
-import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
 import { NavBar } from '@/components/navigation/NavBar';
 import { Footer } from '@/components/layout/Footer';
 import { getDictionary } from '@/lib/i18n/dictionaries';
-import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
+import { surfaceLocale } from '@/lib/i18n/displayLocale.server';
 import { buildPageMetadata } from '@/lib/seo/metadata';
 import { THIRD_PARTY_NOTICES } from '@/lib/legal/thirdPartyNotices.generated';
 
@@ -59,8 +58,7 @@ import { THIRD_PARTY_NOTICES } from '@/lib/legal/thirdPartyNotices.generated';
  * abstracted, for the reason `/source-policy` already records.
  */
 export async function generateMetadata(): Promise<Metadata> {
-  const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
-  const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
+  const language = surfaceLocale('thirdPartyNotices').language;
   const t = getDictionary(language).thirdPartyNoticesPage;
 
   return buildPageMetadata({
@@ -72,8 +70,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ThirdPartyNoticesPage(): Promise<JSX.Element> {
-  const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
-  const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
+  const language = surfaceLocale('thirdPartyNotices').language;
   const t = getDictionary(language).thirdPartyNoticesPage;
 
   return (

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import type { DisplayLocale, LanguageCode } from '@globalnews-ai/shared';
 import { LanguageSelector } from '@/components/search/LanguageSelector';
 import { persistLanguageSelection, displayLocaleOf } from '@/lib/i18n/languages';
+import { useRequestedDisplayLocale } from '@/lib/i18n/useRequestedDisplayLocale';
 
 /**
  * The Home header's language control.
@@ -36,17 +37,19 @@ export function HomeLanguageControl({
   variant = 'desktop',
 }: HomeLanguageControlProps): JSX.Element {
   const router = useRouter();
+  /* T2 · show the REQUESTED locale; the page may be rendering a declared English fallback. */
+  const selectedLocale = useRequestedDisplayLocale(displayLocaleOf(language));
 
   /* R4 · the control speaks DisplayLocale; the cookie is a string and always was. */
   function handleLanguageChange(next: DisplayLocale): void {
-    if (next === language) return;
+    if (next === selectedLocale) return;
     persistLanguageSelection(next);
     router.refresh();
   }
 
   return (
     <LanguageSelector
-      value={displayLocaleOf(language)}
+      value={selectedLocale}
       onChange={handleLanguageChange}
       label={label}
       actionLabel={actionLabel}

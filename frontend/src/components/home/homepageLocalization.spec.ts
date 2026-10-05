@@ -158,7 +158,8 @@ describe('M66.13 — the strings this milestone repaired stay repaired', () => {
     // read the language cookie. Only the async form can.
     expect(layout).not.toMatch(/export const metadata/);
     expect(layout).toMatch(/export async function generateMetadata\(\)/);
-    expect(layout).toMatch(/cookies\(\)\.get\(LANGUAGE_COOKIE_NAME\)/);
+    /* T2 — request-aware through the display-locale authority (effective surface locale). */
+    expect(layout).toMatch(/getDictionary\(documentSurfaceLocale\(\)\.language\)/);
     expect(layout).toMatch(/title: t\.homeMetaTitle/);
     expect(layout).toMatch(/description: t\.homeMetaDescription/);
   });

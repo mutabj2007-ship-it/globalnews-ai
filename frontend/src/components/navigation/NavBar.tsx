@@ -10,6 +10,7 @@ import { ReturnControl } from '@/components/navigation/ReturnControl';
 import { NAV_MODEL, type NavModelEntry } from '@/lib/navModel';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { persistLanguageSelection, displayLocaleOf } from '@/lib/i18n/languages';
+import { useRequestedDisplayLocale } from '@/lib/i18n/useRequestedDisplayLocale';
 import { LanguageSelector } from '@/components/search/LanguageSelector';
 import { AccountControl } from './AccountControl';
 
@@ -77,10 +78,12 @@ export function NavBar({ language = 'en' }: NavBarProps): JSX.Element {
   const pathname = usePathname();
   const router = useRouter();
   const t = getDictionary(language).navBar;
+  /* T2 · the control shows the reader's REQUESTED locale (the page may render an English fallback). */
+  const selectedLocale = useRequestedDisplayLocale(displayLocaleOf(language));
 
   /* R4 · the control speaks DisplayLocale (the contracted seven); the cookie is a string. */
   function handleLanguageChange(next: DisplayLocale): void {
-    if (next === language) return;
+    if (next === selectedLocale) return;
     persistLanguageSelection(next);
     // Server Components on this route re-render against the freshly
     // written cookie — this is what makes the homepage feed, the page
@@ -253,7 +256,7 @@ export function NavBar({ language = 'en' }: NavBarProps): JSX.Element {
 
           handleLanguageChange below is UNCHANGED, so persistence and the
           Server-Component refresh still run exactly as before, and its
-          `if (next === language) return;` guard still makes re-selecting the
+          `if (next === selectedLocale) return;` guard still makes re-selecting the
           current language a complete no-op.
         */}
         {/*
@@ -282,7 +285,7 @@ export function NavBar({ language = 'en' }: NavBarProps): JSX.Element {
         </Link>
 
         <LanguageSelector
-          value={displayLocaleOf(language)}
+          value={selectedLocale}
           onChange={handleLanguageChange}
           label={t.languageSelectorLabel}
           actionLabel={t.languageSelectorAction}
@@ -373,7 +376,7 @@ export function NavBar({ language = 'en' }: NavBarProps): JSX.Element {
           exist here before.
         */}
         <LanguageSelector
-          value={displayLocaleOf(language)}
+          value={selectedLocale}
           onChange={handleLanguageChange}
           label={t.languageSelectorLabel}
           actionLabel={t.languageSelectorAction}

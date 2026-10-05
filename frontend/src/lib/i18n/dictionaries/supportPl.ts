@@ -213,7 +213,7 @@ export const supportPl: SupportDictionary = {
     /* C-14 */
     locale: {
       outOfScope:
-        'Odpowiedzi automatyczne są dostępne wyłącznie po angielsku i po polsku. Napisz tutaj w jednym z tych języków albo niech zajmie się tym osoba z zespołu wsparcia.',
+        'Odpowiedzi automatyczne w Pomocy są pisane po angielsku i po polsku; wybrany język wyświetlania tego nie zmienia. Napisz tutaj w jednym z tych języków albo niech zajmie się tym osoba z zespołu wsparcia.',
     },
 
     close: {

@@ -1,6 +1,6 @@
 import { Transform } from 'class-transformer';
 import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
-import { ALL_ISO3_CODES } from '@globalnews-ai/shared';
+import { ALL_ISO3_CODES, DISPLAY_LOCALES } from '@globalnews-ai/shared';
 // READ-ONLY IMPORT. SUPPORTED_LANGUAGE_CODES is the platform's existing
 // seven-member language list and already lives here as an exported
 // constant. Importing it binds telemetry to the real vocabulary instead of
@@ -10,6 +10,18 @@ import { SUPPORTED_LANGUAGE_CODES } from '../../analysis/dto/analyze-news.dto';
 import { ProductEventName } from '../../../generated/prisma/enums';
 
 const PRODUCT_EVENT_NAMES = Object.values(ProductEventName) as string[];
+
+/**
+ * T2 · GLOBAL LANGUAGE FOUNDATION — the values `language` may carry: the platform's retrieval
+ * `LanguageCode` list PLUS the seven display locales. A reader who selected Deutsch or Português
+ * produces `de`/`pt`, which are display locales and not LanguageCodes; they were rejected with a
+ * 400, so a `language_selected` event for either was impossible to record. The two vocabularies
+ * stay separate types (the field is a plain string column); only the accepted VALUE set is their
+ * union.
+ */
+export const TELEMETRY_LANGUAGE_VALUES: readonly string[] = [
+  ...new Set<string>([...SUPPORTED_LANGUAGE_CODES, ...DISPLAY_LOCALES]),
+];
 
 /**
  * R3/T7 — the client telemetry ingest contract.
@@ -45,10 +57,10 @@ export class RecordEventDto {
   @IsIn(ALL_ISO3_CODES)
   countryCode?: string;
 
-  /** A supported UI language code, validated against the shared list. */
+  /** A supported language code or display locale, validated against the shared lists. */
   @IsOptional()
   @IsString()
-  @IsIn(SUPPORTED_LANGUAGE_CODES as readonly string[])
+  @IsIn(TELEMETRY_LANGUAGE_VALUES)
   language?: string;
 
   /**

@@ -61,4 +61,69 @@ describe('R2 · D1 — briefing snapshot (our output + references only)', () => 
     expect(briefingSnapshotOf({ ...base, checkedAt: undefined })).toBeNull();
     expect(briefingSnapshotOf({ ...base, analysis: null, background: null })).toBeNull();
   });
+
+  describe('EAST AFRICA P0 · A — payload.intelligence is preserved, never rebuilt', () => {
+    const intelligence = {
+      considered: ['IMIHIGO'],
+      contributions: [
+        {
+          contributorId: 'IMIHIGO',
+          domain: 'governance',
+          status: 'USED',
+          applicability: 'REQUIRED',
+          observations: [
+            {
+              reference: 'IMIHIGO:2024-25:56',
+              kind: 'DISTRICT_SCORE',
+              label: 'Gasabo',
+              value: '81.2',
+              unit: '%',
+              period: '2024/25',
+              geography: 'Gasabo',
+              source: { name: 'MINALOC', url: 'https://minaloc.gov.rw/x', licence: null },
+              retainedAt: '2026-09-01T00:00:00Z',
+              detail: { place: null, parties: [], headline: null, citedOutlets: [] },
+            },
+          ],
+          temporalBasis: 'RETAINED_CYCLE',
+          geographyBasis: 'nisr:district:56',
+          disclosures: ['RETAINED_NOT_CURRENT'],
+          degradationReason: null,
+        },
+      ],
+    };
+
+    it('keeps the contribution set exactly as the answer carried it', () => {
+      const s = briefingSnapshotOf({ ...base, intelligence })!;
+      expect(s.blocks.intelligence).toEqual(intelligence);
+      // A degraded/background-only answer keeps its specialist basis too.
+      const bg = briefingSnapshotOf({
+        ...base,
+        analysis: null,
+        background: { text: 'Background.' },
+        intelligence,
+      })!;
+      expect(bg.blocks.intelligence).toEqual(intelligence);
+    });
+
+    it('records null when no specialist was considered or the field is malformed', () => {
+      expect(briefingSnapshotOf(base)!.blocks.intelligence).toBeNull();
+      for (const bad of [
+        null,
+        'x',
+        { considered: 'IMIHIGO', contributions: [] },
+        { considered: [1], contributions: [] },
+        { considered: ['IMIHIGO'] },
+        { considered: ['IMIHIGO'], contributions: [null] },
+      ]) {
+        expect(briefingSnapshotOf({ ...base, intelligence: bad })!.blocks.intelligence).toBeNull();
+      }
+    });
+
+    it('is pure: the same payload gives the same snapshot', () => {
+      expect(briefingSnapshotOf({ ...base, intelligence })).toEqual(
+        briefingSnapshotOf({ ...base, intelligence }),
+      );
+    });
+  });
 });

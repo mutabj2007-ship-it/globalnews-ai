@@ -35,7 +35,7 @@ function statusResponse(status: number): Response {
 
 async function kindFromStatus(status: number): Promise<ProviderFailureKind> {
   global.fetch = jest.fn().mockResolvedValue(statusResponse(status));
-  const provider = new GNewsProvider(makeConfig('test-key') as never);
+  const provider = new GNewsProvider(makeConfig('gnews-spec-fixture-key-7f3a') as never);
   try {
     await provider.search('anything');
   } catch (error) {

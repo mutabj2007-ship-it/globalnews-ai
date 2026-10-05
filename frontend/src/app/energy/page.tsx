@@ -1,14 +1,13 @@
 import type { JSX } from 'react';
 import type { Metadata } from 'next';
-import { cookies } from 'next/headers';
 import { ScriptRun } from '@/lib/typography/runBoundary';
-import { LANGUAGE_COOKIE_NAME, SELECTABLE_LOCALES, isActiveLanguageCode } from '@/lib/i18n/languages';
+import { surfaceLocale } from '@/lib/i18n/displayLocale.server';
 import type { LanguageCode } from '@globalnews-ai/shared';
 import { EnergyShell } from '@/components/energy/EnergyShell';
 import { readEnergyObservations } from '@/lib/energy/energyReadModel';
 import { energyFrameFromRetained, energyRetainedStrings } from '@/lib/energy/energyRetainedAdapter';
 import { energyStateFromSearchParams } from '@/lib/energy/energyUrl';
-import { type EnergyLocale } from '@/lib/energy/energyStrings';
+import { ENERGY_LOCALES, type EnergyLocale } from '@/lib/energy/energyStrings';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -43,8 +42,8 @@ export const metadata: Metadata = {
 };
 
 function energyLanguage(): LanguageCode {
-  const cookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
-  return cookie !== undefined && isActiveLanguageCode(cookie) ? cookie : 'en';
+  /* T2 — the display-locale authority + effective-locale rule, not the EN/PL clamp. */
+  return surfaceLocale('energy').language;
 }
 
 /**
@@ -55,7 +54,7 @@ function energyLanguage(): LanguageCode {
  */
 function energyLocale(): EnergyLocale {
   const language = energyLanguage();
-  return (SELECTABLE_LOCALES.find((locale) => locale === language) ?? 'en') as EnergyLocale;
+  return (ENERGY_LOCALES.find((locale) => locale === language) ?? 'en');
 }
 
 export default async function EnergyPage({

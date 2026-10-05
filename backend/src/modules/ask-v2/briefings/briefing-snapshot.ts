@@ -1,5 +1,6 @@
 import type { AnalysisApiResponse } from '@globalnews-ai/shared';
 import { comparisonTableOf, type ComparisonTable } from '../comparison-table';
+import type { AskContribution } from '../../ask-intelligence/ask-contribution.contract';
 
 /**
  * R2 · D1 — WHAT A BRIEFING VERSION KEEPS, projected from one stored Ask R2 result.
@@ -36,6 +37,19 @@ export interface BriefingBlocks {
   readonly computation: unknown;
   /** Non-sourced model background, explicitly never citable. */
   readonly background: { readonly text: string; readonly citable: false } | null;
+  /**
+   * EAST AFRICA P0 · A — the governed specialist basis of the answer (payload.intelligence),
+   * kept exactly as the answer carried it: which contributors were considered, and each
+   * contribution's status, temporal basis, disclosures and source-attributed observations.
+   * Null when no specialist was considered. Absent on versions saved before this field existed
+   * (unknown, not "none").
+   */
+  readonly intelligence: BriefingIntelligence | null;
+}
+
+export interface BriefingIntelligence {
+  readonly considered: readonly string[];
+  readonly contributions: readonly AskContribution[];
 }
 
 export interface BriefingSnapshot {
@@ -52,6 +66,20 @@ interface StoredR2Payload {
   readonly analysis?: AnalysisApiResponse | null;
   readonly background?: { readonly text?: unknown } | null;
   readonly computation?: unknown;
+  readonly intelligence?: unknown;
+}
+
+/** payload.intelligence as written by the execution adapter, or null; never rebuilt or re-read. */
+function intelligenceOf(value: unknown): BriefingIntelligence | null {
+  if (value === null || typeof value !== 'object') return null;
+  const { considered, contributions } = value as Record<string, unknown>;
+  if (!Array.isArray(considered) || !considered.every((c) => typeof c === 'string')) return null;
+  if (!Array.isArray(contributions)) return null;
+  if (!contributions.every((c) => c !== null && typeof c === 'object')) return null;
+  return {
+    considered: considered as string[],
+    contributions: contributions as AskContribution[],
+  };
 }
 
 function hostOf(url: string): string | null {
@@ -89,6 +117,7 @@ export function briefingSnapshotOf(payload: unknown): BriefingSnapshot | null {
       comparisonTable: comparisonTableOf(p.analysis),
       computation: p.computation ?? null,
       background: backgroundText === null ? null : { text: backgroundText, citable: false },
+      intelligence: intelligenceOf(p.intelligence),
     },
     evidenceRefs: sources.map((s) => ({
       id: s.articleId,

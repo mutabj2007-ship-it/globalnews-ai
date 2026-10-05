@@ -5,14 +5,16 @@ import { AskThemedSurface } from '@/components/ask-nav/AskThemedSurface';
 import { THEME_COOKIE_NAME, parseThemePreference } from '@/lib/theme/theme';
 import { Footer } from '@/components/layout/Footer';
 import { getDictionary } from '@/lib/i18n/dictionaries';
-import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
+import { surfaceLocale } from '@/lib/i18n/displayLocale.server';
+import { effectiveWithin } from '@/lib/i18n/surfaceLocale';
+import { GuestDataSection } from '@/components/consent/GuestDataSection';
 import { buildPageMetadata } from '@/lib/seo/metadata';
 import { COOKIES_PAGE } from '@/lib/privacy/cookiesPageStrings';
 
 /**
  * B2 — Public Legal Surfaces. Mirrors the homepage's own server-side
- * language resolution exactly (cookies().get(LANGUAGE_COOKIE_NAME) +
- * isActiveLanguageCode(), defaulting to 'en' — see app/page.tsx) so
+ * language resolution exactly (cookies().get(LANGUAGE_COOKIE_NAME) —
+ * T2: now through surfaceLocale(), the display-locale authority) so
  * this page respects the same stored language preference NavBar/
  * Footer already use elsewhere, without introducing any new
  * resolution mechanism. A plain server component — no client
@@ -30,8 +32,7 @@ import { COOKIES_PAGE } from '@/lib/privacy/cookiesPageStrings';
  * fabricated metadata applies to prose as much as to dates.
  */
 export async function generateMetadata(): Promise<Metadata> {
-  const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
-  const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
+  const language = surfaceLocale('privacy').language;
   const t = getDictionary(language).privacyPage;
 
   return buildPageMetadata({
@@ -43,9 +44,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function PrivacyPage(): Promise<JSX.Element> {
-  const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
-  const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
+  const surface = surfaceLocale('privacy');
+  const language = surface.language;
   const t = getDictionary(language).privacyPage;
+  /* T5 Part B — the guest-data section's catalogue (`consent`) authors en/pl only; in any other
+     locale the T2 rule already renders this whole surface in English with the declared notice. */
+  const consentLocale = effectiveWithin(surface, ['en', 'pl']);
 
   return (
     /* TRUST R1 §16 — the legal pages take the same theme as the Standalone surfaces (read from the
@@ -68,6 +72,9 @@ export default async function PrivacyPage(): Promise<JSX.Element> {
               </section>
             ))}
           </div>
+          {/* T5 Part B — the measured guest contract, this browser's guest dates/quota, and
+              "Delete my guest data now" (one status read on mount; never mints a session). */}
+          <GuestDataSection locale={consentLocale} />
           {/* TRUST R1 §12 — the detailed Cookies & similar technologies notice and settings. */}
           <p className="mt-8 text-sm">
             <a
@@ -75,7 +82,7 @@ export default async function PrivacyPage(): Promise<JSX.Element> {
               data-privacy="cookies-link"
               className="text-signal underline-offset-2 hover:underline"
             >
-              {COOKIES_PAGE[language === 'pl' ? 'pl' : 'en'].title}
+              {COOKIES_PAGE[consentLocale].title}
             </a>
           </p>
         </main>

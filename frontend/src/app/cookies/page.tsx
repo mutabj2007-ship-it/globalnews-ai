@@ -6,7 +6,9 @@ import { AskThemedSurface } from '@/components/ask-nav/AskThemedSurface';
 import { THEME_COOKIE_NAME, parseThemePreference } from '@/lib/theme/theme';
 import { Footer } from '@/components/layout/Footer';
 import { PreferenceStorageControl } from '@/components/privacy/PreferenceStorageControl';
-import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
+import { GuestDataSection } from '@/components/consent/GuestDataSection';
+import { surfaceLocale } from '@/lib/i18n/displayLocale.server';
+import { effectiveWithin } from '@/lib/i18n/surfaceLocale';
 import { COOKIES_PAGE } from '@/lib/privacy/cookiesPageStrings';
 import { buildPageMetadata } from '@/lib/seo/metadata';
 import { STORAGE_INVENTORY, type StorageCategory } from '@/lib/privacy/storageInventory';
@@ -17,8 +19,8 @@ import { STORAGE_INVENTORY, type StorageCategory } from '@/lib/privacy/storageIn
  * (lib/privacy/storageInventory.ts), so the page cannot list something the code does not do.
  */
 function localeOf(): 'en' | 'pl' {
-  const value = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
-  return value && isActiveLanguageCode(value) && value === 'pl' ? 'pl' : 'en';
+  /* T2 — the effective locale; the cookies-page catalogue authors en/pl only. */
+  return effectiveWithin(surfaceLocale('cookies'), ['en', 'pl']);
 }
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -95,6 +97,9 @@ export default async function CookiesPage(): Promise<JSX.Element> {
               )}
             </section>
           ))}
+
+          {/* T5 Part B — the guest cookie's contract and "Delete my guest data now". */}
+          <GuestDataSection locale={language} />
 
           <p className="mt-10 text-sm">
             <Link href="/privacy" className="text-signal underline-offset-2 hover:underline">

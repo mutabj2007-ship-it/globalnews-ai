@@ -1,6 +1,5 @@
-import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
-import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
+import { surfaceLocale } from '@/lib/i18n/displayLocale.server';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { AdminShell } from '@/components/admin/shell/AdminShell';
 
@@ -24,8 +23,7 @@ import { AdminShell } from '@/components/admin/shell/AdminShell';
  * for the user's benefit, not for protection.
  */
 export async function generateMetadata(): Promise<Metadata> {
-  const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
-  const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
+  const language = surfaceLocale('admin').language;
   const t = getDictionary(language);
 
   return {
@@ -36,8 +34,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function AdminLayout({ children }: { children: React.ReactNode }): JSX.Element {
-  const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
-  const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
+  const language = surfaceLocale('admin').language;
   const t = getDictionary(language);
 
   return <AdminShell t={t.admin}>{children}</AdminShell>;

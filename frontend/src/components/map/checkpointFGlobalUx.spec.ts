@@ -145,7 +145,8 @@ describe('F — MAP-GLOBAL-LANGUAGE-CONTROL-1, the map can change language', () 
 
     it('re-selecting the current language is a no-op', () => {
       /* Otherwise every click would write a cookie and refresh the route. */
-      expect(control).toContain('if (code === value) return;');
+      /* T2 — against the REQUESTED locale, so a declared English fallback cannot lock EN. */
+      expect(control).toContain('if (code === selected) return;');
     });
 
     it('the map holds no language state of its own — the cookie stays the truth', () => {

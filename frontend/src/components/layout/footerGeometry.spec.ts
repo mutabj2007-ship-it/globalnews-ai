@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { footerLinkGroups } from '@/lib/homeContent';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { consentFooterLinkLabels } from '@/lib/consent/consentStrings';
 import tailwindConfig from '../../../tailwind.config';
 
 const footerSource = readFileSync(join(__dirname, 'Footer.tsx'), 'utf-8');
@@ -253,6 +254,8 @@ describe('M66.7 — ROUTE TRUTH (CTO decision D-6 A)', () => {
       into node_modules or a build artefact.
     */
     '/third-party-notices',
+    /* T5 Part B — a real App Router page (frontend/src/app/cookies/page.tsx), proven on disk below. */
+    '/cookies',
   ];
 
   it('links derive entirely from footerLinkGroups — this component has no destination list', () => {
@@ -276,7 +279,8 @@ describe('M66.7 — ROUTE TRUTH (CTO decision D-6 A)', () => {
       /third-party-notices is vetted — a real page on disk, asserted below — so
       the count moves rather than the assertion being loosened.
     */
-    expect(footerLinkGroups.flatMap((group) => group.links)).toHaveLength(5);
+    /* T5 Part B — SIX: /cookies (D10) is vetted — a real page on disk, asserted below. */
+    expect(footerLinkGroups.flatMap((group) => group.links)).toHaveLength(6);
     for (const link of footerLinkGroups.flatMap((group) => group.links)) {
       expect(REAL_ROUTES).toContain(link.href);
     }
@@ -351,12 +355,20 @@ describe('M66.7 — ROUTE TRUTH (CTO decision D-6 A)', () => {
     const LEGAL_ROUTES = ['/privacy', '/source-policy', '/terms', '/third-party-notices'];
     const hrefs = footerLinkGroups.flatMap((group) => group.links).map((link) => link.href).sort();
     expect(hrefs).toEqual([
+      '/cookies',
       '/privacy',
       '/source-policy',
       '/support',
       '/terms',
       '/third-party-notices',
     ]);
+    /* T5 Part B — /cookies is labelled from the `consent` catalogue, not dict.footer (whose keys
+       feed H's protected Ask-shell catalogues); Footer.tsx reads it there, localized en/pl. */
+    expect(code).toMatch(/consentFooterLinkLabels\(language === 'pl' \? 'pl' : 'en'\)/);
+    for (const language of ['en', 'pl'] as const) {
+      expect(consentFooterLinkLabels(language)['/cookies'].length).toBeGreaterThan(0);
+      expect(getDictionary(language).footer.linkLabels['/cookies']).toBeUndefined();
+    }
     for (const route of LEGAL_ROUTES) {
       expect(hrefs).toContain(route);
     }
@@ -596,7 +608,12 @@ describe('M66.7 — accessibility and multilingual', () => {
     for (const language of ['en', 'pl'] as const) {
       const labels = footerLinkGroups
         .flatMap((group) => group.links)
-        .map((link) => getDictionary(language).footer.linkLabels[link.href]);
+        /* T5 Part B — /cookies is labelled from the consent catalogue (as Footer.tsx merges it). */
+        .map(
+          (link) =>
+            getDictionary(language).footer.linkLabels[link.href] ??
+            consentFooterLinkLabels(language)[link.href],
+        );
       const row = labels.reduce((sum, label) => sum + sans(label, 13), 0) + 22 * (labels.length - 1);
       expect(row).toBeLessThan(budget);
     }
@@ -728,7 +745,8 @@ describe('M66.8b — what deliberately did NOT change', () => {
       // M66.10B — the eighth route. It passes language={language} like the other
       // two legal pages, NOT like /history and /workspace.
       ['../../app/source-policy/page.tsx', 'language={language}'],
-      ['../../app/history/page.tsx', ''],
+      /* T2 — /history's client moved to components/history/HistoryClient.tsx (server page hands it the locale). */
+      ['../history/HistoryClient.tsx', 'language={language}'],
       ['../../app/workspace/page.tsx', ''],
     ] as const;
     for (const [relative] of routes) {
@@ -736,10 +754,10 @@ describe('M66.8b — what deliberately did NOT change', () => {
       expect(source).toMatch(/<Footer/);
       expect(source).toMatch(/from '@\/components\/layout\/Footer'/);
     }
-    // /history and /workspace still pass no language prop. That is
-    // M66.7-DEFERRED-004, deliberately NOT fixed here.
-    expect(stripComments(readFileSync(join(__dirname, '../../app/history/page.tsx'), 'utf-8'))).toMatch(
-      /<Footer \/>/,
+    // /workspace still passes no language prop (M66.7-DEFERRED-004). T2 resolved it for
+    // /history: its Footer now follows the surface's effective locale.
+    expect(stripComments(readFileSync(join(__dirname, '../history/HistoryClient.tsx'), 'utf-8'))).toMatch(
+      /<Footer language=\{language\} \/>/,
     );
   });
 

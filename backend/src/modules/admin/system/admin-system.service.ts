@@ -1,3 +1,4 @@
+import { isUsableApiCredential } from '../../../security/placeholder-credential';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { ProviderHealthStatus } from '@globalnews-ai/shared';
@@ -345,8 +346,8 @@ export function resolveAiProviderPosture(config: {
   nodeEnv: string | undefined;
   aiExecutionMode: string | undefined;
 }): AiProviderPosture {
-  const keyUsable =
-    typeof config.openAiApiKey === 'string' && config.openAiApiKey.trim().length > 0;
+  /* T1 — same rule as isUsableOpenAiApiKey, placeholders included. */
+  const keyUsable = isUsableApiCredential(config.openAiApiKey);
 
   if (keyUsable) {
     return { status: 'HEALTHY', detail: 'ai-provider-configured' };

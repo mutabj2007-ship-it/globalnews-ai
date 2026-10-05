@@ -17,18 +17,25 @@ import { readRetainedImihigo } from './imihigo-retained.reader';
  * not an intent classifier: it cannot route, re-route or re-classify a question, and a
  * question the router already answers takes exactly the same route with or without it.
  *
- * The reader never names a module. They ask "How serious is the situation in eastern DRC?";
+ * The reader never names a module. They ask "How serious is the fighting in eastern DRC?";
  * the router already reads DR Congo; the Conflict contributor is consulted because the
- * question is a country situation question — and contributes only if governed retained
- * Conflict observations exist for that scope.
+ * question is an armed-conflict / security question — and contributes only if governed
+ * retained Conflict observations exist for that scope.
+ *
+ * STAGE 2 · T3 — a typed country plus a GENERIC noun ("situation", "crisis", "sytuacja",
+ * "kryzys") is never Conflict relevance: "What is the travel / visa / political / energy
+ * situation in X?" carries no security domain and must not inject Conflict records.
  */
 
 /** Closed, reviewed subject terms per artifact (EN + the PL forms reporting/readers use). */
 export const CONTRIBUTOR_SCOPE_TERMS = {
-  /** A country's security/situation, served by Conflict. "security" itself is the governed domain. */
-  SITUATION: [
-    'situation',
-    'crisis',
+  /**
+   * Armed-conflict vocabulary served by Conflict that the reading's security lexicon does not
+   * (yet) carry. Domain words only: a generic noun ("situation", "crisis", "sytuacja",
+   * "kryzys") is NEVER here — the router's security domain facet / security leg is the
+   * primary key (STAGE 2 · T3).
+   */
+  ARMED_CONFLICT: [
     'fighting',
     'clashes',
     'violence',
@@ -36,9 +43,6 @@ export const CONTRIBUTOR_SCOPE_TERMS = {
     'insurgency',
     'rebels',
     'armed groups',
-    'sytuacja',
-    'sytuacji',
-    'kryzys',
     'walki',
     'przemoc',
     'starcia',
@@ -239,12 +243,14 @@ export function selectContributors(route: AskR2Route): AskContributorSelection[]
     namesScope(question, CONTRIBUTOR_SCOPE_TERMS.PROCUREMENT) ||
     namesScope(question, CONTRIBUTOR_SCOPE_TERMS.CPI) ||
     namesScope(question, CONTRIBUTOR_SCOPE_TERMS.IMIHIGO);
-  const security = domains.includes('security');
+  /* STAGE 2 · T3 — keyed on the router's security domain facet (or its security specialist
+     leg), never on a typed country + a generic noun. */
+  const leg = route.plan.specialistLegs.find((l) => l.domain === 'security');
+  const security = domains.includes('security') || leg !== undefined;
   if (
     countryIso3 !== null &&
-    (security || (!dataScoped && namesScope(question, CONTRIBUTOR_SCOPE_TERMS.SITUATION)))
+    (security || (!dataScoped && namesScope(question, CONTRIBUTOR_SCOPE_TERMS.ARMED_CONFLICT)))
   ) {
-    const leg = route.plan.specialistLegs.find((l) => l.domain === 'security');
     out.push({
       contributorId: 'CONFLICT',
       /* Security intelligence is served THROUGH Conflict — one domain, one store. */
