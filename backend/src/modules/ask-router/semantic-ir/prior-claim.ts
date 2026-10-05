@@ -22,8 +22,17 @@ import { plTolerant } from '../pl-tolerant';
  */
 const EN_REFERENT = String.raw`(?:it|that|this|these|those|what\s+you\s+(?:said|wrote|told\s+me|concluded))`;
 const EN_TAIL = String.raw`(?:\s+(?:still|now|today|anymore|any\s+more|at\s+present|these\s+days|right\s+now|as\s+of\s+(?:now|today)))*\s*[?.!]*\s*$`;
+/*
+  SHARED GOVERNED RE-CHECK (CTO ruling A) — ONE optional RECALL clause about the earlier answer may lead the
+  claim-validity form: "What did you say earlier about that decision, and is it still true now?". The recall
+  names only the earlier answer (what you said / told me / concluded), never a proposition of its own; an
+  "about …" object is limited to an anaphoric/definite reference, so a turn that states new content is not caught.
+*/
+const EN_RECALL_LEAD = String.raw`(?:(?:what\s+did\s+you\s+(?:say|tell\s+me|conclude)|remind\s+me\s+(?:of\s+)?what\s+you\s+said)(?:\s+(?:earlier|before|previously))?(?:\s+about\s+(?:(?:that|this)(?:\s+[a-z]+)?|it|your\s+[a-z]+))?\s*[,;]?\s*(?:and\s+)?)?`;
 const EN_CLAIM_VALIDITY = new RegExp(
-  String.raw`^\s*(?:(?:so|and|but|ok(?:ay)?)[,\s]+)?(?:` +
+  String.raw`^\s*(?:(?:so|and|but|ok(?:ay)?)[,\s]+)?` +
+    EN_RECALL_LEAD +
+    String.raw`(?:` +
     /* is/are/was it still true / accurate / the case … */
     String.raw`(?:is|are|was|were)\s+${EN_REFERENT}\s+(?:still\s+)?(?:true|accurate|correct|valid|right|the\s+case|up\s+to\s+date|current)` +
     '|' +
@@ -35,7 +44,7 @@ const EN_CLAIM_VALIDITY = new RegExp(
 );
 
 const PL_CLAIM_VALIDITY = plTolerant(
-  /^\s*(?:(?:a|i|więc|ok)[,\s]+)?(?:czy\s+)?(?:to|tamto|te|ta|ten|co\s+(?:powiedział(?:eś|aś)|napisał(?:eś|aś)))\s+(?:jest\s+|są\s+)?(?:(?:nadal|wciąż|dalej|ciągle|jeszcze|dziś|dzisiaj|teraz|obecnie)\s+)*(?:prawda|prawdziw\p{L}*|aktualn\p{L}*|słuszn\p{L}*|trafn\p{L}*|poprawn\p{L}*|obowiązuje|się\s+(?:sprawdza|zgadza|utrzymuje))(?:\s+(?:nadal|wciąż|dalej|teraz|dziś|dzisiaj|obecnie))*\s*[?.!]*\s*$/iu,
+  /^\s*(?:(?:a|i|więc|ok)[,\s]+)?(?:czy\s+)?(?:to|tamto|te|ta|ten|co\s+(?:powiedział(?:eś|aś)|napisał(?:eś|aś)))\s+(?:(?:nadal|wciąż|dalej|ciągle|jeszcze|dziś|dzisiaj|teraz|obecnie)\s+)*(?:jest\s+|są\s+)?(?:(?:nadal|wciąż|dalej|ciągle|jeszcze|dziś|dzisiaj|teraz|obecnie)\s+)*(?:prawd\p{L}*|prawdziw\p{L}*|aktualn\p{L}*|słuszn\p{L}*|trafn\p{L}*|poprawn\p{L}*|obowiązuje|się\s+(?:sprawdza|zgadza|utrzymuje))(?:\s+(?:nadal|wciąż|dalej|teraz|dziś|dzisiaj|obecnie))*\s*[?.!]*\s*$/iu,
 );
 
 /*
