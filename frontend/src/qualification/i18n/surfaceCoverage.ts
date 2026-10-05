@@ -82,7 +82,12 @@ export const SURFACE_NAMESPACES: Readonly<Record<SurfaceId, readonly string[]>> 
   askStandalone: ASK_CHROME,
   askRecent: ASK_CHROME,
   saved: ASK_CHROME,
-  accountSettings: uniq(ASK_CHROME, PLATFORM_CHROME, ['dict:accountSettings']),
+  /* R4 + EA CONVERGENCE — since R4 (CTO platform-settings rulings) Settings is an Ask surface in
+     BOTH modes: AskNavShell + AskContinuityHeader + AccountSettingsBody through askDictionary, whose
+     accountSettings / navBar / footer words are the Ask shell's own projected namespaces (askShell).
+     The platform NavBar/Footer and the product-wide dict:accountSettings are no longer rendered here,
+     so measuring them reported a French/Arabic Settings body as an English fallback. */
+  accountSettings: ASK_CHROME,
   search: uniq(PLATFORM_CHROME, ANALYSIS, ['dict:hero', 'dict:heroContext']),
   map: uniq(PLATFORM_CHROME, ANALYSIS, ['dict:map', 'dict:situationMap', 'dict:liveStatusStrip', 'conflict']),
   conflict: uniq(PLATFORM_CHROME, ['conflict', 'dict:map']),

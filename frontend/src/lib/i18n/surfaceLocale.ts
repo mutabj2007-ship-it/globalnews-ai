@@ -117,7 +117,8 @@ export const SURFACES: Readonly<Record<SurfaceId, SurfaceDefinition>> = {
   accountSettings: {
     id: 'accountSettings',
     label: 'Account · Settings',
-    expressible: 'LANGUAGE_CODE',
+    /* R4: the page renders the reader's DisplayLocale through the Ask shell (all seven). */
+    expressible: 'DISPLAY_LOCALE',
     protectedRoute: 'H+R4',
   },
   search: {

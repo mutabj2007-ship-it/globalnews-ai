@@ -37419,81 +37419,11 @@
   "accountSettings": {
    "en": "FULL",
    "pl": "FULL",
-   "fr": {
-    "state": "DECLARED_FALLBACK",
-    "blocking": [
-     "dict:root",
-     "dict:navBar",
-     "dict:footer",
-     "dict:mobileBottomNav",
-     "dict:authError",
-     "dict:askAi",
-     "dict:presentationRibbon",
-     "returnStrings",
-     "consent",
-     "dict:accountSettings"
-    ]
-   },
-   "de": {
-    "state": "DECLARED_FALLBACK",
-    "blocking": [
-     "dict:root",
-     "dict:navBar",
-     "dict:footer",
-     "dict:mobileBottomNav",
-     "dict:authError",
-     "dict:askAi",
-     "dict:presentationRibbon",
-     "returnStrings",
-     "consent",
-     "dict:accountSettings"
-    ]
-   },
-   "es": {
-    "state": "DECLARED_FALLBACK",
-    "blocking": [
-     "dict:root",
-     "dict:navBar",
-     "dict:footer",
-     "dict:mobileBottomNav",
-     "dict:authError",
-     "dict:askAi",
-     "dict:presentationRibbon",
-     "returnStrings",
-     "consent",
-     "dict:accountSettings"
-    ]
-   },
-   "pt": {
-    "state": "DECLARED_FALLBACK",
-    "blocking": [
-     "dict:root",
-     "dict:navBar",
-     "dict:footer",
-     "dict:mobileBottomNav",
-     "dict:authError",
-     "dict:askAi",
-     "dict:presentationRibbon",
-     "returnStrings",
-     "consent",
-     "dict:accountSettings"
-    ]
-   },
-   "ar": {
-    "state": "DECLARED_FALLBACK",
-    "blocking": [
-     "dict:root",
-     "dict:navBar",
-     "dict:footer",
-     "dict:mobileBottomNav",
-     "dict:authError",
-     "dict:askAi",
-     "dict:presentationRibbon",
-     "returnStrings",
-     "consent",
-     "dict:accountSettings"
-    ]
-   }
+   "fr": "FULL",
+   "de": "FULL",
+   "es": "FULL",
+   "pt": "FULL",
+   "ar": "FULL"
   },
   "search": {
    "en": "FULL",

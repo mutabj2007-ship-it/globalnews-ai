@@ -14,7 +14,7 @@ export const SURFACE_RENDERABLE: Readonly<Record<SurfaceId, readonly DisplayLoca
   askStandalone: ['en', 'pl', 'fr', 'de', 'es', 'pt', 'ar'],
   askRecent: ['en', 'pl', 'fr', 'de', 'es', 'pt', 'ar'],
   saved: ['en', 'pl', 'fr', 'de', 'es', 'pt', 'ar'],
-  accountSettings: ['en', 'pl'],
+  accountSettings: ['en', 'pl', 'fr', 'de', 'es', 'pt', 'ar'],
   search: ['en', 'pl'],
   map: ['en', 'pl'],
   conflict: ['en', 'pl'],
