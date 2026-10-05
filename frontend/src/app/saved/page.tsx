@@ -1,4 +1,5 @@
 import { askLanguageDisposition } from '@/lib/ask/askLocale';
+import { ASK_PRODUCT_NAME } from '@/lib/ask/askBrand';
 import { resolveAskLocale } from '@/lib/ask/askLocale';
 import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
@@ -26,7 +27,8 @@ import { LANGUAGE_COOKIE_NAME } from '@/lib/i18n/languages';
  * trigger opens the same drawer. The list below it scrolls normally.
  */
 export const metadata: Metadata = {
-  title: 'Saved — Ask GlobalNews AI',
+  /* R4 · CTO brand ruling — one canonical product name, never an authored variant */
+  title: `Saved — ${ASK_PRODUCT_NAME}`,
   robots: { index: false, follow: false },
 };
 

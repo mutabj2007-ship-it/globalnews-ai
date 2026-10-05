@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ASK_PRODUCT_NAME } from '@/lib/ask/askBrand';
 import { useSearchParams } from 'next/navigation';
 import type { StoryContext } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
@@ -610,12 +611,12 @@ export function AskFrameScreen({
                   CENTERED COMPOSER R1 §3 — the hierarchy the contract specifies: the product,
                   then the question, then the composer. The wordmark replaces the "Ask AI"
                   eyebrow here because on the standalone entry view they said the same thing
-                  twice. It is NOT translated: Claude L's approved catalogue carries
-                  'GlobalNews AI' verbatim as the eyebrow in every one of the five new
-                  languages, so this is the qualified form, not a new string.
+                  twice. R4 · CTO BRAND RULING: the wordmark is the ONE canonical product name
+                  (ASK_PRODUCT_NAME, "Ask GlobalNewsAI"), never a separately authored spelling —
+                  this line was a hard-coded "GlobalNews AI", a second brand beside the header's.
                 */}
                 <p data-ask="entry-brand" className={styles.entryBrand}>
-                  GlobalNews AI
+                  {ASK_PRODUCT_NAME}
                 </p>
                 {/* R4 · the reader's own composer hint. EN/PL read the released dictionary
                     string through the bounded catalogue, so they are unchanged. */}

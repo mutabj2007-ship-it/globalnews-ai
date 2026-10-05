@@ -1,4 +1,5 @@
 import { askLanguageDisposition } from '@/lib/ask/askLocale';
+import { ASK_PRODUCT_NAME } from '@/lib/ask/askBrand';
 import { askDirectionProps } from '@/lib/ask/askDirection';
 import { resolveAskLocale } from '@/lib/ask/askLocale';
 import { cookies } from 'next/headers';
@@ -19,7 +20,8 @@ import { LANGUAGE_COOKIE_NAME } from '@/lib/i18n/languages';
  * are an Alpha-only, switched-off capability until the CTO releases them.
  */
 export const metadata: Metadata = {
-  title: 'Briefing — Ask GlobalNews AI',
+  /* R4 · CTO brand ruling — one canonical product name, never an authored variant */
+  title: `Briefing — ${ASK_PRODUCT_NAME}`,
   robots: { index: false, follow: false },
 };
 

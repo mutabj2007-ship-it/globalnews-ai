@@ -1,6 +1,9 @@
 import { createElement, type ReactElement } from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import type { DisplayLocale } from '@globalnews-ai/shared';
+import { ASK_PRODUCT_NAME } from './askBrand';
+import { askBackGlyph, askIsRtl } from './askDirection';
+import { askShellStrings } from './shell/askShellCatalogue';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -223,5 +226,60 @@ describe('R4 · Arabic: full-surface RTL on every reachable Ask shell page', () 
     const spec = PAGES[page];
     const texts = textDirections(await renderPage(spec.load, 'fr', spec.props ?? {}));
     expect(texts.filter((t) => t.dir === 'rtl')).toEqual([]);
+  });
+});
+
+describe('R4 · CTO brand ruling — one canonical product name on the Ask shell', () => {
+  it.each(['en', 'pl', ...LOCALES] as DisplayLocale[])(
+    '%s: the entry wordmark is ASK_PRODUCT_NAME, and no page renders a second spelling',
+    async (locale) => {
+      const ask = await renderPage(PAGES.ask.load, locale);
+      const brand = ask.root.findAll(
+        (n) => typeof n.type === 'string' && n.props['data-ask'] === 'entry-brand',
+      );
+      expect(brand).toHaveLength(1);
+      expect(brand[0].children).toEqual([ASK_PRODUCT_NAME]);
+      for (const page of Object.keys(PAGES)) {
+        const spec = PAGES[page];
+        const values = visibleValues(await renderPage(spec.load, locale, spec.props ?? {}));
+        expect(values.filter((v) => v === 'GlobalNews AI' || v === 'Ask GlobalNews AI')).toEqual(
+          [],
+        );
+      }
+    },
+  );
+  it('page titles are composed from the one constant, never an authored variant', async () => {
+    for (const load of [
+      () => import('@/app/ask/page'),
+      () => import('@/app/ask/recent/page'),
+      () => import('@/app/saved/page'),
+      () => import('@/app/saved/briefing/page'),
+    ]) {
+      const title = String(((await load()) as { metadata: { title: unknown } }).metadata.title);
+      expect(title).toContain(ASK_PRODUCT_NAME);
+      expect(title).not.toMatch(/GlobalNews AI/);
+    }
+  });
+});
+
+describe('R4 · CTO RTL ruling — the briefing back control points the way the reader reads', () => {
+  const backLink = (r: ReactTestRenderer) =>
+    r.root
+      .find((n) => typeof n.type === 'string' && n.props['data-briefing'] === 'surface')
+      .find((n) => typeof n.type === 'string' && n.props.href === '/saved');
+  it.each(['en', 'pl', ...LOCALES] as DisplayLocale[])('%s', async (locale) => {
+    const r = await renderPage(PAGES.briefing.load, locale, PAGES.briefing.props ?? {});
+    const link = backLink(r);
+    const glyph = link.find((n) => typeof n.type === 'string' && n.props['aria-hidden'] === 'true');
+    expect(glyph.children).toEqual([askIsRtl(locale) ? '→' : '←']);
+    expect(askBackGlyph(locale)).toBe(askIsRtl(locale) ? '→' : '←');
+    /* the accessible name is the localized label; the glyph is decoration */
+    const label = askShellStrings(locale).briefingStrings.back;
+    const linkText = link.children.filter((c): c is string => typeof c === 'string').join('');
+    expect(linkText).toContain(label);
+  });
+  it('Arabic is the RTL locale of the seven, so its back glyph points right', () => {
+    expect(askBackGlyph('ar')).toBe('→');
+    expect(askBackGlyph('fr')).toBe('←');
   });
 });

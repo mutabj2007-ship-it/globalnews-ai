@@ -1,4 +1,5 @@
 import { askLanguageDisposition } from '@/lib/ask/askLocale';
+import { ASK_PRODUCT_NAME } from '@/lib/ask/askBrand';
 import { resolveAskLocale } from '@/lib/ask/askLocale';
 import { Suspense } from 'react';
 import { cookies } from 'next/headers';
@@ -9,7 +10,8 @@ import { AskThemedPage } from '@/components/ask-nav/AskThemedPage';
 import { THEME_COOKIE_NAME, parseThemePreference } from '@/lib/theme/theme';
 import { LANGUAGE_COOKIE_NAME } from '@/lib/i18n/languages';
 export const metadata: Metadata = {
-  title: 'Ask AI — GlobalNews AI',
+  /* R4 · CTO brand ruling — one canonical product name, never an authored variant */
+  title: ASK_PRODUCT_NAME,
   robots: { index: false, follow: false },
 };
 /**

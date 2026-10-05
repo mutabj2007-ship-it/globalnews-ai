@@ -13,6 +13,7 @@ import { briefingStrings } from '@/lib/ask/briefingStrings';
 import type { DisplayLocale } from '@globalnews-ai/shared';
 import { BriefingVersionView } from './BriefingViews';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
+import { askBackGlyph } from '@/lib/ask/askDirection';
 
 /** A briefing id is a UUID (the server validates it too). */
 const BRIEFING_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -84,7 +85,8 @@ export function BriefingDetailClient({
     <main data-briefing="surface" className="min-h-screen px-4 py-8 md:px-8">
       <div className="mx-auto flex max-w-3xl flex-col gap-6">
         <Link href="/saved" className="text-[12.5px] text-signal hover:underline">
-          ← {t.back}
+          {/* R4 · direction-aware glyph (decorative); the link's name is the localized label */}
+          <span aria-hidden="true">{askBackGlyph(locale)}</span> {t.back}
         </Link>
         {failure !== null && (
           <p data-briefing="failure" className="text-[13.5px] text-ink-secondary">

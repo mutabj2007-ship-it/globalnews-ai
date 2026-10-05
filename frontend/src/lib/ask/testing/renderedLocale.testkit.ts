@@ -13,14 +13,6 @@ import { askCountryName } from '../askCountryName';
 /** The countries the fixtures name: in each locale their CLDR name is DATA (a proper noun). */
 export const FIXTURE_COUNTRIES = ['KEN', 'RWA', 'COD', 'COG', 'TZA', 'POL'];
 
-/**
- * The entry-view wordmark above the composer (AskFrameScreen, data-ask="entry-brand"). H's
- * comment records it as L's qualified, untranslated eyebrow. It is a SECOND spelling of the
- * brand beside the ruled "Ask GlobalNewsAI" — accepted here as a declared proper noun and
- * flagged to the CTO in the integration report, not changed by the integrator.
- */
-export const ENTRY_WORDMARK = 'GlobalNews AI';
-
 const valueAt = (tree: unknown, path: string): unknown =>
   path
     .replace(/()$/, '')
@@ -39,7 +31,7 @@ const valueAt = (tree: unknown, path: string): unknown =>
  * design), and the values Claude L marked QUALIFIED_UNCHANGED for THIS locale.
  */
 export function declaredUnchanged(locale: DisplayLocale): Set<string> {
-  const out = new Set<string>([ASK_PRODUCT_NAME, ENTRY_WORDMARK, ...ASK_SHELL_PROPER_NOUNS]);
+  const out = new Set<string>([ASK_PRODUCT_NAME, ...ASK_SHELL_PROPER_NOUNS]);
   for (const l of DISPLAY_LOCALES) {
     out.add(DISPLAY_LOCALE_META[l].endonym);
     out.add(l.toUpperCase());

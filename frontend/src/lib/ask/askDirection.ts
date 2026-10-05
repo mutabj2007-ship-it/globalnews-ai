@@ -70,6 +70,16 @@ export function askIsRtl(locale: DisplayLocale): boolean {
 }
 
 /**
+ * R4 · CTO RTL RULING — the glyph of a BACK control points toward where the reader came from:
+ * left in a left-to-right layout, right in a right-to-left one. Decided by the locale's
+ * direction (the shared direction table), never by a language-specific string. The glyph is
+ * decoration: callers render it aria-hidden and keep their own localized accessible label.
+ */
+export function askBackGlyph(locale: DisplayLocale): '←' | '→' {
+  return askIsRtl(locale) ? '→' : '←';
+}
+
+/**
  * Props for a run that is ALWAYS left-to-right regardless of the paragraph: a URL, a host,
  * an email, an identifier, a version, a bare ISO timestamp.
  *
