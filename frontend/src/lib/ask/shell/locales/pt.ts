@@ -228,6 +228,7 @@ export const ptShellOverlay: ShellLocaleOverlay = {
         HUMANITARIAN: "Inteligência humanitária",
         IMIHIGO: "Avaliação Imihigo do NISR mantida",
         MARKET_PROCUREMENT: "Avisos de licitação da UE mantidos (TED)",
+        POLITICS: "Registros oficiais mantidos da área política",
       },
       currentReports: "Reportagens atuais",
       eventKind: {
@@ -266,6 +267,7 @@ export const ptShellOverlay: ShellLocaleOverlay = {
       retainedNote: {
         RETAINED_EVALUATION_CYCLE: "Avaliação mantida do ciclo encerrado indicado — não a condição de hoje.",
         RETAINED_EVENT_RECORD: "Registros de eventos mantidos, datados pela fonte — não reportagens atuais.",
+        RETAINED_OFFICIAL_RECORD: "Registros oficiais mantidos, cada um exibido com sua própria data — não reportagens atuais.",
         RETAINED_PUBLICATION: "Instantâneo mantido dos avisos publicados na data indicada — não atual.",
         RETAINED_STATISTICAL_RELEASE: "Publicação oficial mantida para o período de referência indicado — não reverificada agora.",
       },
@@ -728,6 +730,7 @@ export const ptShellOverlay: ShellLocaleOverlay = {
         pattern: "Existe uma versão mais recente ({0}). Esta versão é mantida como foi salva.",
       },
       unavailable: "Os briefings não estão disponíveis agora.",
+      unavailableForEvidence: "Briefing indisponível para esta resposta apoiada em evidências",
       updateAvailable: "Novas evidências entraram na matéria acompanhada desde a última versão.",
       version: {
         kind: "pattern",

@@ -228,6 +228,7 @@ export const frShellOverlay: ShellLocaleOverlay = {
         HUMANITARIAN: "Renseignement humanitaire",
         IMIHIGO: "Évaluation Imihigo du NISR conservée",
         MARKET_PROCUREMENT: "Avis de marchés publics de l’UE conservés (TED)",
+        POLITICS: "Dossiers officiels conservés sur la vie politique",
       },
       currentReports: "Reportages actuels",
       eventKind: {
@@ -266,6 +267,7 @@ export const frShellOverlay: ShellLocaleOverlay = {
       retainedNote: {
         RETAINED_EVALUATION_CYCLE: "Évaluation conservée du cycle clos indiqué — et non la situation d’aujourd’hui.",
         RETAINED_EVENT_RECORD: "Dossiers d’événements conservés, datés par la source — et non des reportages actuels.",
+        RETAINED_OFFICIAL_RECORD: "Dossiers officiels conservés, chacun affiché avec sa propre date — et non des reportages actuels.",
         RETAINED_PUBLICATION: "Instantané conservé des avis publiés à la date indiquée — non actuel.",
         RETAINED_STATISTICAL_RELEASE: "Publication officielle conservée pour la période de référence indiquée — non revérifiée maintenant.",
       },
@@ -728,6 +730,7 @@ export const frShellOverlay: ShellLocaleOverlay = {
         pattern: "Une version plus récente ({0}) existe. Cette version est conservée telle qu’elle a été enregistrée.",
       },
       unavailable: "Les notes de synthèse ne sont pas disponibles pour le moment.",
+      unavailableForEvidence: "Note de synthèse indisponible pour cette réponse étayée par des éléments",
       updateAvailable: "De nouveaux éléments se sont ajoutés au sujet suivi depuis la dernière version.",
       version: {
         kind: "pattern",
