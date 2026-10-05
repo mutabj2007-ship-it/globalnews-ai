@@ -49,7 +49,7 @@ import {
 import { GuestSessionService } from './guest/guest-session.service';
 import { askRequestContext } from './ask-request-context';
 import { isReusableStoredPayload } from './stored-result-reuse';
-import { inheritedConversationCountry, PLACE_LOOKBACK } from './conversation/conversation-place';
+import { conversationPlaceOf, PLACE_LOOKBACK } from './conversation/conversation-place';
 import { readConversationalTurn, type ConversationalTurn } from './conversation/conversation-state';
 import { validateStoredArtifact, type PriorArtifact } from './conversation/conversation-artifact';
 import { isSubjectFollowUp } from '../analysis/anchor/conversation-subject.util';
@@ -317,13 +317,16 @@ export class AskV2Service {
   /**
    * TRUST & CONVERSATIONAL EXPERIENCE R1 — a context-free turn that names no place continues the
    * place the reader named earlier in THIS owner-verified thread (conversation-place.ts), as the
-   * existing inherited GEOGRAPHY rung. Reads only the reader's own questions; never an answer.
+   * existing inherited GEOGRAPHY rung. Reads only the reader's own questions, or (R4 ALPHA SMOKE
+   * R2) the latest answer record's server-derived scope codes; never answer text.
    */
   private async conversationPlace(
     p: AskPrincipal,
     threadId: string,
     question: string,
     language: string,
+    /* R4 ALPHA SMOKE R2 — the latest valid answer record: when it exists, it decides the place */
+    record?: PriorArtifact,
   ): Promise<ResolvedAskContext | undefined> {
     /* A RECOGNISED follow-up ("Why did this happen?", "How does this affect X?") already
        continues the prior SUBJECT through the anchor question (ASK R3 CONTINUITY) — a richer
@@ -340,7 +343,7 @@ export class AskV2Service {
     });
     /* A retried submission already has its own turn: it is not an earlier one. */
     const others = (earlier ?? []).filter((t, i) => !(i === 0 && t.question === question));
-    const iso3 = inheritedConversationCountry(question, language, others);
+    const iso3 = conversationPlaceOf(question, language, others, record);
     return iso3 === null ? undefined : conversationGeography(iso3);
   }
 
@@ -840,7 +843,7 @@ export class AskV2Service {
     const context =
       surface ??
       (composed === null
-        ? await this.conversationPlace(p, threadId, question, input.language)
+        ? await this.conversationPlace(p, threadId, question, input.language, priorArtifact)
         : undefined);
     const request: AskRequest = {
       question: composed?.effectiveQuestion ?? question,

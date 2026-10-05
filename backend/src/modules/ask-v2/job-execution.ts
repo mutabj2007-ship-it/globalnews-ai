@@ -97,6 +97,17 @@ const PRIOR_WORK_RULE =
   '"it" or "that" can be resolved. Build on it explicitly. It is NOT evidence, NOT a source and NOT ' +
   'a current fact, and it says nothing about the reader beyond what they asked.';
 
+/**
+ * R4 ALPHA SMOKE R2 (CTO B) — "Is it still true now?" about an earlier REASONING answer is
+ * re-examined by reasoning only (R-5: no news call). Nothing current was checked, so the answer may
+ * not imply that it was; the unverified current part is named to the reader beside it.
+ */
+export const RECHECK_UNVERIFIED_RULE =
+  'RE-EXAMINATION: the reader asks whether the EARLIER WORK still holds now. No current evidence ' +
+  'was checked for this answer. Re-examine the reasoning itself and say whether it still stands as ' +
+  'a general explanation. Do not state or imply that current events, actions, figures or decisions ' +
+  'were checked or confirmed, and do not describe what is happening now.';
+
 const ARTIFACT_RULE =
   'MEMORY: if your answer establishes a reusable structure — a conceptual framework, a diagnosis, ' +
   'a comparison, decision criteria, recommendations, a plan or a summary — end your reply with ' +

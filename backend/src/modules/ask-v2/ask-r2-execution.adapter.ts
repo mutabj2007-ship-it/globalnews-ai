@@ -36,7 +36,7 @@ import {
   type AskRouteContext,
 } from '../ask-router/ask-r2-route';
 import { DECISION_OBJECTIVE_CANDIDATES } from '../ask-router/decision-support';
-import { completionCeilingFor, jobRulesFor } from './job-execution';
+import { completionCeilingFor, jobRulesFor, RECHECK_UNVERIFIED_RULE } from './job-execution';
 import type { BoundedConversationState } from '../ask-router/semantic-ir/interpret-turn';
 import {
   boundedEarlierTurns,
@@ -214,7 +214,7 @@ function withContractRules(
  * R4 ALPHA R-3 — the original semantic scope of an answered turn, from the route that answered it
  * (codes and the composed question only — never model text).
  */
-function scopeOfRoute(route: AskR2Route): ArtifactScope {
+function scopeOfRoute(route: AskR2Route, analysis: AnalysisApiResponse | null): ArtifactScope {
   /* SHARED R4 CONTINUITY — a turn bound to a specific earlier answer answered about THAT answer's
      subject: its record keeps the inherited scope, so the next follow-up binds the same subject */
   const inherited = route.inheritedScope;
@@ -229,10 +229,20 @@ function scopeOfRoute(route: AskR2Route): ArtifactScope {
   const states = route.semantic.entities
     .filter((e) => (e.type === 'COUNTRY' || e.type === 'TERRITORY') && e.iso3 !== null)
     .map((e) => e.iso3 as string);
+  /* R4 ALPHA SMOKE R2 — the context place this answer actually USED (it scoped the plan, or the
+     retrieval applied it — the same test as truthfulInheritedChips): the record carries it, so a
+     same-place continuation keeps following the record; an unused context is not recorded */
+  const scopedPlace =
+    route.plan.scopedBy === 'MAP_GEOGRAPHY_CONTEXT' ||
+    analysis?.retrievalContext?.geographyContextUsed === true
+      ? route.envelope.geography.candidates
+          .filter((c) => c.source === 'MAP_GEOGRAPHY_CONTEXT')
+          .map((c) => c.value)
+      : [];
   return {
     question: route.source.rawQuestion,
     job: route.job.job,
-    countries: [...new Set([...(route.relationship?.countries ?? []), ...states])],
+    countries: [...new Set([...(route.relationship?.countries ?? []), ...states, ...scopedPlace])],
     relation: route.relationship?.relations[0] ?? null,
     freshness: route.semantic.turn.freshness,
   };
@@ -288,7 +298,7 @@ function answerMemory(
   const referent = route.job.discourseReference === 'PRIOR_WORK' ? artifactUsed?.scope : undefined;
   const scope: ArtifactScope =
     referent === undefined
-      ? scopeOfRoute(route)
+      ? scopeOfRoute(route, analysis)
       : { ...referent, job: route.job.job, freshness: route.semantic.turn.freshness };
   if (modelArtifact !== null && analysis === null) return withScope(modelArtifact, scope);
   const label = route.source.rawQuestion;
@@ -2002,7 +2012,24 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     /* R4 ALPHA R-3 — the earlier work reaches the model only when the turn refers to it */
     const usesPriorWork =
       request.priorArtifact !== undefined && route.job.discourseReference === 'PRIOR_WORK';
-    const jobRules = jobRulesFor(route.job, usesPriorWork, horizon);
+    /*
+      R4 ALPHA SMOKE R2 (CTO B) — a claim re-check of an earlier answer that was NOT sourced
+      reporting ("Is it still true now?" after reasoning) is re-examined by reasoning only (R-5):
+      no current evidence is retrieved for it, so the answer says the current part is unverified —
+      the existing partial-current contract, the reader's own question named as the unverified part.
+    */
+    const recheckUnverified =
+      partialCurrent === undefined &&
+      usesPriorWork &&
+      route.semantic.references.target === 'ARTIFACT_PROPOSITION' &&
+      route.semantic.turn.freshness === 'NONE' &&
+      request.priorArtifact?.provenance !== 'SOURCED_REPORTING';
+    const jobRules = [
+      jobRulesFor(route.job, usesPriorWork, horizon),
+      recheckUnverified ? RECHECK_UNVERIFIED_RULE : '',
+    ]
+      .filter((r) => r !== '')
+      .join('\n\n');
     /* 3 · controls, in order, each failing closed — identical to the reporting path. */
     draft.askR2Enabled = await this.switches.isEnabled('ASK_R2_ENABLED');
     if (!draft.askR2Enabled) throw new AskExecutionRefused('ASK_R2_DISABLED');
@@ -2125,11 +2152,13 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     this.observeContributions(contributions, draft);
     /* R3 §6 — a partial answer is the supported STABLE part (non-citable background) with the
        reporting role it still lacks named; a decline is the same truthful unavailability. */
+    /* R4 ALPHA SMOKE R2 (B) — an unverified re-check is the same partial answer, its gap named */
+    const gap = partialCurrent ?? (recheckUnverified ? 'UNAVAILABLE' : undefined);
     const answer: AnswerDecision =
-      partialCurrent !== undefined && !declined
+      gap !== undefined && !declined
         ? {
             state: 'REFERENCE_BACKGROUND',
-            basis: `PARTIAL_CURRENT_${partialCurrent}`,
+            basis: `PARTIAL_CURRENT_${gap}`,
             missingRoles: ['REPORTING'],
           }
         : deriveAnswerState(route.plan, { items: {}, producedAnswer: !declined });
@@ -2146,7 +2175,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     }
     return this.result(
       plan,
-      route,
+      /* the unverified part of a re-check is the reader's own question about "now" */
+      recheckUnverified ? { ...route, currentEvidenceNeeded: [route.source.rawQuestion] } : route,
       operationId,
       this.observeAnswer(answer, draft),
       null,
@@ -2156,7 +2186,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       contributions,
       null,
       await this.recentReportingFor(route),
-      partialCurrent ?? null,
+      gap ?? null,
       {
         artifact: declined ? null : artifact,
         artifactUsed: request.priorArtifact ?? null,

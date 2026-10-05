@@ -105,3 +105,35 @@ export function inheritedConversationCountry(
   }
   return null;
 }
+
+/**
+ * R4 ALPHA SMOKE R2 (CTO) — the conversation's place follows the SAME authority as "that / it"
+ * (R1-B): when the latest valid answer record exists, the place is that record's own scope.
+ *
+ *   - the record carries one country      → that country continues;
+ *   - it carries several (a relationship) → no single place: the two-sided scope already travels
+ *     with the record itself (execution-contract.ts, scopedRelationship), never as one country;
+ *   - it carries none                     → no place. The reader's older questions are NOT walked
+ *     for geography: live Alpha op a812ea97 ("Show me the official evidence." after a central-bank
+ *     chain) walked past three turns to an older Chile question.
+ *
+ * Without a record (the thread has none, or the latest turn answered nothing) the reader's own
+ * questions are read exactly as before. The same gates apply first: a typed place of its own wins,
+ * a long question is its own topic.
+ */
+export function conversationPlaceOf(
+  question: string,
+  language: string,
+  earlierNewestFirst: readonly EarlierTurn[],
+  record?: { readonly scope?: { readonly countries: readonly string[] } },
+): string | null {
+  const scope = record?.scope;
+  if (scope === undefined)
+    return inheritedConversationCountry(question, language, earlierNewestFirst);
+  if (earlierNewestFirst.length === 0) return null;
+  const own = typedCountriesOf(question, language);
+  if (own === null || own.length > 0) return null;
+  if (wordCount(question) > MAX_CONTINUATION_WORDS) return null;
+  const [only, ...more] = scope.countries;
+  return only === undefined || more.length > 0 || only === 'CONTESTED' ? null : only;
+}
