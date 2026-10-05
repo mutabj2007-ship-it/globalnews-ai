@@ -1,14 +1,22 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseInterceptors } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { NewsResponse, ProviderHealthStatus } from '@globalnews-ai/shared';
 import { NewsService } from './news.service';
 import { CategoryParamsDto, SearchNewsDto, TopHeadlinesQueryDto } from './dto';
+import { LegacyRouteUsageInterceptor } from '../legacy-usage/legacy-route-usage.interceptor';
 
 @Controller('news')
 export class NewsController {
   constructor(private readonly newsService: NewsService) {}
 
-  /** GET /news/search?q=...&limit=... */
+  /**
+   * GET /news/search?q=...&limit=...
+   *
+   * STAGE 2 / T4 — no frontend surface calls this at Alpha or Production (newsApi.searchNews has
+   * no importer). Usage is measured before it is retired. Identity is 'not-assessed': this module
+   * is session-blind by contract, so the measurement reads no session either.
+   */
+  @UseInterceptors(new LegacyRouteUsageInterceptor('GET /news/search'))
   @Get('search')
   search(@Query() { q, limit }: SearchNewsDto): Promise<NewsResponse> {
     return this.newsService.search(q, limit);

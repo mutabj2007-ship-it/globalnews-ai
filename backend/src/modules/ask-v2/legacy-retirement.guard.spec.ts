@@ -7,10 +7,15 @@ import { join, relative, sep } from 'node:path';
  * ONE Ask engine: the canonical Ask V2 adapter is the only Ask caller of the analysis engine.
  * Exactly three production call sites of `AnalysisService.analyzeNews` exist, each named here:
  *
- *   1. analysis/controller/analysis.controller.ts — POST /analysis/news. KEPT: the live
- *      Production frontend still calls it (dock, /search, My Intelligence). It is not deleted or
- *      410'd by this stage (contract R2G); retirement waits for the new frontend's deploy and
- *      the observation window in RETIREMENT-READY.md.
+ *   1. analysis/controller/analysis.controller.ts — POST /analysis/news. KEPT as a public
+ *      COMPATIBILITY route. STAGE 2 / T4 (measured at Alpha 5513275f and Production frontend
+ *      58f80fd4): no mounted frontend surface calls it any more — the dock, /ask, /search and
+ *      My Intelligence all send to Ask V2, and `analyzeNews` in lib/api/analysisApi.ts is
+ *      imported only by unmounted code (useAskConversation.ts, AnalysisFrameClient.tsx). It is
+ *      not deleted or 410'd (contract R2G): unknown/external callers and stale clients are now
+ *      MEASURED by the PII-free legacy-usage interceptor (GET /admin/analytics/legacy-usage),
+ *      and it becomes internal-only per docs/convergence/stage2/T4-LEGACY-ASK-CONVERGENCE.md
+ *      once /history and admin analytics have migrated and the observation window is clean.
  *   2. ask-v2/ask-r2-execution.adapter.ts — the canonical engine (one private analyze()).
  *   3. support/support-ai.service.ts — Support AI's one reporting category: a documented
  *      non-Ask exception (REMAINING-EXCEPTIONS.md).

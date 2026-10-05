@@ -1,4 +1,12 @@
-import { BadRequestException, Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Post,
+  Req,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { MULTI_STORY_MIN_STORIES, type AnalysisApiResponse } from '@globalnews-ai/shared';
@@ -9,6 +17,7 @@ import {
   readVerifiedAnalysisUserId,
 } from '../security/analysis-rate-limit.guard';
 import { HistoryService } from '../../history/history.service';
+import { LegacyRouteUsageInterceptor } from '../../legacy-usage/legacy-route-usage.interceptor';
 
 @Controller('analysis')
 export class AnalysisController {
@@ -61,7 +70,20 @@ export class AnalysisController {
    * A selection that asks an action to run on fewer stories than it needs is
    * refused (400) BEFORE anything is recorded or computed.
    */
+  /**
+   * STAGE 2 / T4 — LEGACY-USE MEASUREMENT. No mounted Ask surface at Alpha or Production calls
+   * this route any more (every one uses Ask V2, which reaches AnalysisService internally, not
+   * through here). The interceptor records a PII-free usage event — route, caller class,
+   * signed-in-or-anonymous, user-agent family, time — so remaining callers are proven, not
+   * assumed, before the route is made internal-only. It never sees the body and never stores the
+   * verified user id; behaviour of this handler is unchanged.
+   */
   @UseGuards(AnalysisRateLimitGuard)
+  @UseInterceptors(
+    new LegacyRouteUsageInterceptor('POST /analysis/news', (request) =>
+      readVerifiedAnalysisUserId(request) !== undefined ? 'signed-in' : 'anonymous',
+    ),
+  )
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('news')
   async analyzeNews(
