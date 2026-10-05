@@ -512,7 +512,8 @@ describe('Home composition', () => {
 
   it('the floating Ask launcher yields on Home (the header launcher / Ask AI tab replace it); the dock still opens', () => {
     const dock = readFileSync(join(DIR, '../../ask/AskAiDock.tsx'), 'utf8');
-    expect(dock).toMatch(/LAUNCHER_SUPPRESSED_ROUTES[^=]*=\s*new Set\(\['\/my-intelligence', '\/'\]\)/);
+    /* COMPACT VISUAL PRODUCT R1 adds '/visual', the future '/', for the same reason. */
+    expect(dock).toMatch(/LAUNCHER_SUPPRESSED_ROUTES[^=]*=\s*new Set\(\['\/my-intelligence', '\/', '\/visual'\]\)/);
     expect(dock).toContain('window.addEventListener(GLOBAL_ASK_OPEN_EVENT');
   });
 

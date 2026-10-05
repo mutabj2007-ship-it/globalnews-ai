@@ -28,7 +28,8 @@ describe('Ruling 1 — the floating Ask launcher is suppressed on /my-intelligen
   it('the suppression is keyed on an explicit route set, not a scattered condition', () => {
     expect(dockSource).toContain('LAUNCHER_SUPPRESSED_ROUTES');
     /* HOME WELCOME & DISCOVERY R1 REV A adds '/': there the header launcher (desktop) and the Ask AI tab (phone) replace the floating button. */
-    expect(dockSource).toMatch(/LAUNCHER_SUPPRESSED_ROUTES[^=]*=\s*new Set\(\['\/my-intelligence', '\/'\]\)/);
+    /* COMPACT VISUAL PRODUCT R1 adds '/visual', the future '/', for the same reason. */
+    expect(dockSource).toMatch(/LAUNCHER_SUPPRESSED_ROUTES[^=]*=\s*new Set\(\['\/my-intelligence', '\/', '\/visual'\]\)/);
   });
 
   it('only the launcher BUTTON is conditional — the panel is not', () => {

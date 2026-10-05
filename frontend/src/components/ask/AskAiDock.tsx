@@ -150,7 +150,8 @@ interface AskAiDockProps {
  * "no floating button". Exactly as for My Intelligence, only the floating
  * button yields: the Hero composer's staging still opens this dock.
  */
-const LAUNCHER_SUPPRESSED_ROUTES: ReadonlySet<string> = new Set(['/my-intelligence', '/']);
+/* COMPACT VISUAL PRODUCT R1 — '/visual' is the future '/', where the hero composer and the Ask tab replace the floating button. */
+const LAUNCHER_SUPPRESSED_ROUTES: ReadonlySet<string> = new Set(['/my-intelligence', '/', '/visual']);
 
 /**
  * ═══ MAP / SPATIAL VISUAL CONVERGENCE R2 — ASK ON THE MAP ══════════════════

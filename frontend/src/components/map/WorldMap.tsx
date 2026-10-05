@@ -124,6 +124,12 @@ export function WorldMap({
 }: WorldMapProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  /* COMPACT VISUAL PRODUCT R1 — the latest framing request and selection, for the opt-in resize
+     re-fit below. Unused unless a caller passes `frame` / `trackHostResize`. */
+  const frameRef = useRef(frame);
+  frameRef.current = frame;
+  const selectedRef = useRef(selectedIso3);
+  selectedRef.current = selectedIso3;
   const [isStyleLoaded, setIsStyleLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const t = getDictionary(language).map;
@@ -314,7 +320,23 @@ useEffect(() => {
 useEffect(() => {
   const host = containerRef.current;
   if (!trackHostResize || host === null || typeof ResizeObserver === 'undefined') return undefined;
-  const observer = new ResizeObserver(() => mapRef.current?.resize());
+  /* Re-apply the requested framing after the host settles (first layout, expand / collapse), so a
+     fit computed against a not-yet-sized host never leaves the camera on empty ocean. A selected
+     country keeps its own camera. */
+  const observer = new ResizeObserver(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    map.resize();
+    const current = frameRef.current;
+    if (current === undefined || selectedRef.current || host.clientWidth === 0 || host.clientHeight === 0) return;
+    map.fitBounds(
+      [
+        [current.bounds[0][0], current.bounds[0][1]],
+        [current.bounds[1][0], current.bounds[1][1]],
+      ],
+      { padding: 12, duration: 0 },
+    );
+  });
   observer.observe(host);
   return () => observer.disconnect();
 }, [trackHostResize]);
