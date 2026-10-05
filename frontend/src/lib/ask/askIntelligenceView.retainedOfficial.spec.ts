@@ -1,5 +1,8 @@
 import type { AskContribution, AskR2Payload } from '@/lib/api/askV2Api';
 import { askIntelligenceView } from './askIntelligenceView';
+import { askShellStrings } from './shell/askShellCatalogue';
+/* R4 PHASE B: the view takes RESOLVED strings; the one shell resolver decides the language. */
+const strings = (locale: 'en' | 'pl') => askShellStrings(locale).askIntelligenceStrings;
 
 /*
   SHARED-ASK-DISCLOSURE-PROPAGATION-R1 (reader side) — a contribution read from a retained official
@@ -37,7 +40,7 @@ const payload = (c: AskContribution): AskR2Payload =>
 
 describe('askIntelligenceView — a retained official record, read through the shared projection', () => {
   it.each(['en', 'pl'] as const)('%s: retained + not current + own date + no-recent caveat', (locale) => {
-    const view = askIntelligenceView(payload(politics(['RETAINED_NOT_CURRENT', 'NO_RECENT_RETAINED_RECORD'])), locale, 0)!;
+    const view = askIntelligenceView(payload(politics(['RETAINED_NOT_CURRENT', 'NO_RECENT_RETAINED_RECORD'])), strings(locale), 0)!;
     const section = view.sections[0]!;
     expect(section.title).not.toBe('POLITICS'); // catalogue name, never the raw id
     expect(section.note).toMatch(locale === 'en' ? /Retained official records.*not current/ : /Zachowane rekordy oficjalne.*nie są bieżące/);
@@ -48,7 +51,7 @@ describe('askIntelligenceView — a retained official record, read through the s
   });
 
   it('a recent record carries no no-recent caveat, but is still marked retained and not current', () => {
-    const section = askIntelligenceView(payload(politics(['RETAINED_NOT_CURRENT'])), 'en', 0)!.sections[0]!;
+    const section = askIntelligenceView(payload(politics(['RETAINED_NOT_CURRENT'])), strings('en'), 0)!.sections[0]!;
     expect(section.caveats).toEqual([]);
     expect(section.note).toMatch(/not current/);
   });
