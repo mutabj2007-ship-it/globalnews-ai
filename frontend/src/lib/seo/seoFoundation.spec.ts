@@ -648,8 +648,12 @@ describe('N10/N11/N12 — routing, product contracts and providers are untouched
     /* COMPACT VISUAL PRODUCT R1 — fifty-eight: /visual, the Alpha preview of the future Home
        (CTO visual integration authority). noindex unconditionally, absent from the sitemap, and
        outside the Standalone allowlist, so Production redirects it to `/` before it renders. */
-    expect(pages).toHaveLength(58);
+    /* PUBLIC VISUAL CONVERGENCE — fifty-nine: /admin/news/stories, the Admin Story inspection.
+       Admin pages are noindex (the Admin layout), so no indexability classification changes; a
+       query (?storyId= / ?articleRef=), not a dynamic segment, so N5 still holds. */
+    expect(pages).toHaveLength(59);
     expect(pages).toContain('/visual');
+    expect(pages).toContain('/admin/news/stories');
     expect(pages).toContain('/conflict');
     expect(classify('/conflict').indexability).toBe('noindex');
     expect(pages).toContain('/ask');
