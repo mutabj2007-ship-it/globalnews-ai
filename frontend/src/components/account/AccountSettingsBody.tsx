@@ -8,6 +8,7 @@ import { useAccount } from '@/lib/hooks/useAccount';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import type { DisplayLocale, LanguageCode } from '@globalnews-ai/shared';
 import { askDictionary } from '@/lib/ask/shell/askDictionary';
+import { askDirectionProps } from '@/lib/ask/askDirection';
 
 /**
  * ACCOUNT DESTRUCTIVE-ACTION SAFETY — the dedicated settings surface the
@@ -58,7 +59,12 @@ export function AccountSettingsBody({
   return (
     <div className="flex min-h-screen flex-col bg-void">
       {chrome === 'platform' && <NavBar />}
-      <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-10">
+      {/* R4 · the settings content takes the reader's direction (Arabic RTL); the platform
+          NavBar / Footer around it are general platform chrome and keep their own */}
+      <main
+        className="mx-auto w-full max-w-3xl flex-1 px-6 py-10"
+        {...(locale === undefined ? {} : askDirectionProps(locale))}
+      >
         <h1 className="text-2xl font-semibold text-ink-primary">{t.heading}</h1>
 
         {!isLoading && !user && deleted && (

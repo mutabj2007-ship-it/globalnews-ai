@@ -54,8 +54,10 @@ describe('I — Help & feedback stays inside standalone Ask', () => {
 describe('J — Settings stays inside standalone Ask, in the active language', () => {
   it('a server wrapper decides chrome and language; the client body holds the account logic', () => {
     expect(settingsPage).not.toMatch(/^'use client'/);
+    /* R4 · CTO platform-settings ruling — the platform presentation (Alpha) was hard-coded English;
+       it now reads the same server-resolved DisplayLocale. The server still decides chrome. */
     expect(code(settingsPage)).toContain(
-      'if (!standaloneAskRoot()) return <AccountSettingsBody language="en" chrome="platform" />;',
+      'if (!standaloneAskRoot()) return <AccountSettingsBody locale={locale} chrome="platform" />;',
     );
     /* R4 · the route no longer clamps. It resolves the reader's own locale once; the
        standalone chrome then reads one disposition. The property this asserted — the SERVER

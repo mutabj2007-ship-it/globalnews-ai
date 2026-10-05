@@ -136,8 +136,9 @@ describe('deletion is reachable only through the dedicated settings surface', ()
     expect(settingsPageSource).toContain('onDeleted={() => setDeleted(true)}');
     expect(settingsPageSource).toContain('t.deletedHeading');
     /* the route renders that body in both presentations, and no second danger zone */
+    /* R4 · CTO platform-settings ruling — the platform presentation reads the reader's locale too */
     expect(settingsRouteSource).toContain(
-      '<AccountSettingsBody language="en" chrome="platform" />',
+      '<AccountSettingsBody locale={locale} chrome="platform" />',
     );
     expect(settingsRouteSource).toContain(
       /* R4 · the standalone settings body reads the reader's DisplayLocale through the Ask locale

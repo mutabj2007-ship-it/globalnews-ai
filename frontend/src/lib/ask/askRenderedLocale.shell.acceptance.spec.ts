@@ -55,6 +55,10 @@ jest.mock(
       { get: (_t: object, k: string | symbol) => (typeof k === 'string' ? k : undefined) },
     ),
 );
+/* platform chrome (general platform architecture, out of the R4 scope) — measured in the browser
+   proof; stubbed here so the platform Settings presentation itself can be rendered */
+jest.mock('@/components/navigation/NavBar', () => ({ NavBar: () => null }));
+jest.mock('@/components/layout/Footer', () => ({ Footer: () => null }));
 jest.mock('@/lib/hooks/useAccount', () => ({
   useAccount: () => ({
     user: { id: 'u', email: 'reader@example.invalid', displayName: 'Reader' },
@@ -282,4 +286,53 @@ describe('R4 · CTO RTL ruling — the briefing back control points the way the 
     expect(askBackGlyph('ar')).toBe('→');
     expect(askBackGlyph('fr')).toBe('←');
   });
+});
+
+describe('R4 · CTO platform-settings ruling — Settings on Alpha (GNA_PUBLIC_ROOT=platform)', () => {
+  beforeAll(() => {
+    process.env.GNA_PUBLIC_ROOT = 'platform';
+  });
+  afterAll(() => {
+    process.env.GNA_PUBLIC_ROOT = 'standalone';
+  });
+  /* the settings presentation itself: the body's <main> (the platform NavBar / Footer around it
+     are general platform chrome, measured separately below) */
+  const settingsMain = (r: ReactTestRenderer) =>
+    r.root.find((n) => n.type === 'main' && String(n.props.className).includes('max-w-3xl'));
+  const valuesOf = (node: ReturnType<typeof settingsMain>): string[] => {
+    const out: string[] = [];
+    const walk = (n: unknown): void => {
+      if (typeof n === 'string') {
+        if (n.trim() !== '') out.push(n.trim());
+      } else if (n !== null && typeof n === 'object' && 'children' in (n as object)) {
+        const inst = n as { props?: Record<string, unknown>; children: unknown[] };
+        for (const a of ['aria-label', 'title', 'placeholder']) {
+          const v = inst.props?.[a];
+          if (typeof v === 'string' && v.trim() !== '') out.push(v.trim());
+        }
+        inst.children.forEach(walk);
+      }
+    };
+    walk(node);
+    return out;
+  };
+  it.each(LOCALES)(
+    '%s: every settings heading, label, danger-zone line and action is the reader’s',
+    async (locale) => {
+      const en = valuesOf(settingsMain(await renderPage(PAGES.settings.load, 'en')));
+      const loc = valuesOf(settingsMain(await renderPage(PAGES.settings.load, locale)));
+      expect(loc.length).toBeGreaterThan(5);
+      expect(
+        englishLeaks(en, loc, dataStrings('reader@example.invalid', 'Reader'), locale),
+      ).toEqual([]);
+    },
+  );
+  it.each([...LOCALES, 'en', 'pl'] as DisplayLocale[])(
+    '%s: the settings content carries the reader’s lang / dir',
+    async (locale) => {
+      const main = settingsMain(await renderPage(PAGES.settings.load, locale));
+      expect(main.props.lang).toBe(locale);
+      expect(main.props.dir).toBe(askIsRtl(locale) ? 'rtl' : 'ltr');
+    },
+  );
 });
