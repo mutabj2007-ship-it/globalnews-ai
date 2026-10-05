@@ -36,6 +36,7 @@ import {
 } from './askDirection';
 import { askR2Strings } from './askR2Strings';
 import { SELECTABLE_LOCALES } from '@/lib/i18n/languages';
+import { renderableLocalesOf, resolveSurfaceLocale, surfaceIds } from '@/lib/i18n/surfaceLocale';
 
 /**
  * R4 · CLAUDE H — SEVEN-LANGUAGE ASK FRONTEND + ARABIC RTL.
@@ -313,12 +314,43 @@ describe('H-4 · Arabic RTL', () => {
     }
   });
 
-  it('the Ask content scope declares lang and dir, and the product chrome is untouched', () => {
-    const frame = src('components', 'ask-frame', 'AskFrameScreen.tsx');
-    expect(code(frame)).toMatch(/lang=\{askScope\.lang\}/);
-    expect(code(frame)).toMatch(/dir=\{askScope\.dir\}/);
-    /* <html> keeps its own lang from the layout; this lane does not set dir there. */
-    expect(code(src('app', 'layout.tsx'))).not.toMatch(/dir=/);
+  /*
+    H-4 SUPERSEDED BY T2 + SPEC-T2-H-3 + CTO ARABIC RTL RULING (2026-10-05).
+    The original assertion ("product chrome untouched; app/layout.tsx contains no dir=") predates
+    T2. The CTO ruling makes Arabic APPLICATION CHROME RTL, and T2 derives <html lang/dir> from the
+    EFFECTIVE surface locale. This is a SPEC correction: no product code changed to satisfy it.
+  */
+  it('root document direction comes from the effective-locale authority: Arabic → rtl, the rest → ltr', () => {
+    for (const locale of SEVEN) {
+      const surface = resolveSurfaceLocale('askStandalone', locale);
+      expect([locale, surface.document.dir]).toEqual([locale, locale === 'ar' ? 'rtl' : 'ltr']);
+    }
+    /* EFFECTIVE, not requested: a surface that cannot render Arabic falls back to English → ltr. */
+    const noArabic = surfaceIds().find((id) => !renderableLocalesOf(id).includes('ar'));
+    if (noArabic !== undefined) {
+      const fellBack = resolveSurfaceLocale(noArabic, 'ar');
+      expect(fellBack.fellBack).toBe(true);
+      expect(fellBack.document.dir).toBe('ltr');
+    }
+    const layout = code(src('app', 'layout.tsx'));
+    expect(layout).toMatch(/<html lang=\{surface\.document\.lang\} dir=\{surface\.document\.dir\}/);
+    expect(layout).toMatch(/documentSurfaceLocale\(\)/);
+    expect(layout).not.toMatch(/dir="(rtl|ltr)"/); /* never a literal: one authority decides */
+  });
+
+  it('Ask adds no competing direction mechanism: its scope uses the same shared table as the document', () => {
+    for (const locale of SEVEN) {
+      expect(askDirectionProps(locale).dir).toBe(resolveSurfaceLocale('askStandalone', locale).document.dir);
+    }
+    const frame = code(src('components', 'ask-frame', 'AskFrameScreen.tsx'));
+    expect(frame).toMatch(/lang=\{askScope\.lang\}/);
+    expect(frame).toMatch(/dir=\{askScope\.dir\}/);
+  });
+
+  it('mixed source / URL content stays isolated by the existing bidi helpers', () => {
+    expect(isolatedLtr()).toEqual({ dir: 'ltr', style: { unicodeBidi: 'isolate', direction: 'ltr' } });
+    expect(isolatedAuto()).toEqual({ style: { unicodeBidi: 'isolate' } });
+    expect(isolatedAuto()).not.toHaveProperty('dir'); /* inherits; never a second authority */
   });
 
   it('the surface exposes its locale, direction and answer language for a proof to read', () => {
