@@ -48,6 +48,8 @@ export interface CommentView {
   readonly createdAt: string;
   readonly editedAt: string | null;
   readonly briefVersion: number;
+  /** EA-STORY-BRIEF-01 — the canonical Story Brief version the comment was written against. */
+  readonly storyBriefVersionId: string | null;
 }
 
 export interface ThreadView {
@@ -68,6 +70,7 @@ type CommentRow = {
   createdAt: Date;
   editedAt: Date | null;
   briefVersion: number;
+  storyBriefVersionId?: string | null;
   user: { displayName: string | null } | null;
 };
 
@@ -90,6 +93,7 @@ export function commentView(row: CommentRow, viewerId: string | null): CommentVi
     createdAt: row.createdAt.toISOString(),
     editedAt: visible && row.editedAt ? row.editedAt.toISOString() : null,
     briefVersion: row.briefVersion,
+    storyBriefVersionId: row.storyBriefVersionId ?? null,
   };
 }
 
@@ -149,7 +153,10 @@ export class DiscussionService {
     return out;
   }
 
-  async post(userId: string, input: { articleRef: string; url: string; body: unknown; parentId?: string | null; idempotencyKey: string }): Promise<CommentView> {
+  async post(
+    userId: string,
+    input: { articleRef: string; url: string; body: unknown; parentId?: string | null; idempotencyKey: string; storyBriefVersionId?: string },
+  ): Promise<CommentView> {
     const body = normalizeBody(input.body);
     const prior = await this.prisma.storyComment.findUnique({
       where: { userId_idempotencyKey: { userId, idempotencyKey: input.idempotencyKey } },
@@ -171,9 +178,17 @@ export class DiscussionService {
       parentId = parent.parentId ?? parent.id;
     }
 
+    /* EA-STORY-BRIEF-01 — a Brief version anchor must belong to this canonical story. */
+    let storyBriefVersionId: string | null = null;
+    if (input.storyBriefVersionId !== undefined) {
+      const version = await this.prisma.storyBriefVersion.findUnique({ where: { id: input.storyBriefVersionId }, select: { storyId: true } });
+      if (!version || !story.aliasIds.includes(version.storyId)) throw new NotFoundException('STORY_BRIEF_VERSION');
+      storyBriefVersionId = input.storyBriefVersionId;
+    }
+
     try {
       const row = await this.prisma.storyComment.create({
-        data: { storyId: story.storyId, userId, parentId, body, briefVersion: story.briefVersion, originArticleRef: input.articleRef, idempotencyKey: input.idempotencyKey },
+        data: { storyId: story.storyId, userId, parentId, body, briefVersion: story.briefVersion, storyBriefVersionId, originArticleRef: input.articleRef, idempotencyKey: input.idempotencyKey },
         include: { user: { select: { displayName: true } } },
       });
       return commentView(row, userId);

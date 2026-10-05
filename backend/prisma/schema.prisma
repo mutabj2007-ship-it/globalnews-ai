@@ -2150,9 +2150,12 @@ model Story {
   createdAt            DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt            DateTime  @updatedAt @db.Timestamptz(6)
 
-  articles StoryArticle[]
-  comments StoryComment[]
-  alerts   StoryAlert[]
+  articles      StoryArticle[]
+  comments      StoryComment[]
+  alerts        StoryAlert[]
+  /// EA-STORY-BRIEF-01 — the canonical, story-owned Brief (shared; never a private Ask Briefing).
+  briefVersions StoryBriefVersion[]
+  briefAttempts StoryBriefAttempt[]
 
   @@index([mergedIntoId])
 }
@@ -2193,27 +2196,31 @@ model StoryIdentityEvent {
 /// STAGE B — DISCUSSION. Never evidence: no Ask, retrieval, prompt or source path reads it.
 /// ════════════════════════════════════════════════════════════════════════════
 model StoryComment {
-  id               String         @id @default(uuid())
+  id                  String             @id @default(uuid())
   /// The story the comment was written on. After a merge it is read through the survivor.
-  storyId          String
-  story            Story          @relation(fields: [storyId], references: [id], onDelete: Restrict)
+  storyId             String
+  story               Story              @relation(fields: [storyId], references: [id], onDelete: Restrict)
   /// Author. Account deletion removes the author's comments (privacy); replies by others
   /// survive with parentId set to NULL.
-  userId           String
-  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  parentId         String?
-  parent           StoryComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: SetNull)
-  replies          StoryComment[] @relation("CommentReplies")
-  body             String
+  userId              String
+  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentId            String?
+  parent              StoryComment?      @relation("CommentReplies", fields: [parentId], references: [id], onDelete: SetNull)
+  replies             StoryComment[]     @relation("CommentReplies")
+  body                String
   /// 'VISIBLE' | 'HIDDEN' | 'REMOVED' (moderation) | 'DELETED' (by its author). CHECK below.
-  state            String         @default("VISIBLE")
+  state               String             @default("VISIBLE")
   /// The brief version and article the reader was looking at (continuity, never identity).
-  briefVersion     Int
-  originArticleRef String?
-  idempotencyKey   String
-  createdAt        DateTime       @default(now()) @db.Timestamptz(6)
-  editedAt         DateTime?      @db.Timestamptz(6)
-  deletedAt        DateTime?      @db.Timestamptz(6)
+  briefVersion        Int
+  /// EA-STORY-BRIEF-01 — the canonical Story Brief VERSION the reader was looking at, when one was
+  /// on screen. Versions are append-only, so the reference never dangles.
+  storyBriefVersionId String?
+  storyBriefVersion   StoryBriefVersion? @relation(fields: [storyBriefVersionId], references: [id], onDelete: Restrict)
+  originArticleRef    String?
+  idempotencyKey      String
+  createdAt           DateTime           @default(now()) @db.Timestamptz(6)
+  editedAt            DateTime?          @db.Timestamptz(6)
+  deletedAt           DateTime?          @db.Timestamptz(6)
 
   reports StoryCommentReport[]
 
@@ -2298,4 +2305,68 @@ model UserInboxCursor {
   userId        String   @id
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   repliesSeenAt DateTime @db.Timestamptz(6)
+}
+
+/// ════════════════════════════════════════════════════════════════════════════
+/// EA-STORY-BRIEF-01 — CANONICAL STORY BRIEF (docs/convergence/east-africa/STORY-BRIEF-CONTRACT.md)
+/// ════════════════════════════════════════════════════════════════════════════
+/// A shared, story-owned intelligence Brief. IMMUTABLE and APPEND-ONLY (a trigger refuses UPDATE
+/// and DELETE): a refresh adds version n+1 and never rewrites n. ONE version per evidence revision,
+/// so reopening a current Brief never recomputes. Only conclusions are versions (READY | PARTIAL |
+/// INSUFFICIENT); a provider failure is an ATTEMPT outcome, never an insufficient-evidence Brief.
+/// No user relation: the Brief carries no requester identity (lineage = sourceOperationId only).
+model StoryBriefVersion {
+  id                String   @id @default(uuid())
+  storyId           String
+  story             Story    @relation(fields: [storyId], references: [id], onDelete: Restrict)
+  /// 1, 2, 3 … per story.
+  version           Int
+  /// sha256 over the canonical story's admitted evidence set (sorted member articleRefs). The
+  /// staleness key: any change to the set (same-publisher update, new publisher, merge, split).
+  evidenceRevision  String
+  /// Story.briefVersion at generation — continuity with Alerts/Discussion, never the staleness key.
+  materialVersion   Int
+  /// 'READY' | 'PARTIAL' | 'INSUFFICIENT' (CHECK).
+  state             String
+  /// briefing-blocks/1 shape, including `intelligence` (payload.intelligence, kept verbatim).
+  blocks            Json
+  /// References only (id, host, url, title, publisher, publishedAt) — never publisher full text.
+  evidenceRefs      Json
+  coverageGaps      Json
+  uncertainty       Json
+  asOf              DateTime @db.Timestamptz(6)
+  generatedAt       DateTime @db.Timestamptz(6)
+  /// The governed ComputeOperation that produced it (plain id: the operation is requester-owned).
+  sourceOperationId String?
+  createdAt         DateTime @default(now()) @db.Timestamptz(6)
+
+  attempts StoryBriefAttempt[]
+  comments StoryComment[]
+
+  @@unique([storyId, version])
+  @@unique([storyId, evidenceRevision])
+}
+
+/// One generation attempt: the dedup claim (at most one CHECKING per story + evidence revision,
+/// partial unique index in the migration) and the failure record. An expired CHECKING lease
+/// becomes FAILED / OUTCOME_UNKNOWN and is never re-run.
+model StoryBriefAttempt {
+  id               String             @id @default(uuid())
+  storyId          String
+  story            Story              @relation(fields: [storyId], references: [id], onDelete: Restrict)
+  evidenceRevision String
+  /// 'CHECKING' | 'DONE' | 'FAILED' (CHECK).
+  status           String             @default("CHECKING")
+  /// 'PROVIDER_DEGRADED' | 'BUDGET_REFUSED' | 'CAPABILITY_UNAVAILABLE' | 'EXECUTION_FAILED' |
+  /// 'OUTCOME_UNKNOWN' (CHECK; required exactly when FAILED).
+  failureKind      String?
+  failureCode      String?
+  operationId      String?
+  leaseExpiresAt   DateTime           @db.Timestamptz(6)
+  briefVersionId   String?
+  briefVersion     StoryBriefVersion? @relation(fields: [briefVersionId], references: [id], onDelete: Restrict)
+  startedAt        DateTime           @default(now()) @db.Timestamptz(6)
+  finishedAt       DateTime?          @db.Timestamptz(6)
+
+  @@index([storyId, evidenceRevision, startedAt])
 }

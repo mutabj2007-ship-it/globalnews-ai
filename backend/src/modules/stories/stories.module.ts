@@ -7,7 +7,10 @@ import { AlertsService } from './alerts.service';
 import { DiscussionController } from './discussion.controller';
 import { AlertsController } from './alerts.controller';
 import { AdminStoriesController } from './admin-stories.controller';
-import { AlertsInAppGate, DiscussionReadGate, DiscussionWriteGate } from './story-gate.guards';
+import { AlertsInAppGate, DiscussionReadGate, DiscussionWriteGate, StoryBriefGate } from './story-gate.guards';
+import { StoryBriefService } from './story-brief.service';
+import { StoryBriefController } from './story-brief.controller';
+import { STORY_BRIEF_GENERATOR, UnavailableStoryBriefGenerator } from './story-brief.generator';
 
 /**
  * HOME R1 STAGE B — canonical story identity, Discussion and in-app Alerts.
@@ -18,8 +21,19 @@ import { AlertsInAppGate, DiscussionReadGate, DiscussionWriteGate } from './stor
  */
 @Module({
   imports: [AuthModule, AdminModule],
-  controllers: [DiscussionController, AlertsController, AdminStoriesController],
-  providers: [StoryIdentityService, DiscussionService, AlertsService, DiscussionReadGate, DiscussionWriteGate, AlertsInAppGate],
+  controllers: [DiscussionController, AlertsController, AdminStoriesController, StoryBriefController],
+  providers: [
+    StoryIdentityService,
+    DiscussionService,
+    AlertsService,
+    DiscussionReadGate,
+    DiscussionWriteGate,
+    AlertsInAppGate,
+    StoryBriefGate,
+    StoryBriefService,
+    /* EA-STORY-BRIEF-01: generation is NOT authorized (spend authority open) — honest refusal. */
+    { provide: STORY_BRIEF_GENERATOR, useClass: UnavailableStoryBriefGenerator },
+  ],
   exports: [StoryIdentityService],
 })
 export class StoriesModule {}

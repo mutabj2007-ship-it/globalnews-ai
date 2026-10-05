@@ -1,6 +1,6 @@
 import { CanActivate, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { alertsInAppEnabled, discussionReadEnabled, discussionWriteEnabled } from './story-gates';
+import { alertsInAppEnabled, discussionReadEnabled, discussionWriteEnabled, storyBriefEnabled } from './story-gates';
 
 /**
  * The Stage B gates as the FIRST guard of each route, so a disabled capability answers 404
@@ -29,6 +29,15 @@ export class AlertsInAppGate implements CanActivate {
   constructor(private readonly config: ConfigService) {}
   canActivate(): boolean {
     if (!alertsInAppEnabled(this.config)) throw new NotFoundException();
+    return true;
+  }
+}
+
+@Injectable()
+export class StoryBriefGate implements CanActivate {
+  constructor(private readonly config: ConfigService) {}
+  canActivate(): boolean {
+    if (!storyBriefEnabled(this.config)) throw new NotFoundException();
     return true;
   }
 }

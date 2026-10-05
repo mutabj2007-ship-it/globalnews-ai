@@ -49,6 +49,11 @@ export class PostCommentDto extends StoryArticleDto {
   @IsUUID()
   parentId?: string;
 
+  /** EA-STORY-BRIEF-01 — the canonical Story Brief version on screen when the comment was written. */
+  @IsOptional()
+  @IsUUID()
+  storyBriefVersionId?: string;
+
   /** Client-generated per draft; a retried submit returns the same comment. */
   @IsString()
   @Matches(/^[A-Za-z0-9_-]{8,64}$/)

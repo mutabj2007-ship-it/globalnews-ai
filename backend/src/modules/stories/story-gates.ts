@@ -29,6 +29,14 @@ export function discussionWriteEnabled(config: Getter): boolean {
 export function alertsInAppEnabled(config: Getter): boolean {
   return on(config, 'ALERTS_IN_APP_ENABLED');
 }
+/**
+ * EA-STORY-BRIEF-01 — the canonical Story Brief (read + explicit Read Brief). Default OFF. Not an
+ * Ask spend switch: generation is bound separately (UnavailableStoryBriefGenerator until the
+ * spend authority is decided), so turning this ON spends nothing by itself.
+ */
+export function storyBriefEnabled(config: Getter): boolean {
+  return on(config, 'STORY_BRIEF_ENABLED');
+}
 
 /** A disabled capability does not exist: 404, never a hint. */
 export function requireGate(enabled: boolean): void {
