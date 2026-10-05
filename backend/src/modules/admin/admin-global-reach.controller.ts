@@ -48,6 +48,33 @@ export class AdminGlobalReachController {
     return this.reach.coverage().filter((r) => r.state === 'UNVERIFIED');
   }
 
+  /** T1 — canonical coverage state per governed country and domain. */
+  @Get('coverage-state')
+  @RequireCapability(CAPABILITIES.AnalyticsView)
+  coverageState() {
+    return this.reach
+      .coverage()
+      .map(
+        ({
+          iso2,
+          iso3,
+          governedRegion,
+          coverageState,
+          coverageDomains,
+          activeInternationalSources,
+          coverageGapReason,
+        }) => ({
+          iso2,
+          iso3,
+          governedRegion,
+          coverageState,
+          coverageDomains,
+          activeInternationalSources,
+          coverageGapReason,
+        }),
+      );
+  }
+
   @Get('publishers-by-country')
   @RequireCapability(CAPABILITIES.AnalyticsView)
   publishersByCountry() {

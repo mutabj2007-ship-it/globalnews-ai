@@ -1,3 +1,4 @@
+import { describeUnusableCredential } from '../../../security/placeholder-credential';
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { isUsableGNewsApiKey } from '../providers/provider.tokens';
@@ -72,10 +73,7 @@ export class NewsStartupValidator implements OnApplicationBootstrap {
     const gnewsApiKey = this.config.get<string>('GNEWS_API_KEY');
 
     if (!isUsableGNewsApiKey(gnewsApiKey)) {
-      const reason =
-        gnewsApiKey === undefined || gnewsApiKey === ''
-          ? 'GNEWS_API_KEY is missing or empty.'
-          : 'GNEWS_API_KEY is whitespace-only.';
+      const reason = describeUnusableCredential('GNEWS_API_KEY', gnewsApiKey);
 
       // Never log the key's value — only the fact that it's unusable.
       this.logger.error(

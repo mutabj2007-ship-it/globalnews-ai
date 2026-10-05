@@ -86,3 +86,27 @@ export function resolveFallbackDescription(
 
   return t.genericDescription;
 }
+
+/**
+ * T1 COVERAGE TRUTHFULNESS — the reader disclosure for a country read whose
+ * local news coverage is absent or unverified (CountryNewsResponse.sourceCoverage,
+ * computed by the backend from registries; rendering it calls nothing). Null
+ * when the backend says local news is COVERED_LOCAL or sent no coverage fact.
+ */
+export function resolveSourceCoverageNotice(
+  response: CountryNewsResponse,
+  language: LanguageCode = 'en',
+): { title: string; body: string; localEvidence: string | null } | null {
+  const coverage = response.sourceCoverage;
+  if (!coverage || coverage.notice === null) return null;
+  const t = getDictionary(language).map.sourceCoverage;
+  const total =
+    coverage.evidence.local + coverage.evidence.international + coverage.evidence.unverifiedLocality;
+  const absent = coverage.notice === 'LOCAL_COVERAGE_ABSENT';
+  return {
+    title: absent ? t.absentTitle : t.unverifiedTitle,
+    body: absent ? t.absentBody : t.unverifiedBody,
+    localEvidence:
+      total > 0 ? `${t.localEvidencePrefix} ${coverage.evidence.local} ${t.ofSeparator} ${total}` : null,
+  };
+}

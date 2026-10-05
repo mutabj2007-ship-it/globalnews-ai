@@ -1155,6 +1155,23 @@ export function MobileSpatialShell({
               </p>
             )}
 
+            {/* T1 COVERAGE TRUTHFULNESS — the same governed sentence as the desktop card:
+                absent/unverified local coverage, from the read already made (no request). */}
+            {stop !== 'PEEK' &&
+              countryRead &&
+              (countryRead.state === 'READY' || countryRead.state === 'READY_NO_COVERAGE') &&
+              countryRead.sourceCoverageNotice !== undefined && (
+                <p
+                  data-gn="mobile-country-read-source-coverage"
+                  data-gn-notice={countryRead.sourceCoverageNotice}
+                  className="mt-[8px] text-[11px] leading-[1.45] text-sp-ink-2"
+                >
+                  {countryRead.sourceCoverageNotice === 'LOCAL_COVERAGE_ABSENT'
+                    ? spatial.card.countryRead.coverageAbsent
+                    : spatial.card.countryRead.coverageUnverified}
+                </p>
+              )}
+
             {/* ── HALF shows the newest; FULL shows the retained set ────── */}
             {stop !== 'PEEK' && items.length > 0 && (
               <section

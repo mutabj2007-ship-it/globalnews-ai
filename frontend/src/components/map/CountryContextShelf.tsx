@@ -9,7 +9,12 @@ import { getDictionary } from '@/lib/i18n/dictionaries';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import { calculateCoverageQuality } from '@/lib/coverageQuality';
 import { getCountryDisplayName } from '@/lib/countryDisplayName';
-import { resolveFeedBadgeText, resolveFallbackTitle, resolveFallbackDescription } from '@/components/map/countryPanelText';
+import {
+  resolveFeedBadgeText,
+  resolveFallbackTitle,
+  resolveFallbackDescription,
+  resolveSourceCoverageNotice,
+} from '@/components/map/countryPanelText';
 
 interface CountryContextShelfProps {
   country: CountryMeta;
@@ -48,6 +53,7 @@ export function CountryContextShelf({
   const coverageQuality = calculateCoverageQuality(response?.articles ?? [], language);
   const fallbackTitle = response ? resolveFallbackTitle(response, language) : null;
   const fallbackDescription = response ? resolveFallbackDescription(response, language) : null;
+  const coverageNotice = response ? resolveSourceCoverageNotice(response, language) : null;
 
   return (
     <div className="relative rounded-2xl border border-border bg-surface p-4 sm:p-5">
@@ -98,6 +104,22 @@ export function CountryContextShelf({
               )}
             </div>
           </div>
+        </section>
+      )}
+
+      {coverageNotice && (
+        <section
+          data-gn="source-coverage-notice"
+          className="mb-3 rounded-xl border border-border bg-surface p-3"
+          aria-label={t.sourceCoverage.ariaLabel}
+        >
+          <p className="font-mono text-[10px] font-semibold uppercase tracking-widest text-ink-secondary">
+            {coverageNotice.title}
+          </p>
+          <p className="mt-1 text-[11px] leading-relaxed text-ink-secondary">{coverageNotice.body}</p>
+          {coverageNotice.localEvidence && (
+            <p className="mt-1.5 font-mono text-[10px] text-ink-tertiary">{coverageNotice.localEvidence}</p>
+          )}
         </section>
       )}
 

@@ -517,10 +517,15 @@ describe('PER-SOURCE ACTIVATION BY ENVIRONMENT — RSS_FEED_SOURCES', () => {
     }
   });
 
-  it('activates exactly the ids named, and no others', () => {
+  it('activates exactly the ids named, and no others — minus the rights-refused ones (T1)', () => {
     const selection = resolveActiveFeedSources(FEED_SOURCES, SIX.join(','));
 
-    expect(selection.sources.map((source) => source.sourceId)).toEqual(SIX);
+    /* T1 — UPDATED DELIBERATELY. Before the rights gate all six activated; the two
+       feeds whose recorded rights are RESTRICTED/PROHIBITED are now refused, visibly. */
+    expect(selection.sources.map((source) => source.sourceId)).toEqual(
+      SIX.filter((id) => id !== 'feed:standardmedia-ke' && id !== 'feed:wp-pl'),
+    );
+    expect(selection.refused.map((r) => r.sourceId)).toEqual(['feed:standardmedia-ke', 'feed:wp-pl']);
     expect(selection.unknownIds).toHaveLength(0);
     expect(selection.overridden).toBe(true);
   });
@@ -762,8 +767,9 @@ describe('REGRESSIONS THE CONTRIBUTION HARNESS CAUGHT ON ITS FIRST ACTIVATED RUN
 
     const health = await provider.health();
 
-    expect(health.requestCount).toBe(6);
-    expect(health.failureCount).toBe(6);
+    /* T1 — six named, four fetched: the two rights-refused feeds are never requested. */
+    expect(health.requestCount).toBe(4);
+    expect(health.failureCount).toBe(4);
     expect(health.failureCount).toBeLessThanOrEqual(health.requestCount!);
   });
 
@@ -776,8 +782,9 @@ describe('REGRESSIONS THE CONTRIBUTION HARNESS CAUGHT ON ITS FIRST ACTIVATED RUN
 
     const health = await provider.health();
 
-    expect(health.requestCount).toBe(6);
-    expect(health.failureCount).toBe(6);
+    /* T1 — six named, four fetched (rights gate). */
+    expect(health.requestCount).toBe(4);
+    expect(health.failureCount).toBe(4);
   });
 
   /**
@@ -864,9 +871,13 @@ describe('REGRESSIONS THE CONTRIBUTION HARNESS CAUGHT ON ITS FIRST ACTIVATED RUN
 
     await providerWith(SIX).topHeadlines();
 
-    expect(attempted).toHaveLength(6);
+    /* T1 — UPDATED DELIBERATELY: every ACTIVATED feed is attempted; the two
+       rights-refused feeds (standardmedia RESTRICTED, wp.pl PROHIBITED) never are. */
+    expect(attempted).toHaveLength(4);
     expect(attempted.some((url) => url.includes('ktpress.rw'))).toBe(true);
-    expect(attempted.some((url) => url.includes('wiadomosci.wp.pl'))).toBe(true);
+    expect(attempted.some((url) => url.includes('stat.gov.pl'))).toBe(true);
+    expect(attempted.some((url) => url.includes('wiadomosci.wp.pl'))).toBe(false);
+    expect(attempted.some((url) => url.includes('standardmedia.co.ke'))).toBe(false);
   });
 });
 

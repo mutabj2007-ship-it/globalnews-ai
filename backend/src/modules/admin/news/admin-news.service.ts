@@ -95,6 +95,7 @@ export class AdminNewsService {
       this.config?.get<string>('RSS_FEED_SOURCES'),
     );
     const activeFeedIds = new Set(feedSelection.sources.map((source) => source.sourceId));
+    const refusedFeedIds = new Set(feedSelection.refused.map((refusal) => refusal.sourceId));
 
     let inventory: AdminNewsProvidersResponse['inventory'] = null;
     if (this.prisma) {
@@ -149,6 +150,8 @@ export class AdminNewsService {
         sourceType: source.sourceType,
         ...(source.language ? { language: source.language } : {}),
         enabled: activeFeedIds.has(source.sourceId),
+        rightsState: source.rights.state,
+        activationRefused: refusedFeedIds.has(source.sourceId),
       })),
       inventory,
       execution: {

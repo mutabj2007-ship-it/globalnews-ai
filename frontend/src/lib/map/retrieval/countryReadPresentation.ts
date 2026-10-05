@@ -28,7 +28,7 @@
  * is readable and testable on its own, and so the route holds state rather than
  * presentation logic.
  */
-import type { CountryNewsResponse } from '@globalnews-ai/shared';
+import type { CountryNewsResponse, SourceCoverageNotice } from '@globalnews-ai/shared';
 import type { MapPeriod } from '@/lib/map/state/mapState';
 import type { LanguageCode } from '@globalnews-ai/shared';
 import {
@@ -62,6 +62,13 @@ export interface CountryReadPresentation {
   readonly categories?: readonly CategoryCount[];
   readonly items?: readonly RetainedItem[];
   readonly topics?: readonly string[];
+  /**
+   * T1 COVERAGE TRUTHFULNESS — the backend's canonical local-source coverage
+   * notice for this country (absent when local news is covered or the response
+   * carries no coverage fact). Present in both READY states: "no rights-cleared
+   * local source is active" is true whether or not reports came back.
+   */
+  readonly sourceCoverageNotice?: SourceCoverageNotice;
 }
 
 /**
@@ -95,7 +102,9 @@ export function countryReadPresentationFrom(input: {
     dropping the status on the empty case would collapse them.
   */
   const providerStatus = providerStatusFrom(response);
-  if (state === 'READY_NO_COVERAGE') return { state, onLoad, providerStatus };
+  const notice = response.sourceCoverage?.notice ?? null;
+  const coverageFact = notice === null ? {} : { sourceCoverageNotice: notice };
+  if (state === 'READY_NO_COVERAGE') return { state, onLoad, providerStatus, ...coverageFact };
 
   return {
     state,
@@ -105,5 +114,6 @@ export function countryReadPresentationFrom(input: {
     categories: categoryDistribution(response.articles),
     items: retainedItemsFrom(response.articles),
     topics: retainedTopics(response.articles),
+    ...coverageFact,
   };
 }

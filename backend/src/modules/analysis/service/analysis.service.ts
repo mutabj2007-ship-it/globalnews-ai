@@ -105,6 +105,13 @@ import {
   scoreRelationalEventRelevance,
 } from '../../news/relevance/relational-event';
 import { CountryNewsService } from '../../news/country/country-news.service';
+import { ConfigService } from '@nestjs/config';
+import { findCountryByIso2, findCountryByIso3 } from '@globalnews-ai/shared';
+import {
+  NO_ACTIVATION,
+  countrySourceCoverageDisclosure,
+  sourceActivationFromConfig,
+} from '../../global-reach/source-coverage.authority';
 import type { AnalysisProvider } from '../interfaces';
 import type { EvidenceFreshnessFact } from '../interfaces/analysis-provider.interface';
 import { ANALYSIS_PROVIDER } from '../providers/provider.tokens';
@@ -654,7 +661,42 @@ export class AnalysisService {
        Optional so every existing construction is unchanged. */
     @Optional()
     private readonly evidenceDiscovery?: EvidenceDiscoveryService,
+
+    /* T1 COVERAGE TRUTHFULNESS — read only to know which sources configuration activated.
+       Optional so every existing construction is unchanged. */
+    @Optional()
+    private readonly config?: ConfigService,
   ) {}
+
+  /**
+   * T1 COVERAGE TRUTHFULNESS — the canonical local-source coverage fact for the
+   * country this retrieval established, plus the locality of the evidence used.
+   * Registry + configuration + already-retrieved articles only: no provider
+   * call, no AI call. Undefined when no country was established or it cannot
+   * be resolved; never throws into the analysis path.
+   */
+  private sourceCoverageFor(
+    countryCode: string | undefined,
+    articles: readonly NewsArticle[],
+    providers: readonly string[],
+  ): AnalysisRetrievalContext['sourceCoverage'] {
+    if (!countryCode) return undefined;
+    try {
+      const country =
+        countryCode.length === 2 ? findCountryByIso2(countryCode) : findCountryByIso3(countryCode);
+      if (!country) return undefined;
+      return countrySourceCoverageDisclosure({
+        iso3: country.iso3,
+        evidenceUrls: articles.map((article) => article.url),
+        contributingProviderIds: providers,
+        activation: this.config
+          ? sourceActivationFromConfig((key) => this.config?.get<string>(key))
+          : NO_ACTIVATION,
+      });
+    } catch {
+      return undefined;
+    }
+  }
 
   /**
    * Milestone #47 — `requestedLanguage` defaults to 'en', so every
@@ -3468,9 +3510,16 @@ export class AnalysisService {
           evidence-state fact is stamped exactly once, by the one shared
           derivation. The model, the cache TTL and the UI all read this value.
         */
+        const sourceCoverage = this.sourceCoverageFor(
+          retrievalContext.countryCode,
+          articles,
+          retrievalContext.providers ?? [],
+        );
         retrievalContext = {
           ...retrievalContext,
           evidenceState: resolveEvidenceState(retrievalContext, articles.length),
+          /* T1 — additive: the canonical coverage fact for the established country. */
+          ...(sourceCoverage ? { sourceCoverage } : {}),
           /* R2 — presentation only: the reader asked for dates in THIS turn's own instructions. */
           ...(requestsDates(normalizedQuery) ? { datesRequested: true as const } : {}),
         };
