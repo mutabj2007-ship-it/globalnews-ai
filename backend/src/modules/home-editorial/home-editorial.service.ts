@@ -229,14 +229,16 @@ export class HomeEditorialService {
     };
 
     let relaxed = false;
-    let found = await run(terms);
-    if (found.length === 0 && terms.some((t) => t.length >= 6)) {
-      /* Sensible tolerance without fuzzy indexes: retry on word stems (first 5 letters). */
-      relaxed = true;
-      found = await run(terms.map((t) => (t.length >= 6 ? t.slice(0, 5) : t)));
-    }
-    const rows = found.map((a) => this.toRow(a));
     const eligibleOnly = input.scope === 'HOME_ELIGIBLE';
+    let rows = (await run(terms)).map((a) => this.toRow(a));
+    /* Sensible tolerance without fuzzy indexes: when the exact words leave NOTHING in scope (raw hits
+       may all be out of scope, e.g. "refineri" ⊂ "refineries" in a sport report), retry on word stems
+       (first 5 letters). */
+    const inScope = (rs: RetainedRow[]): number => (eligibleOnly ? candidatesOf(rs, now, true).length : rs.length);
+    if (inScope(rows) === 0 && terms.some((t) => t.length >= 6)) {
+      relaxed = true;
+      rows = (await run(terms.map((t) => (t.length >= 6 ? t.slice(0, 5) : t)))).map((a) => this.toRow(a));
+    }
     let candidates = candidatesOf(rows, now, eligibleOnly);
     if (!eligibleOnly) {
       /* Broader archive: every real retained report, still never sport/entertainment-gated away

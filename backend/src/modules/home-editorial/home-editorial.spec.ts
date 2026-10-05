@@ -149,3 +149,53 @@ describe('Home editorial assembly', () => {
     }
   });
 });
+
+describe('Story search (service, in-memory store)', () => {
+  /* Minimal evaluator for the where-clauses HomeEditorialService builds (AND / OR / contains / countries / publishedAt). */
+  const ev = (w: any, r: any): boolean =>
+    w == null ||
+    Object.entries(w).every(([k, v]: [string, any]) => {
+      if (k === 'AND') return (v as any[]).every((x) => ev(x, r));
+      if (k === 'OR') return (v as any[]).some((x) => ev(x, r));
+      if (k === 'countries') return r.countries.some((c: any) => c.isRelevant && (!v.some.countryCode || v.some.countryCode.in.includes(c.countryCode)));
+      if (k === 'publishedAt') return r.publishedAt >= v.gte;
+      if (v && typeof v === 'object' && 'contains' in v) return String(r[k] ?? '').toLowerCase().includes(String(v.contains).toLowerCase());
+      return true;
+    });
+  const art = (id: string, title: string, summary: string, category = 'world', iso3 = 'KEN') => ({
+    id, url: `https://example.org/${id}`, title, summary, imageUrl: null, sourceId: 'gnews', sourceName: `P-${id}`, category,
+    publishedAt: h(10), publishedAtBasis: 'publisher', fetchedAt: h(10), countryName: null,
+    countries: [{ countryCode: iso3, relevanceScore: 80, isRelevant: true }],
+  });
+  const store = [
+    art('s1', 'Derby result sparks celebrations', 'Fans gathered outside the refineries district', 'sports'),
+    art('b1', 'Kenya refinery investment faces court challenge', 'A legal challenge to the refinery plan'),
+    art('c1', 'Fighting erupts in Tigray as ceasefire collapses', 'Clashes resumed', 'world', 'ETH'),
+  ];
+  const prisma: any = {
+    article: { findMany: async (q: any) => store.filter((r) => ev(q.where, r)) },
+    storyArticle: { findMany: async () => [] }, story: { findMany: async () => [] }, storyComment: { findMany: async () => [] },
+  };
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { HomeEditorialService } = require('./home-editorial.service');
+  const svc = new HomeEditorialService(prisma);
+  const search = (q: string, scope: 'HOME_ELIGIBLE' | 'ALL_RETAINED' = 'HOME_ELIGIBLE') =>
+    svc.search({ q, scope, region: null, domain: null, days: null, now: NOW });
+
+  it('finds eligible stories by keyword and never returns sport in the Home scope', async () => {
+    expect((await search('refinery')).results.map((c: any) => c.title)).toEqual(['Kenya refinery investment faces court challenge']);
+    expect((await search('Derby')).results).toEqual([]);
+    expect((await search('Derby', 'ALL_RETAINED')).results.map((c: any) => c.primaryDomain)).toEqual([null]);
+  });
+  it('a misspelling whose only raw hit is out of scope still relaxes to the word stem', async () => {
+    const r = await search('refineri');
+    expect(r.relaxed).toBe(true);
+    expect(r.results.map((c: any) => c.title)).toEqual(['Kenya refinery investment faces court challenge']);
+  });
+  it('a country name matches the story geography', async () => {
+    expect((await search('Ethiopia')).results.map((c: any) => c.title)).toEqual(['Fighting erupts in Tigray as ceasefire collapses']);
+  });
+  it('too-short queries return nothing without touching the store', async () => {
+    expect((await search('a')).results).toEqual([]);
+  });
+});
