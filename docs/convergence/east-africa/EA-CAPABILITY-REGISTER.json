@@ -3,25 +3,25 @@
   "contract": "GLOBALNEWSAI East Africa Monitoring and Shared Ask Implementation Contract v1.0 (2026-10-05)",
   "measuredAt": "2026-10-05",
   "integrationHead": {
-    "branch": "integration/east-africa-p0-r1",
-    "note": "REVIEWABLE ENGINEERING CHECKPOINT (CTO, 2026-10-05). NOT the frozen R4 baseline. Not deployed anywhere.",
-    "checkpoint": "8ec5cd5",
+    "branch": "integration/r4-east-africa-convergence-r1",
+    "note": "R4 + EAST AFRICA CONVERGENCE (CTO authority, 2026-10-05). Local; not pushed; not deployed. First parent = corrected live R4 db98d957 (= 81a5034 + seven-language persistence repair, LIVE on Alpha backend dff69371); second parent = accepted EA checkpoint ea3edd3.",
+    "checkpoint": "e3ffacd",
     "lineage": [
-      "72ce054 T5B tip (contains H final 266007c + T2 c3754bd + T5A on Alpha 5513275)",
-      "c6088b0 merge T1 8333551 (coverage truthfulness)",
-      "0bded08 merge T4 5a28e26 (legacy caller measurement)",
-      "3548715 merge 5b89bdd (seven-language persistence)",
-      "4e99d64 T3 patch applied (Conflict contributor selection)",
-      "8ec5cd5 T2 translation manifest regenerated (+9 keys/locale)",
-      "afeedc9 briefing evidence preservation (EA P0 A)",
-      "d1a7939 procurement filter-before-limit (EA P0 B)",
-      "a1dbb95 merge registry docs claude/whole-product-convergence-r1 b3b623f"
+      "db98d957 corrected R4 base (81a5034 + 5b89bdd cherry-pick; Alpha backend LIVE, Production NOT deployed)",
+      "bf6ee3c merge ea3edd3 (T1 T2 T3 T4 T5A/B, afeedc9, d1a7939, register) — textual resolutions only",
+      "e220d96 T3 survives R4 EARLIER_TURN inheritance in all seven locales",
+      "3050ba3 Claude L R6: one runtime source (Ask-shell overlays via askShellCatalogue; delivery = provenance)",
+      "1bf07ca Ask dock reads the T2 display-locale authority (no second cookie read)",
+      "593067c region authority matrix (EA-REGION-AUTHORITY-01)",
+      "f0f12ec Settings measured as the Ask surface R4 made it (no false fallback)",
+      "9a9a81d T2 manifest: QUALIFIED_IN_ASK_SCOPE (L work 3560 -> 3386 per locale)",
+      "e3ffacd canonical Story Brief R1 (EA-STORY-BRIEF-01; generation BLOCKED on spend authority)"
     ]
   },
   "outsideThisBranch": [
-    "R4 candidate 04e68e6 (local integration/r4-replacement; backup/r4-replacement-04e68e6) - NOT merged; its final 21-item gate was skipped (owner: 'take the easiest path').",
-    "Claude L R6 delivery (R4_PARALLEL/CLAUDE_L/TO_CLAUDE_CODE/R6_RENDERED_SURFACE_50, 50 keys x fr/de/es/pt-BR/ar) - NOT applied; it targets the R4 candidate.",
-    "Any later merge of R4 + L work into this line is a SEPARATE convergence operation with its own gate. This branch must not be represented as the frozen R4 baseline."
+    "Politics R1 2b7b180 (specialist/politics-r1-on-r4-81a5034-2b7b180, frozen, HOLD) - NOT merged. Its migrations 20261004120000/20261004130000 sort BEFORE the applied 20261005100000: out-of-order apply must be rehearsed on 37-state (Alpha) and 36-state (Production) DBs before any combined candidate. contributor-selection.ts is a three-authority seam (R4 EARLIER_TURN + EA T3 e220d96 + Politics).",
+    "Claude H H0 (sha256 3187cb79…486c) - frozen, NOT integrated; H1 waits for the frozen engineering baseline.",
+    "Production runs 81a5034 with the en/pl CHECK (P0 open) - db98d957 backend-only needs a separate CTO/PO authorization."
   ],
   "runtimeAuthority": {
     "source": "CTO-verified Railway state, contract GLOBALNEWSAI_CLOUD_STAGE2_BUILD_CONTRACT_R2 (2026-10-04)",
@@ -1069,8 +1069,8 @@
     {
       "id": "CLAUDE_DESIGN_COMPACT_VISUAL_PRODUCT",
       "name": "Claude Design compact visual product (Home, story cards, in-app brief, evidence preview, discussion, Watch/Alerts, Settings, mobile, 7-language/RTL, tokens)",
-      "status": "AWAITING_DESIGN_DELIVERY / NOT_AUTHORIZED_FOR_INTEGRATION",
-      "note": "Package expected through D:\\Desktop\\GlobalNewsAI\\Claude_Output\\ and CTO-reviewed before any integration authorization. No visual implementation may be inferred from screenshots, older Claude Design material or the expected ZIP structure. Integration will target the then-current engineering head. Collision surfaces already on this branch: T2 seven-language frontend, T5 consent/privacy surfaces, Ask presentation, Home, Map, footer/navigation, Arabic RTL, coverage notices.",
+      "status": "DELIVERED / ACCEPTED (H0 frozen) / NOT INTEGRATED",
+      "note": "Design R1 ZIP accepted (sha c09bfee4…428b); Claude H H0 frozen (sha 3187cb79…486c), not integrated. H1 waits for the frozen engineering baseline; then truth-binding review (Story Brief generation unavailable, region scope labels, Watch capability).",
       "owner": "Claude Design (visual authority) -> CTO review -> Claude Code (sole code integration owner)"
     }
   ]

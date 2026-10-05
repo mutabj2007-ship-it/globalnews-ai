@@ -1,229 +1,387 @@
 {
-  "schema": "ea-register-source/1",
-  "contract": "GLOBALNEWSAI East Africa Monitoring and Shared Ask Implementation Contract v1.0 (2026-10-05)",
-  "measuredAt": "2026-10-05",
-  "integrationHead": {
-    "branch": "integration/east-africa-p0-r1",
-    "note": "REVIEWABLE ENGINEERING CHECKPOINT (CTO, 2026-10-05). NOT the frozen R4 baseline. Not deployed anywhere.",
-    "checkpoint": "8ec5cd5",
-    "lineage": [
-      "72ce054 T5B tip (contains H final 266007c + T2 c3754bd + T5A on Alpha 5513275)",
-      "c6088b0 merge T1 8333551 (coverage truthfulness)",
-      "0bded08 merge T4 5a28e26 (legacy caller measurement)",
-      "3548715 merge 5b89bdd (seven-language persistence)",
-      "4e99d64 T3 patch applied (Conflict contributor selection)",
-      "8ec5cd5 T2 translation manifest regenerated (+9 keys/locale)",
-      "afeedc9 briefing evidence preservation (EA P0 A)",
-      "d1a7939 procurement filter-before-limit (EA P0 B)",
-      "a1dbb95 merge registry docs claude/whole-product-convergence-r1 b3b623f"
-    ]
-  },
-  "outsideThisBranch": [
-    "R4 candidate 04e68e6 (local integration/r4-replacement; backup/r4-replacement-04e68e6) - NOT merged; its final 21-item gate was skipped (owner: 'take the easiest path').",
-    "Claude L R6 delivery (R4_PARALLEL/CLAUDE_L/TO_CLAUDE_CODE/R6_RENDERED_SURFACE_50, 50 keys x fr/de/es/pt-BR/ar) - NOT applied; it targets the R4 candidate.",
-    "Any later merge of R4 + L work into this line is a SEPARATE convergence operation with its own gate. This branch must not be represented as the frozen R4 baseline."
-  ],
-  "statusVocabulary": {
-    "IMPLEMENTED": "YES | PARTIAL | NO - code for the capability exists on the integration head (PARTIAL = open implementation blockers).",
-    "TESTED": "YES | PARTIAL | NOT_ASSESSED - automated tests at the integration head exercise it (fixtures, real-PG, or both; see evidence). NOT_ASSESSED = not mapped in this pass, NOT a pass.",
-    "DEPLOYED": "per environment: YES (code at the deployed SHA) | NO | UNVERIFIED. Alpha = 5513275 (CTO Railway authority); Production = BE 5b714833 / FE 58f80fd4.",
-    "ENABLED": "per environment: YES | OFF_BY_DEFAULT (flag absent by default; Railway value not re-measured) | UNVERIFIED | N/A.",
-    "LIVE_VERIFIED": "per environment: YES (independently exercised live, with evidence) | NEGATIVE (live evidence shows the capability is NOT working there) | NOT_RUN. A report, fixture, preview route or provider name never sets YES. CTO deployment authority proves DEPLOYED, not LIVE_VERIFIED.",
-    "BLOCKED": "open blocker IDs from 10-PRODUCTION-BLOCKERS (plus EA-* additions).",
-    "NOT_IMPLEMENTED": "named parts of the capability with no code at the integration head."
-  },
-  "derivationRules": [
-    "Alpha DEPLOYED/ENABLED derive from 02 alphaState: ALPHA_LIVE -> YES/YES; ASK_BOUND, RETAINED_ONLY, COVERAGE_GAP, PREVIEW_ONLY -> YES/UNVERIFIED; LOCAL_ONLY -> YES/OFF_BY_DEFAULT; DESIGN_ONLY, ABSENT -> NO/N/A.",
-    "Production DEPLOYED/ENABLED derive from 02 productionState: UNVERIFIED_RUNTIME -> YES/UNVERIFIED; COVERAGE_GAP -> YES/UNVERIFIED; ABSENT -> NO/N/A.",
-    "IMPLEMENTED derives from alphaState (ABSENT/DESIGN_ONLY -> NO), open blockers or named NOT_IMPLEMENTED parts (any -> PARTIAL, none -> YES), then per-capability overrides below for work on the integration head.",
-    "LIVE_VERIFIED is NOT_RUN everywhere unless an override cites live evidence.",
-    "Overrides always win and must cite evidence."
-  ],
-  "overrides": {
-    "ASK-CORE": {
-      "tested": "YES",
-      "branchDelta": "T3 Conflict selection fixed (4e99d64); briefing intelligence kept (afeedc9); procurement scope-before-limit (d1a7939).",
-      "resolvedOnBranch": ["P0-ASK-01", "P1-ASK-03"],
-      "evidence": "P1-ASK-03 per 02 registry note: resolved in H final 266007c, which is in this branch lineage (72ce054). ask-intelligence 139 pass/3 todo; contributor-selection.domain-leak.spec 96; affected modules 1681 tests, 2 pre-existing failures (h-handoff)."
-    },
-    "ASK-SEARCH": {
-      "tested": "YES",
-      "branchDelta": "AskThread/AskTurn accept all seven languages (5b89bdd, migration 20261005100000).",
-      "resolvedOnBranch": ["EA-P0-LANG-DB"],
-      "evidence": "ask-v2.seven-language.postgres.spec (17, real PG), .migration.spec (4)."
-    },
-    "LANG-SYSTEM": {
-      "implemented": "PARTIAL",
-      "tested": "YES",
-      "branchDelta": "T2 one DisplayLocale authority, <html lang/dir>, declared fallback; DB persistence for 7 languages. 3560 keys/locale still pending translation (Claude L).",
-      "resolvedOnBranch": ["P0-LANG-02", "P0-LANG-03", "P1-LANG-05", "EA-P0-LANG-DB"],
-      "liveVerified": { "alpha": "NEGATIVE - live Alpha DB read 2026-10-05: AskThread/AskTurn CHECK still ('en','pl'); threads en=60 pl=5 (read-only)." },
-      "notImplemented": ["fr/de/es/pt/ar catalogues for non-Ask surfaces (declared English fallback)"],
-      "evidence": "T2 dossier; catalogueCoverage spec equal to regenerated manifest (866 i18n tests pass)."
-    },
-    "BRIEFINGS": {
-      "tested": "YES",
-      "branchDelta": "Saved versions keep payload.intelligence verbatim (afeedc9).",
-      "resolvedOnBranch": ["P1-BRF-01"],
-      "notImplemented": ["Frontend display of blocks.intelligence (deferred to the Claude Design lane)", "Scheduled/recurring briefings"],
-      "evidence": "briefings.postgres.spec +2 (save -> StoredResult deleted -> reopen identical; no prepare/execute on reopen); briefing-snapshot.spec 6."
-    },
-    "MARKET": {
-      "tested": "YES",
-      "branchDelta": "Scope filter before limit in the read (d1a7939). Latent: not reachable with today's governed capture (<=20 POL notices).",
-      "resolvedOnBranch": ["P1-MKT-01"],
-      "evidence": "ask-intelligence.spec +3, ted-procurement-retained.spec +2 (real parser + repository)."
-    },
-    "CONFLICT": {
-      "tested": "YES",
-      "resolvedOnBranch": ["P0-ASK-01"],
-      "evidence": "T3 negative controls: travel, visa, politics, economy, energy, weather, humanitarian, country background."
-    },
-    "CONSENT": {
-      "implemented": "PARTIAL",
-      "tested": "YES",
-      "branchDelta": "T5A guest-trial contract + isolation suite; T5B pre-login notices, POST /ask-v2/guest/forget, /cookies footer link.",
-      "notImplemented": ["Owner/legal approval of policy wording", "Retention sweep enabled in any environment (P1-PRIV-03)"],
-      "evidence": "ask-v2-guest.forget.t5b.postgres.spec (serial pass), T5 dossier."
-    },
-    "NEWS-SOURCES": {
-      "implemented": "PARTIAL",
-      "tested": "YES",
-      "branchDelta": "T1 canonical coverage state, rights gate, placeholder-credential rule; 54/54 priority countries disclosed as COVERAGE_GAP.",
-      "resolvedOnBranch": ["P1-SRC-02", "P1-SRC-03"],
-      "notImplemented": ["Activated, rights-resolved regional sources for the 11 East Africa countries", "Tanzania revalidation workstream"],
-      "evidence": "coverage-check.json pinned by spec; T1 dossier."
-    },
-    "ASK-LEGACY": {
-      "branchDelta": "T4 legacy-usage telemetry + caller graph (22 callers: 6 COMPATIBILITY, 3 INTERNALIZE, 6 MIGRATE, ...). No caller migrated yet.",
-      "evidence": "T4 dossier, T4-legacy-caller-graph.json."
-    },
-    "ALERTS-WATCH": {
-      "notImplemented": ["Scheduled Watch execution", "Material-change detection beyond new publisher host", "External delivery channel"]
-    },
-    "PAID": {
-      "notImplemented": ["Entitlements", "Billing integration", "Metering beyond compute shadow ledger"]
-    }
-  },
-  "extraCapabilities": [
-    {
-      "id": "CLAUDE_DESIGN_COMPACT_VISUAL_PRODUCT",
-      "name": "Claude Design compact visual product (Home, story cards, in-app brief, evidence preview, discussion, Watch/Alerts, Settings, mobile, 7-language/RTL, tokens)",
-      "status": "AWAITING_DESIGN_DELIVERY / NOT_AUTHORIZED_FOR_INTEGRATION",
-      "note": "Package expected through D:\\Desktop\\GlobalNewsAI\\Claude_Output\\ and CTO-reviewed before any integration authorization. No visual implementation may be inferred from screenshots, older Claude Design material or the expected ZIP structure. Integration will target the then-current engineering head. Collision surfaces already on this branch: T2 seven-language frontend, T5 consent/privacy surfaces, Ask presentation, Home, Map, footer/navigation, Arabic RTL, coverage notices.",
-      "owner": "Claude Design (visual authority) -> CTO review -> Claude Code (sole code integration owner)"
-    }
-  ],
-  "ledger": [
-    {
-      "id": "EA-P0-01", "requirement": "Contract s2/s3: deployment + migration truth; capability register",
-      "owner": "Claude Code", "commit": "a1dbb95 + this register",
-      "focusedTest": "n/a (documentation)", "regression": "n/a", "migration": "none",
-      "deployed": "n/a", "live": "Alpha DB constraint + language distribution read (read-only) 2026-10-05",
-      "blocker": "Production flags never measured (HOLD); Alpha Railway variables not re-read in this pass."
-    },
-    {
-      "id": "EA-P0-LANG-DB", "requirement": "s7 immediate fix: AskThread/AskTurn language persistence (Alpha log AskThread_language failure)",
-      "owner": "Claude Code", "commit": "5b89bdd (merged 3548715)",
-      "focusedTest": "ask-v2.seven-language.postgres.spec 17/17 (reproduced 6 failures first); .migration.spec 4/4",
-      "regression": "ask-v2 module 1017 pass; full BE 0 new failures vs base",
-      "migration": "20261005100000_ask_seven_language_persistence (relaxing CHECK; DOWN refuses while new-language rows exist - proven)",
-      "deployed": "NO (Alpha DB still en/pl)", "live": "NOT_RUN post-fix",
-      "blocker": "Alpha deploy authorization."
-    },
-    {
-      "id": "P0-ASK-01", "requirement": "s5: country match alone never selects Conflict / J08 negative routing",
-      "owner": "Cloud convergence T3 (spec + patch) / Claude Code (applied)", "commit": "4e99d64 (patch from 424491a)",
-      "focusedTest": "domain-leak spec 22 test.failing reproduced unpatched, then flipped; ask-intelligence 139 pass",
-      "regression": "full BE 0 new failures vs base", "migration": "none",
-      "deployed": "NO", "live": "NOT_RUN", "blocker": "Alpha deploy authorization."
-    },
-    {
-      "id": "P0-LANG-01/02/03", "requirement": "s7 seven frontend languages, persistence, <html lang/dir>, Arabic RTL",
-      "owner": "Cloud convergence T2 / Claude L (translations)", "commit": "c3754bd (in 72ce054 lineage); manifest regen 8ec5cd5",
-      "focusedTest": "T2 effective-locale/persistence/authority specs; 866 i18n tests",
-      "regression": "full FE 0 new failures vs base (askSevenLanguage H-4 is pre-existing, declared SPEC-T2-H-3)",
-      "migration": "none", "deployed": "NO", "live": "NOT_RUN",
-      "blocker": "3560 keys/locale pending Claude L; SPEC-T2-H-3 to be applied by H after R4; R4 + L R6 outside branch."
-    },
-    {
-      "id": "P1-BRF-01", "requirement": "s5/s11: preserve payload.intelligence and its evidence references in saved briefings (J15)",
-      "owner": "Claude Code", "commit": "afeedc9",
-      "focusedTest": "briefings.postgres.spec +2 (reproduced 2 failing first); briefing-snapshot.spec 6",
-      "regression": "ask-v2 + ask-intelligence + market-ingest + qualification: 1681 tests, 2 pre-existing failures",
-      "migration": "none (JSON column)", "deployed": "NO (flag ASK_BRIEFINGS_ENABLED off by default)", "live": "NOT_RUN",
-      "blocker": "Frontend display of blocks.intelligence waits for the Claude Design lane; Alpha deploy authorization."
-    },
-    {
-      "id": "P1-MKT-01", "requirement": "s5: procurement scope filters before the result limit",
-      "owner": "Claude Code", "commit": "d1a7939",
-      "focusedTest": "ask-intelligence.spec +3 (reproduced 2 failing first with a limit-honouring fake); ted-procurement-retained.spec +2 (real parser)",
-      "regression": "1681 tests, 2 pre-existing failures", "migration": "none",
-      "deployed": "NO", "live": "NOT_RUN",
-      "blocker": "None for code. Note: latent - unreachable with today's governed capture (<=20 POL notices, one date)."
-    },
-    {
-      "id": "P0-SRC-01 / P1-SRC-02 / P1-SRC-03", "requirement": "s4: truthful coverage, rights gate, placeholder credentials",
-      "owner": "Cloud convergence T1", "commit": "8333551 (merged c6088b0)",
-      "focusedTest": "coverage-check.json pinned spec; placeholder-credential specs", "regression": "full BE/FE 0 new failures vs base",
-      "migration": "none", "deployed": "NO", "live": "NOT_RUN",
-      "blocker": "GNews rights RIGHTS_UNDER_E1_REVIEW (owner/legal); no rights-cleared regional source yet; 54/54 COVERAGE_GAP."
-    },
-    {
-      "id": "P0-PRIV-01 / P1-PRIV-04", "requirement": "s12: pre-login privacy/consent, guest forget, guest claim (J16)",
-      "owner": "Cloud convergence T5A/T5B", "commit": "ef0e8b9 / 72ce054",
-      "focusedTest": "T5 isolation + forget PG suites (serial pass)", "regression": "0 new failures vs base",
-      "migration": "none recorded in T5 (verify at release)", "deployed": "NO", "live": "NOT_RUN",
-      "blocker": "Owner/legal approval of policy wording; P1-PRIV-03 retention sweep flag decision."
-    },
-    {
-      "id": "P1-ASK-05", "requirement": "s5: reconcile legacy analysis endpoint use with telemetry",
-      "owner": "Cloud convergence T4", "commit": "5a28e26 (merged 0bded08)",
-      "focusedTest": "legacy-usage telemetry specs", "regression": "0 new failures vs base", "migration": "none",
-      "deployed": "NO", "live": "NOT_RUN", "blocker": "6 MIGRATE callers not migrated; Production still serves legacy engine."
-    },
-    {
-      "id": "EA-R4-FREEZE", "requirement": "s3: freeze a shared baseline before integration",
-      "owner": "Claude Code", "commit": "NOT in this branch (04e68e6 local)",
-      "focusedTest": "21-item final gate NOT RUN", "regression": "n/a", "migration": "none",
-      "deployed": "NO", "live": "NOT_RUN",
-      "blocker": "Skipped by owner decision; separate convergence operation required (R4 + L R6 50 keys)."
-    },
-    {
-      "id": "J03 / s6 planning", "requirement": "s6: planning/decision requests (five-day budget safari) answered as plans, not news",
-      "owner": "unassigned", "commit": "none in this pass",
-      "focusedTest": "NOT_ASSESSED", "regression": "n/a", "migration": "n/a",
-      "deployed": "n/a", "live": "Contract audit: public beta answered as a news summary (2026-10-05)",
-      "blocker": "Not started; R4 decision-support work lives outside this branch."
-    },
-    {
-      "id": "P2-ALR-01 / s10-s11", "requirement": "Watch execution, meaningful change detection, delivery",
-      "owner": "unassigned (not authorized in this pass)", "commit": "none",
-      "focusedTest": "n/a", "regression": "n/a", "migration": "n/a", "deployed": "NO", "live": "NOT_RUN",
-      "blocker": "Explicitly not authorized (CTO 2026-10-05)."
-    },
-    {
-      "id": "P1-ECON-01 / P1-RIGHTS-04", "requirement": "s5: Rwanda CPI / Imihigo use-scope before treating as cleared",
-      "owner": "unassigned (owner/legal decision)", "commit": "none", "focusedTest": "n/a", "regression": "n/a",
-      "migration": "n/a", "deployed": "served on Alpha", "live": "NOT_RUN",
-      "blocker": "Rights records not resolved; legal determination is not a coding decision."
-    },
-    {
-      "id": "P1-ENG-01 / P1-SEC-01 / P1-POL-01 / P1-HUM-01", "requirement": "s5: bind Energy, Security, Politics, Humanitarian readers where admitted evidence exists",
-      "owner": "Politics lane / Humanitarian lane / unassigned", "commit": "none in this branch",
-      "focusedTest": "n/a", "regression": "n/a", "migration": "n/a", "deployed": "NO", "live": "NOT_RUN",
-      "blocker": "Politics base d920893 and Humanitarian 05e6c23 not integrated here; Energy/Security unbound."
-    },
-    {
-      "id": "P3-PAID-01", "requirement": "s14: entitlements, billing, metering",
-      "owner": "unassigned (not authorized)", "commit": "none", "focusedTest": "n/a", "regression": "n/a",
-      "migration": "n/a", "deployed": "NO", "live": "NOT_RUN", "blocker": "Commercial approval; pilot evidence."
-    },
-    {
-      "id": "CLAUDE_DESIGN_COMPACT_VISUAL_PRODUCT", "requirement": "s8/s9 approved visual product",
-      "owner": "Claude Design -> CTO -> Claude Code", "commit": "none",
-      "focusedTest": "n/a", "regression": "n/a", "migration": "n/a", "deployed": "NO", "live": "NOT_RUN",
-      "blocker": "AWAITING_DESIGN_DELIVERY / NOT_AUTHORIZED_FOR_INTEGRATION."
-    }
+ "schema": "ea-register-source/1",
+ "contract": "GLOBALNEWSAI East Africa Monitoring and Shared Ask Implementation Contract v1.0 (2026-10-05)",
+ "measuredAt": "2026-10-05",
+ "integrationHead": {
+  "branch": "integration/r4-east-africa-convergence-r1",
+  "note": "R4 + EAST AFRICA CONVERGENCE (CTO authority, 2026-10-05). Local; not pushed; not deployed. First parent = corrected live R4 db98d957 (= 81a5034 + seven-language persistence repair, LIVE on Alpha backend dff69371); second parent = accepted EA checkpoint ea3edd3.",
+  "checkpoint": "e3ffacd",
+  "lineage": [
+   "db98d957 corrected R4 base (81a5034 + 5b89bdd cherry-pick; Alpha backend LIVE, Production NOT deployed)",
+   "bf6ee3c merge ea3edd3 (T1 T2 T3 T4 T5A/B, afeedc9, d1a7939, register) — textual resolutions only",
+   "e220d96 T3 survives R4 EARLIER_TURN inheritance in all seven locales",
+   "3050ba3 Claude L R6: one runtime source (Ask-shell overlays via askShellCatalogue; delivery = provenance)",
+   "1bf07ca Ask dock reads the T2 display-locale authority (no second cookie read)",
+   "593067c region authority matrix (EA-REGION-AUTHORITY-01)",
+   "f0f12ec Settings measured as the Ask surface R4 made it (no false fallback)",
+   "9a9a81d T2 manifest: QUALIFIED_IN_ASK_SCOPE (L work 3560 -> 3386 per locale)",
+   "e3ffacd canonical Story Brief R1 (EA-STORY-BRIEF-01; generation BLOCKED on spend authority)"
   ]
+ },
+ "outsideThisBranch": [
+  "Politics R1 2b7b180 (specialist/politics-r1-on-r4-81a5034-2b7b180, frozen, HOLD) - NOT merged. Its migrations 20261004120000/20261004130000 sort BEFORE the applied 20261005100000: out-of-order apply must be rehearsed on 37-state (Alpha) and 36-state (Production) DBs before any combined candidate. contributor-selection.ts is a three-authority seam (R4 EARLIER_TURN + EA T3 e220d96 + Politics).",
+  "Claude H H0 (sha256 3187cb79…486c) - frozen, NOT integrated; H1 waits for the frozen engineering baseline.",
+  "Production runs 81a5034 with the en/pl CHECK (P0 open) - db98d957 backend-only needs a separate CTO/PO authorization."
+ ],
+ "statusVocabulary": {
+  "IMPLEMENTED": "YES | PARTIAL | NO - code for the capability exists on the integration head (PARTIAL = open implementation blockers).",
+  "TESTED": "YES | PARTIAL | NOT_ASSESSED - automated tests at the integration head exercise it (fixtures, real-PG, or both; see evidence). NOT_ASSESSED = not mapped in this pass, NOT a pass.",
+  "DEPLOYED": "per environment: YES (code at the deployed SHA) | NO | UNVERIFIED. Alpha = 5513275 (CTO Railway authority); Production = BE 5b714833 / FE 58f80fd4.",
+  "ENABLED": "per environment: YES | OFF_BY_DEFAULT (flag absent by default; Railway value not re-measured) | UNVERIFIED | N/A.",
+  "LIVE_VERIFIED": "per environment: YES (independently exercised live, with evidence) | NEGATIVE (live evidence shows the capability is NOT working there) | NOT_RUN. A report, fixture, preview route or provider name never sets YES. CTO deployment authority proves DEPLOYED, not LIVE_VERIFIED.",
+  "BLOCKED": "open blocker IDs from 10-PRODUCTION-BLOCKERS (plus EA-* additions).",
+  "NOT_IMPLEMENTED": "named parts of the capability with no code at the integration head."
+ },
+ "derivationRules": [
+  "Alpha DEPLOYED/ENABLED derive from 02 alphaState: ALPHA_LIVE -> YES/YES; ASK_BOUND, RETAINED_ONLY, COVERAGE_GAP, PREVIEW_ONLY -> YES/UNVERIFIED; LOCAL_ONLY -> YES/OFF_BY_DEFAULT; DESIGN_ONLY, ABSENT -> NO/N/A.",
+  "Production DEPLOYED/ENABLED derive from 02 productionState: UNVERIFIED_RUNTIME -> YES/UNVERIFIED; COVERAGE_GAP -> YES/UNVERIFIED; ABSENT -> NO/N/A.",
+  "IMPLEMENTED derives from alphaState (ABSENT/DESIGN_ONLY -> NO), open blockers or named NOT_IMPLEMENTED parts (any -> PARTIAL, none -> YES), then per-capability overrides below for work on the integration head.",
+  "LIVE_VERIFIED is NOT_RUN everywhere unless an override cites live evidence.",
+  "Overrides always win and must cite evidence."
+ ],
+ "overrides": {
+  "ASK-CORE": {
+   "tested": "YES",
+   "branchDelta": "T3 Conflict selection fixed (4e99d64); briefing intelligence kept (afeedc9); procurement scope-before-limit (d1a7939).",
+   "resolvedOnBranch": [
+    "P0-ASK-01",
+    "P1-ASK-03"
+   ],
+   "evidence": "P1-ASK-03 per 02 registry note: resolved in H final 266007c, which is in this branch lineage (72ce054). ask-intelligence 139 pass/3 todo; contributor-selection.domain-leak.spec 96; affected modules 1681 tests, 2 pre-existing failures (h-handoff)."
+  },
+  "ASK-SEARCH": {
+   "tested": "YES",
+   "branchDelta": "AskThread/AskTurn accept all seven languages (5b89bdd, migration 20261005100000).",
+   "resolvedOnBranch": [
+    "EA-P0-LANG-DB"
+   ],
+   "evidence": "ask-v2.seven-language.postgres.spec (17, real PG), .migration.spec (4)."
+  },
+  "LANG-SYSTEM": {
+   "implemented": "PARTIAL",
+   "tested": "YES",
+   "branchDelta": "T2 one DisplayLocale authority, <html lang/dir>, declared fallback; DB persistence for 7 languages. 3560 keys/locale still pending translation (Claude L).",
+   "resolvedOnBranch": [
+    "P0-LANG-02",
+    "P0-LANG-03",
+    "P1-LANG-05",
+    "EA-P0-LANG-DB"
+   ],
+   "liveVerified": {
+    "alpha": "NEGATIVE - live Alpha DB read 2026-10-05: AskThread/AskTurn CHECK still ('en','pl'); threads en=60 pl=5 (read-only)."
+   },
+   "notImplemented": [
+    "fr/de/es/pt/ar catalogues for non-Ask surfaces (declared English fallback)"
+   ],
+   "evidence": "T2 dossier; catalogueCoverage spec equal to regenerated manifest (866 i18n tests pass)."
+  },
+  "BRIEFINGS": {
+   "tested": "YES",
+   "branchDelta": "Saved versions keep payload.intelligence verbatim (afeedc9).",
+   "resolvedOnBranch": [
+    "P1-BRF-01"
+   ],
+   "notImplemented": [
+    "Frontend display of blocks.intelligence (deferred to the Claude Design lane)",
+    "Scheduled/recurring briefings"
+   ],
+   "evidence": "briefings.postgres.spec +2 (save -> StoredResult deleted -> reopen identical; no prepare/execute on reopen); briefing-snapshot.spec 6."
+  },
+  "MARKET": {
+   "tested": "YES",
+   "branchDelta": "Scope filter before limit in the read (d1a7939). Latent: not reachable with today's governed capture (<=20 POL notices).",
+   "resolvedOnBranch": [
+    "P1-MKT-01"
+   ],
+   "evidence": "ask-intelligence.spec +3, ted-procurement-retained.spec +2 (real parser + repository)."
+  },
+  "CONFLICT": {
+   "tested": "YES",
+   "resolvedOnBranch": [
+    "P0-ASK-01"
+   ],
+   "evidence": "T3 negative controls: travel, visa, politics, economy, energy, weather, humanitarian, country background."
+  },
+  "CONSENT": {
+   "implemented": "PARTIAL",
+   "tested": "YES",
+   "branchDelta": "T5A guest-trial contract + isolation suite; T5B pre-login notices, POST /ask-v2/guest/forget, /cookies footer link.",
+   "notImplemented": [
+    "Owner/legal approval of policy wording",
+    "Retention sweep enabled in any environment (P1-PRIV-03)"
+   ],
+   "evidence": "ask-v2-guest.forget.t5b.postgres.spec (serial pass), T5 dossier."
+  },
+  "NEWS-SOURCES": {
+   "implemented": "PARTIAL",
+   "tested": "YES",
+   "branchDelta": "T1 canonical coverage state, rights gate, placeholder-credential rule; 54/54 priority countries disclosed as COVERAGE_GAP.",
+   "resolvedOnBranch": [
+    "P1-SRC-02",
+    "P1-SRC-03"
+   ],
+   "notImplemented": [
+    "Activated, rights-resolved regional sources for the 11 East Africa countries",
+    "Tanzania revalidation workstream"
+   ],
+   "evidence": "coverage-check.json pinned by spec; T1 dossier."
+  },
+  "ASK-LEGACY": {
+   "branchDelta": "T4 legacy-usage telemetry + caller graph (22 callers: 6 COMPATIBILITY, 3 INTERNALIZE, 6 MIGRATE, ...). No caller migrated yet.",
+   "evidence": "T4 dossier, T4-legacy-caller-graph.json."
+  },
+  "ALERTS-WATCH": {
+   "notImplemented": [
+    "Scheduled Watch execution",
+    "Material-change detection beyond new publisher host",
+    "External delivery channel"
+   ]
+  },
+  "PAID": {
+   "notImplemented": [
+    "Entitlements",
+    "Billing integration",
+    "Metering beyond compute shadow ledger"
+   ]
+  }
+ },
+ "extraCapabilities": [
+  {
+   "id": "CLAUDE_DESIGN_COMPACT_VISUAL_PRODUCT",
+   "name": "Claude Design compact visual product (Home, story cards, in-app brief, evidence preview, discussion, Watch/Alerts, Settings, mobile, 7-language/RTL, tokens)",
+   "status": "DELIVERED / ACCEPTED (H0 frozen) / NOT INTEGRATED",
+   "note": "Design R1 ZIP accepted (sha c09bfee4…428b); Claude H H0 frozen (sha 3187cb79…486c), not integrated. H1 waits for the frozen engineering baseline; then truth-binding review (Story Brief generation unavailable, region scope labels, Watch capability).",
+   "owner": "Claude Design (visual authority) -> CTO review -> Claude Code (sole code integration owner)"
+  }
+ ],
+ "ledger": [
+  {
+   "id": "EA-P0-01",
+   "requirement": "Contract s2/s3: deployment + migration truth; capability register",
+   "owner": "Claude Code",
+   "commit": "a1dbb95 + this register",
+   "focusedTest": "n/a (documentation)",
+   "regression": "n/a",
+   "migration": "none",
+   "deployed": "n/a",
+   "live": "Alpha DB constraint + language distribution read (read-only) 2026-10-05",
+   "blocker": "Production flags never measured (HOLD); Alpha Railway variables not re-read in this pass."
+  },
+  {
+   "id": "EA-P0-LANG-DB",
+   "requirement": "s7 immediate fix: AskThread/AskTurn language persistence (Alpha log AskThread_language failure)",
+   "owner": "Claude Code",
+   "commit": "db98d957 (cherry-pick of 5b89bdd) — release input; in convergence as first parent",
+   "focusedTest": "real-PG seven-language 17/17; migration rehearsal from exact 36-migration 81a5034 schema → 37, en/pl fingerprint unchanged, sw/xx rejected, DOWN refuses",
+   "regression": "db98d957 vs 81a5034: 0 new (affected 1462→1483/0; full BE 29=29 by identity); FE delta 0",
+   "migration": "20261005100000_ask_seven_language_persistence (relaxing CHECK)",
+   "deployed": "Alpha backend dff69371 @ db98d957 (2026-10-05 11:34Z). Production NOT deployed (81a5034, en/pl CHECK).",
+   "live": "Alpha: 37 migrations, both CHECKs = 7 locales, EN/PL counts unchanged, FR/AR threads+turns persisted (RELEASE_CONTROL/ALPHA-P0-LANG-db98d957/05); execution refused BUDGET_REFUSED:account-day (separate quota issue).",
+   "blocker": "Production authorization (same SHA, backend only)."
+  },
+  {
+   "id": "P0-ASK-01",
+   "requirement": "s5: country match alone never selects Conflict / J08 negative routing",
+   "owner": "Cloud convergence T3 (spec + patch) / Claude Code (applied)",
+   "commit": "4e99d64 + e220d96 (T3 × EARLIER_TURN reconciliation)",
+   "focusedTest": "contributor-selection.domain-leak (incl. inherited generic-noun/food-security negatives and security positives in all 7 locales); earlier-turn-scope 56/56",
+   "regression": "full BE 0 new failures vs base",
+   "migration": "none",
+   "deployed": "NO",
+   "live": "NOT deployed",
+   "blocker": "Alpha deploy authorization."
+  },
+  {
+   "id": "P0-LANG-01/02/03",
+   "requirement": "s7 seven frontend languages, persistence, <html lang/dir>, Arabic RTL",
+   "owner": "Cloud convergence T2 / Claude L (translations)",
+   "commit": "c3754bd + 1bf07ca (dock via T2 authority) + f0f12ec (Settings surface) + 9a9a81d (manifest QUALIFIED_IN_ASK_SCOPE)",
+   "focusedTest": "i18n + qualification 889/889; displayLocaleAuthority / surfaceLocale / m65 green",
+   "regression": "full FE 0 new failures vs base (askSevenLanguage H-4 is pre-existing, declared SPEC-T2-H-3)",
+   "migration": "none",
+   "deployed": "NO",
+   "live": "NOT_RUN",
+   "blocker": "askSevenLanguage H-4 (inherited from EA): H root-dir spec contradicts T2 + CTO RTL ruling (SPEC-T2-H-3) — spec decision pending."
+  },
+  {
+   "id": "P1-BRF-01",
+   "requirement": "s5/s11: preserve payload.intelligence and its evidence references in saved briefings (J15)",
+   "owner": "Claude Code",
+   "commit": "afeedc9",
+   "focusedTest": "briefings.postgres.spec +2 (reproduced 2 failing first); briefing-snapshot.spec 6",
+   "regression": "ask-v2 + ask-intelligence + market-ingest + qualification: 1681 tests, 2 pre-existing failures",
+   "migration": "none (JSON column)",
+   "deployed": "NO (flag ASK_BRIEFINGS_ENABLED off by default)",
+   "live": "NOT_RUN",
+   "blocker": "Frontend display of blocks.intelligence waits for the Claude Design lane; Alpha deploy authorization."
+  },
+  {
+   "id": "P1-MKT-01",
+   "requirement": "s5: procurement scope filters before the result limit",
+   "owner": "Claude Code",
+   "commit": "d1a7939",
+   "focusedTest": "ask-intelligence.spec +3 (reproduced 2 failing first with a limit-honouring fake); ted-procurement-retained.spec +2 (real parser)",
+   "regression": "1681 tests, 2 pre-existing failures",
+   "migration": "none",
+   "deployed": "NO",
+   "live": "NOT_RUN",
+   "blocker": "Classification: LATENT DEFECT / FORWARD-SCOPE INVARIANT FIXED (TED capture <=20 POL notices: unreachable today; never a live Alpha/Production failure)."
+  },
+  {
+   "id": "P0-SRC-01 / P1-SRC-02 / P1-SRC-03",
+   "requirement": "s4: truthful coverage, rights gate, placeholder credentials",
+   "owner": "Cloud convergence T1",
+   "commit": "8333551 (merged c6088b0)",
+   "focusedTest": "coverage-check.json pinned spec; placeholder-credential specs",
+   "regression": "full BE/FE 0 new failures vs base",
+   "migration": "none",
+   "deployed": "NO",
+   "live": "NOT_RUN",
+   "blocker": "GNews rights RIGHTS_UNDER_E1_REVIEW (owner/legal); no rights-cleared regional source yet; 54/54 COVERAGE_GAP."
+  },
+  {
+   "id": "P0-PRIV-01 / P1-PRIV-04",
+   "requirement": "s12: pre-login privacy/consent, guest forget, guest claim (J16)",
+   "owner": "Cloud convergence T5A/T5B",
+   "commit": "ef0e8b9 / 72ce054",
+   "focusedTest": "T5 isolation + forget PG suites (serial pass)",
+   "regression": "0 new failures vs base",
+   "migration": "none recorded in T5 (verify at release)",
+   "deployed": "NO",
+   "live": "NOT_RUN",
+   "blocker": "Owner/legal approval of policy wording; P1-PRIV-03 retention sweep flag decision."
+  },
+  {
+   "id": "P1-ASK-05",
+   "requirement": "s5: reconcile legacy analysis endpoint use with telemetry",
+   "owner": "Cloud convergence T4",
+   "commit": "5a28e26 (merged 0bded08)",
+   "focusedTest": "legacy-usage telemetry specs",
+   "regression": "0 new failures vs base",
+   "migration": "none",
+   "deployed": "NO",
+   "live": "NOT_RUN",
+   "blocker": "6 MIGRATE callers not migrated; Production still serves legacy engine."
+  },
+  {
+   "id": "EA-R4-FREEZE",
+   "requirement": "s3: freeze a shared baseline before integration",
+   "owner": "Claude Code",
+   "commit": "R4 frozen at 81a5034 (live Alpha FE + Production); corrected base db98d957; EA reconciled by merge bf6ee3c",
+   "focusedTest": "earlier-turn-scope 56/56 with T3 (e220d96); domain-leak + inherited seven-locale controls",
+   "regression": "convergence head e3ffacd vs both parents by identity: BE 0 new / 0 fixed (29 inherited); FE 0 new, 1 fixed (deleteAccountDangerZone); real-PG 1912/0",
+   "migration": "none",
+   "deployed": "NO",
+   "live": "NOT deployed",
+   "blocker": "CTO review of the convergence head; Politics reconcile ordering."
+  },
+  {
+   "id": "J03 / s6 planning",
+   "requirement": "s6: planning/decision requests (five-day budget safari) answered as plans, not news",
+   "owner": "unassigned",
+   "commit": "none in this pass",
+   "focusedTest": "NOT_ASSESSED",
+   "regression": "n/a",
+   "migration": "n/a",
+   "deployed": "n/a",
+   "live": "Contract audit: public beta answered as a news summary (2026-10-05)",
+   "blocker": "Not started; R4 decision-support work lives outside this branch."
+  },
+  {
+   "id": "P2-ALR-01 / s10-s11",
+   "requirement": "Watch execution, meaningful change detection, delivery",
+   "owner": "unassigned (not authorized in this pass)",
+   "commit": "none",
+   "focusedTest": "n/a",
+   "regression": "n/a",
+   "migration": "n/a",
+   "deployed": "NO",
+   "live": "NOT_RUN",
+   "blocker": "Explicitly not authorized (CTO 2026-10-05)."
+  },
+  {
+   "id": "P1-ECON-01 / P1-RIGHTS-04",
+   "requirement": "s5: Rwanda CPI / Imihigo use-scope before treating as cleared",
+   "owner": "unassigned (owner/legal decision)",
+   "commit": "none",
+   "focusedTest": "n/a",
+   "regression": "n/a",
+   "migration": "n/a",
+   "deployed": "served on Alpha",
+   "live": "NOT_RUN",
+   "blocker": "Rights records not resolved; legal determination is not a coding decision."
+  },
+  {
+   "id": "P1-ENG-01 / P1-SEC-01 / P1-POL-01 / P1-HUM-01",
+   "requirement": "s5: bind Energy, Security, Politics, Humanitarian readers where admitted evidence exists",
+   "owner": "Politics lane / Humanitarian lane / unassigned",
+   "commit": "none in this branch",
+   "focusedTest": "n/a",
+   "regression": "n/a",
+   "migration": "n/a",
+   "deployed": "NO",
+   "live": "NOT_RUN",
+   "blocker": "Politics base d920893 and Humanitarian 05e6c23 not integrated here; Energy/Security unbound."
+  },
+  {
+   "id": "P3-PAID-01",
+   "requirement": "s14: entitlements, billing, metering",
+   "owner": "unassigned (not authorized)",
+   "commit": "none",
+   "focusedTest": "n/a",
+   "regression": "n/a",
+   "migration": "n/a",
+   "deployed": "NO",
+   "live": "NOT_RUN",
+   "blocker": "Commercial approval; pilot evidence."
+  },
+  {
+   "id": "CLAUDE_DESIGN_COMPACT_VISUAL_PRODUCT",
+   "requirement": "s8/s9 approved visual product",
+   "owner": "Claude Design -> CTO -> Claude Code",
+   "commit": "none",
+   "focusedTest": "n/a",
+   "regression": "n/a",
+   "migration": "n/a",
+   "deployed": "NO",
+   "live": "NOT_RUN",
+   "blocker": "AWAITING_DESIGN_DELIVERY / NOT_AUTHORIZED_FOR_INTEGRATION."
+  },
+  {
+   "id": "EA-L-SINGLE-SOURCE",
+   "requirement": "CTO ruling: Claude L R6 is provenance, not a second runtime table",
+   "owner": "Claude Code (EA controller)",
+   "commit": "3050ba3",
+   "focusedTest": "askShellAdditive.provenance.spec (sha256 vs L SHA256SUMS; 50 keys/locale integrated once: 43 overlay + 7 aliases; no runtime import of the delivery); askDictionary.spec",
+   "regression": "Ask + i18n FE: same inherited failures only",
+   "migration": "none",
+   "deployed": "no",
+   "live": "NOT deployed",
+   "blocker": "none (C55 reuse table askDictionaryAdditions.ts unchanged: outside the R6 ruling)"
+  },
+  {
+   "id": "EA-REGION-AUTHORITY-01",
+   "requirement": "5-layer region authority matrix (East Africa, EAC, Europe, EU, Middle East)",
+   "owner": "Claude Code (EA controller)",
+   "commit": "593067c (EA-REGION-AUTHORITY-MATRIX.md)",
+   "focusedTest": "n/a (read-only measurement)",
+   "regression": "n/a",
+   "migration": "none",
+   "deployed": "n/a",
+   "live": "n/a",
+   "blocker": "R-1 EAC questions answered over the EA-11 scope; R-2 region:middle-east id = contested geography AND product scope; R-5 no product-region Watch path — CTO/PO decisions"
+  },
+  {
+   "id": "EA-STORY-BRIEF-01",
+   "requirement": "Canonical story-owned Brief (Design R1): persisted, versioned, zero-compute reopen, stale on evidence change, Discussion per version",
+   "owner": "Claude Code (EA controller)",
+   "commit": "e3ffacd",
+   "focusedTest": "story-brief rules/structure + real-PG (zero-compute reopen, PARTIAL/INSUFFICIENT per revision, append-only trigger, concurrent dedup, PROVIDER_DEGRADED != INSUFFICIENT, lease expiry, merge, comment anchoring)",
+   "regression": "stories + briefings PG 145/145; full gate 0 new",
+   "migration": "20261006100000_story_brief_r1 (additive; DOWN refuses once a Brief exists)",
+   "deployed": "no (STORY_BRIEF_ENABLED default OFF)",
+   "live": "NOT deployed",
+   "blocker": "Generation BLOCKED: spend authority for shared Brief compute (owner/quota/guest/refresh limit) — UnavailableStoryBriefGenerator records CAPABILITY_UNAVAILABLE."
+  }
+ ]
 }
