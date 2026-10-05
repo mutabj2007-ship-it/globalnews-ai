@@ -1,7 +1,7 @@
 {
   "t2Base": "266007c930e8293638bc7971670ee0264923c18c",
   "lineRoot": "c9473e32",
-  "englishDictionaryLeaves": 2807,
+  "englishDictionaryLeaves": 2816,
   "locales": {
     "fr": {
       "recoveredLeaves": 1789,
@@ -13,7 +13,7 @@
         "EN_CHANGED_SINCE_LINE_ROOT": 15
       },
       "droppedStale": 120,
-      "missingNoCandidate": 1138
+      "missingNoCandidate": 1147
     },
     "de": {
       "recoveredLeaves": 1789,
@@ -25,7 +25,7 @@
         "EN_CHANGED_SINCE_LINE_ROOT": 15
       },
       "droppedStale": 120,
-      "missingNoCandidate": 1138
+      "missingNoCandidate": 1147
     },
     "es": {
       "recoveredLeaves": 1789,
@@ -37,7 +37,7 @@
         "EN_CHANGED_SINCE_LINE_ROOT": 15
       },
       "droppedStale": 120,
-      "missingNoCandidate": 1138
+      "missingNoCandidate": 1147
     },
     "pt": {
       "recoveredLeaves": 1789,
@@ -49,7 +49,7 @@
         "EN_CHANGED_SINCE_LINE_ROOT": 15
       },
       "droppedStale": 120,
-      "missingNoCandidate": 1138
+      "missingNoCandidate": 1147
     },
     "ar": {
       "recoveredLeaves": 1789,
@@ -61,7 +61,7 @@
         "EN_CHANGED_SINCE_LINE_ROOT": 15
       },
       "droppedStale": 120,
-      "missingNoCandidate": 1138
+      "missingNoCandidate": 1147
     }
   },
   "manifestTotals": {
@@ -70,23 +70,23 @@
       "namespacesIncomplete": 5
     },
     "fr": {
-      "pendingKeys": 3551,
+      "pendingKeys": 3560,
       "namespacesIncomplete": 61
     },
     "de": {
-      "pendingKeys": 3551,
+      "pendingKeys": 3560,
       "namespacesIncomplete": 61
     },
     "es": {
-      "pendingKeys": 3551,
+      "pendingKeys": 3560,
       "namespacesIncomplete": 61
     },
     "pt": {
-      "pendingKeys": 3551,
+      "pendingKeys": 3560,
       "namespacesIncomplete": 61
     },
     "ar": {
-      "pendingKeys": 3551,
+      "pendingKeys": 3560,
       "namespacesIncomplete": 61
     }
   }

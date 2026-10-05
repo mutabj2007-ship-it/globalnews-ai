@@ -15615,13 +15615,13 @@
   "dict:map": {
    "source": "frontend/src/lib/i18n/dictionaries/{en,pl,adminEn,adminPl,supportEn,supportPl,myIntelligenceEn,myIntelligencePl,homeR1En,homeR1Pl,homeRevaEn,homeRevaPl}.ts",
    "kind": "DICTIONARY",
-   "englishKeys": 633,
+   "englishKeys": 642,
    "gapCounts": {
-    "fr": 619,
-    "de": 619,
-    "es": 619,
-    "pt": 619,
-    "ar": 619
+    "fr": 628,
+    "de": 628,
+    "es": 628,
+    "pt": 628,
+    "ar": 628
    },
    "keys": {
     "map.askAboutStory": {
@@ -16564,6 +16564,76 @@
       "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
      }
     },
+    "map.sourceCoverage.absentBody": {
+     "en": "No rights-cleared local news source is active for this country. Reports shown come from international or aggregated sources and are not local coverage.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "map.sourceCoverage.absentTitle": {
+     "en": "Local coverage gap",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "map.sourceCoverage.ariaLabel": {
+     "en": "Local source coverage",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "map.sourceCoverage.localEvidencePrefix": {
+     "en": "From registered local publishers:",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "map.sourceCoverage.ofSeparator": {
+     "en": "of",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "map.sourceCoverage.unverifiedBody": {
+     "en": "A local news source is active, but its delivery has not been verified. Reports shown may not include local coverage.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "map.sourceCoverage.unverifiedTitle": {
+     "en": "Local coverage unverified",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
     "map.spatial.attribution": {
      "en": "Contains data from the GeoNames geographical database, licensed CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Subdivision data from iso3166-2-db (MIT). Base geography: Natural Earth, public domain.",
      "locales": {
@@ -17166,6 +17236,26 @@
     },
     "map.spatial.card.continents.Oceania": {
      "en": "Oceania",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "map.spatial.card.countryRead.coverageAbsent": {
+     "en": "Local coverage gap: no rights-cleared local news source is active here. These reports come from international or aggregated sources.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "map.spatial.card.countryRead.coverageUnverified": {
+     "en": "Local coverage unverified: a local news source is active but its delivery is not verified.",
      "locales": {
       "fr": "MISSING",
       "de": "MISSING",
@@ -37044,23 +37134,23 @@
    "namespacesIncomplete": 5
   },
   "fr": {
-   "pendingKeys": 3551,
+   "pendingKeys": 3560,
    "namespacesIncomplete": 61
   },
   "de": {
-   "pendingKeys": 3551,
+   "pendingKeys": 3560,
    "namespacesIncomplete": 61
   },
   "es": {
-   "pendingKeys": 3551,
+   "pendingKeys": 3560,
    "namespacesIncomplete": 61
   },
   "pt": {
-   "pendingKeys": 3551,
+   "pendingKeys": 3560,
    "namespacesIncomplete": 61
   },
   "ar": {
-   "pendingKeys": 3551,
+   "pendingKeys": 3560,
    "namespacesIncomplete": 61
   }
  },
