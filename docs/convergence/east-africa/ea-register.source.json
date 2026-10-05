@@ -207,7 +207,7 @@
    "migration": "none",
    "deployed": "NO",
    "live": "NOT_RUN",
-   "blocker": "askSevenLanguage H-4: CTO ruled SUPERSEDED (T2 + SPEC-T2-H-3 + Arabic RTL ruling) — spec rewrite pending (blocked in this session by a tooling permission denial on reading the spec file)."
+   "blocker": "none — H-4 SUPERSEDED BY T2 + SPEC-T2-H-3 + CTO ARABIC RTL RULING (spec rewritten 80e10f4: effective ar → rtl, others ltr, root dir from the effective-locale authority, Ask uses the same table, bidi isolation helpers pinned)."
   },
   {
    "id": "P1-BRF-01",
@@ -375,7 +375,7 @@
    "migration": "none",
    "deployed": "n/a",
    "live": "n/a",
-   "blocker": "R-1 CLOSED (EAC 8 own retrieval scope); R-2 CLOSED (GlobalNewsAI Middle East monitoring scope label/disclosure authority); R-3 comment fixed; R-5 recorded: region Watch UNAVAILABLE (pinned), story follow = Alerts; R-7 drift copies open (engineering, low)."
+   "blocker": "R-1 CLOSED (EAC 8 own retrieval scope); R-2 CLOSED (GlobalNewsAI Middle East monitoring scope label/disclosure authority); R-3 comment fixed; R-5 recorded: region Watch UNAVAILABLE (pinned), story follow = Alerts; R-7 drift copies = recorded LOW technical debt (CTO: do not widen the baseline)."
   },
   {
    "id": "EA-STORY-BRIEF-01",
@@ -387,7 +387,7 @@
    "migration": "20261006100000_story_brief_r1 (additive; DOWN refuses once a Brief exists)",
    "deployed": "no (STORY_BRIEF_ENABLED default OFF)",
    "live": "NOT deployed",
-   "blocker": "none for engineering; Alpha integration acceptance before enabling. Limitations: English Brief; STORY context = founding article; §11 materiality classes not classified."
+   "blocker": "Engineering: none. ENABLEMENT LIMITS before broad enablement: English-only Briefs (locale-aware versions or explicit English disclosure); stale = article set changed, never material event. Canonical resolution GET /stories/by-article/:articleRef (no Discussion dependency)."
   },
   {
    "id": "PUBLIC-ENGINEERING-CONTRACT",

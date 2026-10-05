@@ -102,3 +102,9 @@ Known R1 limitations (recorded, not hidden):
 ## 9. Gate
 
 `STORY_BRIEF_ENABLED` (server literal `'true'`, default OFF until Alpha integration acceptance). When OFF, both endpoints return 404. The Ask spend path never reads it. Turning it ON exposes read + signed-in generation; generation still passes every governed Ask control.
+
+## 10. Canonical resolution and recorded limits (CTO baseline review)
+
+- `GET /stories/by-article/:articleRef` → `{ articleRef, storyId, materialVersion }`: the canonical story for an article. Read-only, zero compute, never creates a story, no user identity, **no Discussion dependency**. Read Brief never needs Discussion ON to discover story identity.
+- **ENABLEMENT LIMIT: language.** Briefs are English in R1. Broad enablement requires governed locale-aware versions, or an explicit English-only limit and disclosure.
+- **Stale ≠ material.** `STALE` / `changedSince.basis = EVIDENCE_SET_CHANGED` means the article set changed. It must never be presented as a material event.
