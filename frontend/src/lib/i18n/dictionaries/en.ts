@@ -10,6 +10,7 @@ import { supportEn } from './supportEn';
 import { myIntelligenceEn } from './myIntelligenceEn';
 import { homeRevaEn } from './homeRevaEn';
 import { homeR1En } from './homeR1En';
+import { visualEn, type VisualDictionary } from './visualEn';
 
 export const en = {
   /**
@@ -40,6 +41,8 @@ export const en = {
   homeReva: homeRevaEn,
   /* HOME, DISCUSSIONS, ALERTS & PAID R1 · STAGE A */
   homeR1: homeR1En,
+  /* COMPACT VISUAL PRODUCT R1 — the `/visual` preview of the future Home */
+  visual: visualEn as VisualDictionary,
 
   languageSelectorLabel: 'Language',
   yourQuestion: 'Your question',

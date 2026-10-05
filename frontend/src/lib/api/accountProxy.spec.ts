@@ -102,6 +102,8 @@ const PROXIED_FAMILIES = [
   /* HOME R1 STAGE B — Discussion writes and in-app Alerts (RequireAuthGuard + CsrfGuard). */
   'discussion',
   'alerts',
+  /* COMPACT VISUAL PRODUCT R1 — the canonical Story Brief (public read + signed-in Read Brief). */
+  'stories',
   'auth',
   'users',
   'history',
@@ -262,7 +264,7 @@ describe('next.config.mjs - the account proxy (M-ALPHA-AUTH)', () => {
     set silently, and a public family quietly moved under `/api` would inherit
     `private, no-store` and `Vary: Cookie` that its responses do not need.
   */
-  it('G-3: exactly TEN authenticated /api families (ask-v2 added by Ask R2 R1; discussion + alerts by Home R1 Stage B) and exactly FIVE public non-/api families', () => {
+  it('G-3: exactly ELEVEN authenticated /api families (ask-v2 added by Ask R2 R1; discussion + alerts by Home R1 Stage B; stories by Compact Visual Product R1) and exactly FIVE public non-/api families', () => {
     const { rewrites } = probeConfig({ SERVER_INTERNAL_API_URL: 'http://backend.internal:8080' });
 
     const authenticated = rewrites.filter((rule) => rule.source.startsWith('/api/'));
@@ -271,7 +273,8 @@ describe('next.config.mjs - the account proxy (M-ALPHA-AUTH)', () => {
     /* THE AUTHENTICATED COUNT IS THE INVARIANT, AND IT HAS NOT MOVED. */
     /* SEVEN → EIGHT: /ask-v2 (RequireAuthGuard + CsrfGuard), added deliberately by Ask R2 R1. */
     /* EIGHT → TEN: /discussion and /alerts (Home R1 Stage B), each counted here deliberately. */
-    expect(authenticated).toHaveLength(10);
+    /* TEN → ELEVEN: /stories (the canonical Story Brief, Compact Visual Product R1). */
+    expect(authenticated).toHaveLength(11);
     expect(publicFamilies.map((rule) => rule.source).sort()).toEqual([
       '/conflict-data/:path*',
       '/economy/:path*',
@@ -548,7 +551,8 @@ describe('MAIN-C2 STAGE 1 — the proxy hop does not change who the backend thin
     }
     /* The R2-verified seven are unchanged; /ask-v2 is the eighth (Ask R2 R1, Gate F). */
     /* Home R1 Stage B adds /discussion and /alerts: ninth and tenth. */
-    expect(PROXIED_FAMILIES).toHaveLength(10);
+    /* Compact Visual Product R1 adds /stories: eleventh. */
+    expect(PROXIED_FAMILIES).toHaveLength(11);
   });
 
   it('analysis is proxied under /api; /news only as a public family; /events not at all', () => {
@@ -585,7 +589,8 @@ describe('Conflict public retained rewrite', () => {
       source: '/conflict-data/:path*',
       destination: origin + '/conflict/:path*',
     });
-    expect(rewrites.filter((rule) => rule.source.startsWith('/api/'))).toHaveLength(10);
+    /* Eleven authenticated families since /stories (Compact Visual Product R1). */
+    expect(rewrites.filter((rule) => rule.source.startsWith('/api/'))).toHaveLength(11);
     expect(headers.some((rule) => rule.source.startsWith('/conflict-data'))).toBe(false);
   });
 });

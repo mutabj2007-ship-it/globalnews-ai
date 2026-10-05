@@ -7,7 +7,8 @@ import type { SurfaceId } from '@/lib/i18n/surfaceLocale';
  * the route table. Path prefixes; the longest match wins; `/` is decided by the deployment mode.
  */
 export const SURFACE_ROUTES: Readonly<Record<SurfaceId, readonly string[]>> = {
-  home: [],
+  /* COMPACT VISUAL PRODUCT R1 — `/visual` is the future Home, rendered under the same rule as `/`. */
+  home: ['/visual'],
   askStandalone: ['/ask'],
   askRecent: ['/ask/recent'],
   saved: ['/saved'],

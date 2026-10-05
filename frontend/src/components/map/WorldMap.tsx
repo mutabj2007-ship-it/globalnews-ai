@@ -87,6 +87,23 @@ interface WorldMapProps {
    */
   compact?: boolean;
 
+  /**
+   * COMPACT VISUAL PRODUCT R1 — a CAMERA-ONLY framing request (`/visual` hero region buttons).
+   *
+   * ADDITIVE AND DEFAULTED, like `compact`: omit it and nothing changes for any existing caller.
+   * It moves the camera and nothing else — no fill, no highlight, no selection, no membership:
+   * a region is not a boundary (regionMayHighlight is false for every region). `key` makes a
+   * repeated press of the same preset re-frame. A selected country still takes precedence,
+   * because the selection effect runs on its own change.
+   */
+  frame?: { readonly key: string; readonly bounds: readonly [readonly [number, number], readonly [number, number]] };
+
+  /**
+   * COMPACT VISUAL PRODUCT R1 — follow the HOST's size, not only the window's (`/visual` hero
+   * expand / collapse changes the host height without a window resize). Defaulted OFF.
+   */
+  trackHostResize?: boolean;
+
   onHoverCountry: (hover: HoveredCountry | null) => void;
 
   onSelectCountry: (feature: CountryFeature) => void;
@@ -99,6 +116,8 @@ export function WorldMap({
   countryStoryCounts,
   selectedIso3,
   compact = false,
+  frame,
+  trackHostResize = false,
   onHoverCountry,
   onSelectCountry,
   language = 'en',
@@ -290,6 +309,30 @@ useEffect(() => {
   // These callbacks intentionally remain fixed for this one-time map setup.
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, []);
+
+  // COMPACT VISUAL PRODUCT R1 — host-size tracking (opt-in; see `trackHostResize`).
+useEffect(() => {
+  const host = containerRef.current;
+  if (!trackHostResize || host === null || typeof ResizeObserver === 'undefined') return undefined;
+  const observer = new ResizeObserver(() => mapRef.current?.resize());
+  observer.observe(host);
+  return () => observer.disconnect();
+}, [trackHostResize]);
+
+  // COMPACT VISUAL PRODUCT R1 — camera-only framing (opt-in; see `frame`).
+useEffect(() => {
+  const map = mapRef.current;
+  if (!map || !isStyleLoaded || frame === undefined) return;
+  map.resize();
+  map.fitBounds(
+    [
+      [frame.bounds[0][0], frame.bounds[0][1]],
+      [frame.bounds[1][0], frame.bounds[1][1]],
+    ],
+    { padding: 12, duration: 700, essential: true },
+  );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [frame?.key, isStyleLoaded]);
 
   // Move the camera whenever a country is selected by search or map click.
 useEffect(() => {

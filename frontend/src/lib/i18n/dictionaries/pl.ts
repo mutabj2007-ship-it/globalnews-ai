@@ -5,6 +5,7 @@ import { supportPl } from './supportPl';
 import { myIntelligencePl } from './myIntelligencePl';
 import { homeRevaPl } from './homeRevaPl';
 import { homeR1Pl } from './homeR1Pl';
+import { visualPl } from './visualPl';
 
 /**
  * Milestone #47 — Polish dictionary, the first production non-English
@@ -36,6 +37,8 @@ export const pl: Dictionary = {
   homeReva: homeRevaPl,
   /* HOME, DISCUSSIONS, ALERTS & PAID R1 · STAGE A */
   homeR1: homeR1Pl,
+  /* COMPACT VISUAL PRODUCT R1 — the `/visual` preview of the future Home */
+  visual: visualPl,
 
   languageSelectorLabel: 'Język',
   yourQuestion: 'Twoje pytanie',

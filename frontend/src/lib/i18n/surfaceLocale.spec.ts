@@ -117,6 +117,8 @@ describe('T2 · the request path decides the surface (layout and page agree)', (
   it.each([
     ['/', true, 'askStandalone'],
     ['/', false, 'home'],
+    /* COMPACT VISUAL PRODUCT R1 — the future Home preview is the Home surface. */
+    ['/visual', false, 'home'],
     ['/ask', true, 'askStandalone'],
     ['/ask/recent', true, 'askRecent'],
     ['/saved/briefing', true, 'saved'],

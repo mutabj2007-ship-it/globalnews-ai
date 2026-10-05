@@ -150,6 +150,14 @@ const nextConfig = {
       */
       { source: '/api/discussion/:path*', destination: `${backendOrigin}/discussion/:path*` },
       { source: '/api/alerts/:path*', destination: `${backendOrigin}/alerts/:path*` },
+      /*
+        COMPACT VISUAL PRODUCT R1 — THE ELEVENTH AUTHENTICATED FAMILY, counted. /stories carries
+        the canonical Story Brief (EA-STORY-BRIEF-01): GET /stories/:id/brief is a public,
+        zero-compute read; POST is the explicit Read Brief (RequireAuthGuard + CsrfGuard). Gated
+        server-side by STORY_BRIEF_ENABLED (404 OFF). The admin story routes live under /admin, not
+        here, so this family reaches only the public Brief surface.
+      */
+      { source: '/api/stories/:path*', destination: `${backendOrigin}/stories/:path*` },
 
       /*
         PUBLIC NEWS — THE EIGHTH FAMILY THAT IS DELIBERATELY NOT AN /api FAMILY.
