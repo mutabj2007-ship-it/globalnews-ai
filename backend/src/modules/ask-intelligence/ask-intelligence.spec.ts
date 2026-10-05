@@ -87,10 +87,24 @@ function coordinator(
       return out;
     }),
   };
+  /* EAST AFRICA P0 · B — the fake honours the repository's real contract: newest first, cut to
+     a bounded limit (1..50). A fake that ignored the limit hid the filter-after-limit defect. */
+  const bound = (limit: number) => Math.max(1, Math.min(Math.trunc(limit), 50));
   const market = {
-    procurement: jest.fn(async () => {
+    procurement: jest.fn(async (limit = 20) => {
       calls.market += 1;
-      return (opts.notices ?? []).map((n) => ({
+      return held().slice(0, bound(limit));
+    }),
+    procurementMatching: jest.fn(
+      async (where: (n: ReturnType<typeof held>[number]) => boolean, limit = 20) => {
+        calls.market += 1;
+        const all = held();
+        return { held: all.length, notices: all.filter(where).slice(0, bound(limit)) };
+      },
+    ),
+  };
+  const held = () =>
+      (opts.notices ?? []).map((n) => ({
         portalReference: { portalId: 'TED', noticeId: n.noticeId },
         artifactClass: 'PROCUREMENT_NOTICE',
         publicationDate: '2026-09-24',
@@ -110,8 +124,6 @@ function coordinator(
         contentAddress: 'sha256',
         freshnessBasis: 'RETAINED_ONLY',
       }));
-    }),
-  };
   const economy = {
     readNisrHeadlineCpi: jest.fn(async () => {
       calls.economy += 1;
@@ -276,6 +288,55 @@ describe('3/4 — Market: Poland procurement, and no arbitrary rows for unrelate
     expect(market).toMatchObject({ temporalBasis: 'RETAINED_PUBLICATION' });
     expect(market.disclosures).toEqual(['RETAINED_NOT_CURRENT', 'SNAPSHOT_NOT_CHANGE_SERIES']);
     expect(calls.market).toBe(1);
+  });
+
+  it('EAST AFRICA P0 · B — the country filter is applied BEFORE the limit', async () => {
+    // 25 newer notices for another buyer country, then 3 in scope: all outside the first 20.
+    const notices = [
+      ...Array.from({ length: 25 }, (_, i) => ({ buyerCountryIso3: 'DEU', noticeId: `d${i}` })),
+      ...['p1', 'p2', 'p3'].map((noticeId) => ({ buyerCountryIso3: 'POL', noticeId })),
+    ];
+    const { c, calls } = coordinator({ notices });
+    const set = await c.read(route('What are the important procurement changes in Poland?'), NOW);
+    const market = byId(set, 'MARKET_PROCUREMENT')!;
+    expect(market.status).toBe('USED');
+    expect((market.observations as { reference: string }[]).map((o) => o.reference)).toEqual([
+      'TED:p1',
+      'TED:p2',
+      'TED:p3',
+    ]);
+    expect(calls.market).toBe(1);
+  });
+
+  it('EAST AFRICA P0 · B — no notice held is NO_DATA; held but none in scope is NO_MATCH', async () => {
+    const empty = await coordinator({ notices: [] }).c.read(
+      route('What are the important procurement changes in Poland?'),
+      NOW,
+    );
+    expect(byId(empty, 'MARKET_PROCUREMENT')).toMatchObject({
+      status: 'NO_DATA',
+      disclosures: ['NO_RETAINED_CAPTURE'],
+    });
+    const other = await coordinator({
+      notices: Array.from({ length: 30 }, (_, i) => ({ buyerCountryIso3: 'DEU', noticeId: `${i}` })),
+    }).c.read(route('What are the important procurement changes in Poland?'), NOW);
+    expect(byId(other, 'MARKET_PROCUREMENT')?.status).toBe('NO_MATCH');
+  });
+
+  it('EAST AFRICA P0 · B — a pinned notice is found by key wherever it sits in the capture', async () => {
+    const notices = Array.from({ length: 60 }, (_, i) => ({
+      buyerCountryIso3: 'POL',
+      noticeId: `n${i}`,
+    }));
+    const { c } = coordinator({ notices });
+    const key = procurementPortalReferenceKey({ portalId: 'TED', noticeId: 'n57' } as never);
+    expect(await c.resolvePinned('MARKET', key)).toMatchObject({ observationKey: key });
+    const out = (await c.readPinned(
+      { module: 'MARKET', observationKey: key, countryIso3: 'POL', district: null },
+      NOW,
+    )) as unknown as { status: string; observations: { reference: string }[] };
+    expect(out.status).toBe('USED');
+    expect(out.observations.map((o) => o.reference)).toEqual(['TED:n57']);
   });
 
   it('retained notices for another country are NO_MATCH, never injected', async () => {
