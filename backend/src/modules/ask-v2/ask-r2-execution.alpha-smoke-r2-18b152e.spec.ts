@@ -6,7 +6,7 @@ import { isSubjectFollowUp } from '../analysis/anchor/conversation-subject.util'
 import { isAnaphoricFollowUp } from '../analysis/anchor/event-anchor.util';
 import { askRequestContext } from './ask-request-context';
 import type { AskRequest } from './ask-compute.contract';
-import { conversationOf, priorArtifactIn } from './ask-v2.service';
+import { conversationOf } from './ask-v2.service';
 import { readConversationalTurn } from './conversation/conversation-state';
 import { validateStoredArtifact, type PriorArtifact } from './conversation/conversation-artifact';
 
