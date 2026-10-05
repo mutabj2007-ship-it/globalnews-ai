@@ -7,7 +7,8 @@ import { Logger } from '@nestjs/common';
  * ════════════════════════════════════════════════════════════════════════════
  *
  * ONE central rule: the Product Owner can test every implemented Alpha capability without the
- * ordinary PRODUCT limits (Ask account/IP day budgets, discussion rate, follow and saved caps).
+ * ordinary PRODUCT limits (Ask account/IP day budgets, discussion rate, saved-stories cap). The country-follow ceiling is a
+ * resource bound by ruling (follows.security.spec), not a product limit, so it is NOT exempted.
  *
  * The exemption holds only when ALL of these are true, each established server-side:
  *   1. DEPLOYMENT_ENVIRONMENT is exactly 'ALPHA' (the existing operator-set environment identity,
@@ -36,7 +37,6 @@ export type OwnerExemptControl =
   | 'ask-account-day'
   | 'ask-ip-day'
   | 'discussion-rate'
-  | 'follow-cap'
   | 'saved-cap';
 
 export interface OwnerAccessEnv {
