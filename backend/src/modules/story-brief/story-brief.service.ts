@@ -253,4 +253,47 @@ export class StoryBriefService {
     });
     return this.viewOf(story, revision, finishedAt);
   }
+
+  /**
+   * ADMIN ↔ PUBLIC CONTRACT (CTO §8) — the operational truth behind what a reader sees, keyed by the
+   * SAME canonical identities: story + alias set, member articles (articleRef / url / publisher
+   * host), the current evidence revision and derived state, every immutable version (with the
+   * governed sourceOperationId), and every attempt (status, failure kind/code, operationId).
+   * Read-only, zero compute. No requester identity exists to show: none is stored on a Brief.
+   */
+  async adminInspect(storyId: string, now: Date = new Date()) {
+    const { story, revision } = await this.evidenceOf(storyId);
+    const aliasIds = [...story.aliasIds];
+    const [members, versions, attempts, view] = await Promise.all([
+      this.prisma.storyArticle.findMany({
+        where: { storyId: { in: aliasIds } },
+        select: { articleRef: true, articleUrl: true, sourceHost: true, storyId: true, addedAt: true },
+        orderBy: [{ addedAt: 'asc' }, { articleRef: 'asc' }],
+      }),
+      this.prisma.storyBriefVersion.findMany({ where: { storyId: { in: aliasIds } }, orderBy: [{ version: 'asc' }, { createdAt: 'asc' }] }),
+      this.prisma.storyBriefAttempt.findMany({ where: { storyId: { in: aliasIds } }, orderBy: { startedAt: 'asc' } }),
+      this.viewOf(story, revision, now),
+    ]);
+    return {
+      story: { storyId: story.storyId, aliasIds, materialVersion: story.briefVersion },
+      currentEvidenceRevision: revision,
+      state: view.state,
+      generationAvailable: view.generationAvailable,
+      members,
+      versions: versions.map((v) => ({ ...versionView(v), id: v.id, storyId: v.storyId, sourceOperationId: v.sourceOperationId, createdAt: v.createdAt.toISOString() })),
+      attempts: attempts.map((a) => ({
+        id: a.id,
+        storyId: a.storyId,
+        evidenceRevision: a.evidenceRevision,
+        status: a.status,
+        failureKind: a.failureKind,
+        failureCode: a.failureCode,
+        operationId: a.operationId,
+        briefVersionId: a.briefVersionId,
+        leaseExpiresAt: a.leaseExpiresAt.toISOString(),
+        startedAt: a.startedAt.toISOString(),
+        finishedAt: a.finishedAt?.toISOString() ?? null,
+      })),
+    };
+  }
 }

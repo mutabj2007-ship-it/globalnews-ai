@@ -7,6 +7,8 @@ import { StoryBriefGate } from '../stories/story-gate.guards';
 import { AskRequestContextInterceptor } from '../ask-v2/ask-request-context';
 import { StoryBriefService } from './story-brief.service';
 import { StoryBriefController } from './story-brief.controller';
+import { AdminStoryBriefController } from './admin-story-brief.controller';
+import { AdminModule } from '../admin/admin.module';
 import { STORY_BRIEF_GENERATOR } from './story-brief.generator';
 import { AskGovernedStoryBriefGenerator } from './ask-governed-story-brief.generator';
 
@@ -18,8 +20,8 @@ import { AskGovernedStoryBriefGenerator } from './ask-governed-story-brief.gener
  * Gate STORY_BRIEF_ENABLED (default OFF → 404).
  */
 @Module({
-  imports: [ConfigModule, AuthModule, StoriesModule, AskV2Module],
-  controllers: [StoryBriefController],
+  imports: [ConfigModule, AuthModule, AdminModule, StoriesModule, AskV2Module],
+  controllers: [StoryBriefController, AdminStoryBriefController],
   providers: [
     StoryBriefGate,
     AskRequestContextInterceptor,

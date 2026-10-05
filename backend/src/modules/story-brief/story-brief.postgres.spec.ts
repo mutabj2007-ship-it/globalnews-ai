@@ -260,4 +260,23 @@ live('Story Brief R1 — live PostgreSQL', () => {
     const plain = await discussion.post(userId, { ...a, body: 'No Brief on screen', idempotencyKey: `k-${randomUUID()}` });
     expect(plain.storyBriefVersionId).toBeNull();
   });
+  it('ADMIN ↔ PUBLIC (CTO §8): Admin inspects the same canonical identities and the governed lineage', async () => {
+    const s1 = await story('Admin story');
+    const gen = new FakeGenerator();
+    gen.next = { outcome: 'FAILED', failureKind: 'PROVIDER_DEGRADED', failureCode: 'MODEL_TIMEOUT', operationId: 'op-failed' };
+    await service(gen).request(s1.storyId, requester);
+    gen.next = concluded('READY');
+    const pub = await service(gen).request(s1.storyId, requester);
+    const admin = await service(gen).adminInspect(s1.storyId);
+    expect(admin.story.storyId).toBe(pub.storyId);
+    expect(admin.currentEvidenceRevision).toBe(pub.currentEvidenceRevision);
+    expect(admin.state).toBe(pub.state);
+    expect(admin.members.map((m) => m.sourceHost)).toEqual(['one.example']);
+    expect(admin.versions).toEqual([expect.objectContaining({ version: 1, state: 'READY', sourceOperationId: 'op-brief-1', evidenceRevision: pub.currentEvidenceRevision })]);
+    expect(admin.attempts.map((a) => [a.status, a.failureKind, a.operationId])).toEqual([
+      ['FAILED', 'PROVIDER_DEGRADED', 'op-failed'],
+      ['DONE', null, 'op-brief-1'],
+    ]);
+    expect(JSON.stringify(admin)).not.toContain(requester.userId);
+  });
 });
