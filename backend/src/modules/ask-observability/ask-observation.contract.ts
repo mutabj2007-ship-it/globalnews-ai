@@ -91,6 +91,8 @@ export const OBSERVED_ARTIFACT_KINDS: ReadonlySet<string> = new Set([
   /* R4 ALPHA R-3 — server-derived records of answered turns (conversation-artifact.ts) */
   'SOURCED_REPORT',
   'REASONED_ANSWER',
+  /* POLITICS R1 on final R4 — an answer that stood on governed retained records (shared re-check) */
+  'GOVERNED_RECORD_ANSWER',
 ]);
 
 /*
