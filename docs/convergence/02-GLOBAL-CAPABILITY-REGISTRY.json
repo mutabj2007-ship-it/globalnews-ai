@@ -2005,7 +2005,7 @@
     {
      "id": "P1-PRIV-04",
      "priority": "P1",
-     "summary": "Guest claim moves ALL guest conversations (copy says 'keep this conversation'); plain sign-in leaves guest data visible on shared device; no immediate guest-data deletion; no /cookies footer link",
+     "summary": "Guest claim moves ALL guest conversations (copy says 'keep this conversation'); plain sign-in leaves guest data visible on shared device; no immediate guest-data deletion; no /cookies footer link (fixed on T5B branch for non-protected surfaces; Ask composer mounts P-1/P-4/P-5 await H)",
      "evidence": "stage2/T5-CONSENT-GUEST-TRIAL.md patches P-1..P-5"
     },
     {
@@ -2040,7 +2040,7 @@
    "rollbackAuthority": "rollback/alpha-pre-home-discussions-alerts-r1 @ 58f80fd4 (only rollback ref); previous Alpha release refs listed in 13-ROLLBACK-REGISTRY.md",
    "sourceLanguages": [],
    "productionNote": "no consent notice component at 58f80fd4",
-   "stage2Branch": "T5 part A branch ef0e8b95: guest trial = 3 completed answers per guest session; isolation I1–I9 proven on Postgres; consent design (no banner needed: no optional storage)"
+   "stage2Branch": "T5 part A branch ef0e8b95: guest trial = 3 completed answers per guest session; isolation I1–I9 proven on Postgres; consent design (no banner needed: no optional storage); T5 part B branch 72ce054c (on T2): GET /ask-v2/guest/status policy fields, POST /ask-v2/guest/forget (own session only, CSRF-bound, claimed data never deleted), guest-data section + delete control on /privacy and /cookies, footer /cookies link, truthful retention wording — all legal copy PENDING_PO_LEGAL_APPROVAL; fr–ar via T2 declared fallback"
   },
   {
    "id": "THEME",

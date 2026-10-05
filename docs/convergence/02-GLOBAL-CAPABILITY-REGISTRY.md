@@ -477,7 +477,7 @@ Locale key: F full · P partial · E English fallback · A absent · - not appli
 - Evidence: stage0/language.json
 - **P0 P0-PRIV-01** — Public-Beta Production P0: pre-login privacy/data/cookie notice and guest-trial boundary (≥3 questions before login, truthful guest session) not proven _(evidence: no consent component at 5513275f or 58f80fd4; contract R2 T5; Alpha guest OFF is intentional)_
 - **P1 P1-PRIV-03** — Privacy page retention claims (limit identifiers ~1 week, usage 90 days, conversations 12 months) hold only when RETENTION_SWEEP_ENABLED=true (default off); privacy/cookies/guest copy en/pl only _(evidence: stage2/T5-CONSENT-GUEST-TRIAL.md; RETENTION_SWEEP_ENABLED default)_
-- **P1 P1-PRIV-04** — Guest claim moves ALL guest conversations (copy says 'keep this conversation'); plain sign-in leaves guest data visible on shared device; no immediate guest-data deletion; no /cookies footer link _(evidence: stage2/T5-CONSENT-GUEST-TRIAL.md patches P-1..P-5)_
+- **P1 P1-PRIV-04** — Guest claim moves ALL guest conversations (copy says 'keep this conversation'); plain sign-in leaves guest data visible on shared device; no immediate guest-data deletion; no /cookies footer link (fixed on T5B branch for non-protected surfaces; Ask composer mounts P-1/P-4/P-5 await H) _(evidence: stage2/T5-CONSENT-GUEST-TRIAL.md patches P-1..P-5)_
 - **P2 P2-PRIV-05** — Production backend 5b714833 stores raw IPv4 (and /64 IPv6) in guest/compute limit scopes with no deletion; Alpha uses a keyed daily pseudonym — fixed at next promotion; live only if Production guest flags are on (unmeasured) _(evidence: 5b714833:backend/src/modules/compute-controls/compute-scopes.ts:43-51 vs 5513275f:…:44-47)_
 
 ### THEME — Light/Dark theme system

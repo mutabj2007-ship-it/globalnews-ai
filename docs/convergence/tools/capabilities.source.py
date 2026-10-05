@@ -840,3 +840,12 @@ _by_id["LANG-SYSTEM"]["stage2Branch"] = (
     "English fallback with a localized notice (no silent English). Seven locales render fully only on Ask surfaces; recovered C55 "
     "catalogues: 0 kept (source English unprovable), 3525 keys/locale handed to Claude L; nothing machine-translated. "
     "Integration after final R4; needs H to apply SPEC-T2-H-3 (H spec asserts no root dir) and Humanitarian SPEC-T2-HUM-1/2.")
+
+STAGE2_BRANCHES["T5 consent UI (part B)"] = "claude/stage2-t5b-consent-ui @ 72ce054c (base T2 c3754bdd + T5A)"
+_by_id["CONSENT"]["stage2Branch"] += (
+    "; T5 part B branch 72ce054c (on T2): GET /ask-v2/guest/status policy fields, POST /ask-v2/guest/forget (own session only, "
+    "CSRF-bound, claimed data never deleted), guest-data section + delete control on /privacy and /cookies, footer /cookies link, "
+    "truthful retention wording — all legal copy PENDING_PO_LEGAL_APPROVAL; fr–ar via T2 declared fallback")
+for _b in _by_id["CONSENT"]["blockers"]:
+    if _b["id"] == "P1-PRIV-04":
+        _b["summary"] += " (fixed on T5B branch for non-protected surfaces; Ask composer mounts P-1/P-4/P-5 await H)"
