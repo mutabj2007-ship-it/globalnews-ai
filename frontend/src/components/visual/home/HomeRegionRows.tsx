@@ -122,7 +122,7 @@ function RegionRow({ row, language, discussionRead }: { readonly row: HomeRegion
           id={`${headingId}-list`}
           aria-labelledby={headingId}
           data-home-row-list=""
-          className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-1 pb-2 [scrollbar-width:thin]"
+          className="relative -mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-1 pb-2 [scrollbar-width:thin]"
         >
           {row.stories.map((card) => (
             <li

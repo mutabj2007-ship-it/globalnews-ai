@@ -145,7 +145,7 @@ function LeadStory({
         <div aria-hidden="true" className="pointer-events-none relative select-none">
           <StoryVisual
             article={{ category: card.category as NewsArticle['category'], imageUrl: card.imageUrl ?? undefined }}
-            className="aspect-[16/9] min-[520px]:h-full min-[520px]:aspect-auto min-[520px]:min-h-[170px] max-h-[200px] min-[520px]:max-h-none"
+            className="aspect-[16/9] min-[520px]:h-full min-[520px]:aspect-auto min-[520px]:min-h-[170px] max-h-[132px] min-[520px]:max-h-none"
             missingLabel={dict.betaHome.imageUnavailable}
             sizes="(min-width: 848px) 300px, 100vw"
           />

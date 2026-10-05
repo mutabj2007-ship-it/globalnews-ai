@@ -57,10 +57,10 @@ export function HomeStoryCardView({
       data-home-card=""
       data-article-ref={card.articleRef}
       data-freshness={card.freshness}
-      className="flex h-full w-full flex-col overflow-hidden rounded-[12px] border border-[var(--gt-line)] bg-[var(--gt-card)] shadow-[0_8px_24px_-20px_rgba(20,36,59,0.5)]"
+      className="relative flex h-full w-full flex-col overflow-hidden rounded-[12px] border border-[var(--gt-line)] bg-[var(--gt-card)] shadow-[0_8px_24px_-20px_rgba(20,36,59,0.5)]"
     >
       <div aria-hidden="true" data-home-card-image="" className="pointer-events-none relative select-none">
-        <StoryVisual article={{ category: card.category as NewsArticle['category'], imageUrl: card.imageUrl ?? undefined }} className="aspect-[16/9]" missingLabel={dict.betaHome.imageUnavailable} sizes="(min-width: 1000px) 300px, (min-width: 600px) 45vw, 84vw" />
+        <StoryVisual article={{ category: card.category as NewsArticle['category'], imageUrl: card.imageUrl ?? undefined }} className="aspect-[2/1]" missingLabel={dict.betaHome.imageUnavailable} sizes="(min-width: 1000px) 300px, (min-width: 600px) 45vw, 84vw" />
         <span
           data-home-freshness=""
           className={`absolute start-[10px] top-[10px] inline-flex items-center gap-1 rounded-[6px] px-2 py-[3px] text-[11.5px] font-bold ${
@@ -96,7 +96,7 @@ export function HomeStoryCardView({
           type="button"
           data-home-action="read-brief"
           onClick={() => openVisualBrief(story, 'top')}
-          className="inline-flex min-h-[44px] items-center gap-1.5 rounded-[0.5rem] px-2.5 text-[0.875rem] font-semibold text-[var(--gt-link)] hover:bg-[var(--gt-actSoft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--gt-act)]"
+          className="inline-flex min-h-[44px] items-center gap-1 whitespace-nowrap rounded-[0.5rem] px-2 text-[0.8125rem] font-semibold text-[var(--gt-link)] hover:bg-[var(--gt-actSoft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--gt-act)]"
         >
           <BookOpenText aria-hidden="true" className="h-4 w-4" />
           {ts.readBrief}
@@ -106,7 +106,7 @@ export function HomeStoryCardView({
             type="button"
             data-home-action="discuss"
             onClick={() => openVisualBrief(story, 'discussion')}
-            className="inline-flex min-h-[44px] items-center gap-1.5 rounded-[0.5rem] px-2.5 text-[0.875rem] font-semibold text-[var(--gt-ink2)] hover:bg-[var(--gt-sunk)] hover:text-[var(--gt-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--gt-act)]"
+            className="inline-flex min-h-[44px] items-center gap-1 whitespace-nowrap rounded-[0.5rem] px-2 text-[0.8125rem] font-semibold text-[var(--gt-ink2)] hover:bg-[var(--gt-sunk)] hover:text-[var(--gt-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--gt-act)]"
           >
             <MessagesSquare aria-hidden="true" className="h-4 w-4" />
             {count !== undefined && count > 0 ? `${ts.discuss} · ${count}` : ts.discuss}
@@ -118,7 +118,7 @@ export function HomeStoryCardView({
           rel="noopener noreferrer"
           data-home-action="read-original"
           aria-label={fill(ts.readOriginalAria, { publisher: card.publisher })}
-          className="ms-auto inline-flex min-h-[44px] items-center gap-1 rounded-[0.5rem] px-2.5 text-[0.875rem] font-semibold text-[var(--gt-link)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--gt-act)]"
+          className="ms-auto inline-flex min-h-[44px] items-center gap-1 whitespace-nowrap rounded-[0.5rem] px-2 text-[0.8125rem] font-semibold text-[var(--gt-link)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--gt-act)]"
         >
           <span className="max-[359px]:sr-only">{ts.readOriginal}</span>
           <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />

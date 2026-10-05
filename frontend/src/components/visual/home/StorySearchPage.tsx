@@ -67,6 +67,8 @@ export function StorySearchPage({
                     {t.searchButton}
                   </button>
                 </div>
+                <details open={params.region !== null || params.domain !== null || params.days !== null || params.scope === 'all'} data-story-filters="">
+                <summary className="inline-flex min-h-[44px] cursor-pointer items-center text-[0.875rem] font-semibold text-[var(--gt-link)]">{t.filters}</summary>
                 <div className="grid grid-cols-1 gap-2 min-[480px]:grid-cols-2 min-[900px]:grid-cols-4">
                   <label className="flex flex-col gap-1 text-[0.75rem] font-semibold text-[var(--gt-ink2)]">
                     {t.filterRegion}
@@ -104,6 +106,7 @@ export function StorySearchPage({
                     </select>
                   </label>
                 </div>
+                </details>
                 <p className="text-[0.75rem] text-[var(--gt-ink2)]">{t.searchNote}</p>
               </form>
 

@@ -234,5 +234,7 @@ export const visualPl: VisualDictionary = {
     ownerPreviewOn: 'Podgląd zwykłego doświadczenia użytkownika — obowiązują zwykłe limity.',
     ownerPreviewStart: 'Podgląd zwykłego doświadczenia użytkownika',
     ownerPreviewStop: 'Zakończ podgląd',
+    ownerPreviewShort: 'Podgląd jako zwykły użytkownik',
+    filters: 'Filtry',
   },
 };

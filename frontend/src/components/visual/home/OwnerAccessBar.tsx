@@ -49,18 +49,19 @@ export function OwnerAccessBar({ language }: { readonly language: LanguageCode }
   };
 
   return (
-    <div data-owner-access={mode} role="status" className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-[0.5rem] border border-[var(--gt-amber)] bg-[var(--gt-amberBg)] px-3 py-2 text-[0.8125rem] text-[var(--gt-amberInk)]">
+    <div data-owner-access={mode} role="status" className="relative mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[0.5rem] border border-[var(--gt-amber)] bg-[var(--gt-amberBg)] px-2.5 py-1 text-[0.8125rem] text-[var(--gt-amberInk)]">
       <ShieldCheck aria-hidden="true" className="h-4 w-4 shrink-0" />
       <span className="font-bold">{t.ownerBadge}</span>
-      <span className="min-w-0 flex-1">{preview ? t.ownerPreviewOn : t.ownerUnrestricted}</span>
+      <span className="hidden min-w-0 flex-1 min-[600px]:inline">{preview ? t.ownerPreviewOn : t.ownerUnrestricted}</span>
+      <span className="sr-only min-[600px]:hidden">{preview ? t.ownerPreviewOn : t.ownerUnrestricted}</span>
       <button
         type="button"
         disabled={busy}
         onClick={() => void toggle()}
         data-owner-preview-toggle=""
-        className="inline-flex min-h-[44px] items-center rounded-[0.5rem] border border-current px-3 font-semibold disabled:opacity-60"
+        className="ms-auto inline-flex min-h-[44px] items-center rounded-[0.5rem] px-2 text-[0.8125rem] font-semibold underline disabled:opacity-60"
       >
-        {preview ? t.ownerPreviewStop : t.ownerPreviewStart}
+        {preview ? t.ownerPreviewStop : t.ownerPreviewShort}
       </button>
     </div>
   );

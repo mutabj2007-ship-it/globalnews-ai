@@ -29217,13 +29217,13 @@
   "dict:visual": {
    "source": "frontend/src/lib/i18n/dictionaries/{en,pl,adminEn,adminPl,supportEn,supportPl,myIntelligenceEn,myIntelligencePl,homeR1En,homeR1Pl,homeRevaEn,homeRevaPl}.ts",
    "kind": "DICTIONARY",
-   "englishKeys": 207,
+   "englishKeys": 209,
    "gapCounts": {
-    "fr": 207,
-    "de": 207,
-    "es": 207,
-    "pt": 207,
-    "ar": 207
+    "fr": 209,
+    "de": 209,
+    "es": 209,
+    "pt": 209,
+    "ar": 209
    },
    "keys": {
     "visual.brief.alert": {
@@ -30086,6 +30086,16 @@
       "ar": "MISSING"
      }
     },
+    "visual.home.filters": {
+     "en": "Filters",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
     "visual.home.firstReported": {
      "en": "First reported {date}",
      "locales": {
@@ -30178,6 +30188,16 @@
     },
     "visual.home.ownerPreviewOn": {
      "en": "Previewing the ordinary user experience — normal limits apply.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.home.ownerPreviewShort": {
+     "en": "Preview as ordinary user",
      "locales": {
       "fr": "MISSING",
       "de": "MISSING",
@@ -39680,27 +39700,27 @@
    "qualifiedInAskScope": 0
   },
   "fr": {
-   "pendingKeys": 3639,
+   "pendingKeys": 3641,
    "namespacesIncomplete": 62,
    "qualifiedInAskScope": 174
   },
   "de": {
-   "pendingKeys": 3639,
+   "pendingKeys": 3641,
    "namespacesIncomplete": 62,
    "qualifiedInAskScope": 174
   },
   "es": {
-   "pendingKeys": 3639,
+   "pendingKeys": 3641,
    "namespacesIncomplete": 62,
    "qualifiedInAskScope": 174
   },
   "pt": {
-   "pendingKeys": 3639,
+   "pendingKeys": 3641,
    "namespacesIncomplete": 62,
    "qualifiedInAskScope": 174
   },
   "ar": {
-   "pendingKeys": 3639,
+   "pendingKeys": 3641,
    "namespacesIncomplete": 62,
    "qualifiedInAskScope": 174
   }

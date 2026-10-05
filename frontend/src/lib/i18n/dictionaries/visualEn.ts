@@ -258,6 +258,8 @@ export const visualEn = {
     ownerPreviewOn: 'Previewing the ordinary user experience — normal limits apply.',
     ownerPreviewStart: 'Preview ordinary user experience',
     ownerPreviewStop: 'Exit preview',
+    ownerPreviewShort: 'Preview as ordinary user',
+    filters: 'Filters',
   },
 } as const;
 
