@@ -1,7 +1,7 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
-import { StoryIdentityService, type CanonicalStory } from './story-identity.service';
+import { StoryIdentityService, type CanonicalStory } from '../stories/story-identity.service';
 import {
   STORY_BRIEF_GENERATOR,
   type StoryBriefGenerator,
@@ -117,10 +117,13 @@ export class StoryBriefService {
     if (!story) throw new NotFoundException('STORY');
     const members = await db.storyArticle.findMany({
       where: { storyId: { in: [...story.aliasIds] } },
-      select: { articleRef: true },
+      select: { articleRef: true, articleUrl: true },
+      orderBy: [{ addedAt: 'asc' }, { articleRef: 'asc' }],
     });
+    if (members.length === 0) throw new NotFoundException('STORY_EVIDENCE');
     const articleRefs = members.map((m) => m.articleRef).sort();
-    return { story, articleRefs, revision: evidenceRevisionOf(articleRefs) };
+    const leadArticle = { articleRef: members[0]!.articleRef, articleUrl: members[0]!.articleUrl };
+    return { story, articleRefs, leadArticle, revision: evidenceRevisionOf(articleRefs) };
   }
 
   /** ZERO COMPUTE. Never calls the generator. */
@@ -180,7 +183,7 @@ export class StoryBriefService {
 
   /** The explicit Read Brief. The ONLY path that may call the generator. */
   async request(storyId: string, requester: StoryBriefRequester, now: Date = new Date()): Promise<StoryBriefView> {
-    const { story, articleRefs, revision } = await this.evidenceOf(storyId);
+    const { story, articleRefs, leadArticle, revision } = await this.evidenceOf(storyId);
     const aliasIds = [...story.aliasIds];
 
     /* A current Brief reopens with zero compute (PARTIAL / INSUFFICIENT included: per revision). */
@@ -208,7 +211,7 @@ export class StoryBriefService {
     let outcome: Awaited<ReturnType<StoryBriefGenerator['generate']>>;
     try {
       outcome = await this.generator.generate(
-        { storyId: story.storyId, evidenceRevision: revision, materialVersion: story.briefVersion, articleRefs },
+        { storyId: story.storyId, attemptId, evidenceRevision: revision, materialVersion: story.briefVersion, articleRefs, leadArticle },
         requester,
       );
     } catch {

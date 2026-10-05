@@ -37,6 +37,7 @@ import { SupportModule } from './modules/support/support.module';
 import { FollowsModule } from './modules/follows/follows.module';
 import { MyIntelligenceModule } from './modules/my-intelligence/my-intelligence.module';
 import { StoriesModule } from './modules/stories/stories.module';
+import { StoryBriefModule } from './modules/story-brief/story-brief.module';
 import { StoryObservationModule } from './modules/stories/story-observation.module';
 import { TelemetryModule } from './modules/telemetry/telemetry.module';
 import { SituationModule } from './modules/situation/situation.module';
@@ -156,6 +157,8 @@ import {
     FollowsModule,
     MyIntelligenceModule,
     StoriesModule,
+    /* EA-STORY-BRIEF-01 — composed above Stories + Ask V2 (STORY_BRIEF_ENABLED, default OFF). */
+    StoryBriefModule,
     StoryObservationModule,
     // R3/T7 — the telemetry foundation. Registers one public write
     // endpoint and the analysis interceptor below. Adds NO third-party

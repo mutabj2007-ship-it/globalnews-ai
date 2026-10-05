@@ -3,8 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { PrismaClient } from '../../generated/prisma/client';
 import type { PrismaService } from '../../database/prisma.service';
 import { computeArticleRef } from '../news/identity/article-ref.util';
-import { StoryIdentityService } from './story-identity.service';
-import { DiscussionService } from './discussion.service';
+import { StoryIdentityService } from '../stories/story-identity.service';
+import { DiscussionService } from '../stories/discussion.service';
 import { StoryBriefService } from './story-brief.service';
 import {
   UnavailableStoryBriefGenerator,
@@ -101,7 +101,7 @@ live('Story Brief R1 — live PostgreSQL', () => {
     expect(gen.calls).toBe(0);
   });
 
-  it('R1 production binding: an honest CAPABILITY_UNAVAILABLE failure — never INSUFFICIENT, nothing persisted as a Brief', async () => {
+  it('an unavailable generator is an honest CAPABILITY_UNAVAILABLE failure — never INSUFFICIENT, nothing persisted as a Brief', async () => {
     const s = await story('Unbound story');
     const view = await service(new UnavailableStoryBriefGenerator()).request(s.storyId, requester);
     expect(view.state).toBe('FAILED');
@@ -136,7 +136,7 @@ live('Story Brief R1 — live PostgreSQL', () => {
     await service(gen).request(s.storyId, requester);
     const row = await db.storyBriefVersion.findFirstOrThrow({ where: { storyId: s.storyId } });
     expect(JSON.stringify(row)).not.toContain(requester.userId);
-    expect(Object.keys(gen.inputs[0] as object).sort()).toEqual(['articleRefs', 'evidenceRevision', 'materialVersion', 'storyId']);
+    expect(Object.keys(gen.inputs[0] as object).sort()).toEqual(['articleRefs', 'attemptId', 'evidenceRevision', 'leadArticle', 'materialVersion', 'storyId']);
   });
 
   it('a same-publisher update makes the Brief STALE (briefVersion does not move); refresh APPENDS v2 and v1 is unchanged', async () => {

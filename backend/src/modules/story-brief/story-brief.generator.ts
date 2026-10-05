@@ -11,9 +11,13 @@ import type { StoryBriefConclusion, StoryBriefFailureKind } from './story-brief.
  */
 export interface StoryBriefEvidenceInput {
   readonly storyId: string;
+  /** The claimed attempt: one governed operation per attempt (a retry is never a replay). */
+  readonly attemptId: string;
   readonly evidenceRevision: string;
   readonly materialVersion: number;
   readonly articleRefs: readonly string[];
+  /** The story's founding member (earliest joined): the STORY context a governed run is scoped to. */
+  readonly leadArticle: { readonly articleRef: string; readonly articleUrl: string };
 }
 
 export interface StoryBriefRequester {

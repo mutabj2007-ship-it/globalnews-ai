@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { evidenceRevisionOf, readStateOf, type AttemptFact, type VersionFact } from './story-brief.rules';
-import { storyBriefEnabled } from './story-gates';
+import { storyBriefEnabled } from '../stories/story-gates';
 
 const ref = (n: number) => n.toString(16).padStart(64, '0');
 const NOW = new Date('2026-10-05T12:00:00Z');
@@ -63,13 +63,23 @@ describe('EA-STORY-BRIEF-01 · structural guarantees', () => {
     expect(storyBriefEnabled(cfg({ STORY_BRIEF_ENABLED: 'true' }))).toBe(true);
   });
 
-  it('the R1 production binding is the honest UNAVAILABLE generator (spend authority open)', () => {
-    expect(code('stories.module.ts')).toMatch(/provide: STORY_BRIEF_GENERATOR, useClass: UnavailableStoryBriefGenerator/);
+  it('CTO §3: the production binding is the GOVERNED Ask generator — no second AI execution path', () => {
+    expect(code('story-brief.module.ts')).toMatch(/provide: STORY_BRIEF_GENERATOR, useExisting: AskGovernedStoryBriefGenerator/);
+    expect(code('ask-governed-story-brief.generator.ts')).toMatch(/this\.ask\.(createThread|quote|accept|execute)\(/);
+    /* no provider SDK, HTTP client, model call or execution-port bypass of its own */
+    for (const file of ['ask-governed-story-brief.generator.ts', 'story-brief.service.ts', 'story-brief.module.ts']) {
+      expect([file, /openai|anthropic|axios|HttpService|fetch\(|\bASK_EXECUTION_PORT\b(?!_)|AskR2ExecutionAdapter/.test(code(file))]).toEqual([file, false]);
+    }
+  });
+
+  it('Stage B stays narrow: the stories module still imports no Ask (the composition lives here)', () => {
+    expect(code('../stories/stories.module.ts')).not.toMatch(/ask-v2|story-brief/);
   });
 
   it('the Brief path never reads Discussion or Alerts content, and never writes a user id onto a version', () => {
     const service = code('story-brief.service.ts');
     expect(service).not.toMatch(/storyComment|storyAlert|\.body\b/);
+    expect(code('ask-governed-story-brief.generator.ts')).not.toMatch(/storyComment|discussion|storyAlert/i);
     expect(service).not.toMatch(/storyBriefVersion\.create\(\{[\s\S]{0,400}userId/);
   });
 
