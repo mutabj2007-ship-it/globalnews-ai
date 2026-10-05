@@ -106,7 +106,7 @@ export interface AskRouteContext {
     readonly kind: string;
     readonly label: string;
     /** R4 ALPHA R-3 / R-5 — model reasoning, or an answer that stood on sourced reporting */
-    readonly provenance?: 'MODEL_REASONING' | 'SOURCED_REPORTING';
+    readonly provenance?: 'MODEL_REASONING' | 'SOURCED_REPORTING' | 'GOVERNED_RECORDS';
   };
   /**
    * CTO R4 fifth pass — the objective the READER stated earlier in this thread (bounded semantic

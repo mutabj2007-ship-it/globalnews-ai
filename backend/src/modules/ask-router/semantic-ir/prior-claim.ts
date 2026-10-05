@@ -81,7 +81,7 @@ export function attributionIsAnaphoric(text: string, language: string): boolean 
   following the READER's subject exactly as before answers were recorded; only model-emitted
   structures (frameworks, plans, diagnoses) are bound by it.
 */
-export const ANSWER_RECORD_KINDS: readonly string[] = ['SOURCED_REPORT', 'REASONED_ANSWER'];
+export const ANSWER_RECORD_KINDS: readonly string[] = ['SOURCED_REPORT', 'REASONED_ANSWER', 'GOVERNED_RECORD_ANSWER'];
 
 /** The turn asks only whether an earlier answer's claim (still) holds. */
 export function readClaimValidity(text: string, language: string): boolean {

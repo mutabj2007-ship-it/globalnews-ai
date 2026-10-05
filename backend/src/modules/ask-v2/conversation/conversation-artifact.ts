@@ -45,10 +45,17 @@ export type ModelArtifactKind = (typeof ARTIFACT_KINDS)[number];
                      evidence the answer used (article ids already retained with that answer — no
                      duplicate evidence store)
     REASONED_ANSWER  a model-reasoning answer that emitted no structure of its own
+    GOVERNED_RECORD_ANSWER  an answer that stood on GOVERNED retained records (a specialist
+                     contribution USED) and on no news reporting: REFERENCES to those governed
+                     observations (bounded hashes of the contributor's own record keys — no
+                     duplicate evidence store), so a later "Is that still true now?" re-checks the
+                     governed records in that scope instead of news or reasoning
 */
-export const SERVER_ARTIFACT_KINDS = ['SOURCED_REPORT', 'REASONED_ANSWER'] as const;
+export const SERVER_ARTIFACT_KINDS = ['SOURCED_REPORT', 'REASONED_ANSWER', 'GOVERNED_RECORD_ANSWER'] as const;
 export type ArtifactKind = ModelArtifactKind | (typeof SERVER_ARTIFACT_KINDS)[number];
-export type ArtifactProvenance = 'MODEL_REASONING' | 'SOURCED_REPORTING';
+export type ArtifactProvenance = 'MODEL_REASONING' | 'SOURCED_REPORTING' | 'GOVERNED_RECORDS';
+/** Provenances whose answer referenced evidence (news articles or governed records). */
+const EVIDENCED: readonly ArtifactProvenance[] = ['SOURCED_REPORTING', 'GOVERNED_RECORDS'];
 
 /** R-3 / R-5 — the original semantic scope of the answer, so a later turn re-examines THAT. */
 export interface ArtifactScope {
@@ -136,7 +143,9 @@ export function validateStoredArtifact(candidate: unknown): ConversationArtifact
   const base = validateArtifact(server ? { ...c, kind: 'SUMMARY' } : candidate);
   if (base === null) return null;
   const provenance: ArtifactProvenance =
-    server && c.provenance === 'SOURCED_REPORTING' ? 'SOURCED_REPORTING' : 'MODEL_REASONING';
+    server && (EVIDENCED as readonly unknown[]).includes(c.provenance)
+      ? (c.provenance as ArtifactProvenance)
+      : 'MODEL_REASONING';
   const scope = validateScope(c.scope);
   const refs = Array.isArray(c.evidenceRefs)
     ? [
@@ -151,7 +160,7 @@ export function validateStoredArtifact(candidate: unknown): ConversationArtifact
     provenance,
     citable: false,
     ...(scope === null ? {} : { scope }),
-    ...(provenance === 'SOURCED_REPORTING' && refs.length > 0 ? { evidenceRefs: refs } : {}),
+    ...(EVIDENCED.includes(provenance) && refs.length > 0 ? { evidenceRefs: refs } : {}),
   };
 }
 
@@ -234,9 +243,12 @@ export function splitArtifact(output: string): {
 /** The artifact as delimited DATA for a later prompt (never rules, never evidence). */
 export function artifactPromptBlock(artifact: ConversationArtifact): string {
   const sourced = artifact.provenance === 'SOURCED_REPORTING';
+  const governed = artifact.provenance === 'GOVERNED_RECORDS';
   const header = sourced
     ? 'your own earlier answer, which summarised sourced reporting retrieved at that time; this summary is NOT evidence and NOT a current fact'
-    : 'your own earlier model reasoning; NOT evidence, NOT a source, NOT a current fact';
+    : governed
+      ? 'your own earlier answer, which drew on governed retained records read at that time; this summary is NOT evidence and NOT a current fact'
+      : 'your own earlier model reasoning; NOT evidence, NOT a source, NOT a current fact';
   return (
     `<<<EARLIER WORK IN THIS CONVERSATION (${header})\n` +
     (artifact.scope === undefined ? '' : `question it answered: ${artifact.scope.question}\n`) +
@@ -253,6 +265,7 @@ export function artifactIdentity(artifact: ConversationArtifact): string {
   return (
     base +
     (artifact.provenance === 'SOURCED_REPORTING' ? '|SOURCED' : '') +
+    (artifact.provenance === 'GOVERNED_RECORDS' ? '|GOVERNED' : '') +
     (artifact.scope === undefined ? '' : `|${artifact.scope.question}`)
   );
 }

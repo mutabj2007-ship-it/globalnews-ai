@@ -37,6 +37,8 @@ export type ExecutionContractKind =
   | 'DIRECT'
   | 'MIXED_CURRENT_PART'
   | 'CLAIM_RECHECK'
+  /** SHARED: "Is that still true now?" after an answer that stood on GOVERNED records (no news) */
+  | 'GOVERNED_RECHECK'
   | 'PRIOR_ANSWER_EVIDENCE'
   | 'PRIOR_ANSWER_CHANGE';
 
@@ -78,6 +80,14 @@ const PRIOR_OFFICIAL_EVIDENCE_RULES =
   ' The reader asked for OFFICIAL evidence: news reporting is not an official source. Point only to ' +
   'governed official records provided for this request; where none supports a point, say that no ' +
   'qualifying official evidence was found.';
+
+const GOVERNED_RECHECK_RULES =
+  'RE-CHECK OF YOUR EARLIER ANSWER AGAINST CURRENT GOVERNED RECORDS. The reader asks whether your own ' +
+  'earlier answer (the EARLIER WORK block below) still holds. It drew on governed retained records; the ' +
+  "governed records provided NOW, in that answer's scope, are the only evidence for this re-check. Say " +
+  'whether they still support it, show a later stage or revision, or no longer contain it, giving each ' +
+  "record's own date. Never present a retained record as today's situation, never use news reporting " +
+  'for this re-check, and never infer a change the records do not show. The earlier answer is not evidence.';
 
 const PRIOR_CHANGE_RULES =
   'CHANGE SINCE YOUR EARLIER ANSWER. The reader asks what has changed since your own earlier answer ' +
@@ -154,6 +164,31 @@ export function executionContractOf(input: {
       answerData: artifactPromptBlock(priorArtifact),
       relationship: scopedRelationship(priorArtifact.scope, routeRelationship),
       inheritedScope: inheritedScopeOf(priorArtifact, official),
+    };
+  }
+
+  /* SHARED GOVERNED RE-CHECK — the earlier answer stood on GOVERNED retained records (no news): the claim is
+     re-checked against the CURRENT governed records in that answer's own scope (inherited, EARLIER_TURN),
+     never silently turned into a generic news search and never into mere re-reasoning */
+  if (
+    route.job.discourseReference === 'PRIOR_WORK' &&
+    route.semantic.references.target === 'ARTIFACT_PROPOSITION' &&
+    /* the claim-validity form ("Is that still true now?"), recorded by the interpreter as a re-check; the
+       IR's turn freshness is cleared for a no-news plan, so the re-check marker is the signal */
+    (route.job.currentnessEvidence ?? []).includes('PRIOR_CLAIM_RECHECK') &&
+    priorArtifact?.provenance === 'GOVERNED_RECORDS' &&
+    priorArtifact.scope !== undefined
+  ) {
+    const scope = priorArtifact.scope;
+    return {
+      kind: 'GOVERNED_RECHECK',
+      retrievalQuestion: scope.question,
+      usePriorQuestion: false,
+      stableQuestion: null,
+      answerRules: GOVERNED_RECHECK_RULES,
+      answerData: artifactPromptBlock(priorArtifact),
+      relationship: scopedRelationship(scope, routeRelationship),
+      inheritedScope: inheritedScopeOf(priorArtifact, false),
     };
   }
 
