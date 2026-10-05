@@ -497,6 +497,8 @@ describe('D-ALPHA §6 — /api/ is structurally outside the worker', () => {
       moves, which is the decision this guard was built to demand.
     */
     /* Home R1 Stage B: /alerts and /discussion — reviewed: still outside the worker by the '/api/' prefix rule; sw.js unchanged. */
+    /* Compact Visual Product R1: /stories (the canonical Story Brief, incl. the signed-in + CSRF
+       POST) — reviewed: outside the worker by the same '/api/' prefix rule; sw.js unchanged. */
     expect(REWRITTEN_ACCOUNT_FAMILIES.sort()).toEqual([
       'admin',
       'alerts',
@@ -505,6 +507,7 @@ describe('D-ALPHA §6 — /api/ is structurally outside the worker', () => {
       'discussion',
       'follows',
       'history',
+      'stories',
       'support',
       'users',
     ]);

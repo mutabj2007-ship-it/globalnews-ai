@@ -28754,6 +28754,1310 @@
     }
    }
   },
+  "dict:visual": {
+   "source": "frontend/src/lib/i18n/dictionaries/{en,pl,adminEn,adminPl,supportEn,supportPl,myIntelligenceEn,myIntelligencePl,homeR1En,homeR1Pl,homeRevaEn,homeRevaPl}.ts",
+   "kind": "DICTIONARY",
+   "englishKeys": 129,
+   "gapCounts": {
+    "fr": 129,
+    "de": 129,
+    "es": 129,
+    "pt": 129,
+    "ar": 129
+   },
+   "keys": {
+    "visual.brief.alert": {
+     "en": "Alert me to new evidence",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.alertNote": {
+     "en": "Alerts arrive in your GlobalNewsAI inbox. No email or push is sent.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.alertOn": {
+     "en": "Alert on — manage",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.askFollowUp": {
+     "en": "Ask a follow-up",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.askFollowUpNote": {
+     "en": "Puts this story in Ask as context. Nothing runs until you press Send.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.back": {
+     "en": "Back",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.background": {
+     "en": "Background — not sourced",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.backgroundNote": {
+     "en": "Background is not evidence and is never cited.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.briefEvidence": {
+     "en": "Evidence in this brief",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.checkStatus": {
+     "en": "Check status",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.checking": {
+     "en": "Checking the evidence…",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.checkingInspectable": {
+     "en": "The previous version stays readable below.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.close": {
+     "en": "Close brief",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.commentsNotEvidence": {
+     "en": "Comments are not evidence.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.commentsNotEvidenceNote": {
+     "en": "Reader comments are never used as evidence, in a brief or in Ask.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.coverageGaps": {
+     "en": "Coverage gaps",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.dialogAria": {
+     "en": "Brief: {title}",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.discussionHeading": {
+     "en": "Discussion",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.evidenceBack": {
+     "en": "Back to brief",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.evidenceHeading": {
+     "en": "Check the evidence",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.evidenceNote": {
+     "en": "This preview stays inside GlobalNewsAI. Only “Read Original” leaves.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.evidenceTitle": {
+     "en": "Evidence preview",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.failedKinds.BUDGET_REFUSED": {
+     "en": "The check was refused by a usage limit.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.failedKinds.CAPABILITY_UNAVAILABLE": {
+     "en": "Preparing briefs is not available yet.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.failedKinds.EXECUTION_FAILED": {
+     "en": "The check failed while running.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.failedKinds.OUTCOME_UNKNOWN": {
+     "en": "The check did not report an outcome.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.failedKinds.PROVIDER_DEGRADED": {
+     "en": "The evidence service was unavailable.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.failedNote": {
+     "en": "Nothing was saved. This is not a finding about the story.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.failedTitle": {
+     "en": "The check could not finish",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.followHeading": {
+     "en": "Follow this story",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.insufficientNote": {
+     "en": "The check ran, and the evidence did not support a verified brief.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.insufficientTitle": {
+     "en": "Not enough evidence for a brief",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.keyFacts": {
+     "en": "Key facts",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.label": {
+     "en": "GlobalNewsAI brief",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.noStoryBody": {
+     "en": "This article is not yet part of a GlobalNewsAI story, so no brief exists for it. Below is the reporting we hold.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.noneBody": {
+     "en": "Preparing a brief runs one evidence check. A prepared brief is saved once and shared by every reader.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.noneUnavailableBody": {
+     "en": "Preparing briefs is not available yet.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.openDiscussion": {
+     "en": "Open discussion",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.partialTitle": {
+     "en": "Partial brief",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.prepare": {
+     "en": "Prepare this brief",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.previewEvidence": {
+     "en": "Preview evidence",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.providerSources": {
+     "en": "The news provider lists {count} reporting this story.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.publishedBy": {
+     "en": "Published by",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.publisherSummary": {
+     "en": "Publisher’s summary",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.readFailedBody": {
+     "en": "The brief could not be loaded. Nothing was run. Below is the reporting we hold.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.refresh": {
+     "en": "Refresh brief",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.refreshNote": {
+     "en": "Refreshing runs one new evidence check and keeps this version in the history.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.reportingHeading": {
+     "en": "Reporting we hold",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.retry": {
+     "en": "Try again",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.savedLine": {
+     "en": "Saved brief · as of {time} · reopened, no new check",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.signInToPrepare": {
+     "en": "Sign in to prepare this brief.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.sourcedBy": {
+     "en": "Sourced from {count}",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.staleNote": {
+     "en": "You are reading version {version} as it was saved. It has not been updated.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.staleRefreshFailed": {
+     "en": "The last refresh did not finish. This version is still the one shown.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.staleTitle": {
+     "en": "The evidence has changed since this brief.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.summary": {
+     "en": "Summary",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.unavailableBody": {
+     "en": "Story briefs are not switched on yet. Below is the reporting we hold, as reported.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.unavailableTitle": {
+     "en": "No GlobalNewsAI brief for this story yet",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.uncertain": {
+     "en": "Uncertain or still developing",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.unresolvedBody": {
+     "en": "This page cannot look up the brief for this story yet. Below is the reporting we hold, as reported.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.versionLine": {
+     "en": "GlobalNewsAI brief · v{version}",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.hero.ask": {
+     "en": "Ask",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.hero.askLabel": {
+     "en": "Ask GlobalNewsAI",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.hero.examplesAria": {
+     "en": "Example questions",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.hero.eyebrow": {
+     "en": "Understand · Verify · Follow",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.hero.line": {
+     "en": "Developing stories, with the evidence behind them.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.hero.note": {
+     "en": "Ask runs one question when you press Ask. Examples only fill the box.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.hero.placeholder": {
+     "en": "Ask about a story, country or topic",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.hero.sent": {
+     "en": "Sent to Ask GlobalNewsAI: “{question}”",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.hero.title": {
+     "en": "What matters to you",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.askAbout": {
+     "en": "Ask about {country}",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.askAboutNote": {
+     "en": "Adds {country} to Ask as context. Nothing runs until you press Send.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.clear": {
+     "en": "Clear selection",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.collapse": {
+     "en": "Collapse map",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.countriesAria": {
+     "en": "Choose a country",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.eac": {
+     "en": "EAC",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.eastAfrica": {
+     "en": "East Africa",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.eu": {
+     "en": "EU",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.europe": {
+     "en": "Europe",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.expand": {
+     "en": "Expand map",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.framingNote": {
+     "en": "These buttons frame the map. They do not filter stories.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.heading": {
+     "en": "Global map",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.loading": {
+     "en": "Loading map…",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.mapAria": {
+     "en": "World map. For keyboard selection, use the country list.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.middleEast": {
+     "en": "Middle East",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.moreCountries": {
+     "en": "More countries",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.noCoverage": {
+     "en": "No coverage shading on Home: Home reads no country data. Coverage appears in World Map after you open a country there.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.noMatch": {
+     "en": "No matching country",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.openFullMap": {
+     "en": "Open World Map",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.openInMap": {
+     "en": "Open {country} in World Map",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.regionMeaning.eac": {
+     "en": "The East African Community, by treaty membership. GlobalNewsAI has no separate EAC scope: Ask answers EAC questions over its East Africa scope, which also includes non-members.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.regionMeaning.eastAfrica": {
+     "en": "GlobalNewsAI’s East Africa monitoring scope: {count} countries, set by GlobalNewsAI. Ask can search this region as a whole.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.regionMeaning.eu": {
+     "en": "The European Union: {count} member states. Ask has no regional scope for it.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.regionMeaning.europe": {
+     "en": "Europe as a geographic region (UN M49) — not the European Union. Ask has no regional scope for it.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.regionMeaning.middleEast": {
+     "en": "GlobalNewsAI’s Middle East monitoring scope: {count} countries, set by GlobalNewsAI — not an agreed geographic definition. Ask has no regional scope for it.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.regionMeaning.world": {
+     "en": "The whole world. No regional scope.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.regionNames.eac": {
+     "en": "East African Community",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.regionNames.eastAfrica": {
+     "en": "East Africa",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.regionNames.eu": {
+     "en": "European Union",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.regionNames.europe": {
+     "en": "Europe",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.regionNames.middleEast": {
+     "en": "Middle East",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.regionNames.world": {
+     "en": "World",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.regionWatch": {
+     "en": "Watching a region is not available yet.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.regionsAria": {
+     "en": "Frame the map",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.searchClose": {
+     "en": "Close country search",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.searchCountries": {
+     "en": "Search countries",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.selected": {
+     "en": "{country} selected",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.map.world": {
+     "en": "World",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.nav.aria": {
+     "en": "Main navigation",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.nav.ask": {
+     "en": "Ask",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.nav.explore": {
+     "en": "Explore",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.nav.home": {
+     "en": "Home",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.nav.intelligence": {
+     "en": "Intelligence",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.nav.phoneAria": {
+     "en": "Main navigation",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.nav.savedAskBriefings": {
+     "en": "Saved Ask briefings",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.nav.savedAskBriefingsShort": {
+     "en": "Ask briefings",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.nav.worldMap": {
+     "en": "World Map",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.previewBanner": {
+     "en": "Preview of the new GlobalNewsAI Home. The current Home is unchanged.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.stories.actionsAria": {
+     "en": "Story actions",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.stories.allTopics": {
+     "en": "All topics",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.stories.discuss": {
+     "en": "Discuss",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.stories.filterAria": {
+     "en": "Filter stories by interest",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.stories.heading": {
+     "en": "Developing stories",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.stories.interest": {
+     "en": "Interest",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.stories.noAi": {
+     "en": "Opening a story, its brief or its evidence runs no AI. Only Ask runs, when you press Ask.",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.stories.readBrief": {
+     "en": "Read brief",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.stories.readOriginal": {
+     "en": "Read Original",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.stories.readOriginalAria": {
+     "en": "Read Original — {publisher}, opens in a new tab",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.stories.showing": {
+     "en": "Showing {count} from the current feed",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    }
+   }
+  },
   "dict:worldMapGateway": {
    "source": "frontend/src/lib/i18n/dictionaries/{en,pl,adminEn,adminPl,supportEn,supportPl,myIntelligenceEn,myIntelligencePl,homeR1En,homeR1Pl,homeRevaEn,homeRevaPl}.ts",
    "kind": "DICTIONARY",
@@ -37136,28 +38440,28 @@
    "qualifiedInAskScope": 0
   },
   "fr": {
-   "pendingKeys": 3386,
-   "namespacesIncomplete": 61,
+   "pendingKeys": 3515,
+   "namespacesIncomplete": 62,
    "qualifiedInAskScope": 174
   },
   "de": {
-   "pendingKeys": 3386,
-   "namespacesIncomplete": 61,
+   "pendingKeys": 3515,
+   "namespacesIncomplete": 62,
    "qualifiedInAskScope": 174
   },
   "es": {
-   "pendingKeys": 3386,
-   "namespacesIncomplete": 61,
+   "pendingKeys": 3515,
+   "namespacesIncomplete": 62,
    "qualifiedInAskScope": 174
   },
   "pt": {
-   "pendingKeys": 3386,
-   "namespacesIncomplete": 61,
+   "pendingKeys": 3515,
+   "namespacesIncomplete": 62,
    "qualifiedInAskScope": 174
   },
   "ar": {
-   "pendingKeys": 3386,
-   "namespacesIncomplete": 61,
+   "pendingKeys": 3515,
+   "namespacesIncomplete": 62,
    "qualifiedInAskScope": 174
   }
  },
@@ -37207,6 +38511,7 @@
      "dict:today",
      "dict:todayWorkspace",
      "dict:trustSection",
+     "dict:visual",
      "dict:worldMapGateway",
      "trustReasons"
     ]
@@ -37253,6 +38558,7 @@
      "dict:today",
      "dict:todayWorkspace",
      "dict:trustSection",
+     "dict:visual",
      "dict:worldMapGateway",
      "trustReasons"
     ]
@@ -37299,6 +38605,7 @@
      "dict:today",
      "dict:todayWorkspace",
      "dict:trustSection",
+     "dict:visual",
      "dict:worldMapGateway",
      "trustReasons"
     ]
@@ -37345,6 +38652,7 @@
      "dict:today",
      "dict:todayWorkspace",
      "dict:trustSection",
+     "dict:visual",
      "dict:worldMapGateway",
      "trustReasons"
     ]
@@ -37391,6 +38699,7 @@
      "dict:today",
      "dict:todayWorkspace",
      "dict:trustSection",
+     "dict:visual",
      "dict:worldMapGateway",
      "trustReasons"
     ]

@@ -645,7 +645,11 @@ describe('N10/N11/N12 — routing, product contracts and providers are untouched
     /* TRUST R1 §12 — fifty-six: /cookies, the public Cookies & similar technologies notice. */
     /* R2 · D1 — fifty-seven: /saved/briefing, one reader's own briefing (noindex, signed-in;
        a query, not a dynamic segment, so N5 still holds). */
-    expect(pages).toHaveLength(57);
+    /* COMPACT VISUAL PRODUCT R1 — fifty-eight: /visual, the Alpha preview of the future Home
+       (CTO visual integration authority). noindex unconditionally, absent from the sitemap, and
+       outside the Standalone allowlist, so Production redirects it to `/` before it renders. */
+    expect(pages).toHaveLength(58);
+    expect(pages).toContain('/visual');
     expect(pages).toContain('/conflict');
     expect(classify('/conflict').indexability).toBe('noindex');
     expect(pages).toContain('/ask');
