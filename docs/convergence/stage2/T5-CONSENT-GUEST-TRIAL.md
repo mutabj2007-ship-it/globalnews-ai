@@ -401,3 +401,221 @@ spec), tests 8301 (+8), failed 21 against 21, runtime-error suites 3 against 3. 
 identical** (no new failures, none fixed).
 
 Commit: see `git log` on `claude/stage2-t5-consent-guest-trial` (this dossier is in that commit).
+
+---
+
+# Part B: pre-login consent, privacy and guest-trial UI
+
+Branch `claude/stage2-t5b-consent-ui`. Exact base: `c3754bdd` (tip of
+`claude/stage2-t2-global-language-foundation`, which sits on H final `266007c`) plus the
+cherry-picked Part A commit `638300f3` (originally `ef0e8b95`). Part B builds the UI on the T2
+display-locale authority. It does not add a second locale mechanism.
+
+Runtime rules kept: the Alpha guest trial stays **OFF**, because no default changed (no flag,
+switch, setting or `RETENTION_SWEEP_ENABLED` was touched). No provider or AI call was added.
+There is still no consent banner and no "Accept all" (Part A §4.1). All new and changed legal
+copy is **PENDING_PO_LEGAL_APPROVAL**. Engineering wrote drafts in en and pl only, with no
+machine translation. fr, de, es, pt and ar render through the T2 declared-fallback rule.
+
+## B1. Backend (non-protected `backend/src/modules/ask-v2/guest/`)
+
+### `GET /ask-v2/guest/status`: new fields
+
+| Field | Value | Notes |
+|---|---|---|
+| `policy.allowance` | `GUEST_ANSWER_ALLOWANCE` (3, a constant) | in every non-signed-in response |
+| `policy.sessionLifetimeH` | resolved `ASK_GUEST_SESSION_LIFETIME_H` (default 168, cap 168) | out-of-range values fall back to the default, same as the runtime |
+| `policy.purgeGraceH` | resolved `ASK_GUEST_PURGE_GRACE_H` (default 24, range 1–72) | closes D3/D4: copy renders the configured value |
+| `policy.sweepIntervalS` | resolved `ASK_GUEST_SWEEP_INTERVAL_S` (default 900) | deletion can lag `purgeAfter` by one tick |
+| `session.purgeAfter` | `expiresAt + purgeGraceH` | live guest only: when the always-on sweep may delete it |
+
+The existing fields `allowance`, `remaining`, `committed` (= answers used), `reserved`, `state`
+and `cooldownUntil` are unchanged. A signed-in reader still gets exactly
+`{signedIn:true, available:false}`. `status` still mints nothing and sets no cookie (F1, I9).
+None of the abuse or spending limits are exposed.
+
+### `POST /ask-v2/guest/forget` (new)
+
+| Property | Behaviour |
+|---|---|
+| Gate | `AskV2EnabledGuard`, like every guest route, so with Ask V2 off it returns 404 (F7). It is **not** gated by the K-4 guest switch, because the switch gates new work only and a guest must be able to delete what it already has while the trial is off (F7). |
+| Request guard (`GuestForgetGuard`) | Requires the same `Origin`, plus `X-Requested-With: globalnews-ask` (a cross-site form cannot send it). A signed-in browser gets 409 `SIGNED_IN_USE_ACCOUNT`, so account data is never in reach (F5). |
+| CSRF | When a guest token is presented, the `x-csrf-token` header must equal the `gna_csrf` cookie **and** be the HMAC bound to *this* guest token. Another guest's value returns 403 (F4). |
+| Effect | `GuestSessionService.forget(tokenHash)`, one Serializable transaction. If the session is ACTIVE (including expired but not yet purged), it is deleted, cascading exactly as the sweep does: threads, turns, operations, stored results, slots and claims (F2, F8). It then clears `gna_guest` and `gna_csrf` (`__Host-` names on https). Response: `{forgotten:true, deleted:true}`. |
+| Idempotent | With no cookie, a dead token, or a CLAIMED session, it returns `{forgotten:true, deleted:false}` with 200 and deletes nothing (F3). A malformed leftover `gna_guest` is cleared. |
+| Claimed conversations | Never deleted. Claimed rows have `guestSessionId = null` and belong to the account. A CLAIMED session is left for the sweep (F5). |
+| In progress | A RESERVED slot gets 409 `GUEST_ANSWER_IN_PROGRESS`. Nothing is deleted and no cookie is cleared (F6). This matches the claim rule. |
+| Shared bounds | `guestiss:`, `guestexec:` and `guestpool` meter rows are **not** refunded, so delete-and-retry cannot bypass the per-network or pool bounds (F2). The per-session `guest:<id>` and `conc:guest:<id>` count rows are left as the sweep leaves them (Part A observation, P2). |
+
+### Tests
+
+- `ask-v2-guest.forget.t5b.postgres.spec.ts`, **new**, F1–F8, live and opt-in like the R3 and T5 suites:
+  - F1 `policy` at defaults and overrides; `purgeAfter`; status mints nothing.
+  - F2 forget deletes only the caller's rows, across all threads plus a pending claim; guest B is untouched and still reads its own; the old token gives 401; both cookies are cleared; shared meter rows are byte-identical.
+  - F3 idempotent.
+  - F4 Origin, X-Requested-With and bound CSRF are each required.
+  - F5 claimed-to-account rows survive; a signed-in browser gets 409.
+  - F6 in progress gives 409.
+  - F7 Ask V2 off gives 404; with the switch off, forget still deletes.
+  - F8 the sweep agrees.
+- `ask-v2-guest.forget.t5b.spec.ts`, **new**, DB-free handler pins (10 tests). These run in every full jest run.
+- Live run: a disposable PostgreSQL 16 cluster under `/var/lib/postgresql/t5b-pg` (port 55436), 36 migrations via `prisma migrate deploy`. Guest group: `ask-v2/guest/*` + `auth.guest-continuation` + `ask-r2-guest-meter-parity` + `data-retention`. **12 suites, 185 tests, all pass.** That includes F1–F8, Part A I1–I9 and R3 G1–G10. The cluster was stopped and deleted afterwards.
+
+## B2. Frontend UI (non-protected)
+
+| Item | File | What it does |
+|---|---|---|
+| Catalogue `consent` | `frontend/src/lib/consent/consentStrings.ts` | 26 keys, en and pl drafts. `CONSENT_KEY_STATES` marks every key `PENDING_PO_LEGAL_APPROVAL`. Numbers are `{placeholders}` filled from `status.policy` / `session`. Before status is known, they are filled from `GUEST_POLICY_BOUNDS` (3 / 168 h / 72 h, the hard code ceilings), and the sentences are worded "at most / within" so they hold for every valid configuration. `LEGAL_COPY_PENDING_APPROVAL` lists the changed Privacy sentences (B3). |
+| T2 registration | `qualification/i18n/catalogueCoverage.ts`, `surfaceCoverage.ts` | `consent` is a measured module namespace. It is added to the platform chrome (the Footer label), `privacy` and `cookies`. Manifest regenerated with `scripts/i18n/t2-reconcile-catalogues.cjs`: fr–ar pending keys go from 3525 to 3551 (+26) and namespaces from 60 to 61. **`surfaceRenderable.generated.ts` is unchanged**: no surface changed state (Ask surfaces stay FULL in all seven; Privacy and Cookies stay FULL en/pl and DECLARED_FALLBACK fr–ar). The T2 dossier's §2 per-surface gap counts are now +26 for platform-chrome surfaces. Its table is not edited here; the manifest is authoritative. |
+| Guest data section | `components/consent/GuestDataSection.tsx` | "Your guest data", the measured contract: {allowance} answers, and a question we cannot answer does not count. Both guest cookies are set on the first guest question only, last at most {lifetimeDays} days, and are never extended. Data is stored **on our servers** until the session ends, then deleted by the always-on guest clean-up within about {purgeGraceH} h; this does not depend on any other setting. "Sign in to continue" moves **all** guest conversations from this browser. A plain sign-in moves none, and they reappear after sign-out on a shared device. How to delete now. Then a live panel: one `GET /ask-v2/guest/status` on mount, which never mints. It shows one of loading, unavailable (404 or network), signed-in (no guest controls), none, or active (expiry date, purge date, quota badge, delete action). |
+| Delete control | `components/consent/GuestForgetControl.tsx` | "Delete my guest data now", then an inline confirmation, then **one** POST. Outcomes: done, nothing, busy (409 `GUEST_ANSWER_IN_PROGRESS`, nothing changed) or failed. No modal and no pre-checked box. Takes `locale` and an injectable client, so the Ask composer can import it (P-1). |
+| Quota badge | `components/consent/GuestQuotaBadge.tsx` | "N of {allowance} guest answers left", "All {allowance} used", or "paused until …". Server mirror only, no client counter. Renders nothing without a live guest session. |
+| Client | `frontend/src/lib/api/guestPrivacyApi.ts` | `status()` and `forget()` over `accountFetch` (CSRF header), with forget adding `X-Requested-With`. 404 → `UNAVAILABLE`, typed refusal → `REFUSED`+`code`, thrown → `NETWORK`. The protected `askV2Api.ts` is untouched. |
+| `/privacy` | `app/privacy/page.tsx` | Mounts `GuestDataSection` with `effectiveWithin(surfaceLocale('privacy'), ['en','pl'])` (the T2 authority). The Cookies link label uses the same effective locale. |
+| `/cookies` | `app/cookies/page.tsx` | Mounts `GuestDataSection` with the page's existing T2 effective locale (`effectiveWithin(surfaceLocale('cookies'), ['en','pl'])`). |
+| Footer | `lib/homeContent.ts`, `components/layout/Footer.tsx` | `/cookies` added to the Legal links (D10). Its label comes from `consentFooterLinkLabels`, merged under `t.linkLabels`, **not** from a `dict.footer.linkLabels` key. Reason: `dict.footer` is projected into H's protected Ask-shell catalogue (`askShellSource.ts`), so a new key would make the protected fr–ar Ask catalogues incomplete and break H's manifest equality. Tripwires updated: `footerGeometry.spec.ts` (6 destinations, `/cookies` real route, label source, link-row budget) and `footerNavHud.spec.ts` (exact href set, labels in en/pl). |
+
+Declared fallback: in fr, de, es, pt and ar, the `consent`, `dict:privacyPage` and `cookiesPage`
+namespaces have no approved copy. The whole Privacy or Cookies surface therefore renders English,
+and the root layout shows `DisplayLocaleNotice` in the reader's language (T2 §1.3). Arabic gets
+the notice with its own `dir`. This is pinned by `guestConsent.t5b.spec.ts`. The fr–ar Ask
+surfaces do not mount these components.
+
+## B3. Legal sentences pending Product Owner / legal approval
+
+Every value below is a draft, marked in source (`/* T5 Part B — PENDING_PO_LEGAL_APPROVAL */`)
+and in `LEGAL_COPY_PENDING_APPROVAL` / `CONSENT_KEY_STATES`.
+
+| # | Catalogue / key | Change |
+|---|---|---|
+| L1 | `privacyPage.lastUpdatedDate` (en, pl) | 3 → **4 October 2026** (the text changed) |
+| L2 | `privacyPage.sections["Using Ask without an account"].body` | D6: "guest conversations", not "one guest conversation". At most 7 days, never extended, deleted automatically (pointer to "Your guest data"). D8: the claim moves **all** of this browser's guest conversations; another sign-in moves none, and they stay visible after sign-out. Network identifiers: deletion now points to the retention paragraph (it depends on `RETENTION_SWEEP_ENABLED`), replacing the unconditional "deleted within about a week" |
+| L3 | `privacyPage.sections["Your choices"].body` | Adds the guest delete action |
+| L4 | `privacyPage.sections["How long information is kept"].body` | **D2.** Guaranteed without any switch: guest conversations (always-on guest sweep, or immediate forget), Ask diagnostics 30 days (their own opportunistic clean-up, `AskObservationRetentionService`, not gated), sign-in sessions expire after 30 days. Stated as **target policy applied by a separate scheduled clean-up that is off unless switched on operationally; while off, not deleted automatically**: account conversations 12 months (account deletion always deletes them), support 24 months, usage/compute 90 days, guest limit identifiers about a week |
+| L5 | `consent.*` (26 keys, en + pl) | New: guest section, panel, quota, forget control, footer label |
+
+Removed claims: "Guest limit identifiers: about a week" as an unconditional promise, "Detailed
+usage and compute records: 90 days" as an unconditional promise, and the same for account
+conversations and support messages. Each is now conditional on the retention sweep. No new legal
+claim was invented. Every sentence restates measured code behaviour (§1.1, `retention-policy.ts`,
+`ask-observation-retention.service.ts`).
+
+## B4. Protected-file specs (updated, not applied)
+
+Re-checked at `c3754bdd`: `AskFrameScreen.tsx`, `askV2Api.ts`, `askR2Strings.ts` and
+`AskNavShell.tsx` have **no CR** at base (`git show c3754bdd:<path> | grep -c $'\r'` = 0), so
+these specs apply as plain LF edits.
+
+**P-1 (`frontend/src/components/ask-frame/AskFrameScreen.tsx`, H+R4), revised for the Part B components that exist now:**
+1. Replace the `data-ask="guest-intro"` block with the **text** of `GuestDataSection` for guests.
+   The section is page-sized, so do not mount it whole. Render the keys
+   `consent.guest.questions` and `consent.guest.storage`, filled with `fillConsent(…, { allowance,
+   lifetimeDays, purgeGraceH })` from `r2.guest.policy` (P-5), with `GUEST_POLICY_BOUNDS` as the
+   fallback, plus links to `/privacy#guest-data` and `/cookies#guest-data`. Keep
+   `data-ask="guest-intro"` on the root.
+2. Keep the `data-ask="privacy-links"` paragraph and its hrefs `/privacy` and `/cookies`. Add `#guest-data` to the Privacy href when `guestMode`.
+3. Where `guestRemaining` is rendered, render
+   `<GuestQuotaBadge status={r2.guest} locale={effectiveConsentLocale} />` from
+   `@/components/consent/GuestQuotaBadge`. `effectiveConsentLocale` = `sevenLocale` when it is
+   `en` or `pl`. Otherwise keep the existing `guestRemaining` string, because the `consent`
+   catalogue has no fr–ar copy and the Ask surface is FULL in seven. Never show English consent
+   copy on a French Ask page.
+4. In the composer footer, for a guest with a live session, render
+   `<GuestForgetControl locale={effectiveConsentLocale} onForgotten={() => r2.resetGuest()} />`
+   from `@/components/consent/GuestForgetControl` (en/pl only, same rule as above). After
+   `deleted:true` the conversation view must drop the guest thread. `useAskR2Conversation`
+   (non-protected) needs a `resetGuest()` that re-reads `status` once.
+5. Exhausted card: body becomes `consent.boundary.moves`-equivalent wording (P-3). `continueAction` → `guestSignInHref()` unchanged.
+
+**P-2 / P-3 (`frontend/src/lib/ask/askR2Strings.ts`, H+R4).** Unchanged from Part A §6. In P-2,
+instead of hard-coding "7 days … 24 hours", prefer interpolating `{lifetimeDays}` and `{purgeGraceH}`
+from `status.policy`. If the H catalogue cannot interpolate, keep Part A's literal diff, which is
+true at defaults. The PL literal in `askGuestTrial.spec.ts:377` changes with P-3.
+
+**P-4 (`frontend/src/components/ask-nav/AskNavShell.tsx`, H+R4).** Next to `signInEntry`, when
+the caller passes `guestSessionLive`, render a one-line note using the en/pl key
+`consent.guest.plainSignIn`, linking to `/privacy#guest-data`, where the delete action now
+exists. With fr–ar there is no note until approved copy lands, which is a P1 gap. It sends no request.
+
+**P-5 (`frontend/src/lib/api/askV2Api.ts`, H+R4), revised.** Add to `AskGuestStatus`:
+```ts
+readonly policy?: { readonly allowance: number; readonly sessionLifetimeH: number; readonly purgeGraceH: number; readonly sweepIntervalS: number };
+readonly session?: { readonly expiresAt: string; readonly purgeAfter?: string } | null;
+```
+No `guestForget()` is needed in `askV2Api.ts` any more. The non-protected
+`lib/api/guestPrivacyApi.ts` (`guestPrivacyApi.forget()`) is the client, and `GuestForgetControl`
+uses it. The type addition is optional: `GuestPrivacyStatus` in `guestPrivacyApi.ts` already
+types the same payload.
+
+Backend: no protected backend file was needed. `ask-v2.service.ts` is untouched.
+
+## B5. Changed-file manifest (Part B, against `638300f3`)
+
+| File | Change |
+|---|---|
+| `backend/src/modules/ask-v2/guest/ask-v2-guest.controller.ts` | `status.policy`, `session.purgeAfter`; `POST forget` |
+| `backend/src/modules/ask-v2/guest/guest-session.service.ts` | `policy()`, `purgeAfter()`, `forget()`, `clearGuestCookies()` |
+| `backend/src/modules/ask-v2/guest/guest.guards.ts` | `GuestForgetGuard` |
+| `backend/src/modules/ask-v2/guest/ask-v2-guest.forget.t5b.postgres.spec.ts` | **new**, F1–F8 (opt-in live) |
+| `backend/src/modules/ask-v2/guest/ask-v2-guest.forget.t5b.spec.ts` | **new**, DB-free handler pins |
+| `frontend/src/lib/consent/consentStrings.ts` | **new**, `consent` catalogue + approval metadata |
+| `frontend/src/lib/api/guestPrivacyApi.ts` | **new**, guest privacy client |
+| `frontend/src/components/consent/GuestDataSection.tsx`, `GuestForgetControl.tsx`, `GuestQuotaBadge.tsx` | **new** |
+| `frontend/src/components/consent/guestConsent.t5b.spec.ts` | **new**, 23 tests |
+| `frontend/src/app/privacy/page.tsx`, `frontend/src/app/cookies/page.tsx` | mount the guest section (T2 effective locale) |
+| `frontend/src/lib/i18n/dictionaries/en.ts`, `pl.ts` | Privacy L1–L4 |
+| `frontend/src/lib/i18n/dictionaries/index.spec.ts` | Privacy date pin (CRLF kept) |
+| `frontend/src/lib/homeContent.ts`, `frontend/src/components/layout/Footer.tsx` | `/cookies` footer link (Footer.tsx CRLF kept) |
+| `frontend/src/components/layout/footerGeometry.spec.ts`, `frontend/src/components/navigation/footerNavHud.spec.ts` | tripwires (footerNavHud CRLF kept) |
+| `frontend/src/qualification/i18n/catalogueCoverage.ts`, `surfaceCoverage.ts` | `consent` namespace |
+| `docs/convergence/stage2/t2/translation-manifest.json`, `reconciliation-summary.json` | regenerated |
+| `docs/convergence/stage2/T5-CONSENT-GUEST-TRIAL.md` | this section |
+
+CRLF: three changed files carry CR at base: `Footer.tsx` (246 CR), `footerNavHud.spec.ts` (292)
+and `index.spec.ts` (803). Their edits were made with CRLF line endings, and they were staged with
+`git hash-object -w --no-filters` + `git update-index --cacheinfo`. `HEAD:<path>` equals the
+unfiltered working file. Protected paths touched: **none**, checked against `protected-files.tsv`
+column 2.
+
+## B6. Qualification
+
+All runs on this worktree, one after another, never two at once.
+
+| Step | Result |
+|---|---|
+| `npm run build:shared` | pass |
+| `npm run build:backend` | pass |
+| `npm run build:frontend` (`next build`) | pass. Only the 2 `react-hooks/exhaustive-deps` warnings in map files, which also appear at T2 |
+| Live guest group (PostgreSQL 16, opt-in) | 12 suites, 185 tests, all pass (B1) |
+| Focused frontend (`guestConsent.t5b.spec.ts`) | 23/23 |
+| Focused backend (`ask-v2-guest.forget.t5b.spec.ts`) | 10/10 |
+
+**Full frontend jest** (`scratchpad/t5b-fe.json`) compared with the T2 tip (`scratchpad/t2-fe.json`):
+- Suites 393 (T2: 391). The +2 are the Part A `storageInventoryLanguageValues.t5.spec.ts` and the Part B `guestConsent.t5b.spec.ts`.
+- Tests 9167 (T2: 9130): 9131 passed, 23 failed, 13 pending.
+- **Failure set identical: 0 new, 0 fixed.** That includes the known `lib/ask/askSevenLanguage.spec.ts` "H-4 · Arabic RTL …", where H must apply SPEC-T2-H-3.
+- The same 3 suites fail to run as at T2: `askDockGeography`, `marketSyntheticHarness` and `mktRetained`.
+
+**Full backend jest** (`scratchpad/t5b-be.json`, no test DB URL, so `*.postgres.spec.ts` are
+skipped as in the baseline) compared with the T2 tip (`scratchpad/t2-be.json`, post-change, present):
+- Suites 444 (T2: 441). The +3 are the Part A isolation spec and the Part B forget specs, live and unit.
+- Tests 11952 (T2: 11924): 11451 passed, 33 failed, 468 pending.
+- **Failure set identical: 0 new, 0 fixed**, and no suite failed to run.
+- No suite was OOM-killed in this run.
+
+## B7. Remaining gaps against the PO requirement
+
+| # | Gap | Class | Owner / next step |
+|---|---|---|---|
+| G1 | fr/de/es/pt/ar have no approved copy for `consent`, `privacyPage` or `cookiesPage`. Those readers see English Privacy and Cookies pages with the declared fallback notice. That is truthful, but it is not localized | **P0** for Public Beta (D9) | Claude L / legal translation from `translation-manifest.json` (namespace `consent` +26 keys) |
+| G2 | Every new and changed legal sentence (L1–L5) is a draft | **P0** | PO / legal approval, then drop the PENDING markers |
+| G3 | The retention periods in L4 depend on `RETENTION_SWEEP_ENABLED` (default OFF). The copy is now truthful either way, but the promised periods are not enforced until the sweep is on | **P0** operational | PO/CTO: enable the sweep in Production, or approve the qualified wording |
+| G4 | The Ask composer (protected) does not yet mount the quota badge, the delete control or the T3 plain-sign-in note | P1 | H: apply P-1, P-4 and P-5 (B4). For fr–ar, keep the existing H strings until approved consent copy exists |
+| G5 | Exhausted-card wording understates what moves (D5) | P1 | H: P-3 |
+| G6 | `useAskR2Conversation` has no `resetGuest()` for the P-1 delete flow | P1 | non-protected, lands with P-1 |
+| G7 | A stale RESERVED slot (crashed worker) blocks `forget` for up to the 10-minute lease grace plus one sweep tick, returning 409 busy | P2 | acceptable. The copy says "try again in a minute" |
+| G8 | `guest:<id>` and `conc:guest:<id>` count rows outlive a forgotten or purged session. They hold counts only, keyed by a deleted UUID | P2 | sweep follow-up (Part A observation) |
+| G9 | `/cookies` does not show the `__Host-` wire names (D7) | P2 | inventory text follow-up |
+| G10 | Guest trial runtime OFF on Alpha, by decision | n/a (not a defect) | PO/CTO enablement manifest (Part A §5) |
+
+Commits: see `git log` on `claude/stage2-t5b-consent-ui` (backend, frontend and this dossier).
