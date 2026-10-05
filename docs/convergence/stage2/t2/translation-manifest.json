@@ -1,10 +1,11 @@
 {
- "purpose": "Translation work manifest for Claude L (language-qualification authority). Every key listed has no qualified value and no declared state in the locales named; until it does, every surface using its namespace renders English with the declared fallback notice in that locale.",
+ "purpose": "Translation work manifest for Claude L (language-qualification authority). Every key listed has no qualified PRODUCT-WIDE value and no declared state in the locales named; until it does, every surface using its namespace renders English with the declared fallback notice in that locale. Keys marked QUALIFIED_IN_ASK_SCOPE are already qualified by Claude L for the Ask scope and are NOT translation work (pendingKeys excludes them).",
  "t2Base": "266007c930e8293638bc7971670ee0264923c18c",
  "generatedBy": "scripts/i18n/t2-reconcile-catalogues.cjs",
  "states": {
   "MISSING": "no value and no candidate",
-  "CANDIDATE_PROVENANCE_UNKNOWN": "a recovered C55 value exists (see reconciled/<locale>.json); its English source is unknown — qualify or replace"
+  "CANDIDATE_PROVENANCE_UNKNOWN": "a recovered C55 value exists (see reconciled/<locale>.json); its English source is unknown — qualify or replace",
+  "QUALIFIED_IN_ASK_SCOPE": "Claude L already qualified this key for the Ask scope (askDictionary: Ask-shell overlay / R6 additive / C55 reuse). Do NOT re-request it from L. Product-wide surfaces still render English until a separate product decision adopts the Ask-scope value; it is not counted in pendingKeys."
  },
  "locales": [
   "pl",
@@ -30,131 +31,131 @@
     "accountSettings.confirmationHint": {
      "en": "Deletion stays disabled until this matches the address above, character for character.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "accountSettings.confirmationLabel": {
      "en": "Type your account email address to confirm",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "accountSettings.confirmationMismatch": {
      "en": "This does not match the address of the account you are signed in to.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "accountSettings.dangerZoneHeading": {
      "en": "Danger zone",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "accountSettings.dangerZoneNote": {
      "en": "These actions are permanent. Nothing below can be undone.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "accountSettings.deleteFailed": {
      "en": "The account could not be deleted. Nothing was removed. Please try again.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "accountSettings.deletePermanently": {
      "en": "Delete account permanently",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "accountSettings.deletedHeading": {
      "en": "Account deleted",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "accountSettings.deletedNote": {
      "en": "Your account and its data have been deleted. You are now signed out.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "accountSettings.deletingLabel": {
      "en": "Deleting…",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "accountSettings.heading": {
      "en": "Account settings",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "accountSettings.intro": {
      "en": "Manage the account you are signed in to.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "accountSettings.signInPrompt": {
      "en": "Sign in to manage your account.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     }
    }
@@ -6548,11 +6549,11 @@
     "analysisFrame.relationalAnswer": {
      "en": "RELATIONAL ANSWER",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "analysisFrame.relationalDirection.association-only": {
@@ -7052,71 +7053,71 @@
     "analysisModeBadge.analysisRejected": {
      "en": "AI ANALYSIS REJECTED · Failed validation",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "analysisModeBadge.cached": {
      "en": "Cached",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "analysisModeBadge.demoAiAnalysis": {
      "en": "DEMO AI ANALYSIS",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "analysisModeBadge.failed": {
      "en": "AI ANALYSIS FAILED",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "analysisModeBadge.liveAiAnalysis": {
      "en": "LIVE AI ANALYSIS · Powered by OpenAI",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "analysisModeBadge.notAttempted": {
      "en": "AI ANALYSIS NOT ATTEMPTED",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "analysisModeBadge.unavailable": {
      "en": "AI UNAVAILABLE",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     }
    }
@@ -7196,21 +7197,21 @@
     "analysisResultView.briefWithheldBody": {
      "en": "The brief for this evidence set did not meet the structural requirement and was withheld rather than shown. Everything below was validated independently and is unaffected.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "analysisResultView.briefWithheldHeading": {
      "en": "Executive brief unavailable",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "analysisResultView.context": {
@@ -8945,411 +8946,411 @@
     "askAi.askingAboutGeography": {
      "en": "Asking about {place}",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.citationLabel": {
      "en": "Source {n}: {title} — {publisher}",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.close": {
      "en": "Close",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.contextChipAnchored": {
      "en": "Asking about this story",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.contextChipGeneric": {
      "en": "Asking about world events",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.contextPending": {
      "en": "Ask about this view — coming soon",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.contextPendingHint": {
      "en": "Asking about the page you are on is not available yet. Questions here are answered from retrieved reporting only.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.continuingSubject": {
      "en": "Continuing: {subject}",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.focusNotInEvidence": {
      "en": "None of the retrieved reports addresses {focus} directly; this answer rests on reporting about the subject itself.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.geographyBasis": {
      "en": "Country geography · no evidence attached",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.geographyNotApplied": {
      "en": "Selected: {place} · not applied to this question",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.geographyOutranked": {
      "en": "Selected: {place} · not used — your question named another place",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.idle": {
      "en": "Ask a question and the answer will be assembled from retrieved reporting, with its sources shown.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.inferenceLabel": {
      "en": "Analytical inference:",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.inputLabel": {
      "en": "Ask a question about world events",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.inputPlaceholder": {
      "en": "What would you like to understand?",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.launcher": {
      "en": "Ask AI",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.mapComputeNotice": {
      "en": "Runs AI analysis. Nothing is sent until you press Send.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.newTopicStarted": {
      "en": "Your next question starts a new topic",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.panelLabel": {
      "en": "Ask GlobalNews AI",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.productApplicabilityNotEstablished": {
      "en": "Exact applicability to GlobalNewsAI cannot be established from this reporting: none of these sources describes GlobalNewsAI itself.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.resultBriefAbsent": {
      "en": "This analysis carried no executive brief. That is an absence, not an assessment — nothing was measured and withheld.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.resultNoAnswer": {
      "en": "No answer was produced for this question. The state above says why.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.resultNoAnswerEvidence": {
      "en": "No relevant reporting found for this question. Try naming the place, organisation or event.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.resultNoAnswerProvider": {
      "en": "Live reporting is temporarily unavailable. Please try again in a moment.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.resultNoAnswerSafety": {
      "en": "GlobalNews AI did not generate an answer without supporting evidence. Try again shortly or ask a narrower question about a place, event, or time period.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.resultSourcesHeading": {
      "en": "Sources",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.resultSourcesNone": {
      "en": "No sources were retrieved for this question.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.resultSourcesTruncated": {
      "en": "Showing {shown} of {total}. Open the full analysis for the rest.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.runFullAnalysis": {
      "en": "Run full analysis",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.runFullAnalysisNote": {
      "en": "Starts a new source-backed analysis.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.sourceDateObserved": {
      "en": "First seen by GlobalNewsAI {date}",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.sourceDatePublished": {
      "en": "Published {date}",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.sourceDateUnknownBasis": {
      "en": "Report date {date}",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.sourceDatesNote": {
      "en": "Dates show when each report was published or first seen, not when the events happened.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.startNewTopic": {
      "en": "Start a new topic",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.submit": {
      "en": "Ask",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.telemetryClusters": {
      "en": "reporting clusters",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.telemetryReports": {
      "en": "retrieved reports",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.title": {
      "en": "Ask GlobalNews AI",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "askAi.unsupportedLabel": {
      "en": "Not established by the reporting:",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     }
    }
@@ -9369,31 +9370,31 @@
     "authError.cancelled": {
      "en": "Sign-in was cancelled. You can sign in whenever you’re ready.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "authError.dismissLabel": {
      "en": "Dismiss",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "authError.failed": {
      "en": "Sign-in didn’t complete. Please try again.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     }
    }
@@ -10229,61 +10230,61 @@
     "eventAnchor.ambiguousCountryQuestion": {
      "en": "Which country do you mean?",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "eventAnchor.causeNotEstablished": {
      "en": "The available reporting does not establish what caused the event.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "eventAnchor.compactHeading": {
      "en": "Evidence note",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "eventAnchor.compactShowDetails": {
      "en": "Show what this means",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "eventAnchor.contextClaimsWithheld": {
      "en": "Statements about effects that were supported only by that separate context were withheld.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "eventAnchor.contextSeparated": {
      "en": "Some reporting from the same place is shown only as separate context: it is not established to be caused by or connected to the event.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "eventAnchor.countryNames.COD": {
@@ -10329,221 +10330,221 @@
     "eventAnchor.crossBorderNotEstablished": {
      "en": "The available reporting does not yet establish a direct impact on neighbouring countries from the event itself.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "eventAnchor.fromSelectedContext": {
      "en": "Country taken from your selection: {country}.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "eventAnchor.heading": {
      "en": "What the event reporting establishes",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "eventAnchor.identityRequiredBody": {
      "en": "Sign in to compare your saved stories.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "eventAnchor.identityRequiredInterestsBody": {
      "en": "Sign in to use your interests.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "eventAnchor.identityRequiredNeutralBody": {
      "en": "Sign in to use your saved information.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "eventAnchor.interpretedFromEvidence": {
      "en": "Interpreted as {country} from the event evidence.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "eventAnchor.noPriorSubjectQuestion": {
      "en": "There's no earlier question to continue. What would you like to know about this place?",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "eventAnchor.personalUnavailableBody": {
      "en": "Comparing your saved stories isn't available yet.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "eventAnchor.personalUnavailableInterestsBody": {
      "en": "Using your interests isn't available yet.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "eventAnchor.personalUnavailableNeutralBody": {
      "en": "Your saved information isn't available here yet.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "eventAnchor.short.causeNotEstablished": {
      "en": "Cause not established",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "eventAnchor.short.contextClaimsWithheld": {
      "en": "Context-only effect claims withheld",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "eventAnchor.short.contextSeparated": {
      "en": "Same-place context kept separate",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "eventAnchor.short.crossBorderNotEstablished": {
      "en": "No direct neighbouring-country impact established",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "eventAnchor.short.fromSelectedContext": {
      "en": "Country from your selection: {country}",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "eventAnchor.short.interpretedFromEvidence": {
      "en": "Interpreted as {country} from reporting",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "eventAnchor.stateAmbiguousCountry": {
      "en": "WHICH COUNTRY? · THE NAME FITS MORE THAN ONE",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "eventAnchor.stateAmbiguousCountryBody": {
      "en": "The place in this question names more than one country, and neither the question nor the reporting settled which one you mean. No answer was generated rather than choosing the country for you.",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "eventAnchor.stateIdentityRequired": {
      "en": "SIGN-IN REQUIRED",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "eventAnchor.stateNoPriorSubject": {
      "en": "NO EARLIER QUESTION TO CONTINUE",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "eventAnchor.statePersonalUnavailable": {
      "en": "NOT AVAILABLE YET",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     }
    }
@@ -10675,171 +10676,171 @@
     "footer.closingTagline": {
      "en": "Built for clarity, not clicks.",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "footer.comingSoon": {
      "en": "Coming soon",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "footer.copyrightSuffix": {
      "en": "GlobalNews AI. All rights reserved.",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "footer.groupTitles.Company": {
      "en": "Company",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "footer.groupTitles.Developers": {
      "en": "Developers",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "footer.groupTitles.Help": {
      "en": "Help",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "footer.groupTitles.Legal": {
      "en": "Legal",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "footer.linkLabels./about": {
      "en": "About",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "footer.linkLabels./careers": {
      "en": "Careers",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "footer.linkLabels./contact": {
      "en": "Contact",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "footer.linkLabels./privacy": {
      "en": "Privacy Policy",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "footer.linkLabels./source-policy": {
      "en": "Source Policy",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "footer.linkLabels./support": {
      "en": "Help & Support",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "footer.linkLabels./terms": {
      "en": "Terms of Service",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "footer.linkLabels./third-party-notices": {
      "en": "Third-Party Notices",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "footer.navigationAriaLabel": {
      "en": "Footer links",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "footer.tagline": {
      "en": "Clear, sourced, multi-perspective news understanding — powered by AI, grounded in real reporting.",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     }
    }
@@ -13686,91 +13687,91 @@
     "homeR1.theme.dark": {
      "en": "Dark",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "homeR1.theme.darkFrom": {
      "en": "Dark from",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "homeR1.theme.label": {
      "en": "Theme",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "homeR1.theme.light": {
      "en": "Light",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "homeR1.theme.lightFrom": {
      "en": "Light from",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "homeR1.theme.scheduled": {
      "en": "Scheduled",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "homeR1.theme.scheduledNote": {
      "en": "Light by day, dark by night, on this device’s clock",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "homeR1.theme.system": {
      "en": "System",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "homeR1.theme.systemNote": {
      "en": "Follows your device setting",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "homeR1.tray.ariaLabel": {
@@ -24603,391 +24604,391 @@
     "navBar.account": {
      "en": "Account",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.accountMenuAriaLabel": {
      "en": "Account menu",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.closeMenuAriaLabel": {
      "en": "Close menu",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.deleteAccount": {
      "en": "Delete Account",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.deleteAccountConfirm": {
      "en": "Delete your account? This permanently deletes your account and its data — your saved history, your followed countries, your support requests and their messages, and your active sessions. This cannot be undone.",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.editorialUnavailableLabel": {
      "en": "not yet available",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.help": {
      "en": "Help",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.history": {
      "en": "History",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.homeAriaLabel": {
      "en": "GlobalNews AI home",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.languageSelectorAction": {
      "en": "Select language",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.languageSelectorLabel": {
      "en": "Language",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.linkLabels./": {
      "en": "Home",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.linkLabels./about": {
      "en": "About",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.linkLabels./business": {
      "en": "Business",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.linkLabels./health": {
      "en": "Health",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.linkLabels./map": {
      "en": "World Map",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.linkLabels./politics": {
      "en": "Politics",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.linkLabels./science": {
      "en": "Science",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.linkLabels./technology": {
      "en": "Technology",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.linkLabels./world": {
      "en": "World",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.mobileNavigationAriaLabel": {
      "en": "Mobile navigation",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.navItemLabels.about": {
      "en": "About",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.navItemLabels.business": {
      "en": "Business",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.navItemLabels.health": {
      "en": "Health",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.navItemLabels.home": {
      "en": "Home",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.navItemLabels.politics": {
      "en": "Politics",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.navItemLabels.science": {
      "en": "Science",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.navItemLabels.technology": {
      "en": "Technology",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.navItemLabels.world": {
      "en": "World",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.navItemLabels.worldMap": {
      "en": "World Map",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.openMenuAriaLabel": {
      "en": "Open menu",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.primaryNavigationAriaLabel": {
      "en": "Primary navigation",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.searchAriaLabel": {
      "en": "Search",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.sectionsHeading": {
      "en": "SECTIONS",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.settings": {
      "en": "Settings",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.signIn": {
      "en": "Sign In",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.signOut": {
      "en": "Sign Out",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.signedInAs": {
      "en": "Signed in as",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "navBar.support": {
      "en": "Support",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     }
    }
@@ -25274,141 +25275,141 @@
     "retrievalContextStatus.demoReporting": {
      "en": "Demo reporting",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "retrievalContextStatus.interpretedAs": {
      "en": "Interpreted",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "retrievalContextStatus.interpretedAsMiddle": {
      "en": "as",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "retrievalContextStatus.liveDataUnavailable": {
      "en": "Live data unavailable",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "retrievalContextStatus.liveNoResultsStoredUsed": {
      "en": "The live provider returned no usable results, so stored reporting was used.",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "retrievalContextStatus.liveNothingNoStored": {
      "en": "Live retrieval found nothing usable, and no stored reporting was available for this question.",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "retrievalContextStatus.liveReporting": {
      "en": "Live reporting",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "retrievalContextStatus.liveUnavailableStoredUsed": {
      "en": "Live reporting was unavailable, so this analysis uses stored reporting.",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "retrievalContextStatus.liveUnreachableNoStored": {
      "en": "The live news provider could not be reached, and no stored reporting was available for this question.",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "retrievalContextStatus.newestStoredArticle": {
      "en": "Newest stored article:",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "retrievalContextStatus.newestStoredArticleObserved": {
      "en": "Newest stored article, seen by a news aggregator (not its publication time):",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "retrievalContextStatus.newestStoredArticlePublished": {
      "en": "Newest stored article, published:",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "retrievalContextStatus.newestStoredArticleUnverified": {
      "en": "Newest stored article (time basis unverified):",
      "locales": {
-      "fr": "MISSING",
-      "de": "MISSING",
-      "es": "MISSING",
-      "pt": "MISSING",
-      "ar": "MISSING"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     },
     "retrievalContextStatus.storedReporting": {
      "en": "Stored reporting",
      "locales": {
-      "fr": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "de": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "es": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "pt": "CANDIDATE_PROVENANCE_UNKNOWN",
-      "ar": "CANDIDATE_PROVENANCE_UNKNOWN"
+      "fr": "QUALIFIED_IN_ASK_SCOPE",
+      "de": "QUALIFIED_IN_ASK_SCOPE",
+      "es": "QUALIFIED_IN_ASK_SCOPE",
+      "pt": "QUALIFIED_IN_ASK_SCOPE",
+      "ar": "QUALIFIED_IN_ASK_SCOPE"
      }
     }
    }
@@ -37131,27 +37132,33 @@
  "totals": {
   "pl": {
    "pendingKeys": 277,
-   "namespacesIncomplete": 5
+   "namespacesIncomplete": 5,
+   "qualifiedInAskScope": 0
   },
   "fr": {
-   "pendingKeys": 3560,
-   "namespacesIncomplete": 61
+   "pendingKeys": 3386,
+   "namespacesIncomplete": 61,
+   "qualifiedInAskScope": 174
   },
   "de": {
-   "pendingKeys": 3560,
-   "namespacesIncomplete": 61
+   "pendingKeys": 3386,
+   "namespacesIncomplete": 61,
+   "qualifiedInAskScope": 174
   },
   "es": {
-   "pendingKeys": 3560,
-   "namespacesIncomplete": 61
+   "pendingKeys": 3386,
+   "namespacesIncomplete": 61,
+   "qualifiedInAskScope": 174
   },
   "pt": {
-   "pendingKeys": 3560,
-   "namespacesIncomplete": 61
+   "pendingKeys": 3386,
+   "namespacesIncomplete": 61,
+   "qualifiedInAskScope": 174
   },
   "ar": {
-   "pendingKeys": 3560,
-   "namespacesIncomplete": 61
+   "pendingKeys": 3386,
+   "namespacesIncomplete": 61,
+   "qualifiedInAskScope": 174
   }
  },
  "surfaces": {

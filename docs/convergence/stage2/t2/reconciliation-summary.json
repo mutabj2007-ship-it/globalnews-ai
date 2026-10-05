@@ -67,27 +67,33 @@
   "manifestTotals": {
     "pl": {
       "pendingKeys": 277,
-      "namespacesIncomplete": 5
+      "namespacesIncomplete": 5,
+      "qualifiedInAskScope": 0
     },
     "fr": {
-      "pendingKeys": 3560,
-      "namespacesIncomplete": 61
+      "pendingKeys": 3386,
+      "namespacesIncomplete": 61,
+      "qualifiedInAskScope": 174
     },
     "de": {
-      "pendingKeys": 3560,
-      "namespacesIncomplete": 61
+      "pendingKeys": 3386,
+      "namespacesIncomplete": 61,
+      "qualifiedInAskScope": 174
     },
     "es": {
-      "pendingKeys": 3560,
-      "namespacesIncomplete": 61
+      "pendingKeys": 3386,
+      "namespacesIncomplete": 61,
+      "qualifiedInAskScope": 174
     },
     "pt": {
-      "pendingKeys": 3560,
-      "namespacesIncomplete": 61
+      "pendingKeys": 3386,
+      "namespacesIncomplete": 61,
+      "qualifiedInAskScope": 174
     },
     "ar": {
-      "pendingKeys": 3560,
-      "namespacesIncomplete": 61
+      "pendingKeys": 3386,
+      "namespacesIncomplete": 61,
+      "qualifiedInAskScope": 174
     }
   }
 }

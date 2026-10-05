@@ -56,6 +56,17 @@ const surfaceCoverage = load('qualification/i18n/surfaceCoverage.ts');
 const declared = load('lib/i18n/declaredKeyStates.ts');
 const recovered = load('lib/i18n/recovered/recoveredCatalogue.ts');
 const { en: dictionaryEn } = load('lib/i18n/dictionaries/en.ts');
+/* R4 + EA CONVERGENCE (preflight S4, CTO L ruling): the Ask scope's dictionary, whose fr–ar values
+   are Claude L's (shell projection, R6 additive, C55 reuse). Read to CLASSIFY manifest gaps only. */
+const { askDictionary } = load('lib/ask/shell/askDictionary.ts');
+const unchanged = load('lib/ask/shell/askShellQualifiedUnchanged.ts');
+/* L's declared QUALIFIED_UNCHANGED (a value she chose to leave identical to English), shell + R6. */
+const askScopeUnchanged = (locale, key) =>
+  [...unchanged.qualifiedUnchangedFor(locale), ...unchanged.additiveQualifiedUnchangedFor(locale)].includes(
+    `dict.${key}`,
+  );
+const askScopeValue = (locale, key) =>
+  key.split('.').reduce((n, k) => (n !== null && typeof n === 'object' ? n[k] : undefined), askDictionary(locale));
 
 const leaves = coverage.leafEntries;
 const serial = (v) =>
@@ -145,18 +156,21 @@ for (const locale of RECOVERED_LOCALES) {
 
 /* ── the translation work manifest: every gap, per namespace, per locale ─ */
 const manifest = {
-  purpose: 'Translation work manifest for Claude L (language-qualification authority). Every key listed has no qualified value and no declared state in the locales named; until it does, every surface using its namespace renders English with the declared fallback notice in that locale.',
+  purpose: 'Translation work manifest for Claude L (language-qualification authority). Every key listed has no qualified PRODUCT-WIDE value and no declared state in the locales named; until it does, every surface using its namespace renders English with the declared fallback notice in that locale. Keys marked QUALIFIED_IN_ASK_SCOPE are already qualified by Claude L for the Ask scope and are NOT translation work (pendingKeys excludes them).',
   t2Base: summary.t2Base,
   generatedBy: 'scripts/i18n/t2-reconcile-catalogues.cjs',
   states: {
     MISSING: 'no value and no candidate',
     CANDIDATE_PROVENANCE_UNKNOWN: 'a recovered C55 value exists (see reconciled/<locale>.json); its English source is unknown — qualify or replace',
+    QUALIFIED_IN_ASK_SCOPE:
+      'Claude L already qualified this key for the Ask scope (askDictionary: Ask-shell overlay / R6 additive / C55 reuse). Do NOT re-request it from L. Product-wide surfaces still render English until a separate product decision adopts the Ask-scope value; it is not counted in pendingKeys.',
   },
   locales: LOCALES.filter((l) => l !== 'en'),
   namespaces: {},
   totals: {},
 };
-for (const locale of manifest.locales) manifest.totals[locale] = { pendingKeys: 0, namespacesIncomplete: 0 };
+for (const locale of manifest.locales)
+  manifest.totals[locale] = { pendingKeys: 0, namespacesIncomplete: 0, qualifiedInAskScope: 0 };
 
 for (const id of coverage.namespaceIds()) {
   const ns = coverage.namespace(id);
@@ -165,10 +179,19 @@ for (const id of coverage.namespaceIds()) {
     const gaps = [...ns.gaps(locale)].sort();
     if (gaps.length === 0) continue;
     entry.gapCounts[locale] = gaps.length;
-    manifest.totals[locale].pendingKeys += gaps.length;
     manifest.totals[locale].namespacesIncomplete += 1;
     for (const key of gaps) {
       entry.keys[key] ??= { en: ns.kind === 'ASK_SHELL' ? undefined : serial(ns.englishText(key)), locales: {} };
+      const askValue = ns.kind === 'DICTIONARY' ? askScopeValue(locale, key) : undefined;
+      if (
+        typeof askValue === 'string' &&
+        (askValue !== ns.englishText(key) || askScopeUnchanged(locale, key))
+      ) {
+        entry.keys[key].locales[locale] = 'QUALIFIED_IN_ASK_SCOPE';
+        manifest.totals[locale].qualifiedInAskScope += 1;
+        continue;
+      }
+      manifest.totals[locale].pendingKeys += 1;
       const candidate = ns.kind === 'DICTIONARY' ? candidatesByLocale[locale]?.[key] : undefined;
       entry.keys[key].locales[locale] = candidate ? 'CANDIDATE_PROVENANCE_UNKNOWN' : 'MISSING';
     }
