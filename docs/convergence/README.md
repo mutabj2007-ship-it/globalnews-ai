@@ -19,8 +19,10 @@ The single, measurable capability record for GlobalNewsAI. It replaces per-lane 
 | 11-WHOLE-PRODUCT-ROADMAP.md | Tranches T1–T15 with measurable exits |
 | 12-INTEGRATION-DECISIONS.md | Decision log + open questions |
 | 13-ROLLBACK-REGISTRY.md | Release / rollback refs |
+| east-africa/EA-CAPABILITY-REGISTER.md / .json | East Africa contract (2026-10-05): the seven contract statuses (IMPLEMENTED, TESTED, DEPLOYED, ENABLED, LIVE_VERIFIED, BLOCKED, NOT_IMPLEMENTED) per capability above, derived from 02 + evidence overrides (generated) |
+| east-africa/EA-FINDING-LEDGER.md | East Africa finding-to-fix ledger: commit, tests, migration, deployed and live state, remaining blocker (generated) |
 | stage0/ | Raw measurements at `5513275f` (JSON) |
-| tools/ | `capabilities.source.py` (hand-edited truth) and `render.py` (regenerates everything) |
+| tools/ | `capabilities.source.py` (hand-edited truth) and `render.py` (regenerates everything); `ea-register.mjs` regenerates `east-africa/` from 02 + `east-africa/ea-register.source.json` (hand-edited truth). Run `render.py` first when 02 changes. |
 
 ## Updating after a tranche
 

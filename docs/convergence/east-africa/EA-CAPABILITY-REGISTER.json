@@ -1,0 +1,1077 @@
+{
+  "schema": "ea-capability-register/1",
+  "contract": "GLOBALNEWSAI East Africa Monitoring and Shared Ask Implementation Contract v1.0 (2026-10-05)",
+  "measuredAt": "2026-10-05",
+  "integrationHead": {
+    "branch": "integration/east-africa-p0-r1",
+    "note": "REVIEWABLE ENGINEERING CHECKPOINT (CTO, 2026-10-05). NOT the frozen R4 baseline. Not deployed anywhere.",
+    "checkpoint": "8ec5cd5",
+    "lineage": [
+      "72ce054 T5B tip (contains H final 266007c + T2 c3754bd + T5A on Alpha 5513275)",
+      "c6088b0 merge T1 8333551 (coverage truthfulness)",
+      "0bded08 merge T4 5a28e26 (legacy caller measurement)",
+      "3548715 merge 5b89bdd (seven-language persistence)",
+      "4e99d64 T3 patch applied (Conflict contributor selection)",
+      "8ec5cd5 T2 translation manifest regenerated (+9 keys/locale)",
+      "afeedc9 briefing evidence preservation (EA P0 A)",
+      "d1a7939 procurement filter-before-limit (EA P0 B)",
+      "a1dbb95 merge registry docs claude/whole-product-convergence-r1 b3b623f"
+    ]
+  },
+  "outsideThisBranch": [
+    "R4 candidate 04e68e6 (local integration/r4-replacement; backup/r4-replacement-04e68e6) - NOT merged; its final 21-item gate was skipped (owner: 'take the easiest path').",
+    "Claude L R6 delivery (R4_PARALLEL/CLAUDE_L/TO_CLAUDE_CODE/R6_RENDERED_SURFACE_50, 50 keys x fr/de/es/pt-BR/ar) - NOT applied; it targets the R4 candidate.",
+    "Any later merge of R4 + L work into this line is a SEPARATE convergence operation with its own gate. This branch must not be represented as the frozen R4 baseline."
+  ],
+  "runtimeAuthority": {
+    "source": "CTO-verified Railway state, contract GLOBALNEWSAI_CLOUD_STAGE2_BUILD_CONTRACT_R2 (2026-10-04)",
+    "alpha": {
+      "backend": "5513275ff731936a07c01e937b92c263ba6d6cf9",
+      "frontend": "5513275ff731936a07c01e937b92c263ba6d6cf9",
+      "GNA_PUBLIC_ROOT": "platform (configured; live root is platform Home)",
+      "askV2": "active (signed-in Ask operations execute)",
+      "guestTrial": "OFF by design during controlled acceptance"
+    },
+    "production": {
+      "backend": "5b714833f2a036557a022a55c646fdb101ec596e",
+      "frontend": "58f80fd4108d3472e5433c7a50e19295788f2544",
+      "flags": "not measured — HOLD"
+    },
+    "handoffs": {
+      "R4 semantic baseline": "handoff/r4-semantic-baseline-5699eb7 @ 5699eb7058b3d20026c62bcffd75f97b7ca846ec",
+      "H final (Ask reading/localization, incl. Claude L delivery)": "handoff/r4-h-answer-reading-5699eb7 @ 266007c930e8293638bc7971670ee0264923c18c",
+      "Politics immutable base": "specialist/politics-r1-integration-d920893 @ d9208933c6ec758756b3b1019d8d01aa1f7592d1",
+      "R4 final replacement": "does not exist yet"
+    }
+  },
+  "statusVocabulary": {
+    "IMPLEMENTED": "YES | PARTIAL | NO - code for the capability exists on the integration head (PARTIAL = open implementation blockers).",
+    "TESTED": "YES | PARTIAL | NOT_ASSESSED - automated tests at the integration head exercise it (fixtures, real-PG, or both; see evidence). NOT_ASSESSED = not mapped in this pass, NOT a pass.",
+    "DEPLOYED": "per environment: YES (code at the deployed SHA) | NO | UNVERIFIED. Alpha = 5513275 (CTO Railway authority); Production = BE 5b714833 / FE 58f80fd4.",
+    "ENABLED": "per environment: YES | OFF_BY_DEFAULT (flag absent by default; Railway value not re-measured) | UNVERIFIED | N/A.",
+    "LIVE_VERIFIED": "per environment: YES (independently exercised live, with evidence) | NEGATIVE (live evidence shows the capability is NOT working there) | NOT_RUN. A report, fixture, preview route or provider name never sets YES. CTO deployment authority proves DEPLOYED, not LIVE_VERIFIED.",
+    "BLOCKED": "open blocker IDs from 10-PRODUCTION-BLOCKERS (plus EA-* additions).",
+    "NOT_IMPLEMENTED": "named parts of the capability with no code at the integration head."
+  },
+  "derivationRules": [
+    "Alpha DEPLOYED/ENABLED derive from 02 alphaState: ALPHA_LIVE -> YES/YES; ASK_BOUND, RETAINED_ONLY, COVERAGE_GAP, PREVIEW_ONLY -> YES/UNVERIFIED; LOCAL_ONLY -> YES/OFF_BY_DEFAULT; DESIGN_ONLY, ABSENT -> NO/N/A.",
+    "Production DEPLOYED/ENABLED derive from 02 productionState: UNVERIFIED_RUNTIME -> YES/UNVERIFIED; COVERAGE_GAP -> YES/UNVERIFIED; ABSENT -> NO/N/A.",
+    "IMPLEMENTED derives from alphaState (ABSENT/DESIGN_ONLY -> NO), open blockers or named NOT_IMPLEMENTED parts (any -> PARTIAL, none -> YES), then per-capability overrides below for work on the integration head.",
+    "LIVE_VERIFIED is NOT_RUN everywhere unless an override cites live evidence.",
+    "Overrides always win and must cite evidence."
+  ],
+  "capabilities": [
+    {
+      "id": "ASK-CORE",
+      "name": "Ask GlobalNewsAI (root /, /ask, global dock)",
+      "registry": {
+        "alphaState": "ALPHA_LIVE",
+        "productionState": "UNVERIFIED_RUNTIME"
+      },
+      "IMPLEMENTED": "PARTIAL",
+      "TESTED": "YES",
+      "DEPLOYED": {
+        "alpha": "YES",
+        "production": "YES"
+      },
+      "ENABLED": {
+        "alpha": "YES",
+        "production": "UNVERIFIED"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P1-ASK-04"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [
+        "P0-ASK-01",
+        "P1-ASK-03"
+      ],
+      "NOT_IMPLEMENTED": [],
+      "branchDelta": "T3 Conflict selection fixed (4e99d64); briefing intelligence kept (afeedc9); procurement scope-before-limit (d1a7939).",
+      "evidence": "P1-ASK-03 per 02 registry note: resolved in H final 266007c, which is in this branch lineage (72ce054). ask-intelligence 139 pass/3 todo; contributor-selection.domain-leak.spec 96; affected modules 1681 tests, 2 pre-existing failures (h-handoff)."
+    },
+    {
+      "id": "ASK-SEARCH",
+      "name": "Search (/search) on the shared Ask engine",
+      "registry": {
+        "alphaState": "ALPHA_LIVE",
+        "productionState": "UNVERIFIED_RUNTIME"
+      },
+      "IMPLEMENTED": "PARTIAL",
+      "TESTED": "YES",
+      "DEPLOYED": {
+        "alpha": "YES",
+        "production": "YES"
+      },
+      "ENABLED": {
+        "alpha": "YES",
+        "production": "UNVERIFIED"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P0-LANG-01"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [
+        "EA-P0-LANG-DB"
+      ],
+      "NOT_IMPLEMENTED": [],
+      "branchDelta": "AskThread/AskTurn accept all seven languages (5b89bdd, migration 20261005100000).",
+      "evidence": "ask-v2.seven-language.postgres.spec (17, real PG), .migration.spec (4)."
+    },
+    {
+      "id": "ASK-LEGACY",
+      "name": "Legacy POST /analysis/news engine",
+      "registry": {
+        "alphaState": "LOCAL_ONLY",
+        "productionState": "UNVERIFIED_RUNTIME"
+      },
+      "IMPLEMENTED": "PARTIAL",
+      "TESTED": "NOT_ASSESSED",
+      "DEPLOYED": {
+        "alpha": "YES",
+        "production": "YES"
+      },
+      "ENABLED": {
+        "alpha": "OFF_BY_DEFAULT",
+        "production": "UNVERIFIED"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P1-ASK-05"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [],
+      "NOT_IMPLEMENTED": [],
+      "branchDelta": "T4 legacy-usage telemetry + caller graph (22 callers: 6 COMPATIBILITY, 3 INTERNALIZE, 6 MIGRATE, ...). No caller migrated yet.",
+      "evidence": "T4 dossier, T4-legacy-caller-graph.json."
+    },
+    {
+      "id": "CONVERSATION",
+      "name": "Shared conversation continuity (prior answer, 'why did you say that', 'still true now')",
+      "registry": {
+        "alphaState": "ALPHA_LIVE",
+        "productionState": "UNVERIFIED_RUNTIME"
+      },
+      "IMPLEMENTED": "PARTIAL",
+      "TESTED": "NOT_ASSESSED",
+      "DEPLOYED": {
+        "alpha": "YES",
+        "production": "YES"
+      },
+      "ENABLED": {
+        "alpha": "YES",
+        "production": "UNVERIFIED"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P1-CONV-01",
+        "P1-CONV-02"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [],
+      "NOT_IMPLEMENTED": [],
+      "branchDelta": null,
+      "evidence": null
+    },
+    {
+      "id": "LANG-SYSTEM",
+      "name": "Seven-locale display system (one switch governs whole UI)",
+      "registry": {
+        "alphaState": "COVERAGE_GAP",
+        "productionState": "COVERAGE_GAP"
+      },
+      "IMPLEMENTED": "PARTIAL",
+      "TESTED": "YES",
+      "DEPLOYED": {
+        "alpha": "YES",
+        "production": "YES"
+      },
+      "ENABLED": {
+        "alpha": "UNVERIFIED",
+        "production": "UNVERIFIED"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NEGATIVE - live Alpha DB read 2026-10-05: AskThread/AskTurn CHECK still ('en','pl'); threads en=60 pl=5 (read-only).",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P0-LANG-01",
+        "P1-LANG-04",
+        "P1-LANG-06",
+        "P2-LANG-07"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [
+        "P0-LANG-02",
+        "P0-LANG-03",
+        "P1-LANG-05",
+        "EA-P0-LANG-DB"
+      ],
+      "NOT_IMPLEMENTED": [
+        "fr/de/es/pt/ar catalogues for non-Ask surfaces (declared English fallback)"
+      ],
+      "branchDelta": "T2 one DisplayLocale authority, <html lang/dir>, declared fallback; DB persistence for 7 languages. 3560 keys/locale still pending translation (Claude L).",
+      "evidence": "T2 dossier; catalogueCoverage spec equal to regenerated manifest (866 i18n tests pass)."
+    },
+    {
+      "id": "HOME",
+      "name": "Home (What Changed · Follow · Alerts · Ask with Evidence)",
+      "registry": {
+        "alphaState": "ALPHA_LIVE",
+        "productionState": "UNVERIFIED_RUNTIME"
+      },
+      "IMPLEMENTED": "PARTIAL",
+      "TESTED": "NOT_ASSESSED",
+      "DEPLOYED": {
+        "alpha": "YES",
+        "production": "YES"
+      },
+      "ENABLED": {
+        "alpha": "YES",
+        "production": "UNVERIFIED"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P1-HOME-01"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [],
+      "NOT_IMPLEMENTED": [],
+      "branchDelta": null,
+      "evidence": null
+    },
+    {
+      "id": "MAP-COUNTRY",
+      "name": "Map / country views",
+      "registry": {
+        "alphaState": "ALPHA_LIVE",
+        "productionState": "UNVERIFIED_RUNTIME"
+      },
+      "IMPLEMENTED": "PARTIAL",
+      "TESTED": "NOT_ASSESSED",
+      "DEPLOYED": {
+        "alpha": "YES",
+        "production": "YES"
+      },
+      "ENABLED": {
+        "alpha": "YES",
+        "production": "UNVERIFIED"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P2-MAP-01"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [],
+      "NOT_IMPLEMENTED": [],
+      "branchDelta": null,
+      "evidence": null
+    },
+    {
+      "id": "CONFLICT",
+      "name": "Conflict (UCDP retained observations)",
+      "registry": {
+        "alphaState": "ALPHA_LIVE",
+        "productionState": "UNVERIFIED_RUNTIME"
+      },
+      "IMPLEMENTED": "PARTIAL",
+      "TESTED": "YES",
+      "DEPLOYED": {
+        "alpha": "YES",
+        "production": "YES"
+      },
+      "ENABLED": {
+        "alpha": "YES",
+        "production": "UNVERIFIED"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P2-CONF-02"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [
+        "P0-ASK-01"
+      ],
+      "NOT_IMPLEMENTED": [],
+      "branchDelta": null,
+      "evidence": "T3 negative controls: travel, visa, politics, economy, energy, weather, humanitarian, country background."
+    },
+    {
+      "id": "SECURITY",
+      "name": "Security observations",
+      "registry": {
+        "alphaState": "PREVIEW_ONLY",
+        "productionState": "UNVERIFIED_RUNTIME"
+      },
+      "IMPLEMENTED": "PARTIAL",
+      "TESTED": "NOT_ASSESSED",
+      "DEPLOYED": {
+        "alpha": "YES",
+        "production": "YES"
+      },
+      "ENABLED": {
+        "alpha": "UNVERIFIED",
+        "production": "UNVERIFIED"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P1-SEC-01"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [],
+      "NOT_IMPLEMENTED": [],
+      "branchDelta": null,
+      "evidence": null
+    },
+    {
+      "id": "POLITICS",
+      "name": "Politics (institutions, legislatures, decisions)",
+      "registry": {
+        "alphaState": "PREVIEW_ONLY",
+        "productionState": "UNVERIFIED_RUNTIME"
+      },
+      "IMPLEMENTED": "PARTIAL",
+      "TESTED": "NOT_ASSESSED",
+      "DEPLOYED": {
+        "alpha": "YES",
+        "production": "YES"
+      },
+      "ENABLED": {
+        "alpha": "UNVERIFIED",
+        "production": "UNVERIFIED"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P1-POL-01"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [],
+      "NOT_IMPLEMENTED": [],
+      "branchDelta": null,
+      "evidence": null
+    },
+    {
+      "id": "ECONOMY",
+      "name": "Economy (official indicators)",
+      "registry": {
+        "alphaState": "ASK_BOUND",
+        "productionState": "UNVERIFIED_RUNTIME"
+      },
+      "IMPLEMENTED": "PARTIAL",
+      "TESTED": "NOT_ASSESSED",
+      "DEPLOYED": {
+        "alpha": "YES",
+        "production": "YES"
+      },
+      "ENABLED": {
+        "alpha": "UNVERIFIED",
+        "production": "UNVERIFIED"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P1-ECON-01",
+        "P1-ECON-02"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [],
+      "NOT_IMPLEMENTED": [],
+      "branchDelta": null,
+      "evidence": null
+    },
+    {
+      "id": "MARKET",
+      "name": "Market (TED procurement)",
+      "registry": {
+        "alphaState": "ALPHA_LIVE",
+        "productionState": "UNVERIFIED_RUNTIME"
+      },
+      "IMPLEMENTED": "PARTIAL",
+      "TESTED": "YES",
+      "DEPLOYED": {
+        "alpha": "YES",
+        "production": "YES"
+      },
+      "ENABLED": {
+        "alpha": "YES",
+        "production": "UNVERIFIED"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P1-MKT-02"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [
+        "P1-MKT-01"
+      ],
+      "NOT_IMPLEMENTED": [],
+      "branchDelta": "Scope filter before limit in the read (d1a7939). Latent: not reachable with today's governed capture (<=20 POL notices).",
+      "evidence": "ask-intelligence.spec +3, ted-procurement-retained.spec +2 (real parser + repository)."
+    },
+    {
+      "id": "ENERGY",
+      "name": "Energy (Eurostat retained)",
+      "registry": {
+        "alphaState": "RETAINED_ONLY",
+        "productionState": "UNVERIFIED_RUNTIME"
+      },
+      "IMPLEMENTED": "PARTIAL",
+      "TESTED": "NOT_ASSESSED",
+      "DEPLOYED": {
+        "alpha": "YES",
+        "production": "YES"
+      },
+      "ENABLED": {
+        "alpha": "UNVERIFIED",
+        "production": "UNVERIFIED"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P1-ENG-01"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [],
+      "NOT_IMPLEMENTED": [],
+      "branchDelta": null,
+      "evidence": null
+    },
+    {
+      "id": "ELECTION",
+      "name": "Election (Kenya IEBC bundle only — not a global Election product)",
+      "registry": {
+        "alphaState": "PREVIEW_ONLY",
+        "productionState": "UNVERIFIED_RUNTIME"
+      },
+      "IMPLEMENTED": "PARTIAL",
+      "TESTED": "NOT_ASSESSED",
+      "DEPLOYED": {
+        "alpha": "YES",
+        "production": "YES"
+      },
+      "ENABLED": {
+        "alpha": "UNVERIFIED",
+        "production": "UNVERIFIED"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P2-ELE-01"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [],
+      "NOT_IMPLEMENTED": [],
+      "branchDelta": null,
+      "evidence": null
+    },
+    {
+      "id": "HUMANITARIAN",
+      "name": "Humanitarian",
+      "registry": {
+        "alphaState": "COVERAGE_GAP",
+        "productionState": "UNVERIFIED_RUNTIME"
+      },
+      "IMPLEMENTED": "PARTIAL",
+      "TESTED": "NOT_ASSESSED",
+      "DEPLOYED": {
+        "alpha": "YES",
+        "production": "YES"
+      },
+      "ENABLED": {
+        "alpha": "UNVERIFIED",
+        "production": "UNVERIFIED"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P1-HUM-01"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [],
+      "NOT_IMPLEMENTED": [],
+      "branchDelta": null,
+      "evidence": null
+    },
+    {
+      "id": "IMIHIGO",
+      "name": "Imihigo (NISR retained snapshot)",
+      "registry": {
+        "alphaState": "ALPHA_LIVE",
+        "productionState": "UNVERIFIED_RUNTIME"
+      },
+      "IMPLEMENTED": "PARTIAL",
+      "TESTED": "NOT_ASSESSED",
+      "DEPLOYED": {
+        "alpha": "YES",
+        "production": "YES"
+      },
+      "ENABLED": {
+        "alpha": "YES",
+        "production": "UNVERIFIED"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P1-RIGHTS-04"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [],
+      "NOT_IMPLEMENTED": [],
+      "branchDelta": null,
+      "evidence": null
+    },
+    {
+      "id": "SIGNALS",
+      "name": "Signals (GDELT GEO / Event Registry)",
+      "registry": {
+        "alphaState": "ABSENT",
+        "productionState": "ABSENT"
+      },
+      "IMPLEMENTED": "NO",
+      "TESTED": "NOT_ASSESSED",
+      "DEPLOYED": {
+        "alpha": "NO",
+        "production": "NO"
+      },
+      "ENABLED": {
+        "alpha": "N/A",
+        "production": "N/A"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P3-SIG-01"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [],
+      "NOT_IMPLEMENTED": [],
+      "branchDelta": null,
+      "evidence": null
+    },
+    {
+      "id": "MY-INTELLIGENCE",
+      "name": "My Intelligence workspace",
+      "registry": {
+        "alphaState": "ALPHA_LIVE",
+        "productionState": "UNVERIFIED_RUNTIME"
+      },
+      "IMPLEMENTED": "PARTIAL",
+      "TESTED": "NOT_ASSESSED",
+      "DEPLOYED": {
+        "alpha": "YES",
+        "production": "YES"
+      },
+      "ENABLED": {
+        "alpha": "YES",
+        "production": "UNVERIFIED"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P1-MI-01",
+        "P1-MI-02"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [],
+      "NOT_IMPLEMENTED": [],
+      "branchDelta": null,
+      "evidence": null
+    },
+    {
+      "id": "SAVED",
+      "name": "Saved (Ask results)",
+      "registry": {
+        "alphaState": "ALPHA_LIVE",
+        "productionState": "UNVERIFIED_RUNTIME"
+      },
+      "IMPLEMENTED": "YES",
+      "TESTED": "NOT_ASSESSED",
+      "DEPLOYED": {
+        "alpha": "YES",
+        "production": "YES"
+      },
+      "ENABLED": {
+        "alpha": "YES",
+        "production": "UNVERIFIED"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [],
+      "NOT_IMPLEMENTED": [],
+      "branchDelta": null,
+      "evidence": null
+    },
+    {
+      "id": "HISTORY-RECENT",
+      "name": "History / Recent",
+      "registry": {
+        "alphaState": "ALPHA_LIVE",
+        "productionState": "UNVERIFIED_RUNTIME"
+      },
+      "IMPLEMENTED": "PARTIAL",
+      "TESTED": "NOT_ASSESSED",
+      "DEPLOYED": {
+        "alpha": "YES",
+        "production": "YES"
+      },
+      "ENABLED": {
+        "alpha": "YES",
+        "production": "UNVERIFIED"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P1-HIST-01"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [],
+      "NOT_IMPLEMENTED": [],
+      "branchDelta": null,
+      "evidence": null
+    },
+    {
+      "id": "BRIEFINGS",
+      "name": "Briefings",
+      "registry": {
+        "alphaState": "LOCAL_ONLY",
+        "productionState": "ABSENT"
+      },
+      "IMPLEMENTED": "PARTIAL",
+      "TESTED": "YES",
+      "DEPLOYED": {
+        "alpha": "YES",
+        "production": "NO"
+      },
+      "ENABLED": {
+        "alpha": "OFF_BY_DEFAULT",
+        "production": "N/A"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [
+        "P1-BRF-01"
+      ],
+      "NOT_IMPLEMENTED": [
+        "Frontend display of blocks.intelligence (deferred to the Claude Design lane)",
+        "Scheduled/recurring briefings"
+      ],
+      "branchDelta": "Saved versions keep payload.intelligence verbatim (afeedc9).",
+      "evidence": "briefings.postgres.spec +2 (save -> StoredResult deleted -> reopen identical; no prepare/execute on reopen); briefing-snapshot.spec 6."
+    },
+    {
+      "id": "FOLLOW",
+      "name": "Follow an issue / country",
+      "registry": {
+        "alphaState": "LOCAL_ONLY",
+        "productionState": "UNVERIFIED_RUNTIME"
+      },
+      "IMPLEMENTED": "PARTIAL",
+      "TESTED": "NOT_ASSESSED",
+      "DEPLOYED": {
+        "alpha": "YES",
+        "production": "YES"
+      },
+      "ENABLED": {
+        "alpha": "OFF_BY_DEFAULT",
+        "production": "UNVERIFIED"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P2-FOL-01"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [],
+      "NOT_IMPLEMENTED": [],
+      "branchDelta": null,
+      "evidence": null
+    },
+    {
+      "id": "ALERTS-WATCH",
+      "name": "Alerts / Watch",
+      "registry": {
+        "alphaState": "DESIGN_ONLY",
+        "productionState": "ABSENT"
+      },
+      "IMPLEMENTED": "NO",
+      "TESTED": "NOT_ASSESSED",
+      "DEPLOYED": {
+        "alpha": "NO",
+        "production": "NO"
+      },
+      "ENABLED": {
+        "alpha": "N/A",
+        "production": "N/A"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P2-ALR-01"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [],
+      "NOT_IMPLEMENTED": [
+        "Scheduled Watch execution",
+        "Material-change detection beyond new publisher host",
+        "External delivery channel"
+      ],
+      "branchDelta": null,
+      "evidence": null
+    },
+    {
+      "id": "DISCUSSIONS",
+      "name": "Discussions / comments",
+      "registry": {
+        "alphaState": "LOCAL_ONLY",
+        "productionState": "ABSENT"
+      },
+      "IMPLEMENTED": "PARTIAL",
+      "TESTED": "NOT_ASSESSED",
+      "DEPLOYED": {
+        "alpha": "YES",
+        "production": "NO"
+      },
+      "ENABLED": {
+        "alpha": "OFF_BY_DEFAULT",
+        "production": "N/A"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P2-DIS-01"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [],
+      "NOT_IMPLEMENTED": [],
+      "branchDelta": null,
+      "evidence": null
+    },
+    {
+      "id": "ACCOUNT-AUTH",
+      "name": "Account, sign-in, settings",
+      "registry": {
+        "alphaState": "ALPHA_LIVE",
+        "productionState": "UNVERIFIED_RUNTIME"
+      },
+      "IMPLEMENTED": "PARTIAL",
+      "TESTED": "NOT_ASSESSED",
+      "DEPLOYED": {
+        "alpha": "YES",
+        "production": "YES"
+      },
+      "ENABLED": {
+        "alpha": "YES",
+        "production": "UNVERIFIED"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P1-ACC-01"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [],
+      "NOT_IMPLEMENTED": [],
+      "branchDelta": null,
+      "evidence": null
+    },
+    {
+      "id": "SUPPORT",
+      "name": "Support / Help & feedback",
+      "registry": {
+        "alphaState": "ALPHA_LIVE",
+        "productionState": "UNVERIFIED_RUNTIME"
+      },
+      "IMPLEMENTED": "PARTIAL",
+      "TESTED": "NOT_ASSESSED",
+      "DEPLOYED": {
+        "alpha": "YES",
+        "production": "YES"
+      },
+      "ENABLED": {
+        "alpha": "YES",
+        "production": "UNVERIFIED"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P1-LANG-06"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [],
+      "NOT_IMPLEMENTED": [],
+      "branchDelta": null,
+      "evidence": null
+    },
+    {
+      "id": "LEGAL",
+      "name": "Privacy, Cookies, Terms, Source policy, Third-party notices",
+      "registry": {
+        "alphaState": "ALPHA_LIVE",
+        "productionState": "UNVERIFIED_RUNTIME"
+      },
+      "IMPLEMENTED": "PARTIAL",
+      "TESTED": "NOT_ASSESSED",
+      "DEPLOYED": {
+        "alpha": "YES",
+        "production": "YES"
+      },
+      "ENABLED": {
+        "alpha": "YES",
+        "production": "UNVERIFIED"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P1-LEG-01",
+        "P2-THEME-01"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [],
+      "NOT_IMPLEMENTED": [],
+      "branchDelta": null,
+      "evidence": null
+    },
+    {
+      "id": "CONSENT",
+      "name": "Pre-login consent / cookie / data-handling notice",
+      "registry": {
+        "alphaState": "ABSENT",
+        "productionState": "ABSENT"
+      },
+      "IMPLEMENTED": "PARTIAL",
+      "TESTED": "YES",
+      "DEPLOYED": {
+        "alpha": "NO",
+        "production": "NO"
+      },
+      "ENABLED": {
+        "alpha": "N/A",
+        "production": "N/A"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P0-PRIV-01",
+        "P1-PRIV-03",
+        "P1-PRIV-04",
+        "P2-PRIV-05"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [],
+      "NOT_IMPLEMENTED": [
+        "Owner/legal approval of policy wording",
+        "Retention sweep enabled in any environment (P1-PRIV-03)"
+      ],
+      "branchDelta": "T5A guest-trial contract + isolation suite; T5B pre-login notices, POST /ask-v2/guest/forget, /cookies footer link.",
+      "evidence": "ask-v2-guest.forget.t5b.postgres.spec (serial pass), T5 dossier."
+    },
+    {
+      "id": "THEME",
+      "name": "Light/Dark theme system",
+      "registry": {
+        "alphaState": "LOCAL_ONLY",
+        "productionState": "UNVERIFIED_RUNTIME"
+      },
+      "IMPLEMENTED": "PARTIAL",
+      "TESTED": "NOT_ASSESSED",
+      "DEPLOYED": {
+        "alpha": "YES",
+        "production": "YES"
+      },
+      "ENABLED": {
+        "alpha": "OFF_BY_DEFAULT",
+        "production": "UNVERIFIED"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P2-THEME-02"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [],
+      "NOT_IMPLEMENTED": [],
+      "branchDelta": null,
+      "evidence": null
+    },
+    {
+      "id": "PREVIEW-ROUTES",
+      "name": "Preview / fixture route containment",
+      "registry": {
+        "alphaState": "PREVIEW_ONLY",
+        "productionState": "UNVERIFIED_RUNTIME"
+      },
+      "IMPLEMENTED": "PARTIAL",
+      "TESTED": "NOT_ASSESSED",
+      "DEPLOYED": {
+        "alpha": "YES",
+        "production": "YES"
+      },
+      "ENABLED": {
+        "alpha": "UNVERIFIED",
+        "production": "UNVERIFIED"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P1-PRV-01",
+        "P2-PRV-02"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [],
+      "NOT_IMPLEMENTED": [],
+      "branchDelta": null,
+      "evidence": null
+    },
+    {
+      "id": "NEWS-SOURCES",
+      "name": "News retrieval + source coverage (local vs international)",
+      "registry": {
+        "alphaState": "COVERAGE_GAP",
+        "productionState": "UNVERIFIED_RUNTIME"
+      },
+      "IMPLEMENTED": "PARTIAL",
+      "TESTED": "YES",
+      "DEPLOYED": {
+        "alpha": "YES",
+        "production": "YES"
+      },
+      "ENABLED": {
+        "alpha": "UNVERIFIED",
+        "production": "UNVERIFIED"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P0-SRC-01",
+        "P2-SRC-04"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [
+        "P1-SRC-02",
+        "P1-SRC-03"
+      ],
+      "NOT_IMPLEMENTED": [
+        "Activated, rights-resolved regional sources for the 11 East Africa countries",
+        "Tanzania revalidation workstream"
+      ],
+      "branchDelta": "T1 canonical coverage state, rights gate, placeholder-credential rule; 54/54 priority countries disclosed as COVERAGE_GAP.",
+      "evidence": "coverage-check.json pinned by spec; T1 dossier."
+    },
+    {
+      "id": "TELEMETRY-ADMIN",
+      "name": "Admin + analytics",
+      "registry": {
+        "alphaState": "LOCAL_ONLY",
+        "productionState": "UNVERIFIED_RUNTIME"
+      },
+      "IMPLEMENTED": "PARTIAL",
+      "TESTED": "NOT_ASSESSED",
+      "DEPLOYED": {
+        "alpha": "YES",
+        "production": "YES"
+      },
+      "ENABLED": {
+        "alpha": "OFF_BY_DEFAULT",
+        "production": "UNVERIFIED"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P1-OBS-01"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [],
+      "NOT_IMPLEMENTED": [],
+      "branchDelta": null,
+      "evidence": null
+    },
+    {
+      "id": "PAID",
+      "name": "Paid product (Sand ledger / charging)",
+      "registry": {
+        "alphaState": "DESIGN_ONLY",
+        "productionState": "ABSENT"
+      },
+      "IMPLEMENTED": "NO",
+      "TESTED": "NOT_ASSESSED",
+      "DEPLOYED": {
+        "alpha": "NO",
+        "production": "NO"
+      },
+      "ENABLED": {
+        "alpha": "N/A",
+        "production": "N/A"
+      },
+      "LIVE_VERIFIED": {
+        "alpha": "NOT_RUN",
+        "production": "NOT_RUN"
+      },
+      "BLOCKED": [
+        "P3-PAID-01"
+      ],
+      "RESOLVED_ON_BRANCH_NOT_DEPLOYED": [],
+      "NOT_IMPLEMENTED": [
+        "Entitlements",
+        "Billing integration",
+        "Metering beyond compute shadow ledger"
+      ],
+      "branchDelta": null,
+      "evidence": null
+    }
+  ],
+  "extraCapabilities": [
+    {
+      "id": "CLAUDE_DESIGN_COMPACT_VISUAL_PRODUCT",
+      "name": "Claude Design compact visual product (Home, story cards, in-app brief, evidence preview, discussion, Watch/Alerts, Settings, mobile, 7-language/RTL, tokens)",
+      "status": "AWAITING_DESIGN_DELIVERY / NOT_AUTHORIZED_FOR_INTEGRATION",
+      "note": "Package expected through D:\\Desktop\\GlobalNewsAI\\Claude_Output\\ and CTO-reviewed before any integration authorization. No visual implementation may be inferred from screenshots, older Claude Design material or the expected ZIP structure. Integration will target the then-current engineering head. Collision surfaces already on this branch: T2 seven-language frontend, T5 consent/privacy surfaces, Ask presentation, Home, Map, footer/navigation, Arabic RTL, coverage notices.",
+      "owner": "Claude Design (visual authority) -> CTO review -> Claude Code (sole code integration owner)"
+    }
+  ]
+}
