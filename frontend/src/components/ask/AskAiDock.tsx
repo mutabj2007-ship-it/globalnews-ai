@@ -8,7 +8,8 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties, FormEvent } from 'react';
 import { usePathname } from 'next/navigation';
-import type { LanguageCode } from '@globalnews-ai/shared';
+import type { DisplayLocale, LanguageCode } from '@globalnews-ai/shared';
+import { askDirectionProps } from '@/lib/ask/askDirection';
 import { LoadingStages } from '@/components/search/LoadingStages';
 import { AskR2TurnView } from '@/components/ask-frame/AskR2TurnView';
 import { COMPACT_TOP_PX } from '@/components/ask/launcherAnchor';
@@ -105,6 +106,12 @@ interface AskAiDockProps {
    * layout). The root owns its composer, exactly as /ask does, so the dock unmounts there.
    */
   standaloneRoot?: boolean;
+  /**
+   * R4 · CTO DOCK-DIRECTION RULING — the reader's selected DisplayLocale (layout, resolveAskLocale).
+   * `language` is the platform's two-catalogue code (an Arabic reader arrives here as 'en'), so
+   * it cannot carry direction; the floating launcher takes the reader's direction from this.
+   */
+  displayLocale?: DisplayLocale;
 }
 
 /**
@@ -212,6 +219,7 @@ export function AskAiDock(props: AskAiDockProps): JSX.Element | null {
   return (
     <GlobalAskAiDock
       language={props.language}
+      {...(props.displayLocale === undefined ? {} : { displayLocale: props.displayLocale })}
       returnPath={pathname}
       showLauncher={!LAUNCHER_SUPPRESSED_ROUTES.has(pathname ?? '')}
       mapSurface={pathname === MAP_ROUTE}
@@ -224,6 +232,7 @@ function GlobalAskAiDock({
   showLauncher = true,
   mapSurface = false,
   returnPath = null,
+  displayLocale,
 }: AskAiDockProps & {
   showLauncher?: boolean;
   mapSurface?: boolean;
@@ -647,6 +656,8 @@ function GlobalAskAiDock({
       <button
         type="button"
         data-ask="launcher"
+        /* R4 · direction only: the launcher follows the reader's display direction (Arabic RTL) */
+        {...(displayLocale === undefined ? {} : askDirectionProps(displayLocale))}
         aria-expanded={isOpen}
         aria-controls="ask-ai-panel"
         onClick={() => setIsOpen((open) => !open)}

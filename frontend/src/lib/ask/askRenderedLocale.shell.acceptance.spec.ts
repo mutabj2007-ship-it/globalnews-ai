@@ -335,4 +335,17 @@ describe('R4 · CTO platform-settings ruling — Settings on Alpha (GNA_PUBLIC_R
       expect(main.props.dir).toBe(askIsRtl(locale) ? 'rtl' : 'ltr');
     },
   );
+  it.each([...LOCALES, 'en', 'pl'] as DisplayLocale[])(
+    '%s: on Alpha, Settings is an Ask surface — Ask navigation (canonical brand), no platform chrome',
+    async (locale) => {
+      const r = await renderPage(PAGES.settings.load, locale);
+      const shell = r.root.findAll(
+        (n) => typeof n.type === 'string' && n.props['data-ask-nav'] === 'shell',
+      );
+      expect(shell).toHaveLength(1);
+      expect(shell[0].props.dir).toBe(askIsRtl(locale) ? 'rtl' : 'ltr');
+      expect(visibleValues(r)).toContain(ASK_PRODUCT_NAME);
+      expect(visibleValues(r).filter((v) => /GlobalNews AI/.test(v))).toEqual([]);
+    },
+  );
 });

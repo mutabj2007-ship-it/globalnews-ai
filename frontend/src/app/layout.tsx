@@ -9,6 +9,7 @@ import {
   JetBrains_Mono,
 } from 'next/font/google';
 import { LANGUAGE_COOKIE_NAME, isActiveLanguageCode } from '@/lib/i18n/languages';
+import { resolveAskLocale } from '@/lib/ask/askLocale';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { buildRootMetadataBase } from '@/lib/seo/metadata';
 import { ServiceWorkerRegistrar } from '@/components/pwa/ServiceWorkerRegistrar';
@@ -308,7 +309,11 @@ export default function RootLayout({
           request on mount and none on navigation.
         */}
         <ReturnDepthTracker />
-        <AskAiDock language={language} standaloneRoot={standaloneAskRoot()} />
+        <AskAiDock
+          language={language}
+          displayLocale={resolveAskLocale(languageCookie)}
+          standaloneRoot={standaloneAskRoot()}
+        />
       </body>
     </html>
   );

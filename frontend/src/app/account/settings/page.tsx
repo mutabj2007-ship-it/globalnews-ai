@@ -8,7 +8,6 @@ import { AskThemedSurface } from '@/components/ask-nav/AskThemedSurface';
 import { THEME_COOKIE_NAME, parseThemePreference } from '@/lib/theme/theme';
 import { AskContinuityHeader } from '@/components/ask-nav/AskContinuityHeader';
 import { AskClearedBoundary } from '@/components/ask-nav/AskClearedBoundary';
-import { standaloneAskRoot } from '@/lib/ask/standaloneRoot';
 import { LANGUAGE_COOKIE_NAME } from '@/lib/i18n/languages';
 
 /**
@@ -18,11 +17,9 @@ import { LANGUAGE_COOKIE_NAME } from '@/lib/i18n/languages';
  * AccountSettingsBody, unchanged in behaviour. What this wrapper decides is the chrome and
  * the language:
  *
- *   standalone Public Beta   the standalone Ask navigation only — no platform header, no
- *                            Footer, no global Ask dock — in the reader's active EN/PL.
- *   GNA_PUBLIC_ROOT=platform the released platform presentation (NavBar + Footer), with the
- *                            settings content in the reader's own DisplayLocale — CTO ruling:
- *                            Alpha runs platform mode and the Ask navigation reaches this page.
+ *   both roots               the Ask navigation, theme and direction — no platform header, no
+ *                            Footer — in the reader's own DisplayLocale (R4 CTO ruling: Alpha
+ *                            runs GNA_PUBLIC_ROOT=platform and the Ask navigation reaches this page).
  *
  * Metadata (noindex) stays with app/account/layout.tsx, untouched.
  */
@@ -31,10 +28,14 @@ export default function AccountSettingsPage(): JSX.Element {
      This line was `=== 'pl' ? 'pl' : 'en'`; see lib/ask/askLocale.ts for the one declared
      boundary between the seven-locale interface and the two-locale answer engine. */
   const locale = resolveAskLocale(cookies().get(LANGUAGE_COOKIE_NAME)?.value);
-  /* R4 · CTO PLATFORM SETTINGS RULING — this branch hard-coded language="en", so a French,
-     German, Spanish, Portuguese or Arabic reader arriving from the Ask navigation on Alpha
-     (GNA_PUBLIC_ROOT=platform) got an English page. Same DisplayLocale authority as below. */
-  if (!standaloneAskRoot()) return <AccountSettingsBody locale={locale} chrome="platform" />;
+  /*
+    R4 · CTO PLATFORM-SETTINGS RULINGS — Settings is an Ask surface in BOTH modes. On Alpha
+    (GNA_PUBLIC_ROOT=platform) it rendered the platform presentation: first hard-coded English,
+    then the platform NavBar / Footer around localized content — English chrome, a second brand
+    spelling, no light theme, LTR in Arabic. It now uses the same Ask shell, theme and direction
+    as Recent, Saved and the briefing detail, whatever the root. The platform NavBar / Footer
+    themselves are unchanged (their localization is the whole-product programme's).
+  */
   /* R4 · one disposition per surface. The nav and continuity chrome read the two-locale
      catalogues (`askNavStrings` / `askContinuityStrings`); the Ask frame renders in the
      reader's locale. Reading both from one disposition is what stops them drifting. */

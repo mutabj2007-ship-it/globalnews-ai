@@ -64,8 +64,9 @@ describe('the global Ask dock is not a second Ask control on the root', () => {
   it('unmounts on / when the root is standalone, and on /ask as before', () => {
     expect(dock).toMatch(/if \(pathname === ASK_CANONICAL_ROUTE\) return null;/);
     expect(dock).toMatch(/if \(props\.standaloneRoot === true && pathname === '\/'\) return null;/);
-    expect(layout).toContain(
-      '<AskAiDock language={language} standaloneRoot={standaloneAskRoot()} />',
+    /* R4 · CTO dock-direction ruling — the mount also carries the reader's DisplayLocale */
+    expect(layout).toMatch(
+      /<AskAiDock\s+language=\{language\}\s+displayLocale=\{resolveAskLocale\(languageCookie\)\}\s+standaloneRoot=\{standaloneAskRoot\(\)\}\s*\/>/,
     );
   });
 });

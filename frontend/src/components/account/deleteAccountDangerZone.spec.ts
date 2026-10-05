@@ -135,11 +135,9 @@ describe('deletion is reachable only through the dedicated settings surface', ()
     // clears the session and unmounts the danger zone in the same render.
     expect(settingsPageSource).toContain('onDeleted={() => setDeleted(true)}');
     expect(settingsPageSource).toContain('t.deletedHeading');
-    /* the route renders that body in both presentations, and no second danger zone */
-    /* R4 · CTO platform-settings ruling — the platform presentation reads the reader's locale too */
-    expect(settingsRouteSource).toContain(
-      '<AccountSettingsBody locale={locale} chrome="platform" />',
-    );
+    /* the route renders that body, and no second danger zone. R4 · CTO platform-settings rulings —
+       Settings is an Ask surface in BOTH roots: the platform presentation is no longer used here */
+    expect(settingsRouteSource).not.toContain('chrome="platform"');
     expect(settingsRouteSource).toContain(
       /* R4 · the standalone settings body reads the reader's DisplayLocale through the Ask locale
          authority (CTO localization convergence). The property asserted — the settings route is
