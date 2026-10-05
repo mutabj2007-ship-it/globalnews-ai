@@ -197,3 +197,67 @@ describe('T3 · positive controls — genuine armed-conflict / security question
     'reading: EN "food insecurity" yields the security domain (substring "security" in detectRequestedDomains)',
   );
 });
+
+/*
+ * R4 + EAST AFRICA CONVERGENCE — T3 must survive R4's EARLIER_TURN inheritance and the five
+ * interpreter-first locales. A bound follow-up ("Is that still true now?") carries no subject of
+ * its own; it inherits the earlier answer's question, which is read by the router's own domain
+ * readers. A generic noun is still never Conflict relevance — in any language, inherited or not.
+ */
+describe('T3 × R4 EARLIER_TURN × seven locales (convergence)', () => {
+  const inheritedFrom = (question: string, countries: string[]): AskR2Route['inheritedScope'] => ({
+    provenance: 'EARLIER_TURN',
+    sourceOperationId: 'op-earlier',
+    question,
+    countries,
+    relation: null,
+    job: 'CURRENT_REPORTING',
+    evidenceRefs: [],
+    officialOnly: false,
+  });
+  const followUp = (earlier: string, countries: string[]): AskR2Route => ({
+    ...route('Is that still true now?', 'en'),
+    inheritedScope: inheritedFrom(earlier, countries),
+  });
+  const conflictOf = (r: AskR2Route) =>
+    selectContributors(r).find((s) => s.contributorId === 'CONFLICT');
+
+  test.each([
+    ['What is the travel situation in Kenya?', 'KEN'],
+    ['What is the economic crisis in Poland?', 'POL'],
+    ['Jaka jest sytuacja polityczna w Polsce?', 'POL'],
+    ['Quelle est la situation politique au Kenya ?', 'KEN'],
+    ['Wie ist die Lage in Kenia?', 'KEN'],
+    ['¿Cuál es la situación económica en Kenia?', 'KEN'],
+    ['Qual é a situação de vistos para o Quênia?', 'KEN'],
+    ['ما هو الوضع السياسي في كينيا؟', 'KEN'],
+    ['Quelle est la sécurité alimentaire au Kenya ?', 'KEN'],
+    ['¿Cómo está la seguridad alimentaria en Kenia?', 'KEN'],
+    ['ما هو وضع الأمن الغذائي في كينيا؟', 'KEN'],
+  ])('inherited "%s" (generic noun / food security) → NO Conflict', (earlier, iso3) => {
+    expect(conflictOf(followUp(earlier, [iso3]))).toBeUndefined();
+  });
+
+  test.each([
+    ['What is the security situation in Mali?'],
+    ['Jaka jest sytuacja bezpieczeństwa w Mali?'],
+    ['Quelle est la situation sécuritaire au Mali ?'],
+    ['Wie ist die Sicherheitslage in Mali?'],
+    ['¿Cuál es la situación de seguridad en Malí?'],
+    ['Qual é a situação de segurança no Mali?'],
+    ['ما هو الوضع الأمني في مالي؟'],
+  ])('inherited "%s" (security domain) → Conflict, scope EARLIER_TURN/MLI', (earlier) => {
+    expect(conflictOf(followUp(earlier, ['MLI']))).toMatchObject({
+      domain: 'security',
+      scope: { countryIso3: 'MLI', provenance: 'EARLIER_TURN' },
+    });
+  });
+
+  test('a follow-up that names its own place is not inherited (a new explicit subject wins)', () => {
+    const r: AskR2Route = {
+      ...route('What is the travel situation in Kenya?', 'en'),
+      inheritedScope: inheritedFrom('What is the security situation in Mali?', ['MLI']),
+    };
+    expect(conflictOf(r)).toBeUndefined();
+  });
+});

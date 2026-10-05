@@ -1,4 +1,6 @@
+import { detectRequestedDomains } from '../analysis/query/detect-analytical-domains.util';
 import type { AskR2Route } from '../ask-router/ask-r2-route';
+import { PL_DOMAIN_FORMS } from '../ask-router/normalization/pl-readings.resources';
 import { resolveGeography } from '../geo/geo-resolver';
 import { nisrDistricts, nisrProvinces } from '../geo/rwanda-nisr.authority';
 import type { AskContributorSelection } from './ask-contribution.contract';
@@ -46,6 +48,46 @@ export const CONTRIBUTOR_SCOPE_TERMS = {
     'walki',
     'przemoc',
     'starcia',
+  ],
+  /**
+   * R4 + EAST AFRICA CONVERGENCE — the SECURITY DOMAIN words of the five interpreter-first locales
+   * (fr/de/es/pt/ar), whose questions get no lexical domain reading from the router (EN reads
+   * `detectRequestedDomains`, PL reads `PL_DOMAIN_FORMS`). The same class of word the EN reader keys
+   * on ("security", "military", "conflict"), whole tokens only. Generic nouns ("situation", "Lage",
+   * "situación", "situação", "الوضع") are NEVER here: T3 holds in every locale.
+   */
+  SECURITY_DOMAIN_INTERPRETER_FIRST: [
+    'sécurité',
+    'sécuritaire',
+    'sécuritaires',
+    'militaire',
+    'militaires',
+    'conflit',
+    'conflits',
+    'sicherheit',
+    'sicherheitslage',
+    'militär',
+    'militärische',
+    'militärischen',
+    'konflikt',
+    'konflikte',
+    'seguridad',
+    'segurança',
+    'militar',
+    'militares',
+    'conflicto',
+    'conflictos',
+    'conflito',
+    'conflitos',
+    'الأمن',
+    'الأمني',
+    'الأمنية',
+    'أمني',
+    'أمنية',
+    'العسكري',
+    'العسكرية',
+    'النزاع',
+    'الصراع',
   ],
   /** The retained TED contract-notice capture. */
   PROCUREMENT: [
@@ -105,6 +147,43 @@ function normalize(text: string): string {
 export function namesScope(text: string, terms: readonly string[]): boolean {
   const normalized = normalize(text);
   return terms.some((term) => normalized.includes(` ${normalize(term).trim()} `));
+}
+
+/**
+ * R4 + EAST AFRICA CONVERGENCE — does this text carry the SECURITY domain, read by the router's own
+ * readers (EN `detectRequestedDomains`, PL `PL_DOMAIN_FORMS.security`) plus the interpreter-first
+ * locales' closed security words? Used for a turn that INHERITS an earlier answer's question: the
+ * route's domain facet belongs to the follow-up's own words ("Is that still true now?"), so the
+ * inherited subject is read the way the router read it when it was asked. No generic noun ever
+ * qualifies (STAGE 2 · T3).
+ */
+export function securityDomainNamed(text: string): boolean {
+  if (detectRequestedDomains(text).some((d) => d.domain === 'security')) return true;
+  if (namesScope(text, Object.values(PL_DOMAIN_FORMS.security).flat())) return true;
+  return interpreterFirstSecurityNamed(text);
+}
+
+/**
+ * "Food security" is a food-supply subject, not a security one. The EN reader's substring match
+ * still has that leak (recorded as a T3 todo, not changed here); the interpreter-first words must
+ * not add it in five more languages, so these phrases are removed before the words are read.
+ */
+const FOOD_SECURITY_PHRASES: readonly string[] = [
+  'sécurité alimentaire',
+  'insécurité alimentaire',
+  'seguridad alimentaria',
+  'inseguridad alimentaria',
+  'segurança alimentar',
+  'insegurança alimentar',
+  'الأمن الغذائي',
+];
+
+function interpreterFirstSecurityNamed(text: string): boolean {
+  let normalized = normalize(text);
+  for (const phrase of FOOD_SECURITY_PHRASES) {
+    normalized = normalized.split(` ${normalize(phrase).trim()} `).join(' ');
+  }
+  return namesScope(normalized, CONTRIBUTOR_SCOPE_TERMS.SECURITY_DOMAIN_INTERPRETER_FIRST);
 }
 
 /** An NISR district named in the question (the governed authority's canonical names). */
@@ -244,9 +323,17 @@ export function selectContributors(route: AskR2Route): AskContributorSelection[]
     namesScope(question, CONTRIBUTOR_SCOPE_TERMS.CPI) ||
     namesScope(question, CONTRIBUTOR_SCOPE_TERMS.IMIHIGO);
   /* STAGE 2 · T3 — keyed on the router's security domain facet (or its security specialist
-     leg), never on a typed country + a generic noun. */
+     leg), never on a typed country + a generic noun. R4 + EA CONVERGENCE: an inherited subject
+     is read by the same domain readers (the facet describes the follow-up's words, not the
+     subject's); an interpreter-first question (fr/de/es/pt/ar) has no lexical facet, so its
+     closed security words stand in for it. */
   const leg = route.plan.specialistLegs.find((l) => l.domain === 'security');
-  const security = domains.includes('security') || leg !== undefined;
+  const security =
+    leg !== undefined ||
+    domains.includes('security') ||
+    (inherit
+      ? securityDomainNamed(question)
+      : interpreterFirstSecurityNamed(question));
   if (
     countryIso3 !== null &&
     (security || (!dataScoped && namesScope(question, CONTRIBUTOR_SCOPE_TERMS.ARMED_CONFLICT)))
