@@ -184,17 +184,28 @@ export function conversationOf(turn: ConversationalTurn | null): Pick<AskRequest
       };
 }
 
+/** CTO R4 — how far back the conversation's earlier WORK is looked for (the most recent wins). */
+const ARTIFACT_LOOKBACK = 3;
+
 /*
-  R4 ALPHA SMOKE REPAIR R1-B (CTO) — "that / it" follows the reader's LATEST TURN, never the latest
-  turn that happened to store an answer. This looked back over the last 3 turns and returned the
-  first stored record, so a turn that answered nothing (Alpha op efe6d76d: CAPABILITY_UNAVAILABLE)
-  was skipped and "Why did you say that?" bound to the answer BEFORE it (Chile, op e5e381e4); the
-  re-check and the official-evidence turn then inherited that wrong scope. Now only the latest turn
-  is read: its own record (R-3; a turn that explained earlier work carries that referent in its own
-  record, so valid chains are kept), or nothing — and with nothing bindable the reference resolves
-  to the R-4 truthful clarification, never to an older answer.
+  R4 ALPHA SMOKE REPAIR R1-B (CTO) — "that / it" never jumps OVER a turn that answered nothing.
+  The lookback returned the first stored record, so a turn that answered nothing (Alpha op
+  efe6d76d: CAPABILITY_UNAVAILABLE) was skipped and "Why did you say that?" bound to the answer
+  BEFORE it (Chile, op e5e381e4); the re-check and the official-evidence turn then inherited that
+  wrong scope. The walk now STOPS at such a turn: nothing is bindable, and the reference resolves
+  to the R-4 truthful clarification. Only a turn that DID answer without storing a record (the
+  pre-R-3 shape) can still be looked past, so a framework stays reachable through the answer that
+  applied it — the chain is preserved, the gap is not jumped.
 */
-const ARTIFACT_LOOKBACK = 1;
+const NOTHING_ANSWERED: ReadonlySet<string> = new Set([
+  'CAPABILITY_UNAVAILABLE',
+  'CLARIFICATION_REQUIRED',
+]);
+function answeredNothing(payload: Record<string, unknown> | null | undefined): boolean {
+  if (payload === null || payload === undefined) return true; /* failed / never stored */
+  const state = (payload.answer as { state?: unknown } | undefined)?.state;
+  return typeof state === 'string' && NOTHING_ANSWERED.has(state);
+}
 
 /**
  * CTO R4 — the most recent earlier work in this owner-verified thread: a validated
@@ -224,6 +235,8 @@ export async function priorArtifactIn(
     /* R4 ALPHA R-3 — a stored answer's memory: model-emitted or server-derived (bounded either way) */
     const artifact = validateStoredArtifact(payload?.artifact);
     if (artifact !== null) return { ...artifact, sourceOperationId: t.operationId };
+    /* R1-B — a turn that answered nothing ends the walk: never bind past it */
+    if (answeredNothing(payload)) return undefined;
   }
   return undefined;
 }

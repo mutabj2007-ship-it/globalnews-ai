@@ -121,7 +121,8 @@ function conversation() {
     );
     earlier.push(question);
     const stored = validateStoredArtifact(payload.artifact);
-    /* R1-B: the latest turn's own record, or NOTHING — never an older one */
+    /* R1-B: the latest turn's own record; a turn that answered nothing leaves NOTHING bindable
+       (the executor gives every answered turn a record, so this matches priorArtifactIn) */
     prior = stored === null ? undefined : { ...stored, sourceOperationId: id };
     return {
       payload,
@@ -232,35 +233,49 @@ describe('R1-B — never skip the latest turn for "that / it" (negative cases)',
     },
   );
 
-  it('priorArtifactIn reads ONLY the latest turn: a latest turn without a record yields nothing', async () => {
-    const chile = {
-      kind: 'SOURCED_REPORT',
-      label: 'Chile',
-      components: ['Chile sourced claim'],
-      provenance: 'SOURCED_REPORTING',
-      citable: false,
-      scope: {
-        question: 'Chile?',
-        job: 'CURRENT_REPORTING',
-        countries: ['CHL'],
-        relation: null,
-        freshness: 'CURRENT',
-      },
-      evidenceRefs: ['a1'],
-    };
-    const turns = [
+  const chile = {
+    kind: 'SOURCED_REPORT',
+    label: 'Chile',
+    components: ['Chile sourced claim'],
+    provenance: 'SOURCED_REPORTING',
+    citable: false,
+    scope: {
+      question: 'Chile?',
+      job: 'CURRENT_REPORTING',
+      countries: ['CHL'],
+      relation: null,
+      freshness: 'CURRENT',
+    },
+    evidenceRefs: ['a1'],
+  };
+  const turnsTx = (turns: unknown[]) => {
+    const findMany = jest.fn(async (args: { take: number }) => turns.slice(0, args.take));
+    return { tx: { askTurn: { findMany } } as never, findMany };
+  };
+  it.each([
+    ['CAPABILITY_UNAVAILABLE', { answer: { state: 'CAPABILITY_UNAVAILABLE' } }],
+    ['CLARIFICATION_REQUIRED', { answer: { state: 'CLARIFICATION_REQUIRED' } }],
+    ['no stored result (failed)', null],
+  ])(
+    'priorArtifactIn: a latest turn that answered nothing (%s) is never jumped over',
+    async (_l, payload) => {
+      const { tx } = turnsTx([
+        { operationId: 'op-3', operation: { storedResult: payload === null ? null : { payload } } },
+        { operationId: 'op-2', operation: { storedResult: { payload: { artifact: chile } } } },
+      ]);
+      expect(await priorArtifactIn(tx, 'thread-1')).toBeUndefined();
+    },
+  );
+
+  it('priorArtifactIn: an ANSWERED turn without a record (pre-R-3 shape) may be looked past — the chain is kept', async () => {
+    const { tx } = turnsTx([
       {
         operationId: 'op-3',
-        operation: { storedResult: { payload: { answer: { state: 'CAPABILITY_UNAVAILABLE' } } } },
+        operation: { storedResult: { payload: { answer: { state: 'REFERENCE_BACKGROUND' } } } },
       },
       { operationId: 'op-2', operation: { storedResult: { payload: { artifact: chile } } } },
-    ];
-    const findMany = jest.fn(async (args: { take: number }) => turns.slice(0, args.take));
-    const got = await priorArtifactIn({ askTurn: { findMany } } as never, 'thread-1');
-    expect(findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ take: 1, orderBy: { sequence: 'desc' } }),
-    );
-    expect(got).toBeUndefined();
+    ]);
+    expect((await priorArtifactIn(tx, 'thread-1'))?.sourceOperationId).toBe('op-2');
   });
 
   it('a valid carried chain is kept: the latest turn’s own record (carrying its referent) binds', async () => {
