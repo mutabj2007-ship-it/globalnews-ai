@@ -1144,9 +1144,20 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
          content words ("How does this affect households?") is guarded where it would SEARCH them —
          a reasoning / advisory turn with its own content words is answered as asked */
       if (
-        followUp.refersBack &&
-        !followUp.carried &&
-        (followUp.namesNothing || requiredRolesOf(route.plan).includes('REPORTING'))
+        (followUp.refersBack &&
+          !followUp.carried &&
+          (followUp.namesNothing || requiredRolesOf(route.plan).includes('REPORTING'))) ||
+        /*
+          CTO R4 ANAPHORA RULING (N8) — a turn that NAMES NOTHING ("What about it?"), bound to no earlier
+          answer, whose plan retrieves NOTHING: a subject carried from an earlier question could reach the
+          answer only as a referent the model ASSUMES for "it" — never through evidence. That referent is
+          unresolved, so the reader is asked. A carried subject that steers RETRIEVAL (a plan that needs
+          reporting: the R4 topical continuation) is untouched.
+        */
+        (followUp.refersBack &&
+          followUp.namesNothing &&
+          followUp.carried &&
+          !requiredRolesOf(route.plan).includes('REPORTING'))
       ) {
         return this.result(
           plan,

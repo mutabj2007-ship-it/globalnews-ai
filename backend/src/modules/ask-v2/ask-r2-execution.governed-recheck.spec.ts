@@ -152,3 +152,44 @@ describe('SHARED GOVERNED RE-CHECK — eligibility from the earlier answer’s e
     expect(validateStoredArtifact({ kind: 'GOVERNED_RECORD_ANSWER', label: 'x', components: ['y'], provenance: 'GOVERNED_RECORDS', evidenceRefs: ['GOV:POLITICS:' + 'a'.repeat(32)] })?.evidenceRefs).toHaveLength(1);
   });
 });
+
+/**
+ * CTO R4 ANAPHORA RULING (N8) — "What about it?" with no resolved prior answer subject and no valid carried
+ * subject is a clarification: no governed read (zero Politics rows), no literal-word news search, and no
+ * background answer that assumes a referent. A real topical continuation (a reporting subject that exists,
+ * or a newly named subject) is preserved.
+ */
+describe('SHARED SUBJECTLESS ANAPHORA (N8) — clarify only when there is no subject to carry', () => {
+  it('N8 · after a background/governed-only answer, "What about it?" → clarification, zero reads, zero news, zero AI', async () => {
+    const ask = conversation('en', { used: true });
+    await ask('What did the Sejm decide?');
+    const t2 = await ask('What about it?');
+    expect(t2.payload.answer).toMatchObject({ state: 'CLARIFICATION_REQUIRED', basis: 'NO_PRIOR_SUBJECT' });
+    expect(t2.read).toBeUndefined(); /* no governed read → zero Politics rows */
+    expect(t2.analysisCalls).toHaveLength(0); /* no literal-word news search */
+    expect(t2.backgroundCalls).toHaveLength(0); /* no answer that assumes a referent */
+  });
+
+  it('N8 · a first-turn "What about it?" → clarification, zero reads, zero news, zero AI', async () => {
+    const t1 = await conversation('en', { used: true })('What about it?');
+    expect(t1.payload.answer).toMatchObject({ state: 'CLARIFICATION_REQUIRED', basis: 'NO_PRIOR_SUBJECT' });
+    expect(t1.read).toBeUndefined();
+    expect(t1.analysisCalls).toHaveLength(0);
+    expect(t1.backgroundCalls).toHaveLength(0);
+  });
+
+  it('preserved · a reporting subject that exists (Mali) continues as a topical follow-up', async () => {
+    const ask = conversation('en', { used: false });
+    await ask('What is the security situation in Mali?');
+    const t2 = await ask('What about it?');
+    expect(t2.payload.answer.state).toBe('CURRENT_REPORTING');
+    expect(t2.analysisCalls).toHaveLength(1);
+  });
+
+  it('preserved · a newly named subject after a governed answer is answered, not clarified', async () => {
+    const ask = conversation('en', { used: true });
+    await ask('What did the Sejm decide?');
+    const t2 = await ask('What about the budget vote?');
+    expect(t2.payload.answer.state).not.toBe('CLARIFICATION_REQUIRED');
+  });
+});
