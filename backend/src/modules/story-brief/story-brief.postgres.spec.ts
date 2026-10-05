@@ -3,8 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { PrismaClient } from '../../generated/prisma/client';
 import type { PrismaService } from '../../database/prisma.service';
 import { computeArticleRef } from '../news/identity/article-ref.util';
-import { StoryIdentityService } from './story-identity.service';
-import { DiscussionService } from './discussion.service';
+import { StoryIdentityService } from '../stories/story-identity.service';
+import { DiscussionService } from '../stories/discussion.service';
 import { StoryBriefService } from './story-brief.service';
 import {
   UnavailableStoryBriefGenerator,
@@ -101,7 +101,7 @@ live('Story Brief R1 — live PostgreSQL', () => {
     expect(gen.calls).toBe(0);
   });
 
-  it('R1 production binding: an honest CAPABILITY_UNAVAILABLE failure — never INSUFFICIENT, nothing persisted as a Brief', async () => {
+  it('an unavailable generator is an honest CAPABILITY_UNAVAILABLE failure — never INSUFFICIENT, nothing persisted as a Brief', async () => {
     const s = await story('Unbound story');
     const view = await service(new UnavailableStoryBriefGenerator()).request(s.storyId, requester);
     expect(view.state).toBe('FAILED');
@@ -136,7 +136,7 @@ live('Story Brief R1 — live PostgreSQL', () => {
     await service(gen).request(s.storyId, requester);
     const row = await db.storyBriefVersion.findFirstOrThrow({ where: { storyId: s.storyId } });
     expect(JSON.stringify(row)).not.toContain(requester.userId);
-    expect(Object.keys(gen.inputs[0] as object).sort()).toEqual(['articleRefs', 'evidenceRevision', 'materialVersion', 'storyId']);
+    expect(Object.keys(gen.inputs[0] as object).sort()).toEqual(['articleRefs', 'attemptId', 'evidenceRevision', 'leadArticle', 'materialVersion', 'storyId']);
   });
 
   it('a same-publisher update makes the Brief STALE (briefVersion does not move); refresh APPENDS v2 and v1 is unchanged', async () => {
@@ -259,5 +259,39 @@ live('Story Brief R1 — live PostgreSQL', () => {
     ).rejects.toThrow(/STORY_BRIEF_VERSION/);
     const plain = await discussion.post(userId, { ...a, body: 'No Brief on screen', idempotencyKey: `k-${randomUUID()}` });
     expect(plain.storyBriefVersionId).toBeNull();
+  });
+  it('ADMIN ↔ PUBLIC (CTO §8): Admin inspects the same canonical identities and the governed lineage', async () => {
+    const s1 = await story('Admin story');
+    const gen = new FakeGenerator();
+    gen.next = { outcome: 'FAILED', failureKind: 'PROVIDER_DEGRADED', failureCode: 'MODEL_TIMEOUT', operationId: 'op-failed' };
+    await service(gen).request(s1.storyId, requester);
+    gen.next = concluded('READY');
+    const pub = await service(gen).request(s1.storyId, requester);
+    const admin = await service(gen).adminInspect(s1.storyId);
+    expect(admin.story.storyId).toBe(pub.storyId);
+    expect(admin.currentEvidenceRevision).toBe(pub.currentEvidenceRevision);
+    expect(admin.state).toBe(pub.state);
+    expect(admin.members.map((m) => m.sourceHost)).toEqual(['one.example']);
+    expect(admin.versions).toEqual([expect.objectContaining({ version: 1, state: 'READY', sourceOperationId: 'op-brief-1', evidenceRevision: pub.currentEvidenceRevision })]);
+    expect(admin.attempts.map((a) => [a.status, a.failureKind, a.operationId])).toEqual([
+      ['FAILED', 'PROVIDER_DEGRADED', 'op-failed'],
+      ['DONE', null, 'op-brief-1'],
+    ]);
+    expect(JSON.stringify(admin)).not.toContain(requester.userId);
+  });
+  it('CANONICAL RESOLUTION (CTO §2): articleRef → storyId without Discussion; reading never creates a story; an alias resolves to its survivor', async () => {
+    const svc = service(new FakeGenerator());
+    const lone = await article('one.example', 'Not yet a story');
+    expect(await svc.resolveByArticle(lone.articleRef)).toEqual({ articleRef: lone.articleRef, storyId: null, materialVersion: null });
+    expect(await db.storyArticle.count({ where: { articleRef: lone.articleRef } })).toBe(0);
+    const a = await article('one.example', 'Resolved left');
+    const b = await article('two.example', 'Resolved right');
+    const { story: left } = await identity.ensureStoryForArticle(a);
+    const { story: right } = await identity.ensureStoryForArticle(b);
+    expect(await svc.resolveByArticle(a.articleRef)).toEqual({ articleRef: a.articleRef, storyId: left.storyId, materialVersion: 1 });
+    await identity.merge({ survivorId: left.storyId, mergedId: right.storyId, actorId: 'editor', reason: 'same event' });
+    const merged = await svc.resolveByArticle(b.articleRef);
+    expect(merged.storyId).toBe(left.storyId);
+    expect(merged.materialVersion).toBeGreaterThan(1);
   });
 });

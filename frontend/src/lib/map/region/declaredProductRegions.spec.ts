@@ -208,3 +208,22 @@ describe('coverage accounting names the gap rather than counting it', () => {
     expect(coverageAccountingFor('region:east-africa', [], new Set()).complete).toBe(false);
   });
 });
+
+describe('CTO R-2 — a product-governed membership is named as a product scope', () => {
+  it('every PRODUCT_GOVERNED region carries the shared scope label + disclosure; BACKEND_PUBLISHED carries none', () => {
+    for (const region of DECLARED_PRODUCT_REGIONS) {
+      if (region.membershipSource === 'PRODUCT_GOVERNED') {
+        expect(region.scopeLabel).toMatch(/^GlobalNewsAI /);
+        expect(region.scopeDisclosure).toMatch(/shown separately/);
+      } else {
+        expect(region.scopeLabel).toBeUndefined();
+      }
+    }
+  });
+
+  it('the 16-country list is the "GlobalNewsAI Middle East monitoring scope"', () => {
+    const me = DECLARED_PRODUCT_REGIONS.find((r) => r.id === 'region:middle-east');
+    expect(me?.scopeLabel).toBe('GlobalNewsAI Middle East monitoring scope');
+    expect(me?.scopeDisclosure).toMatch(/not a geographic definition/);
+  });
+});

@@ -1,6 +1,6 @@
 # Canonical Story Brief: backend/data contract (EA-STORY-BRIEF-01)
 
-Status: **R1 implemented dark** (persistence, state machine, dedup, zero-compute reopen, stale detection, Discussion anchoring, endpoints behind a default-OFF gate). **Generation binding is BLOCKED on spend authority** (see §8). Base: `integration/r4-east-africa-convergence-r1`.
+Status: **R1 implemented dark** (persistence, state machine, dedup, zero-compute reopen, stale detection, Discussion anchoring, endpoints behind a default-OFF gate). **Generation is bound to the governed Ask path** per the CTO compute policy (§8). Base: `integration/r4-east-africa-convergence-r1`.
 
 ## 1. Inventory (read before designing; facts with file refs)
 
@@ -69,14 +69,42 @@ A comment may carry `storyBriefVersionId` (validated: the version must belong to
 
 The Brief is **shared and story-owned**: it has no `userId`, and the requester is never recorded on the version (the lineage is only `sourceOperationId`). Private Ask Briefings stay private and untouched. Nothing is stored in browser storage.
 
-## 8. Generation binding: BLOCKED (spend authority)
+## 8. Generation: through the governed Ask path (CTO compute policy, 2026-10-05)
 
-The production generator must run through the governed Ask compute path (`ComputeOperation`: quote, consent, budgets, ledger, breaker). That is **new provider spend** on a **shared** artifact, which raises an unresolved authority question: whose budget pays for a Brief every reader then reopens free, and does a guest Read Brief spend? The implementation contract forbids new provider spend without approval.
+**Who may do what during Beta**
+- **Public / guest:** may open an existing current Brief (zero compute), inspect its evidence, and read Discussion under its own gates. May **not** trigger generation: `POST /stories/:id/brief` requires a signed-in account and CSRF.
+- **Signed-in:** may explicitly trigger **Read Brief**, and a **refresh** when the Brief is STALE.
 
-R1 therefore ships the `StoryBriefGenerator` port with **one** production binding, `UnavailableStoryBriefGenerator`. It records `FAILED / CAPABILITY_UNAVAILABLE` and spends nothing. Design R1 can bind every state truthfully, and no surface may present Read Brief as working while the register says unavailable.
+**No second AI execution path.** `AskGovernedStoryBriefGenerator` (module `story-brief`, composed above Stories and Ask V2) runs ONE ordinary Ask V2 operation under the requester's account principal:
+- **Same machinery as any Ask turn:** `AskV2Service.createThread` (one thread per reader per story), then `quote`, then accept + reserve where the class requires it, then `execute`. Same router, STORY context for the canonical story's founding article (retained article only), execution adapter, compute meter / budgets / breaker / switches, ledger and StoredResult.
+- **Request context:** the POST route runs under `AskRequestContextInterceptor` (account + trusted IP scope), so per-account and per-IP budgets apply.
+- **Input:** the question is a fixed system sentence (`STORY_BRIEF_QUESTION`). No reader text and no discussion content reach the run.
+- **Output:** projected by the same `briefingSnapshotOf` a saved Briefing uses, so blocks, evidence refs and `payload.intelligence` have exactly the Ask shapes.
+- **Requester's record:** the turn appears in the requester's own Ask history (their compute, their record). The shared Brief stores only the operation id.
+- **Retries:** one governed operation per attempt (idempotency key = attempt id), so a retry after a failure is a new operation, never a replay.
 
-**Decision needed (CTO/PO):** the compute owner and quota for shared Story Brief generation (requesting account vs a product pool), guest eligibility, and the per-story refresh limit.
+**Outcome mapping**
+- `BUDGET_*` → **BUDGET_REFUSED**
+- `MODEL_*` / `CIRCUIT_*` → **PROVIDER_DEGRADED**
+- compute switches off / Ask disabled → **CAPABILITY_UNAVAILABLE**
+- any other failure → **EXECUTION_FAILED**
+- A completed run with no sourced answer → **INSUFFICIENT** (a conclusion)
+- Answer `PARTIAL` → **PARTIAL**
+- A sourced current / verified / computed / background / retained answer → **READY**
+
+**Never generated because** Home loaded, a card rendered, an image or title was clicked, the map changed, or Discussion was opened while a current Brief exists. There is no time-based refresh. Only an explicit signed-in POST on a non-current revision generates.
+
+Known R1 limitations (recorded, not hidden):
+- The Brief is generated in English.
+- The STORY context is the founding article, and the evidence revision covers the whole member set.
+- Materiality classes (§3) are not classified.
 
 ## 9. Gate
 
-`STORY_BRIEF_ENABLED` (server literal `'true'`, default OFF). When OFF, both endpoints return 404. It is **not** an Ask spend switch, and the Ask spend path never reads it.
+`STORY_BRIEF_ENABLED` (server literal `'true'`, default OFF until Alpha integration acceptance). When OFF, both endpoints return 404. The Ask spend path never reads it. Turning it ON exposes read + signed-in generation; generation still passes every governed Ask control.
+
+## 10. Canonical resolution and recorded limits (CTO baseline review)
+
+- `GET /stories/by-article/:articleRef` → `{ articleRef, storyId, materialVersion }`: the canonical story for an article. Read-only, zero compute, never creates a story, no user identity, **no Discussion dependency**. Read Brief never needs Discussion ON to discover story identity.
+- **ENABLEMENT LIMIT: language.** Briefs are English in R1. Broad enablement requires governed locale-aware versions, or an explicit English-only limit and disclosure.
+- **Stale ≠ material.** `STALE` / `changedSince.basis = EVIDENCE_SET_CHANGED` means the article set changed. It must never be presented as a material event.

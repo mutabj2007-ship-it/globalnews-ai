@@ -5,6 +5,7 @@ import type { NewsArticle } from '@globalnews-ai/shared';
 import {
   DECLARED_REGIONS,
   EAST_AFRICA,
+  EAST_AFRICAN_COMMUNITY,
   MAX_CONCURRENT_REGION_REQUESTS,
   detectDeclaredRegion,
   prioritizeRegionMembers,
@@ -82,7 +83,7 @@ describe('TEST A · the typed question resolves EAST AFRICA as request scope', (
     for (const yes of [
       'what is happening in east africa',
       'eastern africa humanitarian situation',
-      'east african community trade',
+      'east african economies',
       'the horn of africa',
     ]) {
       expect(detectDeclaredRegion(yes)).toBe(EAST_AFRICA);
@@ -402,5 +403,34 @@ describe('the declared region list is governed, not inferred', () => {
 
     expect(source).not.toMatch(/fetch\(|http|camera|storyContext|provider/i);
     expect(DECLARED_REGIONS).toContain(EAST_AFRICA);
+  });
+});
+
+describe('CTO R-1 — the East African Community is its own governed scope (never the EA-11)', () => {
+  it('reads its 8 members from canonical geography (the political union), not a restated list', () => {
+    expect([...EAST_AFRICAN_COMMUNITY.members].sort()).toEqual(['BDI', 'COD', 'KEN', 'RWA', 'SOM', 'SSD', 'TZA', 'UGA']);
+    expect(resolveRegionMembers(EAST_AFRICAN_COMMUNITY)).toHaveLength(8);
+  });
+
+  it('the reader’s wording decides: EAC wording → the 8; East Africa wording → the 11', () => {
+    for (const q of ['east african community trade', 'what is the eac doing about tariffs', 'eac summit']) {
+      expect(detectDeclaredRegion(q)).toBe(EAST_AFRICAN_COMMUNITY);
+    }
+    for (const q of ['what is happening in east africa', 'east african economies', 'the horn of africa']) {
+      expect(detectDeclaredRegion(q)).toBe(EAST_AFRICA);
+    }
+  });
+
+  it('an EAC question never retrieves Djibouti, Eritrea or Ethiopia', () => {
+    const region = detectDeclaredRegion('east african community trade');
+    expect(region?.members).not.toEqual(expect.arrayContaining(['DJI']));
+    for (const iso3 of ['DJI', 'ERI', 'ETH']) expect(region?.members).not.toContain(iso3);
+  });
+
+  it('both scopes stay declared side by side', () => {
+    expect(DECLARED_REGIONS.map((r) => [r.id, r.members.length])).toEqual([
+      ['east-african-community', 8],
+      ['east-africa', 11],
+    ]);
   });
 });

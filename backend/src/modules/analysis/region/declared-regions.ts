@@ -1,5 +1,6 @@
 import type { CountryMeta } from '@globalnews-ai/shared';
 import { resolveCountryByAnyIdentifier, EAST_AFRICA_MEMBERS } from '@globalnews-ai/shared';
+import { supranationalById } from '../../geo/supranational-membership';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -71,7 +72,33 @@ export const EAST_AFRICA: DeclaredRegion = {
   phrases: ['east africa', 'eastern africa', 'the horn of africa', 'east african'],
 };
 
-export const DECLARED_REGIONS: readonly DeclaredRegion[] = [EAST_AFRICA];
+/**
+ * CTO R-1 (2026-10-05) — THE EAST AFRICAN COMMUNITY IS ITS OWN GOVERNED SCOPE.
+ *
+ * "East African Community" used to match the East Africa phrase 'east african', so an EAC
+ * question was answered over the 11-country PRODUCT scope — adding Djibouti, Eritrea and
+ * Ethiopia, which are not EAC members. The EAC is an institution with a published membership;
+ * it is read from canonical geography (the political-union record), never restated here.
+ * The reader's wording decides: "East African Community" / "EAC" → these 8; "East Africa" /
+ * "East African" → the 11.
+ */
+function eacMembers(): readonly string[] {
+  const eac = supranationalById('region:east-african-community');
+  if (!eac || eac.basis !== 'POLITICAL_UNION' || eac.members.length === 0) {
+    throw new Error('Missing governed membership: region:east-african-community');
+  }
+  return Object.freeze([...eac.members]);
+}
+
+export const EAST_AFRICAN_COMMUNITY: DeclaredRegion = {
+  id: 'east-african-community',
+  label: 'East African Community',
+  members: eacMembers(),
+  phrases: ['east african community', 'eac'],
+};
+
+/** ORDER MATTERS: the institutional name is matched before the broader 'east african'. */
+export const DECLARED_REGIONS: readonly DeclaredRegion[] = [EAST_AFRICAN_COMMUNITY, EAST_AFRICA];
 
 /**
  * ════════════════════════════════════════════════════════════════════════════

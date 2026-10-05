@@ -1,7 +1,7 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
-import { StoryIdentityService, type CanonicalStory } from './story-identity.service';
+import { StoryIdentityService, type CanonicalStory } from '../stories/story-identity.service';
 import {
   STORY_BRIEF_GENERATOR,
   type StoryBriefGenerator,
@@ -117,10 +117,23 @@ export class StoryBriefService {
     if (!story) throw new NotFoundException('STORY');
     const members = await db.storyArticle.findMany({
       where: { storyId: { in: [...story.aliasIds] } },
-      select: { articleRef: true },
+      select: { articleRef: true, articleUrl: true },
+      orderBy: [{ addedAt: 'asc' }, { articleRef: 'asc' }],
     });
+    if (members.length === 0) throw new NotFoundException('STORY_EVIDENCE');
     const articleRefs = members.map((m) => m.articleRef).sort();
-    return { story, articleRefs, revision: evidenceRevisionOf(articleRefs) };
+    const leadArticle = { articleRef: members[0]!.articleRef, articleUrl: members[0]!.articleUrl };
+    return { story, articleRefs, leadArticle, revision: evidenceRevisionOf(articleRefs) };
+  }
+
+  /**
+   * CANONICAL STORY RESOLUTION (CTO baseline §2) — articleRef → canonical story, read-only and
+   * independent of Discussion: no compute, no write (an article with no story yet stays storyless;
+   * nothing is created by reading), no user identity. An alias resolves to its survivor.
+   */
+  async resolveByArticle(articleRef: string): Promise<{ articleRef: string; storyId: string | null; materialVersion: number | null }> {
+    const story = await this.identity.resolveByArticleRef(articleRef);
+    return { articleRef, storyId: story?.storyId ?? null, materialVersion: story?.briefVersion ?? null };
   }
 
   /** ZERO COMPUTE. Never calls the generator. */
@@ -180,7 +193,7 @@ export class StoryBriefService {
 
   /** The explicit Read Brief. The ONLY path that may call the generator. */
   async request(storyId: string, requester: StoryBriefRequester, now: Date = new Date()): Promise<StoryBriefView> {
-    const { story, articleRefs, revision } = await this.evidenceOf(storyId);
+    const { story, articleRefs, leadArticle, revision } = await this.evidenceOf(storyId);
     const aliasIds = [...story.aliasIds];
 
     /* A current Brief reopens with zero compute (PARTIAL / INSUFFICIENT included: per revision). */
@@ -208,7 +221,7 @@ export class StoryBriefService {
     let outcome: Awaited<ReturnType<StoryBriefGenerator['generate']>>;
     try {
       outcome = await this.generator.generate(
-        { storyId: story.storyId, evidenceRevision: revision, materialVersion: story.briefVersion, articleRefs },
+        { storyId: story.storyId, attemptId, evidenceRevision: revision, materialVersion: story.briefVersion, articleRefs, leadArticle },
         requester,
       );
     } catch {
@@ -249,5 +262,48 @@ export class StoryBriefService {
       });
     });
     return this.viewOf(story, revision, finishedAt);
+  }
+
+  /**
+   * ADMIN ↔ PUBLIC CONTRACT (CTO §8) — the operational truth behind what a reader sees, keyed by the
+   * SAME canonical identities: story + alias set, member articles (articleRef / url / publisher
+   * host), the current evidence revision and derived state, every immutable version (with the
+   * governed sourceOperationId), and every attempt (status, failure kind/code, operationId).
+   * Read-only, zero compute. No requester identity exists to show: none is stored on a Brief.
+   */
+  async adminInspect(storyId: string, now: Date = new Date()) {
+    const { story, revision } = await this.evidenceOf(storyId);
+    const aliasIds = [...story.aliasIds];
+    const [members, versions, attempts, view] = await Promise.all([
+      this.prisma.storyArticle.findMany({
+        where: { storyId: { in: aliasIds } },
+        select: { articleRef: true, articleUrl: true, sourceHost: true, storyId: true, addedAt: true },
+        orderBy: [{ addedAt: 'asc' }, { articleRef: 'asc' }],
+      }),
+      this.prisma.storyBriefVersion.findMany({ where: { storyId: { in: aliasIds } }, orderBy: [{ version: 'asc' }, { createdAt: 'asc' }] }),
+      this.prisma.storyBriefAttempt.findMany({ where: { storyId: { in: aliasIds } }, orderBy: { startedAt: 'asc' } }),
+      this.viewOf(story, revision, now),
+    ]);
+    return {
+      story: { storyId: story.storyId, aliasIds, materialVersion: story.briefVersion },
+      currentEvidenceRevision: revision,
+      state: view.state,
+      generationAvailable: view.generationAvailable,
+      members,
+      versions: versions.map((v) => ({ ...versionView(v), id: v.id, storyId: v.storyId, sourceOperationId: v.sourceOperationId, createdAt: v.createdAt.toISOString() })),
+      attempts: attempts.map((a) => ({
+        id: a.id,
+        storyId: a.storyId,
+        evidenceRevision: a.evidenceRevision,
+        status: a.status,
+        failureKind: a.failureKind,
+        failureCode: a.failureCode,
+        operationId: a.operationId,
+        briefVersionId: a.briefVersionId,
+        leaseExpiresAt: a.leaseExpiresAt.toISOString(),
+        startedAt: a.startedAt.toISOString(),
+        finishedAt: a.finishedAt?.toISOString() ?? null,
+      })),
+    };
   }
 }

@@ -76,6 +76,14 @@ export interface DeclaredProductRegion {
   readonly members: readonly string[] | null;
   /** Considered and deliberately excluded. Empty is allowed; silence is not. */
   readonly excludedPending: readonly ExcludedMember[];
+  /**
+   * CTO R-2 — the reader-facing name of a PRODUCT_GOVERNED scope, from the ONE shared authority
+   * (`PRODUCT_COVERAGE_SCOPES`). A surface showing a product-governed membership names it with
+   * this (e.g. "GlobalNewsAI Middle East monitoring scope"), never as agreed geography. Absent for
+   * BACKEND_PUBLISHED regions, whose membership IS the published geographic record.
+   */
+  readonly scopeLabel?: string;
+  readonly scopeDisclosure?: string;
 }
 
 /* ── PRODUCT-GOVERNED MEMBERSHIPS, EXACTLY AS THE PRODUCT OWNER DECLARED ──── */
@@ -90,7 +98,7 @@ export interface DeclaredProductRegion {
  * membership. UN M49 has no 'Middle East'" — which is why this list is
  * product-governed and says so, rather than pretending to a standard.
  */
-import { MIDDLE_EAST_MEMBERS, EAST_AFRICA_MEMBERS } from '@globalnews-ai/shared';
+import { MIDDLE_EAST_MEMBERS, EAST_AFRICA_MEMBERS, productCoverageScope } from '@globalnews-ai/shared';
 
 /**
  * "Do NOT equate East Africa with EAC. For Alpha, define the GlobalNews AI East
@@ -106,6 +114,8 @@ export const DECLARED_PRODUCT_REGIONS: readonly DeclaredProductRegion[] = [
   {
     id: 'region:middle-east',
     label: 'Middle East',
+    scopeLabel: productCoverageScope('region:middle-east')?.scopeLabel,
+    scopeDisclosure: productCoverageScope('region:middle-east')?.disclosure,
     authority: 'GlobalNews AI Alpha regional coverage baseline',
     authorityVersion: 'alpha-1',
     membershipSource: 'PRODUCT_GOVERNED',
@@ -125,6 +135,8 @@ export const DECLARED_PRODUCT_REGIONS: readonly DeclaredProductRegion[] = [
   },
   {
     id: 'region:east-africa',
+    scopeLabel: productCoverageScope('region:east-africa')?.scopeLabel,
+    scopeDisclosure: productCoverageScope('region:east-africa')?.disclosure,
     label: 'East Africa',
     authority: 'GlobalNews AI Alpha regional coverage baseline',
     authorityVersion: 'alpha-1',
