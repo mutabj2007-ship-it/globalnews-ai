@@ -301,7 +301,7 @@ import { readCapabilityRequests } from '../../ask-router/capability-producers';
 import { readContinuationEllipsis } from '../anchor/continuation-ellipsis.util';
 import {
   admitsReport,
-  anchoredQueries,
+  supplementQueries,
   anchorsKey,
   normalizeText as normalizeAnchorText,
   type QuestionAnchors,
@@ -3549,7 +3549,8 @@ export class AnalysisService {
           admit a report by COUNTRY alone ("oil prices in Rwanda" → any Rwanda report; "Rwanda …
           Congo conflict" → Rwandan condom prices). Here the candidates are checked against what the
           reader actually named: every linked actor (or one of a set) AND every topic family. Only
-          admitted reports become evidence; when fewer than three survive, ONE bounded anchored
+          admitted reports become evidence; when fewer than three survive (or, for a trade corridor,
+          a named route has no admitted report yet), ONE bounded anchored
           supplement (at most two phrases, provider then retained store) is searched and gated the
           same way. Nothing irrelevant is ever padded in: an empty result is the truthful answer.
         */
@@ -3557,7 +3558,7 @@ export class AnalysisService {
           const anchors = executionPolicy.questionAnchors;
           const candidates = articles.length;
           const admitted = articles.filter((article) => admitsReport(anchors, article).admitted);
-          const queries = admitted.length >= 3 ? [] : anchoredQueries(anchors);
+          const queries = supplementQueries(anchors, admitted);
           const seen = new Set(admitted.map((article) => article.id));
           const seenUrls = new Set(admitted.map((article) => article.url));
           const take = (pool: readonly NewsArticle[]): void => {

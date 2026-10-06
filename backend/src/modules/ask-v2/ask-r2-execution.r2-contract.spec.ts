@@ -1,7 +1,9 @@
 import type { AnalysisApiResponse } from '@globalnews-ai/shared';
 import { AskR2ExecutionAdapter } from './ask-r2-execution.adapter';
 import { askRequestContext } from './ask-request-context';
-import type { AskRequest } from './ask-compute.contract';
+import type { AskPlan, AskRequest } from './ask-compute.contract';
+import type { QuestionAnchors } from '../analysis/query/question-anchors.util';
+import { anchoredQueries } from '../analysis/query/question-anchors.util';
 import { conversationOf } from './ask-v2.service';
 import { readConversationalTurn } from './conversation/conversation-state';
 import {
@@ -133,6 +135,7 @@ function conversation(language: 'en' | 'pl' = 'en') {
     const before = { analysis: calls.analysis.length, background: calls.background.length };
     const priorQuestion = earlier[earlier.length - 1];
     const id = `op-${++op}`;
+    let preparedPlan: AskPlan | undefined;
     const payload = await askRequestContext.run(
       {
         accountId: 'user-1',
@@ -141,6 +144,7 @@ function conversation(language: 'en' | 'pl' = 'en') {
       } as never,
       async () => {
         const plan = await adapter.prepare(request);
+        preparedPlan = plan;
         return JSON.parse((await adapter.execute(request, plan, id)).payloadJson) as Payload;
       },
     );
@@ -153,6 +157,8 @@ function conversation(language: 'en' | 'pl' = 'en') {
       analysisCalls: calls.analysis.slice(before.analysis),
       backgroundCalls: calls.background.slice(before.background),
       stored,
+      /* ASK R2 · geography — the plan as prepared (scope / countryCount are what ComputeOperation stores) */
+      plan: preparedPlan as AskPlan,
     };
   }
   return { ask };
@@ -224,5 +230,79 @@ describe('ASK R2 · "As of <today>" anchors the stated window; it is not a filte
     const c = conversation();
     const t = await c.ask(corridor(day(new Date(Date.now() - 40 * 86_400_000))));
     expect(t.analysisCalls).toHaveLength(0);
+  });
+});
+
+describe('ASK R2 · geography — a corridor keeps the destination and BOTH routes (TEST B / C)', () => {
+  const day = (d: Date) =>
+    `${d.getUTCDate()} ${d.toLocaleString('en-GB', { month: 'long', timeZone: 'UTC' })} ${d.getUTCFullYear()}`;
+  const today = day(new Date());
+  /* TEST C — verbatim from the contract, asked today */
+  const TEST_C = `As of ${today}, identify up to five developments reported in the past seven days affecting a small business importing into Rwanda via Mombasa or Dar es Salaam. Cover ports, borders, transport, customs, fuel and security. Include EU or Middle East events only with an evidenced link to these routes.\nPrioritize official and credible local sources. Use a concise table: development, event/publication dates, affected route, facts, likely impact and source link. Separate facts, forecasts and analysis. Flag coverage gaps; no reports does not mean no disruption. End with three practical checks for the importer. Under 600 words.`;
+  /* TEST B — the longer equivalent that names the countries of both ports explicitly */
+  const TEST_B = `As of ${today}, I run a small business importing goods into Rwanda via Mombasa, Kenya, or Dar es Salaam, Tanzania. Identify up to five developments reported in the past seven days that affect this import route: ports, border crossings, road and rail transport, customs and clearance, fuel supply and prices, and security along the corridors. Include events in the EU or the Middle East only where the reporting shows a link to these routes. Prioritize official and credible local sources. Present a concise table with: development, event date and publication date, affected route, reported facts, likely impact on my business, and source link. Keep reported facts, forecasts and your analysis separate. Flag coverage gaps — the absence of reports does not mean the absence of disruption. Finish with three practical checks I should make as an importer. Keep it under 600 words.`;
+  const UGANDA =
+    'Which developments from the past seven days affect a small business importing into Uganda via Mombasa or Dar es Salaam? Cover ports, borders, customs and fuel, in a short table with sources.';
+
+  const scopeOf = (plan: AskPlan) => (JSON.parse(plan.scope) as { geography: string[] }).geography;
+  const anchorsOf = (call: unknown[]) =>
+    (call[6] as { questionAnchors?: QuestionAnchors }).questionAnchors;
+
+  it.each([
+    ['TEST C', TEST_C, 'RWA'],
+    ['TEST B', TEST_B, 'RWA'],
+    ['paraphrase (Uganda)', UGANDA, 'UGA'],
+  ])('%s: typed geography = destination first, then BOTH corridors; countryCount 3', async (_n, q, dest) => {
+    const c = conversation();
+    const t = await c.ask(q);
+    expect(scopeOf(t.plan)).toEqual([
+      `TYPED_GEOGRAPHY:${dest}`,
+      'TYPED_GEOGRAPHY:KEN',
+      'TYPED_GEOGRAPHY:TZA',
+    ]);
+    expect(t.plan.countryCount).toBe(3);
+  });
+
+  it.each([
+    ['TEST C', TEST_C, 'Rwanda'],
+    ['TEST B', TEST_B, 'Rwanda'],
+    ['paraphrase (Uganda)', UGANDA, 'Uganda'],
+  ])('%s: retrieval is anchored on the corridor and each route is searched (bounded: two)', async (_n, q, dest) => {
+    const c = conversation();
+    const t = await c.ask(q);
+    expect(t.analysisCalls).toHaveLength(1);
+    const anchors = anchorsOf(t.analysisCalls[0]);
+    expect(anchors?.relation).toBe('CORRIDOR');
+    expect(anchors?.actors.map((a) => `${(a as { role?: string }).role}:${a.key}`)).toEqual([
+      expect.stringMatching(/^DESTINATION:/),
+      'ROUTE:KEN',
+      'ROUTE:TZA',
+    ]);
+    /* EU / Middle East are conditional ("only with an evidenced link"): never an actor of their own */
+    expect(anchors?.actors.some((a) => a.key.startsWith('region:'))).toBe(false);
+    expect(anchoredQueries(anchors!)).toEqual([`Mombasa ${dest}`, `Dar es Salaam ${dest}`]);
+  });
+
+  it('"…through Dar es Salaam, not Mombasa": Rwanda stays the destination; Mombasa is an exclusion, never retrieved', async () => {
+    const c = conversation();
+    await c.ask(TEST_C);
+    const t = await c.ask(
+      'My shipment goes through Dar es Salaam, not Mombasa. What has changed on that route recently?',
+    );
+    expect(scopeOf(t.plan)).toEqual(['TYPED_GEOGRAPHY:RWA', 'TYPED_GEOGRAPHY:TZA']);
+    expect(scopeOf(t.plan)).not.toContain('TYPED_GEOGRAPHY:KEN');
+    expect(t.plan.countryCount).toBe(2);
+    expect(t.analysisCalls).toHaveLength(1);
+    const anchors = anchorsOf(t.analysisCalls[0]);
+    expect(anchors?.relation).toBe('CORRIDOR');
+    expect(anchors?.actors.map((a) => `${(a as { role?: string }).role}:${a.key}`)).toEqual(['DESTINATION:RWA', 'ROUTE:TZA']);
+    expect(anchoredQueries(anchors!)).toEqual(['Dar es Salaam Rwanda']);
+  });
+
+  it('bilateral relationship (TEST E) keeps its own scope — no corridor reading', async () => {
+    const c = conversation();
+    const t = await c.ask(TEST_E);
+    expect(anchorsOf(t.analysisCalls[0])?.relation).not.toBe('CORRIDOR');
+    expect(scopeOf(t.plan)).toEqual(['TYPED_GEOGRAPHY:COD']);
   });
 });

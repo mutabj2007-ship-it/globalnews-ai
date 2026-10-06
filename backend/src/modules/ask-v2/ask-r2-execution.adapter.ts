@@ -1366,7 +1366,9 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     const governed = governedPrompt(contributions);
 
     /* ASK RELIABILITY R1 — what the reader named (actors, regions, topic), from their own words. */
-    const anchors = questionAnchorsOf(request.question);
+    /* ASK R2 · geography — the route's corridor reading (destination + every route, exclusions
+       removed, an earlier turn's destination kept) anchors retrieval; null keeps the plain reading. */
+    const anchors = questionAnchorsOf(request.question, route.corridor ?? null);
 
     /* 4 · ONE call to the approved analysis path, one model attempt at most. */
     let usage: { promptTokens: number; completionTokens: number } | null = null;
