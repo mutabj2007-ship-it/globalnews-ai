@@ -242,7 +242,7 @@ export interface AskR2Payload {
    */
   readonly priorAnswer?: {
     readonly form: string;
-    readonly outcome: 'FINDINGS' | 'NO_FINDINGS';
+    readonly outcome: 'FINDINGS' | 'NO_FINDINGS' | 'INCOMPLETE';
     readonly evidence: 'REUSED' | 'SEARCHED_AGAIN';
   };
   /**

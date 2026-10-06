@@ -62,7 +62,8 @@ export type ExecutionContractKind =
  */
 export interface AnswerRework {
   readonly form: AnswerReworkForm;
-  readonly priorOutcome: 'FINDINGS' | 'NO_FINDINGS';
+  /* ASK R2 LIVE-GATE REPAIR (P0-4) — INCOMPLETE: the earlier turn's execution did not complete */
+  readonly priorOutcome: 'FINDINGS' | 'NO_FINDINGS' | 'INCOMPLETE';
   readonly evidenceUrls: readonly string[];
   readonly window: ArtifactWindow | null;
   readonly excluded: readonly string[];
@@ -152,6 +153,21 @@ export const REWORK_AFTER_NOTHING_RULES =
   'reformat: say so plainly first and never present that earlier answer as findings. A new search ' +
   "was run now for the same question's scope (its place, subject and period); the reporting " +
   'provided comes from that new search only. ' +
+  REWORK_COMMON;
+
+/**
+ * ASK R2 LIVE-GATE REPAIR (P0-4) — the earlier turn did not complete (live: MODEL_FAILURE), so it
+ * produced no answer at all. The reader's correction is applied to THAT question, a new search runs
+ * now for the corrected scope, and the answer says the earlier search did not complete.
+ */
+export const REWORK_AFTER_INCOMPLETE_RULES =
+  'FOLLOW-UP AFTER AN EARLIER REQUEST THAT DID NOT COMPLETE. The earlier search (the EARLIER WORK ' +
+  'block below names its question) did not finish, so it produced no answer and there are no ' +
+  'earlier findings: say plainly in your first sentence that the earlier search did not complete, ' +
+  "and never present anything as its findings. Apply the reader's correction to the earlier " +
+  'question — keep its destination, places, period, purpose and requested answer structure, and ' +
+  'remove only what the reader excluded — and answer that corrected question from the reporting ' +
+  'provided, which comes from a new search run now. ' +
   REWORK_COMMON;
 
 /** ISO3 → the reader's own words for the place in THIS turn (the qualified reading's spans). */
@@ -277,7 +293,14 @@ export function executionContractOf(input: {
       (priorArtifact.kind === 'REASONED_ANSWER' && priorArtifact.currentFindings === 'NONE'))
   ) {
     const scope = priorArtifact.scope;
-    const excluded = excludedPlaces(input.question, input.language, turnPlaceSpans(route));
+    /* ASK R2 LIVE-GATE REPAIR (P0-4) — "not Mombasa" names a place the corridor reader resolved
+       (KEN) but never typed, so it has no span of its own here: its exclusion counts too. */
+    const excluded = [
+      ...new Set([
+        ...excludedPlaces(input.question, input.language, turnPlaceSpans(route)),
+        ...(route.corridor?.excluded ?? []).map((place) => place.iso3),
+      ]),
+    ].filter((iso3) => !(route.corridor?.routes ?? []).some((r) => r.iso3 === iso3));
     const typed = route.envelope.geography.candidates
       .filter((c) => c.source === 'TYPED_GEOGRAPHY')
       .map((c) => c.value)
@@ -299,7 +322,11 @@ export function executionContractOf(input: {
             : scope.question,
         usePriorQuestion: false,
         stableQuestion: null,
-        answerRules: findings ? REWORK_REUSE_RULES : REWORK_AFTER_NOTHING_RULES,
+        answerRules: findings
+          ? REWORK_REUSE_RULES
+          : priorArtifact.incomplete === true
+            ? REWORK_AFTER_INCOMPLETE_RULES
+            : REWORK_AFTER_NOTHING_RULES,
         answerData:
           `${artifactPromptBlock(priorArtifact)}\n` +
           `<<<READER FOLLOW-UP (the reader's own words — what to do now)\n${input.question}\nREADER FOLLOW-UP>>>`,
@@ -307,7 +334,11 @@ export function executionContractOf(input: {
         inheritedScope: inherited === null ? null : { ...inherited, countries },
         rework: {
           form: reworkForm,
-          priorOutcome: findings ? 'FINDINGS' : 'NO_FINDINGS',
+          priorOutcome: findings
+            ? 'FINDINGS'
+            : priorArtifact.incomplete === true
+              ? 'INCOMPLETE'
+              : 'NO_FINDINGS',
           evidenceUrls: findings ? [...(priorArtifact.evidenceUrls ?? [])] : [],
           window: scope.window ?? null,
           excluded,

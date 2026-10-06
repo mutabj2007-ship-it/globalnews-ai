@@ -480,6 +480,7 @@ export const ptShellOverlay: ShellLocaleOverlay = {
         framework: "Estrutura",
         mixedStableTitle: "Explicação · raciocínio do modelo (não é fonte)",
         mixedStableUnavailable: "A parte explicativa da sua pergunta não pôde ser respondida neste momento; a parte atual abaixo vem de reportagens com fontes.",
+        priorIncomplete: "A busca anterior não foi concluída, então não havia resultados para revisar. Uma nova busca foi feita para a sua pergunta corrigida.",
         priorNoFindings: "A pesquisa anterior não encontrou resultados verificados para revisar, por isso foi feita uma nova pesquisa para a mesma pergunta.",
         priorReferenceUnresolved: "Não encontro nesta conversa uma resposta anterior à qual isso se refira. A qual resposta ou afirmação você se refere?",
         workNoteBody: "Construído a partir das respostas anteriores desta conversa. É raciocínio, não dados atuais com fontes: verifique qualquer número antes de confiar nele.",
@@ -515,6 +516,7 @@ export const ptShellOverlay: ShellLocaleOverlay = {
           other: "{0} fontes",
         },
       },
+      timedOut: "Não consegui concluir esta solicitação a tempo. Sua pergunta continua aqui — tente novamente.",
       unavailable: "O Ask está indisponível agora. Nada foi executado.",
       unavailableBecause: {
         EXECUTOR_NOT_WIRED: "Esta pergunta precisa de uma fonte que o Ask ainda não consegue ler — como suas matérias salvas, uma publicação oficial ou uma avaliação especializada. Nada foi respondido a partir de notícias em seu lugar.",

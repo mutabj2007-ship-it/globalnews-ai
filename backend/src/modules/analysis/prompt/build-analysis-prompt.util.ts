@@ -1,4 +1,5 @@
 import type { DisplayLocale } from '@globalnews-ai/shared';
+import { readOutputContract, renderOutputContract } from './output-contract.util';
 import type {
   AnalysisDevelopmentBreadth,
   EvidenceFreshnessFact,
@@ -592,8 +593,12 @@ export function buildAnalysisUserPrompt(
     )
     .join('\n\n');
 
+  /* ASK R2 LIVE-GATE REPAIR (P0-2) — the reader's output instructions, as an explicit contract */
+  const outputContract = renderOutputContract(readOutputContract(query));
   return `User question: "${query}"
-
+${outputContract === '' ? '' : `
+${outputContract}
+`}
 Evidence (cite these exact evidenceId values in "evidenceIds" fields — never invent new ones, never cite anything else):
 
 ${articleBlocks}
@@ -745,6 +750,18 @@ export function buildSingleSourceBasisSection(breadth: AnalysisDevelopmentBreadt
 export function buildDevelopmentBreadthSection(breadth?: AnalysisDevelopmentBreadth): string {
   if (breadth === undefined) {
     return '';
+  }
+
+  /* ASK R2 LIVE-GATE REPAIR (P0-2) — the reader's own output contract decides the brief's shape */
+  if (breadth.multiDevelopment && breadth.readerContract === true) {
+    return (
+      `\n\nMEASURED EVIDENCE BREADTH FOR THIS REQUEST: ${breadth.clusters} distinct reporting ` +
+      `clusters across ${breadth.categories} editorial domains.\n\n` +
+      'HOW THE BRIEF IS REQUESTED HERE: ONE "summary" field that follows THE READER\'S OUTPUT ' +
+      'CONTRACT in the user message, in its order (opening, table, limits, closing). Separate its ' +
+      'blocks with a BLANK LINE; a brief that reads as a single paragraph is WITHHELD. Cover what ' +
+      'the evidence establishes and nothing more.'
+    );
   }
 
   if (!breadth.multiDevelopment) {
@@ -1137,7 +1154,9 @@ export function buildAnalysisJsonSchema(
     validator will judge the answer against. One fact, three consumers: the prose
     section, this schema, and the verdict.
   */
-  const multiDevelopment = developmentBreadth?.multiDevelopment === true;
+  /* ASK R2 LIVE-GATE REPAIR (P0-2) — a reader's output contract keeps the one "summary" field */
+  const multiDevelopment =
+    developmentBreadth?.multiDevelopment === true && developmentBreadth.readerContract !== true;
 
   const briefProperties: Record<string, unknown> = multiDevelopment
     ? {

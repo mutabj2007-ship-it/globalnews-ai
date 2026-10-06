@@ -46,6 +46,12 @@ export interface AnalysisDevelopmentBreadth {
   readonly categories: number;
   /** True when a single blended paragraph is NOT an acceptable answer. */
   readonly multiDevelopment: boolean;
+  /**
+   * ASK R2 LIVE-GATE REPAIR (P0-2) — the reader's own output contract (opening / table / closing)
+   * shapes the brief: ONE "summary" filled in the contract's order, instead of the two-field
+   * primary/additional split that fought it live. The compliance verdict is unchanged.
+   */
+  readonly readerContract?: boolean;
 }
 
 export interface AnalysisRelationalContext {

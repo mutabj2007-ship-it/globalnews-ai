@@ -480,6 +480,7 @@ export const esShellOverlay: ShellLocaleOverlay = {
         framework: "Marco",
         mixedStableTitle: "Explicación · razonamiento del modelo (no es una fuente)",
         mixedStableUnavailable: "La parte explicativa de tu pregunta no se pudo responder en este momento; la parte actual de abajo proviene de reportes con fuentes.",
+        priorIncomplete: "La búsqueda anterior no se completó, así que no había resultados que revisar. Se realizó una nueva búsqueda para tu pregunta corregida.",
         priorNoFindings: "La búsqueda anterior no encontró resultados verificados que revisar, así que se hizo una nueva búsqueda para la misma pregunta.",
         priorReferenceUnresolved: "No encuentro en esta conversación una respuesta anterior a la que esto se refiera. ¿A qué respuesta o afirmación te refieres?",
         workNoteBody: "Construido a partir de las respuestas anteriores de esta conversación. Es razonamiento, no datos actuales con fuentes: comprueba cualquier cifra antes de confiar en ella.",
@@ -515,6 +516,7 @@ export const esShellOverlay: ShellLocaleOverlay = {
           other: "{0} fuentes",
         },
       },
+      timedOut: "No pude terminar esta solicitud a tiempo. Tu pregunta sigue aquí: inténtalo de nuevo.",
       unavailable: "Ask no está disponible ahora. No se ejecutó nada.",
       unavailableBecause: {
         EXECUTOR_NOT_WIRED: "Esta pregunta necesita una fuente que Ask todavía no puede leer, como tus temas guardados, una publicación oficial o una evaluación especializada. No se respondió nada a partir de noticias en su lugar.",

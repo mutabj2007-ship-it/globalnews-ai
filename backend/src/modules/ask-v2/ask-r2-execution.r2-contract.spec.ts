@@ -1,4 +1,5 @@
 import type { AnalysisApiResponse } from '@globalnews-ai/shared';
+import { AnalysisDeadlineExceededError } from '../analysis/service/analysis.service';
 import { AskR2ExecutionAdapter } from './ask-r2-execution.adapter';
 import { askRequestContext } from './ask-request-context';
 import type { AskPlan, AskRequest } from './ask-compute.contract';
@@ -8,6 +9,7 @@ import { conversationOf } from './ask-v2.service';
 import { readConversationalTurn } from './conversation/conversation-state';
 import {
   SERVER_ARTIFACT_KINDS,
+  incompleteTurnArtifact,
   validateStoredArtifact,
   type PriorArtifact,
 } from './conversation/conversation-artifact';
@@ -35,6 +37,10 @@ const evidence = {
   declineBackground: false,
   /* R2 §7 — an earlier answer's evidence is no longer retained (a re-read resolves nothing) */
   notRetained: false,
+  /* ASK R2 LIVE-GATE REPAIR (P0-5) — the analysis's overall deadline expires */
+  deadline: false,
+  /* ASK R2 LIVE-GATE REPAIR (P0-6) — every provider failed */
+  providersDown: false,
 };
 interface Calls {
   analysis: Call[];
@@ -67,6 +73,24 @@ function harness() {
       }
       /* ASK R2 — a turn whose retrieval found nothing (the failed-A path) */
       if (evidence.none) return { analysis: null, analysisError: 'No matching reporting.', articles: [] };
+      /* ASK R2 LIVE-GATE REPAIR (P0-6) — every source failed: nothing retrieved BECAUSE providers were down */
+      if (evidence.providersDown)
+        return {
+          analysis: null,
+          analysisError: 'No matching reporting.',
+          articles: [],
+          retrievalContext: {
+            dataMode: 'unavailable',
+            providers: [],
+            fallbackReason: 'provider-error',
+            providerFailures: [
+              { providerId: 'gnews', kind: 'rate-limited' },
+              { providerId: 'gdelt-doc', kind: 'timeout' },
+            ],
+          },
+        };
+      /* ASK R2 LIVE-GATE REPAIR (P0-5) — the analysis's overall deadline expired (live 10:42Z) */
+      if (evidence.deadline) throw new AnalysisDeadlineExceededError(28_000, 'k');
       const policy = args[6] as {
         usageSink?: (u: { promptTokens: number; completionTokens: number }) => void;
       };
@@ -193,7 +217,24 @@ function conversation(language: 'en' | 'pl' = 'en') {
       plan: preparedPlan as AskPlan,
     };
   }
-  return { ask };
+  /**
+   * ASK R2 LIVE-GATE REPAIR (P0-4) — a turn that FAILED (live: B released MODEL_FAILURE): its
+   * question is stored (AskTurn) but no result, so priorArtifactIn finds no earlier answer — exactly
+   * what AskV2Service hands the next turn.
+   */
+  async function failed(question: string): Promise<void> {
+    /* the failed turn WAS planned (ComputeOperation.plan stored) — then its execution failed */
+    const plan = await askRequestContext.run(
+      { accountId: 'user-1', ipScope: 'ip:v4:203.0.113.7' } as never,
+      () => adapter.prepare({ question, language, intent: 'ask' } as AskRequest),
+    );
+    earlier.push(question);
+    const id = `op-${++op}`;
+    /* exactly what priorArtifactIn now derives from a RELEASED, failed turn */
+    const record = incompleteTurnArtifact({ question, planScope: plan.scope, askedAt: new Date() });
+    prior = record === null ? undefined : { ...record, sourceOperationId: id };
+  }
+  return { ask, failed };
 }
 
 
@@ -622,5 +663,134 @@ describe('ASK R2 · no evidence never becomes background "developments" (TEST C 
     } finally {
       evidence.none = false;
     }
+  });
+});
+
+describe('ASK R2 LIVE-GATE REPAIR · P0-1 — the live TEST A wording keeps Kenya (never "| Date |" → Japan)', () => {
+  const LIVE_A =
+    'What are the three most important developments reported in the past seven days that could affect a small shop owner in Kenya? Start with a two-sentence summary. Then use a compact table: What changed | Date | Why it matters to the shop | Source link. Prioritize credible Kenyan reporting and official sources. Separate reported facts from your analysis. If you can verify fewer than three developments, show only those. Finish with one practical thing the shopkeeper should check next. Keep the entire answer under 250 words.';
+  it('typed geography is KEN only; the full question reaches analysis', async () => {
+    const c = conversation();
+    const t = await c.ask(LIVE_A);
+    expect((JSON.parse(t.plan.scope) as { geography: string[] }).geography).toEqual(['TYPED_GEOGRAPHY:KEN']);
+    expect(String(t.analysisCalls[0][0])).toContain('What changed | Date | Why it matters to the shop | Source link');
+  });
+});
+
+describe('ASK R2 LIVE-GATE REPAIR · P0-4 — the corridor correction keeps the reader\'s intent', () => {
+  const day = (d: Date) =>
+    `${d.getUTCDate()} ${d.toLocaleString('en-GB', { month: 'long', timeZone: 'UTC' })} ${d.getUTCFullYear()}`;
+  const B = `As of ${day(new Date())}, identify up to five developments reported in the past seven days affecting a small business importing into Rwanda via Mombasa or Dar es Salaam. Cover ports, borders, transport, customs, fuel and security. Include EU or Middle East events only with an evidenced link to these routes.\nPrioritize official and credible local sources. Use a concise table: development, event/publication dates, affected route, facts, likely impact and source link. Separate facts, forecasts and analysis. Flag coverage gaps; no reports does not mean no disruption. End with three practical checks for the importer. Under 600 words.`;
+  /* the live C, verbatim */
+  const C = 'My shipment goes through Dar es Salaam, not Mombasa. Revise your answer to retain only relevant developments and explain what changed.';
+  type Chip = { kind: string; value: string; source: string };
+  const chipsOf = (t: { payload: unknown }) =>
+    ((t.payload as { chips?: { chips?: Chip[] } }).chips?.chips ?? []).map((c) => `${c.kind}:${c.value}`);
+
+  it('after a FAILED B (live: MODEL_FAILURE): Rwanda stays destination, Dar es Salaam the corridor, Mombasa removed, the window and the original request (with its table contract) revised, and the answer must say the search did not complete', async () => {
+    const c = conversation();
+    await c.failed(B);
+    const t = await c.ask(C);
+    expect(chipsOf(t)).toEqual(expect.arrayContaining(['GEOGRAPHY:RWA', 'GEOGRAPHY:TZA', 'TIME:in the past seven days']));
+    expect(chipsOf(t)).not.toContain('GEOGRAPHY:KEN');
+    expect((t.payload as { priorAnswer?: { outcome: string } }).priorAnswer?.outcome).toBe('INCOMPLETE');
+    const query = String(t.analysisCalls[0][0]);
+    expect(query).toContain('importing into Rwanda');
+    expect(query).toContain('Use a concise table');
+    expect(query).toContain(C);
+    const rules = JSON.stringify(t.analysisCalls[0][6] ?? {});
+    expect(rules).toContain('DID NOT COMPLETE');
+  });
+
+  it('after a SUCCESSFUL B: the same correction keeps Rwanda + Dar es Salaam + window, removes Mombasa, and works on the earlier findings', async () => {
+    const c = conversation();
+    await c.ask(B);
+    const t = await c.ask(C);
+    expect(chipsOf(t)).toEqual(expect.arrayContaining(['GEOGRAPHY:RWA', 'GEOGRAPHY:TZA']));
+    expect(chipsOf(t)).not.toContain('GEOGRAPHY:KEN');
+    expect((t.payload as { priorAnswer?: { outcome: string } }).priorAnswer?.outcome).toBe('FINDINGS');
+  });
+});
+
+describe('ASK R2 LIVE-GATE REPAIR · P0-5 — an analysis deadline is MODEL_TIMEOUT end to end', () => {
+  it('the overall analysis budget expiring releases MODEL_TIMEOUT (live: MODEL_FAILURE → "Ask is unavailable")', async () => {
+    evidence.deadline = true;
+    try {
+      const c = conversation();
+      const d = new Date();
+      const asOf = `${d.getUTCDate()} ${d.toLocaleString('en-GB', { month: 'long', timeZone: 'UTC' })} ${d.getUTCFullYear()}`;
+      /* the live corridor turn (TEST C) — the one that was released MODEL_FAILURE at 10:42Z */
+      const liveB = `As of ${asOf}, identify up to five developments reported in the past seven days affecting a small business importing into Rwanda via Mombasa or Dar es Salaam. Cover ports, borders, transport, customs, fuel and security. Use a concise table: development, dates, route, facts, impact and source link. End with three practical checks for the importer. Under 600 words.`;
+      await expect(c.ask(liveB)).rejects.toMatchObject({
+        code: 'MODEL_TIMEOUT',
+      });
+    } finally {
+      evidence.deadline = false;
+    }
+  });
+});
+
+describe('ASK R2 LIVE-GATE REPAIR · P0-6 — genuinely absent evidence is never filled from memory', () => {
+  /* a probe the live D could not run (guest pool exhausted): Lake Kivu licence fees, Rwanda */
+  const D = 'What changes to fishing licence fees on Lake Kivu were reported in Rwanda in the past seven days? Present a table with date and source.';
+  type P = { answer: { state: string; basis?: string } };
+  const run = async (mode: 'none' | 'providersDown') => {
+    evidence[mode] = true;
+    try {
+      const c = conversation();
+      return await c.ask(D);
+    } finally {
+      evidence[mode] = false;
+    }
+  };
+
+  it('zero relevant evidence: never a current-reporting answer; the reasoning call is told NO CURRENT FINDINGS (no developments, no filled table)', async () => {
+    const t = await run('none');
+    expect((t.payload as P).answer.state).not.toBe('CURRENT_REPORTING');
+    for (const b of t.backgroundCalls) {
+      const rules = String((b as { jobRules?: string }).jobRules ?? '');
+      expect(rules).toContain('NO CURRENT FINDINGS');
+      expect(rules).toContain('never fill a requested table of developments');
+    }
+  });
+
+  it('provider failure is DISTINCT from zero relevant evidence: basis says UNAVAILABLE and the call is told the sources could not be reached', async () => {
+    const empty = await run('none');
+    const down = await run('providersDown');
+    expect((down.payload as P).answer.state).not.toBe('CURRENT_REPORTING');
+    /* the reader-facing distinction: the failed sources travel with the answer (the view says
+       "Search was limited — a news source was temporarily unavailable"), the empty search does not */
+    type R = { analysis?: { retrievalContext?: { fallbackReason?: string; providerFailures?: unknown[] } } | null };
+    const ctx = (t: { payload: unknown }) => (t.payload as R).analysis?.retrievalContext;
+    const downBasis = (down.payload as P).answer.basis ?? '';
+    const distinct =
+      downBasis !== (empty.payload as P).answer.basis ||
+      (ctx(down)?.fallbackReason === 'provider-error' && ctx(empty)?.fallbackReason !== 'provider-error');
+    expect(distinct).toBe(true);
+    for (const b of down.backgroundCalls) {
+      const rules = String((b as { jobRules?: string }).jobRules ?? '');
+      expect(rules).toContain('SOURCES UNAVAILABLE');
+      expect(rules).not.toContain('NO CURRENT FINDINGS');
+    }
+  });
+});
+
+describe('ASK R2 LIVE-GATE REPAIR · P0-6 — on the guidance path too, failed sources ≠ nothing found', () => {
+  const Q = 'What fuel price changes were reported in Rwanda in the past seven days? Present a table with date and source.';
+  it('zero evidence → PARTIAL_CURRENT_NO_EVIDENCE + NO CURRENT FINDINGS; providers down → PARTIAL_CURRENT_UNAVAILABLE + SOURCES UNAVAILABLE', async () => {
+    const run = async (mode: 'none' | 'providersDown') => {
+      evidence[mode] = true;
+      try {
+        return await conversation().ask(Q);
+      } finally {
+        evidence[mode] = false;
+      }
+    };
+    const empty = await run('none');
+    const down = await run('providersDown');
+    expect((empty.payload as { answer: { basis: string } }).answer.basis).toBe('PARTIAL_CURRENT_NO_EVIDENCE');
+    expect((down.payload as { answer: { basis: string } }).answer.basis).toBe('PARTIAL_CURRENT_UNAVAILABLE');
+    expect(String((empty.backgroundCalls[0] as { jobRules?: string }).jobRules)).toContain('NO CURRENT FINDINGS');
+    expect(String((down.backgroundCalls[0] as { jobRules?: string }).jobRules)).toContain('SOURCES UNAVAILABLE');
   });
 });

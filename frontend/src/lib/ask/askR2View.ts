@@ -287,6 +287,8 @@ function governedGapText(payload: AskR2Payload, s: AskR2Strings): string {
 export function failedTurnCopy(failure: string | undefined, s: AskR2Strings): string {
   if (failure === 'NETWORK') return s.r3.networkFailed;
   if (failure?.startsWith('BUDGET_')) return s.budgetRefused;
+  /* ASK R2 LIVE-GATE REPAIR (P0-5) — a deadline is "couldn't finish in time", never "unavailable" */
+  if (failure === 'MODEL_TIMEOUT') return s.timedOut;
   /* ASK R2 — the documented length limit is named, never "unavailable". */
   if (failure === ASK_INPUT_TOO_LONG) return s.questionTooLong(ASK_INPUT_MAX_CHARS);
   return s.unavailable;
