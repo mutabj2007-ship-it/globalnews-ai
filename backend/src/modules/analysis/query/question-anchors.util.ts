@@ -139,7 +139,7 @@ const TOPICS: ReadonlyArray<{ key: string; label: string; query: string; cues: R
     key: 'business-impact',
     label: 'business operating conditions',
     query: 'business',
-    cues: /(shops?|shopkeepers?|shop ?owners?|store ?owners?|small business(es)?|small firms?|business ?owners?|smes?|msmes?|traders?|retailers?|merchants?|vendors?|importers?|importing|exporters?|exporting|suppliers?|sklepw*|przedsi(e|ę)biorcw*|importerw*)/,
+    cues: /\b(shops?|shopkeepers?|shop ?owners?|store ?owners?|small business(es)?|small firms?|business ?owners?|smes?|msmes?|traders?|retailers?|merchants?|vendors?|importers?|importing|exporters?|exporting|suppliers?|sklep\w*|przedsi(e|ę)biorc\w*|importer\w*)\b/,
     terms: [
       'price', 'prices', 'inflation', 'cost of living', 'tax', 'taxes', 'levy', 'levies', 'vat', 'excise',
       'duty', 'duties', 'tariff', 'tariffs', 'fuel', 'petrol', 'diesel', 'kerosene', 'electricity',

@@ -309,13 +309,21 @@ export function selectContributors(route: AskR2Route): AskContributorSelection[]
     subject always wins). No contributor-specific logic: every governed contributor sees it alike.
   */
   const inherited = route.inheritedScope;
+  /*
+    ASK R2 CONTENT QUALITY REPAIR (P0-A) — ONE geography reading. Every place read below
+    (district, city, compass qualifier) uses the question with its output-format vocabulary
+    masked — the same masker the router's canonical scope uses — so a requested column such as
+    "Date" can never become a place here while the router has correctly scoped Kenya.
+  */
+  const ownGeo = maskOutputVocabulary(own);
   const inherit =
     inherited !== undefined &&
     typed === undefined &&
-    nisrDistrictNamed(own) === null &&
+    nisrDistrictNamed(ownGeo) === null &&
     placeNamed(own) === null;
   const question = inherit ? inherited.question : own;
-  const district = nisrDistrictNamed(question);
+  const geo = maskOutputVocabulary(question);
+  const district = nisrDistrictNamed(geo);
   const inheritedCountry =
     inherit && inherited.countries.length === 1 ? (inherited.countries[0] ?? null) : null;
   const countryIso3 = typed ?? (district !== null ? 'RWA' : inheritedCountry);
@@ -331,7 +339,7 @@ export function selectContributors(route: AskR2Route): AskContributorSelection[]
     countryIso3,
     district: district === null ? null : { id: district.id, name: district.name },
     place,
-    qualifier: district === null && place === null ? subnationalQualifier(question) : null,
+    qualifier: district === null && place === null ? subnationalQualifier(geo) : null,
     ...(inherit ? { provenance: 'EARLIER_TURN' as const } : {}),
   };
 

@@ -1,3 +1,5 @@
+import { layoutReaderContractSummary } from '../validation/reader-contract-shape.util';
+
 /**
  * ============================================================================
  * C910 - THE PROVIDER-INTERNAL BRIEF NORMALIZATION
@@ -47,4 +49,18 @@ export function normalizeBriefFields(content: unknown): unknown {
     paragraph counting.
   */
   return { ...rest, summary: `${primary.trim()}\n\n${additional.trim()}` };
+}
+
+/**
+ * ASK R2 CONTENT QUALITY REPAIR (P0-B) — the reader-contract layout, applied where the two-field
+ * join above is: inside the provider, before the payload is validated or shown. Whitespace only;
+ * a no-op unless the brief was generated under a structural reader contract.
+ */
+export function layoutReaderContractBrief(content: unknown, readerContract: boolean): unknown {
+  if (!readerContract || content === null || typeof content !== 'object' || Array.isArray(content)) {
+    return content;
+  }
+  const record = content as Record<string, unknown>;
+  if (typeof record.summary !== 'string') return content;
+  return { ...record, summary: layoutReaderContractSummary(record.summary) };
 }
