@@ -12,7 +12,6 @@ describe('Home eligibility — business and conflict only', () => {
     ["Dangote's planned Kenya refinery faces legal challenge by consumer-rights group", 'world', 'business'],
     ['Ruto downplays rivalry over oil refinery in East Africa', 'politics', 'business'],
     ['Is Ethiopia on the verge of another civil war as fighting erupts in Tigray?', 'politics', 'conflict'],
-    ['Telecoms snarled in Ethiopia amid clashes', 'politics', 'conflict'],
     ["UN rights chief 'deeply alarmed' by escalating fighting in Ethiopia", 'world', 'conflict'],
     ['EU agrees new tariffs on Chinese electric vehicles', 'business', 'business'],
     ['Houthi missile attack disrupts Red Sea shipping', 'world', 'conflict'],
@@ -39,6 +38,16 @@ describe('Home eligibility — business and conflict only', () => {
   ])('REJECTED: %s', (title, category, reason) => {
     const v = yes(title, category);
     expect(v).toMatchObject({ eligible: false, reason });
+  });
+
+  it('HOME DATA TRUTH B1 — a lone "clashes" is not conflict evidence; the lead sentence stating the fighting is', () => {
+    expect(yes('Telecoms snarled in Ethiopia amid clashes', 'politics').eligible).toBe(false);
+    const v = yes(
+      'Telecoms snarled in Ethiopia amid clashes',
+      'politics',
+      'Internet and phone services were cut in Amhara as fighters clashed with federal troops near Gondar.',
+    );
+    expect(v.eligible && v.domains).toContain('conflict');
   });
 
   it('a sports headline cannot be smuggled in by a business-sounding summary', () => {
@@ -70,8 +79,8 @@ describe('Home editorial assembly', () => {
     row('Kenya refinery investment faces court challenge', 'KEN', 5),
     row('Tanzania raises fuel prices as import costs climb', 'TZA', 30),
     row('Uganda central bank holds interest rate', 'UGA', 200),
-    row('Fighting erupts in Tigray as ceasefire collapses', 'ETH', 10),
-    row('Fighting erupts in Tigray as ceasefire collapses, residents say', 'ETH', 12, { sourceName: 'Wire copy' }),
+    row("Fighting erupts in Ethiopia's Tigray as ceasefire collapses", 'ETH', 10),
+    row("Fighting erupts in Ethiopia's Tigray as ceasefire collapses, residents say", 'ETH', 12, { sourceName: 'Wire copy' }),
     row('AFCON qualifier: DR Congo beat Zimbabwe', 'COD', 2),
     row('Poland inflation eases as central bank holds rates', 'POL', 20),
     row('EU agrees tariffs on Chinese electric vehicles', 'BEL', 40),
@@ -90,7 +99,7 @@ describe('Home editorial assembly', () => {
   it('same development is one card with its other report named; no story appears twice', () => {
     const r = assembleHomeEditorial({ rows, storyIdByUrl: new Map(), discussionByStory: new Map(), preferences: null, now: NOW });
     const all = [r.hero!.story, ...r.hero!.more, ...r.regions.flatMap((x) => x.stories)];
-    const tigray = all.filter((c) => c.title.startsWith('Fighting erupts in Tigray'));
+    const tigray = all.filter((c) => c.title.startsWith("Fighting erupts in Ethiopia's Tigray"));
     expect(tigray).toHaveLength(1);
     expect(tigray[0].otherReports.count).toBe(1);
     expect(new Set(all.map((c) => c.articleRef)).size).toBe(all.length);
@@ -170,7 +179,7 @@ describe('Story search (service, in-memory store)', () => {
   const store = [
     art('s1', 'Derby result sparks celebrations', 'Fans gathered outside the refineries district', 'sports'),
     art('b1', 'Kenya refinery investment faces court challenge', 'A legal challenge to the refinery plan'),
-    art('c1', 'Fighting erupts in Tigray as ceasefire collapses', 'Clashes resumed', 'world', 'ETH'),
+    art('c1', "Fighting erupts in Ethiopia's Tigray as ceasefire collapses", 'Clashes resumed', 'world', 'ETH'),
   ];
   const prisma: any = {
     article: { findMany: async (q: any) => store.filter((r) => ev(q.where, r)) },
@@ -193,7 +202,7 @@ describe('Story search (service, in-memory store)', () => {
     expect(r.results.map((c: any) => c.title)).toEqual(['Kenya refinery investment faces court challenge']);
   });
   it('a country name matches the story geography', async () => {
-    expect((await search('Ethiopia')).results.map((c: any) => c.title)).toEqual(['Fighting erupts in Tigray as ceasefire collapses']);
+    expect((await search('Ethiopia')).results.map((c: any) => c.title)).toEqual(["Fighting erupts in Ethiopia's Tigray as ceasefire collapses"]);
   });
   it('too-short queries return nothing without touching the store', async () => {
     expect((await search('a')).results).toEqual([]);

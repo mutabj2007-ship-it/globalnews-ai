@@ -6,9 +6,12 @@ import { absoluteDate, domainLabel, freshnessLabel, isAttention, otherReportsLab
 
 /**
  * PHONE-FIRST HOME CORRECTION R1 · §9 — inside the Brief: WHY this story is on Home, stated only
- * from facts the server holds (business/conflict domain, the supporting terms found in the
- * reporting, geography, other reports of the same development, first-report date, freshness).
- * Comments are never evidence; this block cites none.
+ * from facts the server holds: business/conflict domain, the plain-language topic of the evidence
+ * that admitted it (`card.topics`, server-derived), supported geography, other reports of the same
+ * development, first-report date, freshness. Comments are never evidence; this block cites none.
+ *
+ * HOME DATA TRUTH CORRECTION R1 · B2 — `card.signals` (classifier evidence keys) is diagnostic
+ * and is NEVER rendered to readers; no reason is invented here when the server gives none.
  */
 export function BriefEditorialContext({ card, language }: { readonly card: HomeStoryCard; readonly language: LanguageCode }): JSX.Element {
   const t = getDictionary(language).visual.home;

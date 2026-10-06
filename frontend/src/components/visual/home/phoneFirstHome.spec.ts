@@ -173,6 +173,18 @@ describe('copy parity and helpers', () => {
     expect(b.sourcesCount).toBe(3);
     expect(otherReportsLabel(2, visualEn.home)).toBe('+2 other reports');
   });
+  it('HOME DATA TRUTH B2 — raw classifier signals never reach a reader surface', () => {
+    for (const f of [
+      'components/visual/home/BriefEditorialContext.tsx',
+      'components/visual/home/HomeStoryCardView.tsx',
+      'components/visual/home/HomeRegionRows.tsx',
+      'components/visual/home/StorySearchPage.tsx',
+      'components/visual/VisualBriefPanel.tsx',
+    ]) {
+      expect(code(f)).not.toMatch(/\.signals\b/);
+    }
+    expect(code('components/visual/home/BriefEditorialContext.tsx')).toMatch(/card\.topics/);
+  });
   it('the owner bar renders only from the server mode (no client-side grant)', () => {
     const bar = code('components/visual/home/OwnerAccessBar.tsx');
     expect(bar).toMatch(/accountFetch\('\/users\/me\/access'\)/);

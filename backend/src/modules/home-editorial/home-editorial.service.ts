@@ -255,6 +255,8 @@ export class HomeEditorialService {
             signals: [] as string[],
             strength: 0,
             tokens: titleTokens(row.title),
+            /* the archive lists every retained report with its stored tags; it places nothing in a Home row */
+            countries: row.countries,
             regionRelevance: new Map(),
           })),
       ];

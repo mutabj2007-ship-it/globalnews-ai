@@ -17,6 +17,7 @@ import {
 } from '@globalnews-ai/shared';
 import { computeArticleRef } from '../news/identity/article-ref.util';
 import { assessHomeEligibility, plainTopicLabels } from './home-eligibility';
+import { supportedCountries } from './home-geography';
 
 /**
  * PHONE-FIRST HOME CORRECTION R1 · §3, §6, §11 — the pure assembly of the Home editorial read:
@@ -101,6 +102,8 @@ interface Candidate {
   readonly signals: readonly string[];
   readonly strength: number;
   readonly tokens: Set<string>;
+  /** HOME DATA TRUTH B3 — the tagged countries the story itself supports (headline / lead). */
+  readonly countries: RetainedRow['countries'];
   readonly regionRelevance: ReadonlyMap<HomeRegionId, number>;
 }
 
@@ -127,7 +130,9 @@ export function candidatesOf(rows: readonly RetainedRow[], now: Date, requireReg
     if (row.publishedAt.getTime() > now.getTime() + 10 * 60_000) continue;
     const verdict = assessHomeEligibility({ title: row.title, summary: row.summary, category: row.category });
     if (!verdict.eligible) continue;
-    const regionRelevance = regionsOf(row.countries);
+    /* HOME DATA TRUTH B3 — region placement only from countries the story itself names */
+    const countries = supportedCountries(row, row.countries);
+    const regionRelevance = regionsOf(countries);
     if (requireRegion && regionRelevance.size === 0) continue;
     out.push({
       row,
@@ -136,6 +141,7 @@ export function candidatesOf(rows: readonly RetainedRow[], now: Date, requireReg
       signals: [...new Set([...verdict.signals[verdict.primary], ...verdict.signals.business, ...verdict.signals.conflict])].slice(0, 4),
       strength: verdict.strength,
       tokens: titleTokens(row.title),
+      countries,
       regionRelevance,
     });
   }
@@ -206,7 +212,7 @@ export function cardOf(
   const discussion = storyId === null ? null : discussionByStory.get(storyId) ?? null;
   const others = group.members.filter((m) => m !== lead);
   const regions = HOME_REGION_ORDER.filter((id) => group.members.some((m) => m.regionRelevance.has(id)));
-  const countryCodes = [...new Set(group.members.flatMap((m) => [...m.row.countries].sort((a, b) => b.relevance - a.relevance).map((c) => c.iso3)))];
+  const countryCodes = [...new Set(group.members.flatMap((m) => [...m.countries].sort((a, b) => b.relevance - a.relevance).map((c) => c.iso3)))];
   const card: HomeStoryCard = {
     articleRef: computeArticleRef(lead.row.url),
     storyId,
