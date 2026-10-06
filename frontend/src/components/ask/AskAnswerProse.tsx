@@ -187,9 +187,13 @@ export function AskAnswerProse({
               header={block.header.map((cell, i) => (
                 <Inline key={`${key}-h${i}`} text={cell} />
               ))}
-              rows={block.rows.map((row) =>
+              rows={block.rows.map((row, r) =>
                 row.map((cell, c) =>
-                  c === 0 ? <Inline text={cell} /> : <GovernedSourceCell text={cell} sources={sources} />,
+                  c === 0 ? (
+                    <Inline key={`${key}-r${r}c${c}`} text={cell} />
+                  ) : (
+                    <GovernedSourceCell key={`${key}-r${r}c${c}`} text={cell} sources={sources} />
+                  ),
                 ),
               )}
               numeric={block.rows.map((row) => row.map((cell) => isNumericCell(cell)))}

@@ -73,10 +73,12 @@ export function AskTurnSave({
       aria-pressed={saved}
       disabled={busy}
       onClick={() => void toggle()}
-      className={`ms-auto inline-flex min-h-[32px] items-center gap-1.5 rounded-[8px] border px-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] disabled:opacity-60 ${
+      /* ASK READING EXPERIENCE R1 — one of the answer actions now (after the answer), so it no longer
+         pushes itself to the row end, and it is reading type rather than 11px monospace caps. */
+      className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-[8px] border px-2.5 text-[0.8125rem] font-semibold disabled:opacity-60 md:min-h-[32px] ${
         saved
-          ? 'border-[#1b6fa8] bg-[#07304f] text-[#8fd3ff]'
-          : 'border-[#1d4a73] text-[#b6c9de] hover:border-[#5abff5]'
+          ? 'border-[var(--ask-read-control-line,#1b6fa8)] bg-[var(--ask-read-sunk,#07304f)] text-[var(--ask-read-control-ink,#8fd3ff)]'
+          : 'border-[var(--ask-read-line,#1d4a73)] text-[var(--ask-read-ink2,#b6c9de)] hover:border-[var(--ask-read-control-line,#5abff5)]'
       }`}
     >
       <span aria-hidden="true">{saved ? '★' : '☆'}</span>

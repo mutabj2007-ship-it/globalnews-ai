@@ -74,11 +74,11 @@ describe('it consumes the existing Analysis engine and nothing else', () => {
 
   /*
     ASK READING EXPERIENCE R1 — supersedes 'reuses the EXISTING loading presentation'. That was
-    LoadingStages: four retrieval labels advanced by a 1.8 s client timer that knew nothing of
-    the request (H-FREEZE §5). The dock now shows the ONE truthful working line, shared with /ask.
+    the shared /search stage list: four retrieval labels advanced by a 1.8 s client timer that
+    knew nothing of the request (H-FREEZE §5). The dock now shows the ONE truthful working line,
+    shared with /ask (askReadingExperienceR1.spec asserts the timer's absence).
   */
   it('shows the truthful working state, never the simulated stage timer', () => {
-    expect(CODE).not.toMatch(/<LoadingStages|import \{ LoadingStages \}/);
     expect(CODE).toMatch(/import \{ AskWorkingStatus \} from '@\/components\/ask-frame\/AskWorkingStatus'/);
     expect(CODE).toMatch(/<AskWorkingStatus label=\{r2s\.working\} \/>/);
   });

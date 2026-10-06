@@ -1114,18 +1114,24 @@ html[data-gna-schedule='dark'] [data-gna-theme='scheduled'],
   }
 }
 .gna-ask-emblem[data-ask-emblem-state='typing'] {
-  --emblem-size: 64px;
   opacity: var(--ask-read-emblem-typing, 0.45);
 }
+/* typing size — also the size a mark leaving FROM typing keeps while it fades */
+.gna-ask-emblem[data-ask-emblem-state='typing'],
+.gna-ask-emblem[data-ask-emblem-from='typing'] {
+  --emblem-size: 64px;
+}
 @container ask-root (min-width: 700px) {
-  .gna-ask-emblem[data-ask-emblem-state='typing'] {
+  .gna-ask-emblem[data-ask-emblem-state='typing'],
+  .gna-ask-emblem[data-ask-emblem-from='typing'] {
     --emblem-size: 72px;
   }
 }
 .gna-ask-emblem[data-ask-emblem-placement='dock'] {
   --emblem-size: 96px;
 }
-.gna-ask-emblem[data-ask-emblem-placement='dock'][data-ask-emblem-state='typing'] {
+.gna-ask-emblem[data-ask-emblem-placement='dock'][data-ask-emblem-state='typing'],
+.gna-ask-emblem[data-ask-emblem-placement='dock'][data-ask-emblem-from='typing'] {
   --emblem-size: 48px;
 }
 /* Typing with less than 480px of VISIBLE height (keyboard open): the composer wins. */

@@ -52,6 +52,9 @@ export function AskEmblem({
   const [paused, setPaused] = useState(false);
   const [short, setShort] = useState(false);
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, '');
+  /* Leaving keeps the size it had (typing, almost always): it fades, it never grows back. */
+  const from = useRef<'ready' | 'typing'>('ready');
+  if (state !== 'leaving') from.current = state;
 
   /* Leaving: unmount after the fade — at once under reduced motion (no transition to wait for). */
   useEffect(() => {
@@ -118,6 +121,7 @@ export function AskEmblem({
       aria-hidden="true"
       data-ask="emblem"
       data-ask-emblem-state={state}
+      data-ask-emblem-from={state === 'leaving' ? from.current : undefined}
       data-ask-emblem-placement={placement}
       data-ask-emblem-paused={paused ? 'true' : undefined}
       data-ask-emblem-short={short ? 'true' : undefined}
