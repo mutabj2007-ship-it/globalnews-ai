@@ -243,7 +243,9 @@ describe('A-4 · no arbitrary HTML', () => {
 
   it('the only href the renderer can emit is a governed citation', () => {
     const hrefs = [...source.matchAll(/href=\{([^}]*)\}/g)].map((m) => m[1].trim());
-    expect(hrefs).toEqual(['safeExternalHref(cited.url)']);
+    /* ASK R2 — the second is a table source cell, linked only to one of THIS answer's own governed
+       sources (governedSourceFor); a model-written URL is still never followed. */
+    expect(hrefs).toEqual(['safeExternalHref(cited.url)', 'safeExternalHref(source.url)']);
   });
 });
 
