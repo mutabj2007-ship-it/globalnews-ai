@@ -11,7 +11,7 @@ import {
   type NewsDataMode,
   type NewsFeedTier,
 } from '@globalnews-ai/shared';
-import { NewsService } from '../news.service';
+import { NewsService, attachProviderFailures, readProviderFailures } from '../news.service';
 import { scoreArticleConfidence } from '../analysis/article-confidence.util';
 import { ArticlePersistenceService } from '../persistence/article-persistence.service';
 import { deduplicateArticles } from './deduplicate-articles.util';
@@ -535,7 +535,15 @@ export class CountryNewsService {
 
     this.setCached(cacheKey, response);
 
-    return response;
+    /*
+      CURRENT-REPORTING TRUTH R1 (B2) — a provider that failed during THIS search is exposed through
+      the same non-enumerable failure channel every NewsService response uses. It was dropped here,
+      so a country answer whose search lost a lane (e.g. a GDELT timeout beside a healthy feed) read
+      as fully live and the provider-degraded notice never appeared. Attached to a fresh copy: the
+      cached object stays failure-free, so a later cache hit never replays this request's failure.
+    */
+    const failures = readProviderFailures(searchResponse);
+    return failures.length === 0 ? response : attachProviderFailures({ ...response }, failures);
   }
 
   /**

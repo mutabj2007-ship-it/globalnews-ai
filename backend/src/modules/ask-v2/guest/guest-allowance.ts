@@ -36,6 +36,9 @@ const SUBSTANTIVE_STATES: ReadonlySet<string> = new Set([
   /* ASK TECHNICAL / SCIENTIFIC REASONING R1 — a deterministic computed answer IS an answer
      (same rule as a governed record: substantive, even with zero AI). CTO decision point. */
   'COMPUTED_RESULT',
+  /* CURRENT-REPORTING TRUTH R1 — an AI answer from retained reporting is an answer, exactly as it
+     counted when it was (mis)labelled CURRENT_REPORTING. */
+  'RETAINED_REPORTING',
 ]);
 
 /**

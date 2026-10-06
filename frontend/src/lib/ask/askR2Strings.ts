@@ -32,7 +32,10 @@ export interface AskR2Strings {
   readonly notNow: string;
   readonly runConfirm: string;
   readonly badges: Readonly<
-    Record<'ref' | 'ver' | 'cur' | 'clar' | 'part' | 'insuf' | 'unavail' | 'rec' | 'calc', string>
+    Record<
+      'ref' | 'ver' | 'cur' | 'clar' | 'part' | 'insuf' | 'unavail' | 'rec' | 'calc' | 'retrep',
+      string
+    >
   >;
   readonly referenceNoteTitle: string;
   readonly referenceNoteBody: string;
@@ -289,6 +292,7 @@ const EN: AskR2Strings = {
     insuf: 'INSUFFICIENT EVIDENCE',
     unavail: 'CAPABILITY UNAVAILABLE',
     rec: 'RETAINED RECORD',
+    retrep: 'RETAINED REPORTING',
     calc: 'CALCULATION',
   },
   referenceNoteTitle: 'Model background · no citations',
@@ -625,6 +629,7 @@ const PL: AskR2Strings = {
     insuf: 'ZBYT MAŁO DOWODÓW',
     unavail: 'FUNKCJA NIEDOSTĘPNA',
     rec: 'ZACHOWANY ZAPIS',
+    retrep: 'ZACHOWANE DONIESIENIA',
     calc: 'OBLICZENIE',
   },
   referenceNoteTitle: 'Wiedza modelu · bez przypisów',

@@ -5,7 +5,12 @@ import type {
   MultiStoryAction,
   SelectedStoryRef,
 } from '@globalnews-ai/shared';
-import { findCountryByIso3, type DisplayLocale, type LanguageCode } from '@globalnews-ai/shared';
+import {
+  findCountryByIso3,
+  resolveReportingFreshness,
+  type DisplayLocale,
+  type LanguageCode,
+} from '@globalnews-ai/shared';
 import { NewsService } from '../news/news.service';
 import { readCompanionIntent, servesIntent, type CompanionIntent } from './companion-relevance';
 import { withDeadline } from '../compute-controls/compute-scopes';
@@ -1554,6 +1559,11 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       },
       producedAnswer: response.analysis !== null,
       ...(verification === undefined ? {} : { verification }),
+      /* CURRENT-REPORTING TRUTH R1 (B1) — the canonical evidence state decides freshness */
+      reportingFreshness: resolveReportingFreshness(
+        response.retrievalContext,
+        response.articles.length,
+      ),
     });
     /* AI executed = the analysis path produced a model answer (the usage sink is metering only). */
     const aiExecuted = response.analysis !== null;
@@ -1829,8 +1839,13 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     }
 
     const produced = response.analysis !== null;
+    /* CURRENT-REPORTING TRUTH R1 (B1) — this was CURRENT_REPORTING unconditionally: a selection
+       re-read from retained reporting is current only when the canonical evidence state says so. */
+    const freshness = resolveReportingFreshness(response.retrievalContext, response.articles.length);
     const answer: AnswerDecision = produced
-      ? { state: 'CURRENT_REPORTING', basis: 'REQUIRED_EVIDENCE_OBTAINED', missingRoles: [] }
+      ? freshness === 'retained'
+        ? { state: 'RETAINED_REPORTING', basis: 'RETAINED_REPORTING_ONLY', missingRoles: [] }
+        : { state: 'CURRENT_REPORTING', basis: 'REQUIRED_EVIDENCE_OBTAINED', missingRoles: [] }
       : {
           state: 'INSUFFICIENT',
           basis: 'NO_REQUIRED_EVIDENCE_OBTAINED',

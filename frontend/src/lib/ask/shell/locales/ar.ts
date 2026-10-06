@@ -317,6 +317,7 @@ export const arShellOverlay: ShellLocaleOverlay = {
         insuf: "أدلة غير كافية",
         part: "أدلة جزئية",
         rec: "سجل محفوظ",
+        retrep: "تقارير محفوظة",
         ref: "خلفية مرجعية",
         unavail: "قدرة غير متوفرة",
         ver: "مُتحقَّق حاليًا",

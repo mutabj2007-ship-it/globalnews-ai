@@ -87,24 +87,31 @@ describe('B-6 · the shell is one catalogue over seven locales', () => {
       dict.loadingStages[0..3] from the Ask shell (the simulated 1.8 s stage timer is gone from
       every Ask surface; H-FREEZE §5, L2) and adds askR2Strings.working (the one truthful working
       line) and askR2Strings.tableScrollHint (a template: a wide table's hint, shown only when it
-      overflows): 535 − 4 + 2 → 533, 527 → 525, 559 → 557. The Ask R2 keys of the Alpha line
+      overflows): 535 − 4 + 2 → 533, 527 → 525. The Ask R2 keys of the Alpha line
       (questionTooLong, questionLength, showFullQuestion, showLessQuestion, quota, priorNoFindings,
       timedOut, priorIncomplete) are deliberately NOT on this line. The two new keys'
       fr/de/es/pt-BR/ar wording is an ENGINEERING translation awaiting Claude L qualification
       (L1) — present so no locale falls back to English.
+      CURRENT-REPORTING TRUTH R1 (B1) adds ONE reader-visible key, askR2Strings.badges.retrep
+      ("RETAINED REPORTING" — the badge of the new canonical RETAINED_REPORTING state). It is
+      counted twice because it is read twice: as an overlay-managed shell key (533 → 534,
+      localized 525 → 526) and through askSevenStrings.reasoning, which IS the shell's badge
+      table (24 → 25). Combined Production-line total 534 + 25 = 559. Its fr/de/es/pt-BR/ar
+      wording is an ENGINEERING translation awaiting Claude L qualification; no locale falls back
+      to English. (Counts recalculated for this combined line, not copied from either side.)
     */
     const overlayManaged = askShellKeyPaths().length;
     const alreadySeven = shellKeyPaths(askSevenStrings('en')).length;
-    expect(alreadySeven).toBe(24);
-    expect(overlayManaged).toBe(533);
-    expect(overlayManaged + alreadySeven).toBe(557);
+    expect(alreadySeven).toBe(25);
+    expect(overlayManaged).toBe(534);
+    expect(overlayManaged + alreadySeven).toBe(559);
     /*
       EIGHT, not five: the CTO's brand ruling moved the three product-NAME keys out of the
       translation scope. A key nobody should translate does not belong in a translator's
       manifest, and leaving it there is what let three authorities give three answers.
     */
     expect(ASK_SHELL_PROPER_NOUNS).toHaveLength(8);
-    expect(overlayManaged - ASK_SHELL_PROPER_NOUNS.length).toBe(525);
+    expect(overlayManaged - ASK_SHELL_PROPER_NOUNS.length).toBe(526);
   });
 
   it('each proper noun names a key that actually exists', () => {
@@ -186,7 +193,7 @@ describe('B-7 · no English fallback is ever silent', () => {
       expect(coverage.qualification).toBe('SOURCE');
       expect(coverage.fallbacks).toEqual([]);
       expect(coverage.complete).toBe(true);
-      expect(coverage.localizedKeys).toBe(525);
+      expect(coverage.localizedKeys).toBe(526);
     }
   });
 
@@ -206,8 +213,8 @@ describe('B-7 · no English fallback is ever silent', () => {
       expect(coverage.qualification).toBe('CLAUDE_L_QUALIFIED');
       expect(coverage.complete).toBe(true);
       expect(coverage.fallbacks).toEqual([]);
-      expect(coverage.localizedKeys).toBe(525);
-      /* 525 localized + 0 unqualified + 8 not-translated = the 533 overlay-managed keys. */
+      expect(coverage.localizedKeys).toBe(526);
+      /* 526 localized + 0 unqualified + 8 not-translated = the 534 overlay-managed keys. */
       expect(coverage.localizedKeys + coverage.fallbacks.length + coverage.properNouns).toBe(
         coverage.totalKeys,
       );
@@ -221,10 +228,10 @@ describe('B-7 · no English fallback is ever silent', () => {
       misses a leaf kind. So the denominator is asserted directly: if a future catalogue adds
       a leaf shape nobody handles, this count stops matching and the suite fails here.
     */
-    expect(askShellKeyPaths()).toHaveLength(533);
+    expect(askShellKeyPaths()).toHaveLength(534);
     for (const locale of L_LOCALES) {
       const coverage = askShellCoverage(locale);
-      expect(coverage.totalKeys).toBe(533);
+      expect(coverage.totalKeys).toBe(534);
     }
   });
 

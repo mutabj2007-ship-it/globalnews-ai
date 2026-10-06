@@ -214,4 +214,15 @@ describe('A / N — router readings found by the live Production smoke (2026-10-
   it('Congo-Brazzaville stays Congo-Brazzaville when the context is not the eastern-Congo conflict', () => {
     expect(route('How are relations between Congo and Gabon?').relationship?.countries).toEqual(['COG', 'GAB']);
   });
+  it('C — a self-contained inflation word problem is answered by reasoning, not refused for its "this year"', () => {
+    const r = route(
+      'Bread costs $2. If inflation is 5% this year and 2% next year, what does it cost after two years? Show the steps in a table.',
+    );
+    expect(r.plan.questionClass).toBe('REFERENCE');
+    expect(r.plan.terminalState).toBe('REFERENCE_BACKGROUND_ONLY');
+  });
+  it('C — a real current-figure question about inflation still needs current reporting', () => {
+    expect(route('What is the inflation rate in Kenya now?').plan.questionClass).toBe('CURRENT_REPORTING');
+    expect(route('What is inflation in Kenya this year?').plan.questionClass).toBe('CURRENT_REPORTING');
+  });
 });

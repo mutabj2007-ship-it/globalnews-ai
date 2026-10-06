@@ -301,6 +301,7 @@ export const frShellOverlay: ShellLocaleOverlay = {
         insuf: "ÉLÉMENTS INSUFFISANTS",
         part: "ÉLÉMENTS PARTIELS",
         rec: "DOSSIER CONSERVÉ",
+        retrep: "REPORTAGES CONSERVÉS",
         ref: "CONTEXTE DE RÉFÉRENCE",
         unavail: "FONCTION INDISPONIBLE",
         ver: "VÉRIFIÉ À CE JOUR",

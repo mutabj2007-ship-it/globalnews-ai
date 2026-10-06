@@ -52,6 +52,8 @@ describe('§7 — the answer states', () => {
       'RETAINED_RECORD',
       /* ASK TECHNICAL / SCIENTIFIC REASONING R1 — deterministic computation, zero AI. */
       'COMPUTED_RESULT',
+      /* CURRENT-REPORTING TRUTH R1 (B1) — an AI answer from retained reporting only; never current. */
+      'RETAINED_REPORTING',
     ]);
   });
 });

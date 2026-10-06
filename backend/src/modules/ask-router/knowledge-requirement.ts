@@ -447,6 +447,13 @@ export function deriveKnowledgeRequirement(
       reason: `deterministic ${computation.status === 'SOLVED' ? computation.result.kind : computation.kind}`,
     };
   }
+  /* ASK RELIABILITY R1 (C) — a SELF-CONTAINED numerical problem ("Bread costs $2. If inflation is
+     5% this year and 2% next year, what does it cost after two years?") gives its own figures: it
+     is answered by reasoning (with the deterministic arithmetic check), never as a request for
+     current reporting. Its "this year" is part of the hypothetical, not a news window. */
+  if (lang === 'en' && selfContainedNumericalProblem(text)) {
+    return { requirement: 'STABLE_REFERENCE', reason: 'a self-contained numerical problem (the figures are given)' };
+  }
   if (lang === 'en' && deriveEventFrame(text, 'en') !== undefined) {
     return {
       requirement: 'EVENT_DISCOVERY',
@@ -712,3 +719,18 @@ const SPECIFIC_EVENT: Readonly<Record<'en' | 'pl', RegExp>> = {
   en: /\bthe\s+(?:new|newest|latest|recent|upcoming)\s+[\p{L}-]+|\bthe\s+(?:[\p{L}-]+\s+){0,2}(?:decision|outcome|result|results|verdict|announcement|deal|vote|ruling|statement|speech|summit|talks|figures)\b|\b(?:outcome|result|results)\s+of\s+the\b/iu,
   pl: /(?:^|\s)(?:co\s+nowego|nowości|najnowsz\p{L}*|now\p{L}*\s+(?:model|ustaw|decyzj|przepis)\p{L}*)/iu,
 };
+
+/**
+ * ASK RELIABILITY R1 (C) — the reader supplies the figures and asks for a result: at least one
+ * percentage, at least one other number or amount, a hypothetical / given framing, and an explicit
+ * request to compute. A question about a REAL current figure ("what is Kenya's inflation now?")
+ * gives no figures and never matches.
+ */
+export function selfContainedNumericalProblem(text: string): boolean {
+  const percents = text.match(/\d+(?:\.\d+)?\s*(?:%|percent\b|per\s+cent\b)/gi) ?? [];
+  const numbers = text.match(/[$€£]?\s?\d+(?:[.,]\d+)?/g) ?? [];
+  if (percents.length < 1 || numbers.length < 2) return false;
+  const given = /\b(?:if|suppose|supposing|assume|assuming|let'?s\s+say|imagine|say\s+(?:a|the)|costs?\s+[$€£]?\s?\d|priced\s+at|starts?\s+at|is\s+[$€£]\s?\d)\b/i.test(text);
+  const ask = /\b(?:what\s+(?:does|would|will|did)\s+(?:it|this|that|the\s+\w+)\s+cost|how\s+much|calculate|compute|work\s+out|what\s+is\s+the\s+(?:final|new|resulting)|after\s+(?:two|three|four|five|\d+)\s+(?:years?|months?)|show\s+(?:the\s+|your\s+)?(?:steps|working|calculation|math)|numerical\s+example)\b/i.test(text);
+  return given && ask;
+}

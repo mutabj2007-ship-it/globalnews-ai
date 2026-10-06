@@ -301,6 +301,7 @@ export const ptShellOverlay: ShellLocaleOverlay = {
         insuf: "EVIDÊNCIA INSUFICIENTE",
         part: "EVIDÊNCIA PARCIAL",
         rec: "REGISTRO MANTIDO",
+        retrep: "REPORTAGENS MANTIDAS",
         ref: "CONTEXTO DE REFERÊNCIA",
         unavail: "RECURSO INDISPONÍVEL",
         ver: "VERIFICADO AGORA",

@@ -9,6 +9,7 @@ import {
   isFuturePeriod,
   particularPhenomenon,
   type KnowledgeRequirementReading,
+  selfContainedNumericalProblem,
 } from '../knowledge-requirement';
 import { isBroadGlobalHeadlinesQuestion } from '../../analysis/query/broad-global-headlines.util';
 import { readInstitutionalStatusQuestion } from '../../news/relevance/governed-institutions';
@@ -406,6 +407,10 @@ export function interpretTurn(input: TurnInterpretationInput): {
   /* defect 3 — what the TIME readers read: possessive time determiners before a non-state head
      ("today's money") are masked, same length; identity / roles / objective read readerText */
   const timeText = maskTimeDeterminers(readerText, lang);
+  /* ASK RELIABILITY R1 (C) — a self-contained numerical problem ("Bread costs $2. If inflation is 5%
+     this year and 2% next year…") gives its own figures: its years are the problem's periods, not a
+     reporting window, so they never make the turn a current-reporting ask. */
+  const numericalProblem = lang === 'en' && selfContainedNumericalProblem(reading.originalQuestion);
   const conflicts: IrConflict[] = [];
 
   /* ══ 1 · CANDIDATE SIGNALS ══════════════════════════════════════════════════════════════ */
@@ -609,8 +614,11 @@ export function interpretTurn(input: TurnInterpretationInput): {
     knowledge.requirement === null ||
     (knowledge.requirement === 'CURRENT_REPORTING' && knowledge.reason === 'a named place');
   let explicitCurrent = false;
+  /* ASK RELIABILITY R1 (C) — a self-contained numerical problem gives its own figures; its "this
+     year" belongs to the hypothetical and is never a request for current reporting. */
   if (
     (strongCurrent || currentOffice || persistence) &&
+    !numericalProblem &&
     !referencesWork &&
     !temporalHistoryDefault &&
     !pastPresentClause &&
@@ -630,7 +638,7 @@ export function interpretTurn(input: TurnInterpretationInput): {
     conflicts.push('TEMPORAL_AMBIGUOUS');
   }
   /* a WEAK, present-era currentness inside an explanation ("why do firms still use COBOL") */
-  if (weakCurrent && shapeSaysStable) {
+  if (weakCurrent && shapeSaysStable && !numericalProblem) {
     conflicts.push('WEAK_CURRENTNESS_IN_EXPLANATION');
     if (resolution?.needsCurrentEvidence === true) {
       explicitCurrent = true;
@@ -813,7 +821,7 @@ export function interpretTurn(input: TurnInterpretationInput): {
   ].includes(input.landedIntent);
   const stableOrComputed =
     (knowledge.requirement === 'STABLE_REFERENCE' || knowledge.requirement === 'COMPUTATION') &&
-    (reading.statedTime === undefined || historicalOverride) &&
+    (reading.statedTime === undefined || historicalOverride || numericalProblem) &&
     !namedPlace &&
     placeFreeIntent &&
     !(input.eligibleInheritedScope && input.mapOrStoryContext) &&
@@ -853,13 +861,14 @@ export function interpretTurn(input: TurnInterpretationInput): {
   const fresh =
     (genuineFreshness(timeText, reading.sourceLanguage, year) &&
       !temporalHistoryDefault &&
-      !notCurrentByInterpreter) ||
+      !notCurrentByInterpreter &&
+      !numericalProblem) ||
     explicitCurrent;
   const formJob0 = readUserJob(timeText, reading.sourceLanguage, {
     requirement: knowledge.requirement,
     requirementReason: knowledge.reason,
     namedPlace,
-    statedPeriod: reading.statedTime !== undefined && !historicalOverride,
+    statedPeriod: reading.statedTime !== undefined && !historicalOverride && !numericalProblem,
     fresh,
     hasPriorWork: artifact !== undefined,
     hasAnswerRecord: anyWork !== undefined,
@@ -890,7 +899,7 @@ export function interpretTurn(input: TurnInterpretationInput): {
         ? { ...formJob0, discourseReference: 'PRIOR_WORK' }
         : formJob0;
   const inheritedScope = input.eligibleInheritedScope && input.mapOrStoryContext;
-  const currentStated = reading.statedTime !== undefined && !historicalOverride;
+  const currentStated = reading.statedTime !== undefined && !historicalOverride && !numericalProblem;
   const relationCurrent =
     relationshipAny !== null &&
     (fresh ||
@@ -936,7 +945,7 @@ export function interpretTurn(input: TurnInterpretationInput): {
     formJob.job !== null &&
     REASONING_JOBS.has(formJob.job) &&
     formJob.freshness === 'NONE';
-  const timeAnchored = formJob.temporal.some(
+  const timeAnchored = !numericalProblem && formJob.temporal.some(
     (t) =>
       t.role !== 'PLAN_HORIZON' && t.role !== 'TRIP_DURATION' && t.role !== 'HISTORICAL_PERIOD',
   );
