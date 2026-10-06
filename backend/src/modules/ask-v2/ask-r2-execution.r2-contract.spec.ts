@@ -29,7 +29,13 @@ import type { SemanticResolution } from '../ask-router/semantic-ir/semantic-inte
 
 type Call = unknown[];
 /** ASK R2 — switched per turn by the tests: retrieval returns no evidence while set. */
-const evidence = { none: false };
+const evidence = {
+  none: false,
+  /* R2 §7 — the background capability declines (an entirely-current question) */
+  declineBackground: false,
+  /* R2 §7 — an earlier answer's evidence is no longer retained (a re-read resolves nothing) */
+  notRetained: false,
+};
 interface Calls {
   analysis: Call[];
   background: Array<{ question: string; priorWork?: string; [k: string]: unknown }>;
@@ -37,9 +43,28 @@ interface Calls {
 
 function harness() {
   const calls: Calls = { analysis: [], background: [] };
+  /* R2 §7 — what the fake "retained reporting" holds: every article a search returned, by URL */
+  const retained = new Map<string, { id: string; url: string; publishedAt: string }>();
   const analysisService = {
     analyzeNews: jest.fn(async (...args: unknown[]) => {
       calls.analysis.push(args);
+      const selection = args[4] as { stories?: Array<{ url: string }> } | undefined;
+      /* R2 §7 — a selection re-reads RETAINED reporting: exactly the selected stories, original dates */
+      if (selection?.stories !== undefined) {
+        const articles = evidence.notRetained
+          ? []
+          : selection.stories.map((s) => retained.get(s.url)).filter((a) => a !== undefined);
+        if (articles.length === 0) return { analysis: null, articles: [] };
+        return {
+          analysis: {
+            headline: 'Re-read headline',
+            summary: 'Summary.',
+            keyFacts: articles.map((a) => ({ claim: `Claim from ${a!.id}`, sourceArticleIds: [a!.id] })),
+          } as never,
+          articles: articles as never,
+          retrievalContext: { dataMode: 'cached' } as never,
+        } satisfies Partial<AnalysisApiResponse>;
+      }
       /* ASK R2 — a turn whose retrieval found nothing (the failed-A path) */
       if (evidence.none) return { analysis: null, analysisError: 'No matching reporting.', articles: [] };
       const policy = args[6] as {
@@ -47,6 +72,12 @@ function harness() {
       };
       policy?.usageSink?.({ promptTokens: 1200, completionTokens: 300 });
       const n = calls.analysis.length;
+      const articles = [1, 2].map((k) => ({
+        id: `art-${n}-${k}`,
+        url: `https://news.example/report-${n}-${k}`,
+        publishedAt: `2026-10-0${k}T08:00:00.000Z`,
+      }));
+      for (const a of articles) retained.set(a.url, a);
       return {
         analysis: {
           headline: `Sourced headline ${n}`,
@@ -56,7 +87,7 @@ function harness() {
             { claim: `Sourced claim ${n}b`, sourceArticleIds: [`art-${n}-2`] },
           ],
         } as never,
-        articles: [{ id: `art-${n}-1` } as never, { id: `art-${n}-2` } as never],
+        articles: articles as never,
         retrievalContext: {} as never,
       } satisfies Partial<AnalysisApiResponse>;
     }),
@@ -71,6 +102,7 @@ function harness() {
       (
         input as { usageSink?: (u: { promptTokens: number; completionTokens: number }) => void }
       ).usageSink?.({ promptTokens: 400, completionTokens: 150 });
+      if (evidence.declineBackground) return { text: null };
       return { text: `Reasoned answer.\n\nSecond paragraph about ${input.question.slice(0, 30)}.` };
     }),
   };
@@ -312,5 +344,260 @@ Finish with three practical checks the importer should make next, explaining why
     const t = await c.ask(TEST_E);
     expect(anchorsOf(t.analysisCalls[0])?.relation).not.toBe('CORRIDOR');
     expect(scopeOf(t.plan)).toEqual(['TYPED_GEOGRAPHY:COD']);
+  });
+});
+
+/* ════════════════════════════════════════════════════════════════════════════════════════════
+   ASK RETRIEVAL / CONVERSATION R2 (contract §7) — FOLLOW-UPS ON THE EARLIER ANSWER (TEST G / D)
+   A follow-up must reference the prior user intent AND the actual outcome of the prior answer:
+   after a sourced answer its evidence is re-read (original dates, no fresh unrelated search) and
+   its subject / place / window are kept and disclosed; after a failed answer that outcome is
+   stated, one new search runs only for the same scope, and the failed turn is never evidence.
+   ════════════════════════════════════════════════════════════════════════════════════════════ */
+
+interface FollowUpPayload {
+  answer: { state: string; basis?: string };
+  chips: { kind: string; chips?: Array<{ kind: string; value: string; source: string; applied: boolean }> };
+  priorAnswer?: { form: string; outcome: string; evidence: string };
+  diagnostics: { job: { artifactUsed: { kind: string } | null } };
+}
+const follow = (t: { payload: unknown }) => t.payload as FollowUpPayload;
+const selectionUrls = (call: Call) =>
+  ((call[4] as { stories?: Array<{ url: string }> } | undefined)?.stories ?? []).map((s) => s.url);
+const policyOf = (call: Call) =>
+  call[6] as {
+    governed?: { rules: string; data: string };
+    reportingWindow?: { statedPeriod: string; from: string; to: string };
+  };
+const placeChips = (t: { payload: unknown }) =>
+  (follow(t).chips.chips ?? []).filter((c) => c.kind === 'GEOGRAPHY').map((c) => c.value);
+const timeChips = (t: { payload: unknown }) =>
+  (follow(t).chips.chips ?? []).filter((c) => c.kind === 'TIME').map((c) => c.value.toLowerCase());
+const urlsOf = (stored: unknown) => (stored as { evidenceUrls?: string[] } | null)?.evidenceUrls ?? [];
+
+const TEST_G1 = 'Put those developments in a table with dates, sources and uncertainty.';
+const TEST_G2 = 'Which should a small shopkeeper watch most closely, and why?';
+const TEST_D1 =
+  'My shipment goes through Dar es Salaam, not Mombasa. Revise your answer to retain only relevant developments and explain what changed. Reuse valid evidence already found; search again only where necessary.';
+const todayAsOf = () => {
+  const d = new Date();
+  return `${d.getUTCDate()} ${d.toLocaleString('en-GB', { month: 'long', timeZone: 'UTC' })} ${d.getUTCFullYear()}`;
+};
+const TEST_B = () =>
+  `As of ${todayAsOf()}, identify up to five developments reported in the past seven days affecting a small business importing into Rwanda via Mombasa or Dar es Salaam. Cover ports, borders, transport, customs, fuel and security. End with three practical checks for the importer. Under 600 words.`;
+
+afterEach(() => {
+  evidence.none = false;
+  evidence.declineBackground = false;
+  evidence.notRetained = false;
+});
+
+describe('ASK R2 §7 · TEST G — format / priority follow-ups after a SUCCESSFUL answer', () => {
+  it('"Put those developments in a table…" re-reads the earlier evidence — no fresh unrelated search', async () => {
+    const c = conversation();
+    const a = await c.ask(TEST_A);
+    const aUrls = urlsOf(a.stored);
+    expect(aUrls).toHaveLength(2);
+
+    const g1 = await c.ask(TEST_G1);
+    /* ONE call, on the earlier answer's own evidence; never a search for "put those in a table" */
+    expect(g1.analysisCalls).toHaveLength(1);
+    expect(selectionUrls(g1.analysisCalls[0])).toEqual(aUrls);
+    expect(g1.backgroundCalls).toHaveLength(0);
+    expect(follow(g1).priorAnswer).toEqual({ form: 'FORMAT', outcome: 'FINDINGS', evidence: 'REUSED' });
+    expect(follow(g1).answer.state).toBe('CURRENT_REPORTING');
+    expect(follow(g1).diagnostics.job.artifactUsed?.kind).toBe('SOURCED_REPORT');
+    /* the reuse is said to the model: same evidence, original dates, no new check */
+    const rules = policyOf(g1.analysisCalls[0]).governed?.rules ?? '';
+    expect(rules).toMatch(/no new search was run/);
+    expect(rules).toMatch(/original date/);
+    /* the earlier intent travels as data: Kenya, small businesses, the seven days */
+    const data = policyOf(g1.analysisCalls[0]).governed?.data ?? '';
+    expect(data).toMatch(/small businesses in Kenya over the past seven days/);
+    expect(data).toContain(TEST_G1);
+    /* the scope is disclosed: never "General question" */
+    expect(follow(g1).chips.kind).toBe('SCOPED');
+    expect(placeChips(g1)).toEqual(['KEN']);
+    expect(timeChips(g1)).toEqual(['past seven days']);
+  });
+
+  it('"Which should a small shopkeeper watch most closely, and why?" keeps the same subject and evidence', async () => {
+    const c = conversation();
+    const a = await c.ask(TEST_A);
+    const aUrls = urlsOf(a.stored);
+    await c.ask(TEST_G1);
+    const g2 = await c.ask(TEST_G2);
+    expect(g2.analysisCalls).toHaveLength(1);
+    /* still the evidence A found (G1 re-read it; G2 re-reads the same stories) */
+    expect(selectionUrls(g2.analysisCalls[0])).toEqual(aUrls);
+    expect(follow(g2).priorAnswer).toEqual({ form: 'PRIORITY', outcome: 'FINDINGS', evidence: 'REUSED' });
+    expect(placeChips(g2)).toEqual(['KEN']);
+    expect(timeChips(g2)).toEqual(['past seven days']);
+    /* the record keeps A's question and A's ORIGINAL window instants */
+    const aScope = (a.stored as { scope?: { window?: unknown } } | null)?.scope;
+    const g2Scope = (g2.stored as { scope?: { question: string; countries: string[]; window?: unknown } } | null)
+      ?.scope;
+    expect(g2Scope?.question).toMatch(/small businesses in Kenya/);
+    expect(g2Scope?.countries).toEqual(['KEN']);
+    expect(aScope?.window).toBeDefined();
+    expect(g2Scope?.window).toEqual(aScope?.window);
+  });
+
+  it.each([
+    'Can you show these as a table with dates and sources?',
+    'Of those, which matters most to a corner-shop owner?',
+    'Which one should a market trader worry about most?',
+  ])('paraphrase binds the earlier answer: %s', async (q) => {
+    const c = conversation();
+    const a = await c.ask(TEST_A);
+    const t = await c.ask(q);
+    expect(t.analysisCalls).toHaveLength(1);
+    expect(selectionUrls(t.analysisCalls[0])).toEqual(urlsOf(a.stored));
+    expect(follow(t).priorAnswer?.outcome).toBe('FINDINGS');
+    expect(placeChips(t)).toEqual(['KEN']);
+  });
+
+  it('evidence no longer retained → ONE search in the earlier scope, said as a new search', async () => {
+    const c = conversation();
+    await c.ask(TEST_A);
+    evidence.notRetained = true;
+    const g1 = await c.ask(TEST_G1);
+    expect(g1.analysisCalls).toHaveLength(2);
+    expect(String(g1.analysisCalls[1][0])).toMatch(/small businesses in Kenya over the past seven days/);
+    expect(policyOf(g1.analysisCalls[1]).reportingWindow?.statedPeriod).toBe('past seven days');
+    expect(policyOf(g1.analysisCalls[1]).governed?.rules).toMatch(/a new search was run now/);
+    expect(follow(g1).priorAnswer).toEqual({ form: 'FORMAT', outcome: 'FINDINGS', evidence: 'SEARCHED_AGAIN' });
+  });
+
+  it('a self-contained new question, or a format turn about a NEW place, is not bound', async () => {
+    const c = conversation();
+    await c.ask(TEST_A);
+    const fresh = await c.ask('Which countries raised interest rates this week?');
+    expect(follow(fresh).priorAnswer).toBeUndefined();
+    expect(fresh.analysisCalls.every((call) => selectionUrls(call).length === 0)).toBe(true);
+    const c2 = conversation();
+    await c2.ask(TEST_A);
+    const elsewhere = await c2.ask('Put those developments for Uganda in a table.');
+    expect(follow(elsewhere).priorAnswer).toBeUndefined();
+  });
+});
+
+describe('ASK R2 §7 · TEST G — follow-ups after a FAILED (no-evidence) answer', () => {
+  it('the failed A is an honest no-evidence answer: its current-news question never goes to reasoning', async () => {
+    evidence.none = true;
+    const c = conversation();
+    const a = await c.ask(TEST_A);
+    /* the explanatory part depends on the findings: nothing is answerable from background */
+    expect(a.backgroundCalls).toHaveLength(0);
+    expect(follow(a).answer.state).toBe('INSUFFICIENT');
+    expect((a.payload as unknown as { background: unknown }).background).toBeNull();
+  });
+
+  it('G1 / G2 keep Kenya, small businesses and the window, say nothing was found, and never fabricate', async () => {
+    evidence.none = true;
+    const c = conversation();
+    await c.ask(TEST_A);
+    for (const [q, form] of [
+      [TEST_G1, 'FORMAT'],
+      [TEST_G2, 'PRIORITY'],
+    ] as const) {
+      const t = await c.ask(q);
+      /* the earlier outcome is stated, and the new search that DID run is said */
+      expect(follow(t).priorAnswer).toEqual({ form, outcome: 'NO_FINDINGS', evidence: 'SEARCHED_AGAIN' });
+      /* ONE new search, for the SAME scope (A's question and window) — not the follow-up words */
+      expect(t.analysisCalls).toHaveLength(1);
+      expect(String(t.analysisCalls[0][0])).toMatch(/small businesses in Kenya over the past seven days/);
+      expect(selectionUrls(t.analysisCalls[0])).toEqual([]);
+      expect(policyOf(t.analysisCalls[0]).reportingWindow?.statedPeriod).toBe('past seven days');
+      expect(policyOf(t.analysisCalls[0]).governed?.rules).toMatch(/found no verified reporting/);
+      /* nothing found again → the honest insufficient answer; never a reasoning stand-in */
+      expect(t.backgroundCalls).toHaveLength(0);
+      expect(follow(t).answer.state).toBe('INSUFFICIENT');
+      expect(placeChips(t)).toEqual(['KEN']);
+      expect(timeChips(t)).toEqual(['past seven days']);
+    }
+  });
+
+  it('paraphrase after failure: "Turn them into a table with dates."', async () => {
+    evidence.none = true;
+    const c = conversation();
+    await c.ask(TEST_A);
+    const t = await c.ask('Turn them into a table with dates.');
+    expect(follow(t).priorAnswer?.outcome).toBe('NO_FINDINGS');
+    expect(String(t.analysisCalls[0][0])).toMatch(/Kenya/);
+  });
+
+  it('when the new search DOES find reporting, the answer stands on it — the earlier outcome still said', async () => {
+    evidence.none = true;
+    const c = conversation();
+    await c.ask(TEST_A);
+    evidence.none = false;
+    const g1 = await c.ask(TEST_G1);
+    expect(follow(g1).answer.state).toBe('CURRENT_REPORTING');
+    expect(follow(g1).priorAnswer).toEqual({ form: 'FORMAT', outcome: 'NO_FINDINGS', evidence: 'SEARCHED_AGAIN' });
+    expect(policyOf(g1.analysisCalls[0]).governed?.rules).toMatch(/never present that earlier answer as findings/);
+  });
+});
+
+describe('ASK R2 §7 · TEST D — a route change revises the earlier answer', () => {
+  it('after a SUCCESSFUL corridor answer: earlier evidence re-read, Rwanda + window kept, Mombasa excluded', async () => {
+    const c = conversation();
+    const b = await c.ask(TEST_B());
+    const bUrls = urlsOf(b.stored);
+    expect(bUrls.length).toBeGreaterThan(0);
+    const d = await c.ask(TEST_D1);
+    expect(d.analysisCalls).toHaveLength(1);
+    expect(selectionUrls(d.analysisCalls[0])).toEqual(bUrls);
+    expect(follow(d).priorAnswer).toEqual({ form: 'REVISION', outcome: 'FINDINGS', evidence: 'REUSED' });
+    /* the destination stays; the excluded port's country is never shown as scope */
+    expect(placeChips(d)).toContain('RWA');
+    expect(placeChips(d)).toContain('TZA');
+    expect(placeChips(d)).not.toContain('KEN');
+    expect(timeChips(d)).toEqual(['in the past seven days']);
+    /* the correction is the reader's own words, handed over as what to do now */
+    const data = policyOf(d.analysisCalls[0]).governed?.data ?? '';
+    expect(data).toContain('not Mombasa');
+    expect(data).toMatch(/importing into Rwanda/);
+    expect(policyOf(d.analysisCalls[0]).governed?.rules).toMatch(/say what changed/);
+  });
+
+  it.each([
+    'Actually the goods come in via Dar es Salaam rather than Mombasa — update your answer and keep only what still applies.',
+    'We route through Dar es Salaam instead of Mombasa. Please adjust the answer accordingly.',
+  ])('paraphrase: %s', async (q) => {
+    const c = conversation();
+    await c.ask(TEST_B());
+    const d = await c.ask(q);
+    expect(follow(d).priorAnswer?.form).toBe('REVISION');
+    expect(placeChips(d)).toContain('RWA');
+    expect(placeChips(d)).not.toContain('KEN');
+  });
+
+  it('after a FAILED corridor answer: says nothing was found, searches once in the revised scope', async () => {
+    evidence.none = true;
+    const c = conversation();
+    await c.ask(TEST_B());
+    const d = await c.ask(TEST_D1);
+    expect(follow(d).priorAnswer).toEqual({ form: 'REVISION', outcome: 'NO_FINDINGS', evidence: 'SEARCHED_AGAIN' });
+    expect(d.analysisCalls).toHaveLength(1);
+    const query = String(d.analysisCalls[0][0]);
+    expect(query).toMatch(/importing into Rwanda/);
+    expect(query).toContain('not Mombasa');
+    expect(policyOf(d.analysisCalls[0]).reportingWindow?.statedPeriod).toBe('in the past seven days');
+    expect(d.backgroundCalls).toHaveLength(0);
+    expect(follow(d).answer.state).toBe('INSUFFICIENT');
+    expect(placeChips(d)).toContain('RWA');
+    expect(placeChips(d)).not.toContain('KEN');
+  });
+
+  it('after a failed corridor answer whose background DECLINED: the failed search is still the outcome', async () => {
+    evidence.none = true;
+    evidence.declineBackground = true;
+    const c = conversation();
+    const b = await c.ask(TEST_B());
+    expect(b.stored?.kind).toBe('SOURCED_REPORT');
+    const d = await c.ask(TEST_D1);
+    expect(follow(d).priorAnswer?.outcome).toBe('NO_FINDINGS');
+    expect(String(d.analysisCalls[0][0])).toMatch(/importing into Rwanda/);
   });
 });

@@ -480,6 +480,7 @@ export const deShellOverlay: ShellLocaleOverlay = {
         framework: "Rahmen",
         mixedStableTitle: "Erläuterung · Modellschluss (keine Quelle)",
         mixedStableUnavailable: "Der erklärende Teil Ihrer Frage konnte gerade nicht beantwortet werden; der aktuelle Teil unten stammt aus quellenbasierter Berichterstattung.",
+        priorNoFindings: "Die frühere Suche hat keine überprüften Ergebnisse ergeben, die überarbeitet werden könnten; daher wurde für dieselbe Frage neu gesucht.",
         priorReferenceUnresolved: "Ich finde in dieser Unterhaltung keine frühere Antwort, auf die sich das bezieht. Welche Antwort oder Aussage meinen Sie?",
         workNoteBody: "Aus den früheren Antworten dieser Unterhaltung erstellt. Es ist eine Schlussfolgerung, keine aktuellen quellenbasierten Daten: prüfen Sie jede Zahl, bevor Sie sich darauf verlassen.",
         workNoteTitle: "Gesprächsarbeit · Modellschluss",

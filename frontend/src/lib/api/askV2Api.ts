@@ -235,6 +235,16 @@ export interface AskR2Payload {
     readonly kind?: 'CROSS_COUNTRY' | 'JOB_CONTEXT';
   };
   /**
+   * ASK RETRIEVAL / CONVERSATION R2 (§7) — a follow-up executed on the earlier answer ("put those in
+   * a table", "revise your answer"): what that answer found (NO_FINDINGS — its search found nothing,
+   * so nothing is revised) and whether its evidence was re-read or a new search ran in its scope.
+   */
+  readonly priorAnswer?: {
+    readonly form: string;
+    readonly outcome: 'FINDINGS' | 'NO_FINDINGS';
+    readonly evidence: 'REUSED' | 'SEARCHED_AGAIN';
+  };
+  /**
    * CTO R4 — the reusable structure this answer established (a framework, diagnosis, plan…): the
    * conversation's memory for "that idea" / "which part". Model reasoning; never a source.
    */

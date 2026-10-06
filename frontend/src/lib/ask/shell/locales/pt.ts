@@ -480,6 +480,7 @@ export const ptShellOverlay: ShellLocaleOverlay = {
         framework: "Estrutura",
         mixedStableTitle: "Explicação · raciocínio do modelo (não é fonte)",
         mixedStableUnavailable: "A parte explicativa da sua pergunta não pôde ser respondida neste momento; a parte atual abaixo vem de reportagens com fontes.",
+        priorNoFindings: "A pesquisa anterior não encontrou resultados verificados para revisar, por isso foi feita uma nova pesquisa para a mesma pergunta.",
         priorReferenceUnresolved: "Não encontro nesta conversa uma resposta anterior à qual isso se refira. A qual resposta ou afirmação você se refere?",
         workNoteBody: "Construído a partir das respostas anteriores desta conversa. É raciocínio, não dados atuais com fontes: verifique qualquer número antes de confiar nele.",
         workNoteTitle: "Trabalho da conversa · raciocínio do modelo",

@@ -480,6 +480,7 @@ export const esShellOverlay: ShellLocaleOverlay = {
         framework: "Marco",
         mixedStableTitle: "Explicación · razonamiento del modelo (no es una fuente)",
         mixedStableUnavailable: "La parte explicativa de tu pregunta no se pudo responder en este momento; la parte actual de abajo proviene de reportes con fuentes.",
+        priorNoFindings: "La búsqueda anterior no encontró resultados verificados que revisar, así que se hizo una nueva búsqueda para la misma pregunta.",
         priorReferenceUnresolved: "No encuentro en esta conversación una respuesta anterior a la que esto se refiera. ¿A qué respuesta o afirmación te refieres?",
         workNoteBody: "Construido a partir de las respuestas anteriores de esta conversación. Es razonamiento, no datos actuales con fuentes: comprueba cualquier cifra antes de confiar en ella.",
         workNoteTitle: "Trabajo de la conversación · razonamiento del modelo",

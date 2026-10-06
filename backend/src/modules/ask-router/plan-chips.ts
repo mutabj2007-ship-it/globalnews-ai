@@ -180,3 +180,30 @@ export function withRelationshipScope(
     ],
   };
 }
+
+/**
+ * ASK RETRIEVAL / CONVERSATION R2 (§7) — A FOLLOW-UP BOUND TO AN EARLIER ANSWER SHOWS THAT SCOPE.
+ *
+ * "Put those developments in a table" names no place, so its own plan has no scope and the reader
+ * saw "General question" while the answer was about Kenya over the past seven days. When the turn
+ * is bound to a specific earlier answer (execution-contract.ts PRIOR_ANSWER_REWORK), that answer's
+ * places are its scope: added as GEOGRAPHY chips with source EARLIER_TURN (inherited — never
+ * relabelled as typed), after nothing the reader typed. A place the reader EXCLUDED in this turn
+ * ("not Mombasa") is never shown as scope. Pure; every other chip is kept as planned.
+ */
+export function withInheritedPlaces(
+  chips: PlanChips,
+  inherited: readonly string[],
+  excluded: readonly string[],
+): PlanChips {
+  if (chips.kind === 'PENDING') return chips;
+  const own = (chips.kind === 'SCOPED' ? chips.chips : []).filter(
+    (c) => !(c.kind === 'GEOGRAPHY' && excluded.includes(c.value)),
+  );
+  const shown = new Set(own.filter((c) => c.kind === 'GEOGRAPHY').map((c) => c.value));
+  const added: PlanChip[] = [...new Set(inherited)]
+    .filter((iso3) => !shown.has(iso3) && !excluded.includes(iso3))
+    .map((iso3) => ({ kind: 'GEOGRAPHY', value: iso3, source: 'EARLIER_TURN', applied: true }));
+  const all = [...added, ...own];
+  return all.length === 0 ? { kind: 'NONE' } : { kind: 'SCOPED', chips: all };
+}

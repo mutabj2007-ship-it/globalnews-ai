@@ -186,6 +186,8 @@ export interface AskR2Strings {
     readonly mixedStableUnavailable: string;
     /** R4 ALPHA R-4 — the turn refers to an earlier answer this conversation does not hold */
     readonly priorReferenceUnresolved: string;
+    /** R2 §7 — a follow-up on an earlier answer whose search found nothing (a new search then ran) */
+    readonly priorNoFindings: string;
   };
   /** ALPHA ENABLEMENT R1 (MC-070) — a continuation (“And Kenya?”) with nothing to continue; the place stays a chip. */
   readonly noPriorSubject: string;
@@ -427,6 +429,8 @@ const EN: AskR2Strings = {
       'The explanatory part of your question could not be answered right now; the current part below is from sourced reporting.',
     priorReferenceUnresolved:
       'I can’t find an earlier answer in this conversation that this refers to. Which answer or statement do you mean?',
+    priorNoFindings:
+      'The earlier search found no verified findings to revise, so a new search was run for the same question.',
   },
   r3: {
     continuationJobNote: 'continuing what you are working on in this conversation',
@@ -770,6 +774,8 @@ const PL: AskR2Strings = {
       'Nie udało się teraz odpowiedzieć na część wyjaśniającą pytania; bieżąca część poniżej pochodzi ze źródeł.',
     priorReferenceUnresolved:
       'Nie znajduję w tej rozmowie wcześniejszej odpowiedzi, do której to się odnosi. O którą odpowiedź lub stwierdzenie chodzi?',
+    priorNoFindings:
+      'Wcześniejsze wyszukiwanie nie przyniosło zweryfikowanych ustaleń do poprawienia, więc przeprowadzono nowe wyszukiwanie dla tego samego pytania.',
   },
   r3: {
     continuationJobNote: 'kontynuacja tego, nad czym pracujesz w tej rozmowie',

@@ -191,6 +191,12 @@ export function AskR2TurnView({
             : s.continuationNote}
         </p>
       )}
+      {/* R2 §7 — a follow-up on an earlier answer whose search found nothing: said, never revised */}
+      {payload.priorAnswer?.outcome === 'NO_FINDINGS' && (
+        <p data-ask="prior-no-findings" className="-mt-1 mb-3 text-[13px] leading-[1.5] text-[#9fb4cc]">
+          {s.r4.priorNoFindings}
+        </p>
+      )}
       {/* R3 §14 — a relationship question is scoped to BOTH sides, said in plain words */}
       {payload.relationship != null && payload.relationship.countries.length === 2 && (
         <p data-ask="relationship" className="-mt-1 mb-3 text-[13px] leading-[1.5] text-[#9fb4cc]">
