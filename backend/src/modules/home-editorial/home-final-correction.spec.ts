@@ -79,6 +79,8 @@ describe('R2 · casualty, generic attack, legal-process and background words are
     ['incident near a war-used base', '‘Terror’ incident near RAF base used for Iran war: What we know', ''],
     ['generic casualty report', 'Dozens dead and hundreds wounded after bus plunges off bridge', ''],
     ['background war, diplomatic event', 'Modi forges BRICS consensus in shadow of worsening Iran war', ''],
+    ['plot accusation near a war-used base (live Alpha)', 'Men accused of planning terrorist attack near RAF base used to strike Iran', ''],
+    ['terror plot charge', 'Three charged over alleged terror plot in London', ''],
   ])('%s → not admitted as conflict', (_l, title, summary) => {
     const r = v(title, summary);
     expect(r.eligible && r.domains.includes('conflict')).toBe(false);
@@ -97,6 +99,9 @@ describe('R2 · casualty, generic attack, legal-process and background words are
     ['country-prefixed attack', 'Russian attack on Ukraine power grid leaves millions without heat', ''],
     ['casualties corroborate a real conflict family', 'Militants storm military base, killing 20 soldiers', ''],
     ['legal headline with a genuine current development', 'Court halts deployment as rebels capture border town', ''],
+    ['suicide bombing (no legal process)', 'Suicide bomber kills 12 at Mogadishu checkpoint', ''],
+    ['"suspected" with a real armed actor', 'Suspected jihadists kill 20 villagers in northern Mozambique', ''],
+    ['"suspected" drone strike by a named actor', 'Suspected Houthi drone strike hits Saudi oil facility', ''],
   ])('%s → admitted as conflict', (_l, title, summary) => {
     const r = v(title, summary);
     expect(r.eligible && r.domains.includes('conflict')).toBe(true);

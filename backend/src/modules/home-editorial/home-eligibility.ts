@@ -124,6 +124,7 @@ const NOT_EVIDENCE: readonly RegExp[] = [
      used for the Iran war"), not what happened. */
   /\b(rebel|rebels|militia|militant|militants|jihadist|insurgent|army|military|m23|houthi|taliban) (held|controlled|run|occupied|seized|ruled)( [a-z]+)? (city|cities|town|towns|area|areas|territory|territories|region|regions|zone|zones|east|province|capital)\b/g,
   /\b(used|deployed|stationed|involved|operating)( [a-z0-9]+){0,4} (in|for|during) (the )?([a-z]+ ){0,2}(war|wars|conflict)\b/g,
+  /\b(used|deployed|stationed) to (strike|attack|bomb|hit|target)( [a-z]+){0,2}\b/g,
   /\b(war|conflict) (torn|ravaged|hit|scarred|weary|affected|stricken)\b/g,
   /\bin (the )?shadow of( [a-z]+){0,4} (war|wars|conflict)\b/g,
 ];
@@ -179,7 +180,9 @@ const FAMILIES: readonly Family[] = [
   { key: 'tax-policy', domain: 'business', strong: false, re: /\b(vat|taxman|taxpayers?|taxation)\b/ },
   { key: 'tourism', domain: 'business', strong: false, re: /\b(tourism (revenue|earnings|receipts|sector)|tourist arrivals)\b/ },
   /* ── CONFLICT · STRONG ─────────────────────────────────────────────── */
-  { key: 'armed-conflict', domain: 'conflict', strong: true, re: /\b(civil war|armed (conflict|conflicts|groups?|men|clashes|attack|attacks|violence|rebellion)|rebel (alliance|alliances|groups?|forces|held|coalition|movement|offensive|fighters)|naval blockade|military (offensive|occupation|operation|operations|campaign|escalation)|ground (offensive|invasion|assault)|humanitarian corridor|forced displacement|escalation of (violence|fighting|hostilities)|hostilities|civilians killed|suicide (bomb|bomber|bombers|bombing)|terror(ist)? attacks?|car bomb|roadside bomb|cross border (attack|attacks|raid|raids|shelling))\b/ },
+  { key: 'armed-conflict', domain: 'conflict', strong: true, re: /\b(civil war|armed (conflict|conflicts|groups?|men|clashes|attack|attacks|violence|rebellion)|rebel (alliance|alliances|groups?|forces|held|coalition|movement|offensive|fighters)|naval blockade|military (offensive|occupation|operation|operations|campaign|escalation)|ground (offensive|invasion|assault)|humanitarian corridor|forced displacement|escalation of (violence|fighting|hostilities)|hostilities|civilians killed|cross border (attack|attacks|raid|raids|shelling))\b/ },
+  /* named attack types: a charge or plot ABOUT one is legal process, not a conflict development */
+  { key: 'terror-attack', domain: 'conflict', strong: true, re: /\b(suicide (bomb|bomber|bombers|bombing)|terror(ist)? (attacks?|plots?)|car bomb|roadside bomb)\b/ },
   /* atrocity crimes are usually NAMED in legal process; under a legal headline they are not a current development */
   { key: 'atrocity-crimes', domain: 'conflict', strong: true, re: /\b(war crimes|crimes against humanity)\b/ },
   { key: 'ceasefire', domain: 'conflict', strong: true, re: /\b(ceasefire|cease fire|truce|peace (talks|deal|agreement|process|accord|negotiations)|armistice|end (the )?war|end to (the )?(war|fighting))\b/ },
@@ -336,8 +339,8 @@ function familiesIn(rawText: string, domain: HomeDomain): Set<string> {
   return out;
 }
 
-const LEGAL_PROCESS = /\b(arrest(s|ed|ing)?|charged|charges|charging|jailed|jails|sentenced|sentences|trial|trials|tried|prosecut[a-z]*|court|courts|indicted|indictment|convicted|conviction|extradit[a-z]*|acquitted|lawsuit|sued|tribunal|custody|detained)\b/;
-const LEGAL_BACKGROUND_KEYS: readonly string[] = ['place-war', 'atrocity-crimes'];
+const LEGAL_PROCESS = /\b(accused|accuses|suspects?|suspected|plot|plots|plotting|plotted|arrest(s|ed|ing)?|charged|charges|charging|jailed|jails|sentenced|sentences|trial|trials|tried|prosecut[a-z]*|court|courts|indicted|indictment|convicted|conviction|extradit[a-z]*|acquitted|lawsuit|sued|tribunal|custody|detained)\b/;
+const LEGAL_BACKGROUND_KEYS: readonly string[] = ['place-war', 'atrocity-crimes', 'terror-attack'];
 
 const STRONG_KEYS: ReadonlySet<string> = new Set([...FAMILIES.filter((f) => f.strong).map((f) => f.key), 'place-war']);
 
@@ -416,7 +419,7 @@ const TOPIC_LABELS: ReadonlyArray<{ label: string; keys: readonly string[] }> = 
   { label: 'Armed conflict', keys: ['armed-conflict', 'atrocity-crimes', 'air-war', 'named-armed-actor', 'armed-action', 'place-war', 'armed-actors', 'military-ops'] },
   { label: 'Ceasefire and peace efforts', keys: ['ceasefire'] },
   { label: 'Displacement and humanitarian impact', keys: ['displacement'] },
-  { label: 'Attacks and security', keys: ['violence', 'casualties'] },
+  { label: 'Attacks and security', keys: ['terror-attack', 'violence', 'casualties'] },
 ];
 
 /** Families in the order given (strong first), mapped to at most two distinct reader labels. */
