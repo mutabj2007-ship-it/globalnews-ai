@@ -301,7 +301,7 @@ export const esShellOverlay: ShellLocaleOverlay = {
         insuf: "EVIDENCIA INSUFICIENTE",
         part: "EVIDENCIA PARCIAL",
         rec: "REGISTRO CONSERVADO",
-        retrep: "INFORMES CONSERVADOS",
+        retrep: "REPORTES CONSERVADOS",
         ref: "CONTEXTO DE REFERENCIA",
         unavail: "FUNCIÓN NO DISPONIBLE",
         ver: "VERIFICADO AHORA",
@@ -507,7 +507,7 @@ export const esShellOverlay: ShellLocaleOverlay = {
       },
       tableScrollHint: {
         kind: "pattern",
-        pattern: "Desplázate hacia el lado para ver las {0} columnas",
+        pattern: "Desplázate hacia los lados para ver las {0} columnas",
       },
       working: "Preparando tu respuesta…",
       unavailable: "Ask no está disponible ahora. No se ejecutó nada.",

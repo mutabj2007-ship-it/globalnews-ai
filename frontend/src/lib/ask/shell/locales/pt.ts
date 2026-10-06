@@ -507,7 +507,7 @@ export const ptShellOverlay: ShellLocaleOverlay = {
       },
       tableScrollHint: {
         kind: "pattern",
-        pattern: "Role para o lado para ver todas as {0} colunas",
+        pattern: "Role na horizontal para ver todas as {0} colunas",
       },
       working: "Preparando sua resposta…",
       unavailable: "O Ask está indisponível agora. Nada foi executado.",
