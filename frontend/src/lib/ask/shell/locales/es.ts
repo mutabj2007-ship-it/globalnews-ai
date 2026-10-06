@@ -541,6 +541,7 @@ export const esShellOverlay: ShellLocaleOverlay = {
         reasons: {
           auth: "acceso denegado",
           "not-configured": "no configurada",
+          quota: "cuota de solicitudes agotada",
           "rate-limited": "con límite de solicitudes",
           timeout: "tiempo agotado",
           unavailable: "no disponible",

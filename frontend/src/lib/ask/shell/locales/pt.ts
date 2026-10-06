@@ -541,6 +541,7 @@ export const ptShellOverlay: ShellLocaleOverlay = {
         reasons: {
           auth: "acesso recusado",
           "not-configured": "não configurada",
+          quota: "cota de requisições esgotada",
           "rate-limited": "com limite de requisições",
           timeout: "tempo esgotado",
           unavailable: "indisponível",

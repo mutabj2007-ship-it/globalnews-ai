@@ -541,6 +541,7 @@ export const deShellOverlay: ShellLocaleOverlay = {
         reasons: {
           auth: "Zugriff verweigert",
           "not-configured": "nicht konfiguriert",
+          quota: "Anfragekontingent aufgebraucht",
           "rate-limited": "durch Ratenbegrenzung blockiert",
           timeout: "Zeitüberschreitung",
           unavailable: "nicht verfügbar",

@@ -569,6 +569,7 @@ export const arShellOverlay: ShellLocaleOverlay = {
         reasons: {
           auth: "رُفض الوصول",
           "not-configured": "غير مُهيّأة",
+          quota: "نفد رصيد الطلبات",
           "rate-limited": "مُقيَّدة بحدّ الطلبات",
           timeout: "انتهت المدة",
           unavailable: "غير متوفرة",

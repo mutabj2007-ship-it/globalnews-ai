@@ -337,6 +337,8 @@ const EN: AskR2Strings = {
     reasons: {
       'not-configured': 'not configured',
       'rate-limited': 'rate limited',
+      /* ASK R2 — a spent plan allowance is not a short rate limit */
+      quota: 'request allowance used up',
       auth: 'access refused',
       timeout: 'timed out',
       unavailable: 'unavailable',
@@ -678,6 +680,7 @@ const PL: AskR2Strings = {
     reasons: {
       'not-configured': 'nieskonfigurowane',
       'rate-limited': 'limit zapytań',
+      quota: 'wyczerpany przydział zapytań',
       auth: 'odmowa dostępu',
       timeout: 'przekroczony czas',
       unavailable: 'niedostępne',

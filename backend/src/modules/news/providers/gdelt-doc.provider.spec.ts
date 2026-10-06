@@ -1,6 +1,10 @@
 import { readFileSync } from 'fs';
 import { ConfigService } from '@nestjs/config';
-import { GdeltDocProvider, GdeltDocProviderError } from './gdelt-doc.provider';
+import {
+  GDELT_DOC_REQUEST_TIMEOUT_MS,
+  GdeltDocProvider,
+  GdeltDocProviderError,
+} from './gdelt-doc.provider';
 
 /**
  * R4 GDELT — the DOC 2.0 provider, tested against the SHAPE THE CTO
@@ -483,7 +487,7 @@ describe('GdeltDocProvider — U and V: request spacing and concurrency collapse
         provider.search('beta query'),
       ]);
 
-      await jest.advanceTimersByTimeAsync(8_100);
+      await jest.advanceTimersByTimeAsync(GDELT_DOC_REQUEST_TIMEOUT_MS + 100);
 
       const [firstResult, secondResult] = await settled;
 

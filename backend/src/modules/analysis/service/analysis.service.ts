@@ -3320,13 +3320,29 @@ export class AnalysisService {
                 ? null
                 : { from: reportingWindow.from, to: reportingWindow.to, basis: 'REQUEST_INSTANT' },
             languages: plannedTrace?.languages ?? [requestedLanguage],
-            lanesAttempted: plannedTrace?.lanesAttempted ?? retrievalContext.providers,
-            lanesSucceeded: plannedTrace?.lanesSucceeded ?? retrievalContext.providers,
+            /* ASK R2 — a failed provider is named with its reason, never counted as checked. */
+            lanesAttempted:
+              plannedTrace?.lanesAttempted ?? [
+                ...new Set([
+                  ...retrievalContext.providers,
+                  ...(retrievalContext.providerFailures ?? []).map((f) => f.providerId),
+                ]),
+              ],
+            lanesSucceeded:
+              plannedTrace?.lanesSucceeded ??
+              retrievalContext.providers.filter(
+                (id) => !(retrievalContext.providerFailures ?? []).some((f) => f.providerId === id),
+              ),
             lanesUnavailable:
               plannedTrace?.lanesUnavailable ??
-              (retrievalContext.fallbackReason === 'provider-error'
-                ? [{ lane: 'news-providers', reason: 'provider-error' }]
-                : []),
+              ((retrievalContext.providerFailures ?? []).length > 0
+                ? (retrievalContext.providerFailures ?? []).map((f) => ({
+                    lane: f.providerId,
+                    reason: laneFailureReason(f.kind),
+                  }))
+                : retrievalContext.fallbackReason === 'provider-error'
+                  ? [{ lane: 'news-providers', reason: 'provider-error' }]
+                  : []),
             candidatesSeen: plannedTrace?.candidatesSeen ?? articles.length,
             candidatesAdmitted: articles.length,
             /* R1G — the same conservative story identity the final evidence uses. */
@@ -5566,9 +5582,17 @@ export class AnalysisService {
         : source.articles.find((article) => article.publishedAt === newestArticlePublishedAt)
             ?.publishedAtBasis;
 
+    /* ASK R2 — which provider failed and how, from the failure channel (ids + kinds only). */
+    const failed = new Map<string, string>();
+    if (!isCountryResponse) {
+      for (const f of readProviderFailures(source)) if (!failed.has(f.providerId)) failed.set(f.providerId, f.kind);
+    }
     return {
       dataMode: source.dataMode,
       providers: source.providers,
+      ...(failed.size === 0
+        ? {}
+        : { providerFailures: [...failed].map(([providerId, kind]) => ({ providerId, kind })) }),
       fallbackReason: source.fallbackReason,
       newestArticlePublishedAt,
       ...(newestArticlePublishedAtBasis === undefined ? {} : { newestArticlePublishedAtBasis }),
@@ -5990,5 +6014,22 @@ export class AnalysisService {
       value,
       expiresAt: Date.now() + ttlSeconds * 1000,
     });
+  }
+}
+
+/**
+ * ASK RETRIEVAL / CONVERSATION R2 — the reader-facing reason for a failed lane. Rate limit, spent
+ * allowance, timeout and refused access stay distinct (contract §4); everything else is
+ * "unavailable" rather than a guess.
+ */
+export function laneFailureReason(kind: string): string {
+  switch (kind) {
+    case 'rate-limited':
+    case 'quota':
+    case 'timeout':
+    case 'auth':
+      return kind;
+    default:
+      return 'unavailable';
   }
 }

@@ -2499,6 +2499,25 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         `normalization=${route.outcome.status} language=${route.envelope.language.questionLanguage} ` +
         `answer=${answer.state} aiExecuted=${aiExecuted}`,
     );
+    /* ASK RETRIEVAL / CONVERSATION R2 (contract §4) — the redacted retrieval record of this Ask:
+       which providers answered, which failed and HOW, what was seen / admitted / excluded by the
+       window, and the evidence outcome. Ids, kinds and counts only — never the query, the
+       reader's words, an article, a key or an account. */
+    const retrieval = analysis?.retrievalContext;
+    if (retrieval !== undefined && retrieval !== null) {
+      this.logger.log(
+        `ask-r2 retrieval operation=${operationId} basis=${answer.basis} ` +
+          `answered=${retrieval.providers.join('+') || 'none'} ` +
+          `failed=${(retrieval.providerFailures ?? []).map((f) => `${f.providerId}:${f.kind}`).join('+') || 'none'} ` +
+          `dataMode=${retrieval.dataMode} fallback=${retrieval.fallbackReason ?? 'none'} ` +
+          `outcome=${retrieval.outcome ?? 'none'} retrieved=${retrieval.articlesRetrieved ?? 'n/a'} ` +
+          `seen=${retrieval.retrievalTrace?.candidatesSeen ?? 'n/a'} ` +
+          `admitted=${retrieval.retrievalTrace?.candidatesAdmitted ?? analysis?.articles?.length ?? 0} ` +
+          `clusters=${retrieval.retrievalTrace?.independentClusters ?? 'n/a'} ` +
+          `windowH=${retrieval.reportingWindow === undefined ? 'none' : Math.round((Date.parse(retrieval.reportingWindow.to) - Date.parse(retrieval.reportingWindow.from)) / 3_600_000)} ` +
+          `outsideWindow=${retrieval.reportingWindow?.excludedOutsideWindow ?? 0}`,
+      );
+    }
     return {
       succeeded: true,
       payloadJson: JSON.stringify({

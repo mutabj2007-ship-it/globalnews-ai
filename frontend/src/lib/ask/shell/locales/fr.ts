@@ -541,6 +541,7 @@ export const frShellOverlay: ShellLocaleOverlay = {
         reasons: {
           auth: "accès refusé",
           "not-configured": "non configurée",
+          quota: "quota de requêtes épuisé",
           "rate-limited": "débit limité",
           timeout: "délai dépassé",
           unavailable: "indisponible",
