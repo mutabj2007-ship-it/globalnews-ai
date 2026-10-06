@@ -23,6 +23,9 @@
 }
 .frame {
   font-family: var(--font-cd-body), system-ui, sans-serif;
+  /* ASK READING EXPERIENCE R1 — the Ask root is the size container (H RESPONSIVE-FREEZE §1):
+     embedded Ask is sized by its host, which a viewport query cannot see. */
+  container: ask-root / inline-size;
   flex: 1 1 0;
   min-height: 0;
   display: flex;
@@ -145,19 +148,27 @@
   }
 }
 
-/* Question heading (D25 qFs: 26 · 30 at 1920 · 21 phone). */
+/*
+  ASK READING EXPERIENCE R1 — the submitted question is a COMPACT BUBBLE, not the D25 display
+  heading (26 · 30 at 1920 · 21 phone) it was: the reader's own words were the largest object on
+  the page, above the answer. 17px, wraps, at most 85% of the column, at the inline end. It is
+  the same element (an <h2> naming the turn); only its weight changed.
+*/
 .question {
-  margin: 8px 0 12px;
-  font-size: 26px;
-  font-weight: 700;
-  line-height: 1.2;
-  letter-spacing: -0.015em;
+  width: fit-content;
+  max-width: 85%;
+  margin: 4px 0 12px;
+  margin-inline-start: auto;
+  padding: 0.625rem 1rem;
+  border: 1px solid var(--ask-read-line-soft, #0e2d4d);
+  border-radius: 14px;
+  background: var(--ask-read-sunk, #06223d);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.45;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
   text-wrap: pretty;
-}
-@media (min-width: 1900px) {
-  .question {
-    font-size: 30px;
-  }
 }
 .legacyTurn {
   margin-bottom: 20px;
@@ -263,9 +274,6 @@
   }
   .emptyLead {
     font-size: 16px;
-  }
-  .question {
-    font-size: 21px;
   }
   .thread :global([data-ask='brief']) p {
     font-size: 16px;

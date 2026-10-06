@@ -72,9 +72,15 @@ describe('it consumes the existing Analysis engine and nothing else', () => {
     expect(CODE).not.toMatch(/asked \+|`\$\{asked\}[^`]/);
   });
 
-  it('reuses the EXISTING loading presentation', () => {
-    expect(CODE).toMatch(/import \{ LoadingStages \} from '@\/components\/search\/LoadingStages'/);
-    expect(CODE).toMatch(/<LoadingStages stages=\{\[\.\.\.dictionary\.loadingStages\]\}/);
+  /*
+    ASK READING EXPERIENCE R1 — supersedes 'reuses the EXISTING loading presentation'. That was
+    LoadingStages: four retrieval labels advanced by a 1.8 s client timer that knew nothing of
+    the request (H-FREEZE §5). The dock now shows the ONE truthful working line, shared with /ask.
+  */
+  it('shows the truthful working state, never the simulated stage timer', () => {
+    expect(CODE).not.toMatch(/<LoadingStages|import \{ LoadingStages \}/);
+    expect(CODE).toMatch(/import \{ AskWorkingStatus \} from '@\/components\/ask-frame\/AskWorkingStatus'/);
+    expect(CODE).toMatch(/<AskWorkingStatus label=\{r2s\.working\} \/>/);
   });
 
   /* R2C — failures and refusals render through the CANONICAL turn view (the same as /ask). */

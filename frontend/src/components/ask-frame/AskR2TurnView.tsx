@@ -17,6 +17,7 @@ import { AskRecentReporting } from './AskRecentReporting';
 import { AskAnswerProse } from '@/components/ask/AskAnswerProse';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 import { askLocaleForLegacyCatalogue } from '@/lib/ask/askLocale';
+import { useAskSourcesPanel } from './AskSourcesPanel';
 
 /**
  * ASK R2 CONSOLIDATED INTEGRATION R1 · GATE G — ONE ASK R2 TURN, AS D25 DRAWS IT.
@@ -35,38 +36,68 @@ import { askLocaleForLegacyCatalogue } from '@/lib/ask/askLocale';
  */
 
 /* ASK R2 CLAUDE DESIGN RECONCILIATION R1 — the D25 BADGE palette, per engine state. */
+/*
+  ASK READING EXPERIENCE R1 — every colour is a `--ask-read-*` role with the accepted dark value
+  as its var() fallback (the R4 Phase C consumption rule): a dark scope, and any surface with no
+  theme scope, renders exactly the accepted palette; a light scope resolves the reading tokens.
+*/
 const TONE_CLASS: Readonly<Record<AskR2View['tone'], string>> = {
-  reference: 'border border-[#3a4a5e] bg-[#1a2230] text-[#c3ccd8]',
-  verified: 'border border-[#1b6fa8] bg-[#07304f] text-[#8fd3ff]',
-  current: 'border border-[#1b6fa8] bg-[#07304f] text-[#8fd3ff]',
-  clarification: 'border border-[#2a6d9e] bg-[#0a2a47] text-[#bfe3fb]',
-  partial: 'border border-[#6b5a20] bg-[#2a2410] text-[#f3d36b]',
-  insufficient: 'border border-[#6b3236] bg-[#2d1618] text-[#f2a5a5]',
-  unavailable: 'border border-[#3a4a5e] bg-[#12161c] text-[#c5ccd6]',
-  retained: 'border border-[#2f5d4a] bg-[#0f2a22] text-[#a8e0c6]',
+  reference:
+    'border border-[var(--ask-read-rule-reference,#3a4a5e)] bg-[var(--ask-read-sunk,#1a2230)] text-[var(--ask-read-ink2,#c3ccd8)]',
+  verified:
+    'border border-[var(--ask-read-control-line,#1b6fa8)] bg-[var(--ask-read-sunk,#07304f)] text-[var(--ask-read-control-ink,#8fd3ff)]',
+  current:
+    'border border-[var(--ask-read-control-line,#1b6fa8)] bg-[var(--ask-read-sunk,#07304f)] text-[var(--ask-read-control-ink,#8fd3ff)]',
+  clarification:
+    'border border-[var(--ask-read-rule-clarify,#2a6d9e)] bg-[var(--ask-read-sunk,#0a2a47)] text-[var(--ask-read-control-ink,#bfe3fb)]',
+  partial:
+    'border border-[var(--ask-read-deep-line,#6b5a20)] bg-[var(--ask-read-deep-bg,#2a2410)] text-[var(--ask-read-deep-ink,#f3d36b)]',
+  insufficient:
+    'border border-[var(--ask-read-rule-insufficient,#6b3236)] bg-[var(--ask-read-sunk,#2d1618)] text-[var(--ask-read-rule-insufficient,#f2a5a5)]',
+  unavailable:
+    'border border-[var(--ask-read-line,#3a4a5e)] bg-[var(--ask-read-sunk,#12161c)] text-[var(--ask-read-ink2,#c5ccd6)]',
+  retained:
+    'border border-[var(--ask-read-rule-retained,#2f5d4a)] bg-[var(--ask-read-sunk,#0f2a22)] text-[var(--ask-read-rule-retained,#a8e0c6)]',
 };
 
 /* D25 answer surfaces: Reference is dashed and muted, never styled like current evidence. */
+const ANSWER_SURFACE =
+  'border border-[var(--ask-read-line-soft,#0e2d4d)] [background:var(--ask-read-answer-bg,linear-gradient(#082038,#041a30_46%,#02152b))] text-[var(--ask-read-ink,#e6eef6)]';
 const CARD_CLASS: Readonly<Record<AskR2View['tone'], string>> = {
-  reference: 'border border-dashed border-[#4a5a6e] bg-[#0e1520] text-[#c3ccd8]',
-  verified:
-    'border border-[#0e2d4d] bg-[linear-gradient(#082038,#041a30_46%,#02152b)] text-[#e6eef6]',
-  current:
-    'border border-[#0e2d4d] bg-[linear-gradient(#082038,#041a30_46%,#02152b)] text-[#e6eef6]',
-  clarification: 'border border-[#2a6d9e] bg-[linear-gradient(#08263f,#051a2e)] text-[#e6eef6]',
-  partial:
-    'border border-[#0e2d4d] bg-[linear-gradient(#082038,#041a30_46%,#02152b)] text-[#e6eef6]',
-  insufficient: 'border border-[#4a2a2e] bg-[#0b1522] text-[#cfe2f2]',
-  unavailable: 'border border-[#3a4a5e] bg-[#12161c] text-[#c5ccd6]',
-  retained: 'border border-[#1f4a3a] bg-[#0a1c17] text-[#e6eef6]',
+  reference:
+    'border border-dashed border-[var(--ask-read-rule-reference,#4a5a6e)] bg-[var(--ask-read-sunk,#0e1520)] text-[var(--ask-read-ink2,#c3ccd8)]',
+  verified: ANSWER_SURFACE,
+  current: ANSWER_SURFACE,
+  clarification:
+    'border border-[var(--ask-read-rule-clarify,#2a6d9e)] [background:var(--ask-read-answer-bg,linear-gradient(#08263f,#051a2e))] text-[var(--ask-read-ink,#e6eef6)]',
+  partial: ANSWER_SURFACE,
+  insufficient:
+    'border border-[var(--ask-read-rule-insufficient,#4a2a2e)] bg-[var(--ask-read-sunk,#0b1522)] text-[var(--ask-read-ink,#cfe2f2)]',
+  unavailable:
+    'border border-[var(--ask-read-line,#3a4a5e)] bg-[var(--ask-read-sunk,#12161c)] text-[var(--ask-read-ink2,#c5ccd6)]',
+  retained:
+    'border border-[var(--ask-read-rule-retained,#1f4a3a)] bg-[var(--ask-read-sunk,#0a1c17)] text-[var(--ask-read-ink,#e6eef6)]',
 };
 
+/* ASK READING EXPERIENCE R1 — a label is reading type, not 11px monospace. */
 const EYEBROW =
-  'font-mono text-[11px] font-semibold uppercase leading-none tracking-[0.12em] text-[#6f89a8]';
+  'text-[0.75rem] font-semibold leading-none tracking-[0.04em] text-[var(--ask-read-ink3,#6f89a8)]';
+/* Secondary text: provenance, notes, metadata. One size, one ink — never mono. */
+const META = 'text-[0.8125rem] leading-[1.5] text-[var(--ask-read-ink3,#8299b4)]';
+const NOTE = 'text-[0.8125rem] leading-[1.5] text-[var(--ask-read-ink2,#9fb4cc)]';
+const CAUTION = 'text-[0.8125rem] leading-[1.45] text-[var(--ask-read-deep-ink,#c9b27a)]';
 const TURN = 'mb-6 flex flex-col';
-/* D25 qFs: 21 phone · 26 desktop · 30 at 1920. */
+/*
+  ASK READING EXPERIENCE R1 — THE QUESTION IS A COMPACT BUBBLE, NOT A DISPLAY HEADING.
+
+  It was the D25 question heading at 21 / 26 / 30 px bold, so every turn opened with the
+  reader's own words repeated as the largest object on the page, above the answer they came
+  for. Design R1 freezes a compact question: 17px, wrapping, at most 85% of the column, at the
+  inline END (the reader's side, mirrored in RTL). It keeps its <h2>: the question still names
+  the turn for assistive technology, and Copy still reads it from there.
+*/
 const QUESTION =
-  'mb-3 mt-2.5 text-[21px] font-bold leading-[1.2] tracking-[-0.015em] text-white md:text-[26px] min-[1900px]:text-[30px]';
+  'mb-3 mt-1 ms-auto w-fit max-w-[85%] whitespace-pre-line break-words rounded-[14px] border border-[var(--ask-read-line-soft,#0e2d4d)] bg-[var(--ask-read-sunk,#06223d)] px-4 py-2.5 text-[1.0625rem] font-semibold leading-[1.45] text-[var(--ask-read-ink,#fff)]';
 const CARD = 'rounded-[12px] p-3.5 md:p-5';
 
 /*
@@ -121,12 +152,14 @@ export function AskR2TurnView({
   readonly storyBookmarks?: boolean;
 }): JSX.Element {
   const s = askShellStrings(locale).askR2Strings;
+  /* ASK READING EXPERIENCE R1 — the Sources panel/sheet, when this surface provides one. */
+  const openSources = useAskSourcesPanel();
   const payload = turn.payload ?? null;
 
   if (payload === null) {
     return (
       <article data-ask-turn data-ask="turn" data-ask-state="unavail" className={TURN}>
-        <p className={EYEBROW}>{s.youAsked}</p>
+        <p className="sr-only">{s.youAsked}</p>
         <AskSubmittedQuestion
           question={turn.question}
           headingClassName={QUESTION}
@@ -172,10 +205,12 @@ export function AskR2TurnView({
   const computedAnswer = view.badge === 'calc' && payload.computation != null;
   /* R3 — which kind of guidance labels this answer (§28 human labels) */
   const guidanceKind = payload.guidance?.kind ?? null;
+  /* The SAME array the inline citations number against, so item n is always [n]. */
+  const answerSources = payload.analysis?.analysis?.sources ?? [];
 
   return (
     <article data-ask-turn data-ask="turn" data-ask-state={view.badge} className={TURN}>
-      <p className={EYEBROW}>{s.youAsked}</p>
+      <p className="sr-only">{s.youAsked}</p>
       <AskSubmittedQuestion
         question={turn.question}
         headingClassName={QUESTION}
@@ -184,7 +219,7 @@ export function AskR2TurnView({
       />
       {/* CTO checkpoint 5 §5 — "And in Kenya?" answered as the earlier question for Kenya: said, never hidden. */}
       {payload.continuation != null && (
-        <p data-ask="continuation" className="-mt-1 mb-3 text-[13px] leading-[1.5] text-[#9fb4cc]">
+        <p data-ask="continuation" className={`-mt-1 mb-3 ${NOTE}`}>
           {s.continuationAnsweredAs}: “{payload.continuation.answeredAs}” ·{' '}
           {payload.continuation.kind === 'JOB_CONTEXT'
             ? s.r3.continuationJobNote
@@ -194,18 +229,18 @@ export function AskR2TurnView({
       {/* R2 §7 — a follow-up on an earlier answer whose search found nothing: said, never revised */}
       {/* ASK R2 LIVE-GATE REPAIR (P0-4) — the earlier request did not complete: said, never revised */}
       {payload.priorAnswer?.outcome === 'INCOMPLETE' && (
-        <p data-ask="prior-incomplete" className="-mt-1 mb-3 text-[13px] leading-[1.5] text-[#9fb4cc]">
+        <p data-ask="prior-incomplete" className={`-mt-1 mb-3 ${NOTE}`}>
           {s.r4.priorIncomplete}
         </p>
       )}
       {payload.priorAnswer?.outcome === 'NO_FINDINGS' && (
-        <p data-ask="prior-no-findings" className="-mt-1 mb-3 text-[13px] leading-[1.5] text-[#9fb4cc]">
+        <p data-ask="prior-no-findings" className={`-mt-1 mb-3 ${NOTE}`}>
           {s.r4.priorNoFindings}
         </p>
       )}
       {/* R3 §14 — a relationship question is scoped to BOTH sides, said in plain words */}
       {payload.relationship != null && payload.relationship.countries.length === 2 && (
-        <p data-ask="relationship" className="-mt-1 mb-3 text-[13px] leading-[1.5] text-[#9fb4cc]">
+        <p data-ask="relationship" className={`-mt-1 mb-3 ${NOTE}`}>
           {s.r3.relationshipScope(
             askCountryName(payload.relationship.countries[0], locale) ??
               payload.relationship.countries[0],
@@ -218,73 +253,15 @@ export function AskR2TurnView({
         </p>
       )}
 
-      <div data-ask="scope" className="mb-3 flex flex-wrap items-center gap-1.5">
-        <span className="me-1 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6f89a8]">
-          {s.scope}
-        </span>
-        {view.chips.items.map((chip, i) => (
-          <span
-            key={`${chip.kind}-${i}`}
-            data-ask-chip={chip.kind}
-            data-ask-chip-kept={chip.kept ? 'true' : undefined}
-            /* R4 · a chip is a self-contained run: a publisher name, a domain or the
-               reader's own words. Isolated so its boundaries cannot reorder the row — a
-               DOMAIN chip beside an Arabic TOPIC chip is the case this exists for. */
-            {...isolatedAuto()}
-            className={`inline-flex h-7 items-center whitespace-nowrap rounded-[14px] border bg-[#06223d] px-2.5 text-[13px] font-semibold text-[#cfe2f2] ${chip.kept ? 'border-dashed border-[#c98a8a]/60' : 'border-[#1d4a73]'}`}
-          >
-            {chip.label}
-          </span>
-        ))}
-        {view.chips.note !== null && (
-          <span className="text-[13px] italic text-[#8fa6c0]" {...isolatedAuto()}>
-            {view.chips.note}
-          </span>
-        )}
-      </div>
-
-      <div data-ask="engine-state" className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1.5">
-        {governed !== null ? (
-          /* Restrained: the machine state is metadata, never the headline of the answer. */
-          <span
-            data-ask-badge={view.badge}
-            data-ask-badge-restrained="true"
-            className="font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-[#6f89a8]"
-          >
-            {view.badgeText}
-          </span>
-        ) : (
-          <>
-            <span
-              data-ask-badge={view.badge}
-              className={`inline-flex h-[26px] items-center whitespace-nowrap rounded-[6px] px-2.5 font-mono text-[11px] font-bold tracking-[0.08em] ${TONE_CLASS[view.tone]}`}
-            >
-              {view.badgeText}
-            </span>
-            <span
-              data-ask="freshness"
-              className="font-mono text-[12px] leading-[1.3] text-[#8299b4]"
-            >
-              {view.freshness}
-            </span>
-          </>
-        )}
-        {/* ASK RELIABILITY R1 (L) — a reporting re-use window passing does not make a timeless
-            explanation or a computed result "expired": the note is shown only for answers that
-            rest on CURRENT reporting, where re-checking genuinely matters. */}
-        {turn.expired === true && payload.answer.state !== 'REFERENCE_BACKGROUND' && payload.answer.state !== 'COMPUTED_RESULT' && (
-          <span data-ask="expired" className="font-mono text-[12px] text-[#8299b4]">
-            {s.expiredNote}
-          </span>
-        )}
-        {/* STANDALONE PUBLIC BETA CONVERGENCE R1 — the reader's Save / Saved (0 AI). */}
-        {canSave && <AskTurnSave operation={turn.operation} locale={locale} />}
-        {/* R2 · D1 — Save as briefing (signed-in, produced answers, only when the server has briefings on). */}
-        {canSave && <AskTurnBrief operation={turn.operation} locale={locale} />}
-        {/* TRUST R1 — copy this answer (local clipboard only; nothing is shared or sent). */}
-        <AskTurnCopy locale={locale} />
-      </div>
-
+      {/*
+        ASK READING EXPERIENCE R1 — ANSWER FIRST. The scope chips and the engine-state line
+        (badge, freshness, expired) used to stand between the question and the answer, so a
+        reader met a wall of metadata before the first sentence they came for. They are the
+        same elements with the same content; they now follow the answer as its status footer
+        (`answer-meta` below). A qualified answer still opens with its own qualification INSIDE
+        the answer — the reference note, the insufficient title, the limited-search note — so
+        no caveat moves away from the claims it qualifies.
+      */}
       {/* ASK TECHNICAL / SCIENTIFIC REASONING R1 — the server's deterministic computation. */}
       {payload.computation != null && (
         <section
@@ -298,7 +275,7 @@ export function AskR2TurnView({
           </p>
           <ul data-ask="computation-inputs" className="flex flex-col gap-0.5">
             {payload.computation.inputs.map((input) => (
-              <li key={input.name} className="font-mono text-[12px] text-[#8fa6c0]">
+              <li key={input.name} className="text-[0.75rem] text-[var(--ask-read-ink2,#8fa6c0)]">
                 {input.name} = {input.value}
                 {input.unit === '' ? '' : ` ${input.unit}`} (“{input.quoted}”)
               </li>
@@ -307,7 +284,7 @@ export function AskR2TurnView({
           <ol data-ask="computation-steps" className="flex flex-col gap-1">
             {payload.computation.steps.map((step) => (
               <li key={step.label} className="text-[15px] leading-[1.5]">
-                {step.label}: <span className="font-mono">{step.expression}</span> ={' '}
+                {step.label}: <span className="">{step.expression}</span> ={' '}
                 <strong>
                   {step.value} {step.unit}
                 </strong>
@@ -315,7 +292,7 @@ export function AskR2TurnView({
             ))}
           </ol>
           {payload.computation.conventions.map((convention) => (
-            <p key={convention} className="text-[13px] text-[#8fa6c0]">
+            <p key={convention} className="text-[13px] text-[var(--ask-read-ink2,#8fa6c0)]">
               {convention}
             </p>
           ))}
@@ -332,14 +309,14 @@ export function AskR2TurnView({
           )}
           {view.verification.lanes.length > 0 && (
             <div data-ask="sources-checked" className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-[#8fa6c0]">
+              <span className="text-[0.75rem] text-[var(--ask-read-ink2,#8fa6c0)]">
                 {s.verification.sourcesChecked}
               </span>
               {view.verification.lanes.map((lane) => (
                 <span
                   key={`${lane.label}-${lane.status}`}
                   data-ask-lane={lane.ok ? 'ok' : 'unavailable'}
-                  className="font-mono text-[12px] text-[#8299b4]"
+                  className="text-[0.75rem] text-[var(--ask-read-ink3,#8299b4)]"
                 >
                   {lane.label} {lane.ok ? '✓' : '—'} {lane.ok ? '' : lane.status}
                 </span>
@@ -352,7 +329,7 @@ export function AskR2TurnView({
                 <li
                   key={claim.text}
                   data-ask-claim-state={claim.state}
-                  className="text-[13px] leading-[1.45] text-[#b7c7da]"
+                  className="text-[13px] leading-[1.45] text-[var(--ask-read-ink2,#b7c7da)]"
                 >
                   {claim.text}: <strong>{claim.label}</strong>
                 </li>
@@ -377,7 +354,7 @@ export function AskR2TurnView({
                 {view.clarification.candidates.map((name, i) => {
                   const choice = view.clarification.choices[i];
                   const itemClass =
-                    'flex min-h-[48px] w-full items-center rounded-[10px] border border-[#1d4a73] bg-[#06223d] px-3.5 text-start text-[15px] font-semibold';
+                    'flex min-h-[48px] w-full items-center rounded-[10px] border border-[var(--ask-read-line,#1d4a73)] bg-[var(--ask-read-sunk,#06223d)] px-3.5 text-start text-[15px] font-semibold';
                   return (
                     <li key={name}>
                       {onUseQuestion !== undefined && choice !== undefined ? (
@@ -397,7 +374,7 @@ export function AskR2TurnView({
                 })}
               </ul>
               {onUseQuestion !== undefined && view.clarification.choices.length > 0 && (
-                <p className="text-[13px] text-[#8fa6c0]">{s.clarify.chooseHint}</p>
+                <p className="text-[13px] text-[var(--ask-read-ink2,#8fa6c0)]">{s.clarify.chooseHint}</p>
               )}
             </>
           ) : (
@@ -408,7 +385,7 @@ export function AskR2TurnView({
               </p>
               {view.clarification.suggestion !== null && (
                 <div data-ask="clarification-suggestion" className="flex flex-col gap-2">
-                  <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-[#8fa6c0]">
+                  <p className="text-[0.75rem] text-[var(--ask-read-ink2,#8fa6c0)]">
                     {s.clarify.suggestion}
                   </p>
                   <p className="text-[15px] font-semibold leading-[1.45]">
@@ -419,7 +396,7 @@ export function AskR2TurnView({
                       type="button"
                       data-ask="clarification-use"
                       onClick={() => onUseQuestion(view.clarification.suggestion ?? '')}
-                      className="inline-flex min-h-11 w-fit items-center rounded-[9px] border border-[#1d4a73] bg-[#06223d] px-3.5 text-[14px] font-semibold hover:border-[rgba(34,211,238,0.55)]"
+                      className="inline-flex min-h-11 w-fit items-center rounded-[9px] border border-[var(--ask-read-line,#1d4a73)] bg-[var(--ask-read-sunk,#06223d)] px-3.5 text-[14px] font-semibold hover:border-[rgba(34,211,238,0.55)]"
                     >
                       {s.clarify.useSuggestion}
                     </button>
@@ -428,11 +405,11 @@ export function AskR2TurnView({
               )}
             </>
           )}
-          <p className="font-mono text-[12px] text-[#6f89a8]">
+          <p className="text-[0.75rem] text-[var(--ask-read-ink3,#6f89a8)]">
             {view.clarification.byExecutor ? s.clarificationFooterNoAi : s.clarificationFooter}
           </p>
           {/* At ≥1280 the Sources column states this instead; never both (CTO ruling). */}
-          <p data-ask="sources-after-choice" className="font-mono text-[12px] text-[#6f89a8]">
+          <p data-ask="sources-after-choice" className="text-[0.75rem] text-[var(--ask-read-ink3,#6f89a8)]">
             {s.sourcesAfterChoice}
           </p>
         </section>
@@ -460,14 +437,14 @@ export function AskR2TurnView({
           ))}
           <p
             data-ask="governed-provenance"
-            className="font-mono text-[11.5px] leading-[1.4] text-[#8299b4]"
+            className="text-[0.75rem] leading-[1.4] text-[var(--ask-read-ink3,#8299b4)]"
           >
             {governed.provenance}
           </p>
           {governed.followUps.length > 0 && (
             /* Continuity: a suggestion only becomes a DRAFT in the composer; nothing runs. */
             <div data-ask="governed-follow-ups" className="flex flex-wrap items-center gap-2 pt-1">
-              <span className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-[#6f89a8]">
+              <span className="text-[0.75rem] text-[var(--ask-read-ink3,#6f89a8)]">
                 {s.followUpHint}
               </span>
               {governed.followUps.map((q) =>
@@ -477,7 +454,7 @@ export function AskR2TurnView({
                     type="button"
                     data-ask="governed-follow-up"
                     onClick={() => onUseQuestion(q)}
-                    className="inline-flex min-h-9 items-center rounded-[16px] border border-[#1d4a73] bg-[#06223d] px-3 text-start text-[13.5px] font-semibold text-[#cfe2f2] hover:border-[rgba(34,211,238,0.55)]"
+                    className="inline-flex min-h-9 items-center rounded-[16px] border border-[var(--ask-read-line,#1d4a73)] bg-[var(--ask-read-sunk,#06223d)] px-3 text-start text-[13.5px] font-semibold text-[var(--ask-read-ink,#cfe2f2)] hover:border-[rgba(34,211,238,0.55)]"
                   >
                     {q}
                   </button>
@@ -485,7 +462,7 @@ export function AskR2TurnView({
                   <span
                     key={q}
                     data-ask="governed-follow-up"
-                    className="text-[13.5px] text-[#cfe2f2]"
+                    className="text-[13.5px] text-[var(--ask-read-ink,#cfe2f2)]"
                   >
                     {q}
                   </span>
@@ -518,10 +495,10 @@ export function AskR2TurnView({
               data-ask="reference-note"
               /* R4 · PHASE C — compact metadata beside the answer header, same words. */
               data-ask-read="r4"
-              className="rounded-[8px] border border-dashed border-[#4a5a6e] bg-[#121a26] px-3 py-2.5 text-[13px] leading-[1.45] text-[#a9b6c6]"
+              className="rounded-[8px] border border-dashed border-[var(--ask-read-line,#4a5a6e)] bg-[var(--ask-read-sunk,#121a26)] px-3 py-2.5 text-[13px] leading-[1.45] text-[var(--ask-read-ink2,#a9b6c6)]"
             >
               {/* CTO P0 — advice is labelled as general guidance, never as current sourced research */}
-              <p className="font-bold text-[#d3dbe5]">
+              <p className="font-bold text-[var(--ask-read-ink,#d3dbe5)]">
                 {guidanceKind === 'DECISION_SUPPORT'
                   ? s.r3.decisionNoteTitle
                   : guidanceKind === 'CONCEPTUAL_ANALYSIS'
@@ -556,7 +533,7 @@ export function AskR2TurnView({
             payload.guidance.stablePart === 'UNAVAILABLE' && (
               <p
                 data-ask="mixed-stable-unavailable"
-                className="text-[13px] leading-[1.45] text-[#c9b27a]"
+                className="text-[13px] leading-[1.45] text-[var(--ask-read-deep-ink,#c9b27a)]"
               >
                 {s.r4.mixedStableUnavailable}
               </p>
@@ -568,7 +545,7 @@ export function AskR2TurnView({
           )}
           {/* ASK FIRST-ANSWER RETRIEVAL R3 — an answer standing on reachable reporting says so. */}
           {view.badge !== 'insuf' && view.searchLimited && (
-            <p data-ask="search-limited" className="text-[13px] leading-[1.45] text-[#c9b27a]">
+            <p data-ask="search-limited" className="text-[13px] leading-[1.45] text-[var(--ask-read-deep-ink,#c9b27a)]">
               {s.limitedNote}
             </p>
           )}
@@ -642,7 +619,7 @@ export function AskR2TurnView({
               <div
                 data-ask="guidance-current-gap"
                 data-ask-partial={payload.guidance.currentPart ?? undefined}
-                className="rounded-[8px] border border-[#5a4a2a] bg-[#17130c] px-3 py-2.5 text-[13px] leading-[1.45] text-[#c9b27a]"
+                className="rounded-[8px] border border-[var(--ask-read-deep-line,#5a4a2a)] bg-[var(--ask-read-deep-bg,#17130c)] px-3 py-2.5 text-[13px] leading-[1.45] text-[var(--ask-read-deep-ink,#c9b27a)]"
               >
                 <p className="font-bold">
                   {/* ASK R2 — "the general explanation above still stands" only when an explanation
@@ -663,12 +640,68 @@ export function AskR2TurnView({
             <AskRecentReporting reporting={payload.recentReporting} locale={locale} />
           )}
           {view.badge === 'ref' && view.sourceCount === 0 && (
-            <p data-ask="no-citable" className="font-mono text-[12px] text-[#8fa6c0]">
+            <p data-ask="no-citable" className="text-[0.75rem] text-[var(--ask-read-ink2,#8fa6c0)]">
               {s.noCitable}
             </p>
           )}
         </section>
       )}
+
+      {/* ASK READING EXPERIENCE R1 — the answer's status footer: what it was scoped to and
+          what state it is in, after the answer rather than before it. */}
+      <div data-ask="answer-meta" className="mt-4 flex flex-col gap-2">
+        <div data-ask="scope" className="flex flex-wrap items-center gap-1.5">
+          <span className={`me-1 ${EYEBROW}`}>{s.scope}</span>
+          {view.chips.items.map((chip, i) => (
+            <span
+              key={`${chip.kind}-${i}`}
+              data-ask-chip={chip.kind}
+              data-ask-chip-kept={chip.kept ? 'true' : undefined}
+              /* R4 · a chip is a self-contained run: a publisher name, a domain or the
+                 reader's own words. Isolated so its boundaries cannot reorder the row — a
+                 DOMAIN chip beside an Arabic TOPIC chip is the case this exists for. */
+              {...isolatedAuto()}
+              className={`inline-flex min-h-7 items-center rounded-[14px] border bg-[var(--ask-read-sunk,#06223d)] px-2.5 text-[0.8125rem] font-semibold text-[var(--ask-read-ink,#cfe2f2)] ${chip.kept ? 'border-dashed border-[var(--ask-read-rule-insufficient,rgba(201,138,138,0.6))]' : 'border-[var(--ask-read-line,#1d4a73)]'}`}
+            >
+              {chip.label}
+            </span>
+          ))}
+          {view.chips.note !== null && (
+            <span className={META} {...isolatedAuto()}>
+              {view.chips.note}
+            </span>
+          )}
+        </div>
+
+        <div data-ask="engine-state" className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+          {governed !== null ? (
+            /* Restrained: the machine state is metadata, never the headline of the answer. */
+            <span data-ask-badge={view.badge} data-ask-badge-restrained="true" className={EYEBROW}>
+              {view.badgeText}
+            </span>
+          ) : (
+            <>
+              <span
+                data-ask-badge={view.badge}
+                className={`inline-flex min-h-[26px] items-center rounded-[6px] px-2.5 text-[0.75rem] font-semibold tracking-[0.04em] ${TONE_CLASS[view.tone]}`}
+              >
+                {view.badgeText}
+              </span>
+              <span data-ask="freshness" className={META}>
+                {view.freshness}
+              </span>
+            </>
+          )}
+          {/* ASK RELIABILITY R1 (L) — a reporting re-use window passing does not make a timeless
+              explanation or a computed result "expired": the note is shown only for answers that
+              rest on CURRENT reporting, where re-checking genuinely matters. */}
+          {turn.expired === true && payload.answer.state !== 'REFERENCE_BACKGROUND' && payload.answer.state !== 'COMPUTED_RESULT' && (
+            <span data-ask="expired" className={META}>
+              {s.expiredNote}
+            </span>
+          )}
+        </div>
+      </div>
 
       {/* ASK INTELLIGENCE BINDING R1 — the governed structured basis of this one answer. */}
       <AskIntelligenceBasis
@@ -678,6 +711,32 @@ export function AskR2TurnView({
         hideNotes={governed !== null}
       />
 
+      {/*
+        ASK READING EXPERIENCE R1 — the answer's actions, after the answer and its footer
+        (CAPABILITY-MATRIX §A/§B): only controls with a real backing render. Copy (local
+        clipboard), Save and Save as briefing (their endpoints), Sources (this answer's own
+        list, zero network). Share / Copy link, Download and remembered preferences have no
+        endpoint (D7, D8, D6) and are omitted, never shown disabled.
+      */}
+      <div data-ask="turn-actions" className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+        {/* TRUST R1 — copy this answer (local clipboard only; nothing is shared or sent). */}
+        <AskTurnCopy locale={locale} />
+        {/* STANDALONE PUBLIC BETA CONVERGENCE R1 — the reader's Save / Saved (0 AI). */}
+        {canSave && <AskTurnSave operation={turn.operation} locale={locale} />}
+        {/* R2 · D1 — Save as briefing (signed-in, produced answers, only when the server has briefings on). */}
+        {canSave && <AskTurnBrief operation={turn.operation} locale={locale} />}
+        {openSources !== null && answerSources.length > 0 && (
+          <button
+            type="button"
+            data-ask="open-sources"
+            onClick={(event) => openSources({ sources: answerSources, opener: event.currentTarget })}
+            className="inline-flex min-h-[44px] items-center rounded-[8px] px-3 text-[0.8125rem] font-semibold text-[var(--ask-read-control-ink,#cfe2f2)] underline decoration-transparent underline-offset-[3px] hover:decoration-current focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ask-read-control-ink,#5abff5)] md:min-h-[32px]"
+          >
+            {s.sourcesLabel(answerSources.length)}
+          </button>
+        )}
+      </div>
+
       {((view.handoffs.openFull && !displayOnly) ||
         (view.handoffs.runDeeper && onRunDeeper !== undefined)) &&
         operationId !== undefined && (
@@ -686,12 +745,12 @@ export function AskR2TurnView({
               <a
                 data-ask="open-full-analysis"
                 href={openFullAnalysisHref(operationId)}
-                className="flex min-h-[56px] flex-[1_1_220px] flex-col justify-center gap-1 rounded-[12px] border border-[#1b6fa8] px-4 py-2.5 hover:bg-[#07304f]"
+                className="flex min-h-[56px] flex-[1_1_220px] flex-col justify-center gap-1 rounded-[12px] border border-[var(--ask-read-control-line,#1b6fa8)] px-4 py-2.5 hover:bg-[var(--ask-read-sunk,#07304f)]"
               >
-                <span className="text-[15px] font-bold leading-[1.1] text-[#cfe2f2]">
+                <span className="text-[15px] font-bold leading-[1.1] text-[var(--ask-read-ink,#cfe2f2)]">
                   {s.openFull}
                 </span>
-                <span className="font-mono text-[11px] leading-[1.2] text-[#8299b4]">
+                <span className="text-[0.75rem] leading-[1.2] text-[var(--ask-read-ink3,#8299b4)]">
                   {s.openFullMeta}
                 </span>
               </a>
@@ -701,12 +760,12 @@ export function AskR2TurnView({
                 type="button"
                 data-ask="run-deeper"
                 onClick={() => onRunDeeper(turn.question)}
-                className="flex min-h-[56px] flex-[1_1_220px] flex-col justify-center gap-1 rounded-[12px] border-2 border-[#6a5634] bg-[#2e2618] px-4 py-2.5 text-left hover:bg-[#3a3020]"
+                className="flex min-h-[56px] flex-[1_1_220px] flex-col justify-center gap-1 rounded-[12px] border-2 border-[var(--ask-read-deep-line,#6a5634)] bg-[var(--ask-read-deep-bg,#2e2618)] px-4 py-2.5 text-left hover:bg-[var(--ask-read-deep-bg,#3a3020)]"
               >
-                <span className="text-[15px] font-bold leading-[1.1] text-[#D9B98A]">
+                <span className="text-[15px] font-bold leading-[1.1] text-[var(--ask-read-deep-ink,#d9b98a)]">
                   {s.runDeep}
                 </span>
-                <span className="font-mono text-[11px] leading-[1.2] text-[#c9b48c]">
+                <span className="text-[0.75rem] leading-[1.2] text-[var(--ask-read-deep-ink,#c9b48c)]">
                   {s.runDeepMeta}
                 </span>
               </button>

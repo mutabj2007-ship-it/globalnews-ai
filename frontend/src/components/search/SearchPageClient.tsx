@@ -1,5 +1,6 @@
 'use client';
 
+import { ASK_INPUT_MAX_CHARS } from '@globalnews-ai/shared';
 import { askLanguageDisposition, resolveAskLocale } from '@/lib/ask/askLocale';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
@@ -579,7 +580,7 @@ export function SearchPageClient({ initialLanguage = 'en' }: SearchPageClientPro
               value={workspaceQuery}
               onChange={(event) => setWorkspaceQuery(event.target.value)}
               placeholder={dictionary.searchWorkspacePlaceholder}
-              maxLength={1000}
+              maxLength={ASK_INPUT_MAX_CHARS}
               minHeight={SEARCH_COMPOSER_GEOMETRY.minHeight}
               maxHeight={SEARCH_COMPOSER_GEOMETRY.maxHeight}
               maxViewportFraction={SEARCH_COMPOSER_GEOMETRY.maxViewportFraction}

@@ -1,5 +1,6 @@
 'use client';
 
+import { ASK_INPUT_MAX_CHARS } from '@globalnews-ai/shared';
 import type { FormEvent, JSX } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, MessagesSquare } from 'lucide-react';
@@ -75,7 +76,7 @@ export function HomeComposer({
           name="q"
           type="text"
           autoComplete="off"
-          maxLength={1000}
+          maxLength={ASK_INPUT_MAX_CHARS}
           placeholder={placeholder}
           aria-label={ariaLabel}
           aria-describedby={`${HERO_COMPOSER_ID}-status`}

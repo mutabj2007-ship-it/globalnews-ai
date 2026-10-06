@@ -1,5 +1,6 @@
 'use client';
 
+import { ASK_INPUT_MAX_CHARS } from '@globalnews-ai/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AnalysisApiResponse, LanguageCode, MultiStoryAction } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
@@ -637,7 +638,7 @@ export function ComputeCommitSheet({
             <span className="text-[12.5px] font-semibold text-[#cfe2f2]">{t.questionLabel}</span>
             <textarea
               value={question}
-              maxLength={1000}
+              maxLength={ASK_INPUT_MAX_CHARS}
               rows={3}
               disabled={running}
               onChange={(event) => setQuestion(event.target.value)}
@@ -646,7 +647,7 @@ export function ComputeCommitSheet({
             />
             <span className="flex items-center justify-between text-[11.5px] text-[#7d92aa]">
               <span>{questionMissing ? t.questionRequired : t.draftOnly}</span>
-              <span>{question.length}/1000</span>
+              <span>{question.length}/{ASK_INPUT_MAX_CHARS}</span>
             </span>
           </label>
         )}

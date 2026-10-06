@@ -1,5 +1,6 @@
 'use client';
 
+import { ASK_INPUT_MAX_CHARS } from '@globalnews-ai/shared';
 import { useRef, useState, type FormEvent, type JSX } from 'react';
 import { ArrowRight, MessagesSquare } from 'lucide-react';
 import type { LanguageCode } from '@globalnews-ai/shared';
@@ -49,7 +50,7 @@ export function HomeAskSection({ language, examples }: { readonly language: Lang
           name="q"
           rows={2}
           dir="auto"
-          maxLength={1000}
+          maxLength={ASK_INPUT_MAX_CHARS}
           enterKeyHint="send"
           placeholder={t.placeholder}
           aria-label={t.askLabel}

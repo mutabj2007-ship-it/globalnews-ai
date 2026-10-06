@@ -165,8 +165,14 @@ describe('what the composer must never do', () => {
     expect(readFileSync(join(__dirname, '../home/HeroAskField.tsx'), 'utf8')).toContain('maxHeight={280}');
   });
 
-  it('keeps maxLength=1000 and puts Analyze beside the composer at every width', () => {
-    expect(client).toContain('maxLength={1000}');
+  /*
+    ASK READING EXPERIENCE R1 — supersedes 'keeps maxLength=1000'. This composer submits into the
+    canonical Ask V2 turn, so its limit is the one governed shared limit (ASK_INPUT_MAX_CHARS, the
+    constant the backend enforces), not a second, smaller literal that cut questions short.
+  */
+  it('uses the governed Ask input limit and puts Analyze beside the composer at every width', () => {
+    expect(client).toContain('maxLength={ASK_INPUT_MAX_CHARS}');
+    expect(client).not.toContain('maxLength={1000}');
     expect(client).toContain('className="mt-6 flex flex-row items-end gap-2 sm:gap-3"');
     expect(client).not.toContain('flex flex-col items-stretch gap-3 sm:flex-row sm:items-end');
   });

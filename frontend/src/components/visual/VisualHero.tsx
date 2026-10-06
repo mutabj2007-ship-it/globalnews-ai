@@ -1,5 +1,6 @@
 'use client';
 
+import { ASK_INPUT_MAX_CHARS } from '@globalnews-ai/shared';
 import { useRef, useState, type FormEvent, type JSX } from 'react';
 import { ArrowRight, MessagesSquare } from 'lucide-react';
 import type { LanguageCode } from '@globalnews-ai/shared';
@@ -85,7 +86,7 @@ export function VisualHero({
               dir="auto"
               autoComplete="off"
               enterKeyHint="send"
-              maxLength={1000}
+              maxLength={ASK_INPUT_MAX_CHARS}
               placeholder={t.placeholder}
               aria-label={t.askLabel}
               aria-describedby="visual-composer-note"

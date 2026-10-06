@@ -98,19 +98,25 @@ describe('B-6 · the shell is one catalogue over seven locales', () => {
       complete): 541 → 543, 533 → 535, 565 → 567. Their fr/de/es/pt-BR/ar wording is
       CLAUDE L QUALIFIED (ASK R2 live-gate strings, 2026-10-06: 5 approved as provided, 5 corrected
       — de/ar timedOut, fr/de/pt priorIncomplete); priorIncomplete keeps the governed past tense.
+      ASK READING EXPERIENCE R1 retires dict.loadingStages[0..3] from the Ask shell (the simulated
+      1.8 s stage timer is gone from every Ask surface; H-FREEZE §5, L2) and adds askR2Strings.working
+      (the one truthful working line) and askR2Strings.tableScrollHint (a template: a wide table's
+      hint, shown only when it overflows): 543 − 4 + 2 → 541, 535 → 533, 567 → 565. The two new
+      keys' fr/de/es/pt-BR/ar wording is an ENGINEERING translation awaiting Claude L
+      qualification (L1; handoff ledger) — present so no locale falls back to English.
     */
     const overlayManaged = askShellKeyPaths().length;
     const alreadySeven = shellKeyPaths(askSevenStrings('en')).length;
     expect(alreadySeven).toBe(24);
-    expect(overlayManaged).toBe(543);
-    expect(overlayManaged + alreadySeven).toBe(567);
+    expect(overlayManaged).toBe(541);
+    expect(overlayManaged + alreadySeven).toBe(565);
     /*
       EIGHT, not five: the CTO's brand ruling moved the three product-NAME keys out of the
       translation scope. A key nobody should translate does not belong in a translator's
       manifest, and leaving it there is what let three authorities give three answers.
     */
     expect(ASK_SHELL_PROPER_NOUNS).toHaveLength(8);
-    expect(overlayManaged - ASK_SHELL_PROPER_NOUNS.length).toBe(535);
+    expect(overlayManaged - ASK_SHELL_PROPER_NOUNS.length).toBe(533);
   });
 
   it('each proper noun names a key that actually exists', () => {
@@ -137,6 +143,8 @@ describe('B-6 · the shell is one catalogue over seven locales', () => {
         'askR2Strings.r3.choiceFor',
         'askR2Strings.r3.relationshipScope',
         'askR2Strings.sourcesLabel',
+        /* ASK READING EXPERIENCE R1 — a wide table's scroll hint names its column count */
+        'askR2Strings.tableScrollHint',
         'briefingStrings.latest',
         'briefingStrings.savedAs',
         'briefingStrings.superseded',
@@ -168,8 +176,9 @@ describe('B-6 · the shell is one catalogue over seven locales', () => {
         'askIntelligenceStrings.lead.procurement',
       ].sort(),
     );
-    /* 33 + the two ASK R2 input-limit templates (questionTooLong, questionLength) */
-    expect(askShellTemplatePaths()).toHaveLength(35);
+    /* 33 + the two ASK R2 input-limit templates (questionTooLong, questionLength)
+       + ASK READING EXPERIENCE R1 tableScrollHint */
+    expect(askShellTemplatePaths()).toHaveLength(36);
   });
 });
 
@@ -191,7 +200,7 @@ describe('B-7 · no English fallback is ever silent', () => {
       expect(coverage.qualification).toBe('SOURCE');
       expect(coverage.fallbacks).toEqual([]);
       expect(coverage.complete).toBe(true);
-      expect(coverage.localizedKeys).toBe(535);
+      expect(coverage.localizedKeys).toBe(533);
     }
   });
 
@@ -211,8 +220,8 @@ describe('B-7 · no English fallback is ever silent', () => {
       expect(coverage.qualification).toBe('CLAUDE_L_QUALIFIED');
       expect(coverage.complete).toBe(true);
       expect(coverage.fallbacks).toEqual([]);
-      expect(coverage.localizedKeys).toBe(535);
-      /* 535 qualified + 0 unqualified + 8 not-translated = the 543 overlay-managed keys. */
+      expect(coverage.localizedKeys).toBe(533);
+      /* 533 localized + 0 unqualified + 8 not-translated = the 541 overlay-managed keys. */
       expect(coverage.localizedKeys + coverage.fallbacks.length + coverage.properNouns).toBe(
         coverage.totalKeys,
       );
@@ -226,10 +235,10 @@ describe('B-7 · no English fallback is ever silent', () => {
       misses a leaf kind. So the denominator is asserted directly: if a future catalogue adds
       a leaf shape nobody handles, this count stops matching and the suite fails here.
     */
-    expect(askShellKeyPaths()).toHaveLength(543);
+    expect(askShellKeyPaths()).toHaveLength(541);
     for (const locale of L_LOCALES) {
       const coverage = askShellCoverage(locale);
-      expect(coverage.totalKeys).toBe(543);
+      expect(coverage.totalKeys).toBe(541);
     }
   });
 

@@ -31,12 +31,12 @@ import { ASK_BRAND_KEYS, ASK_PRODUCT_NAME } from '@/lib/ask/askBrand';
  *
  * ── WHY THE DICTIONARY NAMESPACES ARE COPIED IN RATHER THAN WIDENED IN PLACE ──
  *
- * `navBar`, `footer`, `accountSettings`, `loadingStages`, `authError` and `askAi` come from
+ * `navBar`, `footer`, `accountSettings`, `authError` and `askAi` come from
  * `lib/i18n/dictionaries`, which is PRODUCT-WIDE: Home renders from the same object.
  * Widening `getDictionary` to seven locales would localize Home as a side effect, and the
  * ruling is explicit — *"Do not turn this into whole-product localization yet."*
  *
- * So the six namespaces a Standalone Ask reader can actually reach are projected into this
+ * So the five namespaces a Standalone Ask reader can actually reach are projected into this
  * Ask-scoped tree, localized here, and read back by the Ask surfaces through
  * `askShellDictionary()`. `getDictionary` is untouched, so no out-of-scope surface changes.
  * When whole-product localization is commissioned, the overlays move; the mechanism does not.
@@ -48,13 +48,19 @@ import { ASK_BRAND_KEYS, ASK_PRODUCT_NAME } from '@/lib/ask/askBrand';
  * manifest's diff rather than appearing as English text in front of a French reader.
  */
 
-/** The six dictionary namespaces a Standalone Ask reader can reach. Named, not inferred. */
+/** The five dictionary namespaces a Standalone Ask reader can reach. Named, not inferred. */
 export const ASK_SHELL_DICTIONARY_NAMESPACES = Object.freeze([
   'askAi',
   'navBar',
   'footer',
   'accountSettings',
-  'loadingStages',
+  /*
+    ASK READING EXPERIENCE R1 — `loadingStages` is RETIRED from the Ask shell. Its four labels
+    were advanced by a 1.8 s client timer that knew nothing of the request, so they claimed
+    retrieval stages that may not have been happening (H-FREEZE §5). No Ask surface renders
+    them now; the one truthful working line is `askR2Strings.working`. The product-wide
+    dictionary keeps the namespace for /search, which is outside this scope.
+  */
   'authError',
 ] as const);
 
@@ -87,7 +93,6 @@ function dictionaryProjection(): AskShellDictionary {
     navBar: en.navBar,
     footer: en.footer,
     accountSettings: en.accountSettings,
-    loadingStages: en.loadingStages,
     authError: en.authError,
   };
 }
@@ -174,7 +179,6 @@ export function askShellPolish(): AskShellSource {
         navBar: pl.navBar,
         footer: pl.footer,
         accountSettings: pl.accountSettings,
-        loadingStages: pl.loadingStages,
         authError: pl.authError,
       };
     })(),

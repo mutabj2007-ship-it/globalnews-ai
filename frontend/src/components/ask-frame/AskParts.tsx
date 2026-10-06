@@ -17,9 +17,12 @@ import {
  * not in D25's idle state and are gone; D25 01 lists every region the workspace has.
  */
 
-/** D25 micro label: mono 11 / .12em, the eyebrow every Ask section carries. */
+/**
+ * D25 micro label — the eyebrow every Ask section carries. ASK READING EXPERIENCE R1: reading
+ * type (sans, 12px) in the reading token, no longer 11px monospace caps.
+ */
 export const ASK_EYEBROW =
-  'font-mono text-[11px] font-semibold uppercase leading-none tracking-[0.12em] text-[#8fa6c0]';
+  'text-[0.75rem] font-semibold leading-none tracking-[0.04em] text-[var(--ask-read-ink2,#8fa6c0)]';
 
 /**
  * QUESTIONS WORTH ASKING — ONE CARD, ONE TRUTHFUL SENTENCE.
@@ -38,10 +41,10 @@ export function QuestionsWorthAsking({
     <section
       data-ask="suggestions"
       aria-label={label}
-      className="mt-3 flex flex-col gap-1.5 rounded-[10px] border border-[#0e2d4d] bg-[#03152a] p-3.5"
+      className="mt-3 flex flex-col gap-1.5 rounded-[10px] border border-[var(--ask-read-line-soft,#0e2d4d)] bg-[var(--ask-read-sunk,#03152a)] p-3.5"
     >
       <h2 className={ASK_EYEBROW}>{label}</h2>
-      <p data-ask="statement" className="text-[13px] leading-[1.55] text-[#b6c9de]">
+      <p data-ask="statement" className="text-[13px] leading-[1.55] text-[var(--ask-read-ink2,#b6c9de)]">
         {statement}
       </p>
     </section>
@@ -224,8 +227,8 @@ export function Composer({
       className="flex min-w-0 flex-col gap-2"
     >
       <div
-        className={`flex min-h-[56px] items-end gap-2 rounded-[14px] border bg-[#061a30] py-1.5 pe-1.5 ps-4 focus-within:border-[#5abff5] ${
-          value.trim() ? 'border-[#5abff5]' : 'border-[#1d4a73]'
+        className={`flex min-h-[56px] items-end gap-2 rounded-[14px] border bg-[var(--ask-read-answer-bg,#061a30)] py-1.5 pe-1.5 ps-4 focus-within:border-[var(--ask-read-rule-current,#5abff5)] ${
+          value.trim() ? 'border-[var(--ask-read-rule-current,#5abff5)]' : 'border-[var(--ask-read-line,#1d4a73)]'
         }`}
       >
         <label className="sr-only" htmlFor="ask-frame-composer">
@@ -265,7 +268,7 @@ export function Composer({
             maxHeight={maxHeight}
             maxViewportFraction={0.4}
             keepVisible
-            className="w-full min-w-0 flex-1 bg-transparent py-1.5 text-[16px] leading-[1.45] text-white placeholder:text-[#6f89a8] focus:outline-none"
+            className="w-full min-w-0 flex-1 bg-transparent py-1.5 text-[16px] leading-[1.45] text-white placeholder:text-[var(--ask-read-ink3,#6f89a8)] focus:outline-none"
           />
           {showExample && example !== undefined && (
             /*
@@ -292,7 +295,7 @@ export function Composer({
                 data-ask-example-id={example.id}
                 key={example.generation}
                 aria-hidden="true"
-                className={`max-w-full select-none truncate text-start text-[16px] leading-[1.45] text-[#6f89a8] ${
+                className={`max-w-full select-none truncate text-start text-[16px] leading-[1.45] text-[var(--ask-read-ink3,#6f89a8)] ${
                   example.animationClass ?? ''
                 }`}
                 {...(example.directionProps ?? {})}
@@ -307,7 +310,7 @@ export function Composer({
           data-ask="send"
           disabled={!ready}
           className={`inline-flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-[10px] border border-[#1b6fa8] px-[18px] text-[14px] font-bold text-[#e6f5ff] ${
-            ready ? 'bg-[#0a6bd6]' : 'bg-[#07304f] opacity-55'
+            ready ? 'bg-[#0a6bd6]' : 'bg-[var(--ask-read-sunk,#07304f)] opacity-55'
           }`}
         >
           {submitLabel}
@@ -321,7 +324,7 @@ export function Composer({
       <AskQuestionLimitNote id="ask-frame-composer-limit" state={limit} copy={limitCopy} />
       <p
         data-ask="cost-note"
-        className="font-mono text-[11px] leading-[1.3] text-[#6f89a8]"
+        className="text-[0.75rem] leading-[1.3] text-[var(--ask-read-ink3,#6f89a8)]"
         {...(costNoteProps ?? {})}
       >
         {costNote}

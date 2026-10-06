@@ -82,7 +82,10 @@ export const HOME_CLICK_CONTRACT: readonly HomeClickRow[] = [
     id: 'hero.composer.input', label: 'Ask anything…', breakpoints: ALL, element: 'textarea',
     destination: '—', behavior: 'toggle', signedIn: same, signedOut: 'focus/expand; Enter submits the form above',
     back: 'none', unavailable: '—', external: false, aiCost: 'none', network: 'none',
-    evidence: { file: 'components/home/HeroAskField.tsx', contains: 'maxLength={1000}' },
+    /* ASK READING EXPERIENCE R1 — superseded evidence: the composer's limit was the literal 1000,
+       which silently truncated a pasted question before Ask saw it; it is now the one governed
+       shared limit (ASK_INPUT_MAX_CHARS, the constant the backend enforces). Same row, same input. */
+    evidence: { file: 'components/home/HeroAskField.tsx', contains: 'maxLength={ASK_INPUT_MAX_CHARS}' },
   },
   {
     id: 'hero.premium.cta', label: 'Plans coming soon', breakpoints: TD, element: 'button',

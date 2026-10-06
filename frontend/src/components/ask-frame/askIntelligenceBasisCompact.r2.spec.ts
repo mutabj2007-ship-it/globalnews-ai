@@ -55,7 +55,8 @@ describe('ASK R2 · retained records are dated background, compact and expandabl
 
   it('the limitation (not current / no recent record) comes BEFORE the records', () => {
     const records = html.indexOf('data-ask="intelligence-records"');
-    const caveats = [...html.matchAll(/font-mono text-\[11px\] text-\[#8fa6c0\]">([^<]+)</g)].map((m) => m.index ?? 0);
+    /* ASK READING EXPERIENCE R1 — caveats are found by their role, not by a mono class */
+    const caveats = [...html.matchAll(/data-ask="intelligence-caveat"[^>]*>([^<]+)</g)].map((m) => m.index ?? 0);
     expect(caveats.length).toBeGreaterThan(0);
     expect(Math.min(...caveats)).toBeLessThan(records);
   });

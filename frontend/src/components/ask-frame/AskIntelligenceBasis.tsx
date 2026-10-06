@@ -26,12 +26,12 @@ export function AskIntelligenceBasis({
   return (
     <section data-ask="intelligence" className="mt-4 flex flex-col gap-3">
       {view.basedOn !== null && (
-        <p data-ask="based-on" className="font-mono text-[12px] leading-[1.5] text-[#8fa6c0]">
+        <p data-ask="based-on" className="text-[0.75rem] leading-[1.5] text-[var(--ask-read-ink2,#8fa6c0)]">
           {`${s.basedOn}: ${view.basedOn.join(' · ')}`}
         </p>
       )}
       {view.place !== null && (
-        <p data-ask="place-context" className="font-mono text-[12px] text-[#8fa6c0]">
+        <p data-ask="place-context" className="text-[0.75rem] text-[var(--ask-read-ink2,#8fa6c0)]">
           {`${s.placeContext}: ${view.place}`}
         </p>
       )}
@@ -40,24 +40,24 @@ export function AskIntelligenceBasis({
           key={section.contributorId}
           data-ask="intelligence-section"
           data-contributor={section.contributorId}
-          className="flex flex-col gap-1.5 rounded-[10px] border border-[#1d4a73] px-3.5 py-3"
+          className="flex flex-col gap-1.5 rounded-[10px] border border-[var(--ask-read-line,#1d4a73)] px-3.5 py-3"
         >
-          <p className="text-[14px] font-semibold text-[#e6eef6]">{section.title}</p>
+          <p className="text-[14px] font-semibold text-[var(--ask-read-ink,#e6eef6)]">{section.title}</p>
           {/* ASK R2 — what these records ARE (retained, dated, not current reporting) and their
               limits come FIRST, before any record (Alpha 2026-10-06: the historical-date
               limitation appeared only after a long list). */}
           {section.note !== null && (
-            <p className="font-mono text-[11px] text-[#8fa6c0]">{section.note}</p>
+            <p className="text-[0.75rem] text-[var(--ask-read-ink2,#8fa6c0)]">{section.note}</p>
           )}
           {section.caveats.map((caveat) => (
-            <p key={caveat} className="font-mono text-[11px] text-[#8fa6c0]">
+            <p key={caveat} data-ask="intelligence-caveat" className="text-[0.75rem] text-[var(--ask-read-ink2,#8fa6c0)]">
               {caveat}
             </p>
           ))}
           {/* ASK R2 — dated background is EXPANDABLE, never a dump in the main answer: a compact
               summary (how many records, which period), the rows on request. */}
           <details data-ask="intelligence-records" className="group">
-            <summary className="cursor-pointer list-none font-mono text-[12px] text-[#7cc4f5] underline-offset-2 hover:underline">
+            <summary className="cursor-pointer list-none text-[0.75rem] text-[var(--ask-read-control-ink,#7cc4f5)] underline-offset-2 hover:underline">
               {recordsSummary(section.rows)}
             </summary>
             <ul className="mt-1.5 flex flex-col gap-1">
@@ -65,9 +65,9 @@ export function AskIntelligenceBasis({
                 <li
                   key={row.reference}
                   data-ask="intelligence-row"
-                  className="break-words text-[13.5px] leading-[1.45] text-[#cfe2f2]"
+                  className="break-words text-[13.5px] leading-[1.45] text-[var(--ask-read-ink,#cfe2f2)]"
                 >
-                  <span className="font-mono text-[12px] text-[#8299b4]">{row.period}</span>
+                  <span className="text-[0.75rem] text-[var(--ask-read-ink3,#8299b4)]">{row.period}</span>
                   {row.place !== null && (
                     <>
                       {' · '}
@@ -87,7 +87,7 @@ export function AskIntelligenceBasis({
                     </>
                   )}
                   {(row.parties !== null || row.cited !== null) && (
-                    <span className="block font-mono text-[11px] text-[#8299b4]">
+                    <span className="block text-[0.75rem] text-[var(--ask-read-ink3,#8299b4)]">
                       {row.parties !== null && `${s.parties}: ${row.parties}`}
                       {row.parties !== null && row.cited !== null && ' · '}
                       {row.cited !== null && `${s.cited}: ${compactCited(row.cited)}`}
@@ -98,7 +98,7 @@ export function AskIntelligenceBasis({
             </ul>
           </details>
           {sharedSource(section.rows) !== null && (
-            <p className="font-mono text-[11px] text-[#8fa6c0]">
+            <p className="text-[0.75rem] text-[var(--ask-read-ink2,#8fa6c0)]">
               <SourceLink
                 name={sharedSource(section.rows)!.sourceName}
                 url={sharedSource(section.rows)!.sourceUrl}
@@ -108,7 +108,7 @@ export function AskIntelligenceBasis({
         </div>
       ))}
       {(hideNotes ? [] : view.notes).map((note) => (
-        <p key={note} data-ask="intelligence-note" className="text-[13px] text-[#8fa6c0]">
+        <p key={note} data-ask="intelligence-note" className="text-[13px] text-[var(--ask-read-ink2,#8fa6c0)]">
           {note}
         </p>
       ))}
@@ -152,7 +152,7 @@ function compactCited(cited: string): string {
 function SourceLink({ name, url }: { readonly name: string; readonly url: string | null }): JSX.Element {
   const href = url === null ? undefined : safeExternalHref(url);
   return href !== undefined ? (
-    <a href={href} target="_blank" rel="noopener noreferrer" className="underline decoration-[#1d4a73] underline-offset-4">
+    <a href={href} target="_blank" rel="noopener noreferrer" className="underline decoration-[var(--ask-read-line,#1d4a73)] underline-offset-4">
       {name}
     </a>
   ) : (

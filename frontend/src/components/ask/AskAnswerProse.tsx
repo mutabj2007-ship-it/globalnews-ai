@@ -4,6 +4,8 @@ import type { AnalysisSourceRef, LanguageCode, SummaryStatement } from '@globaln
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 import { parseAnswerBlocks, parseInline, type AskBlock } from '@/lib/ask/askAnswerMarkdown';
 import { citationNumbers } from './AskCitedBrief';
+import { AskAnswerTable, isNumericCell } from './AskAnswerTable';
+import { AskCitation } from './AskCitation';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -81,7 +83,8 @@ export function AskAnswerProse({
   readonly sources: readonly AnalysisSourceRef[];
   readonly language: DisplayLocale;
 }): JSX.Element {
-  const t = askShellStrings(language).dict.askAi;
+  const shell = askShellStrings(language);
+  const t = shell.dict.askAi;
   const blocks = parseAnswerBlocks(source);
   let remaining: readonly SummaryStatement[] = statements ?? [];
 
@@ -97,13 +100,23 @@ export function AskAnswerProse({
 
       if (statement.kind === 'ANALYTICAL_INFERENCE' || statement.kind === 'UNSUPPORTED') {
         return (
+          /*
+            ASK READING EXPERIENCE R1 — the qualification stays DIRECTLY on the statement it
+            qualifies (never in a disclosure), as an inline note in reading type: no 10px
+            monospace caps, and no italic paragraph — a whole inferred paragraph set in italics
+            was the "full-paragraph italics" the freeze forbids. The <em> element is kept (its
+            semantics are pinned); its slant is not. The lighter ink still marks inference.
+          */
           <span
             key={key}
             data-ask="statement"
             data-statement-kind={statement.kind}
-            className="text-ink-secondary"
+            className="text-ink-secondary [&_em]:not-italic"
           >
-            <span className="font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">
+            <span
+              data-ask="statement-qualifier"
+              className="me-0.5 rounded-[4px] bg-[var(--ask-read-deep-bg,rgba(217,185,138,0.12))] px-1 text-[0.8125rem] font-semibold text-[var(--ask-read-deep-ink,#d9b98a)]"
+            >
               {statement.kind === 'ANALYTICAL_INFERENCE' ? t.inferenceLabel : t.unsupportedLabel}
             </span>{' '}
             <em>
@@ -119,21 +132,16 @@ export function AskAnswerProse({
           {citationNumbers(statement, sources).map((n) => {
             const cited = sources[n - 1];
             return (
-              <a
+              <AskCitation
                 key={n}
-                data-ask="citation"
-                data-citation={n}
+                n={n}
                 href={safeExternalHref(cited.url)}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={t.citationLabel
+                label={t.citationLabel
                   .replace('{n}', String(n))
                   .replace('{title}', cited.title)
                   .replace('{publisher}', cited.publisher)}
-                className="ms-0.5 inline-flex min-h-6 min-w-6 items-center justify-center rounded px-0.5 align-baseline font-mono text-[11px] text-signal underline decoration-signal/40 underline-offset-2 hover:decoration-signal focus-visible:outline focus-visible:outline-2 focus-visible:outline-signal"
-              >
-                [{n}]
-              </a>
+                sources={sources}
+              />
             );
           })}
         </span>
@@ -166,56 +174,27 @@ export function AskAnswerProse({
           );
         }
         if (block.kind === 'table') {
-          /* ASK RELIABILITY R1 (M) — a requested table is rendered as a real table. On a phone it
-             scrolls inside its own labelled region (never the page), with the row/column
-             relationships kept by <th scope>. Cells are text only (React-escaped). */
+          /* ASK RELIABILITY R1 (M) — a requested table is rendered as a real table, with the
+             row/column relationships kept by <th scope>. Cells are text only (React-escaped).
+             ASK READING EXPERIENCE R1 — ≤3 columns wrap in place; wider tables scroll inside
+             their own labelled region (never the page) with a sticky first column, or become
+             labelled stacked rows when the container is narrow or the text is enlarged. */
           return (
-            <div
+            <AskAnswerTable
               key={key}
-              role="region"
-              aria-label={block.header.join(' · ')}
-              tabIndex={0}
-              data-ask="answer-table"
-              className="my-2 max-w-full overflow-x-auto overscroll-x-contain rounded-[8px] border border-[var(--gt-line,#d6dde8)]"
-            >
-              <table
-                className="w-full border-collapse text-start text-[0.875rem] leading-snug"
-                /* ASK R2 — wide tables keep readable columns: the region scrolls, the columns do
-                   not collapse to a few characters (a 6-column corridor table on a 428 px phone). */
-                style={{ minWidth: `${Math.max(28, block.header.length * 8)}rem` }}
-              >
-                <thead>
-                  <tr>
-                    {block.header.map((cell, i) => (
-                      <th
-                        key={`${key}-h${i}`}
-                        scope="col"
-                        className="border-b border-[var(--gt-line,#d6dde8)] bg-[var(--gt-sunk,#f1f4f8)] px-2.5 py-2 text-start font-semibold"
-                      >
-                        <Inline text={cell} />
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {block.rows.map((row, r) => (
-                    <tr key={`${key}-r${r}`} className="align-top">
-                      {row.map((cell, c) =>
-                        c === 0 ? (
-                          <th key={`${key}-r${r}c${c}`} scope="row" className="border-t border-[var(--gt-line,#d6dde8)] px-2.5 py-2 text-start font-semibold">
-                            <Inline text={cell} />
-                          </th>
-                        ) : (
-                          <td key={`${key}-r${r}c${c}`} className="border-t border-[var(--gt-line,#d6dde8)] px-2.5 py-2">
-                            <GovernedSourceCell text={cell} sources={sources} />
-                          </td>
-                        ),
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+              label={block.header.join(' · ')}
+              headerText={block.header}
+              header={block.header.map((cell, i) => (
+                <Inline key={`${key}-h${i}`} text={cell} />
+              ))}
+              rows={block.rows.map((row) =>
+                row.map((cell, c) =>
+                  c === 0 ? <Inline text={cell} /> : <GovernedSourceCell text={cell} sources={sources} />,
+                ),
+              )}
+              numeric={block.rows.map((row) => row.map((cell) => isNumericCell(cell)))}
+              scrollHint={shell.askR2Strings.tableScrollHint(block.header.length)}
+            />
           );
         }
         if (block.kind === 'ordered') {

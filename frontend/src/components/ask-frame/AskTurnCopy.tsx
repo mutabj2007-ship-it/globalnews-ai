@@ -57,7 +57,7 @@ export function AskTurnCopy({ locale }: { readonly locale: DisplayLocale }): JSX
       type="button"
       data-ask="copy"
       onClick={() => void copy()}
-      className="inline-flex min-h-[44px] items-center rounded-[8px] border border-[#1d4a73] px-3 font-cd-body text-[13px] font-semibold text-[#cfe2f2] hover:bg-[#07304f] md:min-h-[32px]"
+      className="inline-flex min-h-[44px] items-center rounded-[8px] border border-[var(--ask-read-line,#1d4a73)] px-3 font-cd-body text-[13px] font-semibold text-[var(--ask-read-ink,#cfe2f2)] hover:bg-[var(--ask-read-sunk,#07304f)] md:min-h-[32px]"
     >
       <span aria-live="polite">
         {state === 'copied' ? t.copied : state === 'failed' ? t.failed : t.copy}

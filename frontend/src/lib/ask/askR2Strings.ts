@@ -95,6 +95,13 @@ export interface AskR2Strings {
   /** ASK R2 LIVE-GATE REPAIR (P0-5) — the answer could not be finished in time (MODEL_TIMEOUT). */
   readonly timedOut: string;
   /**
+   * ASK READING EXPERIENCE R1 — the ONE truthful working state while a request is in flight.
+   * No retrieval stage is claimed: the client receives no progress events (H-FREEZE §5, D1).
+   */
+  readonly working: string;
+  /** ASK READING EXPERIENCE R1 — a wide table's scroll hint, shown only when it overflows. */
+  readonly tableScrollHint: (columns: number) => string;
+  /**
    * ASK RETRIEVAL / CONVERSATION R2 — the one documented input limit (ASK_INPUT_MAX_CHARS),
    * said BEFORE submit; the draft is kept whole. Also the copy for the typed server refusal.
    */
@@ -367,6 +374,8 @@ const EN: AskR2Strings = {
   retryKept: 'Not answered — your question is still in the box. Press Ask to try again.',
   newAnswerBelow: 'New answer below',
   timedOut: 'I couldn’t finish this request in time. Your question is still here — please try again.',
+  working: 'Working on your answer…',
+  tableScrollHint: (columns) => `Scroll sideways to see all ${columns} columns`,
   budgetRefused:
     'You have reached today’s Ask limit, so nothing was run and nothing was charged. Questions answered from retained records still work.',
   questionTooLong: (max) =>
@@ -715,6 +724,8 @@ const PL: AskR2Strings = {
     'Brak odpowiedzi — Twoje pytanie nadal jest w polu. Naciśnij Zapytaj, aby spróbować ponownie.',
   newAnswerBelow: 'Nowa odpowiedź poniżej',
   timedOut: 'Nie udało się ukończyć tego zapytania na czas. Twoje pytanie nadal tu jest — spróbuj ponownie.',
+  working: 'Pracuję nad odpowiedzią…',
+  tableScrollHint: (columns) => `Przewiń w bok, aby zobaczyć wszystkie kolumny (${columns})`,
   budgetRefused:
     'Wykorzystano dzisiejszy limit Zapytaj AI, więc nic nie uruchomiono ani nie naliczono. Pytania, na które odpowiadają zachowane zapisy, nadal działają.',
   questionTooLong: (max) =>

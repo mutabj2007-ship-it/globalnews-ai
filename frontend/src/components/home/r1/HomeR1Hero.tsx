@@ -1,5 +1,6 @@
 'use client';
 
+import { ASK_INPUT_MAX_CHARS } from '@globalnews-ai/shared';
 import type { FormEvent, JSX } from 'react';
 import { useRef, useState } from 'react';
 import { ArrowRight, Map as MapIcon, MessagesSquare } from 'lucide-react';
@@ -76,7 +77,7 @@ export function HomeR1Hero({
             name="q"
             type="text"
             autoComplete="off"
-            maxLength={1000}
+            maxLength={ASK_INPUT_MAX_CHARS}
             placeholder={t.placeholder}
             aria-label={t.askBrand}
             aria-describedby="home-r1-composer-note"

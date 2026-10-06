@@ -1,5 +1,6 @@
 'use client';
 
+import { ASK_INPUT_MAX_CHARS } from '@globalnews-ai/shared';
 import type { FormEvent, JSX } from 'react';
 import { useCallback, useRef, useState } from 'react';
 import { ArrowRight, Sparkles } from 'lucide-react';
@@ -135,7 +136,7 @@ export function HeroAskField({ placeholder, ariaLabel, buttonLabel, hint }: Hero
             autoComplete="off"
             placeholder={placeholder}
             aria-label={ariaLabel}
-            maxLength={1000}
+            maxLength={ASK_INPUT_MAX_CHARS}
             minHeight={32}
             maxHeight={280}
             maxViewportFraction={0.42}

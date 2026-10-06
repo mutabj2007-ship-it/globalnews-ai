@@ -516,7 +516,12 @@ export const esShellOverlay: ShellLocaleOverlay = {
           other: "{0} fuentes",
         },
       },
+      tableScrollHint: {
+        kind: "pattern",
+        pattern: "Desplázate hacia el lado para ver las {0} columnas",
+      },
       timedOut: "No pude terminar esta solicitud a tiempo. Tu pregunta sigue aquí: inténtalo de nuevo.",
+      working: "Preparando tu respuesta…",
       unavailable: "Ask no está disponible ahora. No se ejecutó nada.",
       unavailableBecause: {
         EXECUTOR_NOT_WIRED: "Esta pregunta necesita una fuente que Ask todavía no puede leer, como tus temas guardados, una publicación oficial o una evaluación especializada. No se respondió nada a partir de noticias en su lugar.",
@@ -834,12 +839,6 @@ export const esShellOverlay: ShellLocaleOverlay = {
         },
         navigationAriaLabel: "Enlaces del pie de página",
         tagline: "Comprensión de las noticias clara, con fuentes y multiperspectiva — impulsada por IA, anclada en reportes reales.",
-      },
-      loadingStages: {
-        "0": "Buscando en fuentes fiables…",
-        "1": "Agrupando reportes relacionados…",
-        "2": "Comparando la cobertura…",
-        "3": "Preparando el análisis con fuentes…",
       },
       navBar: {
         account: "Cuenta",

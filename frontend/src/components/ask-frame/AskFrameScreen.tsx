@@ -31,7 +31,9 @@ import { ASK_SIGN_IN_HREF, keepQuestion, readKeptQuestion } from '@/lib/ask/askK
 import { authReturnNotice, type GuestNotice } from '@/lib/ask/askGuestTrial';
 import type { AskShellMenuControl } from '@/lib/ask/askShellMenu';
 import { askCountryName } from '@/lib/ask/askCountryName';
-import { LoadingStages } from '@/components/search/LoadingStages';
+import { AskWorkingStatus } from './AskWorkingStatus';
+import { AskEmblem } from './AskEmblem';
+import { AskSourcesPanelProvider } from './AskSourcesPanel';
 import { AskR2TurnView } from './AskR2TurnView';
 import { AskSourcesColumn } from './AskSourcesColumn';
 import { AskDeepConfirm } from './AskDeepConfirm';
@@ -227,6 +229,20 @@ export function AskFrameScreen({
     construction rather than by care.
   */
   const entryState = !hasQuestion;
+  /*
+    ASK READING EXPERIENCE R1 — the emblem lives in the entry state (ready / typing) and LEAVES
+    when the first request starts: a 200 ms fade with its motion stopped, then it unmounts. It is
+    never drawn beside an answer, a reopened conversation or a sign-in interruption.
+  */
+  const [composerFocused, setComposerFocused] = useState(false);
+  const emblemState = isPending
+    ? 'leaving'
+    : composerFocused || question.trim() !== ''
+      ? 'typing'
+      : 'ready';
+  const showEmblem =
+    entryState ||
+    (isPending && r2.turns.length === 0 && opened === null && r2.signInRequired === null);
   /*
     The rotating examples. Client-side, zero compute, zero network, zero personalisation, and
     every rule decided by the pure machine in `askExampleRotation`. `enabled` is the entry
@@ -480,6 +496,12 @@ export function AskFrameScreen({
       data-ask-entry={entryState ? 'true' : undefined}
       className={styles.frame}
     >
+      {/* ASK READING EXPERIENCE R1 — Sources panel (desktop column) / sheet (otherwise), inside
+          the Ask scope so the sheet inherits its direction, language and theme. */}
+      <AskSourcesPanelProvider
+        locale={interfaceLocale}
+        columnSources={withSourcesColumn ? (lastR2?.payload?.analysis?.analysis?.sources ?? null) : null}
+      >
       {/* PHONE / 768 PORTRAIT — header 56 (D25 11). Hidden by CSS on wider layouts. */}
       <header data-ask="header" className={styles.phoneHeader}>
         {/*
@@ -494,7 +516,7 @@ export function AskFrameScreen({
             aria-label={shellMenu.open ? shellMenu.closeLabel : shellMenu.openLabel}
             aria-expanded={shellMenu.open}
             onClick={shellMenu.onToggle}
-            className="inline-flex min-h-11 min-w-11 flex-col items-center justify-center gap-[4px] text-[#cfe2f2]"
+            className="inline-flex min-h-11 min-w-11 flex-col items-center justify-center gap-[4px] text-[var(--ask-read-ink,#cfe2f2)]"
           >
             <span aria-hidden="true" className="block h-[2px] w-[18px] rounded-sm bg-current" />
             <span aria-hidden="true" className="block h-[2px] w-[18px] rounded-sm bg-current" />
@@ -506,7 +528,7 @@ export function AskFrameScreen({
             data-ask={returnsToMap ? 'back' : 'close'}
             aria-label={returnsToMap ? r2s.returnMap : r2s.close}
             onClick={leave}
-            className="inline-flex min-h-11 min-w-11 items-center justify-center text-[20px] text-[#cfe2f2]"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center text-[20px] text-[var(--ask-read-ink,#cfe2f2)]"
           >
             {returnsToMap ? '←' : '×'}
           </button>
@@ -514,7 +536,7 @@ export function AskFrameScreen({
         <h1 className="flex-1 truncate text-center text-[16px] font-bold">{r2s.askTitle}</h1>
         <span
           data-ask="header-state"
-          className="min-w-11 text-end font-mono text-[11px] leading-tight text-[#8fa6c0]"
+          className="min-w-11 text-end text-[0.75rem] leading-tight text-[var(--ask-read-ink2,#8fa6c0)]"
         >
           {lastR2View !== null ? r2s.sourcesLabel(lastR2View.sourceCount) : ''}
         </span>
@@ -527,7 +549,7 @@ export function AskFrameScreen({
               type="button"
               data-ask="return-to-map"
               onClick={leave}
-              className="shrink-0 rounded-full border border-dashed border-[#1d4a73] px-2.5 py-1 text-[#93cdf5]"
+              className="shrink-0 rounded-full border border-dashed border-[var(--ask-read-line,#1d4a73)] px-2.5 py-1 text-[var(--ask-read-control-ink,#93cdf5)]"
             >
               {r2s.returnMap}
             </button>
@@ -536,7 +558,7 @@ export function AskFrameScreen({
             lastR2View.chips.items.map((chip, i) => (
               <span
                 key={`${chip.kind}-${i}`}
-                className="shrink-0 rounded-full border border-[#1d4a73] bg-[#06223d] px-2.5 py-1 text-[#cfe2f2]"
+                className="shrink-0 rounded-full border border-[var(--ask-read-line,#1d4a73)] bg-[var(--ask-read-sunk,#06223d)] px-2.5 py-1 text-[var(--ask-read-ink,#cfe2f2)]"
                 /* R4 · same isolation as the scope row; this strip renders the same chips. */
                 {...isolatedAuto()}
               >
@@ -544,7 +566,7 @@ export function AskFrameScreen({
               </span>
             ))}
           {lastR2View?.chips.note != null && (
-            <span className="shrink-0 text-[#8fa6c0]">{lastR2View.chips.note}</span>
+            <span className="shrink-0 text-[var(--ask-read-ink2,#8fa6c0)]">{lastR2View.chips.note}</span>
           )}
         </div>
       )}
@@ -616,6 +638,7 @@ export function AskFrameScreen({
                 </button>
               </div>
             )}
+            {showEmblem && <AskEmblem placement="page" state={emblemState} />}
             {!hasQuestion && (
               <section data-ask="empty" data-ask-entry-view="" className={styles.empty}>
                 {/*
@@ -649,8 +672,8 @@ export function AskFrameScreen({
                 {guestMode && (
                   /* ASK GUEST TRIAL R3 — restrained, factual; sign-in stays optional. */
                   <div data-ask="guest-intro" className="mt-1 flex flex-col gap-1">
-                    <p className="text-[15px] font-semibold text-[#cfe2f2]">{g.intro}</p>
-                    <p className="text-[12.5px] leading-[1.45] text-[#8fa6c0]">{g.privacy}</p>
+                    <p className="text-[15px] font-semibold text-[var(--ask-read-ink,#cfe2f2)]">{g.intro}</p>
+                    <p className="text-[12.5px] leading-[1.45] text-[var(--ask-read-ink2,#8fa6c0)]">{g.privacy}</p>
                   </div>
                 )}
                 {/*
@@ -678,11 +701,11 @@ export function AskFrameScreen({
                   showFullLabel={r2s.showFullQuestion}
                   showLessLabel={r2s.showLessQuestion}
                 />
-                <div className="flex flex-col items-start gap-3 rounded-[12px] border border-[#2a6d9e] bg-[linear-gradient(#08263f,#051a2e)] p-3.5 md:p-5">
-                  <span className="inline-flex h-[26px] items-center rounded-[6px] border border-[#2a6d9e] bg-[#0a2a47] px-2.5 font-mono text-[11px] font-bold tracking-[0.08em] text-[#bfe3fb]">
+                <div className="flex flex-col items-start gap-3 rounded-[12px] border border-[var(--ask-read-control-line,#2a6d9e)] [background:var(--ask-read-answer-bg,linear-gradient(#08263f,#051a2e))] p-3.5 md:p-5">
+                  <span className="inline-flex h-[26px] items-center rounded-[6px] border border-[var(--ask-read-control-line,#2a6d9e)] bg-[var(--ask-read-sunk,#0a2a47)] px-2.5 text-[0.75rem] font-bold text-[var(--ask-read-control-ink,#bfe3fb)]">
                     {r2s.signInRequired.title}
                   </span>
-                  <p className="text-[16px] leading-[1.55] text-[#cfe2f2]">
+                  <p className="text-[16px] leading-[1.55] text-[var(--ask-read-ink,#cfe2f2)]">
                     {r2s.signInRequired.body}
                   </p>
                   <a
@@ -712,7 +735,7 @@ export function AskFrameScreen({
                       <span data-ask-earlier-eyebrow="" className={ASK_EYEBROW}>
                         {r2s.earlier}
                       </span>
-                      <span className="mt-2 block text-[15px] font-bold leading-[1.3] text-[#e6eef6]">
+                      <span className="mt-2 block text-[15px] font-bold leading-[1.3] text-[var(--ask-read-ink,#e6eef6)]">
                         {turn.question}
                       </span>
                     </summary>
@@ -753,7 +776,7 @@ export function AskFrameScreen({
                       <span data-ask-earlier-eyebrow="" className={ASK_EYEBROW}>
                         {r2s.earlier}
                       </span>
-                      <span className="mt-2 block text-[15px] font-bold leading-[1.3] text-[#e6eef6]">
+                      <span className="mt-2 block text-[15px] font-bold leading-[1.3] text-[var(--ask-read-ink,#e6eef6)]">
                         {turn.question}
                       </span>
                     </summary>
@@ -781,7 +804,7 @@ export function AskFrameScreen({
                   onUseQuestion={draftQuestion}
                 />
                 {guestMode && latestR2.uncounted === true && (
-                  <p data-ask="guest-not-counted" className="mt-2 text-[13px] text-[#8fa6c0]">
+                  <p data-ask="guest-not-counted" className="mt-2 text-[13px] text-[var(--ask-read-ink2,#8fa6c0)]">
                     {g.notCounted}
                   </p>
                 )}
@@ -794,11 +817,11 @@ export function AskFrameScreen({
                 question waits in the composer and is not sent on return.
               */
               <section data-ask="guest-continue" role="status" className="mb-6 mt-2">
-                <div className="flex flex-col items-start gap-3 rounded-[12px] border border-[#2a6d9e] bg-[linear-gradient(#08263f,#051a2e)] p-3.5 md:p-5">
-                  <span className="inline-flex h-[26px] items-center rounded-[6px] border border-[#2a6d9e] bg-[#0a2a47] px-2.5 font-mono text-[11px] font-bold tracking-[0.08em] text-[#bfe3fb]">
+                <div className="flex flex-col items-start gap-3 rounded-[12px] border border-[var(--ask-read-control-line,#2a6d9e)] [background:var(--ask-read-answer-bg,linear-gradient(#08263f,#051a2e))] p-3.5 md:p-5">
+                  <span className="inline-flex h-[26px] items-center rounded-[6px] border border-[var(--ask-read-control-line,#2a6d9e)] bg-[var(--ask-read-sunk,#0a2a47)] px-2.5 text-[0.75rem] font-bold text-[var(--ask-read-control-ink,#bfe3fb)]">
                     {g.exhaustedTitle}
                   </span>
-                  <p className="text-[16px] leading-[1.55] text-[#cfe2f2]">{g.exhaustedBody}</p>
+                  <p className="text-[16px] leading-[1.55] text-[var(--ask-read-ink,#cfe2f2)]">{g.exhaustedBody}</p>
                   <button
                     type="button"
                     data-ask="guest-sign-in"
@@ -819,7 +842,9 @@ export function AskFrameScreen({
                   showFullLabel={r2s.showFullQuestion}
                   showLessLabel={r2s.showLessQuestion}
                 />
-                <LoadingStages stages={dict.loadingStages} />
+                {/* ASK READING EXPERIENCE R1 — one truthful working line; the 1.8 s simulated
+                    stage timer is retired from Ask (H-FREEZE §5). */}
+                <AskWorkingStatus label={r2s.working} />
               </section>
             )}
           </div>
@@ -831,7 +856,12 @@ export function AskFrameScreen({
         </div>
       </div>
 
-      <div data-ask="composer-footer" className={styles.composerBar}>
+      <div
+        data-ask="composer-footer"
+        onFocusCapture={() => setComposerFocused(true)}
+        onBlurCapture={() => setComposerFocused(false)}
+        className={styles.composerBar}
+      >
         {newBelow && (
           <div className="mx-auto mb-2 flex max-w-[760px] justify-center px-4 md:px-1">
             <button
@@ -841,7 +871,7 @@ export function AskFrameScreen({
                 if (reader.current) reader.current.scrollTop = reader.current.scrollHeight;
                 setNewBelow(false);
               }}
-              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-[#1d4a73] bg-[#06223d] px-4 text-[13px] font-semibold text-[#cfe2f2]"
+              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-[var(--ask-read-line,#1d4a73)] bg-[var(--ask-read-sunk,#06223d)] px-4 text-[13px] font-semibold text-[var(--ask-read-ink,#cfe2f2)]"
             >
               {r2s.newAnswerBelow} <span aria-hidden="true">↓</span>
             </button>
@@ -851,7 +881,7 @@ export function AskFrameScreen({
           <p
             data-ask="retry-kept"
             role="status"
-            className="mx-auto mb-2 max-w-[760px] px-4 md:px-1 text-[13px] leading-[1.45] text-[#c9b27a]"
+            className="mx-auto mb-2 max-w-[760px] px-4 md:px-1 text-[13px] leading-[1.45] text-[var(--ask-read-deep-ink,#c9b27a)]"
           >
             {r2s.retryKept}
           </p>
@@ -860,7 +890,7 @@ export function AskFrameScreen({
           <p
             data-ask="ask-unavailable"
             role="status"
-            className="mx-auto mb-2 max-w-[760px] px-4 md:px-1 text-[13px] leading-[1.45] text-[#c9b27a]"
+            className="mx-auto mb-2 max-w-[760px] px-4 md:px-1 text-[13px] leading-[1.45] text-[var(--ask-read-deep-ink,#c9b27a)]"
           >
             {r2s.unified.askUnavailable}
           </p>
@@ -869,7 +899,7 @@ export function AskFrameScreen({
           <p
             data-ask="context-unavailable"
             role="status"
-            className="mx-auto mb-2 max-w-[760px] px-4 md:px-1 text-[13px] leading-[1.45] text-[#c9b27a]"
+            className="mx-auto mb-2 max-w-[760px] px-4 md:px-1 text-[13px] leading-[1.45] text-[var(--ask-read-deep-ink,#c9b27a)]"
           >
             {r2s.unified.contextUnavailable}
           </p>
@@ -878,7 +908,7 @@ export function AskFrameScreen({
           <p
             data-ask="guest-notice"
             role="status"
-            className="mx-auto mb-2 max-w-[760px] px-4 md:px-1 text-[13px] leading-[1.45] text-[#c9b27a]"
+            className="mx-auto mb-2 max-w-[760px] px-4 md:px-1 text-[13px] leading-[1.45] text-[var(--ask-read-deep-ink,#c9b27a)]"
           >
             {notice}
           </p>
@@ -887,14 +917,14 @@ export function AskFrameScreen({
           /* ASK GUEST TRIAL R3 — the server-authoritative counter; sign-in stays voluntary. */
           <div
             data-ask="guest-counter"
-            className="mx-auto mb-2 flex max-w-[760px] items-center justify-between gap-3 px-4 md:px-1 text-[12.5px] text-[#8fa6c0]"
+            className="mx-auto mb-2 flex max-w-[760px] items-center justify-between gap-3 px-4 md:px-1 text-[12.5px] text-[var(--ask-read-ink2,#8fa6c0)]"
           >
             <span>{g.remaining(guestRemaining)}</span>
             <button
               type="button"
               data-ask="guest-sign-in-optional"
               onClick={() => void r2.continueWithSignIn(question)}
-              className="inline-flex min-h-11 items-center px-2 font-semibold text-[#93cdf5] underline-offset-2 hover:underline"
+              className="inline-flex min-h-11 items-center px-2 font-semibold text-[var(--ask-read-control-ink,#93cdf5)] underline-offset-2 hover:underline"
             >
               {g.signInOptional}
             </button>
@@ -953,7 +983,7 @@ export function AskFrameScreen({
             before the first question, without interrupting the conversation. */}
         <p
           data-ask="privacy-links"
-          className="mx-auto mt-1 flex max-w-[760px] gap-3 px-4 md:px-1 font-mono text-[11px] text-[#6f89a8]"
+          className="mx-auto mt-1 flex max-w-[760px] gap-3 px-4 md:px-1 text-[0.75rem] text-[var(--ask-read-ink3,#6f89a8)]"
         >
           <a href="/privacy" className="underline-offset-2 hover:underline">
             {r2s.privacyLink}
@@ -978,6 +1008,7 @@ export function AskFrameScreen({
           onCancel={() => void r2.cancelDeeper()}
         />
       )}
+      </AskSourcesPanelProvider>
     </main>
   );
 }
