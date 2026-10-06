@@ -519,7 +519,7 @@ export const ptShellOverlay: ShellLocaleOverlay = {
       },
       tableScrollHint: {
         kind: "pattern",
-        pattern: "Role para o lado para ver todas as {0} colunas",
+        pattern: "Role na horizontal para ver todas as {0} colunas",
       },
       read: {
         welcomeSupport: "Entenda as notícias. Veja o que importa para você.",
