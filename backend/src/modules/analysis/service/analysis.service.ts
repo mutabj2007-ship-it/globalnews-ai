@@ -1,4 +1,5 @@
 import type { DisplayLocale } from '@globalnews-ai/shared';
+import { withRetrievalDeadline, retrievalBudgetMs } from '../../news/retrieval-budget';
 import { isSameHeadline } from '../../news/identity/headline-identity.util';
 import { createHash } from 'node:crypto';
 import {
@@ -1008,8 +1009,12 @@ export class AnalysisService {
      */
     const responseAbort = new AbortController();
 
+    /* ASK R2 LIVE-GATE REPAIR (P0-3) — retrieval has its own deadline INSIDE the one overall
+       budget, leaving GENERATION_RESERVE_MS for the model (news/retrieval-budget.ts). */
+    const retrievalDeadlineAt =
+      Date.now() + retrievalBudgetMs(resolveServerBudgetMs(config.totalBudgetMs));
     const inFlightOperation: Promise<AnalysisApiResponse> =
-      (async (): Promise<AnalysisApiResponse> => {
+      withRetrievalDeadline(retrievalDeadlineAt, async (): Promise<AnalysisApiResponse> => {
         /**
          * Milestone #51 Phase B — root-cause fix. Previously, retrieval
          * for a story-originated query relied ENTIRELY on
@@ -3571,24 +3576,34 @@ export class AnalysisService {
               admitted.push(article);
             }
           };
-          for (const query of queries) {
-            try {
-              const response = await this.newsService.search(query, SEARCH_POOL_SIZE, { type: 'none' }, {
-                ...(executionPolicy.reportingWindow === undefined
-                  ? {}
-                  : { from: executionPolicy.reportingWindow.from, to: executionPolicy.reportingWindow.to }),
-              });
-              take(response.articles);
-            } catch {
-              /* a refused or failed supplement never fails the answer; the retained read follows */
-            }
-            try {
-              const terms = normalizeAnchorText(query).trim().split(' ').filter((t) => t.length >= 3).slice(0, 8);
-              take(await this.newsService.findRetainedByQuery(query, terms, 60, 7 * 24 * 60));
-            } catch {
-              /* retained store unavailable — the gate result stands */
-            }
-          }
+          /* ASK R2 LIVE-GATE REPAIR (P0-3) — the (at most two) supplement searches are independent:
+             they run in PARALLEL inside the retrieval budget (they ran one after another, after a
+             12 s GDELT wait, live on Alpha). Pools are merged in query order, so the admitted set
+             is deterministic. Each live search is bounded by the budget in NewsService; the
+             retained read is a local database query. */
+          const pools = await Promise.all(
+            queries.map(async (query) => {
+              const found: NewsArticle[][] = [];
+              try {
+                const response = await this.newsService.search(query, SEARCH_POOL_SIZE, { type: 'none' }, {
+                  ...(executionPolicy.reportingWindow === undefined
+                    ? {}
+                    : { from: executionPolicy.reportingWindow.from, to: executionPolicy.reportingWindow.to }),
+                });
+                found.push(response.articles);
+              } catch {
+                /* a refused or failed supplement never fails the answer; the retained read follows */
+              }
+              try {
+                const terms = normalizeAnchorText(query).trim().split(' ').filter((t) => t.length >= 3).slice(0, 8);
+                found.push(await this.newsService.findRetainedByQuery(query, terms, 60, 7 * 24 * 60));
+              } catch {
+                /* retained store unavailable — the gate result stands */
+              }
+              return found;
+            }),
+          );
+          for (const found of pools) for (const pool of found) take(pool);
           retrievalContext = {
             ...retrievalContext,
             questionAnchorGate: {
@@ -4150,7 +4165,7 @@ export class AnalysisService {
         this.setCached(cacheKey, response, this.cacheTtlFor(response, config));
 
         return response;
-      })();
+      });
 
     // Milestone #45 — registered only once the operation object exists,
     // and removed unconditionally on settlement (try/finally-equivalent

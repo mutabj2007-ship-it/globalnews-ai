@@ -1,6 +1,12 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { ProviderExecutionRegistry } from './telemetry/provider-execution.registry';
 import { logWithRequestId } from '../../observability/log-with-request-id';
+import {
+  MIN_PROVIDER_START_MS,
+  RETRIEVAL_BUDGET_EXHAUSTED,
+  remainingRetrievalMs,
+  withinRetrievalBudget,
+} from './retrieval-budget';
 import { resolveCountryByAnyIdentifier, type CountryMeta } from '@globalnews-ai/shared';
 import type {
   LanguageCode,
@@ -1965,6 +1971,8 @@ export class NewsService {
      */
     const outcomes = new Map<string, { articles: NewsArticle[] } | { error: unknown }>();
     let sealed = false;
+    /* ASK R2 LIVE-GATE REPAIR (P0-3) — providers this call did not start for lack of budget */
+    const budgetSkipped = new Set<string>();
 
     let firstAdmittedProviderId: string | undefined;
     let graceStartedAt: number | undefined;
@@ -2015,6 +2023,19 @@ export class NewsService {
         `response.providers` grew from [] to [one]. The counter had altered the
         thing it was counting. Wrapped, the worst case is a lost count.
       */
+      /* ASK R2 LIVE-GATE REPAIR (P0-3) — with too little of this analysis's retrieval budget
+         left, the provider is not started at all (no call, no quota spent): it is left without an
+         outcome, i.e. "not awaited", and logged as a budget skip — never a provider failure. */
+      const remaining = remainingRetrievalMs();
+      if (remaining !== undefined && remaining < MIN_PROVIDER_START_MS) {
+        logWithRequestId(
+          this.logger,
+          'log',
+          `provider-attempt provider=${provider.id} capability=${capability} result=budget-skip remainingMs=${Math.max(0, Math.round(remaining))}`,
+        );
+        budgetSkipped.add(provider.id);
+        return;
+      }
       try {
         this.executions?.recordExecution(provider.id, capability);
       } catch {
@@ -2066,10 +2087,19 @@ export class NewsService {
     const allSettled = Promise.all(everyPeer);
     allSettled.catch(() => {});
 
-    if (graceElapsed === undefined) {
-      await allSettled;
-    } else {
-      await Promise.race([allSettled, graceElapsed]);
+    /* ASK R2 LIVE-GATE REPAIR (P0-3) — the tier waits no longer than the analysis's retrieval
+       budget (a slow GDELT can no longer take 12 s of a 28 s turn); without an analysis deadline
+       this is exactly the previous wait. Peers still running are "not awaited" below. */
+    const exhausted = await withinRetrievalBudget(
+      graceElapsed === undefined ? allSettled : Promise.race([allSettled, graceElapsed]),
+    );
+    if (exhausted === RETRIEVAL_BUDGET_EXHAUSTED) {
+      logWithRequestId(
+        this.logger,
+        'log',
+        `Retrieval budget reached after ${Date.now() - startedAt}ms; providers still running are not awaited ` +
+          '(their own timeout, cooldown and no-retry rules are unchanged).',
+      );
     }
 
     /* SEAL FIRST. Everything below reads a frozen world. */
@@ -2090,6 +2120,11 @@ export class NewsService {
 
       if (outcome === undefined) {
         notAwaitedProviderIds.push(provider.id);
+        /* ASK R2 LIVE-GATE REPAIR (P0-3) — a lane cut by the retrieval budget is named, never
+           shown as checked: not started → unavailable; started but not awaited → timed out. The
+           public fallbackReason (failedProviderIds) is unchanged. */
+        if (budgetSkipped.has(provider.id)) failures.push({ providerId: provider.id, kind: 'unavailable' });
+        else if (exhausted === RETRIEVAL_BUDGET_EXHAUSTED) failures.push({ providerId: provider.id, kind: 'timeout' });
         continue;
       }
 
@@ -2112,7 +2147,7 @@ export class NewsService {
       );
     }
 
-    if (notAwaitedProviderIds.length > 0) {
+    if (notAwaitedProviderIds.length > 0 && firstAdmittedProviderId !== undefined) {
       logWithRequestId(
         this.logger,
         'log',
