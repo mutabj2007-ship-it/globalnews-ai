@@ -446,7 +446,10 @@ describe('ASK R2 §7 · TEST G — format / priority follow-ups after a SUCCESSF
     expect(selectionUrls(g1.analysisCalls[0])).toEqual(aUrls);
     expect(g1.backgroundCalls).toHaveLength(0);
     expect(follow(g1).priorAnswer).toEqual({ form: 'FORMAT', outcome: 'FINDINGS', evidence: 'REUSED' });
-    expect(follow(g1).answer.state).toBe('CURRENT_REPORTING');
+    /* CURRENT-REPORTING TRUTH R1 (B1) · ALPHA-LINE ADAPTATION — the reused evidence is served from
+       stored reporting (retrievalContext.dataMode 'cached'), so the rework is RETAINED_REPORTING,
+       never CURRENT_REPORTING (was asserted current before B1). */
+    expect(follow(g1).answer.state).toBe('RETAINED_REPORTING');
     expect(follow(g1).diagnostics.job.artifactUsed?.kind).toBe('SOURCED_REPORT');
     /* the reuse is said to the model: same evidence, original dates, no new check */
     const rules = policyOf(g1.analysisCalls[0]).governed?.rules ?? '';

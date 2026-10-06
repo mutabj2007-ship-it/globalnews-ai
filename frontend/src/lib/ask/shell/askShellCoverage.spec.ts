@@ -104,19 +104,25 @@ describe('B-6 · the shell is one catalogue over seven locales', () => {
       hint, shown only when it overflows): 543 − 4 + 2 → 541, 535 → 533, 567 → 565. The two new
       keys' fr/de/es/pt-BR/ar wording is an ENGINEERING translation awaiting Claude L
       qualification (L1; handoff ledger) — present so no locale falls back to English.
+      CURRENT-REPORTING TRUTH R1 (B1) adds ONE reader-visible key, askR2Strings.badges.retrep
+      ("RETAINED REPORTING" — the badge of the new canonical RETAINED_REPORTING state), counted twice
+      because it is read twice: overlay-managed 541 → 542, localized 533 → 534, and through
+      askSevenStrings.reasoning (the shell's badge table) 24 → 25; reader-visible 565 → 567.
+      Recalculated for this (Alpha Reading) line. Its fr/de/es/pt-BR/ar wording is an ENGINEERING
+      translation awaiting Claude L qualification; no locale falls back to English.
     */
     const overlayManaged = askShellKeyPaths().length;
     const alreadySeven = shellKeyPaths(askSevenStrings('en')).length;
-    expect(alreadySeven).toBe(24);
-    expect(overlayManaged).toBe(541);
-    expect(overlayManaged + alreadySeven).toBe(565);
+    expect(alreadySeven).toBe(25);
+    expect(overlayManaged).toBe(542);
+    expect(overlayManaged + alreadySeven).toBe(567);
     /*
       EIGHT, not five: the CTO's brand ruling moved the three product-NAME keys out of the
       translation scope. A key nobody should translate does not belong in a translator's
       manifest, and leaving it there is what let three authorities give three answers.
     */
     expect(ASK_SHELL_PROPER_NOUNS).toHaveLength(8);
-    expect(overlayManaged - ASK_SHELL_PROPER_NOUNS.length).toBe(533);
+    expect(overlayManaged - ASK_SHELL_PROPER_NOUNS.length).toBe(534);
   });
 
   it('each proper noun names a key that actually exists', () => {
@@ -200,7 +206,7 @@ describe('B-7 · no English fallback is ever silent', () => {
       expect(coverage.qualification).toBe('SOURCE');
       expect(coverage.fallbacks).toEqual([]);
       expect(coverage.complete).toBe(true);
-      expect(coverage.localizedKeys).toBe(533);
+      expect(coverage.localizedKeys).toBe(534);
     }
   });
 
@@ -220,8 +226,8 @@ describe('B-7 · no English fallback is ever silent', () => {
       expect(coverage.qualification).toBe('CLAUDE_L_QUALIFIED');
       expect(coverage.complete).toBe(true);
       expect(coverage.fallbacks).toEqual([]);
-      expect(coverage.localizedKeys).toBe(533);
-      /* 533 localized + 0 unqualified + 8 not-translated = the 541 overlay-managed keys. */
+      expect(coverage.localizedKeys).toBe(534);
+      /* 534 localized + 0 unqualified + 8 not-translated = the 542 overlay-managed keys. */
       expect(coverage.localizedKeys + coverage.fallbacks.length + coverage.properNouns).toBe(
         coverage.totalKeys,
       );
@@ -235,10 +241,10 @@ describe('B-7 · no English fallback is ever silent', () => {
       misses a leaf kind. So the denominator is asserted directly: if a future catalogue adds
       a leaf shape nobody handles, this count stops matching and the suite fails here.
     */
-    expect(askShellKeyPaths()).toHaveLength(541);
+    expect(askShellKeyPaths()).toHaveLength(542);
     for (const locale of L_LOCALES) {
       const coverage = askShellCoverage(locale);
-      expect(coverage.totalKeys).toBe(541);
+      expect(coverage.totalKeys).toBe(542);
     }
   });
 

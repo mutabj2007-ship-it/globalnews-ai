@@ -30,7 +30,7 @@
  * Codes only; the frontend owns every word.
  */
 
-import type { AskAnswerState, AskEvidenceRole } from '@globalnews-ai/shared';
+import type { AskAnswerState, AskEvidenceRole, ReportingFreshness } from '@globalnews-ai/shared';
 import type { EvidenceClass, RoutingPlan, VerificationOutcome } from './frozen-c/src/ports';
 
 /** Frozen C's evidence classes, as Ask evidence roles. MODEL_PRIOR has no role. */
@@ -55,6 +55,12 @@ export interface ObtainedEvidence {
    * no evidence and made no model call). Then there is nothing to present as background.
    */
   readonly producedAnswer?: boolean;
+  /**
+   * CURRENT-REPORTING TRUTH R1 (B1) — how fresh the obtained REPORTING is, from the canonical
+   * evidence state (`resolveReportingFreshness`), never inferred from an item count. 'retained'
+   * means no current item supported the answer. Absent: unknown, read as before.
+   */
+  readonly reportingFreshness?: ReportingFreshness;
 }
 
 export interface AnswerStateDecision {
@@ -168,11 +174,21 @@ export function deriveAnswerState(
   if (requiredRoles.length === 0) {
     return { state: 'REFERENCE_BACKGROUND', basis: 'NO_REQUIRED_EVIDENCE', missingRoles };
   }
+  /*
+    CURRENT-REPORTING TRUTH R1 (B1) — retained-only reporting is never CURRENT (or a current
+    PARTIAL): it answers as RETAINED_REPORTING, its missing roles kept. Provider health does not
+    enter here — a partially degraded live search stays current and is disclosed separately.
+  */
+  const retainedOnly = has('REPORTING') && obtained?.reportingFreshness === 'retained';
   if (missingRoles.length === 0) {
-    return { state: 'CURRENT_REPORTING', basis: 'REQUIRED_EVIDENCE_OBTAINED', missingRoles };
+    return retainedOnly
+      ? { state: 'RETAINED_REPORTING', basis: 'RETAINED_REPORTING_ONLY', missingRoles }
+      : { state: 'CURRENT_REPORTING', basis: 'REQUIRED_EVIDENCE_OBTAINED', missingRoles };
   }
   if (missingRoles.length < requiredRoles.length) {
-    return { state: 'PARTIAL', basis: 'SOME_REQUIRED_EVIDENCE_MISSING', missingRoles };
+    return retainedOnly
+      ? { state: 'RETAINED_REPORTING', basis: 'RETAINED_REPORTING_ONLY', missingRoles }
+      : { state: 'PARTIAL', basis: 'SOME_REQUIRED_EVIDENCE_MISSING', missingRoles };
   }
   return { state: 'INSUFFICIENT', basis: 'NO_REQUIRED_EVIDENCE_OBTAINED', missingRoles };
 }

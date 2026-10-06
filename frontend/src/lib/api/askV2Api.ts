@@ -82,6 +82,8 @@ export type AskAnswerState =
   /* ASK INTELLIGENCE BINDING LIVE ACCEPTANCE REPAIR R1 — a governed retained record (or its
      stated absence), answered with zero AI. Never current, never verified. */
   | 'RETAINED_RECORD'
+  /* CURRENT-REPORTING TRUTH R1 — an AI answer from retained (not current) reporting. */
+  | 'RETAINED_REPORTING'
   /* ASK TECHNICAL / SCIENTIFIC REASONING CONVERGENCE R1 — a deterministic computation over the
      reader's own values: zero AI, zero sources. */
   | 'COMPUTED_RESULT';

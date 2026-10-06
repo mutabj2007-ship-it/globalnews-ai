@@ -28,7 +28,7 @@ import type { AnalysisRetrievalContext } from '@globalnews-ai/shared';
  */
 
 export type AskR2Badge =
-  'ref' | 'ver' | 'cur' | 'clar' | 'part' | 'insuf' | 'unavail' | 'rec' | 'calc';
+  'ref' | 'ver' | 'cur' | 'clar' | 'part' | 'insuf' | 'unavail' | 'rec' | 'calc' | 'retrep';
 
 export interface AskR2ChipView {
   readonly kind: AskPlanChip['kind'];
@@ -119,6 +119,8 @@ const BADGE_OF: Readonly<Record<AskAnswerState, AskR2Badge>> = {
   RETAINED_RECORD: 'rec',
   /* R1 — a deterministic computation, zero AI; no hand-offs. */
   COMPUTED_RESULT: 'calc',
+  /* CURRENT-REPORTING TRUTH R1 — retained reporting is never the current badge. */
+  RETAINED_REPORTING: 'retrep',
 };
 
 const TONE_OF: Readonly<Record<AskR2Badge, AskR2View['tone']>> = {
@@ -131,6 +133,8 @@ const TONE_OF: Readonly<Record<AskR2Badge, AskR2View['tone']>> = {
   unavail: 'unavailable',
   rec: 'retained',
   calc: 'reference',
+  /* not current: the qualified (partial) tone, never the current one */
+  retrep: 'partial',
 };
 
 /** D25 02: handoffs exist for states 2, 3, 5 (and 7, 8 — not produced by this candidate). */
@@ -358,6 +362,8 @@ export function askR2View(
      retained reporting (served from the store: dataMode 'cached' / outcome RETAINED_ONLY).
      A live answer — healthy or limited — says when it was checked; a limited one keeps its
      separate search-limited note. */
+  /* CURRENT-REPORTING TRUTH R1 — retained reporting always says how far it reaches. */
+  else if (badge === 'retrep') freshness = fill(s.freshness.retainedTo, retainedTo);
   else if (badge === 'cur')
     freshness =
       retrieval?.dataMode === 'cached' || retrieval?.outcome === 'RETAINED_ONLY'

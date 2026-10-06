@@ -1159,6 +1159,45 @@ export function resolveEvidenceState(
 }
 
 /**
+ * CURRENT-REPORTING TRUTH R1 (B1) — HOW FRESH IS THE REPORTING AN ANSWER STANDS ON.
+ *
+ * Freshness and provider health are INDEPENDENT facts. `resolveEvidenceState` above folds a
+ * provider failure into 'degraded-fallback' whatever was served; this reads the SAME canonical
+ * state and separates the one question an answer state needs: did at least one item of current
+ * (live) reporting support the answer?
+ *
+ *   current   at least one live item — including a live search that lost a provider lane
+ *             (partial degradation stays current; the failure is disclosed separately through
+ *             fallbackReason 'provider-error' and the provider-failure metadata)
+ *   retained  only previously retrieved reporting was served (outcome RETAINED_ONLY, or the
+ *             reporting did not come from a live answer: dataMode 'cached' / 'unavailable')
+ *   none      no usable reporting
+ *
+ * RETAINED IS A POSITIVE FACT, NEVER A DEFAULT. An absent or unknown context (and 'mock', the
+ * disclosed demo mode) reads as it always did — current — so this resolver can only ever
+ * remove a false "current" claim, never invent a "retained" one.
+ */
+export type ReportingFreshness = 'current' | 'retained' | 'none';
+
+export function resolveReportingFreshness(
+  context:
+    | Pick<AnalysisRetrievalContext, 'dataMode' | 'fallbackReason' | 'outcome'>
+    | null
+    | undefined,
+  articleCount: number,
+): ReportingFreshness {
+  if (articleCount === 0) return 'none';
+  if (context == null) return 'current';
+  const state = resolveEvidenceState(context, articleCount);
+  if (state === 'no-relevant-evidence') return 'none';
+  const servedRetained =
+    context.outcome === 'RETAINED_ONLY' ||
+    context.dataMode === 'cached' ||
+    context.dataMode === 'unavailable';
+  return servedRetained ? 'retained' : 'current';
+}
+
+/**
  * C907 §8 — what retrieval actually did, as one value a machine can branch on.
  *
  * THE FIVE ARE NOT A SEVERITY LADDER; they are five different facts, and

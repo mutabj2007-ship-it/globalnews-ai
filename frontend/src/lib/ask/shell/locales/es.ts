@@ -301,6 +301,7 @@ export const esShellOverlay: ShellLocaleOverlay = {
         insuf: "EVIDENCIA INSUFICIENTE",
         part: "EVIDENCIA PARCIAL",
         rec: "REGISTRO CONSERVADO",
+        retrep: "INFORMES CONSERVADOS",
         ref: "CONTEXTO DE REFERENCIA",
         unavail: "FUNCIÓN NO DISPONIBLE",
         ver: "VERIFICADO AHORA",
