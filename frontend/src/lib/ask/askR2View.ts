@@ -1,7 +1,12 @@
 import { askFormatUtcInstant } from './askDirection';
 import type { AskAnswerState, AskPlanChip, AskR2Payload } from '@/lib/api/askV2Api';
 import type { AskR2Locale, AskR2Strings } from './askR2Strings';
-import { resolveEvidenceState, type DisplayLocale } from '@globalnews-ai/shared';
+import {
+  ASK_INPUT_MAX_CHARS,
+  ASK_INPUT_TOO_LONG,
+  resolveEvidenceState,
+  type DisplayLocale,
+} from '@globalnews-ai/shared';
 import type { AnalysisRetrievalContext } from '@globalnews-ai/shared';
 
 /**
@@ -282,6 +287,8 @@ function governedGapText(payload: AskR2Payload, s: AskR2Strings): string {
 export function failedTurnCopy(failure: string | undefined, s: AskR2Strings): string {
   if (failure === 'NETWORK') return s.r3.networkFailed;
   if (failure?.startsWith('BUDGET_')) return s.budgetRefused;
+  /* ASK R2 — the documented length limit is named, never "unavailable". */
+  if (failure === ASK_INPUT_TOO_LONG) return s.questionTooLong(ASK_INPUT_MAX_CHARS);
   return s.unavailable;
 }
 

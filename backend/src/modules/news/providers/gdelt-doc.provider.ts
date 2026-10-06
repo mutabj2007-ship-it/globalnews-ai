@@ -13,7 +13,16 @@ import { logWithRequestId } from '../../../observability/log-with-request-id';
 const GDELT_DOC_URL = 'https://api.gdeltproject.org/api/v2/doc/doc';
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 50;
-const REQUEST_TIMEOUT_MS = 8000;
+/*
+ * ASK RETRIEVAL / CONVERSATION R2 — MEASURED, NOT ASSUMED. From a workstation on 2026-10-06 the
+ * public DOC endpoint answered a 7-day artlist query in 15.8 s (HTTP 200) and its own "one request
+ * every 5 seconds" 429 in 12–13 s. An 8 s deadline therefore aborted every GDELT answer that was
+ * on its way: Alpha logged "GDELT DOC request timed out" + a 60 s cooldown on every traced Ask
+ * (04:57, 06:24, 06:46 UTC) and the only independent fallback never returned evidence. 20 s lets
+ * the answer (or GDELT's own rate-limit reply) arrive; it is still one request, never retried.
+ */
+export const GDELT_DOC_REQUEST_TIMEOUT_MS = 20_000;
+const REQUEST_TIMEOUT_MS = GDELT_DOC_REQUEST_TIMEOUT_MS;
 
 /**
  * ALWAYS SENT, NEVER DEFAULTED.
@@ -24,6 +33,26 @@ const REQUEST_TIMEOUT_MS = 8000;
  * mistake. So it is a constant and it is on every request.
  */
 const REQUEST_TIMESPAN = '24h';
+
+/**
+ * ASK R2 — a stated reporting window ("past seven days") is sent as GDELT's own STARTDATETIME /
+ * ENDDATETIME (UTC, YYYYMMDDHHMMSS) instead of the fixed 24 h, which silently dropped six of the
+ * seven days the reader asked about. Still explicit on every request; GDELT's 3-month default is
+ * never reached (a window is bounded upstream to 30 days).
+ */
+export function gdeltWindowParams(
+  from: string | undefined,
+  to: string | undefined,
+): Record<string, string> {
+  const start = from === undefined ? NaN : Date.parse(from);
+  if (!Number.isFinite(start)) return { timespan: REQUEST_TIMESPAN };
+  const endMs = to === undefined ? Date.now() : Date.parse(to);
+  const stamp = (ms: number) => new Date(ms).toISOString().replace(/[-:T]/g, '').slice(0, 14);
+  return {
+    startdatetime: stamp(start),
+    enddatetime: stamp(Number.isFinite(endMs) ? endMs : Date.now()),
+  };
+}
 
 /**
  * The host's own instruction, taken literally.
@@ -286,14 +315,15 @@ export class GdeltDocProvider implements NewsProvider {
     }
 
     const limit = this.clampLimit(options?.limit);
-    const key = `${safeQuery}::${limit}`;
+    const window = gdeltWindowParams(options?.from, options?.to);
+    const key = `${safeQuery}::${limit}::${JSON.stringify(window)}`;
 
     const existing = this.inFlight.get(key);
     if (existing !== undefined) {
       return existing;
     }
 
-    const request = this.fetchArticles(safeQuery, limit).finally(() => {
+    const request = this.fetchArticles(safeQuery, limit, window).finally(() => {
       this.inFlight.delete(key);
     });
 
@@ -516,7 +546,11 @@ export class GdeltDocProvider implements NewsProvider {
     return undefined;
   }
 
-  private async fetchArticles(expression: string, limit: number): Promise<NewsArticle[]> {
+  private async fetchArticles(
+    expression: string,
+    limit: number,
+    window: Record<string, string> = { timespan: REQUEST_TIMESPAN },
+  ): Promise<NewsArticle[]> {
     if (!this.isEnabled()) {
       throw new GdeltDocProviderError('GDELT DOC is not enabled.', undefined, 'unknown');
     }
@@ -541,7 +575,7 @@ export class GdeltDocProvider implements NewsProvider {
     url.searchParams.set('query', expression);
     url.searchParams.set('mode', 'ArtList');
     url.searchParams.set('format', 'json');
-    url.searchParams.set('timespan', REQUEST_TIMESPAN);
+    for (const [param, value] of Object.entries(window)) url.searchParams.set(param, value);
     url.searchParams.set('maxrecords', String(limit));
     url.searchParams.set('sort', 'DateDesc');
 

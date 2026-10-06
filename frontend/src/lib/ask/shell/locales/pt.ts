@@ -423,6 +423,14 @@ export const ptShellOverlay: ShellLocaleOverlay = {
         },
       },
       privacyLink: "Privacidade",
+      questionLength: {
+        kind: "pattern",
+        pattern: "{0} / {1} caracteres",
+      },
+      questionTooLong: {
+        kind: "pattern",
+        pattern: "Esta pergunta ultrapassa o limite de {0} caracteres do Ask. Encurte-a para enviar — seu texto completo continua aqui.",
+      },
       r3: {
         choiceFor: {
           kind: "pattern",
@@ -472,6 +480,7 @@ export const ptShellOverlay: ShellLocaleOverlay = {
         framework: "Estrutura",
         mixedStableTitle: "Explicação · raciocínio do modelo (não é fonte)",
         mixedStableUnavailable: "A parte explicativa da sua pergunta não pôde ser respondida neste momento; a parte atual abaixo vem de reportagens com fontes.",
+        priorNoFindings: "A pesquisa anterior não encontrou resultados verificados para revisar, por isso foi feita uma nova pesquisa para a mesma pergunta.",
         priorReferenceUnresolved: "Não encontro nesta conversa uma resposta anterior à qual isso se refira. A qual resposta ou afirmação você se refere?",
         workNoteBody: "Construído a partir das respostas anteriores desta conversa. É raciocínio, não dados atuais com fontes: verifique qualquer número antes de confiar nele.",
         workNoteTitle: "Trabalho da conversa · raciocínio do modelo",
@@ -490,6 +499,8 @@ export const ptShellOverlay: ShellLocaleOverlay = {
       runDeepMeta: "Pergunta antes de executar",
       scope: "ESCOPO",
       scopePending: "O escopo aguarda sua escolha",
+      showFullQuestion: "Mostrar a pergunta completa",
+      showLessQuestion: "Mostrar menos",
       signInRequired: {
         action: "Entrar para perguntar",
         body: "Entre para perguntar ao GlobalNewsAI. Sua pergunta foi mantida abaixo e não foi enviada — nada foi executado.",
@@ -531,6 +542,7 @@ export const ptShellOverlay: ShellLocaleOverlay = {
         reasons: {
           auth: "acesso recusado",
           "not-configured": "não configurada",
+          quota: "cota de requisições esgotada",
           "rate-limited": "com limite de requisições",
           timeout: "tempo esgotado",
           unavailable: "indisponível",

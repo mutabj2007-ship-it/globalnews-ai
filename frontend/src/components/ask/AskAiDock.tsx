@@ -27,6 +27,7 @@ import {
 } from '@/lib/ask/useAskR2Conversation';
 import { askContextKey, askContextRefOf } from '@/lib/ask/askContextRef';
 import { askR2Strings } from '@/lib/ask/askR2Strings';
+import { AskQuestionLimitNote, askQuestionLimitState } from '@/components/ask/AskQuestionLimit';
 import { ASK_SIGN_IN_HREF, keepQuestion } from '@/lib/ask/askKeptQuestion';
 import { localisedCountryName } from '@/lib/map/geography/displayName';
 import { getDictionary } from '@/lib/i18n/dictionaries';
@@ -298,6 +299,8 @@ function GlobalAskAiDock({
   const askDisposition = askLanguageDisposition(resolveAskLocale(language));
   const r2Locale = askDisposition.catalogueLocale;
   const r2s = askShellStrings(r2Locale).askR2Strings;
+  /* ASK R2 — the one documented input limit; the whole draft is kept, nothing is sent over it. */
+  const questionLimit = askQuestionLimitState(question);
 
   /*
     UNIFIED INTELLIGENCE BINDING R2C — THE CANONICAL CONVERSATION.
@@ -631,6 +634,22 @@ function GlobalAskAiDock({
   );
 
   /*
+    ASK RETRIEVAL / CONVERSATION R2 — over the one documented input limit nothing is sent: the
+    form's submit (button, Enter or the Home send) is held in the CAPTURE phase, before the
+    byte-pinned R2 submit handler (unchanged, still the form's onSubmit) ever runs,
+    and the note under the box says why. The draft stays in the box, whole.
+  */
+  const holdOverLimit = useCallback(
+    (event: FormEvent<HTMLFormElement>): void => {
+      if (!askQuestionLimitState(question).over) return;
+      event.preventDefault();
+      /* capture phase: the pinned submit handler on the same form never receives this event */
+      event.stopPropagation();
+    },
+    [question],
+  );
+
+  /*
     MAP R2 — the panel geometry per Spatial Ask layout. `null` everywhere but
     /map, where the generic classes below are not used at all.
   */
@@ -862,7 +881,7 @@ function GlobalAskAiDock({
               skin differ. 16px type so a phone does not zoom on focus.
             */
             <div data-ask="composer" className="shrink-0 border-t border-[#3c2f7a]/60 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-              <form ref={formRef} onSubmit={submit} data-ask="form" className="flex flex-col gap-[10px] px-[14px] py-[12px]">
+              <form ref={formRef} onSubmit={submit} onSubmitCapture={holdOverLimit} data-ask="form" className="flex flex-col gap-[10px] px-[14px] py-[12px]">
                 <div className="flex flex-wrap items-center gap-x-[10px] gap-y-[4px]">
                   <span
                     data-ask="context-affordance"
@@ -893,13 +912,15 @@ function GlobalAskAiDock({
                   value={question}
                   onChange={(event) => setQuestion(event.target.value)}
                   placeholder={t.inputPlaceholder}
-                  maxLength={1000}
+                  aria-invalid={questionLimit.over ? true : undefined}
+                  aria-describedby={questionLimit.near || questionLimit.over ? 'ask-ai-question-limit' : undefined}
                   minHeight={isIdle ? 58 : 44}
                   maxHeight={220}
                   maxViewportFraction={0.3}
                   keepVisible={false}
                   className="w-full rounded-[10px] border border-[#3c2f7a] bg-[#12263f] px-[12px] py-[10px] text-[16px] leading-[1.45] text-[#eef2f8] placeholder:text-[#8fa6c0] focus:border-[#a78bfa] focus:outline-none"
                 />
+                <AskQuestionLimitNote id="ask-ai-question-limit" state={questionLimit} copy={r2s} />
                 <div className="flex items-center justify-between gap-[10px]">
                   <p data-ask="compute-notice" className="min-w-0 text-[12px] leading-[1.4] text-[#e5d2b0]">
                     <span aria-hidden="true" className="me-1 text-[#d9b98a]">ϟ</span>
@@ -918,7 +939,7 @@ function GlobalAskAiDock({
             </div>
           ) : (
           <div data-ask="composer" className={`shrink-0 border-t border-border bg-surface-raised/95 backdrop-blur ${visibleBox !== null ? 'pb-1' : 'pb-[max(0.75rem,env(safe-area-inset-bottom))]'}`}>
-          <form ref={formRef} onSubmit={submit} data-ask="form" className="flex flex-col gap-2 px-4 py-3">
+          <form ref={formRef} onSubmit={submit} onSubmitCapture={holdOverLimit} data-ask="form" className="flex flex-col gap-2 px-4 py-3">
             <label className="sr-only" htmlFor="ask-ai-question">
               {t.inputLabel}
             </label>
@@ -928,13 +949,15 @@ function GlobalAskAiDock({
               value={question}
               onChange={(event) => setQuestion(event.target.value)}
               placeholder={t.inputPlaceholder}
-              maxLength={1000}
+              aria-invalid={questionLimit.over ? true : undefined}
+              aria-describedby={questionLimit.near || questionLimit.over ? 'ask-ai-question-limit' : undefined}
               minHeight={isIdle ? 58 : 44}
               maxHeight={420}
               maxViewportFraction={0.46}
               keepVisible={false}
               className="w-full rounded-2xl border border-border-strong bg-surface px-4 py-3 text-[16px] leading-6 text-ink-primary shadow-inner placeholder:text-ink-secondary/70 focus:border-signal focus:outline-none"
             />
+            <AskQuestionLimitNote id="ask-ai-question-limit" state={questionLimit} copy={r2s} />
             <div className="flex flex-wrap items-center justify-between gap-2">
               {/*
                 THE CONTEXTUAL AFFORDANCE — NOW A TRUTHFUL STATEMENT OF

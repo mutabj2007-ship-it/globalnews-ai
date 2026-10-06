@@ -3,6 +3,11 @@
 import type { IsolatedAutoProps, IsolatedRunProps } from '@/lib/ask/askDirection';
 import { useRef, type JSX } from 'react';
 import { AdaptiveTextarea } from '@/components/ui/AdaptiveTextarea';
+import {
+  AskQuestionLimitNote,
+  askQuestionLimitState,
+  type AskQuestionLimitCopy,
+} from '@/components/ask/AskQuestionLimit';
 
 /**
  * ASK R2 CLAUDE DESIGN RECONCILIATION R1 — presentation primitives of the frozen D25
@@ -172,6 +177,7 @@ export function Composer({
   pending = false,
   maxHeight,
   example,
+  limitCopy,
 }: {
   readonly value: string;
   readonly onChange: (next: string) => void;
@@ -191,8 +197,12 @@ export function Composer({
   readonly maxHeight: 220 | 140;
   /** CENTERED COMPOSER R1 — the rotating example. Absent for every other caller. */
   readonly example?: ComposerExample;
+  /** ASK R2 — the documented input limit's copy (askR2Strings); the limit itself is shared. */
+  readonly limitCopy: AskQuestionLimitCopy;
 }): JSX.Element {
-  const ready = !pending && value.trim().length > 0 && onSubmit !== undefined;
+  /* ASK R2 — the whole draft is kept; over the documented limit Send waits and says why. */
+  const limit = askQuestionLimitState(value);
+  const ready = !pending && value.trim().length > 0 && !limit.over && onSubmit !== undefined;
   /*
     CROSS-PLATFORM PARITY — latched evidence of a physical keyboard. A ref, not state: it must
     not re-render, and it only ever turns on.
@@ -249,7 +259,8 @@ export function Composer({
               if (action === 'SUBMIT') event.currentTarget.form?.requestSubmit();
             }}
             placeholder={showExample ? '' : placeholder}
-            maxLength={1000}
+            aria-invalid={limit.over ? true : undefined}
+            aria-describedby={limit.near || limit.over ? 'ask-frame-composer-limit' : undefined}
             minHeight={32}
             maxHeight={maxHeight}
             maxViewportFraction={0.4}
@@ -307,6 +318,7 @@ export function Composer({
           )}
         </button>
       </div>
+      <AskQuestionLimitNote id="ask-frame-composer-limit" state={limit} copy={limitCopy} />
       <p
         data-ask="cost-note"
         className="font-mono text-[11px] leading-[1.3] text-[#6f89a8]"

@@ -423,6 +423,14 @@ export const frShellOverlay: ShellLocaleOverlay = {
         },
       },
       privacyLink: "Confidentialité",
+      questionLength: {
+        kind: "pattern",
+        pattern: "{0} / {1} caractères",
+      },
+      questionTooLong: {
+        kind: "pattern",
+        pattern: "Cette question dépasse la limite de {0} caractères d’Ask. Raccourcissez-la pour l’envoyer — votre texte complet est conservé ici.",
+      },
       r3: {
         choiceFor: {
           kind: "pattern",
@@ -472,6 +480,7 @@ export const frShellOverlay: ShellLocaleOverlay = {
         framework: "Cadre",
         mixedStableTitle: "Explication · raisonnement du modèle (pas une source)",
         mixedStableUnavailable: "La partie explicative de votre question n’a pas pu être traitée à l’instant ; la partie actuelle ci-dessous provient de reportages sourcés.",
+        priorNoFindings: "La recherche précédente n’a trouvé aucun résultat vérifié à réviser ; une nouvelle recherche a donc été lancée pour la même question.",
         priorReferenceUnresolved: "Je ne trouve pas, dans cette conversation, de réponse antérieure à laquelle cela renvoie. De quelle réponse ou de quelle affirmation parlez-vous ?",
         workNoteBody: "Construit à partir des réponses précédentes de cette conversation. C’est un raisonnement, non des données sourcées et actuelles : vérifiez tout chiffre avant de vous y fier.",
         workNoteTitle: "Travail de conversation · raisonnement du modèle",
@@ -490,6 +499,8 @@ export const frShellOverlay: ShellLocaleOverlay = {
       runDeepMeta: "Demande avant de s’exécuter",
       scope: "PÉRIMÈTRE",
       scopePending: "Le périmètre attend votre choix",
+      showFullQuestion: "Afficher la question complète",
+      showLessQuestion: "Afficher moins",
       signInRequired: {
         action: "Se connecter pour demander",
         body: "Connectez-vous pour interroger GlobalNewsAI. Votre question est conservée ci-dessous et n’a pas été envoyée — rien n’a été exécuté.",
@@ -531,6 +542,7 @@ export const frShellOverlay: ShellLocaleOverlay = {
         reasons: {
           auth: "accès refusé",
           "not-configured": "non configurée",
+          quota: "quota de requêtes épuisé",
           "rate-limited": "débit limité",
           timeout: "délai dépassé",
           unavailable: "indisponible",

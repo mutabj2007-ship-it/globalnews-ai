@@ -1,5 +1,9 @@
 import { ConfigService } from '@nestjs/config';
-import { GdeltDocProvider, GdeltDocProviderError } from './gdelt-doc.provider';
+import {
+  GDELT_DOC_REQUEST_TIMEOUT_MS,
+  GdeltDocProvider,
+  GdeltDocProviderError,
+} from './gdelt-doc.provider';
 
 /**
  * G-GDELT-DOC-ALPHA-RELIABILITY-R1 — corrections A and B.
@@ -60,7 +64,7 @@ describe('R1-A — a real timeout arms the existing cooldown', () => {
     global.fetch = abortingFetch() as unknown as typeof fetch;
 
     const inFlight = settle(provider.search('congo unrest'));
-    await jest.advanceTimersByTimeAsync(8_000);
+    await jest.advanceTimersByTimeAsync(GDELT_DOC_REQUEST_TIMEOUT_MS);
 
     const outcome = await inFlight;
     expect(outcome.ok).toBe(false);
@@ -80,7 +84,7 @@ describe('R1-A — a real timeout arms the existing cooldown', () => {
     global.fetch = abortingFetch() as unknown as typeof fetch;
 
     const inFlight = settle(provider.search('congo unrest'));
-    await jest.advanceTimersByTimeAsync(8_000);
+    await jest.advanceTimersByTimeAsync(GDELT_DOC_REQUEST_TIMEOUT_MS);
 
     const outcome = await inFlight;
     expect(outcome.ok).toBe(false);
@@ -98,7 +102,7 @@ describe('R1-A — a real timeout arms the existing cooldown', () => {
     global.fetch = fetchMock as unknown as typeof fetch;
 
     const first = settle(provider.search('congo unrest'));
-    await jest.advanceTimersByTimeAsync(8_000);
+    await jest.advanceTimersByTimeAsync(GDELT_DOC_REQUEST_TIMEOUT_MS);
     expect((await first).ok).toBe(false);
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
@@ -138,7 +142,7 @@ describe('R1-A — a real timeout arms the existing cooldown', () => {
     global.fetch = fetchMock as unknown as typeof fetch;
 
     const first = settle(provider.search('congo unrest'));
-    await jest.advanceTimersByTimeAsync(8_000);
+    await jest.advanceTimersByTimeAsync(GDELT_DOC_REQUEST_TIMEOUT_MS);
     expect((await first).ok).toBe(false);
 
     // Still inside the 60 s cooldown: refused without a request.
@@ -188,7 +192,7 @@ describe('R1-B — health tells the truth about a provider that has never worked
     global.fetch = abortingFetch() as unknown as typeof fetch;
 
     const first = settle(provider.search('congo unrest'));
-    await jest.advanceTimersByTimeAsync(8_000);
+    await jest.advanceTimersByTimeAsync(GDELT_DOC_REQUEST_TIMEOUT_MS);
     expect((await first).ok).toBe(false);
 
     // Step past the cooldown so `cooling` is false and only the
@@ -196,7 +200,7 @@ describe('R1-B — health tells the truth about a provider that has never worked
     await jest.advanceTimersByTimeAsync(61_000);
 
     const second = settle(provider.search('kinshasa protest'));
-    await jest.advanceTimersByTimeAsync(8_000);
+    await jest.advanceTimersByTimeAsync(GDELT_DOC_REQUEST_TIMEOUT_MS);
     expect((await second).ok).toBe(false);
     await jest.advanceTimersByTimeAsync(61_000);
 
@@ -215,7 +219,7 @@ describe('R1-B — health tells the truth about a provider that has never worked
     global.fetch = abortingFetch() as unknown as typeof fetch;
 
     const inFlight = settle(provider.search('congo unrest'));
-    await jest.advanceTimersByTimeAsync(8_000);
+    await jest.advanceTimersByTimeAsync(GDELT_DOC_REQUEST_TIMEOUT_MS);
     expect((await inFlight).ok).toBe(false);
 
     expect((await provider.health()).status).toBe('degraded'); // cooling
@@ -307,7 +311,7 @@ describe('R1-REV-A — a cooling circuit says truthfully WHY it is open', () => 
     global.fetch = fetchMock as unknown as typeof fetch;
 
     const first = settle(provider.search('alpha query'));
-    await jest.advanceTimersByTimeAsync(8_000);
+    await jest.advanceTimersByTimeAsync(GDELT_DOC_REQUEST_TIMEOUT_MS);
     expect((await first).ok).toBe(false);
 
     const cooling = await settle(provider.search('bravo query'));

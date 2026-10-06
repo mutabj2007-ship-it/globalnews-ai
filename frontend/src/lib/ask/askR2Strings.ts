@@ -92,6 +92,16 @@ export interface AskR2Strings {
   readonly unavailable: string;
   /** LIVE ACCEPTANCE REPAIR R1 — a compute-budget refusal is named as such, never "unavailable". */
   readonly budgetRefused: string;
+  /**
+   * ASK RETRIEVAL / CONVERSATION R2 — the one documented input limit (ASK_INPUT_MAX_CHARS),
+   * said BEFORE submit; the draft is kept whole. Also the copy for the typed server refusal.
+   */
+  readonly questionTooLong: (max: number) => string;
+  /** ASK R2 — the length counter shown as a draft approaches the limit. */
+  readonly questionLength: (length: number, max: number) => string;
+  /** ASK R2 — a long submitted question shows a compact preview; this reveals all of it. */
+  readonly showFullQuestion: string;
+  readonly showLessQuestion: string;
   /** TRUST R1 — a failed Send keeps the draft; the reader retries by pressing Ask. */
   /** TRUST R1 §12 — pre-login links under the composer. */
   readonly privacyLink: string;
@@ -176,6 +186,8 @@ export interface AskR2Strings {
     readonly mixedStableUnavailable: string;
     /** R4 ALPHA R-4 — the turn refers to an earlier answer this conversation does not hold */
     readonly priorReferenceUnresolved: string;
+    /** R2 §7 — a follow-up on an earlier answer whose search found nothing (a new search then ran) */
+    readonly priorNoFindings: string;
   };
   /** ALPHA ENABLEMENT R1 (MC-070) — a continuation (“And Kenya?”) with nothing to continue; the place stays a chip. */
   readonly noPriorSubject: string;
@@ -327,6 +339,8 @@ const EN: AskR2Strings = {
     reasons: {
       'not-configured': 'not configured',
       'rate-limited': 'rate limited',
+      /* ASK R2 — a spent plan allowance is not a short rate limit */
+      quota: 'request allowance used up',
       auth: 'access refused',
       timeout: 'timed out',
       unavailable: 'unavailable',
@@ -350,6 +364,11 @@ const EN: AskR2Strings = {
   newAnswerBelow: 'New answer below',
   budgetRefused:
     'You have reached today’s Ask limit, so nothing was run and nothing was charged. Questions answered from retained records still work.',
+  questionTooLong: (max) =>
+    `This question is longer than Ask’s ${max}-character limit. Shorten it to send — your full text is kept here.`,
+  questionLength: (length, max) => `${length} / ${max} characters`,
+  showFullQuestion: 'Show full question',
+  showLessQuestion: 'Show less',
   retainedAnswer: 'Answered from a retained governed record — no AI was used.',
   followUpHint: 'You could ask next',
   retainedFallback: {
@@ -410,6 +429,8 @@ const EN: AskR2Strings = {
       'The explanatory part of your question could not be answered right now; the current part below is from sourced reporting.',
     priorReferenceUnresolved:
       'I can’t find an earlier answer in this conversation that this refers to. Which answer or statement do you mean?',
+    priorNoFindings:
+      'The earlier search found no verified findings to revise, so a new search was run for the same question.',
   },
   r3: {
     continuationJobNote: 'continuing what you are working on in this conversation',
@@ -663,6 +684,7 @@ const PL: AskR2Strings = {
     reasons: {
       'not-configured': 'nieskonfigurowane',
       'rate-limited': 'limit zapytań',
+      quota: 'wyczerpany przydział zapytań',
       auth: 'odmowa dostępu',
       timeout: 'przekroczony czas',
       unavailable: 'niedostępne',
@@ -687,6 +709,11 @@ const PL: AskR2Strings = {
   newAnswerBelow: 'Nowa odpowiedź poniżej',
   budgetRefused:
     'Wykorzystano dzisiejszy limit Zapytaj AI, więc nic nie uruchomiono ani nie naliczono. Pytania, na które odpowiadają zachowane zapisy, nadal działają.',
+  questionTooLong: (max) =>
+    `To pytanie przekracza limit ${max} znaków w Zapytaj AI. Skróć je, aby wysłać — cały tekst pozostaje tutaj.`,
+  questionLength: (length, max) => `${length} / ${max} znaków`,
+  showFullQuestion: 'Pokaż całe pytanie',
+  showLessQuestion: 'Pokaż mniej',
   retainedAnswer: 'Odpowiedź z zachowanego, zweryfikowanego zapisu — bez użycia AI.',
   followUpHint: 'Możesz zapytać dalej',
   retainedFallback: {
@@ -747,6 +774,8 @@ const PL: AskR2Strings = {
       'Nie udało się teraz odpowiedzieć na część wyjaśniającą pytania; bieżąca część poniżej pochodzi ze źródeł.',
     priorReferenceUnresolved:
       'Nie znajduję w tej rozmowie wcześniejszej odpowiedzi, do której to się odnosi. O którą odpowiedź lub stwierdzenie chodzi?',
+    priorNoFindings:
+      'Wcześniejsze wyszukiwanie nie przyniosło zweryfikowanych ustaleń do poprawienia, więc przeprowadzono nowe wyszukiwanie dla tego samego pytania.',
   },
   r3: {
     continuationJobNote: 'kontynuacja tego, nad czym pracujesz w tej rozmowie',

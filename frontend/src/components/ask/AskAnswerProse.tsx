@@ -178,7 +178,12 @@ export function AskAnswerProse({
               data-ask="answer-table"
               className="my-2 max-w-full overflow-x-auto overscroll-x-contain rounded-[8px] border border-[var(--gt-line,#d6dde8)]"
             >
-              <table className="w-full min-w-[28rem] border-collapse text-start text-[0.875rem] leading-snug">
+              <table
+                className="w-full border-collapse text-start text-[0.875rem] leading-snug"
+                /* ASK R2 — wide tables keep readable columns: the region scrolls, the columns do
+                   not collapse to a few characters (a 6-column corridor table on a 428 px phone). */
+                style={{ minWidth: `${Math.max(28, block.header.length * 8)}rem` }}
+              >
                 <thead>
                   <tr>
                     {block.header.map((cell, i) => (
@@ -202,7 +207,7 @@ export function AskAnswerProse({
                           </th>
                         ) : (
                           <td key={`${key}-r${r}c${c}`} className="border-t border-[var(--gt-line,#d6dde8)] px-2.5 py-2">
-                            <Inline text={cell} />
+                            <GovernedSourceCell text={cell} sources={sources} />
                           </td>
                         ),
                       )}
@@ -231,5 +236,39 @@ export function AskAnswerProse({
         );
       })}
     </div>
+  );
+}
+
+/**
+ * ASK RETRIEVAL / CONVERSATION R2 — a table's "source" cell is clickable ONLY through the governed
+ * mechanism: when its text names exactly one of THIS answer's own cited sources (by publisher or
+ * title), it links to that source's governed URL (safeExternalHref). A model-written URL is never
+ * followed; an ambiguous or unknown name stays text.
+ */
+export function governedSourceFor(
+  text: string,
+  sources: readonly AnalysisSourceRef[],
+): AnalysisSourceRef | null {
+  const name = text.trim().toLowerCase();
+  if (name === '') return null;
+  const matches = sources.filter(
+    (s) => s.publisher.trim().toLowerCase() === name || s.title.trim().toLowerCase() === name,
+  );
+  return matches.length === 1 ? matches[0]! : null;
+}
+
+function GovernedSourceCell({
+  text,
+  sources,
+}: {
+  readonly text: string;
+  readonly sources: readonly AnalysisSourceRef[];
+}): JSX.Element {
+  const source = governedSourceFor(text, sources);
+  if (source === null || safeExternalHref(source.url) === undefined) return <Inline text={text} />;
+  return (
+    <a data-ask="table-source" href={safeExternalHref(source.url)} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+      <Inline text={text} />
+    </a>
   );
 }

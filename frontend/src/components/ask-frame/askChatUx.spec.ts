@@ -157,7 +157,8 @@ describe('CTO checkpoint 5 §5 — a composed cross-country continuation is disc
   it('the turn shows the question actually answered, beneath the reader’s own words', () => {
     const turn = code(read('AskR2TurnView.tsx'));
     expect(turn).toMatch(
-      /<h2 className=\{QUESTION\}>\{turn\.question\}<\/h2>\s*(?:\{\}\s*)?\{payload\.continuation != null && \(/,
+      /* ASK R2 — the reader's words render through AskSubmittedQuestion (a long question is a compact preview) */
+      /<AskSubmittedQuestion\s+question=\{turn\.question\}[\s\S]*?\/>\s*(?:\{\}\s*)?\{payload\.continuation != null && \(/,
     );
     expect(turn).toContain('{payload.continuation.answeredAs}');
   });
@@ -182,6 +183,15 @@ describe('CTO P0 — advice is labelled as general guidance, never as current so
     const strings = read('../../lib/ask/askR2Strings.ts');
     expect(strings).toContain('The current part could not be verified right now.');
     expect(strings).toContain('Bieżącej części nie udało się teraz zweryfikować.');
+  });
+
+  it('R2 §7 a follow-up on an earlier answer that found nothing says so (EN / PL)', () => {
+    const turn = code(read('AskR2TurnView.tsx'));
+    expect(turn).toContain("payload.priorAnswer?.outcome === 'NO_FINDINGS'");
+    expect(turn).toContain('data-ask="prior-no-findings"');
+    expect(turn).toContain('s.r4.priorNoFindings');
+    expect(askR2Strings('en').r4.priorNoFindings).toMatch(/earlier search found no verified findings/);
+    expect(askR2Strings('pl').r4.priorNoFindings).toMatch(/nie przyniosło zweryfikowanych ustaleń/);
   });
 
   it('R3 §14 a relationship answer names both sides; §12 "best for what?" offers objectives', () => {

@@ -36,7 +36,12 @@ import {
   type AskRouteContext,
 } from '../ask-router/ask-r2-route';
 import { DECISION_OBJECTIVE_CANDIDATES } from '../ask-router/decision-support';
-import { completionCeilingFor, jobRulesFor, RECHECK_UNVERIFIED_RULE } from './job-execution';
+import {
+  completionCeilingFor,
+  jobRulesFor,
+  NO_CURRENT_FINDINGS_RULE,
+  RECHECK_UNVERIFIED_RULE,
+} from './job-execution';
 import type { BoundedConversationState } from '../ask-router/semantic-ir/interpret-turn';
 import {
   boundedEarlierTurns,
@@ -62,7 +67,12 @@ import {
   type ArtifactScope,
   type ConversationArtifact,
 } from './conversation/conversation-artifact';
-import { executionContractOf, type ExecutionContract } from './execution-contract';
+import {
+  executionContractOf,
+  REWORK_RESEARCH_RULES,
+  type ExecutionContract,
+} from './execution-contract';
+import { computeArticleRef } from '../news/identity/article-ref.util';
 import {
   answerStateBeforeExecution,
   deriveAnswerState,
@@ -71,7 +81,12 @@ import {
 import { readContinuationEllipsis } from '../analysis/anchor/continuation-ellipsis.util';
 import { readSubjectlessFollowUp } from '../analysis/anchor/conversation-subject.util';
 import { landedSpecialistRegistryPort } from '../ask-router/specialist-registry.port';
-import { planChips, withRelationshipScope, type PlanChips } from '../ask-router/plan-chips';
+import {
+  planChips,
+  withInheritedPlaces,
+  withRelationshipScope,
+  type PlanChips,
+} from '../ask-router/plan-chips';
 import type { PlannerDeps } from '../ask-router/frozen-c/src/planner';
 import type { RoutingPlan, VerificationOutcome } from '../ask-router/frozen-c/src/ports';
 import {
@@ -228,6 +243,7 @@ function scopeOfRoute(route: AskR2Route, analysis: AnalysisApiResponse | null): 
       countries: [...inherited.countries],
       relation: inherited.relation,
       freshness: route.semantic.turn.freshness,
+      ...windowOfRoute(route),
     };
   const states = route.semantic.entities
     .filter((e) => (e.type === 'COUNTRY' || e.type === 'TERRITORY') && e.iso3 !== null)
@@ -248,7 +264,15 @@ function scopeOfRoute(route: AskR2Route, analysis: AnalysisApiResponse | null): 
     countries: [...new Set([...(route.relationship?.countries ?? []), ...states, ...scopedPlace])],
     relation: route.relationship?.relations[0] ?? null,
     freshness: route.semantic.turn.freshness,
+    ...windowOfRoute(route),
   };
+}
+
+/** ASK RETRIEVAL / CONVERSATION R2 (§7) — the reporting window the answer was bounded by, recorded
+ *  with its ORIGINAL instants so a follow-up on it keeps the same period. */
+function windowOfRoute(route: AskR2Route): Pick<ArtifactScope, 'window'> {
+  const w = route.reportingWindow;
+  return w === null ? {} : { window: { statedPeriod: w.statedPeriod, from: w.from, to: w.to } };
 }
 
 /** Up to n sentences of authored text, as short claim points (prompt data, never evidence). */
@@ -267,6 +291,9 @@ function leadingSentences(text: string, n: number): string[] {
  * references), a truthful "no qualifying reporting" answer, or a reasoning answer. A clarification,
  * an unavailability or a refusal answered nothing and records nothing.
  */
+const NO_QUALIFYING_REPORTING =
+  'No qualifying reporting was found for this question at the time it was asked.';
+
 function answerMemory(
   route: AskR2Route,
   answer: AnswerDecision,
@@ -274,9 +301,26 @@ function answerMemory(
   backgroundText: string | null,
   modelArtifact: ConversationArtifact | null,
   artifactUsed: ConversationArtifact | null = null,
+  /** R3 §6 — the current part of the question was not verified (its search failed / found nothing) */
+  partialCurrent: 'UNAVAILABLE' | 'NO_EVIDENCE' | null = null,
 ): ConversationArtifact | null {
-  if (answer.state === 'CLARIFICATION_REQUIRED' || answer.state === 'CAPABILITY_UNAVAILABLE')
-    return null;
+  /*
+    ASK RETRIEVAL / CONVERSATION R2 (§7) — a search that RAN and found nothing is an outcome the
+    next turn must be able to state ("the earlier search found no verified findings"): when the
+    background capability then declined the question, the turn still records that outcome (a
+    no-findings record, never findings). Any other unavailability answered nothing, as before.
+  */
+  if (answer.state === 'CLARIFICATION_REQUIRED') return null;
+  if (answer.state === 'CAPABILITY_UNAVAILABLE')
+    return partialCurrent !== 'NO_EVIDENCE'
+      ? null
+      : serverArtifact({
+          kind: 'SOURCED_REPORT',
+          provenance: 'SOURCED_REPORTING',
+          label: route.source.rawQuestion,
+          components: [NO_QUALIFYING_REPORTING],
+          scope: scopeOfRoute(route, null),
+        });
   /* An answer that EXPLAINS earlier sourced work ("Why did you say that?") makes no new claim and
      retrieves nothing: the conversation's claim stays the one the sourced answer made, so a later
      "Is it still true now?" re-verifies THAT claim, in THAT scope (R-5) — not the explanation. */
@@ -309,7 +353,7 @@ function answerMemory(
     const result = analysis.analysis;
     const points =
       result === null
-        ? ['No qualifying reporting was found for this question at the time it was asked.']
+        ? [NO_QUALIFYING_REPORTING]
         : [
             ...(typeof result.headline === 'string' ? [result.headline] : []),
             ...(Array.isArray(result.keyFacts) ? result.keyFacts.map((k) => k?.claim) : []),
@@ -324,6 +368,8 @@ function answerMemory(
       ],
       scope,
       evidenceRefs: (Array.isArray(analysis.articles) ? analysis.articles : []).map((a) => a?.id),
+      /* R2 §7 — the evidence identities a follow-up re-reads from retained reporting */
+      evidenceUrls: (Array.isArray(analysis.articles) ? analysis.articles : []).map((a) => a?.url),
     });
   }
   if (backgroundText !== null)
@@ -332,6 +378,16 @@ function answerMemory(
       provenance: 'MODEL_REASONING',
       label,
       components: leadingSentences(backgroundText, 4),
+      scope,
+      /* R2 §7 — reasoning beside a current part that found no verified reporting */
+      ...(partialCurrent === null ? {} : { currentFindings: 'NONE' as const }),
+    });
+  if (partialCurrent === 'NO_EVIDENCE')
+    return serverArtifact({
+      kind: 'SOURCED_REPORT',
+      provenance: 'SOURCED_REPORTING',
+      label,
+      components: [NO_QUALIFYING_REPORTING],
       scope,
     });
   return null;
@@ -1045,6 +1101,13 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
        contributor selection and reads), as INHERITED: frozen C's envelope is not touched */
     if (contract.inheritedScope !== null)
       route = { ...route, inheritedScope: contract.inheritedScope };
+    /* ASK RETRIEVAL / CONVERSATION R2 (§7) — a follow-up on the earlier answer's findings is
+       executed on THAT answer: its evidence re-read, or — after an answer that found nothing — one
+       new search in its scope (executeRework). Decided before any routing branch below: the
+       follow-up's own words are not a news topic. */
+    if (contract.kind === 'PRIOR_ANSWER_REWORK' && contract.rework !== undefined) {
+      return this.executeRework(request, plan, route, operationId, draft, contract, semanticRun);
+    }
 
     if (route.knowledgeRequirement === 'DECISION_SUPPORT' && route.decisionObjective === null) {
       return this.result(
@@ -1085,6 +1148,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       route.plan.refusals.includes('CONSTRAINT_UNTRANSPORTABLE');
     if (
       route.knowledgeRequirement === 'MIXED_REFERENCE_CURRENT' &&
+      /* R2 — a turn whose explanatory part depends on the findings has no stable part to answer */
+      contract.stableDependsOnFindings !== true &&
       (route.plan.terminalState === 'BROADENING_OFFERED' || untransportableCurrentPart)
     ) {
       return this.executeBackground(
@@ -1366,7 +1431,9 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     const governed = governedPrompt(contributions);
 
     /* ASK RELIABILITY R1 — what the reader named (actors, regions, topic), from their own words. */
-    const anchors = questionAnchorsOf(request.question);
+    /* ASK R2 · geography — the route's corridor reading (destination + every route, exclusions
+       removed, an earlier turn's destination kept) anchors retrieval; null keeps the plain reading. */
+    const anchors = questionAnchorsOf(request.question, route.corridor ?? null);
 
     /* 4 · ONE call to the approved analysis path, one model attempt at most. */
     let usage: { promptTokens: number; completionTokens: number } | null = null;
@@ -1466,8 +1533,17 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       class that needs it: the stable part is answered by the background provider (one bounded
       call, behind every control) and the current part is NAMED as not verified right now.
     */
+    /*
+      ASK RETRIEVAL / CONVERSATION R2 — A TURN KEPT WHOLE IS NOT HALF-ANSWERABLE. A MIXED turn the
+      contract kept DIRECT because its explanatory part depends on the findings ("…which development
+      a small shopkeeper should watch most closely and why") has no part that background knowledge
+      can answer: on no evidence the reasoning model received the WHOLE current-news question and
+      could only invent "developments". It is the honest no-evidence answer instead (below), and a
+      provider failure is a failure — never a background answer standing in for current reporting.
+    */
     if (
       (route.knowledgeRequirement === 'MIXED_REFERENCE_CURRENT' &&
+        contract.stableDependsOnFindings !== true &&
         (noEvidence || outcome !== 'SUCCESS' || response === null)) ||
       /* ASK RELIABILITY R1 (G) — a CURRENT question whose named actors / topic left NO relevant
          report (the anchor gate rejected the candidates, or none existed): never an empty turn and
@@ -1725,6 +1801,235 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
    * `evidenceRolesObtained` stays [] and `reportingItemCount` is 0 (not null: Reporting was
    * decided against, not unreached). No background text reaches the draft.
    */
+  /**
+   * ASK RETRIEVAL / CONVERSATION R2 (contract §7) — A FOLLOW-UP ON THE EARLIER ANSWER'S FINDINGS.
+   *
+   * The turn is bound to the earlier SOURCED answer (execution-contract.ts PRIOR_ANSWER_REWORK):
+   *   · that answer FOUND evidence → its evidence is re-read from RETAINED reporting through the
+   *     analysis path's existing selection branch (no provider search; each item keeps its own
+   *     publication date; the answer is labelled as retained reporting, never as a fresh check).
+   *     Only when none of it can be re-read does ONE search run, in that answer's scope.
+   *   · that answer found NOTHING → it is never an evidence bundle: ONE new search runs for the
+   *     same scope (its question, place and period), and the payload says the earlier search found
+   *     no verified findings (`priorAnswer.outcome: NO_FINDINGS`).
+   * Either way the record and the chips keep the earlier subject, place and window (inherited as
+   * EARLIER_TURN). Every control is the reporting path's, in the same order.
+   */
+  private async executeRework(
+    request: Readonly<AskRequest>,
+    plan: Readonly<AskPlan>,
+    routed: AskR2Route,
+    operationId: string,
+    draft: AskObservationDraft,
+    contract: ExecutionContract,
+    semanticRun?: ClassifierRun,
+  ): Promise<ExecutionResult> {
+    const rework = contract.rework!;
+    const window =
+      routed.reportingWindow ??
+      (rework.window === null
+        ? null
+        : {
+            statedPeriod: rework.window.statedPeriod,
+            hours: Math.round(
+              (Date.parse(rework.window.to) - Date.parse(rework.window.from)) / 3_600_000,
+            ),
+            from: rework.window.from,
+            to: rework.window.to,
+            basis: 'PUBLICATION_TIME' as const,
+          });
+    /* the route this answer is executed, displayed and recorded under: current reporting about the
+       earlier answer's scope, its window kept (the reader's own, else the earlier answer's) */
+    const route: AskR2Route = {
+      ...routed,
+      knowledgeRequirement: 'CURRENT_REPORTING',
+      reportingWindow: window,
+      ...(contract.inheritedScope === null ? {} : { inheritedScope: contract.inheritedScope }),
+      plan: {
+        ...routed.plan,
+        questionClass: 'CURRENT_REPORTING',
+        terminalState: 'EXECUTABLE',
+        refusals: [],
+        clarification: [],
+      },
+    };
+
+    draft.askR2Enabled = await this.switches.isEnabled('ASK_R2_ENABLED');
+    if (!draft.askR2Enabled) throw new AskExecutionRefused('ASK_R2_DISABLED');
+    draft.askPublicComputeEnabled = await this.switches.isEnabled('ASK_PUBLIC_COMPUTE_ENABLED');
+    if (!draft.askPublicComputeEnabled) {
+      throw new AskExecutionRefused('ASK_PUBLIC_COMPUTE_DISABLED');
+    }
+    const who = askRequestContext.getStore();
+    if (who === undefined) throw new AskExecutionRefused('ASK_REQUEST_CONTEXT_MISSING');
+
+    const provider = this.provider.id;
+    draft.providerId = provider;
+    const permit = await this.breaker.permit(provider);
+    if (!permit.allowed) throw new AskExecutionRefused(`CIRCUIT_${permit.state}`);
+    const analysisConfig = this.analysisConfig.get();
+    const guest = await this.resolveGuestComputeScope(who);
+    const reservation = await this.meter.reserve({
+      accountId: who.accountId,
+      ipScope: who.ipScope,
+      ...(guest === undefined ? {} : { guest }),
+      provider,
+      estimatedUnits: estimateUnits(
+        request.question.length,
+        analysisConfig,
+        this.meter.config.outputWeight,
+      ),
+    });
+    if (!reservation.admitted) {
+      await this.breaker.record(provider, 'REFUSAL', permit.trial);
+      throw new AskExecutionRefused(`BUDGET_${reservation.kind}:${reservation.control}`);
+    }
+
+    const contributions = await this.readIntelligence(route, request.context);
+    const governed = governedPrompt(contributions);
+    const stories = rework.evidenceUrls.map((url) => ({ articleRef: computeArticleRef(url), url }));
+
+    let usage: { promptTokens: number; completionTokens: number } | null = null;
+    const policy = (answerRules: string) => ({
+      maxModelAttempts: ASK_MODEL_MAX_ATTEMPTS,
+      usageSink: (u: { promptTokens: number; completionTokens: number }) => {
+        const was = usage as { promptTokens: number; completionTokens: number } | null;
+        usage = {
+          promptTokens: (was?.promptTokens ?? 0) + u.promptTokens,
+          completionTokens: (was?.completionTokens ?? 0) + u.completionTokens,
+        };
+      },
+      ...answerLanguageOf(request.language),
+      ...withContractRules(governed, { ...contract, answerRules }),
+    });
+    let outcome: BreakerOutcome = 'FAILURE';
+    let response: AnalysisApiResponse | null = null;
+    let noEvidence = false;
+    let evidence: 'REUSED' | 'SEARCHED_AGAIN' = 'REUSED';
+    try {
+      draft.providerCallCount = 0;
+      if (stories.length > 0) {
+        draft.providerCallCount += 1;
+        /* the earlier answer's own evidence, re-read from retained reporting (no search) */
+        response = await this.analyze(
+          request.question,
+          retrievalLanguageOf(request.language),
+          undefined,
+          undefined,
+          { action: 'ASK_SELECTED', stories },
+          undefined,
+          policy(contract.answerRules),
+        );
+      }
+      if (response === null || (response.analysis === null && response.articles.length === 0)) {
+        /* nothing to re-read (the earlier search found nothing, or its evidence is no longer
+           retained): ONE search, in the earlier answer's scope and window — said in the payload */
+        evidence = 'SEARCHED_AGAIN';
+        draft.providerCallCount += 1;
+        const anchors = questionAnchorsOf(contract.retrievalQuestion);
+        response = await this.analyze(
+          contract.retrievalQuestion,
+          retrievalLanguageOf(request.language),
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          {
+            ...policy(
+              rework.priorOutcome === 'NO_FINDINGS' ? contract.answerRules : REWORK_RESEARCH_RULES,
+            ),
+            ...(window === null
+              ? {}
+              : { reportingWindow: { statedPeriod: window.statedPeriod, from: window.from, to: window.to } }),
+            ...(contract.relationship === null
+              ? {}
+              : {
+                  relationship: {
+                    countries: [...contract.relationship.countries],
+                    relations: [...contract.relationship.relations],
+                  },
+                }),
+            ...(anchors.gated ? { questionAnchors: anchors } : {}),
+          },
+        );
+      }
+      noEvidence = response.analysis === null && response.articles.length === 0;
+      outcome = noEvidence
+        ? 'REFUSAL'
+        : response.analysis === null && response.analysisError !== undefined
+          ? 'FAILURE'
+          : 'SUCCESS';
+    } catch (error) {
+      outcome = /timeout|deadline/i.test((error as Error)?.message ?? '') ? 'TIMEOUT' : 'FAILURE';
+    } finally {
+      const used = usage as { promptTokens: number; completionTokens: number } | null;
+      const actual =
+        used !== null
+          ? used.promptTokens + this.meter.config.outputWeight * used.completionTokens
+          : noEvidence
+            ? 0
+            : null;
+      await this.meter.settle(reservation.reservationId, actual, noEvidence ? 'NO_EVIDENCE' : outcome);
+      await this.breaker.record(provider, outcome, permit.trial);
+      draft.breakerOutcome = noEvidence ? 'REFUSAL' : outcome;
+    }
+    if ((outcome !== 'SUCCESS' && !noEvidence) || response === null) {
+      throw new AskExecutionRefused(`MODEL_${outcome}`);
+    }
+
+    /* the same grounding test as the reporting path: retrieved is not the same as relevant */
+    const groundedNothing =
+      response.analysis !== null &&
+      response.analysis.trustState?.level === 'insufficient' &&
+      (response.analysis.keyFacts?.length ?? 0) === 0 &&
+      (response.analysis.trustState?.distinctSourceArticleCount ?? 0) === 0;
+    const answered = response.analysis !== null && response.articles.length > 0 && !groundedNothing;
+    const answer: AnswerDecision = answered
+      ? { state: 'CURRENT_REPORTING', basis: 'REQUIRED_EVIDENCE_OBTAINED', missingRoles: [] }
+      : { state: 'INSUFFICIENT', basis: 'NO_REQUIRED_EVIDENCE_OBTAINED', missingRoles: ['REPORTING'] };
+    const aiExecuted = response.analysis !== null;
+    const specialistItems = specialistItemsOf(contributions);
+    this.observeContributions(contributions, draft);
+    draft.aiExecuted = aiExecuted;
+    draft.modelInvocationCount = (aiExecuted ? 1 : 0) + (semanticRun?.calls ?? 0);
+    draft.reportingItemCount = response.articles.length;
+    draft.evidenceRolesObtained = [
+      ...(response.articles.length > 0 ? ['REPORTING'] : []),
+      ...(specialistItems > 0 ? ['SPECIALIST'] : []),
+    ];
+    const measured = usage as { promptTokens: number; completionTokens: number } | null;
+    if (measured !== null) {
+      draft.promptTokens = measured.promptTokens;
+      draft.completionTokens = measured.completionTokens;
+    }
+    return this.result(
+      plan,
+      route,
+      operationId,
+      this.observeAnswer(answer, draft),
+      response,
+      aiExecuted,
+      null,
+      null,
+      contributions,
+      null,
+      null,
+      null,
+      {
+        artifact: null,
+        artifactUsed: request.priorArtifact ?? null,
+        classifier: semanticRun ?? null,
+      },
+      null,
+      {
+        form: rework.form,
+        outcome: rework.priorOutcome,
+        evidence,
+        excluded: rework.excluded,
+      },
+    );
+  }
+
   /**
    * UNIFIED INTELLIGENCE BINDING R2D — the My Intelligence SELECTION, executed by the canonical
    * engine through AnalysisService's EXISTING selection branch (its evidence is exactly the
@@ -2081,6 +2386,10 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     const jobRules = [
       jobRulesFor(route.job, usesPriorWork, horizon),
       recheckUnverified ? RECHECK_UNVERIFIED_RULE : '',
+      /* ASK R2 (contract §7/§10 G) — this turn's search found no usable current reporting (or a
+         source failed): the reasoning model is told so, explicitly, and may not supply
+         "developments" from memory (replayed: TEST C with no evidence reached this call). */
+      partialCurrent === undefined ? '' : NO_CURRENT_FINDINGS_RULE,
     ]
       .filter((r) => r !== '')
       .join('\n\n');
@@ -2493,12 +2802,41 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     } | null = null,
     /** R4 ALPHA R-2 — set only when the execution contract split a MIXED turn: the stable part's outcome */
     mixedStable: 'ANSWERED' | 'UNAVAILABLE' | null = null,
+    /** ASK RETRIEVAL / CONVERSATION R2 (§7) — a follow-up executed on the earlier answer */
+    rework: {
+      readonly form: string;
+      readonly outcome: 'FINDINGS' | 'NO_FINDINGS';
+      readonly evidence: 'REUSED' | 'SEARCHED_AGAIN';
+      readonly excluded: readonly string[];
+    } | null = null,
   ): ExecutionResult {
     this.logger.log(
       `ask-r2 operation=${operationId} class=${route.plan.questionClass} terminal=${route.plan.terminalState} ` +
         `normalization=${route.outcome.status} language=${route.envelope.language.questionLanguage} ` +
         `answer=${answer.state} aiExecuted=${aiExecuted}`,
     );
+    /* ASK RETRIEVAL / CONVERSATION R2 (contract §4) — the redacted retrieval record of this Ask:
+       which providers answered, which failed and HOW, what was seen / admitted / excluded by the
+       window, and the evidence outcome. Ids, kinds and counts only — never the query, the
+       reader's words, an article, a key or an account. */
+    const retrieval = analysis?.retrievalContext;
+    /* A diagnostic never decides an answer: any shape it cannot read is skipped, not thrown. */
+    if (retrieval !== undefined && retrieval !== null) try {
+      this.logger.log(
+        `ask-r2 retrieval operation=${operationId} basis=${answer.basis} ` +
+          `answered=${(retrieval.providers ?? []).join('+') || 'none'} ` +
+          `failed=${(retrieval.providerFailures ?? []).map((f) => `${f.providerId}:${f.kind}`).join('+') || 'none'} ` +
+          `dataMode=${retrieval.dataMode} fallback=${retrieval.fallbackReason ?? 'none'} ` +
+          `outcome=${retrieval.outcome ?? 'none'} retrieved=${retrieval.articlesRetrieved ?? 'n/a'} ` +
+          `seen=${retrieval.retrievalTrace?.candidatesSeen ?? 'n/a'} ` +
+          `admitted=${retrieval.retrievalTrace?.candidatesAdmitted ?? analysis?.articles?.length ?? 0} ` +
+          `clusters=${retrieval.retrievalTrace?.independentClusters ?? 'n/a'} ` +
+          `windowH=${retrieval.reportingWindow === undefined ? 'none' : Math.round((Date.parse(retrieval.reportingWindow.to) - Date.parse(retrieval.reportingWindow.from)) / 3_600_000)} ` +
+          `outsideWindow=${retrieval.reportingWindow?.excludedOutsideWindow ?? 0}`,
+      );
+    } catch {
+      /* the record is best-effort; the answer is not */
+    }
     return {
       succeeded: true,
       payloadJson: JSON.stringify({
@@ -2520,14 +2858,32 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
               : null,
         },
         /* D25 05: chips from the effective server plan only, in the order asked. */
-        chips: withRelationshipScope(
-          truthfulInheritedChips(
-            planChips(route.envelope, route.plan, placeSpansOf(route), route.reportingWindow),
-            analysis,
-          ),
-          /* R3 L-4 — a relationship answer is scoped to both sides, from the route's authority */
-          route.relationship,
-        ),
+        chips: ((): PlanChips => {
+          const planned = withRelationshipScope(
+            truthfulInheritedChips(
+              planChips(route.envelope, route.plan, placeSpansOf(route), route.reportingWindow),
+              analysis,
+            ),
+            /* R3 L-4 — a relationship answer is scoped to both sides, from the route's authority */
+            route.relationship,
+          );
+          /* R2 §7 — a follow-up bound to an earlier answer shows THAT answer's places (inherited) */
+          return rework === null
+            ? planned
+            : withInheritedPlaces(planned, route.inheritedScope?.countries ?? [], rework.excluded);
+        })(),
+        /* R2 §7 — what this follow-up stood on: the earlier answer's outcome (NO_FINDINGS is said
+           to the reader, never presented as findings) and whether its evidence was re-read or a
+           new search ran */
+        ...(rework === null
+          ? {}
+          : {
+              priorAnswer: {
+                form: rework.form,
+                outcome: rework.outcome,
+                evidence: rework.evidence,
+              },
+            }),
         answer,
         /* When the answer was decided — the freshness line's time when no analysis ran. */
         checkedAt: new Date().toISOString(),
@@ -2597,6 +2953,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
               backgroundText,
               r4?.artifact ?? null,
               r4?.artifactUsed ?? null,
+              partialCurrent,
             );
             return memory === null ? {} : { artifact: memory };
           } catch {

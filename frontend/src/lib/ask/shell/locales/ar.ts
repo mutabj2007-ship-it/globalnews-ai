@@ -447,6 +447,14 @@ export const arShellOverlay: ShellLocaleOverlay = {
         },
       },
       privacyLink: "الخصوصية",
+      questionLength: {
+        kind: "pattern",
+        pattern: "{0} / {1} حرفًا",
+      },
+      questionTooLong: {
+        kind: "pattern",
+        pattern: "هذا السؤال أطول من حدّ Ask البالغ {0} حرفًا. اختصره لإرساله — يبقى نصّك الكامل هنا.",
+      },
       r3: {
         choiceFor: {
           kind: "pattern",
@@ -496,6 +504,7 @@ export const arShellOverlay: ShellLocaleOverlay = {
         framework: "الإطار",
         mixedStableTitle: "تفسير · استدلال النموذج (ليس مصدرًا)",
         mixedStableUnavailable: "لم يتسنَّ الإجابة عن الجزء التفسيري من سؤالك في هذه اللحظة؛ والجزء الحالي أدناه مستند إلى تقارير ذات مصادر.",
+        priorNoFindings: "لم يُسفر البحث السابق عن نتائج مُتحقَّق منها يمكن مراجعتها، لذا أُجري بحث جديد للسؤال نفسه.",
         priorReferenceUnresolved: "لا أجد في هذه المحادثة إجابة سابقة يشير إليها هذا. أي إجابة أو عبارة تقصد؟",
         workNoteBody: "مبني على الإجابات السابقة في هذه المحادثة. إنه استدلال، لا بيانات حالية مستندة إلى مصادر: تحقَّق من أي رقم قبل الاعتماد عليه.",
         workNoteTitle: "عمل المحادثة · استدلال النموذج",
@@ -514,6 +523,8 @@ export const arShellOverlay: ShellLocaleOverlay = {
       runDeepMeta: "يسأل قبل التنفيذ",
       scope: "النطاق",
       scopePending: "النطاق ينتظر اختيارك",
+      showFullQuestion: "عرض السؤال كاملًا",
+      showLessQuestion: "عرض أقل",
       signInRequired: {
         action: "سجّل الدخول لتسأل",
         body: "سجّل الدخول لتسأل GlobalNewsAI. سؤالك محفوظ أدناه ولم يُرسَل — ولم يُنفَّذ أي شيء.",
@@ -559,6 +570,7 @@ export const arShellOverlay: ShellLocaleOverlay = {
         reasons: {
           auth: "رُفض الوصول",
           "not-configured": "غير مُهيّأة",
+          quota: "نفد رصيد الطلبات",
           "rate-limited": "مُقيَّدة بحدّ الطلبات",
           timeout: "انتهت المدة",
           unavailable: "غير متوفرة",

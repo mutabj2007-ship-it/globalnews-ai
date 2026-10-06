@@ -243,3 +243,5 @@ export * from './conflict/validation';
 export * from './home-suggestions';
 export * from './my-intelligence';
 export * from './home-editorial';
+/* ASK RETRIEVAL / CONVERSATION R2 — the one documented Ask input limit. */
+export * from './ask-input';

@@ -2,7 +2,16 @@ import type { AskR2Route } from '../ask-router/ask-r2-route';
 import { RELATION_KINDS, type RelationKind } from '../ask-router/bilateral-relationship';
 import { semanticReaderText } from '../ask-router/semantic-ir/interpret-turn';
 import type { InheritedScope } from '../ask-router/semantic-ir/prior-claim';
-import { artifactPromptBlock, type PriorArtifact } from './conversation/conversation-artifact';
+import {
+  artifactPromptBlock,
+  type ArtifactWindow,
+  type PriorArtifact,
+} from './conversation/conversation-artifact';
+import {
+  excludedPlaces,
+  readAnswerRework,
+  type AnswerReworkForm,
+} from './conversation/answer-rework';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -38,7 +47,26 @@ export type ExecutionContractKind =
   | 'MIXED_CURRENT_PART'
   | 'CLAIM_RECHECK'
   | 'PRIOR_ANSWER_EVIDENCE'
-  | 'PRIOR_ANSWER_CHANGE';
+  | 'PRIOR_ANSWER_CHANGE'
+  | 'PRIOR_ANSWER_REWORK';
+
+/**
+ * ASK RETRIEVAL / CONVERSATION R2 (§7) — a follow-up that works on the findings of the earlier
+ * SOURCED answer (a format, a priority among them, a revision). What the executor needs:
+ *   form           which operation the reader asked for
+ *   priorOutcome   what the earlier answer actually found — FINDINGS (it admitted evidence) or
+ *                  NO_FINDINGS (its search found nothing: never an evidence bundle)
+ *   evidenceUrls   the earlier answer's evidence identities, re-read from RETAINED reporting
+ *   window         the earlier answer's reporting window (its own period and original instants)
+ *   excluded       places the reader excluded in this turn ("not Mombasa"), ISO3
+ */
+export interface AnswerRework {
+  readonly form: AnswerReworkForm;
+  readonly priorOutcome: 'FINDINGS' | 'NO_FINDINGS';
+  readonly evidenceUrls: readonly string[];
+  readonly window: ArtifactWindow | null;
+  readonly excluded: readonly string[];
+}
 
 export interface ExecutionContract {
   readonly kind: ExecutionContractKind;
@@ -52,6 +80,13 @@ export interface ExecutionContract {
     readonly relations: readonly RelationKind[];
   } | null;
   readonly inheritedScope: InheritedScope | null;
+  /** R2 §7 — set only for PRIOR_ANSWER_REWORK */
+  readonly rework?: AnswerRework;
+  /**
+   * R2 — a MIXED turn kept whole (DIRECT) because its explanatory part depends on the findings
+   * (selfContainedStablePart): with no evidence, nothing of it is answerable from background.
+   */
+  readonly stableDependsOnFindings?: true;
 }
 
 const MIXED_CURRENT_RULES =
@@ -85,6 +120,48 @@ const PRIOR_CHANGE_RULES =
   'evidence for this request shows, against the earlier points. If no change is evidenced, say ' +
   'that no material change is evidenced; never infer or invent a stage, step or event. The earlier ' +
   'answer is not evidence and must never be cited as current reporting.';
+
+/*
+  ASK RETRIEVAL / CONVERSATION R2 (§7) — the rules for a follow-up on the earlier answer's findings.
+  Trusted rules (system); the earlier work and the reader's follow-up travel as delimited DATA.
+*/
+const REWORK_COMMON =
+  'Do exactly what the READER FOLLOW-UP block asks (a format such as a table, a priority among ' +
+  "the findings, or a revision for a corrected scope) and keep the earlier question's subject, " +
+  'place and period. If the reader corrected or excluded a place, route or option, keep only the ' +
+  'items relevant to the corrected scope, drop the excluded ones and say what changed. Distinguish ' +
+  'reported facts from your own analysis. Never add a development that the reporting provided ' +
+  'does not support; if fewer items qualify, give fewer. The earlier answer is not evidence.';
+
+export const REWORK_REUSE_RULES =
+  'FOLLOW-UP ON YOUR EARLIER ANSWER. The reader is working on your own earlier answer (the ' +
+  'EARLIER WORK block below). The reporting provided is the SAME evidence that answer used, re-read ' +
+  'from retained reporting: no new search was run, so never say or imply that anything was checked ' +
+  'again or is newer than its own publication date, and give each item its original date. ' +
+  REWORK_COMMON;
+
+export const REWORK_RESEARCH_RULES =
+  'FOLLOW-UP ON YOUR EARLIER ANSWER. The reader is working on your own earlier answer (the ' +
+  'EARLIER WORK block below). Its evidence could not be re-read, so a new search was run now for ' +
+  "that answer's scope: the reporting provided comes from that new search only — say so once. " +
+  REWORK_COMMON;
+
+export const REWORK_AFTER_NOTHING_RULES =
+  'FOLLOW-UP AFTER AN EARLIER ANSWER THAT FOUND NOTHING. Your earlier answer (the EARLIER WORK ' +
+  'block below) found no verified reporting, so there are no earlier findings to revise or ' +
+  'reformat: say so plainly first and never present that earlier answer as findings. A new search ' +
+  "was run now for the same question's scope (its place, subject and period); the reporting " +
+  'provided comes from that new search only. ' +
+  REWORK_COMMON;
+
+/** ISO3 → the reader's own words for the place in THIS turn (the qualified reading's spans). */
+function turnPlaceSpans(route: AskR2Route): Record<string, string> {
+  if (route.outcome.status === 'NOT_READ') return {};
+  const spans: Record<string, string> = {};
+  for (const g of route.outcome.reading.geography)
+    if (g.matchedText !== undefined && spans[g.value] === undefined) spans[g.value] = g.matchedText;
+  return spans;
+}
 
 /** SHARED R4 CONTINUITY — the bound earlier answer's scope, as inherited (EARLIER_TURN). */
 function inheritedScopeOf(prior: PriorArtifact, officialOnly: boolean): InheritedScope | null {
@@ -179,6 +256,66 @@ export function executionContractOf(input: {
     };
   }
 
+  /*
+    ASK RETRIEVAL / CONVERSATION R2 (§7) — A FOLLOW-UP ON THE EARLIER ANSWER'S FINDINGS. "Put those
+    developments in a table", "Which should a small shopkeeper watch most closely?", "My shipment
+    goes through Dar es Salaam, not Mombasa. Revise your answer…" operate on what the earlier
+    SOURCED answer found: bound to THAT answer (its subject, place and period, inherited as
+    EARLIER_TURN), its evidence re-read instead of a fresh unrelated search — and, when the earlier
+    search found nothing, that outcome is stated and a new search runs only for the same scope.
+    A format / priority turn that names a place of its own outside that scope is a new question.
+  */
+  const reworkForm = readAnswerRework(input.question, input.language);
+  if (
+    reworkForm !== null &&
+    priorArtifact !== undefined &&
+    priorArtifact.scope !== undefined &&
+    /* an answer that stood on sourced reporting (or whose search found nothing), or a reasoning
+       answer given beside a current part that found no verified reporting */
+    ((priorArtifact.kind === 'SOURCED_REPORT' &&
+      priorArtifact.provenance === 'SOURCED_REPORTING') ||
+      (priorArtifact.kind === 'REASONED_ANSWER' && priorArtifact.currentFindings === 'NONE'))
+  ) {
+    const scope = priorArtifact.scope;
+    const excluded = excludedPlaces(input.question, input.language, turnPlaceSpans(route));
+    const typed = route.envelope.geography.candidates
+      .filter((c) => c.source === 'TYPED_GEOGRAPHY')
+      .map((c) => c.value)
+      .filter((iso3) => !excluded.includes(iso3));
+    const ownPlaceOutsideScope = typed.some((iso3) => !scope.countries.includes(iso3));
+    if (reworkForm === 'REVISION' || !ownPlaceOutsideScope) {
+      const findings =
+        priorArtifact.kind === 'SOURCED_REPORT' && (priorArtifact.evidenceRefs ?? []).length > 0;
+      const inherited = inheritedScopeOf(priorArtifact, false);
+      const countries = [...new Set([...scope.countries, ...typed])].filter(
+        (iso3) => !excluded.includes(iso3),
+      );
+      return {
+        kind: 'PRIOR_ANSWER_REWORK',
+        /* searched only when a search is needed: the earlier scope, as the reader revised it */
+        retrievalQuestion:
+          reworkForm === 'REVISION'
+            ? `${scope.question} (revised by the reader: ${input.question})`
+            : scope.question,
+        usePriorQuestion: false,
+        stableQuestion: null,
+        answerRules: findings ? REWORK_REUSE_RULES : REWORK_AFTER_NOTHING_RULES,
+        answerData:
+          `${artifactPromptBlock(priorArtifact)}\n` +
+          `<<<READER FOLLOW-UP (the reader's own words — what to do now)\n${input.question}\nREADER FOLLOW-UP>>>`,
+        relationship: scopedRelationship(scope, routeRelationship),
+        inheritedScope: inherited === null ? null : { ...inherited, countries },
+        rework: {
+          form: reworkForm,
+          priorOutcome: findings ? 'FINDINGS' : 'NO_FINDINGS',
+          evidenceUrls: findings ? [...(priorArtifact.evidenceUrls ?? [])] : [],
+          window: scope.window ?? null,
+          excluded,
+        },
+      };
+    }
+  }
+
   /* R-1 / R-2 — a MIXED turn: retrieval for the CURRENT part, the stable part answered beside it */
   if (
     route.knowledgeRequirement === 'MIXED_REFERENCE_CURRENT' &&
@@ -197,7 +334,16 @@ export function executionContractOf(input: {
     }));
     const current = parts.filter((p) => p.current && p.text !== '').map((p) => p.text);
     const stable = parts.filter((p) => p.stable && p.text !== '').map((p) => p.text);
-    if (current.length > 0 && stable.length > 0) {
+    /*
+      ASK RETRIEVAL / CONVERSATION R2 — SPLIT ONLY A PART THAT STANDS ON ITS OWN.
+      "…Finish by explaining, in no more than 60 words, which development a small shopkeeper should
+      watch most closely and why." was read as a separate EXPLANATION clause and sent to the
+      reasoning model by itself; it answered "what do you mean by why?" above the sourced answer,
+      and the table, dates and the closing priority were lost (Alpha 2026-10-06 06:24 UTC). An
+      explanatory part that points back at the findings, or is an instruction about the answer, is
+      part of ONE request: the turn is then executed whole (DIRECT), with every instruction intact.
+    */
+    if (current.length > 0 && stable.length > 0 && stable.every(selfContainedStablePart)) {
       const currentText = current.join(' ');
       const stableText = stable.join(' ');
       return {
@@ -215,6 +361,23 @@ export function executionContractOf(input: {
         inheritedScope: null,
       };
     }
+    /* R2 — kept whole because its explanatory part depends on the findings (see below), OR because
+       it has NO separable explanatory part at all (every clause asks for current reporting — the
+       corridor prompt TEST C): marked, so a retrieval that finds nothing is never answered from
+       background knowledge as if part of it were stable (replayed: the reasoning model received
+       the whole "identify up to five developments…" question). */
+    if (current.length > 0)
+      return {
+        kind: 'DIRECT',
+        retrievalQuestion: input.question,
+        usePriorQuestion: true,
+        stableQuestion: null,
+        answerRules: '',
+        answerData: '',
+        relationship: routeRelationship,
+        inheritedScope: null,
+        stableDependsOnFindings: true,
+      };
   }
 
   return {
@@ -227,4 +390,31 @@ export function executionContractOf(input: {
     relationship: routeRelationship,
     inheritedScope: null,
   };
+}
+
+/*
+  ASK RETRIEVAL / CONVERSATION R2 — whether an explanatory part can be answered on its own.
+  Not on its own: a bare "why" / "and why", a part that points back at the findings of the same
+  request ("which development…", "those", "these", "it", "the above"), or an instruction about the
+  answer itself ("Finish by…", "End with…", "Conclude…"). EN and PL (the deterministic reader's
+  languages); any other wording keeps the existing split, which is unchanged.
+*/
+const STABLE_BACK_REFERENCE =
+  /\b(?:those|these|them|it|its|which\s+(?:development|developments|one|ones|of\s+(?:these|those|them))|the\s+(?:development|developments|findings|above|ones?\s+above))\b|(?<![\p{L}\p{N}])(?:te|tych|któr\p{L}*|powyższ\p{L}*)(?![\p{L}\p{N}])/iu;
+const STABLE_ANSWER_INSTRUCTION =
+  /^(?:and\s+|then\s+)?(?:finish|end|conclude|close|wrap\s+up|summari[sz]e|explain(?:ing)?\s+(?:in|which|briefly)|in\s+no\s+more\s+than)\b|^(?:i\s+)?(?:zakończ|podsumuj|na\s+koniec)/iu;
+const STABLE_FILLER = new Set([
+  'why', 'and', 'or', 'also', 'how', 'what', 'is', 'are', 'was', 'were', 'does', 'do', 'did',
+  'the', 'a', 'an', 'so', 'then', 'dlaczego', 'czemu', 'i', 'oraz', 'a',
+]);
+
+export function selfContainedStablePart(text: string): boolean {
+  const t = text.trim().replace(/[?.!,;:]+$/u, '');
+  if (STABLE_ANSWER_INSTRUCTION.test(t)) return false;
+  if (STABLE_BACK_REFERENCE.test(t)) return false;
+  const content = t
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((w) => w.length > 0 && !STABLE_FILLER.has(w));
+  return content.length >= 1;
 }

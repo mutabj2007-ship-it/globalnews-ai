@@ -59,6 +59,18 @@ export interface ArtifactScope {
   readonly countries: readonly string[];
   readonly relation: string | null;
   readonly freshness: 'NONE' | 'CURRENT' | 'MIXED';
+  /**
+   * ASK RETRIEVAL / CONVERSATION R2 (§7) — the reporting window the answer was bounded by (the
+   * reader's own period words and its ORIGINAL instants), so a follow-up on that answer keeps the
+   * same period ("past seven days" of the original ask), never a dropped or re-anchored one.
+   */
+  readonly window?: ArtifactWindow;
+}
+
+export interface ArtifactWindow {
+  readonly statedPeriod: string;
+  readonly from: string;
+  readonly to: string;
 }
 
 export interface ConversationArtifact {
@@ -71,6 +83,19 @@ export interface ConversationArtifact {
   readonly scope?: ArtifactScope;
   /** references to evidence the answer used (retained article ids), never the evidence itself */
   readonly evidenceRefs?: readonly string[];
+  /**
+   * ASK RETRIEVAL / CONVERSATION R2 (§7) — the canonical URLs of the evidence a SOURCED answer
+   * used: the story identity (articleRef = sha256(url)) a follow-up re-reads from RETAINED
+   * reporting ("put those in a table") instead of running a fresh, unrelated search. References
+   * only — never prompt data (artifactPromptBlock never prints them), never a source by itself.
+   */
+  readonly evidenceUrls?: readonly string[];
+  /**
+   * ASK RETRIEVAL / CONVERSATION R2 (§7) — the current part of the question this answer was asked
+   * found NO verified reporting (its search found nothing or failed): the answer is reasoning
+   * beside a named gap, never findings. A follow-up on it says so instead of revising "findings".
+   */
+  readonly currentFindings?: 'NONE';
 }
 
 /** The artifact as it is handed to a later turn: with the turn that produced it. */
@@ -84,6 +109,9 @@ const MAX_COMPONENT = 80;
 const MAX_SCOPE_QUESTION = 300;
 const MAX_EVIDENCE_REFS = 8;
 const EVIDENCE_REF = /^[A-Za-z0-9:._-]{1,120}$/;
+const EVIDENCE_URL = /^https?:\/\/[^\s<>"'`]{1,2040}$/i;
+const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/;
+const MAX_STATED_PERIOD = 60;
 
 /* plain text only: no markup, no URLs, no delimiter tricks — this travels back into a prompt */
 function clean(value: unknown, max: number): string | null {
@@ -145,6 +173,7 @@ export function validateStoredArtifact(candidate: unknown): ConversationArtifact
         ),
       ].slice(0, MAX_EVIDENCE_REFS)
     : [];
+  const urls = evidenceUrlsOf(c.evidenceUrls);
   return {
     ...base,
     kind: (server ? kind : base.kind) as ArtifactKind,
@@ -152,7 +181,28 @@ export function validateStoredArtifact(candidate: unknown): ConversationArtifact
     citable: false,
     ...(scope === null ? {} : { scope }),
     ...(provenance === 'SOURCED_REPORTING' && refs.length > 0 ? { evidenceRefs: refs } : {}),
+    ...(provenance === 'SOURCED_REPORTING' && urls.length > 0 ? { evidenceUrls: urls } : {}),
+    ...(server && c.currentFindings === 'NONE' ? { currentFindings: 'NONE' as const } : {}),
   };
+}
+
+/** R2 §7 — the evidence URLs of a stored record, bounded (http(s) only, at most 8, no dupes). */
+function evidenceUrlsOf(candidate: unknown): string[] {
+  if (!Array.isArray(candidate)) return [];
+  return [
+    ...new Set(candidate.filter((u): u is string => typeof u === 'string' && EVIDENCE_URL.test(u))),
+  ].slice(0, MAX_EVIDENCE_REFS);
+}
+
+/** R2 §7 — a stored reporting window: the reader's period words and two valid instants. */
+function validateWindow(candidate: unknown): ArtifactWindow | null {
+  if (candidate === null || typeof candidate !== 'object') return null;
+  const c = candidate as Record<string, unknown>;
+  const statedPeriod = clean(c.statedPeriod, MAX_STATED_PERIOD);
+  const from = typeof c.from === 'string' && ISO_INSTANT.test(c.from) ? c.from : null;
+  const to = typeof c.to === 'string' && ISO_INSTANT.test(c.to) ? c.to : null;
+  if (statedPeriod === null || from === null || to === null) return null;
+  return Date.parse(from) < Date.parse(to) ? { statedPeriod, from, to } : null;
 }
 
 function validateScope(candidate: unknown): ArtifactScope | null {
@@ -169,6 +219,7 @@ function validateScope(candidate: unknown): ArtifactScope | null {
     : [];
   const freshness: ArtifactScope['freshness'] =
     c.freshness === 'CURRENT' || c.freshness === 'MIXED' ? c.freshness : 'NONE';
+  const window = validateWindow(c.window);
   return {
     question,
     job: typeof c.job === 'string' && /^[A-Z_]{1,40}$/.test(c.job) ? c.job : null,
@@ -176,6 +227,7 @@ function validateScope(candidate: unknown): ArtifactScope | null {
     relation:
       typeof c.relation === 'string' && /^[A-Z_]{1,40}$/.test(c.relation) ? c.relation : null,
     freshness,
+    ...(window === null ? {} : { window }),
   };
 }
 
@@ -190,6 +242,8 @@ export function serverArtifact(input: {
   readonly components: readonly string[];
   readonly scope: ArtifactScope | null;
   readonly evidenceRefs?: readonly string[];
+  readonly evidenceUrls?: readonly string[];
+  readonly currentFindings?: 'NONE';
 }): ConversationArtifact | null {
   return validateStoredArtifact({ ...input, scope: input.scope ?? undefined });
 }

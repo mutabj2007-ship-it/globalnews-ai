@@ -355,7 +355,9 @@ live('Ask V2 PostgreSQL durability, lifecycle and HTTP authorization', () => {
     expect(execute).not.toHaveBeenCalled();
   });
   test('cross-replica reserve/execute/settle retries never double-dispatch or double-charge', async () => {
-    plan.countryCount = 3;
+    /* ASK R2 — breadth alone no longer parks a plain ask behind a quote (classifyCompute); the
+       accept → reserve → execute concurrency under test is reached by an explicit deep request. */
+    plan.deepRequested = true;
     const input = quoteInput('retry');
     const op = await service.quote(accountPrincipal(userId), threadId, input);
     await service.accept(accountPrincipal(userId), op.operationId);

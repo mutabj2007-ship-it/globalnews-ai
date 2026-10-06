@@ -155,9 +155,12 @@ describe('Home Ask dock — request counts', () => {
     expect(JSON.stringify(transport.mock.calls[1])).not.toContain('MODEL OUTPUT');
   });
 
-  it('the composer stays bounded to the 1,000-character transport limit', async () => {
+  /* ASK RETRIEVAL / CONVERSATION R2 — the 1,000 `maxLength` silently cut a pasted research
+     question mid-word (Alpha 2026-10-06 06:36 UTC). The box accepts the whole paste; the one
+     documented limit (ASK_INPUT_MAX_CHARS) is said before Send and enforced server-side. */
+  it('the composer never truncates silently — no maxLength, the shared limit is announced instead', async () => {
     act(() => openGlobalAsk());
-    expect(field().props.maxLength).toBe(1000);
+    expect(field().props.maxLength).toBeUndefined();
   });
 });
 

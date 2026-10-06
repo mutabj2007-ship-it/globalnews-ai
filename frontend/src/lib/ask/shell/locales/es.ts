@@ -423,6 +423,14 @@ export const esShellOverlay: ShellLocaleOverlay = {
         },
       },
       privacyLink: "Privacidad",
+      questionLength: {
+        kind: "pattern",
+        pattern: "{0} / {1} caracteres",
+      },
+      questionTooLong: {
+        kind: "pattern",
+        pattern: "Esta pregunta supera el límite de {0} caracteres de Ask. Acórtala para enviarla: tu texto completo se conserva aquí.",
+      },
       r3: {
         choiceFor: {
           kind: "pattern",
@@ -472,6 +480,7 @@ export const esShellOverlay: ShellLocaleOverlay = {
         framework: "Marco",
         mixedStableTitle: "Explicación · razonamiento del modelo (no es una fuente)",
         mixedStableUnavailable: "La parte explicativa de tu pregunta no se pudo responder en este momento; la parte actual de abajo proviene de reportes con fuentes.",
+        priorNoFindings: "La búsqueda anterior no encontró resultados verificados que revisar, así que se hizo una nueva búsqueda para la misma pregunta.",
         priorReferenceUnresolved: "No encuentro en esta conversación una respuesta anterior a la que esto se refiera. ¿A qué respuesta o afirmación te refieres?",
         workNoteBody: "Construido a partir de las respuestas anteriores de esta conversación. Es razonamiento, no datos actuales con fuentes: comprueba cualquier cifra antes de confiar en ella.",
         workNoteTitle: "Trabajo de la conversación · razonamiento del modelo",
@@ -490,6 +499,8 @@ export const esShellOverlay: ShellLocaleOverlay = {
       runDeepMeta: "Pregunta antes de ejecutarse",
       scope: "ALCANCE",
       scopePending: "El alcance espera tu elección",
+      showFullQuestion: "Mostrar la pregunta completa",
+      showLessQuestion: "Mostrar menos",
       signInRequired: {
         action: "Iniciar sesión para preguntar",
         body: "Inicia sesión para preguntar a GlobalNewsAI. Tu pregunta se conserva abajo y no se envió: no se ejecutó nada.",
@@ -531,6 +542,7 @@ export const esShellOverlay: ShellLocaleOverlay = {
         reasons: {
           auth: "acceso denegado",
           "not-configured": "no configurada",
+          quota: "cuota de solicitudes agotada",
           "rate-limited": "con límite de solicitudes",
           timeout: "tiempo agotado",
           unavailable: "no disponible",
