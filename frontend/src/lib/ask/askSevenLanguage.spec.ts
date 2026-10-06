@@ -215,6 +215,9 @@ describe('H-2 · EN and PL regression — nothing about them changed', () => {
       unavail: 'CAPABILITY UNAVAILABLE',
       rec: 'RETAINED RECORD',
       calc: 'CALCULATION',
+      /* CURRENT-REPORTING TRUTH R1 (B1) — the new state's badge; the nine released labels above
+         are unchanged. */
+      retrep: 'RETAINED REPORTING',
     });
     expect(askSevenStrings('pl').reasoning.clar).toBe('WYMAGA DOPRECYZOWANIA');
   });
