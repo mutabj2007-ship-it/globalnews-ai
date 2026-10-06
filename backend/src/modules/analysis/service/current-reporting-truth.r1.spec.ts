@@ -35,8 +35,14 @@ describe('B1 · resolveReportingFreshness — freshness is not provider health',
     ['nothing usable', ctx({}), 0, 'none'],
     ['provider down, nothing retained', ctx({ dataMode: 'unavailable', fallbackReason: 'provider-error' }), 0, 'none'],
     ['the disclosed demo mode, as before', ctx({ dataMode: 'mock' }), 2, 'current'],
+    ['an unknown context never invents "retained"', {} as AnalysisRetrievalContext, 2, 'current'],
   ] as const)('%s → %s', (_label, context, count, expected) => {
     expect(resolveReportingFreshness(context, count)).toBe(expected);
+  });
+
+  it('an absent context reads as before (current) and empty evidence is none', () => {
+    expect(resolveReportingFreshness(undefined, 2)).toBe('current');
+    expect(resolveReportingFreshness(undefined, 0)).toBe('none');
   });
 
   it('reads the SAME canonical evidence state (partial degradation is still degraded there)', () => {

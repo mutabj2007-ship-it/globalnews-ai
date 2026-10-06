@@ -1161,22 +1161,31 @@ export function resolveEvidenceState(
  *             (partial degradation stays current; the failure is disclosed separately through
  *             fallbackReason 'provider-error' and the provider-failure metadata)
  *   retained  only previously retrieved reporting was served (outcome RETAINED_ONLY, or the
- *             store answered: dataMode 'cached')
+ *             reporting did not come from a live answer: dataMode 'cached' / 'unavailable')
  *   none      no usable reporting
  *
- * 'mock' is the disclosed demo mode and is read as it always was (not retained).
+ * RETAINED IS A POSITIVE FACT, NEVER A DEFAULT. An absent or unknown context (and 'mock', the
+ * disclosed demo mode) reads as it always did — current — so this resolver can only ever
+ * remove a false "current" claim, never invent a "retained" one.
  */
 export type ReportingFreshness = 'current' | 'retained' | 'none';
 
 export function resolveReportingFreshness(
-  context: Pick<AnalysisRetrievalContext, 'dataMode' | 'fallbackReason' | 'outcome'>,
+  context:
+    | Pick<AnalysisRetrievalContext, 'dataMode' | 'fallbackReason' | 'outcome'>
+    | null
+    | undefined,
   articleCount: number,
 ): ReportingFreshness {
+  if (articleCount === 0) return 'none';
+  if (context == null) return 'current';
   const state = resolveEvidenceState(context, articleCount);
-  if (articleCount === 0 || state === 'no-relevant-evidence') return 'none';
-  if (context.outcome === 'RETAINED_ONLY' || context.dataMode === 'cached') return 'retained';
-  if (state === 'retained' && context.dataMode !== 'mock') return 'retained';
-  return 'current';
+  if (state === 'no-relevant-evidence') return 'none';
+  const servedRetained =
+    context.outcome === 'RETAINED_ONLY' ||
+    context.dataMode === 'cached' ||
+    context.dataMode === 'unavailable';
+  return servedRetained ? 'retained' : 'current';
 }
 
 /**

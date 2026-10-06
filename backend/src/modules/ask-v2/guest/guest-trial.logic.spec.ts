@@ -46,6 +46,9 @@ describe('ASK GUEST TRIAL R3 — D3 counting rule: exhaustive over every answer 
     ['CAPABILITY_UNAVAILABLE', 'OFFICIAL_SOURCE_UNAVAILABLE', false],
     ['CAPABILITY_UNAVAILABLE', 'GOVERNED_RECORD_UNAVAILABLE', false],
     ['RETAINED_RECORD', 'GOVERNED_RECORD', true],
+    /* CURRENT-REPORTING TRUTH R1 — an AI answer from retained reporting counts, as it did when it
+       was labelled CURRENT_REPORTING */
+    ['RETAINED_REPORTING', 'RETAINED_REPORTING_ONLY', true],
     ['RETAINED_RECORD', 'GOVERNED_NO_RECORD', false],
   ])('%s / %s → counts=%s', (state, basis, counts) => {
     expect(countsAsGuestAnswer({ answer: { state, basis } })).toBe(counts);
@@ -62,6 +65,7 @@ describe('ASK GUEST TRIAL R3 — D3 counting rule: exhaustive over every answer 
       'CAPABILITY_UNAVAILABLE',
       'RETAINED_RECORD',
       'COMPUTED_RESULT',
+      'RETAINED_REPORTING',
     ]);
     expect([...ASK_ANSWER_STATES].sort()).toEqual([...decided].sort());
   });
