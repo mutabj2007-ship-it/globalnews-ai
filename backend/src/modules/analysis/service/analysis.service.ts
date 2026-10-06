@@ -74,6 +74,7 @@ import {
   readCandidatesSeen,
   readProviderFailures,
   readWindowExcluded,
+  type ProviderFailure,
   type RelevanceMode,
 } from '../../news/news.service';
 import { flightIdentifiersIn } from '../../news/relevance/event-frame-relevance.util';
@@ -1539,6 +1540,19 @@ export class AnalysisService {
 
         let articles: NewsArticle[];
         let retrievalContext: AnalysisRetrievalContext;
+        /*
+          CURRENT-REPORTING TRUTH R1 (B2) — every provider failure seen by the branch that produced
+          the evidence, collected as its retrieval context is built (contextOf), so the ONE rule at
+          the convergence point below can apply to every branch alike.
+        */
+        const retrievalFailures: ProviderFailure[] = [];
+        const contextOf = (
+          source: Parameters<AnalysisService['toRetrievalContext']>[0],
+          geo?: Parameters<AnalysisService['toRetrievalContext']>[1],
+        ): AnalysisRetrievalContext => {
+          retrievalFailures.push(...readProviderFailures(source));
+          return this.toRetrievalContext(source, geo);
+        };
         /* ASK TRUTHFUL RETRIEVAL R2A — set by a branch that ran planned searches. */
         let plannedTrace: PlannedSearchTrace | undefined;
         let activeCompoundPlan: CompoundRetrievalPlan | undefined;
@@ -1698,7 +1712,7 @@ export class AnalysisService {
 
           articles = response?.articles ?? [];
           retrievalContext = response
-            ? this.toRetrievalContext(response)
+            ? contextOf(response)
             : NON_RETRIEVABLE_QUERY_CONTEXT;
           relationalContext = { x: followUpRelation.x, y: followUpRelation.y };
         } else if (declaredRegion && declaredRegionRelation) {
@@ -1965,7 +1979,7 @@ export class AnalysisService {
               const [country] = supported;
               articles = searchResponse.articles;
               retrievalContext = {
-                ...this.toRetrievalContext(searchResponse),
+                ...contextOf(searchResponse),
                 countryCode: country.iso3,
                 countryName: country.name,
               };
@@ -1979,7 +1993,7 @@ export class AnalysisService {
           const run = await this.retrieveEventFrame(eventFrame, executionPolicy?.reportingWindow);
           plannedTrace = run.trace;
           articles = run.response.articles;
-          retrievalContext = this.toRetrievalContext(run.response);
+          retrievalContext = contextOf(run.response);
           const failures = readProviderFailures(run.response);
           if (articles.length === 0 && failures.length > 0) {
             /* A refused / failed lane is a limited search, never "no such event". */
@@ -2054,7 +2068,7 @@ export class AnalysisService {
             }
           }
           articles = relationalResponse.articles;
-          retrievalContext = this.toRetrievalContext(relationalResponse);
+          retrievalContext = contextOf(relationalResponse);
           if (relationalOutcome !== undefined) {
             retrievalContext = { ...retrievalContext, outcome: relationalOutcome };
           }
@@ -2102,7 +2116,7 @@ export class AnalysisService {
                 );
 
           articles = countryResponse.articles;
-          retrievalContext = this.toRetrievalContext(countryResponse, geoMatch);
+          retrievalContext = contextOf(countryResponse, geoMatch);
 
           // Milestone #63 — bounded domain-aware supplemental retrieval.
           // Fires ONLY for genuinely broad questions (>=3 distinct
@@ -2474,7 +2488,7 @@ export class AnalysisService {
               }
 
               articles = sourceResponse.articles;
-              retrievalContext = this.toRetrievalContext(sourceResponse);
+              retrievalContext = contextOf(sourceResponse);
             }
           } else if (sourceIntent) {
             /*
@@ -2545,7 +2559,7 @@ export class AnalysisService {
             );
 
             articles = searchResponse.articles;
-            retrievalContext = this.toRetrievalContext(searchResponse);
+            retrievalContext = contextOf(searchResponse);
           } else if (classification.intent === 'CLARIFICATION_REQUIRED') {
             /*
              * G-ALPHA-2 — AN IMPLICIT COMPARISON IS NOT ANSWERED BY GUESSING
@@ -2687,7 +2701,7 @@ export class AnalysisService {
               }
             }
             articles = institutionalResponse.articles;
-            retrievalContext = this.toRetrievalContext(institutionalResponse);
+            retrievalContext = contextOf(institutionalResponse);
             if (institutionalOutcome !== undefined) {
               retrievalContext = { ...retrievalContext, outcome: institutionalOutcome };
             }
@@ -2846,7 +2860,7 @@ export class AnalysisService {
 
               if (relevantPrimaryArticles.length > 0) {
                 articles = relevantPrimaryArticles;
-                retrievalContext = this.toRetrievalContext(primaryResponse);
+                retrievalContext = contextOf(primaryResponse);
               } else {
                 /**
                  * R4 POLISH LIVE 400 — P2. A PROVIDER REFUSAL IS NOT ZERO RESULTS.
@@ -2899,7 +2913,7 @@ export class AnalysisService {
                   articles = [];
                   /* R3 — the refusal is stated on the response, not only in the log. */
                   retrievalContext = {
-                    ...this.toRetrievalContext(primaryResponse),
+                    ...contextOf(primaryResponse),
                     outcome: retrievalOutcome(
                       0,
                       new Set(primaryFailures.map((failure) => failure.kind)),
@@ -2939,7 +2953,7 @@ export class AnalysisService {
                   );
 
                   articles = fallbackResponse.articles;
-                  retrievalContext = this.toRetrievalContext(fallbackResponse);
+                  retrievalContext = contextOf(fallbackResponse);
                   /* R3 — a refused bounded fallback is a limited search, never "no reporting". */
                   const fallbackFailures = readProviderFailures(fallbackResponse);
                   if (fallbackResponse.articles.length === 0 && fallbackFailures.length > 0) {
@@ -3254,7 +3268,7 @@ export class AnalysisService {
               }
 
               articles = searchResponse.articles;
-              retrievalContext = this.toRetrievalContext(searchResponse);
+              retrievalContext = contextOf(searchResponse);
               if (genericOutcome !== undefined) {
                 retrievalContext = { ...retrievalContext, outcome: genericOutcome };
               } else if (
@@ -3585,6 +3599,25 @@ export class AnalysisService {
             `ask anchor gate key=${anchorsKey(anchors)} candidates=${candidates} admitted=${admitted.length} supplements=${queries.length}`,
           );
           articles = admitted;
+        }
+
+        /*
+          CURRENT-REPORTING TRUTH R1 (B2) — PROVIDER HEALTH, ONE RULE FOR EVERY BRANCH.
+          Usable evidence was admitted while a provider the branch attempted failed: the answer uses
+          what could be reached and the search is disclosed as limited — the existing
+          'provider-error' fallbackReason, which the shared evidence state and the reader's
+          provider-degraded notice already read. Previously only the event-frame, generic and
+          broad-headlines branches promoted it; the country, relational, institutional, source and
+          search branches carried the failure and still read as fully live. A stronger
+          fallbackReason a branch already set (retained after failure, no live results) is kept.
+          Freshness is NOT decided here: a partially degraded live search stays current reporting.
+        */
+        if (
+          articles.length > 0 &&
+          retrievalFailures.length > 0 &&
+          retrievalContext.fallbackReason === undefined
+        ) {
+          retrievalContext = { ...retrievalContext, fallbackReason: 'provider-error' };
         }
 
         const sourceCoverage = this.sourceCoverageFor(

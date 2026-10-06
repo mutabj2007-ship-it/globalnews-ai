@@ -344,10 +344,10 @@ const PROVIDER_FAILURES = Symbol('globalnews.providerFailures');
  *
  * This adds no field, changes no JSON, and changes no behavior for any caller.
  */
-export function attachProviderFailures(
-  response: NewsResponse,
+export function attachProviderFailures<T extends object = NewsResponse>(
+  response: T,
   failures: ProviderFailure[],
-): NewsResponse {
+): T {
   if (failures.length === 0) return response;
   Object.defineProperty(response, PROVIDER_FAILURES, {
     value: failures,
@@ -404,7 +404,7 @@ export function readCandidatesSeen(response: NewsResponse): number {
   return typeof carried === 'number' ? carried : response.articles.length;
 }
 
-export function readProviderFailures(response: NewsResponse): ProviderFailure[] {
+export function readProviderFailures(response: object): ProviderFailure[] {
   const carried = (response as unknown as Record<symbol, unknown>)[PROVIDER_FAILURES];
   return Array.isArray(carried) ? (carried as ProviderFailure[]) : [];
 }
