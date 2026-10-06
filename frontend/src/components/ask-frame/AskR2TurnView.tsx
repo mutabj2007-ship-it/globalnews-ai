@@ -192,6 +192,12 @@ export function AskR2TurnView({
         </p>
       )}
       {/* R2 §7 — a follow-up on an earlier answer whose search found nothing: said, never revised */}
+      {/* ASK R2 LIVE-GATE REPAIR (P0-4) — the earlier request did not complete: said, never revised */}
+      {payload.priorAnswer?.outcome === 'INCOMPLETE' && (
+        <p data-ask="prior-incomplete" className="-mt-1 mb-3 text-[13px] leading-[1.5] text-[#9fb4cc]">
+          {s.r4.priorIncomplete}
+        </p>
+      )}
       {payload.priorAnswer?.outcome === 'NO_FINDINGS' && (
         <p data-ask="prior-no-findings" className="-mt-1 mb-3 text-[13px] leading-[1.5] text-[#9fb4cc]">
           {s.r4.priorNoFindings}

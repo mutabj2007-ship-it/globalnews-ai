@@ -92,6 +92,8 @@ export interface AskR2Strings {
   readonly unavailable: string;
   /** LIVE ACCEPTANCE REPAIR R1 — a compute-budget refusal is named as such, never "unavailable". */
   readonly budgetRefused: string;
+  /** ASK R2 LIVE-GATE REPAIR (P0-5) — the answer could not be finished in time (MODEL_TIMEOUT). */
+  readonly timedOut: string;
   /**
    * ASK RETRIEVAL / CONVERSATION R2 — the one documented input limit (ASK_INPUT_MAX_CHARS),
    * said BEFORE submit; the draft is kept whole. Also the copy for the typed server refusal.
@@ -188,6 +190,8 @@ export interface AskR2Strings {
     readonly priorReferenceUnresolved: string;
     /** R2 §7 — a follow-up on an earlier answer whose search found nothing (a new search then ran) */
     readonly priorNoFindings: string;
+    /** ASK R2 LIVE-GATE REPAIR (P0-4) — the earlier request did not complete; its intent was kept. */
+    readonly priorIncomplete: string;
   };
   /** ALPHA ENABLEMENT R1 (MC-070) — a continuation (“And Kenya?”) with nothing to continue; the place stays a chip. */
   readonly noPriorSubject: string;
@@ -362,6 +366,7 @@ const EN: AskR2Strings = {
   cookiesLink: 'Cookies',
   retryKept: 'Not answered — your question is still in the box. Press Ask to try again.',
   newAnswerBelow: 'New answer below',
+  timedOut: 'I couldn’t finish this request in time. Your question is still here — please try again.',
   budgetRefused:
     'You have reached today’s Ask limit, so nothing was run and nothing was charged. Questions answered from retained records still work.',
   questionTooLong: (max) =>
@@ -431,6 +436,8 @@ const EN: AskR2Strings = {
       'I can’t find an earlier answer in this conversation that this refers to. Which answer or statement do you mean?',
     priorNoFindings:
       'The earlier search found no verified findings to revise, so a new search was run for the same question.',
+    priorIncomplete:
+      'The earlier search did not complete, so there were no findings to revise. A new search was run for your corrected question.',
   },
   r3: {
     continuationJobNote: 'continuing what you are working on in this conversation',
@@ -707,6 +714,7 @@ const PL: AskR2Strings = {
   retryKept:
     'Brak odpowiedzi — Twoje pytanie nadal jest w polu. Naciśnij Zapytaj, aby spróbować ponownie.',
   newAnswerBelow: 'Nowa odpowiedź poniżej',
+  timedOut: 'Nie udało się ukończyć tego zapytania na czas. Twoje pytanie nadal tu jest — spróbuj ponownie.',
   budgetRefused:
     'Wykorzystano dzisiejszy limit Zapytaj AI, więc nic nie uruchomiono ani nie naliczono. Pytania, na które odpowiadają zachowane zapisy, nadal działają.',
   questionTooLong: (max) =>
@@ -776,6 +784,8 @@ const PL: AskR2Strings = {
       'Nie znajduję w tej rozmowie wcześniejszej odpowiedzi, do której to się odnosi. O którą odpowiedź lub stwierdzenie chodzi?',
     priorNoFindings:
       'Wcześniejsze wyszukiwanie nie przyniosło zweryfikowanych ustaleń do poprawienia, więc przeprowadzono nowe wyszukiwanie dla tego samego pytania.',
+    priorIncomplete:
+      'Wcześniejsze wyszukiwanie nie zostało ukończone, więc nie było ustaleń do poprawienia. Przeprowadzono nowe wyszukiwanie dla poprawionego pytania.',
   },
   r3: {
     continuationJobNote: 'kontynuacja tego, nad czym pracujesz w tej rozmowie',
