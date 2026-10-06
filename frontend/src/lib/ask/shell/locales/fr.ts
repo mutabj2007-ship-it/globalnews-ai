@@ -480,7 +480,7 @@ export const frShellOverlay: ShellLocaleOverlay = {
         framework: "Cadre",
         mixedStableTitle: "Explication · raisonnement du modèle (pas une source)",
         mixedStableUnavailable: "La partie explicative de votre question n’a pas pu être traitée à l’instant ; la partie actuelle ci-dessous provient de reportages sourcés.",
-        priorIncomplete: "La recherche précédente n’a pas abouti ; il n’y avait donc aucun résultat à réviser. Une nouvelle recherche a été lancée pour votre question corrigée.",
+        priorIncomplete: "La recherche précédente ne s’est pas terminée ; il n’y avait donc aucun résultat à réviser. Une nouvelle recherche a été lancée pour votre question corrigée.",
         priorNoFindings: "La recherche précédente n’a trouvé aucun résultat vérifié à réviser ; une nouvelle recherche a donc été lancée pour la même question.",
         priorReferenceUnresolved: "Je ne trouve pas, dans cette conversation, de réponse antérieure à laquelle cela renvoie. De quelle réponse ou de quelle affirmation parlez-vous ?",
         workNoteBody: "Construit à partir des réponses précédentes de cette conversation. C’est un raisonnement, non des données sourcées et actuelles : vérifiez tout chiffre avant de vous y fier.",

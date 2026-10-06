@@ -95,7 +95,9 @@ describe('B-6 · the shell is one catalogue over seven locales', () => {
       wording is an ENGINEERING translation awaiting Claude L qualification.
       ASK R2 LIVE-GATE REPAIR adds askR2Strings.timedOut (P0-5: a deadline is "couldn't finish in
       time", never "unavailable") and r4.priorIncomplete (P0-4: the earlier request did not
-      complete): 541 → 543, 533 → 535, 565 → 567. Engineering translations, awaiting Claude L.
+      complete): 541 → 543, 533 → 535, 565 → 567. Their fr/de/es/pt-BR/ar wording is
+      CLAUDE L QUALIFIED (ASK R2 live-gate strings, 2026-10-06: 5 approved as provided, 5 corrected
+      — de/ar timedOut, fr/de/pt priorIncomplete); priorIncomplete keeps the governed past tense.
     */
     const overlayManaged = askShellKeyPaths().length;
     const alreadySeven = shellKeyPaths(askSevenStrings('en')).length;
