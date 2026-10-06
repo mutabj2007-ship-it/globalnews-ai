@@ -239,8 +239,14 @@ describe('ASK R2 · geography — a corridor keeps the destination and BOTH rout
   const today = day(new Date());
   /* TEST C — verbatim from the contract, asked today */
   const TEST_C = `As of ${today}, identify up to five developments reported in the past seven days affecting a small business importing into Rwanda via Mombasa or Dar es Salaam. Cover ports, borders, transport, customs, fuel and security. Include EU or Middle East events only with an evidenced link to these routes.\nPrioritize official and credible local sources. Use a concise table: development, event/publication dates, affected route, facts, likely impact and source link. Separate facts, forecasts and analysis. Flag coverage gaps; no reports does not mean no disruption. End with three practical checks for the importer. Under 600 words.`;
-  /* TEST B — the longer equivalent that names the countries of both ports explicitly */
+  /* TEST B (paraphrase) — a longer equivalent that names the countries of both ports explicitly */
   const TEST_B = `As of ${today}, I run a small business importing goods into Rwanda via Mombasa, Kenya, or Dar es Salaam, Tanzania. Identify up to five developments reported in the past seven days that affect this import route: ports, border crossings, road and rail transport, customs and clearance, fuel supply and prices, and security along the corridors. Include events in the EU or the Middle East only where the reporting shows a link to these routes. Prioritize official and credible local sources. Present a concise table with: development, event date and publication date, affected route, reported facts, likely impact on my business, and source link. Keep reported facts, forecasts and your analysis separate. Flag coverage gaps — the absence of reports does not mean the absence of disruption. Finish with three practical checks I should make as an importer. Keep it under 600 words.`;
+  /* TEST B — VERBATIM from the contract (multi-paragraph, 1,093 chars), asked today */
+  const TEST_B_VERBATIM = `As of ${today}, what developments reported during the previous seven days could materially affect a small business importing goods into Rwanda through either Mombasa, Kenya, or Dar es Salaam, Tanzania?
+Investigate port and border operations, transport disruptions, customs or trade-policy changes, fuel costs, and security. Include developments in the EU or Middle East only when evidence establishes a relevant connection to these routes.
+Select up to five developments, prioritizing official notices and credible local reporting. Present a concise table showing: development; event date and publication date; affected route or location; reported facts; likely business impact; and a clickable supporting source.
+Distinguish confirmed changes from forecasts and your own analysis. Do not assume a disruption exists. If you find no relevant update for a category or route, explain the coverage gap rather than treating silence as proof that conditions are normal.
+Finish with three practical checks the importer should make next, explaining why. Keep the complete answer under 600 words.`;
   const UGANDA =
     'Which developments from the past seven days affect a small business importing into Uganda via Mombasa or Dar es Salaam? Cover ports, borders, customs and fuel, in a short table with sources.';
 
@@ -251,6 +257,7 @@ describe('ASK R2 · geography — a corridor keeps the destination and BOTH rout
   it.each([
     ['TEST C', TEST_C, 'RWA'],
     ['TEST B', TEST_B, 'RWA'],
+    ['TEST B (verbatim)', TEST_B_VERBATIM, 'RWA'],
     ['paraphrase (Uganda)', UGANDA, 'UGA'],
   ])('%s: typed geography = destination first, then BOTH corridors; countryCount 3', async (_n, q, dest) => {
     const c = conversation();
@@ -266,6 +273,7 @@ describe('ASK R2 · geography — a corridor keeps the destination and BOTH rout
   it.each([
     ['TEST C', TEST_C, 'Rwanda'],
     ['TEST B', TEST_B, 'Rwanda'],
+    ['TEST B (verbatim)', TEST_B_VERBATIM, 'Rwanda'],
     ['paraphrase (Uganda)', UGANDA, 'Uganda'],
   ])('%s: retrieval is anchored on the corridor and each route is searched (bounded: two)', async (_n, q, dest) => {
     const c = conversation();

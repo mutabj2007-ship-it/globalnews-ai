@@ -378,11 +378,26 @@ const AS_OF_DATE =
 function readStatedTime(text: string, pl: boolean): StatedTimeReading | undefined {
   const asOf = AS_OF_DATE.exec(text);
   if (asOf !== null && asOf[1] !== undefined) {
-    const period = readStatedTimeOnce(text.replace(asOf[0], ' '), pl);
+    const rest = text.replace(asOf[0], ' ');
+    const period = readStatedTimeOnce(rest, pl);
     if (period !== undefined) return { ...period, asOf: asOf[1] };
+    /* "…reported during the PREVIOUS seven days" is not read by the pinned G producer; the
+       reporting-window grammar (reporting-window.ts) supports it, so it is the period here. */
+    const relative = AS_OF_RELATIVE_WINDOW.exec(rest);
+    if (relative !== null)
+      return {
+        statedPeriod: relative[0].trim(),
+        anchor: 'RELATIVE_TO_ASK',
+        source: 'ASK_R2:AS_OF_RELATIVE_WINDOW',
+        asOf: asOf[1],
+      };
   }
   return readStatedTimeOnce(text, pl);
 }
+
+/* the relative windows reporting-window.ts can honour (EN), read only beside an "as of" anchor */
+const AS_OF_RELATIVE_WINDOW =
+  /(?:(?:over|in|during|within|for)\s+)?(?:the\s+)?(?:last|past|previous)\s+(?:\d{1,3}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fourteen|fifteen|twenty|thirty)\s+(?:days?|hours?)(?![\p{L}\p{N}])/iu;
 
 function readStatedTimeOnce(text: string, pl: boolean): StatedTimeReading | undefined {
   if (!pl) {

@@ -63,7 +63,8 @@ const LIST = `(${ITEM}(?:${SEP}${ITEM})*)`;
 
 /* keywords spell their own sentence-initial capital: the ITEM must stay case-sensitive */
 const ROUTE_EN = new RegExp(
-  String.raw`\b(?:[Vv]ia|[Tt]hrough|thru|[Tt]ransiting|by\s+way\s+of)\s+(?:the\s+)?(?:ports?\s+of\s+)?${LIST}`,
+  /* ASK R2 — "through EITHER Mombasa, Kenya, or Dar es Salaam, Tanzania" (the verbatim TEST B) */
+  String.raw`\b(?:[Vv]ia|[Tt]hrough|thru|[Tt]ransiting|by\s+way\s+of)\s+(?:(?:either|both)\s+)?(?:the\s+)?(?:ports?\s+of\s+)?${LIST}`,
   'gu',
 );
 const ROUTE_PL = new RegExp(
