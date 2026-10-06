@@ -292,6 +292,12 @@ export interface AnalysisExecutionPolicy {
    * supplement is searched (provider + retained). Part of the cache key. Absent for /analysis.
    */
   readonly questionAnchors?: QuestionAnchors;
+  /**
+   * ASK R2 CONTENT QUALITY REPAIR — `false`: gate only, never the anchored supplement search. A
+   * follow-up that RE-READS an earlier answer's evidence ("no new search was run") still admits only
+   * the reports that concern the corrected scope, without running a search it says it did not run.
+   */
+  readonly anchorSupplements?: false;
 }
 import { officeGeographyCountryCode } from '../context-producers/office-geography.producer';
 import {
@@ -3564,7 +3570,8 @@ export class AnalysisService {
           const anchors = executionPolicy.questionAnchors;
           const candidates = articles.length;
           const admitted = articles.filter((article) => admitsReport(anchors, article).admitted);
-          const queries = supplementQueries(anchors, admitted);
+          const queries =
+            executionPolicy.anchorSupplements === false ? [] : supplementQueries(anchors, admitted);
           const seen = new Set(admitted.map((article) => article.id));
           const seenUrls = new Set(admitted.map((article) => article.url));
           const take = (pool: readonly NewsArticle[]): void => {

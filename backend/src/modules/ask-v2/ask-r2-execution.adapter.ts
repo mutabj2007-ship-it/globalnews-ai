@@ -1895,6 +1895,15 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     const contributions = await this.readIntelligence(route, request.context);
     const governed = governedPrompt(contributions);
     const stories = rework.evidenceUrls.map((url) => ({ articleRef: computeArticleRef(url), url }));
+    /*
+      ASK R2 CONTENT QUALITY REPAIR — the re-read evidence passes the CORRECTED scope's gate. Live
+      Alpha (gate 2, C): "My shipment goes through Dar es Salaam, not Mombasa. Revise…" re-read all
+      eight earlier reports and answered with an Ethiopian election and an AU visit to Goma as
+      "may affect … Dar es Salaam". The same anchor gate the first turn uses now admits only reports
+      that concern the corrected corridor; gate only — no search, as the answer says. Nothing left
+      means nothing to re-read, which is the existing one-new-search path below.
+    */
+    const reuseAnchors = questionAnchorsOf(contract.retrievalQuestion, route.corridor ?? null);
 
     let usage: { promptTokens: number; completionTokens: number } | null = null;
     const policy = (answerRules: string) => ({
@@ -1925,7 +1934,10 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
           undefined,
           { action: 'ASK_SELECTED', stories },
           undefined,
-          policy(contract.answerRules),
+          {
+            ...policy(contract.answerRules),
+            ...(reuseAnchors.gated ? { questionAnchors: reuseAnchors, anchorSupplements: false as const } : {}),
+          },
         );
       }
       if (response === null || (response.analysis === null && response.articles.length === 0)) {

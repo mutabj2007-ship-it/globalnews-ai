@@ -2,6 +2,7 @@ import { detectRequestedDomains } from '../analysis/query/detect-analytical-doma
 import type { AskR2Route } from '../ask-router/ask-r2-route';
 import { PL_DOMAIN_FORMS } from '../ask-router/normalization/pl-readings.resources';
 import { resolveGeography } from '../geo/geo-resolver';
+import { maskOutputVocabulary } from '../ask-router/normalization/output-instructions';
 import { nisrDistricts, nisrProvinces } from '../geo/rwanda-nisr.authority';
 import type { AskContributorSelection } from './ask-contribution.contract';
 import { readRetainedImihigo } from './imihigo-retained.reader';
@@ -206,11 +207,27 @@ export function nisrDistrictNamed(
 }
 
 /** A place finer than a country, from the existing geography resolver (no network). */
-export function placeNamed(text: string): string | null {
-  const resolution = resolveGeography(text);
+/**
+ * ASK R2 CONTENT QUALITY REPAIR (Alpha gate 2, blocker 3) — the reader's place, never a column
+ * header. The router already reads geography through `maskOutputVocabulary` (live-gate P0-1), so
+ * "What changed | Date | …" scopes Kenya; this read did not, and the same header resolved to the
+ * settlement Date, Hokkaido — shown as "Place: Date, Hokkaido, Japan" under a Kenya answer.
+ *
+ * Two rules, both on this one read: output-format vocabulary is masked first (the SAME masker,
+ * not a second list), and a place outside the canonical countries the turn is scoped to is not a
+ * place of this answer — it is dropped rather than displayed. With no canonical country
+ * (`withinIso3` empty or absent) any resolved city still stands, exactly as before.
+ */
+export function placeNamed(text: string, withinIso3?: readonly string[]): string | null {
+  const resolution = resolveGeography(maskOutputVocabulary(text));
   const place = resolution.place as
-    { cityName?: string; regionName?: string; country?: { name: string } } | undefined;
+    | { cityName?: string; regionName?: string; country?: { name: string; iso3?: string } }
+    | undefined;
   if (resolution.precision !== 'CITY' || place?.cityName === undefined) return null;
+  const iso3 = place.country?.iso3;
+  if (withinIso3 !== undefined && withinIso3.length > 0 && iso3 !== undefined && !withinIso3.includes(iso3)) {
+    return null;
+  }
   return [place.cityName, place.regionName, place.country?.name].filter(Boolean).join(', ');
 }
 
@@ -302,7 +319,13 @@ export function selectContributors(route: AskR2Route): AskContributorSelection[]
   const inheritedCountry =
     inherit && inherited.countries.length === 1 ? (inherited.countries[0] ?? null) : null;
   const countryIso3 = typed ?? (district !== null ? 'RWA' : inheritedCountry);
-  const place = district === null ? placeNamed(question) : null;
+  /* the canonical countries this turn is scoped to: typed by the router, or inherited */
+  const canonicalIso3 = inherit
+    ? inherited.countries
+    : route.envelope.geography.candidates
+        .filter((c) => c.source === 'TYPED_GEOGRAPHY' && /^[A-Z]{3}$/.test(c.value))
+        .map((c) => c.value);
+  const place = district === null ? placeNamed(question, canonicalIso3) : null;
   const domains = route.envelope.domains.domains;
   const scope = {
     countryIso3,
