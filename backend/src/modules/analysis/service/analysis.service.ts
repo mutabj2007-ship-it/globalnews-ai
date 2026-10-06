@@ -126,6 +126,7 @@ import {
   assessSingleSourceDiscipline,
   detectDevelopmentBreadth,
 } from '../validation/brief-compliance.util';
+import { assessReaderContractShape } from '../validation/reader-contract-shape.util';
 import { acceptExecutiveBrief, withholdExecutiveBrief } from '../validation/brief-fail-closed.util';
 import { applyBriefRelationIntegrity } from '../validation/entity-role-geography.util';
 import {
@@ -293,6 +294,12 @@ export interface AnalysisExecutionPolicy {
    * supplement is searched (provider + retained). Part of the cache key. Absent for /analysis.
    */
   readonly questionAnchors?: QuestionAnchors;
+  /**
+   * ASK R2 CONTENT QUALITY REPAIR — `false`: gate only, never the anchored supplement search. A
+   * follow-up that RE-READS an earlier answer's evidence ("no new search was run") still admits only
+   * the reports that concern the corrected scope, without running a search it says it did not run.
+   */
+  readonly anchorSupplements?: false;
 }
 import { officeGeographyCountryCode } from '../context-producers/office-geography.producer';
 import {
@@ -3578,7 +3585,8 @@ export class AnalysisService {
           const anchors = executionPolicy.questionAnchors;
           const candidates = articles.length;
           const admitted = articles.filter((article) => admitsReport(anchors, article).admitted);
-          const queries = supplementQueries(anchors, admitted);
+          const queries =
+            executionPolicy.anchorSupplements === false ? [] : supplementQueries(anchors, admitted);
           const seen = new Set(admitted.map((article) => article.id));
           const seenUrls = new Set(admitted.map((article) => article.url));
           const take = (pool: readonly NewsArticle[]): void => {
@@ -3990,11 +3998,26 @@ export class AnalysisService {
             already does. Fail closed rather than fabricate.
           */
           const structuralVerdict = assessBriefCompliance(analysis.summary, developmentBreadth);
-          let briefVerdict = applyBriefRelationIntegrity(
-            structuralVerdict,
-            analysis.summary,
-            deduped,
-          );
+          /*
+            ASK R2 CONTENT QUALITY REPAIR (P0-B) — the brief is judged against the contract
+            GENERATION WAS GIVEN. With a structural reader contract (opening / table / closing) the
+            model was told to write one summary in the reader's shape, so that shape is what is
+            checked (assessReaderContractShape: a well-formed table with the requested columns and
+            at most the requested rows, or an honest short statement); the generic broad-news
+            paragraph rule judges every other brief exactly as before.
+          */
+          const shapeVerdict =
+            'readerContract' in generationBreadth
+              ? assessReaderContractShape(analysis.summary, readerContract, developmentBreadth)
+              : structuralVerdict;
+          if ('readerContract' in generationBreadth) {
+            this.logger.log(
+              `ask brief contract table=${readerContract.table?.columns.length ?? 0} cap=${readerContract.itemCap ?? '-'} ` +
+                `opening=${readerContract.openingSentences ?? '-'} closing=${readerContract.closing !== null} ` +
+                `verdict=${shapeVerdict.compliant ? 'compliant' : (shapeVerdict.reason ?? 'non-compliant')}`,
+            );
+          }
+          let briefVerdict = applyBriefRelationIntegrity(shapeVerdict, analysis.summary, deduped);
           /*
             ══════════════════════════════════════════════════════════════════
             THE REPAIR IS NO LONGER ON THE SYNCHRONOUS PATH — ALPHA BUDGET R1

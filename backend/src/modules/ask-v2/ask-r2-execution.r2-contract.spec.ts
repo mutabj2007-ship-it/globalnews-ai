@@ -797,3 +797,49 @@ describe('ASK R2 LIVE-GATE REPAIR · P0-6 — on the guidance path too, failed s
     expect(String((down.backgroundCalls[0] as { jobRules?: string }).jobRules)).toContain('SOURCES UNAVAILABLE');
   });
 });
+
+describe('ASK R2 CONTENT QUALITY REPAIR R2 · C — the Dar es Salaam correction uses only corrected-route evidence', () => {
+  const day = (d: Date) =>
+    `${d.getUTCDate()} ${d.toLocaleString('en-GB', { month: 'long', timeZone: 'UTC' })} ${d.getUTCFullYear()}`;
+  const B = `As of ${day(new Date())}, identify up to five developments reported in the past seven days affecting a small business importing into Rwanda via Mombasa or Dar es Salaam. Cover ports, borders, transport, customs, fuel and security. Use a concise table: development, event/publication dates, affected route, facts, likely impact and source link. End with three practical checks for the importer. Under 600 words.`;
+  const C = 'My shipment goes through Dar es Salaam, not Mombasa. Revise your answer to retain only relevant developments and explain what changed.';
+  type Anchors = { gated: boolean; relation: string; actors: Array<{ key: string; role?: string }> };
+  const gateOf = (call: Call) =>
+    call[6] as { questionAnchors?: Anchors; anchorSupplements?: false; governed?: { rules: string } };
+
+  it('C1 · after a SUCCESSFUL B: the re-read evidence passes the CORRECTED corridor gate — no search, Mombasa gone', async () => {
+    const c = conversation();
+    await c.ask(B);
+    const t = await c.ask(C);
+    expect((t.payload as { priorAnswer?: { evidence: string } }).priorAnswer?.evidence).toBe('REUSED');
+    const policy = gateOf(t.analysisCalls[0]);
+    expect(policy.questionAnchors?.gated).toBe(true);
+    expect(policy.questionAnchors?.relation).toBe('CORRIDOR');
+    expect(policy.anchorSupplements).toBe(false);
+    const keys = (policy.questionAnchors?.actors ?? []).map((a) => `${a.role}:${a.key}`);
+    expect(keys).toEqual(expect.arrayContaining(['DESTINATION:RWA', 'ROUTE:TZA']));
+    expect(keys.some((k) => k.endsWith(':KEN'))).toBe(false);
+    /* "explain what changed" is a scope explanation, never permission to manufacture links */
+    expect(policy.governed?.rules).toMatch(/say what changed/);
+    expect(policy.governed?.rules).toMatch(/never connect a report to it by speculation/);
+  });
+
+  it('C2 · after an INCOMPLETE B: the original intent is kept, the failed search is not evidence, ONE corrected search runs', async () => {
+    const c = conversation();
+    await c.failed(B);
+    const t = await c.ask(C);
+    expect((t.payload as { priorAnswer?: { outcome: string; evidence: string } }).priorAnswer).toMatchObject({
+      outcome: 'INCOMPLETE',
+      evidence: 'SEARCHED_AGAIN',
+    });
+    expect(t.analysisCalls).toHaveLength(1);
+    /* a search runs (no re-read of evidence the failed turn never had) */
+    expect(((t.analysisCalls[0][4] as { stories?: unknown[] } | undefined)?.stories ?? []).length).toBe(0);
+    const query = String(t.analysisCalls[0][0]);
+    expect(query).toContain('importing into Rwanda');
+    const policy = gateOf(t.analysisCalls[0]);
+    expect(policy.questionAnchors?.gated).toBe(true);
+    expect((policy.questionAnchors?.actors ?? []).some((a) => a.key === 'KEN')).toBe(false);
+    expect(policy.anchorSupplements).toBeUndefined();
+  });
+});
