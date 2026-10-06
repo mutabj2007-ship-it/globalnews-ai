@@ -810,7 +810,9 @@ export function routeAskR2(
   let source: EnvelopeSource =
     stableOrComputed && !relationshipReasoning
       ? {
-          ...(historicalOverride
+          /* a stable turn that still carries a stated period got here via the historical override or a
+             self-contained numerical problem (ASK RELIABILITY R1 C): the period is no constraint */
+          ...(historicalOverride || reading.statedTime !== undefined
             ? withoutStatedPeriod(unconstrained as EnvelopeSource)
             : unconstrained),
           reading: { ...composedSource.reading, queryIntent: 'EXPLANATION', analyticalDomains: [] },
