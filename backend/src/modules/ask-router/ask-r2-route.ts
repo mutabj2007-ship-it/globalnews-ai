@@ -401,6 +401,9 @@ export function statedPeriodIsConstraint(
   const stated = reading.statedTime;
   if (stated === undefined) return false;
   const phrase = stated.statedPeriod.trim().toLowerCase();
+  /* ASK R2 — an "as of" date that is not the request's own day is a constraint (unchanged rule:
+     never silently re-anchor a past or future date on "now"). */
+  if (stated.asOf !== undefined && !asOfIsRequestDay(stated.asOf, requestInstant)) return true;
   if (stated.anchor === 'RELATIVE_TO_ASK' && SAME_DAY_PERIODS.has(phrase)) return false;
   /* BETA-ASK-005 — a supported relative window is honoured by the executor (reporting-window.ts). */
   if (reportingWindowFor(stated.statedPeriod, stated.anchor, requestInstant) !== null) return false;
@@ -937,4 +940,17 @@ export function routeAskR2(
                 : null,
     },
   };
+}
+
+/**
+ * ASK RETRIEVAL / CONVERSATION R2 — "As of 6 October 2026" asked ON 6 October 2026 anchors the
+ * stated window on the request itself. Within 36 hours of the request instant covers every reader
+ * timezone; anything else (or no instant) is not the request's day.
+ */
+export function asOfIsRequestDay(asOf: string, requestInstant: string | undefined): boolean {
+  if (requestInstant === undefined) return false;
+  const at = Date.parse(`${asOf.replace(',', '')} 12:00 UTC`);
+  const now = Date.parse(requestInstant);
+  if (!Number.isFinite(at) || !Number.isFinite(now)) return false;
+  return Math.abs(now - at) <= 36 * 3_600_000;
 }

@@ -549,26 +549,6 @@ export function AskR2TurnView({
                 {s.r4.mixedStableUnavailable}
               </p>
             )}
-          {payload.guidance != null &&
-            payload.guidance.currentPart !== 'SOURCED' &&
-            payload.guidance.currentEvidenceNeeded.length > 0 && (
-              <div
-                data-ask="guidance-current-gap"
-                data-ask-partial={payload.guidance.currentPart ?? undefined}
-                className="rounded-[8px] border border-[#5a4a2a] bg-[#17130c] px-3 py-2.5 text-[13px] leading-[1.45] text-[#c9b27a]"
-              >
-                <p className="font-bold">
-                  {payload.guidance.currentPart != null
-                    ? s.r3.partialCurrent[payload.guidance.currentPart]
-                    : s.guidanceCurrentGap}
-                </p>
-                <ul className="list-disc ps-5">
-                  {payload.guidance.currentEvidenceNeeded.map((clause) => (
-                    <li key={clause}>{clause}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
           {view.badge === 'insuf' && (
             <p className="text-[19px] font-bold leading-[1.2] md:text-[22px]">
               {view.searchLimited ? s.limitedTitle : s.insufficientTitle}
@@ -643,6 +623,29 @@ export function AskR2TurnView({
               <AskAnswerProse source={payload.background.text} sources={[]} language={locale} />
             </div>
           )}
+          {/* ASK R2 — the gap note follows the explanation it refers to ("above"). */}
+          {payload.guidance != null &&
+            payload.guidance.currentPart !== 'SOURCED' &&
+            payload.guidance.currentEvidenceNeeded.length > 0 && (
+              <div
+                data-ask="guidance-current-gap"
+                data-ask-partial={payload.guidance.currentPart ?? undefined}
+                className="rounded-[8px] border border-[#5a4a2a] bg-[#17130c] px-3 py-2.5 text-[13px] leading-[1.45] text-[#c9b27a]"
+              >
+                <p className="font-bold">
+                  {/* ASK R2 — "the general explanation above still stands" only when an explanation
+                      IS shown above; with none, the plain gap statement (Prod 2026-10-06 A). */}
+                  {payload.guidance.currentPart != null && (payload.background?.text ?? '').trim() !== ''
+                    ? s.r3.partialCurrent[payload.guidance.currentPart]
+                    : s.guidanceCurrentGap}
+                </p>
+                <ul className="list-disc ps-5">
+                  {payload.guidance.currentEvidenceNeeded.map((clause) => (
+                    <li key={clause}>{clause}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           {/* TRUST R1 — mixed answer: retained recent reporting about the same place. */}
           {payload.analysis === null && payload.recentReporting != null && (
             <AskRecentReporting reporting={payload.recentReporting} locale={locale} />

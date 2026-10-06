@@ -129,6 +129,13 @@ export interface StatedTimeReading {
   readonly statedPeriod: string;
   readonly anchor: 'ABSOLUTE' | 'RELATIVE_TO_ASK';
   readonly source: string;
+  /**
+   * ASK RETRIEVAL / CONVERSATION R2 — the reader's "as of <date>" anchor, verbatim, when the
+   * question ALSO states a period ("As of 6 October 2026, … the past seven days"). The period is
+   * the window; the as-of date is where it ends. The route decides whether that date is the
+   * request's own day (then the window is simply anchored on the request) or a constraint.
+   */
+  readonly asOf?: string;
 }
 
 export type DefinitionDefeater =
@@ -362,7 +369,22 @@ function normalizeForPeriod(query: string): string {
     .trim();
 }
 
+/* ASK R2 — "As of 6 October 2026," / "as at October 6, 2026" / PL "na dzień 6 października 2026" /
+   "według stanu na 6 października 2026". The G producer is byte-pinned, so the anchor is
+   separated here, where its reading is consumed. */
+const AS_OF_DATE =
+  /(?<![\p{L}\p{N}])(?:as\s+(?:of|at)|na\s+dzień|według\s+stanu\s+na)\s+((?:\d{1,2}\s+\p{L}+|\p{L}+\s+\d{1,2},?)\s+\d{4})(?![\p{L}\p{N}]),?/iu;
+
 function readStatedTime(text: string, pl: boolean): StatedTimeReading | undefined {
+  const asOf = AS_OF_DATE.exec(text);
+  if (asOf !== null && asOf[1] !== undefined) {
+    const period = readStatedTimeOnce(text.replace(asOf[0], ' '), pl);
+    if (period !== undefined) return { ...period, asOf: asOf[1] };
+  }
+  return readStatedTimeOnce(text, pl);
+}
+
+function readStatedTimeOnce(text: string, pl: boolean): StatedTimeReading | undefined {
   if (!pl) {
     const g = detectStatedPeriod(text);
     if (g !== null)

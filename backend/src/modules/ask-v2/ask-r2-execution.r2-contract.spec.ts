@@ -26,6 +26,8 @@ import type { SemanticResolution } from '../ask-router/semantic-ir/semantic-inte
  */
 
 type Call = unknown[];
+/** ASK R2 — switched per turn by the tests: retrieval returns no evidence while set. */
+const evidence = { none: false };
 interface Calls {
   analysis: Call[];
   background: Array<{ question: string; priorWork?: string; [k: string]: unknown }>;
@@ -36,6 +38,8 @@ function harness() {
   const analysisService = {
     analyzeNews: jest.fn(async (...args: unknown[]) => {
       calls.analysis.push(args);
+      /* ASK R2 — a turn whose retrieval found nothing (the failed-A path) */
+      if (evidence.none) return { analysis: null, analysisError: 'No matching reporting.', articles: [] };
       const policy = args[6] as {
         usageSink?: (u: { promptTokens: number; completionTokens: number }) => void;
       };
@@ -196,5 +200,29 @@ describe('ASK R2 · relevance — no incidental topic on a diplomacy question (T
     const t = await c.ask(TEST_E);
     const chips = JSON.stringify((t.payload as unknown as { chips?: unknown }).chips ?? null);
     expect(chips).not.toMatch(/TRANSPORT/);
+  });
+});
+
+describe('ASK R2 · "As of <today>" anchors the stated window; it is not a filter (TEST B / C)', () => {
+  const day = (d: Date) =>
+    `${d.getUTCDate()} ${d.toLocaleString('en-GB', { month: 'long', timeZone: 'UTC' })} ${d.getUTCFullYear()}`;
+  const corridor = (asOf: string) =>
+    `As of ${asOf}, identify up to five developments reported in the past seven days affecting a small business importing into Rwanda via Mombasa or Dar es Salaam. Cover ports, borders, transport, customs, fuel and security. Include EU or Middle East events only with an evidenced link to these routes.\nPrioritize official and credible local sources. Use a concise table: development, event/publication dates, affected route, facts, likely impact and source link. Separate facts, forecasts and analysis. Flag coverage gaps; no reports does not mean no disruption. End with three practical checks for the importer. Under 600 words.`;
+
+  it('asked today: executed with the seven-day window applied — never a broadening offer', async () => {
+    const c = conversation();
+    const t = await c.ask(corridor(day(new Date())));
+    const p = t.payload as unknown as { answer: { basis: string }; chips: { chips?: Array<{ kind: string; source: string; applied: boolean }> } };
+    expect(p.answer.basis).not.toBe('PLAN_BROADENING_OFFERED');
+    expect(t.analysisCalls).toHaveLength(1);
+    expect(p.chips.chips).toEqual(
+      expect.arrayContaining([expect.objectContaining({ kind: 'TIME', source: 'REPORTING_WINDOW', applied: true })]),
+    );
+  });
+
+  it('a past "as of" date is NOT silently re-anchored on now (it stays a constraint)', async () => {
+    const c = conversation();
+    const t = await c.ask(corridor(day(new Date(Date.now() - 40 * 86_400_000))));
+    expect(t.analysisCalls).toHaveLength(0);
   });
 });

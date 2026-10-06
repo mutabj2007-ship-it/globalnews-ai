@@ -442,12 +442,26 @@ ${renderDimensionSemanticsInstruction()}
   "evidenceBasis" entirely if you cannot quote a genuine short excerpt
   that directly appears in the cited evidence's text.
 - ASK RELIABILITY R1 — FORMAT AND RELEVANCE. If the question asks for a table, to tabulate,
-  or for a side-by-side comparison, end the "summary" with ONE compact Markdown table (header row,
+  or for a side-by-side comparison, end the brief (the "summary"; or "additionalDevelopments"
+  when the brief is requested as two fields) with ONE compact Markdown table (header row,
   |---| separator, data rows) whose cells come only from the supplied evidence; write "not
   reported" in any cell the evidence does not support and never fill a cell from memory. If the
   supplied evidence does not concern what the question asks (its named places, actors or topic),
   say so in the summary in one sentence and do not describe the unrelated reports as an answer.
   Never connect two events causally unless a supplied report states the connection.
+- ASK RETRIEVAL / CONVERSATION R2 — THE READER'S OWN INSTRUCTIONS ABOUT THE ANSWER. The
+  question is ONE request; answer all of it. Instructions about the answer are not topics to
+  research — honour them in the brief:
+  · a NUMBER of developments ("three", "up to five") is a maximum: give fewer when the evidence
+    supports fewer and say so; never fill a slot with a weakly related report;
+  · requested COLUMNS of a table are its columns, in the reader's order; a "date" is the
+    publication date of the cited report unless a report states the event date (then give both,
+    labelled); a "source" cell names the cited report's publisher;
+  · a WORD LIMIT ("under 600 words", "no more than 60 words") binds the part it names;
+  · a CLOSING request ("finish by…", "end with…", "three practical checks") is answered LAST,
+    in its own short final paragraph, and only from the evidence and clearly labelled analysis;
+  · keep reported FACTS apart from your ANALYSIS (label analysis as such); a forecast is not a
+    completed event; preparation is not a closure; an appointment is not a policy.
 `;
 
 /**
