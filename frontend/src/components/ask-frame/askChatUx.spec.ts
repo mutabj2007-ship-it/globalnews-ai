@@ -157,7 +157,8 @@ describe('CTO checkpoint 5 §5 — a composed cross-country continuation is disc
   it('the turn shows the question actually answered, beneath the reader’s own words', () => {
     const turn = code(read('AskR2TurnView.tsx'));
     expect(turn).toMatch(
-      /<h2 className=\{QUESTION\}>\{turn\.question\}<\/h2>\s*(?:\{\}\s*)?\{payload\.continuation != null && \(/,
+      /* ASK R2 — the reader's words render through AskSubmittedQuestion (a long question is a compact preview) */
+      /<AskSubmittedQuestion\s+question=\{turn\.question\}[\s\S]*?\/>\s*(?:\{\}\s*)?\{payload\.continuation != null && \(/,
     );
     expect(turn).toContain('{payload.continuation.answeredAs}');
   });

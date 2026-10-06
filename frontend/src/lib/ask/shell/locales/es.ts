@@ -423,6 +423,14 @@ export const esShellOverlay: ShellLocaleOverlay = {
         },
       },
       privacyLink: "Privacidad",
+      questionLength: {
+        kind: "pattern",
+        pattern: "{0} / {1} caracteres",
+      },
+      questionTooLong: {
+        kind: "pattern",
+        pattern: "Esta pregunta supera el límite de {0} caracteres de Ask. Acórtala para enviarla: tu texto completo se conserva aquí.",
+      },
       r3: {
         choiceFor: {
           kind: "pattern",
@@ -490,6 +498,8 @@ export const esShellOverlay: ShellLocaleOverlay = {
       runDeepMeta: "Pregunta antes de ejecutarse",
       scope: "ALCANCE",
       scopePending: "El alcance espera tu elección",
+      showFullQuestion: "Mostrar la pregunta completa",
+      showLessQuestion: "Mostrar menos",
       signInRequired: {
         action: "Iniciar sesión para preguntar",
         body: "Inicia sesión para preguntar a GlobalNewsAI. Tu pregunta se conserva abajo y no se envió: no se ejecutó nada.",

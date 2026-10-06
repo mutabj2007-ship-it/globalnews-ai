@@ -32,14 +32,18 @@ describe('Ask compute compatibility contract', () => {
     ['CONTEXTUAL', {}, { contextual: true }, false],
     ['FRESH_BOUNDED', {}, {}, false],
     ['FRESH_BOUNDED', {}, { countryCount: 2, timeWindowDays: 89 }, false],
-    ['DEEP_ANALYSIS', {}, { countryCount: 2, timeWindowDays: 90 }, false],
+    /* ASK R2 — breadth alone never parks a plain question behind a quote nobody asked for */
+    ['FRESH_BOUNDED', {}, { countryCount: 2, timeWindowDays: 90 }, false],
     ['DEEP_ANALYSIS', {}, { deepRequested: true }, false],
     ['RESEARCH_REPORT', {}, { reportRequested: true }, false],
     ['DEEP_ANALYSIS', { intent: 'deep-analysis' }, {}, false],
-    ['DEEP_ANALYSIS', {}, { countryCount: 3 }, false],
-    ['DEEP_ANALYSIS', {}, { domainCount: 3 }, false],
+    ['FRESH_BOUNDED', {}, { countryCount: 3 }, false],
+    ['FRESH_BOUNDED', {}, { domainCount: 3 }, false],
     ['DEEP_ANALYSIS', {}, { timeWindowDays: 180 }, false],
-    ['DEEP_ANALYSIS', {}, { countryCount: 2, domainCount: 2 }, false],
+    ['FRESH_BOUNDED', {}, { countryCount: 2, domainCount: 2 }, false],
+    /* the observed Alpha corridor turns (06:36 / 06:45 UTC): 1 country, 3 domains, plain ask */
+    ['FRESH_BOUNDED', {}, { countryCount: 1, domainCount: 3, timeWindowDays: 0 }, false],
+    ['DEEP_ANALYSIS', { intent: 'deep-analysis' }, { countryCount: 1, domainCount: 3 }, false],
     ['RESEARCH_REPORT', { intent: 'research-report' }, {}, false],
   ])('classifies %s', (expected, change, signals, stored) => {
     expect(

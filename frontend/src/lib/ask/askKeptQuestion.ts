@@ -12,8 +12,12 @@ import { accountSignInUrl } from '@/lib/api/accountLinks';
  * simply retypes.
  */
 export const ASK_KEPT_QUESTION_KEY = 'globalnews-ai:ask-kept-question';
-/** The composer's own bound. */
-const MAX_KEPT_LENGTH = 1000;
+/**
+ * ASK R2 — a storage backstop only, far above the documented Ask limit (ASK_QUESTION_MAX_CHARS).
+ * The old 1,000 bound cut a kept long question silently; the composer now keeps the WHOLE draft
+ * and says when it is over the limit, so the store must not shorten it either.
+ */
+const MAX_KEPT_LENGTH = 16_000;
 
 /** Where "Sign in to ask" goes: the existing Google sign-in, back to /ask. */
 export const ASK_SIGN_IN_HREF = accountSignInUrl('/ask');

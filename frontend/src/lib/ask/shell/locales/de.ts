@@ -423,6 +423,14 @@ export const deShellOverlay: ShellLocaleOverlay = {
         },
       },
       privacyLink: "Datenschutz",
+      questionLength: {
+        kind: "pattern",
+        pattern: "{0} / {1} Zeichen",
+      },
+      questionTooLong: {
+        kind: "pattern",
+        pattern: "Diese Frage überschreitet das Ask-Limit von {0} Zeichen. Kürzen Sie sie zum Senden — Ihr vollständiger Text bleibt hier erhalten.",
+      },
       r3: {
         choiceFor: {
           kind: "pattern",
@@ -490,6 +498,8 @@ export const deShellOverlay: ShellLocaleOverlay = {
       runDeepMeta: "Fragt vor dem Ausführen",
       scope: "BEREICH",
       scopePending: "Der Bereich wartet auf Ihre Auswahl",
+      showFullQuestion: "Ganze Frage anzeigen",
+      showLessQuestion: "Weniger anzeigen",
       signInRequired: {
         action: "Zum Fragen anmelden",
         body: "Melden Sie sich an, um GlobalNewsAI zu fragen. Ihre Frage bleibt unten erhalten und wurde nicht gesendet — es wurde nichts ausgeführt.",

@@ -92,6 +92,16 @@ export interface AskR2Strings {
   readonly unavailable: string;
   /** LIVE ACCEPTANCE REPAIR R1 — a compute-budget refusal is named as such, never "unavailable". */
   readonly budgetRefused: string;
+  /**
+   * ASK RETRIEVAL / CONVERSATION R2 — the one documented input limit (ASK_QUESTION_MAX_CHARS),
+   * said BEFORE submit; the draft is kept whole. Also the copy for the typed server refusal.
+   */
+  readonly questionTooLong: (max: number) => string;
+  /** ASK R2 — the length counter shown as a draft approaches the limit. */
+  readonly questionLength: (length: number, max: number) => string;
+  /** ASK R2 — a long submitted question shows a compact preview; this reveals all of it. */
+  readonly showFullQuestion: string;
+  readonly showLessQuestion: string;
   /** TRUST R1 — a failed Send keeps the draft; the reader retries by pressing Ask. */
   /** TRUST R1 §12 — pre-login links under the composer. */
   readonly privacyLink: string;
@@ -350,6 +360,11 @@ const EN: AskR2Strings = {
   newAnswerBelow: 'New answer below',
   budgetRefused:
     'You have reached today’s Ask limit, so nothing was run and nothing was charged. Questions answered from retained records still work.',
+  questionTooLong: (max) =>
+    `This question is longer than Ask’s ${max}-character limit. Shorten it to send — your full text is kept here.`,
+  questionLength: (length, max) => `${length} / ${max} characters`,
+  showFullQuestion: 'Show full question',
+  showLessQuestion: 'Show less',
   retainedAnswer: 'Answered from a retained governed record — no AI was used.',
   followUpHint: 'You could ask next',
   retainedFallback: {
@@ -687,6 +702,11 @@ const PL: AskR2Strings = {
   newAnswerBelow: 'Nowa odpowiedź poniżej',
   budgetRefused:
     'Wykorzystano dzisiejszy limit Zapytaj AI, więc nic nie uruchomiono ani nie naliczono. Pytania, na które odpowiadają zachowane zapisy, nadal działają.',
+  questionTooLong: (max) =>
+    `To pytanie przekracza limit ${max} znaków w Zapytaj AI. Skróć je, aby wysłać — cały tekst pozostaje tutaj.`,
+  questionLength: (length, max) => `${length} / ${max} znaków`,
+  showFullQuestion: 'Pokaż całe pytanie',
+  showLessQuestion: 'Pokaż mniej',
   retainedAnswer: 'Odpowiedź z zachowanego, zweryfikowanego zapisu — bez użycia AI.',
   followUpHint: 'Możesz zapytać dalej',
   retainedFallback: {

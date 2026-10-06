@@ -447,6 +447,14 @@ export const arShellOverlay: ShellLocaleOverlay = {
         },
       },
       privacyLink: "الخصوصية",
+      questionLength: {
+        kind: "pattern",
+        pattern: "{0} / {1} حرفًا",
+      },
+      questionTooLong: {
+        kind: "pattern",
+        pattern: "هذا السؤال أطول من حدّ Ask البالغ {0} حرفًا. اختصره لإرساله — يبقى نصّك الكامل هنا.",
+      },
       r3: {
         choiceFor: {
           kind: "pattern",
@@ -514,6 +522,8 @@ export const arShellOverlay: ShellLocaleOverlay = {
       runDeepMeta: "يسأل قبل التنفيذ",
       scope: "النطاق",
       scopePending: "النطاق ينتظر اختيارك",
+      showFullQuestion: "عرض السؤال كاملًا",
+      showLessQuestion: "عرض أقل",
       signInRequired: {
         action: "سجّل الدخول لتسأل",
         body: "سجّل الدخول لتسأل GlobalNewsAI. سؤالك محفوظ أدناه ولم يُرسَل — ولم يُنفَّذ أي شيء.",

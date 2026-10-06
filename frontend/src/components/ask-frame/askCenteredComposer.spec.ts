@@ -296,7 +296,8 @@ describe('C-5 · the keyboard ruling — one submit pipeline', () => {
     const html = render({ example: example('en') });
     expect(html).toMatch(/<button type="submit"[^>]*disabled=""/);
     expect(parts).toMatch(
-      /const ready = !pending && value\.trim\(\)\.length > 0 && onSubmit !== undefined;/,
+      /* ASK R2 — over the documented input limit Send also waits (the draft is kept whole) */
+      /const ready = !pending && value\.trim\(\)\.length > 0 && !limit\.over && onSubmit !== undefined;/,
     );
   });
 

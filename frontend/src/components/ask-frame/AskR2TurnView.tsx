@@ -1,4 +1,5 @@
 'use client';
+import { AskSubmittedQuestion } from './AskSubmittedQuestion';
 import type { DisplayLocale } from '@globalnews-ai/shared';
 
 import { isolatedAuto, isolatedLtr } from '@/lib/ask/askDirection';
@@ -126,7 +127,12 @@ export function AskR2TurnView({
     return (
       <article data-ask-turn data-ask="turn" data-ask-state="unavail" className={TURN}>
         <p className={EYEBROW}>{s.youAsked}</p>
-        <h2 className={QUESTION}>{turn.question}</h2>
+        <AskSubmittedQuestion
+          question={turn.question}
+          headingClassName={QUESTION}
+          showFullLabel={s.showFullQuestion}
+          showLessLabel={s.showLessQuestion}
+        />
         <p
           role="alert"
           data-ask="unavailable"
@@ -170,7 +176,12 @@ export function AskR2TurnView({
   return (
     <article data-ask-turn data-ask="turn" data-ask-state={view.badge} className={TURN}>
       <p className={EYEBROW}>{s.youAsked}</p>
-      <h2 className={QUESTION}>{turn.question}</h2>
+      <AskSubmittedQuestion
+        question={turn.question}
+        headingClassName={QUESTION}
+        showFullLabel={s.showFullQuestion}
+        showLessLabel={s.showLessQuestion}
+      />
       {/* CTO checkpoint 5 §5 — "And in Kenya?" answered as the earlier question for Kenya: said, never hidden. */}
       {payload.continuation != null && (
         <p data-ask="continuation" className="-mt-1 mb-3 text-[13px] leading-[1.5] text-[#9fb4cc]">

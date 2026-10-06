@@ -27,6 +27,7 @@ import {
 } from '@/lib/ask/useAskR2Conversation';
 import { askContextKey, askContextRefOf } from '@/lib/ask/askContextRef';
 import { askR2Strings } from '@/lib/ask/askR2Strings';
+import { AskQuestionLimitNote, askQuestionLimitState } from '@/components/ask/AskQuestionLimit';
 import { ASK_SIGN_IN_HREF, keepQuestion } from '@/lib/ask/askKeptQuestion';
 import { localisedCountryName } from '@/lib/map/geography/displayName';
 import { getDictionary } from '@/lib/i18n/dictionaries';
@@ -298,6 +299,8 @@ function GlobalAskAiDock({
   const askDisposition = askLanguageDisposition(resolveAskLocale(language));
   const r2Locale = askDisposition.catalogueLocale;
   const r2s = askShellStrings(r2Locale).askR2Strings;
+  /* ASK R2 — the one documented input limit; the whole draft is kept, Send waits when over. */
+  const questionLimit = askQuestionLimitState(question);
 
   /*
     UNIFIED INTELLIGENCE BINDING R2C — THE CANONICAL CONVERSATION.
@@ -600,6 +603,8 @@ function GlobalAskAiDock({
       event.preventDefault();
       const asked = question.trim();
       if (asked.length === 0) return;
+      /* ASK R2 — over the documented limit nothing is sent; the note under the box says why. */
+      if (askQuestionLimitState(asked).over) return;
       /* ASK/SEARCH R1 — one Send is one execution: a second submit while a turn is in flight
          (Enter/requestSubmit bypass the disabled button) must not issue a second request. */
       if (isPending) return;
@@ -620,7 +625,12 @@ function GlobalAskAiDock({
           }
         })
         .then((outcome) => {
-        if (outcome === 'sent' || outcome === 'failed') return;
+        if (outcome === 'sent') return;
+        /* ASK R2 — a failed Send keeps the reader's words too (never retyped, never lost). */
+        if (outcome === 'failed') {
+          setQuestion((current) => (current.trim().length === 0 ? asked : current));
+          return;
+        }
         /* Nothing ran (sign-in, a guest refusal, an unresolvable context, Ask unavailable,
            busy): the reader's question returns to the composer — never re-sent elsewhere. */
         if (outcome === 'legacy') setAskUnavailable(true);
@@ -893,13 +903,15 @@ function GlobalAskAiDock({
                   value={question}
                   onChange={(event) => setQuestion(event.target.value)}
                   placeholder={t.inputPlaceholder}
-                  maxLength={1000}
+                  aria-invalid={questionLimit.over ? true : undefined}
+                  aria-describedby={questionLimit.near || questionLimit.over ? 'ask-ai-question-limit' : undefined}
                   minHeight={isIdle ? 58 : 44}
                   maxHeight={220}
                   maxViewportFraction={0.3}
                   keepVisible={false}
                   className="w-full rounded-[10px] border border-[#3c2f7a] bg-[#12263f] px-[12px] py-[10px] text-[16px] leading-[1.45] text-[#eef2f8] placeholder:text-[#8fa6c0] focus:border-[#a78bfa] focus:outline-none"
                 />
+                <AskQuestionLimitNote id="ask-ai-question-limit" state={questionLimit} copy={r2s} />
                 <div className="flex items-center justify-between gap-[10px]">
                   <p data-ask="compute-notice" className="min-w-0 text-[12px] leading-[1.4] text-[#e5d2b0]">
                     <span aria-hidden="true" className="me-1 text-[#d9b98a]">ϟ</span>
@@ -908,7 +920,7 @@ function GlobalAskAiDock({
                   <button
                     type="submit"
                     data-ask="submit"
-                    disabled={question.trim().length === 0 || isPending}
+                    disabled={question.trim().length === 0 || questionLimit.over || isPending}
                     className="min-h-[44px] min-w-[96px] shrink-0 rounded-[10px] border border-[#d9b98a] bg-[linear-gradient(105deg,#412d9f,#1f328a)] px-5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {t.submit}
@@ -928,13 +940,15 @@ function GlobalAskAiDock({
               value={question}
               onChange={(event) => setQuestion(event.target.value)}
               placeholder={t.inputPlaceholder}
-              maxLength={1000}
+              aria-invalid={questionLimit.over ? true : undefined}
+              aria-describedby={questionLimit.near || questionLimit.over ? 'ask-ai-question-limit' : undefined}
               minHeight={isIdle ? 58 : 44}
               maxHeight={420}
               maxViewportFraction={0.46}
               keepVisible={false}
               className="w-full rounded-2xl border border-border-strong bg-surface px-4 py-3 text-[16px] leading-6 text-ink-primary shadow-inner placeholder:text-ink-secondary/70 focus:border-signal focus:outline-none"
             />
+            <AskQuestionLimitNote id="ask-ai-question-limit" state={questionLimit} copy={r2s} />
             <div className="flex flex-wrap items-center justify-between gap-2">
               {/*
                 THE CONTEXTUAL AFFORDANCE — NOW A TRUTHFUL STATEMENT OF
@@ -975,7 +989,7 @@ function GlobalAskAiDock({
               <button
                 type="submit"
                 data-ask="submit"
-                disabled={question.trim().length === 0 || isPending}
+                disabled={question.trim().length === 0 || questionLimit.over || isPending}
                 className="min-h-[44px] rounded-2xl bg-signal px-5 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(61,111,255,0.22)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:shadow-none disabled:opacity-50"
               >
                 {t.submit}

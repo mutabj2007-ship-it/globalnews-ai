@@ -423,6 +423,14 @@ export const frShellOverlay: ShellLocaleOverlay = {
         },
       },
       privacyLink: "Confidentialité",
+      questionLength: {
+        kind: "pattern",
+        pattern: "{0} / {1} caractères",
+      },
+      questionTooLong: {
+        kind: "pattern",
+        pattern: "Cette question dépasse la limite de {0} caractères d’Ask. Raccourcissez-la pour l’envoyer — votre texte complet est conservé ici.",
+      },
       r3: {
         choiceFor: {
           kind: "pattern",
@@ -490,6 +498,8 @@ export const frShellOverlay: ShellLocaleOverlay = {
       runDeepMeta: "Demande avant de s’exécuter",
       scope: "PÉRIMÈTRE",
       scopePending: "Le périmètre attend votre choix",
+      showFullQuestion: "Afficher la question complète",
+      showLessQuestion: "Afficher moins",
       signInRequired: {
         action: "Se connecter pour demander",
         body: "Connectez-vous pour interroger GlobalNewsAI. Votre question est conservée ci-dessous et n’a pas été envoyée — rien n’a été exécuté.",

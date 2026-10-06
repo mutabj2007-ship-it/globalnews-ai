@@ -194,7 +194,8 @@ describe('opening the panel is not a question', () => {
 
   it('an empty question cannot be submitted', () => {
     expect(CODE).toMatch(/if \(asked\.length === 0\) return;/);
-    expect(CODE).toMatch(/disabled=\{question\.trim\(\)\.length === 0 \|\| isPending\}/);
+    /* ASK R2 — still disabled when empty; also while over the one documented input limit */
+    expect(CODE).toMatch(/disabled=\{question\.trim\(\)\.length === 0 \|\| questionLimit\.over \|\| isPending\}/);
   });
 });
 

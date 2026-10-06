@@ -1,5 +1,6 @@
 'use client';
 
+import { AskSubmittedQuestion } from './AskSubmittedQuestion';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ASK_PRODUCT_NAME } from '@/lib/ask/askBrand';
 import { useSearchParams } from 'next/navigation';
@@ -671,7 +672,12 @@ export function AskFrameScreen({
               /* SIGNED-OUT FALLBACK REMOVAL R1 — a sign-in requirement, never a reporting failure. */
               <section data-ask="sign-in-required" role="status" className="mb-6">
                 <p className={ASK_EYEBROW}>{r2s.youAsked}</p>
-                <h2 className={styles.question}>{r2.signInRequired}</h2>
+                <AskSubmittedQuestion
+                  question={r2.signInRequired}
+                  headingClassName={styles.question}
+                  showFullLabel={r2s.showFullQuestion}
+                  showLessLabel={r2s.showLessQuestion}
+                />
                 <div className="flex flex-col items-start gap-3 rounded-[12px] border border-[#2a6d9e] bg-[linear-gradient(#08263f,#051a2e)] p-3.5 md:p-5">
                   <span className="inline-flex h-[26px] items-center rounded-[6px] border border-[#2a6d9e] bg-[#0a2a47] px-2.5 font-mono text-[11px] font-bold tracking-[0.08em] text-[#bfe3fb]">
                     {r2s.signInRequired.title}
@@ -807,7 +813,12 @@ export function AskFrameScreen({
             {isPending && (
               <section data-ask="pending" className="mb-5">
                 <p className={ASK_EYEBROW}>{r2s.youAsked}</p>
-                <h2 className={styles.question}>{r2.pending}</h2>
+                <AskSubmittedQuestion
+                  question={r2.pending ?? ''}
+                  headingClassName={styles.question}
+                  showFullLabel={r2s.showFullQuestion}
+                  showLessLabel={r2s.showLessQuestion}
+                />
                 <LoadingStages stages={dict.loadingStages} />
               </section>
             )}
@@ -910,6 +921,7 @@ export function AskFrameScreen({
             onSubmit={() => void ask()}
             pending={isPending}
             maxHeight={compact ? 140 : 220}
+            limitCopy={r2s}
             /*
               CENTERED COMPOSER R1 — the rotating example, supplied only in the entry state.
               `onUse` sets the composer's VALUE and submits nothing (§9, §11): from that moment
