@@ -601,3 +601,26 @@ describe('ASK R2 §7 · TEST D — a route change revises the earlier answer', (
     expect(String(d.analysisCalls[0][0])).toMatch(/importing into Rwanda/);
   });
 });
+
+describe('ASK R2 · no evidence never becomes background "developments" (TEST C failed path)', () => {
+  const day = (d: Date) =>
+    `${d.getUTCDate()} ${d.toLocaleString('en-GB', { month: 'long', timeZone: 'UTC' })} ${d.getUTCFullYear()}`;
+  const TEST_C = `As of ${day(new Date())}, identify up to five developments reported in the past seven days affecting a small business importing into Rwanda via Mombasa or Dar es Salaam. Cover ports, borders, transport, customs, fuel and security. Include EU or Middle East events only with an evidenced link to these routes.\nPrioritize official and credible local sources. Use a concise table: development, event/publication dates, affected route, facts, likely impact and source link. Separate facts, forecasts and analysis. Flag coverage gaps; no reports does not mean no disruption. End with three practical checks for the importer. Under 600 words.`;
+
+  it('a corridor question whose search finds nothing: no current answer, and any reasoning call is told there are NO current findings', async () => {
+    evidence.none = true;
+    try {
+      const c = conversation();
+      const t = await c.ask(TEST_C);
+      expect(t.analysisCalls).toHaveLength(1);
+      /* the reasoning model may give general guidance (the checks) but is TOLD there are no
+         current findings and may not supply developments from memory */
+      for (const b of t.backgroundCalls) {
+        expect(String((b as { jobRules?: string }).jobRules ?? '')).toContain('NO CURRENT FINDINGS');
+      }
+      expect(t.payload.answer.state).not.toBe('CURRENT_REPORTING');
+    } finally {
+      evidence.none = false;
+    }
+  });
+});

@@ -361,9 +361,12 @@ export function executionContractOf(input: {
         inheritedScope: null,
       };
     }
-    /* R2 — kept whole because its explanatory part depends on the findings (see below): marked,
-       so a retrieval that finds nothing is never answered from background as if it were stable */
-    if (current.length > 0 && stable.length > 0)
+    /* R2 — kept whole because its explanatory part depends on the findings (see below), OR because
+       it has NO separable explanatory part at all (every clause asks for current reporting — the
+       corridor prompt TEST C): marked, so a retrieval that finds nothing is never answered from
+       background knowledge as if part of it were stable (replayed: the reasoning model received
+       the whole "identify up to five developments…" question). */
+    if (current.length > 0)
       return {
         kind: 'DIRECT',
         retrievalQuestion: input.question,

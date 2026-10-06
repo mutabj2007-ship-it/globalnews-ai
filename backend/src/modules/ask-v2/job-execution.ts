@@ -108,6 +108,20 @@ export const RECHECK_UNVERIFIED_RULE =
   'a general explanation. Do not state or imply that current events, actions, figures or decisions ' +
   'were checked or confirmed, and do not describe what is happening now.';
 
+/**
+ * ASK RETRIEVAL / CONVERSATION R2 — the search for current reporting found NOTHING usable for this
+ * question (or a source failed). The reasoning model may still give general guidance (what to
+ * check and why), but it has no verified current findings and must not supply any from memory.
+ */
+export const NO_CURRENT_FINDINGS_RULE =
+  'NO CURRENT FINDINGS: the search for current reporting for this question found no usable ' +
+  'evidence. Say so plainly in your first sentence. Do not name, list, date or describe any recent ' +
+  'development, event, notice, figure, price change, closure or disruption as if it happened, and ' +
+  'never fill a requested table of developments: you have no verified current findings. Absence of ' +
+  'reports is not evidence that conditions are normal — say that too. Then answer ONLY the general ' +
+  'or advisory part of the question (for example which checks to make and why), clearly as general ' +
+  'guidance; if no such part exists, stop after stating that no verified current findings exist.';
+
 const ARTIFACT_RULE =
   'MEMORY: if your answer establishes a reusable structure — a conceptual framework, a diagnosis, ' +
   'a comparison, decision criteria, recommendations, a plan or a summary — end your reply with ' +

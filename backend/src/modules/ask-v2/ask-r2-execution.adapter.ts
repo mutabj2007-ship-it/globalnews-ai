@@ -36,7 +36,12 @@ import {
   type AskRouteContext,
 } from '../ask-router/ask-r2-route';
 import { DECISION_OBJECTIVE_CANDIDATES } from '../ask-router/decision-support';
-import { completionCeilingFor, jobRulesFor, RECHECK_UNVERIFIED_RULE } from './job-execution';
+import {
+  completionCeilingFor,
+  jobRulesFor,
+  NO_CURRENT_FINDINGS_RULE,
+  RECHECK_UNVERIFIED_RULE,
+} from './job-execution';
 import type { BoundedConversationState } from '../ask-router/semantic-ir/interpret-turn';
 import {
   boundedEarlierTurns,
@@ -2381,6 +2386,10 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     const jobRules = [
       jobRulesFor(route.job, usesPriorWork, horizon),
       recheckUnverified ? RECHECK_UNVERIFIED_RULE : '',
+      /* ASK R2 (contract §7/§10 G) — this turn's search found no usable current reporting (or a
+         source failed): the reasoning model is told so, explicitly, and may not supply
+         "developments" from memory (replayed: TEST C with no evidence reached this call). */
+      partialCurrent === undefined ? '' : NO_CURRENT_FINDINGS_RULE,
     ]
       .filter((r) => r !== '')
       .join('\n\n');
