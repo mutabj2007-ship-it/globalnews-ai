@@ -26,12 +26,12 @@ export function AskIntelligenceBasis({
   return (
     <section data-ask="intelligence" className="mt-4 flex flex-col gap-3">
       {view.basedOn !== null && (
-        <p data-ask="based-on" className="font-mono text-[12px] leading-[1.5] text-[#8fa6c0]">
+        <p data-ask="based-on" className="text-[0.75rem] leading-[1.5] text-[var(--ask-read-ink2,#8fa6c0)]">
           {`${s.basedOn}: ${view.basedOn.join(' · ')}`}
         </p>
       )}
       {view.place !== null && (
-        <p data-ask="place-context" className="font-mono text-[12px] text-[#8fa6c0]">
+        <p data-ask="place-context" className="text-[0.75rem] text-[var(--ask-read-ink2,#8fa6c0)]">
           {`${s.placeContext}: ${view.place}`}
         </p>
       )}
@@ -40,20 +40,20 @@ export function AskIntelligenceBasis({
           key={section.contributorId}
           data-ask="intelligence-section"
           data-contributor={section.contributorId}
-          className="flex flex-col gap-1.5 rounded-[10px] border border-[#1d4a73] px-3.5 py-3"
+          className="flex flex-col gap-1.5 rounded-[10px] border border-[var(--ask-read-line,#1d4a73)] px-3.5 py-3"
         >
-          <p className="text-[14px] font-semibold text-[#e6eef6]">{section.title}</p>
+          <p className="text-[14px] font-semibold text-[var(--ask-read-ink,#e6eef6)]">{section.title}</p>
           {section.note !== null && (
-            <p className="font-mono text-[11px] text-[#8fa6c0]">{section.note}</p>
+            <p className="text-[0.75rem] text-[var(--ask-read-ink2,#8fa6c0)]">{section.note}</p>
           )}
           <ul className="flex flex-col gap-1">
             {section.rows.map((row) => (
               <li
                 key={row.reference}
                 data-ask="intelligence-row"
-                className="text-[13.5px] leading-[1.45] text-[#cfe2f2]"
+                className="text-[13.5px] leading-[1.45] text-[var(--ask-read-ink,#cfe2f2)]"
               >
-                <span className="font-mono text-[12px] text-[#8299b4]">{row.period}</span>
+                <span className="text-[0.75rem] text-[var(--ask-read-ink3,#8299b4)]">{row.period}</span>
                 {row.place !== null && (
                   <>
                     {' · '}
@@ -71,7 +71,7 @@ export function AskIntelligenceBasis({
                     href={safeExternalHref(row.sourceUrl)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="underline decoration-[#1d4a73] underline-offset-4"
+                    className="underline decoration-[var(--ask-read-line,#1d4a73)] underline-offset-4"
                   >
                     {row.sourceName}
                   </a>
@@ -79,7 +79,7 @@ export function AskIntelligenceBasis({
                   <span>{row.sourceName}</span>
                 )}
                 {(row.parties !== null || row.cited !== null) && (
-                  <span className="block font-mono text-[11px] text-[#8299b4]">
+                  <span className="block text-[0.75rem] text-[var(--ask-read-ink3,#8299b4)]">
                     {row.parties !== null && `${s.parties}: ${row.parties}`}
                     {row.parties !== null && row.cited !== null && ' · '}
                     {row.cited !== null && `${s.cited}: ${row.cited}`}
@@ -89,14 +89,14 @@ export function AskIntelligenceBasis({
             ))}
           </ul>
           {section.caveats.map((caveat) => (
-            <p key={caveat} className="font-mono text-[11px] text-[#8fa6c0]">
+            <p key={caveat} data-ask="intelligence-caveat" className="text-[0.75rem] text-[var(--ask-read-ink2,#8fa6c0)]">
               {caveat}
             </p>
           ))}
         </div>
       ))}
       {(hideNotes ? [] : view.notes).map((note) => (
-        <p key={note} data-ask="intelligence-note" className="text-[13px] text-[#8fa6c0]">
+        <p key={note} data-ask="intelligence-note" className="text-[13px] text-[var(--ask-read-ink2,#8fa6c0)]">
           {note}
         </p>
       ))}

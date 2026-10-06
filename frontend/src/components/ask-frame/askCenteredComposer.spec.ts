@@ -542,9 +542,11 @@ describe('C-8 · responsive widths', () => {
 describe('C-9 · themes', () => {
   it('the example is drawn in EXACTLY the released placeholder ink, so it cannot differ in either theme', () => {
     const html = render({ example: example('en') });
-    const placeholderInk = /placeholder:text-\[#6f89a8\]/;
+    /* ASK READING EXPERIENCE R1 — both now read the --ask-read-ink3 token (dark fallback #6f89a8),
+       so the identity this test protects holds in light as well as dark. */
+    const placeholderInk = /placeholder:text-\[var\(--ask-read-ink3,#6f89a8\)\]/;
     expect(parts).toMatch(placeholderInk);
-    expect(html).toMatch(/data-ask="composer-example"[^>]*class="[^"]*text-\[#6f89a8\]/);
+    expect(html).toMatch(/data-ask="composer-example"[^>]*class="[^"]*text-\[var\(--ask-read-ink3,#6f89a8\)\]/);
   });
 
   it('the entry chrome uses the themed tokens that retarget in Light', () => {

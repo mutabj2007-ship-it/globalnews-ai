@@ -504,6 +504,11 @@ export const ptShellOverlay: ShellLocaleOverlay = {
           other: "{0} fontes",
         },
       },
+      tableScrollHint: {
+        kind: "pattern",
+        pattern: "Role para o lado para ver todas as {0} colunas",
+      },
+      working: "Preparando sua resposta…",
       unavailable: "O Ask está indisponível agora. Nada foi executado.",
       unavailableBecause: {
         EXECUTOR_NOT_WIRED: "Esta pergunta precisa de uma fonte que o Ask ainda não consegue ler — como suas matérias salvas, uma publicação oficial ou uma avaliação especializada. Nada foi respondido a partir de notícias em seu lugar.",
@@ -820,12 +825,6 @@ export const ptShellOverlay: ShellLocaleOverlay = {
         },
         navigationAriaLabel: "Links do rodapé",
         tagline: "Compreensão das notícias clara, com fontes e multiperspectiva — movida por IA, ancorada em reportagens reais.",
-      },
-      loadingStages: {
-        "0": "Buscando em fontes confiáveis…",
-        "1": "Agrupando reportagens relacionadas…",
-        "2": "Comparando a cobertura…",
-        "3": "Preparando a análise com fontes…",
       },
       navBar: {
         account: "Conta",

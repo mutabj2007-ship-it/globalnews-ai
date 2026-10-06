@@ -53,10 +53,10 @@ export function AskRecentReporting({
       data-ask-recent-status={reporting.status}
       data-ask-recent-topic={reporting.topic}
       aria-label={title}
-      className="mt-4 rounded-[12px] border border-[#1d4a73] bg-[#04162b] p-3.5 md:p-4"
+      className="mt-4 rounded-[12px] border border-[var(--ask-read-line,#1d4a73)] bg-[var(--ask-read-sunk,#04162b)] p-3.5 md:p-4"
     >
-      <h3 className="text-[14px] font-bold text-[#cfe2f2]">{title}</h3>
-      <p className="mt-1 font-mono text-[11.5px] leading-[1.4] text-[#8fa6c0]">{t.note}</p>
+      <h3 className="text-[14px] font-bold text-[var(--ask-read-ink,#cfe2f2)]">{title}</h3>
+      <p className="mt-1 text-[0.75rem] leading-[1.4] text-[var(--ask-read-ink2,#8fa6c0)]">{t.note}</p>
       {reporting.status === 'LISTED' ? (
         <ul className="mt-3 flex flex-col gap-2">
           {reporting.items.map((item) => (
@@ -65,18 +65,18 @@ export function AskRecentReporting({
                 href={safeExternalHref(item.url)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-semibold text-[#93cdf5] underline-offset-2 hover:underline"
+                className="font-semibold text-[var(--ask-read-control-ink,#93cdf5)] underline-offset-2 hover:underline"
               >
                 {item.title}
               </a>
-              <span className="block font-mono text-[11.5px] text-[#8fa6c0]">
+              <span className="block text-[0.75rem] text-[var(--ask-read-ink2,#8fa6c0)]">
                 {item.sourceName} · {day(item.publishedAt, locale)}
               </span>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="mt-3 text-[14px] text-[#cfe2f2]">
+        <p className="mt-3 text-[14px] text-[var(--ask-read-ink,#cfe2f2)]">
           {reporting.status === 'NONE_RETAINED' ? t.none : t.unavailable}
         </p>
       )}

@@ -524,7 +524,9 @@ describe('H-8 · chips, source rows and the thread are direction-safe', () => {
   });
 
   it('source rows isolate the citation number, the headline and the publisher/date run', () => {
-    const column = code(src('components', 'ask-frame', 'AskSourcesColumn.tsx'));
+    /* ASK READING EXPERIENCE R1 — the source row is now the ONE list shared by the desktop column
+       and the Sources sheet (AskSourcesList in AskSourcesPanel.tsx); the column renders it. */
+    const column = code(src('components', 'ask-frame', 'AskSourcesPanel.tsx'));
     /* the number is always a left-to-right token */
     expect(column).toMatch(/\{\.\.\.isolatedLtr\(\)\}/);
     /* the headline and the publisher · date run inherit direction and are bounded */
@@ -540,6 +542,7 @@ describe('H-8 · chips, source rows and the thread are direction-safe', () => {
     for (const path of [
       ['components', 'ask-frame', 'AskR2TurnView.tsx'],
       ['components', 'ask-frame', 'AskSourcesColumn.tsx'],
+      ['components', 'ask-frame', 'AskSourcesPanel.tsx'],
       ['components', 'ask-frame', 'AskFrameScreen.tsx'],
       ['components', 'ask', 'AskCompactResult.tsx'],
       ['lib', 'ask', 'askDirection.ts'],

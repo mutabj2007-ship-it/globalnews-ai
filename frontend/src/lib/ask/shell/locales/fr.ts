@@ -504,6 +504,11 @@ export const frShellOverlay: ShellLocaleOverlay = {
           other: "{0} sources",
         },
       },
+      tableScrollHint: {
+        kind: "pattern",
+        pattern: "Faites défiler horizontalement pour voir les {0} colonnes",
+      },
+      working: "Préparation de votre réponse…",
       unavailable: "Ask est indisponible pour le moment. Rien n’a été exécuté.",
       unavailableBecause: {
         EXECUTOR_NOT_WIRED: "Cette question nécessite une source qu’Ask ne peut pas encore lire — par exemple vos sujets enregistrés, une publication officielle ou une évaluation spécialisée. Rien n’a été répondu à partir de l’actualité à la place.",
@@ -820,12 +825,6 @@ export const frShellOverlay: ShellLocaleOverlay = {
         },
         navigationAriaLabel: "Liens de pied de page",
         tagline: "Une compréhension de l’actualité claire, sourcée et multiperspective — portée par l’IA, ancrée dans de vrais reportages.",
-      },
-      loadingStages: {
-        "0": "Recherche dans les sources fiables…",
-        "1": "Regroupement des reportages liés…",
-        "2": "Comparaison de la couverture…",
-        "3": "Préparation de l’analyse sourcée…",
       },
       navBar: {
         account: "Compte",

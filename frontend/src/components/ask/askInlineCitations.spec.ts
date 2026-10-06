@@ -77,15 +77,20 @@ describe('inline citations', () => {
     expect(citations(render(r))).toEqual([3]);
   });
 
-  it('markers are real links with an accessible name and a 24px tap target', () => {
+  /* ASK READING EXPERIENCE R1 — supersedes the 24px (min-h-6 / min-w-6) target: the chip is a
+     22px visual with a 44px hit area from a pseudo-element (H-FREEZE §7), still a real link. */
+  it('markers are real links with an accessible name and a 44px tap target', () => {
     const r0 = withBrief(S1, []);
     const r = withBrief(S1, [{ text: S1, kind: 'REPORTED_FACT', sourceArticleIds: [idOf(r0, 1)] }]);
     const html = render(r);
     const marker = html.match(/<a[^>]*data-ask="citation"[^>]*>/)![0];
     expect(marker).toContain('href=');
     expect(marker).toContain(`aria-label="Source 1: ${r.analysis!.sources[0].title}`);
-    expect(marker).toContain('min-h-6');
-    expect(marker).toContain('min-w-6');
+    expect(marker).toContain('h-[1.375rem]');
+    expect(marker).toContain('min-w-[1.375rem]');
+    /* 22px + 2 × 11px = 44px tall; the pseudo-element is the touch target */
+    expect(marker).toContain('before:-inset-y-[11px]');
+    expect(marker).toContain('before:content-[');
     expect(marker).not.toContain('tabindex="-1"');
   });
 
@@ -123,7 +128,8 @@ describe('inference and unsupported labels', () => {
     ]);
     const text = render(r)
       .replace(/<a[^>]*data-ask="citation"[^>]*>[^<]*<\/a>/g, '')
-      .replace(/<span class="font-mono[^"]*">[^<]*<\/span> /g, '')
+      /* ASK READING EXPERIENCE R1 — the qualifier is an inline note, no longer a mono span */
+      .replace(/<span data-ask="statement-qualifier"[^>]*>[^<]*<\/span> /g, '')
       .replace(/<[^>]+>/g, '');
     expect(text).toContain(`${S1} ${S3}`);
   });

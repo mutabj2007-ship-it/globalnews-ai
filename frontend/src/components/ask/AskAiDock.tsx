@@ -10,7 +10,9 @@ import type { CSSProperties, FormEvent } from 'react';
 import { usePathname } from 'next/navigation';
 import type { DisplayLocale, LanguageCode } from '@globalnews-ai/shared';
 import { askDirectionProps } from '@/lib/ask/askDirection';
-import { LoadingStages } from '@/components/search/LoadingStages';
+import { AskWorkingStatus } from '@/components/ask-frame/AskWorkingStatus';
+import { AskEmblem } from '@/components/ask-frame/AskEmblem';
+import { AskSourcesPanelProvider } from '@/components/ask-frame/AskSourcesPanel';
 import { AskR2TurnView } from '@/components/ask-frame/AskR2TurnView';
 import { COMPACT_TOP_PX } from '@/components/ask/launcherAnchor';
 import { mapAskLayoutFor, mapAskPanelStyle, type MapAskLayout } from '@/lib/ask/mapAskGeometry';
@@ -390,6 +392,8 @@ function GlobalAskAiDock({
       : '';
   const isPending = r2.pending !== null;
   const isIdle = visibleTurns.length === 0 && !isPending;
+  /* ASK READING EXPERIENCE R1 — the emblem's ready/typing state: focus or text in the composer. */
+  const [composerFocused, setComposerFocused] = useState(false);
   const guestText: Partial<Record<string, string>> = {
     IN_PROGRESS: r2s.guest.inProgress,
     COOLDOWN: r2s.guest.cooldown,
@@ -767,6 +771,8 @@ function GlobalAskAiDock({
             data-ask="body"
             data-ask-scroll="conversation"
           >
+            {/* ASK READING EXPERIENCE R1 — the dock is always the phone layout: Sources open as a sheet. */}
+            <AskSourcesPanelProvider locale={r2Locale}>
             {/*
               UNIFIED INTELLIGENCE BINDING R2C — the canonical turn view, the SAME component /ask
               renders: answer state, provenance, sources, Save, and "Open full analysis" (a
@@ -797,9 +803,25 @@ function GlobalAskAiDock({
                 <div data-ask="user-message" className="ms-auto max-w-[88%] rounded-2xl rounded-br-md border border-signal/25 bg-signal/15 px-4 py-3 text-sm leading-relaxed text-ink-primary shadow-sm">
                   {r2.pending}
                 </div>
-                {/* the SAME loading presentation /search uses, same stages */}
-                <LoadingStages stages={[...dictionary.loadingStages]} />
+                {/*
+                  ASK READING EXPERIENCE R1 — the truthful working line. The simulated four-stage
+                  timer (LoadingStages, 1.8 s) is retired from Ask: it claimed retrieval stages the
+                  client cannot know are happening (H-FREEZE §5).
+                */}
+                <AskWorkingStatus label={r2s.working} />
               </div>
+            ) : null}
+
+            {/*
+              ASK READING EXPERIENCE R1 — the emblem, idle states only (dock: 96 ready · 48 typing).
+              A first request fades it out and unmounts it; it never returns into the reading
+              content. Not on the Map skin, whose composition is the Map's own.
+            */}
+            {!onMap && visibleTurns.length === 0 && (isIdle || isPending) ? (
+              <AskEmblem
+                placement="dock"
+                state={isPending ? 'leaving' : composerFocused || question.trim() !== '' ? 'typing' : 'ready'}
+              />
             ) : null}
 
             {isIdle ? (
@@ -827,7 +849,7 @@ function GlobalAskAiDock({
             ) : null}
 
             {notice !== null ? (
-              <p data-ask="notice" role="status" className="text-[13px] leading-[1.45] text-[#c9b27a]">
+              <p data-ask="notice" role="status" className="text-[13px] leading-[1.45] text-[var(--ask-read-deep-ink,#c9b27a)]">
                 {notice}
               </p>
             ) : null}
@@ -851,6 +873,7 @@ function GlobalAskAiDock({
                 {r2s.unified.newTopic}
               </button>
             ) : null}
+            </AskSourcesPanelProvider>
           </div>
 
           {onMap ? (
@@ -917,7 +940,12 @@ function GlobalAskAiDock({
               </form>
             </div>
           ) : (
-          <div data-ask="composer" className={`shrink-0 border-t border-border bg-surface-raised/95 backdrop-blur ${visibleBox !== null ? 'pb-1' : 'pb-[max(0.75rem,env(safe-area-inset-bottom))]'}`}>
+          <div
+            data-ask="composer"
+            onFocusCapture={() => setComposerFocused(true)}
+            onBlurCapture={() => setComposerFocused(false)}
+            className={`shrink-0 border-t border-border bg-surface-raised/95 backdrop-blur ${visibleBox !== null ? 'pb-1' : 'pb-[max(0.75rem,env(safe-area-inset-bottom))]'}`}
+          >
           <form ref={formRef} onSubmit={submit} data-ask="form" className="flex flex-col gap-2 px-4 py-3">
             <label className="sr-only" htmlFor="ask-ai-question">
               {t.inputLabel}
@@ -956,7 +984,7 @@ function GlobalAskAiDock({
                   showStoryLabel ? 'anchored' : showGeographyLabel ? 'geography' : 'generic'
                 }
                 title={showStoryLabel ? storyContext?.title : undefined}
-                className="inline-flex max-w-full items-center gap-1.5 truncate rounded-full border border-border-strong bg-surface px-3 py-1 font-mono text-[10px] uppercase tracking-wide text-ink-secondary"
+                className="inline-flex max-w-full items-center gap-1.5 truncate rounded-full border border-border-strong bg-surface px-3 py-1 text-[0.75rem] text-ink-secondary"
               >
                 {/*
                   Three states, not two. "Asking about Algeria" names the SCOPE

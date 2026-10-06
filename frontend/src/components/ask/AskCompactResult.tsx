@@ -268,7 +268,7 @@ export function AskCompactResult({
         telemetry.reportingClusterCount === null ? null : (
           <span
             data-ask="telemetry"
-            className="font-mono text-[10px] uppercase tracking-wide text-ink-tertiary"
+            className="text-[0.75rem] text-ink-tertiary"
           >
             {telemetry.retrievedArticleCount === null
               ? null
@@ -380,7 +380,7 @@ export function AskCompactResult({
           data-ask="relational-answer"
           className="rounded-2xl border border-signal/35 bg-signal/10 px-4 py-3"
         >
-          <p className="mb-2 font-mono text-[10px] uppercase tracking-wide text-signal">
+          <p className="mb-2 text-[0.75rem] text-signal">
             {dictionary.analysisFrame.relationalAnswer}
           </p>
           <p className="text-sm leading-relaxed text-ink-primary">
@@ -427,7 +427,7 @@ export function AskCompactResult({
               state cannot be described differently here than on Surface B.
             */
             <div data-ask="brief-withheld" className="flex flex-col gap-2">
-              <p className="font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">
+              <p className="text-[0.75rem] text-ink-tertiary">
                 {dictionary.analysisResultView.briefWithheldHeading}
               </p>
               <p className="text-sm text-ink-secondary">
@@ -468,7 +468,7 @@ export function AskCompactResult({
           ) : null}
 
           <div data-ask="sources" className="flex flex-col gap-2">
-            <p className="font-mono text-[10px] uppercase tracking-wide text-ink-tertiary">
+            <p className="text-[0.75rem] text-ink-tertiary">
               {t.resultSourcesHeading}
             </p>
             {shown.length === 0 ? (
@@ -486,7 +486,7 @@ export function AskCompactResult({
                   >
                     {/* R4 · "[1]" is brackets around a digit — two neutrals and a number,
                         which is the classic bidi reorder. Pinned LTR and isolated. */}
-                    <span className="me-1.5 font-mono text-[11px] text-ink-tertiary" {...isolatedLtr()}>
+                    <span className="me-1.5 text-[0.75rem] text-ink-tertiary" {...isolatedLtr()}>
                       [{number}]
                     </span>
                     <a
@@ -498,7 +498,7 @@ export function AskCompactResult({
                       {source.title}
                     </a>
                     <span
-                      className="ms-2 font-mono text-[10px] uppercase tracking-wide text-ink-tertiary"
+                      className="ms-2 text-[0.75rem] text-ink-tertiary"
                       {...isolatedAuto()}
                     >
                       {source.publisher}

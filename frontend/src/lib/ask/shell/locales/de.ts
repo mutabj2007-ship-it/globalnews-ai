@@ -504,6 +504,11 @@ export const deShellOverlay: ShellLocaleOverlay = {
           other: "{0} Quellen",
         },
       },
+      tableScrollHint: {
+        kind: "pattern",
+        pattern: "Seitlich scrollen, um alle {0} Spalten zu sehen",
+      },
+      working: "Ihre Antwort wird erstellt…",
       unavailable: "Ask ist derzeit nicht verfügbar. Es wurde nichts ausgeführt.",
       unavailableBecause: {
         EXECUTOR_NOT_WIRED: "Diese Frage benötigt eine Quelle, die Ask noch nicht lesen kann — etwa Ihre gespeicherten Storys, eine amtliche Veröffentlichung oder eine Facheinschätzung. Es wurde an ihrer Stelle nichts aus Nachrichten beantwortet.",
@@ -820,12 +825,6 @@ export const deShellOverlay: ShellLocaleOverlay = {
         },
         navigationAriaLabel: "Fußzeilen-Links",
         tagline: "Klares, quellenbasiertes Nachrichtenverständnis aus mehreren Perspektiven — KI-gestützt, in echter Berichterstattung verankert.",
-      },
-      loadingStages: {
-        "0": "Vertrauenswürdige Quellen werden durchsucht…",
-        "1": "Verwandte Berichte werden gruppiert…",
-        "2": "Berichterstattung wird verglichen…",
-        "3": "Quellenbasierte Analyse wird vorbereitet…",
       },
       navBar: {
         account: "Konto",

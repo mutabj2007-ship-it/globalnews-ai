@@ -92,6 +92,13 @@ export interface AskR2Strings {
   readonly unavailable: string;
   /** LIVE ACCEPTANCE REPAIR R1 — a compute-budget refusal is named as such, never "unavailable". */
   readonly budgetRefused: string;
+  /**
+   * ASK READING EXPERIENCE R1 — the ONE truthful working state while a request is in flight.
+   * No retrieval stage is claimed: the client receives no progress events (H-FREEZE §5, D1).
+   */
+  readonly working: string;
+  /** ASK READING EXPERIENCE R1 — a wide table's scroll hint, shown only when it overflows. */
+  readonly tableScrollHint: (columns: number) => string;
   /** TRUST R1 — a failed Send keeps the draft; the reader retries by pressing Ask. */
   /** TRUST R1 §12 — pre-login links under the composer. */
   readonly privacyLink: string;
@@ -348,6 +355,8 @@ const EN: AskR2Strings = {
   cookiesLink: 'Cookies',
   retryKept: 'Not answered — your question is still in the box. Press Ask to try again.',
   newAnswerBelow: 'New answer below',
+  working: 'Working on your answer…',
+  tableScrollHint: (columns) => `Scroll sideways to see all ${columns} columns`,
   budgetRefused:
     'You have reached today’s Ask limit, so nothing was run and nothing was charged. Questions answered from retained records still work.',
   retainedAnswer: 'Answered from a retained governed record — no AI was used.',
@@ -685,6 +694,8 @@ const PL: AskR2Strings = {
   retryKept:
     'Brak odpowiedzi — Twoje pytanie nadal jest w polu. Naciśnij Zapytaj, aby spróbować ponownie.',
   newAnswerBelow: 'Nowa odpowiedź poniżej',
+  working: 'Pracuję nad odpowiedzią…',
+  tableScrollHint: (columns) => `Przewiń w bok, aby zobaczyć wszystkie kolumny (${columns})`,
   budgetRefused:
     'Wykorzystano dzisiejszy limit Zapytaj AI, więc nic nie uruchomiono ani nie naliczono. Pytania, na które odpowiadają zachowane zapisy, nadal działają.',
   retainedAnswer: 'Odpowiedź z zachowanego, zweryfikowanego zapisu — bez użycia AI.',
