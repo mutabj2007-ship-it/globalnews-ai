@@ -521,7 +521,7 @@ export function AskR2TurnView({
               <div
                 data-ask="guidance-current-gap"
                 data-ask-partial={payload.guidance.currentPart ?? undefined}
-                className="rounded-[8px] border border-[#5a4a2a] bg-[#17130c] px-3 py-2.5 text-[13px] leading-[1.45] text-[#c9b27a]"
+                className="rounded-[8px] border border-[var(--ask-read-deep-line,#5a4a2a)] bg-[var(--ask-read-deep-bg,#17130c)] px-3 py-2.5 text-[13px] leading-[1.45] text-[var(--ask-read-deep-ink,#c9b27a)]"
               >
                 <p className="font-bold">
                   {payload.guidance.currentPart != null

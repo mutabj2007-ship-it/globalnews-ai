@@ -21,7 +21,6 @@ jest.mock('next/navigation', () => ({ usePathname: () => '/map' }));
 jest.mock('@/components/ask/useLauncherAnchor', () => ({
   useLauncherAnchor: () => ({ anchor: 'bottom', bottomOffset: 16, coveredByDialog: false }),
 }));
-jest.mock('@/components/search/LoadingStages', () => ({ LoadingStages: () => 'loading' }));
 jest.mock('@/components/ask/AskCompactResult', () => ({ AskCompactResult: () => 'result' }));
 jest.mock('@/components/ui/AdaptiveTextarea', () => {
   const react = jest.requireActual('react');

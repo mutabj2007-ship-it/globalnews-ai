@@ -174,7 +174,8 @@ describe('Answer hierarchy — answer first (H-FREEZE §4)', () => {
 
   it('question → answer → status footer → basis → actions → hand-offs, in DOM order', () => {
     const at = (needle: string) => turn.indexOf(needle);
-    const question = at('<AskSubmittedQuestion');
+    /* Production line: the turn view renders the compact question <h2> itself (no AskSubmittedQuestion) */
+    const question = at('<h2 className={QUESTION}>');
     const answer = at('data-ask="answer"');
     const meta = at('data-ask="answer-meta"');
     const basis = at('<AskIntelligenceBasis');
@@ -191,20 +192,19 @@ describe('Answer hierarchy — answer first (H-FREEZE §4)', () => {
     expect(at('data-ask="engine-state"')).toBeGreaterThan(meta);
   });
 
-  it('the question is a compact 17px bubble (≤85%), still the <h2> AskSubmittedQuestion renders', () => {
+  it('the question is a compact 17px bubble (≤85%), still an <h2> (Production line: rendered by the turn view)', () => {
     expect(turn).toMatch(/const QUESTION =\s*'[^']*max-w-\[85%\][^']*text-\[1\.0625rem\][^']*'/);
     expect(turn).not.toMatch(/text-\[26px\]|text-\[30px\]|min-\[1900px\]:text-\[30px\]/);
     const css = read('components', 'ask-frame', 'askDashboard.module.css');
     const q = css.slice(css.indexOf('.question {'));
     expect(q.slice(0, q.indexOf('}'))).toMatch(/max-width: 85%;[\s\S]*font-size: 1\.0625rem;/);
-    expect(read('components', 'ask-frame', 'AskSubmittedQuestion.tsx')).toMatch(/<h2 className=\{headingClassName\}>/);
+    expect(turn).toMatch(/<h2 className=\{QUESTION\}>\{turn\.question\}<\/h2>/);
   });
 
   it('no mono prose and no dark-only literal on the reading components', () => {
     for (const file of [
       'AskR2TurnView.tsx',
       'AskIntelligenceBasis.tsx',
-      'AskSubmittedQuestion.tsx',
       'AskRecentReporting.tsx',
       'AskSourcesColumn.tsx',
       'AskSourcesPanel.tsx',

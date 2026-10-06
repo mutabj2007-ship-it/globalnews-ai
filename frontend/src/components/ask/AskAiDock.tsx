@@ -805,7 +805,7 @@ function GlobalAskAiDock({
                 </div>
                 {/*
                   ASK READING EXPERIENCE R1 — the truthful working line. The simulated four-stage
-                  timer (LoadingStages, 1.8 s) is retired from Ask: it claimed retrieval stages the
+                  timer (the /search stage list, 1.8 s) is retired from Ask: it claimed retrieval stages the
                   client cannot know are happening (H-FREEZE §5).
                 */}
                 <AskWorkingStatus label={r2s.working} />

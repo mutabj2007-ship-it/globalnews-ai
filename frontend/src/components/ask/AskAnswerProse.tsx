@@ -187,7 +187,9 @@ export function AskAnswerProse({
               header={block.header.map((cell, i) => (
                 <Inline key={`${key}-h${i}`} text={cell} />
               ))}
-              rows={block.rows.map((row) => row.map((cell) => <Inline text={cell} />))}
+              rows={block.rows.map((row, r) =>
+                row.map((cell, c) => <Inline key={`${key}-r${r}c${c}`} text={cell} />),
+              )}
               numeric={block.rows.map((row) => row.map((cell) => isNumericCell(cell)))}
               scrollHint={shell.askR2Strings.tableScrollHint(block.header.length)}
             />

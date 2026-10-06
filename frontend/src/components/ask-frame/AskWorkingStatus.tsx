@@ -3,7 +3,7 @@ import type { JSX } from 'react';
 /**
  * ASK READING EXPERIENCE R1 — THE TRUTHFUL WORKING STATE (H-FREEZE §5, STATE-MATRIX §1).
  *
- * This replaces `LoadingStages` on the Ask surface. That component advanced four retrieval
+ * This replaces the /search stage list on the Ask surface. That component advanced four retrieval
  * labels ("Searching trusted sources…", "Comparing coverage…") on a 1.8 s client timer that
  * knew nothing of the request — so it could claim a news search for a calculation, or claim
  * the analysis was being prepared while the server was still deciding what to do.
