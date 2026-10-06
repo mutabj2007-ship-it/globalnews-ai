@@ -142,6 +142,17 @@ export class StoryBriefService {
     return this.viewOf(story, revision, now);
   }
 
+  /**
+   * ASK RELIABILITY R1 (§9) — a signed-in reader's explicit Read Brief on a retained article that is
+   * not yet part of a canonical story places it in one (the SAME identity path Discussion uses:
+   * the URL must hash to the articleRef and the article must be retained; unknown reporting is
+   * refused). No compute here; generation remains the governed POST /stories/:id/brief.
+   */
+  async ensureByArticle(articleRef: string, url: string): Promise<{ articleRef: string; storyId: string; materialVersion: number }> {
+    const { story } = await this.identity.ensureStoryForArticle({ articleRef, url });
+    return { articleRef, storyId: story.storyId, materialVersion: story.briefVersion };
+  }
+
   private async viewOf(story: CanonicalStory, revision: string, now: Date): Promise<StoryBriefView> {
     const aliasIds = [...story.aliasIds];
     const [forCurrent, latest, versions, lastAttempt] = await Promise.all([

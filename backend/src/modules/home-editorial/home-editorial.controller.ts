@@ -1,4 +1,4 @@
-import { BadRequestException, Controller, Get, Header, Query, Req } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Header, Query, Req, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import {
@@ -12,6 +12,7 @@ import {
 import { SessionService } from '../auth/session.service';
 import { resolveAuthCookieNames } from '../auth/cookie.util';
 import { HomeEditorialService } from './home-editorial.service';
+import { HomeEditorialGate } from './home-editorial.gate';
 
 /**
  * PHONE-FIRST HOME CORRECTION R1 — public, read-only, retained-store reads:
@@ -23,6 +24,7 @@ import { HomeEditorialService } from './home-editorial.service';
  * and never another reader's data.
  */
 @Controller()
+@UseGuards(HomeEditorialGate)
 export class HomeEditorialController {
   constructor(
     private readonly service: HomeEditorialService,

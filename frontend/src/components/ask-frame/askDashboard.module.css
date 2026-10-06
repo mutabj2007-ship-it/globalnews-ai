@@ -206,10 +206,19 @@
 @media (max-width: 860px), (orientation: portrait) and (max-width: 1100px) {
   .frame {
     position: fixed;
-    inset: 0;
+    /* ASK RELIABILITY R1 (Q) — the VISIBLE box: top follows the visual viewport's pan, height its
+       visible height; no bottom, so nothing is over-constrained. */
+    top: var(--ask-visible-top, 0px);
+    left: 0;
+    right: 0;
+    bottom: auto;
     z-index: 60;
     height: var(--ask-visible-height, 100dvh);
     min-height: 0;
+  }
+  /* with the keyboard open the composer rests on it: no home-indicator padding under it */
+  .frame[data-ask-keyboard] .composerGrid {
+    padding-bottom: 8px;
   }
   .phoneHeader {
     display: flex;

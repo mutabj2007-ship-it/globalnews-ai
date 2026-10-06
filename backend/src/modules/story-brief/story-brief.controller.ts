@@ -1,4 +1,4 @@
-import { Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, UseGuards, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, UseGuards, UseInterceptors } from '@nestjs/common';
 import { AskRequestContextInterceptor } from '../ask-v2/ask-request-context';
 import { Throttle } from '@nestjs/throttler';
 import { RequireAuthGuard } from '../auth/require-auth.guard';
@@ -33,6 +33,18 @@ export class StoryBriefController {
   @Get('by-article/:articleRef')
   async byArticle(@Param('articleRef', ParseArticleRefPipe) articleRef: string) {
     return this.briefs.resolveByArticle(articleRef);
+  }
+
+  /** ASK RELIABILITY R1 (§9) — signed-in + CSRF: place a retained article in its canonical story. */
+  @UseGuards(StoryBriefGate, RequireAuthGuard, CsrfGuard)
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @Post('by-article/:articleRef/ensure')
+  @HttpCode(200)
+  async ensure(@Param('articleRef', ParseArticleRefPipe) articleRef: string, @Body() body: { url?: unknown }) {
+    if (typeof body?.url !== 'string' || body.url.length === 0 || body.url.length > 2048) {
+      throw new BadRequestException('url is required');
+    }
+    return this.briefs.ensureByArticle(articleRef, body.url);
   }
 
   @UseGuards(StoryBriefGate)

@@ -99,6 +99,18 @@ export const PL_PUBLIC_EVENT = plTolerant(
   /(?:^|\s)(?:wojn\p{L}*|konflikt\p{L}*|walk[aiię]|walkach|inwazj\p{L}*|zawieszeni\p{L}*\s+broni|zamach\p{L}*|wybor(?:y|ów|ach|ami|cz\p{L}*)|referend\p{L}*|protest\p{L}*|zamieszk\p{L}*|kryzys\p{L}*|atak\p{L}*|sankcj\p{L}*|ludobójstw\p{L}*|głód|epidemi\p{L}*|pandemi\p{L}*|trzęsieni\p{L}*\s+ziemi|powodzi\p{L}*|powódź)/iu,
 );
 
+/* ASK RELIABILITY R1 (J) — the reader's own day: "today" here is when they act, not news. */
+const EN_PERSONAL_DAY =
+  /\b(?:eat|eating|cook|cooking|meal|meals|breakfast|lunch|dinner|snack|drink|wear|wearing|outfit|exercise|workout|sleep|rest|relax|watch|read|listen\s+to|do\s+(?:today|tonight|this\s+weekend)|spend\s+my\s+(?:day|evening))\b/i;
+const PL_PERSONAL_DAY = plTolerant(
+  /(?:^|\s)(?:zjeść|jeść|jedzeni\p{L}*|ugotować|gotować|obiad\p{L}*|śniadani\p{L}*|kolacj\p{L}*|ubrać|założyć|ćwicz\p{L}*|odpocz\p{L}*|obejrzeć|przeczytać)(?=\s|$|[?,.!])/iu,
+);
+const EN_REPORTED_SUBJECT =
+  /\b(?:prices?|cost|market|markets|stocks?|shares|exchange\s+rate|inflation|weather|forecast|news|headlines|events?|election|traffic|strike|outbreak|shortage|fuel|petrol)\b/i;
+const PL_REPORTED_SUBJECT = plTolerant(
+  /(?:^|\s)(?:cen\p{L}*|kurs\p{L}*|rynk\p{L}*|giełd\p{L}*|inflacj\p{L}*|pogod\p{L}*|prognoz\p{L}*|wiadomości|wydarzeni\p{L}*|wybor\p{L}*|paliw\p{L}*)(?=\s|$|[?,.!])/iu,
+);
+
 /* ── genuine freshness: an explicit time marker, never a topic noun ───────────────────────── */
 const EN_EXPLICIT_TIME =
   /\b(?:today|today's|tonight|right\s+now|now|currently|current\s+(?:market|prices?|pricing|rates?|state|situation|data|figures|events|news|status)|latest|most\s+recent|recent(?:ly)?|this\s+(?:week|month|year|quarter)|yesterday|as\s+of|at\s+the\s+moment|at\s+present|so\s+far\s+this)\b/i;
@@ -228,7 +240,18 @@ export function readAdvisory(
     (interrogative && (planningSubject || ownVenture));
   if (!advisory) return null;
 
-  const timed = clauses(text).filter((clause) => hasExplicitTime(clause, lang, requestYear));
+  /* ASK RELIABILITY R1 (J) — "Recommend me what I should eat today" is personal, everyday advice:
+     "today" is when the reader will act, not a request for today's reporting. A clause about the
+     reader's own day (food, clothes, exercise, rest, what to do or watch) never needs current
+     evidence — unless it also names something that is reported on (prices, markets, weather,
+     news, events, an election…), which keeps "what should I buy today given current prices"
+     a mixed question. */
+  const personalDay = lang === 'en' ? EN_PERSONAL_DAY : PL_PERSONAL_DAY;
+  const reported = lang === 'en' ? EN_REPORTED_SUBJECT : PL_REPORTED_SUBJECT;
+  const timed = clauses(text).filter(
+    (clause) =>
+      hasExplicitTime(clause, lang, requestYear) && !(personalDay.test(clause) && !reported.test(clause)),
+  );
   if (timed.length === 0) return { mode: 'ADVISORY', currentClauses: [] };
   /* A question that is ONLY a timed fact request with an advice word in it is still advisory in
      part: the advisory guidance is answered, the timed part is named as needing evidence. */

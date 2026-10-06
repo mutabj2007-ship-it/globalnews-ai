@@ -186,9 +186,12 @@ describe('C-3 · the example lives inside the composer', () => {
   });
 
   it('never lets the example layer swallow a click meant for the field', () => {
+    /* ASK RELIABILITY R1 (§8) — Product Owner instruction 2026-10-06: a sample question shown inside the input is
+     visible GUIDANCE ONLY — plain text, not clickable, not focusable; it never fills, submits, navigates or
+     steals focus. This supersedes the earlier C-3/C-4/C-6/C-10 'tap the example to fill' contract. */
     const html = render({ example: example('en') });
     expect(html).toMatch(/data-ask="composer-example-layer"[^>]*class="[^"]*pointer-events-none/);
-    expect(html).toMatch(/data-ask="composer-example"[^>]*class="[^"]*pointer-events-auto/);
+    expect(html).not.toMatch(/data-ask="composer-example"[^>]*class="[^"]*pointer-events-auto/);
   });
 
   it('animates only when motion is allowed, and the stylesheet refuses it too', () => {
@@ -217,10 +220,14 @@ describe('C-3 · the example lives inside the composer', () => {
 });
 
 describe('C-4 · selection fills the composer and submits nothing', () => {
-  it('is a real button that calls onUse — never a form submit', () => {
+  it('is plain guidance text — never a control, never a form submit', () => {
+    /* ASK RELIABILITY R1 (§8) — Product Owner instruction 2026-10-06: a sample question shown inside the input is
+     visible GUIDANCE ONLY — plain text, not clickable, not focusable; it never fills, submits, navigates or
+     steals focus. This supersedes the earlier C-3/C-4/C-6/C-10 'tap the example to fill' contract. */
     const html = render({ example: example('en') });
-    expect(html).toMatch(/<button type="button"[^>]*data-ask="composer-example"/);
-    expect(parts).toMatch(/onClick=\{example\.onUse\}/);
+    expect(html).toMatch(/<span[^>]*data-ask="composer-example"/);
+    expect(html).not.toMatch(/<button[^>]*data-ask="composer-example"/);
+    expect(parts).not.toMatch(/onClick=\{example\.onUse\}/);
   });
 
   it('puts the example into the draft through the shared draft path, then focuses it', () => {
@@ -395,7 +402,7 @@ describe('C-6 · cross-platform functional parity addendum', () => {
        missing control. */
     const html = render({ example: example('en', true), maxHeight: 140 });
     expect(html).toContain('data-ask="composer-example"');
-    expect(html).toMatch(/<button type="button"[^>]*data-ask="composer-example"/);
+    expect(html).toMatch(/<span[^>]*data-ask="composer-example"/);
     expect(html).toMatch(/<button type="submit"[^>]*data-ask="send"/);
     expect(parts).not.toMatch(/matchMedia[^)]*max-width/);
   });
@@ -547,12 +554,14 @@ describe('C-9 · themes', () => {
 });
 
 describe('C-10 · accessibility', () => {
-  it('the example is keyboard reachable and names what activating it does', () => {
+  it('the example is not a focus stop and is hidden from assistive tech as a control', () => {
+    /* ASK RELIABILITY R1 (§8) — Product Owner instruction 2026-10-06: a sample question shown inside the input is
+     visible GUIDANCE ONLY — plain text, not clickable, not focusable; it never fills, submits, navigates or
+     steals focus. This supersedes the earlier C-3/C-4/C-6/C-10 'tap the example to fill' contract. */
     const html = render({ example: example('en') });
-    expect(html).toMatch(/<button type="button"/);
-    expect(html).not.toMatch(/data-ask="composer-example"[^>]*tabindex="-1"/);
-    expect(html).toContain(askSevenStrings('en').exampleUse);
-    expect(html).toMatch(/<span class="sr-only">Use this example question: <\/span>/);
+    expect(html).not.toMatch(/<button type="button"[^>]*data-ask="composer-example"/);
+    expect(html).toMatch(/data-ask="composer-example"[^>]*aria-hidden="true"|aria-hidden="true"[^>]*data-ask="composer-example"/);
+    expect(html).not.toMatch(/Use this example question/);
   });
 
   it('creates no aria-live loop: nothing announces every few seconds', () => {

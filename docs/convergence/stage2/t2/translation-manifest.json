@@ -29217,13 +29217,13 @@
   "dict:visual": {
    "source": "frontend/src/lib/i18n/dictionaries/{en,pl,adminEn,adminPl,supportEn,supportPl,myIntelligenceEn,myIntelligencePl,homeR1En,homeR1Pl,homeRevaEn,homeRevaPl}.ts",
    "kind": "DICTIONARY",
-   "englishKeys": 209,
+   "englishKeys": 210,
    "gapCounts": {
-    "fr": 209,
-    "de": 209,
-    "es": 209,
-    "pt": 209,
-    "ar": 209
+    "fr": 210,
+    "de": 210,
+    "es": 210,
+    "pt": 210,
+    "ar": 210
    },
    "keys": {
     "visual.brief.alert": {
@@ -29728,6 +29728,16 @@
     },
     "visual.brief.savedLine": {
      "en": "Saved brief · as of {time} · reopened, no new check",
+     "locales": {
+      "fr": "MISSING",
+      "de": "MISSING",
+      "es": "MISSING",
+      "pt": "MISSING",
+      "ar": "MISSING"
+     }
+    },
+    "visual.brief.showMore": {
+     "en": "Show more",
      "locales": {
       "fr": "MISSING",
       "de": "MISSING",
@@ -39700,27 +39710,27 @@
    "qualifiedInAskScope": 0
   },
   "fr": {
-   "pendingKeys": 3641,
+   "pendingKeys": 3642,
    "namespacesIncomplete": 62,
    "qualifiedInAskScope": 174
   },
   "de": {
-   "pendingKeys": 3641,
+   "pendingKeys": 3642,
    "namespacesIncomplete": 62,
    "qualifiedInAskScope": 174
   },
   "es": {
-   "pendingKeys": 3641,
+   "pendingKeys": 3642,
    "namespacesIncomplete": 62,
    "qualifiedInAskScope": 174
   },
   "pt": {
-   "pendingKeys": 3641,
+   "pendingKeys": 3642,
    "namespacesIncomplete": 62,
    "qualifiedInAskScope": 174
   },
   "ar": {
-   "pendingKeys": 3641,
+   "pendingKeys": 3642,
    "namespacesIncomplete": 62,
    "qualifiedInAskScope": 174
   }

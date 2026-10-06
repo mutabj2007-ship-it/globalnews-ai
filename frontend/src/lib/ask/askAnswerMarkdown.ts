@@ -47,7 +47,11 @@ export type AskBlock =
   | { readonly kind: 'heading'; readonly level: 2 | 3; readonly text: string }
   | { readonly kind: 'paragraph'; readonly text: string }
   | { readonly kind: 'bullets'; readonly items: readonly string[] }
-  | { readonly kind: 'ordered'; readonly items: readonly string[] };
+  /** ASK RELIABILITY R1 (M) — `start` is the AUTHORED first number, so a list split by prose
+      still counts 1, 2, 3 instead of restarting at 1. */
+  | { readonly kind: 'ordered'; readonly items: readonly string[]; readonly start: number }
+  /** ASK RELIABILITY R1 (M) — a Markdown pipe table the answer authored (header + rows). */
+  | { readonly kind: 'table'; readonly header: readonly string[]; readonly rows: readonly (readonly string[])[] };
 
 const HEADING = /^(#{1,6})\s+(.*)$/;
 /** `-`, `*` or `•` followed by a space. `*` only when it is not the start of `**bold**`. */
@@ -55,6 +59,18 @@ const BULLET = /^\s{0,3}(?:[-•]|\*(?!\*))\s+(.*)$/;
 const ORDERED = /^\s{0,3}(\d{1,2})[.)]\s+(.*)$/;
 /** A line that is only `---` / `***` / `___`: a rule. Dropped — the layout provides separation. */
 const RULE = /^\s{0,3}([-*_])\s*(?:\1\s*){2,}$/;
+/** ASK RELIABILITY R1 (M) — a pipe-table row, and the |---|:--:| separator row under its header. */
+const TABLE_ROW = /^\s{0,3}\|.*\|\s*$/;
+const TABLE_SEPARATOR = /^\s{0,3}\|?(?:\s*:?-{2,}:?\s*\|)+\s*:?-{0,}:?\s*\|?\s*$/;
+
+function tableCells(line: string): string[] {
+  return line
+    .trim()
+    .replace(/^\|/, '')
+    .replace(/\|$/, '')
+    .split('|')
+    .map((cell) => cell.trim());
+}
 
 /**
  * A SHORT BOLD LINE ON ITS OWN IS A HEADING THE ANSWER WROTE WITHOUT A `#`.
@@ -93,6 +109,12 @@ export function parseAnswerBlocks(source: string): readonly AskBlock[] {
   let paragraph: string[] = [];
   let bullets: string[] = [];
   let ordered: string[] = [];
+  let orderedStart = 1;
+  /* the number the NEXT item of the open (or just-closed) ordered list would carry */
+  let orderedNext = 0;
+  /* a blank line seen while a list was open: the list continues only if the sequence does */
+  let blankAfterOrdered = false;
+  let table: string[] = [];
 
   const flushParagraph = (): void => {
     if (paragraph.length === 0) return;
@@ -111,10 +133,29 @@ export function parseAnswerBlocks(source: string): readonly AskBlock[] {
     bullets = [];
   };
   const flushOrdered = (): void => {
-    if (ordered.length > 0) blocks.push({ kind: 'ordered', items: ordered });
+    if (ordered.length > 0) blocks.push({ kind: 'ordered', items: ordered, start: orderedStart });
     ordered = [];
+    blankAfterOrdered = false;
+  };
+  const flushTable = (): void => {
+    if (table.length === 0) return;
+    const rows = table;
+    table = [];
+    if (rows.length >= 2 && TABLE_SEPARATOR.test(rows[1])) {
+      const header = tableCells(rows[0]);
+      const body = rows.slice(2).map((row) => {
+        const cells = tableCells(row);
+        return header.map((_, i) => cells[i] ?? '');
+      });
+      blocks.push({ kind: 'table', header, rows: body });
+      return;
+    }
+    /* not a table after all (no separator row): the lines are prose */
+    for (const row of rows) paragraph.push(row.trim());
+    flushParagraph();
   };
   const flushAll = (): void => {
+    flushTable();
     flushParagraph();
     flushBullets();
     flushOrdered();
@@ -124,9 +165,28 @@ export function parseAnswerBlocks(source: string): readonly AskBlock[] {
     const line = raw.trimEnd();
 
     if (line.trim().length === 0) {
+      /* A loose ordered list ("1. A" blank "2. B") is ONE list: keep it open across the blank
+         line and decide on the next line (ASK RELIABILITY R1 · M). */
+      if (ordered.length > 0) {
+        flushTable();
+        flushParagraph();
+        flushBullets();
+        blankAfterOrdered = true;
+        continue;
+      }
       flushAll();
       continue;
     }
+    if (TABLE_ROW.test(line) || (table.length === 1 && TABLE_SEPARATOR.test(line))) {
+      if (table.length === 0) {
+        flushParagraph();
+        flushBullets();
+        flushOrdered();
+      }
+      table.push(line);
+      continue;
+    }
+    flushTable();
     if (RULE.test(line)) {
       flushAll();
       continue;
@@ -165,9 +225,18 @@ export function parseAnswerBlocks(source: string): readonly AskBlock[] {
     if (numbered !== null) {
       flushParagraph();
       flushBullets();
-      if (numbered[2].trim().length > 0) ordered.push(numbered[2].trim());
+      const n = Number(numbered[1]);
+      if (ordered.length > 0 && n !== orderedNext) flushOrdered();
+      if (ordered.length === 0) orderedStart = n;
+      blankAfterOrdered = false;
+      if (numbered[2].trim().length > 0) {
+        ordered.push(numbered[2].trim());
+        orderedNext = orderedStart + ordered.length;
+      }
       continue;
     }
+    /* prose after a blank line closes a loose list; its next item, if any, keeps its number */
+    if (blankAfterOrdered) flushOrdered();
 
     /* A continuation line of the open list item, not a new paragraph. */
     if (bullets.length > 0 && /^\s{2,}\S/.test(raw)) {
@@ -235,6 +304,7 @@ export function answerPlainText(blocks: readonly AskBlock[]): string {
   return blocks
     .map((block) => {
       if (block.kind === 'heading' || block.kind === 'paragraph') return flat(block.text);
+      if (block.kind === 'table') return [block.header, ...block.rows].map((row) => row.map(flat).join(' | ')).join('\n');
       return block.items.map(flat).join('\n');
     })
     .join('\n');

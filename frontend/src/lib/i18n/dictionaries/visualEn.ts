@@ -185,6 +185,7 @@ export const visualEn = {
     backgroundNote: 'Background is not evidence and is never cited.',
     uncertain: 'Uncertain or still developing',
     briefEvidence: 'Evidence in this brief',
+    showMore: 'Show more',
   },
   /** PHONE-FIRST HOME CORRECTION R1 — hero, story search, region rows, lower Ask, owner access. */
   home: {

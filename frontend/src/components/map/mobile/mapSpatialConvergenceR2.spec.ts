@@ -102,7 +102,9 @@ describe('ASK ON THE MAP — the dock keeps every contract', () => {
 
   it('the generic dock is full screen below 1024 (D25 11) and a floating dock from 1024', () => {
     expect(DOCK).toContain(
-      "'inset-0 h-[100dvh] max-h-[100dvh] rounded-none pb-[env(safe-area-inset-bottom)]'",
+      /* ASK RELIABILITY R1 (Q) — the home-indicator inset now applies once, on the composer (it was
+         also on the panel: a doubled empty strip once viewport-fit=cover made the inset real). */
+      "'inset-0 h-[100dvh] max-h-[100dvh] rounded-none',",
     );
     expect(DOCK).not.toContain('h-[86dvh]');
     expect(DOCK).toContain("className={onMap ? mapPanelClass : [");

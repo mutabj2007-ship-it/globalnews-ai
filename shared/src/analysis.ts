@@ -1075,6 +1075,17 @@ export interface AnalysisRetrievalContext {
    */
   datesRequested?: true;
   /**
+   * ASK RELIABILITY R1 — the question-anchor admission gate (Ask only): how many retrieved
+   * candidates were seen and how many actually concern the question's named actors and topic.
+   * Discovery candidates are NOT evidence; only the admitted reports reach the answer.
+   */
+  questionAnchorGate?: {
+    readonly key: string;
+    readonly candidates: number;
+    readonly admitted: number;
+    readonly supplementQueries: number;
+  };
+  /**
    * MY INTELLIGENCE R1 — present only on a multi-story selection analysis:
    * which action ran and how many of the selected stories resolved to
    * retained reporting.

@@ -283,6 +283,13 @@ export interface AnalysisExecutionPolicy {
    * when they evidence the relationship itself (relationship-evidence.util.ts). Part of the cache key.
    */
   readonly relationship?: RelationshipScope;
+  /**
+   * ASK RELIABILITY R1 — the question's own anchors (named actors / regions, topic families and
+   * whether they are linked), read from the ORIGINAL question by the Ask adapter. When gated, only
+   * reports that concern them are admitted as evidence; when too few survive, ONE bounded anchored
+   * supplement is searched (provider + retained). Part of the cache key. Absent for /analysis.
+   */
+  readonly questionAnchors?: QuestionAnchors;
 }
 import { officeGeographyCountryCode } from '../context-producers/office-geography.producer';
 import {
@@ -292,6 +299,13 @@ import {
 import { polishOfficeGeographyCountryCode } from '../../ask-router/normalization/qualified-reading';
 import { readCapabilityRequests } from '../../ask-router/capability-producers';
 import { readContinuationEllipsis } from '../anchor/continuation-ellipsis.util';
+import {
+  admitsReport,
+  anchoredQueries,
+  anchorsKey,
+  normalizeText as normalizeAnchorText,
+  type QuestionAnchors,
+} from '../query/question-anchors.util';
 
 /**
  * PROVIDER-SAFETY EDGE CLOSURE — the retrieval context for a question that has
@@ -865,11 +879,15 @@ export class AnalysisService {
       executionPolicy?.relationship === undefined
         ? ''
         : `:relationship:${executionPolicy.relationship.countries.join('-')}:${executionPolicy.relationship.relations.join('+')}`;
+    const anchorKeySegment =
+      executionPolicy?.questionAnchors === undefined || !executionPolicy.questionAnchors.gated
+        ? ''
+        : `:anchors:${anchorsKey(executionPolicy.questionAnchors)}`;
     const answerKeySegment =
       executionPolicy?.answerLanguage === undefined
         ? ''
         : `:answer:${executionPolicy.answerLanguage}`;
-    const cacheKey = `${requestedLanguage}${answerKeySegment}:${normalizedQuery.toLowerCase()}${storyAnchorKeySegment}${priorQuestionKeySegment}${selectionKeySegment}${identityKeySegment}${governedKeySegment}${windowKeySegment}${broadKeySegment}${relationshipKeySegment}`;
+    const cacheKey = `${requestedLanguage}${answerKeySegment}:${normalizedQuery.toLowerCase()}${storyAnchorKeySegment}${priorQuestionKeySegment}${selectionKeySegment}${identityKeySegment}${governedKeySegment}${windowKeySegment}${broadKeySegment}${relationshipKeySegment}${anchorKeySegment}`;
 
     const cached = this.getCached(cacheKey);
 
@@ -3510,6 +3528,65 @@ export class AnalysisService {
           evidence-state fact is stamped exactly once, by the one shared
           derivation. The model, the cache TTL and the UI all read this value.
         */
+        /*
+          ASK RELIABILITY R1 — THE QUESTION-ANCHOR ADMISSION GATE (Ask only). Every branch above may
+          admit a report by COUNTRY alone ("oil prices in Rwanda" → any Rwanda report; "Rwanda …
+          Congo conflict" → Rwandan condom prices). Here the candidates are checked against what the
+          reader actually named: every linked actor (or one of a set) AND every topic family. Only
+          admitted reports become evidence; when fewer than three survive, ONE bounded anchored
+          supplement (at most two phrases, provider then retained store) is searched and gated the
+          same way. Nothing irrelevant is ever padded in: an empty result is the truthful answer.
+        */
+        if (executionPolicy?.questionAnchors?.gated === true) {
+          const anchors = executionPolicy.questionAnchors;
+          const candidates = articles.length;
+          const admitted = articles.filter((article) => admitsReport(anchors, article).admitted);
+          const queries = admitted.length >= 3 ? [] : anchoredQueries(anchors);
+          const seen = new Set(admitted.map((article) => article.id));
+          const seenUrls = new Set(admitted.map((article) => article.url));
+          const take = (pool: readonly NewsArticle[]): void => {
+            for (const article of pool) {
+              if (seen.has(article.id) || seenUrls.has(article.url)) continue;
+              if (!admitsReport(anchors, article).admitted) continue;
+              if (executionPolicy.reportingWindow !== undefined && !publishedInsideWindow(article, executionPolicy.reportingWindow.from, executionPolicy.reportingWindow.to)) continue;
+              seen.add(article.id);
+              seenUrls.add(article.url);
+              admitted.push(article);
+            }
+          };
+          for (const query of queries) {
+            try {
+              const response = await this.newsService.search(query, SEARCH_POOL_SIZE, { type: 'none' }, {
+                ...(executionPolicy.reportingWindow === undefined
+                  ? {}
+                  : { from: executionPolicy.reportingWindow.from, to: executionPolicy.reportingWindow.to }),
+              });
+              take(response.articles);
+            } catch {
+              /* a refused or failed supplement never fails the answer; the retained read follows */
+            }
+            try {
+              const terms = normalizeAnchorText(query).trim().split(' ').filter((t) => t.length >= 3).slice(0, 8);
+              take(await this.newsService.findRetainedByQuery(query, terms, 60, 7 * 24 * 60));
+            } catch {
+              /* retained store unavailable — the gate result stands */
+            }
+          }
+          retrievalContext = {
+            ...retrievalContext,
+            questionAnchorGate: {
+              key: anchorsKey(anchors),
+              candidates,
+              admitted: admitted.length,
+              supplementQueries: queries.length,
+            },
+          };
+          this.logger.log(
+            `ask anchor gate key=${anchorsKey(anchors)} candidates=${candidates} admitted=${admitted.length} supplements=${queries.length}`,
+          );
+          articles = admitted;
+        }
+
         const sourceCoverage = this.sourceCoverageFor(
           retrievalContext.countryCode,
           articles,

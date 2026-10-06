@@ -50,8 +50,11 @@ describe('D25 /ask — the composer stays inside the visible frame', () => {
 
   it('phone / 768 keep the keyboard-aware full-screen height', () => {
     expect(frame).toContain("'--ask-visible-height'");
+    /* ASK RELIABILITY R1 (Q) — the frame follows the VISIBLE box (top AND height) so Safari's keyboard
+       pan can hide neither the header/close nor the composer; no bottom, nothing over-constrained. */
     expect(css).toMatch(
-      /position: fixed;\s*inset: 0;[\s\S]{0,80}height: var\(--ask-visible-height, 100dvh\);/,
+      /position: fixed;[\s\S]{0,260}top: var\(--ask-visible-top, 0px\);[\s\S]{0,80}bottom: auto;[\s\S]{0,60}height: var\(--ask-visible-height, 100dvh\);/,
     );
+    expect(frame).toContain("'--ask-visible-top'");
   });
 });

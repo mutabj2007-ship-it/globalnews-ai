@@ -28,6 +28,20 @@ const REQUEST_TIMEOUT_MS = 8000;
  */
 const GNEWS_COOLDOWN_MS = 60_000;
 /**
+ * ASK RELIABILITY R1 — Production logs of 2026-10-05 21:42–21:51 UTC show repeated 429s
+ * ("rate limit exceeded") across consecutive Ask turns. The 60 s circuit was re-opened at the same
+ * length each time, so every next minute began with a call into the same throttle. Now:
+ *   · repeated 429s back off exponentially (60 s → 2 min → 4 min …, capped at 10 min) until a
+ *     success resets the streak;
+ *   · a 403 (allowance exhausted on this plan) does not refill within a minute: 15 min cooldown;
+ *   · consecutive requests keep at least GNEWS_MIN_SPACING_MS apart (short-window throttle);
+ *   · an identical request already in flight is SHARED, never sent twice.
+ * This only reduces calls; it never retries a refused request or evades a quota.
+ */
+const GNEWS_QUOTA_COOLDOWN_MS = 15 * 60_000;
+const GNEWS_MAX_COOLDOWN_MS = 10 * 60_000;
+const GNEWS_MIN_SPACING_MS = 1_100;
+/**
  * Query-limit correction — GNews's own documented search `q` parameter
  * maximum. This is an UNCONDITIONAL, last-resort defensive backstop —
  * see search()'s own use of clampQueryLength() below — not the
@@ -236,6 +250,10 @@ export class GNewsProvider implements NewsProvider {
    */
   private executionChain: Promise<void> = Promise.resolve();
   private cooldownUntil = 0;
+  /* ASK RELIABILITY R1 — consecutive 429s (reset by a success), last request start, in-flight map. */
+  private throttleStreak = 0;
+  private lastRequestStartedAt = 0;
+  private readonly inFlight = new Map<string, Promise<GNewsApiResponse>>();
   private cooldownKind: 'quota' | 'rate-limited' | 'timeout' | 'transport' | undefined;
   /** Passive provider telemetry: Admin health must never spend a GNews request. */
   private lastSuccessfulRequestAt: string | undefined;
@@ -439,10 +457,24 @@ export class GNewsProvider implements NewsProvider {
   }
 
   private async request(url: string): Promise<GNewsApiResponse> {
+    /* ASK RELIABILITY R1 — an identical request already in flight is shared, not repeated. */
+    const pending = this.inFlight.get(url);
+    if (pending !== undefined) return pending;
+    const run = this.requestOnce(url).finally(() => {
+      this.inFlight.delete(url);
+    });
+    this.inFlight.set(url, run);
+    return run;
+  }
+
+  private async requestOnce(url: string): Promise<GNewsApiResponse> {
     return this.runSerialized(async () => {
       if (Date.now() < this.cooldownUntil) {
         throw this.cooldownRefusal();
       }
+      const wait = this.lastRequestStartedAt + GNEWS_MIN_SPACING_MS - Date.now();
+      if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+      this.lastRequestStartedAt = Date.now();
 
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -523,6 +555,7 @@ export class GNewsProvider implements NewsProvider {
       }
 
       this.lastSuccessfulRequestAt = new Date().toISOString();
+      this.throttleStreak = 0;
       this.lastFailureAt = undefined;
       this.lastFailureMessage = undefined;
       return payload as GNewsApiResponse;
@@ -554,7 +587,14 @@ export class GNewsProvider implements NewsProvider {
   private openCooldown(
     kind: 'quota' | 'rate-limited' | 'timeout' | 'transport',
   ): void {
-    this.cooldownUntil = Date.now() + GNEWS_COOLDOWN_MS;
+    if (kind === 'rate-limited') this.throttleStreak += 1;
+    const length =
+      kind === 'quota'
+        ? GNEWS_QUOTA_COOLDOWN_MS
+        : kind === 'rate-limited'
+          ? Math.min(GNEWS_COOLDOWN_MS * 2 ** Math.max(this.throttleStreak - 1, 0), GNEWS_MAX_COOLDOWN_MS)
+          : GNEWS_COOLDOWN_MS;
+    this.cooldownUntil = Date.now() + length;
     this.cooldownKind = kind;
     this.lastFailureAt = new Date().toISOString();
     this.lastFailureMessage =

@@ -30,7 +30,8 @@ import type { StoryBriefConclusion, StoryBriefFailureKind } from './story-brief.
  * Guests never reach this class: POST /stories/:id/brief is signed-in only.
  */
 export const STORY_BRIEF_QUESTION =
-  'Brief me on this story: what does the current reporting establish, and what is not yet established?';
+  'Brief me on this story in 60 to 100 words, as three or four short points: what happened; why it matters locally; ' +
+  'who may be affected; and what to watch or verify next. Say plainly what the current reporting does not yet establish.';
 
 /** Ask answer states that are a conclusion, and which conclusion. */
 const CONCLUSION_OF: Readonly<Record<string, StoryBriefConclusion>> = {

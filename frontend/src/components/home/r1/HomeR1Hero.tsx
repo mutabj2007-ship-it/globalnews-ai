@@ -2,7 +2,7 @@
 
 import type { FormEvent, JSX } from 'react';
 import { useRef, useState } from 'react';
-import { ArrowRight, ArrowUpRight, Map as MapIcon, MessagesSquare } from 'lucide-react';
+import { ArrowRight, Map as MapIcon, MessagesSquare } from 'lucide-react';
 import type { LanguageCode } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { submitGlobalAsk } from '@/lib/ask/submitGlobalAsk';
@@ -43,12 +43,6 @@ export function HomeR1Hero({
     event.currentTarget.reset();
   };
 
-  const stage = (question: string): void => {
-    const input = inputRef.current;
-    if (input === null) return;
-    input.value = question;
-    input.focus();
-  };
 
   return (
     <section data-home-r1-hero="" aria-labelledby="home-r1-title" className="relative overflow-hidden pt-6 lg:pt-10">
@@ -101,18 +95,12 @@ export function HomeR1Hero({
           {status ?? t.noteSend}
         </p>
 
-        <ul aria-label={t.suggestionsAria} className="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] sm:flex-wrap sm:overflow-visible">
+        {/* ASK RELIABILITY R1 (§8) — sample questions are visible guidance only: plain text, never a
+            control that fills, submits or takes focus. */}
+        <ul aria-label={t.suggestionsAria} data-home-r1-suggestion-hints="" className="mt-3 flex flex-col gap-1 px-1 text-[13px] leading-snug text-[var(--gt-ink2)]">
           {suggestions.slice(0, 3).map((question) => (
-            <li key={question} className="shrink-0">
-              <button
-                type="button"
-                data-home-r1-suggestion=""
-                onClick={() => stage(question)}
-                className="flex min-h-[44px] max-w-[260px] items-center gap-2 rounded-[10px] border border-[var(--gt-line)] bg-[var(--gt-card)] px-3 py-2 text-left text-[13px] font-semibold leading-snug text-[var(--gt-ink)] hover:border-[var(--gt-act)]"
-              >
-                <ArrowUpRight aria-hidden="true" className="h-4 w-4 shrink-0 text-[var(--gt-link)]" />
-                <span>{question}</span>
-              </button>
+            <li key={question} data-home-r1-suggestion="" className="before:me-1.5 before:content-['·']">
+              <span className="italic">{question}</span>
             </li>
           ))}
         </ul>

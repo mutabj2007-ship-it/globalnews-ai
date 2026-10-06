@@ -16,7 +16,7 @@ import {
   type HomeVisibilityPolicy,
 } from '@globalnews-ai/shared';
 import { computeArticleRef } from '../news/identity/article-ref.util';
-import { assessHomeEligibility } from './home-eligibility';
+import { assessHomeEligibility, plainTopicLabels } from './home-eligibility';
 
 /**
  * PHONE-FIRST HOME CORRECTION R1 · §3, §6, §11 — the pure assembly of the Home editorial read:
@@ -223,6 +223,7 @@ export function cardOf(
     primaryDomain: lead.domains.length > 0 ? lead.primary : null,
     domains: [...new Set(group.members.flatMap((m) => m.domains))],
     signals: lead.signals,
+    topics: plainTopicLabels([...new Set(group.members.flatMap((m) => m.signals))]),
     countries: countryCodes.slice(0, 4).map(country),
     regions,
     freshness: freshnessOf(group, discussion, now, policy),
@@ -251,7 +252,10 @@ function scoreOf(group: Group, card: HomeStoryCard, discussion: DiscussionActivi
   const strength = Math.min(group.lead.strength, 6);
   const corroboration = Math.min(new Set(group.members.map((m) => m.row.sourceName)).size - 1, 4);
   const talk = discussion === null ? 0 : Math.min(discussion.participants, 4);
-  return TIER[card.freshness] * 100 + strength * 3 + Math.min(relevance, 100) / 10 + corroboration * 2 + talk * 2 - ageDays * 4;
+  /* ASK RELIABILITY R1 (§10) — local original East African reporting leads the international
+     aggregators that otherwise dominate by volume (a bounded nudge inside the same freshness tier). */
+  const local = group.members.some((m) => isEastAfricanLocalPublisher(m.row.sourceName)) ? 8 : 0;
+  return TIER[card.freshness] * 100 + strength * 3 + Math.min(relevance, 100) / 10 + corroboration * 2 + talk * 2 + local - ageDays * 4;
 }
 
 function sixHourBucket(now: Date, hours: number): number {
@@ -298,7 +302,10 @@ export function assembleHomeEditorial(input: AssemblyInput): HomeEditorialRespon
     const basis = pick === undefined ? 'DEFAULT' : 'PREFERENCES';
     if (pick === undefined) {
       const fresh = ranked.filter((r) => r.card.freshness === 'LAST_72H' || r.card.freshness === 'DEVELOPING');
-      const pool = (fresh.length > 0 ? fresh : ranked).slice(0, 3);
+      /* ASK RELIABILITY R1 (§10) — the default hero leads with East Africa when a fresh East African
+         development qualifies; otherwise the strongest fresh development anywhere in scope. */
+      const freshEastAfrica = fresh.filter((r) => r.card.regions.includes('region:east-africa'));
+      const pool = (freshEastAfrica.length > 0 ? freshEastAfrica : fresh.length > 0 ? fresh : ranked).slice(0, 3);
       pick = pool[sixHourBucket(now, policy.heroRotationHours) % pool.length];
     }
     used.add(pick);
@@ -364,4 +371,16 @@ export function degradedHomeEditorial(now: Date, policy: HomeVisibilityPolicy = 
       };
     }),
   };
+}
+
+/** Known East African local publishers (names as retained providers report them). */
+const EAST_AFRICAN_LOCAL_PUBLISHERS = [
+  'the standard', 'nation', 'daily nation', 'business daily', 'the star', 'capital fm', 'the citizen', 'daily news',
+  'the new times', 'kt press', 'taarifa', 'igihe', 'daily monitor', 'new vision', 'the eastafrican', 'the east african',
+  'addis standard', 'the reporter', 'garowe online', 'hiiraan', 'radio okapi', 'actualite.cd', 'sudans post',
+  'radio tamazuj', 'eye radio', 'iwacu', 'kenyans.co.ke', 'tuko', 'mwananchi', 'the chronicles',
+];
+export function isEastAfricanLocalPublisher(name: string): boolean {
+  const n = name.trim().toLowerCase();
+  return EAST_AFRICAN_LOCAL_PUBLISHERS.some((p) => n === p || n.startsWith(`${p} `) || n.endsWith(` ${p}`));
 }

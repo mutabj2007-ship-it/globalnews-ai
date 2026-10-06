@@ -165,9 +165,57 @@ export function AskAnswerProse({
             </ul>
           );
         }
+        if (block.kind === 'table') {
+          /* ASK RELIABILITY R1 (M) — a requested table is rendered as a real table. On a phone it
+             scrolls inside its own labelled region (never the page), with the row/column
+             relationships kept by <th scope>. Cells are text only (React-escaped). */
+          return (
+            <div
+              key={key}
+              role="region"
+              aria-label={block.header.join(' · ')}
+              tabIndex={0}
+              data-ask="answer-table"
+              className="my-2 max-w-full overflow-x-auto overscroll-x-contain rounded-[8px] border border-[var(--gt-line,#d6dde8)]"
+            >
+              <table className="w-full min-w-[28rem] border-collapse text-start text-[0.875rem] leading-snug">
+                <thead>
+                  <tr>
+                    {block.header.map((cell, i) => (
+                      <th
+                        key={`${key}-h${i}`}
+                        scope="col"
+                        className="border-b border-[var(--gt-line,#d6dde8)] bg-[var(--gt-sunk,#f1f4f8)] px-2.5 py-2 text-start font-semibold"
+                      >
+                        <Inline text={cell} />
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {block.rows.map((row, r) => (
+                    <tr key={`${key}-r${r}`} className="align-top">
+                      {row.map((cell, c) =>
+                        c === 0 ? (
+                          <th key={`${key}-r${r}c${c}`} scope="row" className="border-t border-[var(--gt-line,#d6dde8)] px-2.5 py-2 text-start font-semibold">
+                            <Inline text={cell} />
+                          </th>
+                        ) : (
+                          <td key={`${key}-r${r}c${c}`} className="border-t border-[var(--gt-line,#d6dde8)] px-2.5 py-2">
+                            <Inline text={cell} />
+                          </td>
+                        ),
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        }
         if (block.kind === 'ordered') {
           return (
-            <ol key={key} data-ask="answer-steps">
+            <ol key={key} data-ask="answer-steps" start={block.start === 1 ? undefined : block.start}>
               {block.items.map((item, i) => (
                 <li key={`${key}-${i}`} data-ask="answer-step">
                   {run(item, `${key}-${i}`)}

@@ -237,7 +237,7 @@ const TIME_GOVERNOR = String.raw`(?:(?:over|in|during|within|for|across|througho
 
 /** A function word left hanging before punctuation or the end, or an empty clause (", ,"). */
 const DANGLING =
-  /(?:\b(?:the|a|an|of|over|in|during|within|for|across|throughout|from|since|to|and|or|by|with|at|next|last|past|previous|coming|recent)\s*(?:[?.!,;:]|$))|(?:[,;:]\s*[,;:?.!])|(?:^[\s,;:?.!])/giu;
+  /(?:\b(?:the|a|an|of|over|in|during|within|for|across|throughout|from|since|to|and|or|by|with|at|next|last|past|previous|coming|recent|entire|whole|all|every|this|that|these|those|its|their|my|our|your|his|her)\s*(?:[?.!,;:]|$))|(?:[,;:]\s*[,;:?.!])|(?:^[\s,;:?.!])/giu;
 
 function danglingCount(text: string): number {
   return (text.trim().match(DANGLING) ?? []).length;
@@ -410,7 +410,9 @@ export function askR2View(
         : (payload.answer.candidates ?? []).map((iso3) => placeName(iso3));
   let lead: string | null = null;
   let suggestion: string | null = null;
-  if (basis === 'NO_PRIOR_SUBJECT') lead = s.noPriorSubject;
+  /* ASK RELIABILITY R1 (E) — "…about this place?" only when a PLACE is in play (candidates); a
+     question that named no place gets the neutral "what should this cover" request instead. */
+  if (basis === 'NO_PRIOR_SUBJECT') lead = (payload.answer.candidates ?? []).length > 0 ? s.noPriorSubject : s.clarify.fallback;
   /* R4 ALPHA R-4 — a reference to an earlier answer this conversation does not hold */
   else if (basis === 'PRIOR_REFERENCE_UNRESOLVED') lead = s.r4.priorReferenceUnresolved;
   else if (basis === 'CONSTRAINT_NOTED') lead = s.r3.constraintNoted;

@@ -282,6 +282,9 @@ function GlobalAskAiDock({
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const conversationRef = useRef<HTMLDivElement | null>(null);
   const [keyboardInset, setKeyboardInset] = useState(0);
+  /* ASK RELIABILITY R1 (Q) — the visible box (top + height) of the visual viewport while the
+     on-screen keyboard is open on a phone, so the full-screen panel fits exactly above it. */
+  const [visibleBox, setVisibleBox] = useState<{ top: number; height: number } | null>(null);
   /* MAP R2 — the Spatial Ask geometry, measured only on /map (see MAP_ROUTE). */
   const [mapLayout, setMapLayout] = useState<MapAskLayout | null>(null);
   const [mapViewport, setMapViewport] = useState<{ height: number; navInset: number }>({ height: 0, navInset: 0 });
@@ -475,6 +478,16 @@ function GlobalAskAiDock({
         window.innerHeight - viewport.height - viewport.offsetTop,
       );
       setKeyboardInset(obscured > 80 ? obscured : 0);
+      /* ASK RELIABILITY R1 (Q) — iOS Safari overlays the keyboard and PANS the visual viewport
+         (offsetTop > 0) to reveal the focused field. A panel that is inset:0 + 100dvh then keeps
+         its composer under the keyboard and its header/close above the visible area. On phones the
+         panel instead takes the visible box exactly: top = offsetTop, height = visible height. */
+      const phone = window.innerWidth < 1024;
+      setVisibleBox(
+        phone && obscured > 80
+          ? { top: Math.round(viewport.offsetTop), height: Math.round(viewport.height) }
+          : null,
+      );
     };
     update();
     viewport.addEventListener('resize', update);
@@ -703,12 +716,20 @@ function GlobalAskAiDock({
           data-ask-geometry={mapLayout === null ? 'dock' : `map-${mapLayout}`}
           data-ask-transport="r2"
           data-gna-theme={themed && mapLayout === null ? themePreference : undefined}
-          style={mapPanelStyle ?? { bottom: keyboardInset > 0 ? `${keyboardInset}px` : undefined }}
+          style={
+            mapPanelStyle ??
+            (visibleBox !== null
+              ? { top: `${visibleBox.top}px`, height: `${visibleBox.height}px`, maxHeight: `${visibleBox.height}px`, bottom: 'auto' }
+              : { bottom: keyboardInset > 0 ? `${keyboardInset}px` : undefined })
+          }
           className={onMap ? mapPanelClass : [
             'fixed z-50 flex flex-col overflow-hidden border border-border-strong bg-surface-raised shadow-2xl',
             /* PHONE and 768 PORTRAIT — FULL SCREEN (D25 11: "PHONE ASK MAY NOT" be partial).
                Was an 86dvh bottom sheet; D25 names that geometry as not permitted. */
-            'inset-0 h-[100dvh] max-h-[100dvh] rounded-none pb-[env(safe-area-inset-bottom)]',
+            /* ASK RELIABILITY R1 (Q) — the home-indicator inset is applied ONCE, by the composer
+               (it was also on this panel: ~68 px of empty strip once viewport-fit=cover made the
+               inset real). */
+            'inset-0 h-[100dvh] max-h-[100dvh] rounded-none',
             /* 1024 and up — a bounded floating right-hand dock. */
             'lg:inset-y-4 lg:end-4 lg:start-auto lg:h-auto lg:w-[min(600px,92vw)] lg:max-h-[calc(100dvh-2rem)] lg:rounded-2xl',
             /* DESKTOP — a wider dock, so evidence and answer sit side by side. */
@@ -896,7 +917,7 @@ function GlobalAskAiDock({
               </form>
             </div>
           ) : (
-          <div data-ask="composer" className="shrink-0 border-t border-border bg-surface-raised/95 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
+          <div data-ask="composer" className={`shrink-0 border-t border-border bg-surface-raised/95 backdrop-blur ${visibleBox !== null ? 'pb-1' : 'pb-[max(0.75rem,env(safe-area-inset-bottom))]'}`}>
           <form ref={formRef} onSubmit={submit} data-ask="form" className="flex flex-col gap-2 px-4 py-3">
             <label className="sr-only" htmlFor="ask-ai-question">
               {t.inputLabel}
@@ -912,7 +933,7 @@ function GlobalAskAiDock({
               maxHeight={420}
               maxViewportFraction={0.46}
               keepVisible={false}
-              className="w-full rounded-2xl border border-border-strong bg-surface px-4 py-3 text-sm leading-6 text-ink-primary shadow-inner placeholder:text-ink-secondary/70 focus:border-signal focus:outline-none"
+              className="w-full rounded-2xl border border-border-strong bg-surface px-4 py-3 text-[16px] leading-6 text-ink-primary shadow-inner placeholder:text-ink-secondary/70 focus:border-signal focus:outline-none"
             />
             <div className="flex flex-wrap items-center justify-between gap-2">
               {/*

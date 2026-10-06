@@ -309,6 +309,19 @@ body {
   padding-right: env(safe-area-inset-right, 0px);
   overflow-x: clip;
 }
+/*
+  ASK RELIABILITY R1 (Q) — while the on-screen keyboard is open (html[data-gna-kb], set by
+  ViewportKeyboardSync), a panel marked [data-kb-follow] occupies exactly the VISIBLE box: its top
+  follows Safari's pan and its height ends at the keyboard, so neither the header/close control nor
+  the composer is hidden. The home-indicator padding is not needed above a keyboard.
+*/
+html[data-gna-kb] [data-kb-follow] {
+  top: var(--gna-vvt, 0px) !important;
+  bottom: auto !important;
+  height: var(--gna-vvh, 100dvh) !important;
+  max-height: var(--gna-vvh, 100dvh) !important;
+  padding-bottom: 0 !important;
+}
 
 /*
   ════════════════════════════════════════════════════════════════════════════

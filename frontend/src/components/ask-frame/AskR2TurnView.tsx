@@ -246,7 +246,10 @@ export function AskR2TurnView({
             </span>
           </>
         )}
-        {turn.expired === true && (
+        {/* ASK RELIABILITY R1 (L) — a reporting re-use window passing does not make a timeless
+            explanation or a computed result "expired": the note is shown only for answers that
+            rest on CURRENT reporting, where re-checking genuinely matters. */}
+        {turn.expired === true && payload.answer.state !== 'REFERENCE_BACKGROUND' && payload.answer.state !== 'COMPUTED_RESULT' && (
           <span data-ask="expired" className="font-mono text-[12px] text-[#8299b4]">
             {s.expiredNote}
           </span>

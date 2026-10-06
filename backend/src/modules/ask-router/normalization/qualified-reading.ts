@@ -400,11 +400,22 @@ function readCategory(
 ): ReadingElement<string> | undefined {
   if (!pl) {
     const topic = detectReaderTopic(text);
+    /* ASK RELIABILITY R1 (A) — "how this affects the entire world" names the SCOPE OF AN IMPACT,
+       not the "World" news category: read as a category it became an untransportable topic
+       constraint, then a broadening offer and a truncated rewrite ("…affects the entire"). The
+       category is named only as "world news / affairs / headlines". (The G producer itself is a
+       byte-pinned accepted package, so the reading is corrected here, where it is consumed.) */
+    if (topic.categoryTerm === 'world' && !/\bworld\s+(?:news|affairs|headlines|stories|section)\b/i.test(text)) {
+      return undefined;
+    }
     return topic.categoryTerm === undefined
       ? undefined
       : el(topic.categoryTerm, topic.categoryTerm, 'LEXICON_WHOLE_TOKEN', 'G:detectReaderTopic');
   }
   for (const [key, forms] of Object.entries(PL_CATEGORY_FORMS)) {
+    /* ASK RELIABILITY R1 (A) — "wpływa na cały świat" is the scope of an impact, not the "świat"
+       news category; the category is named only as news from the world ("wiadomości ze świata"). */
+    if (key === 'world' && !/wiadomo\p{L}*\s+(?:ze\s+)?świat/iu.test(text)) continue;
     const h = hasToken(toks, forms);
     if (h !== undefined) return el(key, h, 'SURFACE_FORM_SET', 'PL_CATEGORY_FORMS');
   }

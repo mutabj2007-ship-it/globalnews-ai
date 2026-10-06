@@ -344,12 +344,22 @@ export function AskFrameScreen({
           '--ask-visible-height',
           `${viewport?.height ?? window.innerHeight}px`,
         );
+        /* ASK RELIABILITY R1 (Q) — iOS PANS the visual viewport when the keyboard opens
+           (offsetTop > 0). Sized to the visible height but pinned at top 0, the frame lost its
+           header/close above the visible area and showed an empty band below the composer. The
+           frame now follows the visible box: its top too, and on scroll as well as resize. */
+        node.style.setProperty('--ask-visible-top', `${Math.round(viewport?.offsetTop ?? 0)}px`);
+        const keyboard = window.innerHeight - (viewport?.height ?? window.innerHeight) - (viewport?.offsetTop ?? 0) > 80;
+        if (keyboard) node.setAttribute?.('data-ask-keyboard', '');
+        else node.removeAttribute?.('data-ask-keyboard');
       }
     };
     update();
     viewport?.addEventListener('resize', update);
+    viewport?.addEventListener('scroll', update);
     window.addEventListener('resize', update);
     return () => {
+      viewport?.removeEventListener('scroll', update);
       viewport?.removeEventListener('resize', update);
       window.removeEventListener('resize', update);
     };

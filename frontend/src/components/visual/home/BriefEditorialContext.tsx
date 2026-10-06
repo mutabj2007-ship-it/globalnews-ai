@@ -28,7 +28,7 @@ export function BriefEditorialContext({ card, language }: { readonly card: HomeS
         ) : (
           <span className="font-semibold">{domain}</span>
         )}
-        {card.signals.length > 0 && <span className="text-[var(--gt-ink2)]">· {card.signals.join(', ')}</span>}
+        {(card.topics ?? []).length > 0 && <span className="text-[var(--gt-ink2)]">· {card.topics.join(' · ')}</span>}
       </p>
       {card.countries.length > 0 && (
         <p className="text-[0.8125rem] text-[var(--gt-ink2)]" aria-label={t.countriesAria}>

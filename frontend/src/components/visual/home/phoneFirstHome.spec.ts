@@ -126,7 +126,11 @@ describe('A10 — shared phone fixes', () => {
   });
   it('the comment composer lifts above the keyboard and uses 16 px (no iOS focus zoom)', () => {
     const d = code('components/home/r1/stageb/DiscussionPanel.tsx');
-    expect(d).toMatch(/bottom: 'var\(--gna-kb, 0px\)'/);
+    /* ASK RELIABILITY R1 (Q) — the panel follows the VISIBLE box (top and height) while the
+       keyboard is open, via the one shared rule in globals.css. */
+    expect(d).toMatch(/data-kb-follow=""/);
+    expect(code('components/visual/VisualBriefPanel.tsx')).toMatch(/data-kb-follow=""/);
+    expect(read('app/globals.css')).toMatch(/html\[data-gna-kb\] \[data-kb-follow\] \{\n  top: var\(--gna-vvt, 0px\) !important;/);
     expect(d).not.toMatch(/<textarea[^>]*text-\[14px\]/);
   });
   it('page-level horizontal overflow is clipped centrally', () => {
@@ -155,6 +159,7 @@ describe('copy parity and helpers', () => {
       primaryDomain: 'business',
       domains: ['business'],
       signals: ['tariffs'],
+      topics: ['Trade and transport'],
       countries: [],
       regions: [],
       freshness: 'LAST_72H',

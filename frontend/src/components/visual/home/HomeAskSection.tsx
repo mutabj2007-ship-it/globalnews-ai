@@ -69,22 +69,14 @@ export function HomeAskSection({ language, examples }: { readonly language: Lang
         {status ?? t.note}
       </p>
       {examples.length > 0 && (
-        <ul aria-label={t.examplesAria} className="mt-2 flex flex-wrap gap-2">
+        /* ASK RELIABILITY R1 (§8) — examples are visible guidance ONLY: plain text, never a
+           control. Nothing fills, submits or takes focus; the reader types their own question. */
+        <ul aria-label={t.examplesAria} data-visual-example-hints="" className="mt-2 flex flex-col gap-1 ps-1 text-[0.8125rem] leading-snug text-[var(--gt-ink2)]">
           {examples.slice(0, 3).map((question) => (
-            <li key={question} className="min-w-0 max-w-full">
-              <button
-                type="button"
-                data-visual-example=""
-                onClick={() => {
-                  if (inputRef.current !== null) {
-                    inputRef.current.value = question;
-                    inputRef.current.focus();
-                  }
-                }}
-                className="min-h-[44px] max-w-full rounded-[0.5rem] border border-[var(--gt-line)] px-3 py-2 text-start text-[0.8125rem] font-semibold leading-snug text-[var(--gt-ink)] hover:border-[var(--gt-act)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--gt-act)]"
-              >
-                <span dir="auto">{question}</span>
-              </button>
+            <li key={question} data-visual-example="" className="min-w-0 max-w-full before:me-1.5 before:content-['·']">
+              <span dir="auto" className="italic">
+                {question}
+              </span>
             </li>
           ))}
         </ul>

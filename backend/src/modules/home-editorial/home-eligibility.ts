@@ -102,10 +102,10 @@ const BUSINESS_STRONG = [
   'competition authority', 'infrastructure', 'pipeline', 'port', 'railway', 'power plant', 'electricity',
   'blackout', 'power outage', 'supply chain', 'shipping', 'freight', 'cost of living', 'subsidy', 'subsidies',
   'manufacturing', 'factory', 'startup', 'start up', 'bank', 'banks', 'banking', 'loan', 'loans', 'credit',
-  'mining', 'minerals', 'cobalt', 'copper', 'gold mine', 'oil field', 'gas field', 'lng', 'opec', 'crude',
+  'mining', 'minerals', 'cobalt', 'copper', 'gold mine', 'oil field', 'gas field', 'lng', 'opec', 'crude', 'crude oil',
   'agriculture', 'harvest', 'food prices', 'wheat', 'coffee exports', 'tea exports', 'tourism revenue',
   'sanctions', 'trade', 'company', 'companies', 'firm', 'firms', 'business', 'businesses', 'market share',
-  'commodity', 'commodities', 'stock', 'stocks', 'orders worth', 'deal worth', 'contract worth',
+  'commodity', 'commodities', 'cargo', 'stock', 'stocks', 'orders worth', 'deal worth', 'contract worth',
   'payroll', 'expansion', 'ecb', 'european commission fines', 'single market', 'customs',
 ];
 
@@ -165,10 +165,17 @@ export function assessHomeEligibility(input: HomeEligibilityInput): HomeEligibil
 
   /* "trade", "company", "business", "firm", "bank" are common enough that ONE of them in the summary
      alone is not evidence; they need a second business term or a headline position. */
-  const COMMON = new Set(['trade', 'company', 'companies', 'firm', 'firms', 'business', 'businesses', 'bank', 'banks', 'credit', 'port', 'budget', 'tax']);
+  /* ASK RELIABILITY R1 (O) — words that are business evidence only WITH another business term: a
+     smuggled-alcohol report that mentions "crude" spirits or a "commodity" is not an energy or
+     markets story, and one "electricity" or "shipping" mention is not a business development. */
+  const COMMON = new Set([
+    'trade', 'company', 'companies', 'firm', 'firms', 'business', 'businesses', 'bank', 'banks', 'credit', 'port',
+    'budget', 'tax', 'crude', 'commodity', 'commodities', 'electricity', 'shipping', 'freight', 'stock', 'stocks',
+    'loan', 'loans', 'expansion', 'jobs', 'agriculture', 'harvest',
+  ]);
   const businessInTitle = matches(title, BUSINESS_STRONG);
-  const businessOk =
-    business.some((t) => !COMMON.has(t)) || business.length >= 2 || businessInTitle.length >= 1;
+  /* a DISTINCTIVE business term is always required; common words alone never qualify (ASK RELIABILITY R1 · O) */
+  const businessOk = business.some((t) => !COMMON.has(t));
   const conflictOk = conflictStrong.length >= 1 || conflictWeak.length >= 3;
 
   if (!businessOk && !conflictOk) return { eligible: false, reason: 'NO_BUSINESS_OR_CONFLICT_EVIDENCE' };
@@ -187,4 +194,34 @@ export function assessHomeEligibility(input: HomeEligibilityInput): HomeEligibil
     signals: { business: businessOk ? business : [], conflict: conflictOk ? [...conflictStrong, ...conflictWeak] : [] },
     strength: businessScore + conflictScore,
   };
+}
+
+/**
+ * ASK RELIABILITY R1 (O) — "Why it is here" in plain words: the topic families the supporting terms
+ * belong to, never the raw matched tokens ("crude", "commodity").
+ */
+const TOPIC_LABELS: ReadonlyArray<{ label: string; terms: readonly string[] }> = [
+  { label: 'Energy and fuel', terms: ['refinery', 'crude oil', 'oil price', 'oil prices', 'fuel price', 'fuel prices', 'energy prices', 'gas prices', 'electricity prices', 'power plant', 'blackout', 'power outage', 'pipeline', 'lng', 'opec', 'oil field', 'gas field'] },
+  { label: 'Prices and cost of living', terms: ['inflation', 'cost of living', 'food prices', 'subsidy', 'subsidies'] },
+  { label: 'Money, debt and finance', terms: ['central bank', 'interest rate', 'interest rates', 'currency', 'shilling', 'bonds', 'bond yields', 'eurobond', 'debt', 'imf', 'world bank', 'banking', 'ecb', 'eurozone', 'euro zone'] },
+  { label: 'Trade and transport', terms: ['tariff', 'tariffs', 'trade deal', 'trade war', 'trade talks', 'exports', 'imports', 'export ban', 'customs', 'supply chain', 'single market', 'sanctions'] },
+  { label: 'Companies and investment', terms: ['investment', 'investments', 'investor', 'investors', 'acquisition', 'merger', 'takeover', 'privatisation', 'privatization', 'stock exchange', 'stock market', 'earnings', 'revenue', 'profit', 'profits', 'startup', 'start up', 'orders worth', 'deal worth', 'contract worth', 'payroll', 'manufacturing', 'factory', 'mining', 'minerals', 'cobalt', 'copper', 'gold mine', 'market share'] },
+  { label: 'Jobs and incomes', terms: ['unemployment', 'layoffs', 'job cuts', 'wages', 'minimum wage', 'workers strike'] },
+  { label: 'Public policy and regulation', terms: ['vat', 'regulator', 'regulation', 'regulations', 'antitrust', 'competition authority', 'european commission fines'] },
+  { label: 'Infrastructure', terms: ['infrastructure', 'railway'] },
+  { label: 'Agriculture and food', terms: ['wheat', 'coffee exports', 'tea exports', 'food prices'] },
+  { label: 'Growth and the economy', terms: ['economy', 'economic', 'economies', 'gdp', 'recession'] },
+  { label: 'Armed conflict', terms: ['war', 'wars', 'warfare', 'conflict', 'fighting', 'clashes', 'offensive', 'invasion', 'occupation', 'siege', 'airstrike', 'airstrikes', 'air strike', 'air strikes', 'drone strike', 'drone strikes', 'shelling', 'missile', 'missiles', 'rocket fire', 'bombardment', 'militia', 'militias', 'rebel', 'rebels', 'insurgent', 'insurgents', 'insurgency', 'troops', 'military operation', 'frontline', 'front line', 'civil war'] },
+  { label: 'Ceasefire and peace efforts', terms: ['ceasefire', 'cease fire', 'truce', 'peace talks', 'peace deal', 'peace agreement'] },
+  { label: 'Displacement and humanitarian impact', terms: ['displaced', 'displacement', 'refugees', 'refugee camp', 'humanitarian corridor', 'civilians killed'] },
+  { label: 'Attacks and security', terms: ['terror attack', 'terrorist attack', 'suicide bomber', 'bombing', 'gunmen', 'armed group', 'armed groups', 'hostage', 'hostages', 'massacre'] },
+  { label: 'Political crisis', terms: ['coup', 'annexation', 'blockade'] },
+];
+
+export function plainTopicLabels(signals: readonly string[]): string[] {
+  const out: string[] = [];
+  for (const t of TOPIC_LABELS) {
+    if (signals.some((sig) => t.terms.includes(sig)) && !out.includes(t.label)) out.push(t.label);
+  }
+  return out.slice(0, 2);
 }

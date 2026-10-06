@@ -9,7 +9,7 @@ import { pluralWithForms } from '@/lib/i18n/pluralize';
 import { fill } from '@/components/home/reva/homeRevaModel';
 import { useHomeSession } from '@/components/home/reva/HomeSession';
 import { accountSignInUrl } from '@/lib/api/accountLinks';
-import { readStoryBrief, requestStoryBrief, resolveStoryId, type CanonicalStoryIdentity } from '@/lib/api/storyBriefApi';
+import { ensureStoryForArticle, readStoryBrief, requestStoryBrief, resolveStoryId, type CanonicalStoryIdentity } from '@/lib/api/storyBriefApi';
 import type { BriefResult, BriefRunIntent, StoryBriefFailureKind, StoryBriefView, StoryId } from '@/lib/storyBrief/storyBriefView';
 import {
   closeVisualBrief,
@@ -103,6 +103,7 @@ export function VisualBriefPanel({
   const open = panel.kind === 'brief';
   const story = open ? panel.story : null;
   const ref = story?.articleRef ?? null;
+  const storyUrl = story?.url ?? null;
   const section = open ? panel.section : 'top';
   const evidence = open ? panel.evidence : null;
 
@@ -132,8 +133,14 @@ export function VisualBriefPanel({
     setIdentity(null);
     void (async () => {
       /* Canonical resolution — independent of Discussion (PUBLIC-ENGINEERING-BASELINE-R1 §2). */
-      const resolved = await resolveStoryId(ref);
+      let resolved = await resolveStoryId(ref);
       if (!live) return;
+      /* ASK RELIABILITY R1 (§9) — a signed-in Read Brief on an article not yet in a story places it
+         in one (server-validated), so a real brief can be prepared instead of a dead end. */
+      if (!resolved.ok && resolved.reason === 'NO_STORY' && signedIn && section === 'top' && storyUrl !== null) {
+        resolved = await ensureStoryForArticle(ref, storyUrl);
+        if (!live) return;
+      }
       if (!resolved.ok) {
         apply(resolved);
         return;
@@ -144,7 +151,7 @@ export function VisualBriefPanel({
     return () => {
       live = false;
     };
-  }, [ref, apply]);
+  }, [ref, apply, signedIn, section, storyUrl]);
 
   /*
    * The card's Read brief press IS the explicit request (CTO §6). Once the read says NONE, a
@@ -260,7 +267,8 @@ export function VisualBriefPanel({
         data-evidence-revision={view?.currentEvidenceRevision}
         data-brief-version={briefVersion}
         className="fixed bottom-0 end-0 top-0 z-[61] flex w-full flex-col bg-[var(--gt-card)] text-[var(--gt-ink)] shadow-[0_0_40px_-12px_rgba(0,0,0,0.45)] min-[600px]:w-[min(600px,calc(100vw-48px))] min-[900px]:w-[520px] min-[1200px]:top-[60px] min-[1200px]:border-s min-[1200px]:border-[var(--gt-line)] min-[1200px]:shadow-none"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)', bottom: 'var(--gna-kb, 0px)' }}
+        data-kb-follow=""
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         <div className="flex items-center gap-2 border-b border-[var(--gt-line)] px-3 py-2">
           {evidence !== null ? (
@@ -313,6 +321,58 @@ export function VisualBriefPanel({
               <h2 ref={headingRef} tabIndex={-1} dir="auto" className="font-display text-[1.375rem] font-bold leading-snug focus:outline-none">
                 {story.title}
               </h2>
+
+              {/* ASK RELIABILITY R1 (P) — Follow, Discuss and Ask are visible at the top, not after
+                  the reporting and the discussion: one compact, clearly labelled row. */}
+              <div role="group" aria-label={t.followHeading} data-visual-brief-quick-actions="" className="-mt-3 flex flex-wrap items-center gap-2">
+                {alertsInApp &&
+                  (stageB.alertsByRef[story.articleRef] !== undefined ? (
+                    <button
+                      type="button"
+                      data-visual-alert="on"
+                      aria-pressed="true"
+                      onClick={() => openAlertsCentre()}
+                      className="inline-flex min-h-[44px] items-center gap-1.5 rounded-[0.5rem] bg-[var(--gt-amberBg)] px-3 text-[0.875rem] font-semibold text-[var(--gt-amberInk)]"
+                    >
+                      <BellRing aria-hidden="true" className="h-4 w-4" />
+                      {t.alertOn}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      data-visual-alert="off"
+                      aria-pressed="false"
+                      onClick={() => openAlertSetup(target)}
+                      className="inline-flex min-h-[44px] items-center gap-1.5 rounded-[0.5rem] border border-[var(--gt-line)] px-3 text-[0.875rem] font-semibold hover:border-[var(--gt-act)]"
+                    >
+                      <Bell aria-hidden="true" className="h-4 w-4" />
+                      {t.alert}
+                    </button>
+                  ))}
+                {discussionRead && (
+                  <button
+                    type="button"
+                    data-visual-quick-discuss=""
+                    onClick={() => openDiscussion(target)}
+                    className="inline-flex min-h-[44px] items-center gap-1.5 rounded-[0.5rem] border border-[var(--gt-line)] px-3 text-[0.875rem] font-semibold hover:border-[var(--gt-act)]"
+                  >
+                    <MessagesSquare aria-hidden="true" className="h-4 w-4" />
+                    {stageB.counts[story.articleRef] !== undefined && stageB.counts[story.articleRef] > 0
+                      ? `${t.openDiscussion} · ${stageB.counts[story.articleRef]}`
+                      : t.openDiscussion}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  data-visual-quick-ask=""
+                  onClick={askFollowUp}
+                  className="inline-flex min-h-[44px] items-center gap-1.5 rounded-[0.5rem] bg-[var(--gt-act)] px-3 text-[0.875rem] font-bold text-white hover:brightness-110"
+                >
+                  <MessagesSquare aria-hidden="true" className="h-4 w-4" />
+                  {t.askFollowUp}
+                </button>
+                {alertsInApp && <p className="w-full text-[0.75rem] text-[var(--gt-ink2)]">{t.alertNote}</p>}
+              </div>
 
               {story.editorial !== undefined && <BriefEditorialContext card={story.editorial} language={language} />}
 
@@ -380,32 +440,6 @@ export function VisualBriefPanel({
                 <h3 id="visual-brief-follow" className="text-[1rem] font-bold">
                   {t.followHeading}
                 </h3>
-                {alertsInApp && (
-                  <div>
-                    {stageB.alertsByRef[story.articleRef] !== undefined ? (
-                      <button
-                        type="button"
-                        data-visual-alert="on"
-                        onClick={() => openAlertsCentre()}
-                        className="inline-flex min-h-[44px] items-center gap-1.5 rounded-[0.5rem] bg-[var(--gt-amberBg)] px-3 text-[0.875rem] font-semibold text-[var(--gt-amberInk)]"
-                      >
-                        <BellRing aria-hidden="true" className="h-4 w-4" />
-                        {t.alertOn}
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        data-visual-alert="off"
-                        onClick={() => openAlertSetup(target)}
-                        className="inline-flex min-h-[44px] items-center gap-1.5 rounded-[0.5rem] border border-[var(--gt-line)] px-3 text-[0.875rem] font-semibold hover:border-[var(--gt-act)]"
-                      >
-                        <Bell aria-hidden="true" className="h-4 w-4" />
-                        {t.alert}
-                      </button>
-                    )}
-                    <p className="mt-1 text-[0.8125rem] text-[var(--gt-ink2)]">{t.alertNote}</p>
-                  </div>
-                )}
                 <div>
                   <button
                     type="button"
@@ -467,7 +501,7 @@ function ReportingWeHold({ story, language }: { readonly story: VisualBriefStory
         <figure className="mt-3 border-s-2 border-[var(--gt-line)] ps-3">
           <figcaption className="text-[0.75rem] font-semibold uppercase tracking-[0.06em] text-[var(--gt-ink3)]">{t.publisherSummary}</figcaption>
           <blockquote dir="auto" className="mt-1 text-[0.9375rem] leading-[1.55] text-[var(--gt-ink)]">
-            {story.summary}
+            {briefExcerpt(story.summary)}
           </blockquote>
         </figure>
       )}
@@ -496,7 +530,7 @@ function EvidencePreview({ item, language }: { readonly item: VisualEvidenceItem
         <figure className="border-s-2 border-[var(--gt-line)] ps-3">
           <figcaption className="text-[0.75rem] font-semibold uppercase tracking-[0.06em] text-[var(--gt-ink3)]">{t.publisherSummary}</figcaption>
           <blockquote dir="auto" className="mt-1 text-[0.9375rem] leading-[1.55]">
-            {item.summary}
+            {briefExcerpt(item.summary)}
           </blockquote>
         </figure>
       )}
@@ -516,4 +550,16 @@ function EvidencePreview({ item, language }: { readonly item: VisualEvidenceItem
       )}
     </div>
   );
+}
+
+/**
+ * ASK RELIABILITY R1 (O) — the publisher's text is shown as a SHORT, attributed excerpt (at most
+ * 45 words), never as pages of copy relabelled as a brief. The full report is one explicit
+ * "Read Original" away.
+ */
+export const BRIEF_EXCERPT_WORDS = 45;
+export function briefExcerpt(text: string): string {
+  const words = text.trim().split(/\s+/);
+  if (words.length <= BRIEF_EXCERPT_WORDS) return text.trim();
+  return `${words.slice(0, BRIEF_EXCERPT_WORDS).join(' ')}…`;
 }

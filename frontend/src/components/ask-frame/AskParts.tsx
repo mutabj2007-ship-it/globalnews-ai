@@ -272,20 +272,22 @@ export function Composer({
               data-ask="composer-example-layer"
               className="pointer-events-none absolute inset-0 flex items-center"
             >
-              <button
-                type="button"
+              {/* ASK RELIABILITY R1 (§8) — Product Owner instruction: a sample question shown inside
+                  the input is visible GUIDANCE ONLY. It is plain text: not clickable, not
+                  focusable, never fills, submits, navigates or steals focus. A tap goes straight
+                  through it to the composer (the layer takes no pointer events). */}
+              <span
                 data-ask="composer-example"
                 data-ask-example-id={example.id}
                 key={example.generation}
-                onClick={example.onUse}
-                className={`pointer-events-auto max-w-full truncate text-start text-[16px] leading-[1.45] text-[#6f89a8] ${
+                aria-hidden="true"
+                className={`max-w-full select-none truncate text-start text-[16px] leading-[1.45] text-[#6f89a8] ${
                   example.animationClass ?? ''
                 }`}
                 {...(example.directionProps ?? {})}
               >
-                <span className="sr-only">{example.useLabel}: </span>
                 {example.text}
-              </button>
+              </span>
             </div>
           )}
         </div>

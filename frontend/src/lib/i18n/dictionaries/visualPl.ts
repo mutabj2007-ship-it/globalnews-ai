@@ -162,6 +162,7 @@ export const visualPl: VisualDictionary = {
     backgroundNote: 'Tło nie jest dowodem i nigdy nie jest cytowane.',
     uncertain: 'Niepewne lub wciąż się rozwija',
     briefEvidence: 'Dowody w tym briefie',
+    showMore: 'Pokaż więcej',
   },
   home: {
     previewBanner: 'Podgląd Alpha poprawionej strony głównej GlobalNewsAI: tylko wydarzenia gospodarcze i konfliktowe.',

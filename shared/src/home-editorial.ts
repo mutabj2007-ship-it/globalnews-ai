@@ -61,6 +61,8 @@ export interface HomeStoryCard {
   readonly domains: readonly HomeEditorialDomain[];
   /** The supporting terms found in the reporting — the stated reason this story is on Home. */
   readonly signals: readonly string[];
+  /** ASK RELIABILITY R1 (O) — plain topic families for "Why it is here" (e.g. "Energy and fuel"). */
+  readonly topics: readonly string[];
   readonly countries: readonly HomeStoryCountry[];
   readonly regions: readonly HomeRegionId[];
   readonly freshness: HomeFreshness;

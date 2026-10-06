@@ -103,6 +103,9 @@ import { askRequestContext, type AskRequestContext } from './ask-request-context
 import { contextIdentityToken, type ResolvedAskContext } from './context/resolved-ask-context';
 import { isSameHeadline } from '../news/identity/headline-identity.util';
 import { AskObservationService } from '../ask-observability/ask-observation.service';
+import { questionAnchorsOf, sameMessageSubject, stableClauseNeedsMessage } from '../analysis/query/question-anchors.util';
+import { productMetaAnswer, readProductMeta } from './product-meta';
+import { checkWrittenArithmetic } from '../analysis/providers/arithmetic-check.util';
 import {
   newAskObservationDraft,
   type AskObservationDraft,
@@ -932,6 +935,27 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       });
     }
 
+    /* ASK RELIABILITY R1 (I) — a question about GlobalNewsAI itself (which model, how to improve
+       it, "you lack recent news") is answered from trusted application facts: zero AI, zero
+       provider, zero cost — never a news search about the product, never invented self-knowledge. */
+    const productMeta = request.context === undefined ? readProductMeta(request.question, request.language) : null;
+    if (productMeta !== null) {
+      draft.aiExecuted = false;
+      draft.modelInvocationCount = 0;
+      return this.result(
+        plan,
+        route,
+        operationId,
+        this.observeAnswer({ state: 'REFERENCE_BACKGROUND', basis: 'PRODUCT_INFORMATION', missingRoles: [] }, draft),
+        null,
+        false,
+        productMetaAnswer(productMeta, request.language, {
+          model: this.analysisConfig.get().openAiModel ?? null,
+          modelProvider: 'OpenAI',
+        }),
+      );
+    }
+
     /*
       CONVERSATIONAL INTELLIGENCE JOURNEY R3 — two answers that need no model, decided on the
       service's own conversation reading and the route before anything is spent:
@@ -1147,6 +1171,10 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       if (
         followUp.refersBack &&
         !followUp.carried &&
+        /* ASK RELIABILITY R1 (E) — "Indicate the oil prices today. How is it?": the "it" refers to
+           an EARLIER SENTENCE OF THE SAME MESSAGE, not to a previous turn. A message whose own
+           earlier sentence names a subject is never asked "what would you like to know about…". */
+        !sameMessageSubject(request.question) &&
         (followUp.namesNothing || requiredRolesOf(route.plan).includes('REPORTING'))
       ) {
         return this.result(
@@ -1337,6 +1365,9 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     const contributions = await this.readIntelligence(route, request.context);
     const governed = governedPrompt(contributions);
 
+    /* ASK RELIABILITY R1 — what the reader named (actors, regions, topic), from their own words. */
+    const anchors = questionAnchorsOf(request.question);
+
     /* 4 · ONE call to the approved analysis path, one model attempt at most. */
     let usage: { promptTokens: number; completionTokens: number } | null = null;
     let outcome: BreakerOutcome = 'FAILURE';
@@ -1391,6 +1422,9 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
                   relations: [...contract.relationship.relations],
                 },
               }),
+          /* ASK RELIABILITY R1 — the reader's OWN named actors and topic, read from their original
+             words: only reports that concern them are admitted as evidence (analysis gate). */
+          ...(anchors.gated ? { questionAnchors: anchors } : {}),
         },
       );
       /* The landed path's no-evidence answer (0 articles, "no AI call was made") is not a
@@ -1433,8 +1467,15 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       call, behind every control) and the current part is NAMED as not verified right now.
     */
     if (
-      route.knowledgeRequirement === 'MIXED_REFERENCE_CURRENT' &&
-      (noEvidence || outcome !== 'SUCCESS' || response === null)
+      (route.knowledgeRequirement === 'MIXED_REFERENCE_CURRENT' &&
+        (noEvidence || outcome !== 'SUCCESS' || response === null)) ||
+      /* ASK RELIABILITY R1 (G) — a CURRENT question whose named actors / topic left NO relevant
+         report (the anchor gate rejected the candidates, or none existed): never an empty turn and
+         never unrelated reports — the general part is answered as clearly-labelled background
+         (rule 14: an unverified premise is discussed only conditionally; a table if asked), with
+         the current part named as still needing sourced evidence. Entirely-current questions
+         ("oil prices today") are declined by the background capability itself. */
+      (anchors.gated && noEvidence && route.knowledgeRequirement === 'CURRENT_REPORTING')
     ) {
       return this.executeBackground(
         request,
@@ -1492,10 +1533,23 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     const verification = executorVerificationOutcome(route.plan, corroboration);
     const specialistItems = specialistItemsOf(contributions);
     this.observeContributions(contributions, draft);
+    /* ASK RELIABILITY R1 (E) — retrieved is not the same as relevant. "Oil prices in Rwanda" kept
+       16 Rwanda reports while the analysis itself concluded that none addresses oil prices
+       (trustState insufficient, no grounded statement, no key fact) — and the turn was labelled
+       Current intelligence. When the answer's own grounding says the evidence does not support
+       it, the reporting role is NOT obtained: the honest state is INSUFFICIENT. */
+    const groundedNothing =
+      response.analysis !== null &&
+      response.analysis.trustState?.level === 'insufficient' &&
+      (response.analysis.keyFacts?.length ?? 0) === 0 &&
+      (response.analysis.trustState?.distinctSourceArticleCount ?? 0) === 0;
     const answer = deriveAnswerState(route.plan, {
       items: {
-        REPORTING:
-          corroboration === null ? response.articles.length : corroboration.qualifyingReports,
+        REPORTING: groundedNothing
+          ? 0
+          : corroboration === null
+            ? response.articles.length
+            : corroboration.qualifyingReports,
         SPECIALIST: specialistItems,
       },
       producedAnswer: response.analysis !== null,
@@ -2086,7 +2140,16 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
          A partial answer (R3 §6) already made the reporting attempt: this is the second call. */
       draft.providerCallCount = partialCurrent === undefined ? 1 : draft.providerCallCount + 1;
       const out = await this.background.answerBackground({
-        question: stableQuestion ?? request.question,
+        /* ASK RELIABILITY R1 (B) — a MIXED turn's explanatory clause alone ("Explain the three
+           most important changes…") lost its sibling's subject (Kenya · economy · past seven
+           days) and the model asked which field was meant. The clause is still what this call
+           answers, but the reader's whole message travels with it as their own words. */
+        question:
+          stableQuestion === undefined
+            ? request.question
+            : stableClauseNeedsMessage(stableQuestion, request.question)
+              ? `${stableQuestion}\n\n(The reader's full message, for its subject, place and period — do not ask them to restate it: "${request.question}")`
+              : stableQuestion,
         responseLanguage: request.language,
         maxModelAttempts: ASK_MODEL_MAX_ATTEMPTS,
         usageSink: (u) => {
@@ -2108,7 +2171,12 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       if (out.text === null) text = null;
       else {
         const split = splitArtifact(out.text);
-        text = split.text;
+        /* ASK RELIABILITY R1 (C) — a written-out calculation is recomputed deterministically. */
+        const checked = checkWrittenArithmetic(split.text);
+        text = checked.text;
+        if (checked.corrections.length > 0) {
+          this.logger.warn(`ask background arithmetic corrected n=${checked.corrections.length}`);
+        }
         artifact = split.artifact;
         draft.jobArtifactProducedKind = artifact?.kind ?? null;
       }

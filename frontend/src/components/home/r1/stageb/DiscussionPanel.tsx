@@ -127,7 +127,7 @@ export function DiscussionPanel({
   const href = safeExternalHref(story.url);
 
   return (
-    <div className="fixed inset-0 z-[70] flex justify-end bg-[var(--gt-scrim)]" style={{ bottom: 'var(--gna-kb, 0px)' }} data-stage-b-discussion="" onClick={(e) => e.target === e.currentTarget && closePanel()}>
+    <div className="fixed inset-0 z-[70] flex justify-end bg-[var(--gt-scrim)]" data-kb-follow="" data-stage-b-discussion="" onClick={(e) => e.target === e.currentTarget && closePanel()}>
       <section
         role="dialog"
         aria-modal="true"

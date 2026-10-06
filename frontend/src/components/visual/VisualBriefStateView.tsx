@@ -230,9 +230,17 @@ function StoredContent({
       {brief.summary !== null && (
         <section>
           <h4 className="text-[0.9375rem] font-bold text-[var(--gt-ink)]">{t.summary}</h4>
+          {/* ASK RELIABILITY R1 (§9) — the visible brief is short (about 100 words, hard cap 120);
+              any longer text is one explicit "Show more" away, collapsed by default. */}
           <p dir="auto" className="mt-1 text-[0.9375rem] leading-[1.55] text-[var(--gt-ink)]">
-            {brief.summary}
+            {visibleBrief(brief.summary).head}
           </p>
+          {visibleBrief(brief.summary).rest !== null && (
+            <details data-visual-brief-more="" className="mt-1 text-[0.9375rem] leading-[1.55] text-[var(--gt-ink)]">
+              <summary className="inline-flex min-h-[44px] cursor-pointer items-center text-[0.875rem] font-semibold text-[var(--gt-link)]">{t.showMore}</summary>
+              <p dir="auto">{visibleBrief(brief.summary).rest}</p>
+            </details>
+          )}
         </section>
       )}
       {brief.keyFacts.length > 0 && (
@@ -289,4 +297,18 @@ function StoredContent({
       )}
     </div>
   );
+}
+
+/** ASK RELIABILITY R1 (§9) — the first ~100 words (ending on a sentence when one ends after 60), the rest folded. */
+export function visibleBrief(text: string): { head: string; rest: string | null } {
+  const words = text.trim().split(/\s+/);
+  if (words.length <= 120) return { head: text.trim(), rest: null };
+  let cut = 100;
+  for (let i = 100; i >= 60; i--) {
+    if (/[.!?]$/.test(words[i - 1])) {
+      cut = i;
+      break;
+    }
+  }
+  return { head: words.slice(0, cut).join(' '), rest: words.slice(cut).join(' ') };
 }

@@ -77,6 +77,30 @@ export async function resolveStoryId(articleRef: string): Promise<BriefResult<Ca
   }
 }
 
+/**
+ * ASK RELIABILITY R1 (§9) — the signed-in reader's explicit Read Brief on a retained article that is
+ * not yet in a canonical story: the server places it (same identity rules as Discussion) and returns
+ * its storyId. Never called for guests, never from Discuss.
+ */
+export async function ensureStoryForArticle(articleRef: string, url: string): Promise<BriefResult<CanonicalStoryIdentity>> {
+  if (!ARTICLE_REF.test(articleRef)) return { ok: false, reason: 'INVALID' };
+  try {
+    const response = await accountFetch(`${RESOLVE_PATH(articleRef)}/ensure`, { method: 'POST', body: { url } });
+    if (response.status === 404) return { ok: false, reason: 'NO_STORY' };
+    if (response.status === 401 || response.status === 403) return { ok: false, reason: 'NO_STORY' };
+    if (response.status === 429) return { ok: false, reason: 'RATE_LIMITED' };
+    if (!response.ok) return { ok: false, reason: 'FAILED' };
+    const body = (await response.json()) as { storyId?: unknown; materialVersion?: unknown } | null;
+    if (body === null || typeof body.storyId !== 'string' || !UUID.test(body.storyId)) return { ok: false, reason: 'FAILED' };
+    return {
+      ok: true,
+      value: { articleRef, storyId: body.storyId as StoryId, materialVersion: typeof body.materialVersion === 'number' ? body.materialVersion : null },
+    };
+  } catch {
+    return { ok: false, reason: 'FAILED' };
+  }
+}
+
 async function call(storyId: StoryId, method: 'GET' | 'POST'): Promise<BriefResult<StoryBriefView>> {
   try {
     const response = await accountFetch(BRIEF_PATH(storyId), method === 'POST' ? { method: 'POST', body: {} } : {});
