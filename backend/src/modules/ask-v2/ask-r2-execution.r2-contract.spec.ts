@@ -624,3 +624,14 @@ describe('ASK R2 · no evidence never becomes background "developments" (TEST C 
     }
   });
 });
+
+describe('ASK R2 LIVE-GATE REPAIR · P0-1 — the live TEST A wording keeps Kenya (never "| Date |" → Japan)', () => {
+  const LIVE_A =
+    'What are the three most important developments reported in the past seven days that could affect a small shop owner in Kenya? Start with a two-sentence summary. Then use a compact table: What changed | Date | Why it matters to the shop | Source link. Prioritize credible Kenyan reporting and official sources. Separate reported facts from your analysis. If you can verify fewer than three developments, show only those. Finish with one practical thing the shopkeeper should check next. Keep the entire answer under 250 words.';
+  it('typed geography is KEN only; the full question reaches analysis', async () => {
+    const c = conversation();
+    const t = await c.ask(LIVE_A);
+    expect((JSON.parse(t.plan.scope) as { geography: string[] }).geography).toEqual(['TYPED_GEOGRAPHY:KEN']);
+    expect(String(t.analysisCalls[0][0])).toContain('What changed | Date | Why it matters to the shop | Source link');
+  });
+});

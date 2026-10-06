@@ -1,3 +1,4 @@
+import { maskOutputVocabulary } from './output-instructions';
 /**
  * ════════════════════════════════════════════════════════════════════════════
  * ASK R2 CONSOLIDATED INTEGRATION R1 · GATE C — THE QUALIFIED-READING BOUNDARY (L)
@@ -569,7 +570,8 @@ export function normalizeAskQuestion(req: NormalizationRequest): NormalizationOu
     geography.push(el(iso3, undefined, 'SUPPLIED_BY_SURFACE', `origin:${req.origin}`));
   }
   /* CANONICAL PARITY (L): called exactly as canonical calls it — no options. */
-  const geo = resolveGeography(text);
+  /* ASK R2 LIVE-GATE REPAIR (P0-1) — requested columns / headers are not places ("| Date |" → Date, Hokkaido) */
+  const geo = resolveGeography(maskOutputVocabulary(text));
   const readPlace = (iso3: string, matched: string | undefined, source: string): void => {
     if (!geography.some((g) => g.value === iso3 && g.provenance !== 'SUPPLIED_BY_SURFACE')) {
       geography.push(el(iso3, matched, 'CANONICAL_RESOLVER', source));

@@ -1,3 +1,4 @@
+import { readOutputContract } from '../prompt/output-contract.util';
 import type { DisplayLocale } from '@globalnews-ai/shared';
 import { withRetrievalDeadline, retrievalBudgetMs } from '../../news/retrieval-budget';
 import { isSameHeadline } from '../../news/identity/headline-identity.util';
@@ -3771,6 +3772,16 @@ export class AnalysisService {
           not a reaction to the answer.
         */
         const developmentBreadth = detectDevelopmentBreadth(deduped);
+        /* ASK R2 LIVE-GATE REPAIR (P0-2) — a structural output contract (opening / table / closing)
+           asks the MODEL for ONE summary in the contract's order. The measured breadth, and the
+           compliance verdict that reads it, are unchanged. */
+        const readerContract = readOutputContract(normalizedQuery);
+        const generationBreadth =
+          readerContract.table !== null ||
+          readerContract.openingSentences !== null ||
+          readerContract.closing !== null
+            ? { ...developmentBreadth, readerContract: true }
+            : developmentBreadth;
 
         try {
           const candidate = await this.provider.analyzeNews({
@@ -3830,8 +3841,12 @@ export class AnalysisService {
               This is the whole of the correction at this call site: no second
               provider call, no second measurement, no change to retrieval, and
               no change to what happens to a non-compliant answer.
+
+              ASK R2 LIVE-GATE REPAIR (P0-2) — the SAME measured breadth (same clusters, same
+              multiDevelopment, read by the same verdict below), marked readerContract when the
+              reader set the answer's shape, so the model fills one summary in that order.
             */
-            developmentBreadth,
+            developmentBreadth: generationBreadth,
             signal: responseAbort.signal,
             /* ASK R2 INTEGRATION R1 · GATE E — present only for the public Ask path. */
             ...(executionPolicy?.maxModelAttempts === undefined
