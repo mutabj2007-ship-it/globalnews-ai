@@ -21,8 +21,8 @@ export class CreateThreadDto {
 }
 /**
  * ASK RETRIEVAL / CONVERSATION R2 — a TRANSPORT backstop only. The reader-facing limit is
- * ASK_QUESTION_MAX_CHARS (shared/src/ask-input.ts), enforced in AskV2Service.quote with the typed
- * refusal ASK_QUESTION_TOO_LONG so the composer can say why; this bound only stops abuse far
+ * ASK_INPUT_MAX_CHARS (shared/src/ask-input.ts), enforced in AskV2Service.quote with the typed
+ * refusal ASK_INPUT_TOO_LONG so the composer can say why; this bound only stops abuse far
  * above it (the 64 kb body limit still applies).
  */
 export const ASK_QUESTION_TRANSPORT_MAX = 16_000;

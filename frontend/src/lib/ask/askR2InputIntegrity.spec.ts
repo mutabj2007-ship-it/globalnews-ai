@@ -4,11 +4,11 @@ import { act, create } from 'react-test-renderer';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import {
-  ASK_QUESTION_MAX_CHARS,
-  ASK_QUESTION_TOO_LONG,
-  askQuestionLength,
+  ASK_INPUT_MAX_CHARS,
+  ASK_INPUT_TOO_LONG,
+  askInputLength,
 } from '@globalnews-ai/shared';
-import { askV2Api, type AskV2Operation } from '@/lib/api/askV2Api';
+import { askV2Api, namedInputRefusal } from '@/lib/api/askV2Api';
 import { askQuestionLimitState } from '@/components/ask/AskQuestionLimit';
 import { AskSubmittedQuestion, isLongQuestion } from '@/components/ask-frame/AskSubmittedQuestion';
 import { askR2Strings } from './askR2Strings';
@@ -54,20 +54,20 @@ describe('A1 · one documented limit, never a silent cut', () => {
   });
 
   it('the boundary: exactly the limit is accepted, one more is over, and the draft is never shortened', () => {
-    const at = 'a'.repeat(ASK_QUESTION_MAX_CHARS);
+    const at = 'a'.repeat(ASK_INPUT_MAX_CHARS);
     const over = `${at}b`;
     expect(askQuestionLimitState(at)).toMatchObject({ over: false, near: true });
-    expect(askQuestionLimitState(over)).toMatchObject({ over: true, length: ASK_QUESTION_MAX_CHARS + 1 });
+    expect(askQuestionLimitState(over)).toMatchObject({ over: true, length: ASK_INPUT_MAX_CHARS + 1 });
     /* the state is computed FROM the draft; nothing returns a shortened copy of it */
-    expect(over.length).toBe(ASK_QUESTION_MAX_CHARS + 1);
+    expect(over.length).toBe(ASK_INPUT_MAX_CHARS + 1);
   });
 
   it('counts by code point — emoji, Arabic, Polish and Kinyarwanda diacritics count once each', () => {
-    expect(askQuestionLength('Rwanda 🇷🇼')).toBe(9);
-    expect(askQuestionLength('Ź')).toBe(1);
-    expect(askQuestionLength('رواندا')).toBe(6);
-    expect(askQuestionLength('😀'.repeat(ASK_QUESTION_MAX_CHARS))).toBe(ASK_QUESTION_MAX_CHARS);
-    expect(askQuestionLimitState('😀'.repeat(ASK_QUESTION_MAX_CHARS)).over).toBe(false);
+    expect(askInputLength('Rwanda 🇷🇼')).toBe(9);
+    expect(askInputLength('Ź')).toBe(1);
+    expect(askInputLength('رواندا')).toBe(6);
+    expect(askInputLength('😀'.repeat(ASK_INPUT_MAX_CHARS))).toBe(ASK_INPUT_MAX_CHARS);
+    expect(askQuestionLimitState('😀'.repeat(ASK_INPUT_MAX_CHARS)).over).toBe(false);
   });
 
   it('no Ask composer carries a silent maxLength any more (standalone, dock — both skins)', () => {
@@ -77,12 +77,14 @@ describe('A1 · one documented limit, never a silent cut', () => {
     expect(dock).not.toMatch(/maxLength=\{1000\}/);
     expect(parts).toContain('<AskQuestionLimitNote');
     expect(dock.match(/<AskQuestionLimitNote/g)).toHaveLength(2);
+    /* the dock holds an over-limit submit in the CAPTURE phase; the pinned R2 handler is unchanged */
+    expect(dock.match(/onSubmitCapture={holdOverLimit}/g)).toHaveLength(2);
   });
 
   it('the typed server refusal is NAMED, never "unavailable"', () => {
     const en = askR2Strings('en');
-    expect(failedTurnCopy(ASK_QUESTION_TOO_LONG, en)).toBe(en.questionTooLong(ASK_QUESTION_MAX_CHARS));
-    expect(failedTurnCopy(ASK_QUESTION_TOO_LONG, en)).not.toBe(en.unavailable);
+    expect(failedTurnCopy(ASK_INPUT_TOO_LONG, en)).toBe(en.questionTooLong(ASK_INPUT_MAX_CHARS));
+    expect(failedTurnCopy(ASK_INPUT_TOO_LONG, en)).not.toBe(en.unavailable);
     expect(en.questionTooLong(4000)).toContain('4000');
     expect(askR2Strings('pl').questionTooLong(4000)).toContain('4000');
   });
@@ -118,22 +120,7 @@ describe('A2 · the submitted question: compact preview, the full original on re
   });
 });
 
-const quoted = (): AskV2Operation => ({
-  operationId: 'op-q',
-  computeClass: 'DEEP_ANALYSIS',
-  status: 'QUOTED',
-  quotedSand: 24,
-  chargingEnabled: false,
-  requiresAcceptance: true,
-  quoteExpiresAt: '2026-10-06T07:00:00Z',
-  acceptedAt: null,
-  storedResultId: null,
-  storedResultReused: false,
-  failureCode: null,
-  result: null,
-});
-
-describe('A3 · a quote is a choice, never "Ask is unavailable"', () => {
+describe('A3 · the typed length refusal is named on the turn (never "Ask is unavailable")', () => {
   beforeEach(() => jest.resetAllMocks());
   type Hook = ReturnType<typeof useAskR2Conversation>;
   function mount(): () => Hook {
@@ -148,29 +135,24 @@ describe('A3 · a quote is a choice, never "Ask is unavailable"', () => {
     return () => latest!;
   }
 
-  it('a quoted reply to a plain Send becomes the explicit confirmation, not a failed turn', async () => {
-    api.createThread.mockResolvedValue({ ok: true, value: { id: 't-1' } } as never);
-    api.submit.mockResolvedValue({ ok: true, value: quoted() });
-    const hook = mount();
-    await act(async () => {
-      await hook().submit(TEST_C);
-    });
-    expect(hook().turns).toHaveLength(0);
-    expect(hook().deepQuote).toMatchObject({ question: TEST_C, operation: { operationId: 'op-q' } });
+  it('the API client turns the server code into the outcome reason; other outcomes are untouched', () => {
+    const refused = { ok: false as const, reason: 'REFUSED' as const, status: 400, code: ASK_INPUT_TOO_LONG };
+    expect(namedInputRefusal(refused)).toMatchObject({ reason: ASK_INPUT_TOO_LONG, code: ASK_INPUT_TOO_LONG });
+    const other = { ok: false as const, reason: 'REFUSED' as const, status: 409, code: 'SOMETHING_ELSE' };
+    expect(namedInputRefusal(other)).toBe(other);
+    const ok = { ok: true as const, value: 1 };
+    expect(namedInputRefusal(ok)).toBe(ok);
   });
 
-  it('a typed refusal is kept on the failed turn so it can be named', async () => {
+  it('the (byte-pinned) conversation records that reason as the failed turn, which the view names', async () => {
     api.createThread.mockResolvedValue({ ok: true, value: { id: 't-1' } } as never);
-    api.submit.mockResolvedValue({
-      ok: false,
-      reason: 'REFUSED',
-      status: 400,
-      code: ASK_QUESTION_TOO_LONG,
-    } as never);
+    api.submit.mockResolvedValue({ ok: false, reason: ASK_INPUT_TOO_LONG, status: 400, code: ASK_INPUT_TOO_LONG } as never);
     const hook = mount();
     await act(async () => {
-      await hook().submit('x'.repeat(ASK_QUESTION_MAX_CHARS + 1));
+      await hook().submit('x'.repeat(ASK_INPUT_MAX_CHARS + 1));
     });
-    expect(hook().turns[0]?.failure).toBe(ASK_QUESTION_TOO_LONG);
+    expect(hook().turns[0]?.failure).toBe(ASK_INPUT_TOO_LONG);
+    const en = askR2Strings('en');
+    expect(failedTurnCopy(hook().turns[0]?.failure, en)).toBe(en.questionTooLong(ASK_INPUT_MAX_CHARS));
   });
 });

@@ -299,7 +299,7 @@ function GlobalAskAiDock({
   const askDisposition = askLanguageDisposition(resolveAskLocale(language));
   const r2Locale = askDisposition.catalogueLocale;
   const r2s = askShellStrings(r2Locale).askR2Strings;
-  /* ASK R2 — the one documented input limit; the whole draft is kept, Send waits when over. */
+  /* ASK R2 — the one documented input limit; the whole draft is kept, nothing is sent over it. */
   const questionLimit = askQuestionLimitState(question);
 
   /*
@@ -603,8 +603,6 @@ function GlobalAskAiDock({
       event.preventDefault();
       const asked = question.trim();
       if (asked.length === 0) return;
-      /* ASK R2 — over the documented limit nothing is sent; the note under the box says why. */
-      if (askQuestionLimitState(asked).over) return;
       /* ASK/SEARCH R1 — one Send is one execution: a second submit while a turn is in flight
          (Enter/requestSubmit bypass the disabled button) must not issue a second request. */
       if (isPending) return;
@@ -625,12 +623,7 @@ function GlobalAskAiDock({
           }
         })
         .then((outcome) => {
-        if (outcome === 'sent') return;
-        /* ASK R2 — a failed Send keeps the reader's words too (never retyped, never lost). */
-        if (outcome === 'failed') {
-          setQuestion((current) => (current.trim().length === 0 ? asked : current));
-          return;
-        }
+        if (outcome === 'sent' || outcome === 'failed') return;
         /* Nothing ran (sign-in, a guest refusal, an unresolvable context, Ask unavailable,
            busy): the reader's question returns to the composer — never re-sent elsewhere. */
         if (outcome === 'legacy') setAskUnavailable(true);
@@ -638,6 +631,22 @@ function GlobalAskAiDock({
         });
     },
     [question, isPending, r2, contextRef],
+  );
+
+  /*
+    ASK RETRIEVAL / CONVERSATION R2 — over the one documented input limit nothing is sent: the
+    form's submit (button, Enter or the Home send) is held in the CAPTURE phase, before the
+    byte-pinned R2 submit handler (unchanged, still the form's onSubmit) ever runs,
+    and the note under the box says why. The draft stays in the box, whole.
+  */
+  const holdOverLimit = useCallback(
+    (event: FormEvent<HTMLFormElement>): void => {
+      if (!askQuestionLimitState(question).over) return;
+      event.preventDefault();
+      /* capture phase: the pinned submit handler on the same form never receives this event */
+      event.stopPropagation();
+    },
+    [question],
   );
 
   /*
@@ -872,7 +881,7 @@ function GlobalAskAiDock({
               skin differ. 16px type so a phone does not zoom on focus.
             */
             <div data-ask="composer" className="shrink-0 border-t border-[#3c2f7a]/60 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-              <form ref={formRef} onSubmit={submit} data-ask="form" className="flex flex-col gap-[10px] px-[14px] py-[12px]">
+              <form ref={formRef} onSubmit={submit} onSubmitCapture={holdOverLimit} data-ask="form" className="flex flex-col gap-[10px] px-[14px] py-[12px]">
                 <div className="flex flex-wrap items-center gap-x-[10px] gap-y-[4px]">
                   <span
                     data-ask="context-affordance"
@@ -920,7 +929,7 @@ function GlobalAskAiDock({
                   <button
                     type="submit"
                     data-ask="submit"
-                    disabled={question.trim().length === 0 || questionLimit.over || isPending}
+                    disabled={question.trim().length === 0 || isPending}
                     className="min-h-[44px] min-w-[96px] shrink-0 rounded-[10px] border border-[#d9b98a] bg-[linear-gradient(105deg,#412d9f,#1f328a)] px-5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {t.submit}
@@ -930,7 +939,7 @@ function GlobalAskAiDock({
             </div>
           ) : (
           <div data-ask="composer" className={`shrink-0 border-t border-border bg-surface-raised/95 backdrop-blur ${visibleBox !== null ? 'pb-1' : 'pb-[max(0.75rem,env(safe-area-inset-bottom))]'}`}>
-          <form ref={formRef} onSubmit={submit} data-ask="form" className="flex flex-col gap-2 px-4 py-3">
+          <form ref={formRef} onSubmit={submit} onSubmitCapture={holdOverLimit} data-ask="form" className="flex flex-col gap-2 px-4 py-3">
             <label className="sr-only" htmlFor="ask-ai-question">
               {t.inputLabel}
             </label>
@@ -989,7 +998,7 @@ function GlobalAskAiDock({
               <button
                 type="submit"
                 data-ask="submit"
-                disabled={question.trim().length === 0 || questionLimit.over || isPending}
+                disabled={question.trim().length === 0 || isPending}
                 className="min-h-[44px] rounded-2xl bg-signal px-5 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(61,111,255,0.22)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:shadow-none disabled:opacity-50"
               >
                 {t.submit}

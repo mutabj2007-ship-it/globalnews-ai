@@ -2,8 +2,8 @@ import { askFormatUtcInstant } from './askDirection';
 import type { AskAnswerState, AskPlanChip, AskR2Payload } from '@/lib/api/askV2Api';
 import type { AskR2Locale, AskR2Strings } from './askR2Strings';
 import {
-  ASK_QUESTION_MAX_CHARS,
-  ASK_QUESTION_TOO_LONG,
+  ASK_INPUT_MAX_CHARS,
+  ASK_INPUT_TOO_LONG,
   resolveEvidenceState,
   type DisplayLocale,
 } from '@globalnews-ai/shared';
@@ -288,7 +288,7 @@ export function failedTurnCopy(failure: string | undefined, s: AskR2Strings): st
   if (failure === 'NETWORK') return s.r3.networkFailed;
   if (failure?.startsWith('BUDGET_')) return s.budgetRefused;
   /* ASK R2 — the documented length limit is named, never "unavailable". */
-  if (failure === ASK_QUESTION_TOO_LONG) return s.questionTooLong(ASK_QUESTION_MAX_CHARS);
+  if (failure === ASK_INPUT_TOO_LONG) return s.questionTooLong(ASK_INPUT_MAX_CHARS);
   return s.unavailable;
 }
 

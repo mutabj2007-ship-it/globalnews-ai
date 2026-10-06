@@ -1,3 +1,4 @@
+import { ASK_INPUT_TOO_LONG } from '@globalnews-ai/shared';
 import type { AnalysisApiResponse, DisplayLocale, MultiStoryAction } from '@globalnews-ai/shared';
 import { accountFetch } from './accountFetch';
 
@@ -485,7 +486,8 @@ export type AskV2Outcome<T> =
   | { readonly ok: true; readonly value: T }
   | {
       readonly ok: false;
-      readonly reason: 'UNAVAILABLE' | 'SIGNED_OUT' | 'REFUSED' | 'NETWORK';
+      /* ASK R2 — the documented input limit is its own reason (shared ASK_INPUT_TOO_LONG). */
+      readonly reason: 'UNAVAILABLE' | 'SIGNED_OUT' | 'REFUSED' | 'NETWORK' | typeof ASK_INPUT_TOO_LONG;
       readonly status?: number;
       /** ASK GUEST TRIAL R3 — the server's typed refusal code, when it gave one. */
       readonly code?: string;
@@ -629,7 +631,7 @@ export const askV2Api = {
       language,
       intent,
       ...(context === undefined ? {} : { context }),
-    });
+    }).then(namedInputRefusal);
   },
   /**
    * PUBLIC BETA ASK CONTINUITY R1 — Recent. A read: 0 AI · 0 provider · 0 Sand.
@@ -739,7 +741,7 @@ export const askV2Api = {
         ...(context === undefined ? {} : { context }),
       },
       GUEST_FIRST_WRITE,
-    );
+    ).then(namedInputRefusal);
   },
   guestThreads() {
     return call<readonly AskGuestThreadSummary[]>('/ask-v2/guest/threads', 'GET');
@@ -770,4 +772,15 @@ export function askR2PayloadOf(operation: AskV2Operation | null | undefined): As
     typeof p.answer?.state === 'string'
     ? (p as AskR2Payload)
     : null;
+}
+
+/**
+ * ASK RETRIEVAL / CONVERSATION R2 — the server's typed length refusal (ASK_INPUT_TOO_LONG) becomes
+ * the outcome's REASON, so the conversation records it as the turn's failure and the turn names
+ * the documented limit instead of "Ask is unavailable". Every other outcome is returned unchanged.
+ */
+export function namedInputRefusal<T>(outcome: AskV2Outcome<T>): AskV2Outcome<T> {
+  return !outcome.ok && outcome.code === ASK_INPUT_TOO_LONG
+    ? { ...outcome, reason: ASK_INPUT_TOO_LONG }
+    : outcome;
 }

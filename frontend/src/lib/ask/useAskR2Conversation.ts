@@ -365,24 +365,12 @@ export function useAskR2Conversation(
           return 'context-unavailable';
         }
         if (!sent.ok) {
-          /* ASK R2 — a TYPED refusal (e.g. ASK_QUESTION_TOO_LONG) is named, never "unavailable". */
-          const failedTurn: AskR2Turn = { question: q, failure: sent.code ?? sent.reason };
+          const failedTurn: AskR2Turn = { question: q, failure: sent.reason };
           setTurns((t) => [...t, failedTurn]);
           onTurn?.(failedTurn);
           return 'failed';
         }
         const op = sent.value;
-        /*
-          ASK RETRIEVAL / CONVERSATION R2 — a quote is a question waiting for the reader's
-          explicit choice, NOT a failure. It used to become a payload-less turn rendered as
-          "Ask is unavailable right now. Nothing was run." (Alpha 2026-10-06 06:36 UTC). The
-          server no longer quotes a plain question for breadth; should it quote one, the reader
-          gets the same confirmation `runDeeper` shows, and nothing runs until they accept.
-        */
-        if (op.requiresAcceptance && op.status === 'QUOTED') {
-          setDeepQuote({ question: q, operation: op });
-          return 'sent';
-        }
         const turn: AskR2Turn = {
           question: q,
           operation: op,

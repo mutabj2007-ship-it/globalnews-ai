@@ -93,7 +93,7 @@ export interface AskR2Strings {
   /** LIVE ACCEPTANCE REPAIR R1 — a compute-budget refusal is named as such, never "unavailable". */
   readonly budgetRefused: string;
   /**
-   * ASK RETRIEVAL / CONVERSATION R2 — the one documented input limit (ASK_QUESTION_MAX_CHARS),
+   * ASK RETRIEVAL / CONVERSATION R2 — the one documented input limit (ASK_INPUT_MAX_CHARS),
    * said BEFORE submit; the draft is kept whole. Also the copy for the typed server refusal.
    */
   readonly questionTooLong: (max: number) => string;

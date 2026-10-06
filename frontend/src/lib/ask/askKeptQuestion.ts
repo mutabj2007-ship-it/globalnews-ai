@@ -13,7 +13,7 @@ import { accountSignInUrl } from '@/lib/api/accountLinks';
  */
 export const ASK_KEPT_QUESTION_KEY = 'globalnews-ai:ask-kept-question';
 /**
- * ASK R2 — a storage backstop only, far above the documented Ask limit (ASK_QUESTION_MAX_CHARS).
+ * ASK R2 — a storage backstop only, far above the documented Ask limit (ASK_INPUT_MAX_CHARS).
  * The old 1,000 bound cut a kept long question silently; the composer now keeps the WHOLE draft
  * and says when it is over the limit, so the store must not shorten it either.
  */

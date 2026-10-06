@@ -1,6 +1,6 @@
 'use client';
 
-import { ASK_QUESTION_MAX_CHARS, askQuestionLength } from '@globalnews-ai/shared';
+import { ASK_INPUT_MAX_CHARS, askInputLength } from '@globalnews-ai/shared';
 
 /**
  * ASK RETRIEVAL / CONVERSATION R2 — THE ONE INPUT LIMIT, SAID BEFORE SUBMIT.
@@ -8,7 +8,7 @@ import { ASK_QUESTION_MAX_CHARS, askQuestionLength } from '@globalnews-ai/shared
  * Every Ask composer used `maxLength={1000}`, which made the browser drop the end of a pasted
  * research question without a word (Alpha 2026-10-06 06:36 UTC: the stored question was exactly
  * 1,000 characters, ending "Finish with three practica"). The textarea now accepts the whole
- * paste; this reads the draft against the shared documented limit (ASK_QUESTION_MAX_CHARS,
+ * paste; this reads the draft against the shared documented limit (ASK_INPUT_MAX_CHARS,
  * the same constant the backend enforces), keeps the full draft, disables Send while it is
  * over, and says so. Nothing is truncated anywhere.
  */
@@ -23,12 +23,12 @@ export interface AskQuestionLimitState {
 }
 
 export function askQuestionLimitState(value: string): AskQuestionLimitState {
-  const length = askQuestionLength(value.trim());
+  const length = askInputLength(value.trim());
   return {
     length,
-    max: ASK_QUESTION_MAX_CHARS,
-    over: length > ASK_QUESTION_MAX_CHARS,
-    near: length >= Math.floor(ASK_QUESTION_MAX_CHARS * ASK_QUESTION_NEAR_FRACTION),
+    max: ASK_INPUT_MAX_CHARS,
+    over: length > ASK_INPUT_MAX_CHARS,
+    near: length >= Math.floor(ASK_INPUT_MAX_CHARS * ASK_QUESTION_NEAR_FRACTION),
   };
 }
 

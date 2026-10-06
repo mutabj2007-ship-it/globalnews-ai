@@ -8,20 +8,20 @@
  *
  * Counting is by Unicode code point (what a reader perceives as characters, and what the backend
  * validator counts), never by UTF-16 unit. Over the limit, the composer keeps the whole draft and
- * says so BEFORE submit; the backend refuses with ASK_QUESTION_TOO_LONG. Nothing is truncated.
+ * says so BEFORE submit; the backend refuses with ASK_INPUT_TOO_LONG. Nothing is truncated.
  */
-export const ASK_QUESTION_MAX_CHARS = 4000;
-export const ASK_QUESTION_MIN_CHARS = 2;
-export const ASK_QUESTION_TOO_LONG = 'ASK_QUESTION_TOO_LONG';
+export const ASK_INPUT_MAX_CHARS = 4000;
+export const ASK_INPUT_MIN_CHARS = 2;
+export const ASK_INPUT_TOO_LONG = 'ASK_INPUT_TOO_LONG';
 
 /** Length in code points, so an emoji or a non-BMP character counts once. */
-export function askQuestionLength(text: string): number {
+export function askInputLength(text: string): number {
   let n = 0;
   for (const _ of text) n += 1;
   return n;
 }
 
 /** True when the trimmed question is within the documented Ask limit. */
-export function askQuestionWithinLimit(text: string): boolean {
-  return askQuestionLength(text.trim()) <= ASK_QUESTION_MAX_CHARS;
+export function askInputWithinLimit(text: string): boolean {
+  return askInputLength(text.trim()) <= ASK_INPUT_MAX_CHARS;
 }

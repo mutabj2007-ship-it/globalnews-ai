@@ -11,9 +11,9 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
 import {
-  ASK_QUESTION_MAX_CHARS,
-  ASK_QUESTION_TOO_LONG,
-  askQuestionWithinLimit,
+  ASK_INPUT_MAX_CHARS,
+  ASK_INPUT_TOO_LONG,
+  askInputWithinLimit,
 } from '@globalnews-ai/shared';
 import { PrismaService } from '../../database/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
@@ -78,7 +78,7 @@ const TERMINAL = ['COMPLETED', 'RELEASED', 'REFUNDED'];
 export class AskQuestionTooLong extends HttpException {
   constructor() {
     super(
-      { statusCode: 400, code: ASK_QUESTION_TOO_LONG, maxChars: ASK_QUESTION_MAX_CHARS },
+      { statusCode: 400, code: ASK_INPUT_TOO_LONG, maxChars: ASK_INPUT_MAX_CHARS },
       400,
     );
     this.name = 'AskQuestionTooLong';
@@ -839,7 +839,7 @@ export class AskV2Service {
     if (question.length < 2) throw new BadRequestException('Question is too short');
     /* ASK RETRIEVAL / CONVERSATION R2 — the one documented limit, refused BY NAME before any
        context, slot, meter, guest allowance or planner is touched: nothing runs, nothing is used. */
-    if (!askQuestionWithinLimit(question)) throw new AskQuestionTooLong();
+    if (!askInputWithinLimit(question)) throw new AskQuestionTooLong();
     /* R2B — resolved FIRST: before guest preflight, slot, operation, meter and planner. */
     const surface = await this.resolveContext(input.context);
     /*
