@@ -197,7 +197,16 @@ export function executionContractOf(input: {
     }));
     const current = parts.filter((p) => p.current && p.text !== '').map((p) => p.text);
     const stable = parts.filter((p) => p.stable && p.text !== '').map((p) => p.text);
-    if (current.length > 0 && stable.length > 0) {
+    /*
+      ASK RETRIEVAL / CONVERSATION R2 — SPLIT ONLY A PART THAT STANDS ON ITS OWN.
+      "…Finish by explaining, in no more than 60 words, which development a small shopkeeper should
+      watch most closely and why." was read as a separate EXPLANATION clause and sent to the
+      reasoning model by itself; it answered "what do you mean by why?" above the sourced answer,
+      and the table, dates and the closing priority were lost (Alpha 2026-10-06 06:24 UTC). An
+      explanatory part that points back at the findings, or is an instruction about the answer, is
+      part of ONE request: the turn is then executed whole (DIRECT), with every instruction intact.
+    */
+    if (current.length > 0 && stable.length > 0 && stable.every(selfContainedStablePart)) {
       const currentText = current.join(' ');
       const stableText = stable.join(' ');
       return {
@@ -227,4 +236,31 @@ export function executionContractOf(input: {
     relationship: routeRelationship,
     inheritedScope: null,
   };
+}
+
+/*
+  ASK RETRIEVAL / CONVERSATION R2 — whether an explanatory part can be answered on its own.
+  Not on its own: a bare "why" / "and why", a part that points back at the findings of the same
+  request ("which development…", "those", "these", "it", "the above"), or an instruction about the
+  answer itself ("Finish by…", "End with…", "Conclude…"). EN and PL (the deterministic reader's
+  languages); any other wording keeps the existing split, which is unchanged.
+*/
+const STABLE_BACK_REFERENCE =
+  /\b(?:those|these|them|it|its|which\s+(?:development|developments|one|ones|of\s+(?:these|those|them))|the\s+(?:development|developments|findings|above|ones?\s+above))\b|(?<![\p{L}\p{N}])(?:te|tych|któr\p{L}*|powyższ\p{L}*)(?![\p{L}\p{N}])/iu;
+const STABLE_ANSWER_INSTRUCTION =
+  /^(?:and\s+|then\s+)?(?:finish|end|conclude|close|wrap\s+up|summari[sz]e|explain(?:ing)?\s+(?:in|which|briefly)|in\s+no\s+more\s+than)\b|^(?:i\s+)?(?:zakończ|podsumuj|na\s+koniec)/iu;
+const STABLE_FILLER = new Set([
+  'why', 'and', 'or', 'also', 'how', 'what', 'is', 'are', 'was', 'were', 'does', 'do', 'did',
+  'the', 'a', 'an', 'so', 'then', 'dlaczego', 'czemu', 'i', 'oraz', 'a',
+]);
+
+export function selfContainedStablePart(text: string): boolean {
+  const t = text.trim().replace(/[?.!,;:]+$/u, '');
+  if (STABLE_ANSWER_INSTRUCTION.test(t)) return false;
+  if (STABLE_BACK_REFERENCE.test(t)) return false;
+  const content = t
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((w) => w.length > 0 && !STABLE_FILLER.has(w));
+  return content.length >= 1;
 }

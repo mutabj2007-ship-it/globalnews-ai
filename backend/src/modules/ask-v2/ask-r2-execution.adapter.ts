@@ -2504,10 +2504,11 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
        window, and the evidence outcome. Ids, kinds and counts only — never the query, the
        reader's words, an article, a key or an account. */
     const retrieval = analysis?.retrievalContext;
-    if (retrieval !== undefined && retrieval !== null) {
+    /* A diagnostic never decides an answer: any shape it cannot read is skipped, not thrown. */
+    if (retrieval !== undefined && retrieval !== null) try {
       this.logger.log(
         `ask-r2 retrieval operation=${operationId} basis=${answer.basis} ` +
-          `answered=${retrieval.providers.join('+') || 'none'} ` +
+          `answered=${(retrieval.providers ?? []).join('+') || 'none'} ` +
           `failed=${(retrieval.providerFailures ?? []).map((f) => `${f.providerId}:${f.kind}`).join('+') || 'none'} ` +
           `dataMode=${retrieval.dataMode} fallback=${retrieval.fallbackReason ?? 'none'} ` +
           `outcome=${retrieval.outcome ?? 'none'} retrieved=${retrieval.articlesRetrieved ?? 'n/a'} ` +
@@ -2517,6 +2518,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
           `windowH=${retrieval.reportingWindow === undefined ? 'none' : Math.round((Date.parse(retrieval.reportingWindow.to) - Date.parse(retrieval.reportingWindow.from)) / 3_600_000)} ` +
           `outsideWindow=${retrieval.reportingWindow?.excludedOutsideWindow ?? 0}`,
       );
+    } catch {
+      /* the record is best-effort; the answer is not */
     }
     return {
       succeeded: true,

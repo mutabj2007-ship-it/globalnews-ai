@@ -103,72 +103,72 @@ const RELATIONS: ReadonlyArray<readonly [RelationKind, RegExp]> = (
   [
     [
       'BORDER',
-      /\b(?:border|borders|cross-?border|frontier|border\s+post|one-?stop\s+border|crossing|crossings)\b|(?:granic\p{L}*|przejś\p{L}*\s+graniczn\p{L}*|transgraniczn\p{L}*)/iu,
+      /\b(?:border|borders|cross-?border|frontier|border\s+post|one-?stop\s+border|crossing|crossings)\b|(?<![\p{L}\p{N}])(?:granic\p{L}*|przejś\p{L}*\s+graniczn\p{L}*|transgraniczn\p{L}*)/iu,
     ],
     [
       'CORRIDOR',
-      /\b(?:corridor|corridors|central\s+corridor|northern\s+corridor|transit\s+route)\b|(?:korytarz\p{L}*)/iu,
+      /\b(?:corridor|corridors|central\s+corridor|northern\s+corridor|transit\s+route)\b|(?<![\p{L}\p{N}])(?:korytarz\p{L}*)/iu,
     ],
     [
       'TRADE',
-      /\b(?:trade|trading|commerc\w*|exports?|imports?|customs|tariffs?|duties|traders?|goods|services|market\s+access|business(?:es)?)\b|(?:handl\p{L}*|handel|eksport\p{L}*|import\p{L}*|cł\p{L}*|celn\p{L}*|towar\p{L}*|usług\p{L}*|biznes\p{L}*)/iu,
+      /\b(?:trade|trading|commerc\w*|exports?|imports?|customs|tariffs?|duties|traders?|goods|services|market\s+access|business(?:es)?)\b|(?<![\p{L}\p{N}])(?:handl\p{L}*|handel|eksport\p{L}*|import\p{L}*|cł\p{L}*|celn\p{L}*|towar\p{L}*|usług\p{L}*|biznes\p{L}*)/iu,
     ],
     [
       'TRANSPORT',
-      /\b(?:railways?|rail|sgr|standard\s+gauge|roads?|highways?|trucks?|trucking|freight|ports?|shipping|logistics|transit)\b|(?:kolej\p{L}*|drog\p{L}*|transport\p{L}*|ciężarów\p{L}*|port\p{L}*|logistyk\p{L}*|tranzyt\p{L}*)/iu,
+      /\b(?:railways?|rail|sgr|standard\s+gauge|roads?|highways?|trucks?|trucking|freight|ports?|shipping|logistics|transit)\b|(?<![\p{L}\p{N}])(?:kolej\p{L}*|drog\p{L}*|transport\p{L}*|ciężarów\p{L}*|port\p{L}*|logistyk\p{L}*|tranzyt\p{L}*)/iu,
     ],
     [
       'ENERGY',
-      /\b(?:power\s+(?:line|lines|interconnect\w*|trade)|interconnect\w*|electricity|pipeline|hydro\w*|energy)\b|(?:energ\p{L}*|elektrycz\p{L}*|rurociąg\p{L}*)/iu,
+      /\b(?:power\s+(?:line|lines|interconnect\w*|trade)|interconnect\w*|electricity|pipeline|hydro\w*|energy)\b|(?<![\p{L}\p{N}])(?:energ\p{L}*|elektrycz\p{L}*|rurociąg\p{L}*)/iu,
     ],
     [
       'INSTITUTIONAL',
-      /\b(?:eac|east\s+african\s+community|comesa|sadc|afcfta|common\s+market|customs\s+union)\b|(?:wspóln\p{L}*\s+rynek|uni\p{L}*\s+celn\p{L}*)/iu,
+      /\b(?:eac|east\s+african\s+community|comesa|sadc|afcfta|common\s+market|customs\s+union)\b|(?<![\p{L}\p{N}])(?:wspóln\p{L}*\s+rynek|uni\p{L}*\s+celn\p{L}*)/iu,
     ],
     [
       'DIPLOMATIC',
-      /\b(?:relations?|relationship|ties|diplomatic|bilateral|agreements?|treaty|treaties|mou|cooperation|dispute|disputes|tensions?|rivals?|rivalry|rivalries|partners?|partnership|allian\w*|allies|allied|reconcil\w*|enmity|friendship|feud\w*|hostilit\w*|normali[sz]\w*|d[ée]tente|rapprochement|antagonism|grievances?|each\s+other|one\s+another|f[ae]ll(?:s|en|ing)?\s+out|clash\w*|quarrel\w*|compet\w*\s+with|cooperat\w*|collaborat\w*|fought|fight(?:s|ing)?\s+(?:over|with)|sided\s+with|negotiat\w*|talks|argu(?:e|es|ed|ing)|spar(?:s|red|ring)?|wrangl\w*|bicker\w*)\b|(?:kłóc\p{L}*|ściera\p{L}*|spier\p{L}*\s+się|walczy\p{L}*\s+z|rywalizuj\p{L}*|współpracuj\p{L}*|pogodzi\p{L}*)|(?:stosunk\p{L}*|relacj\p{L}*|dwustronn\p{L}*|umow\p{L}*|współprac\p{L}*|sp[oó]r\p{L}*|napięci\p{L}*|rywal\p{L}*|partner\p{L}*|sojusz\p{L}*|pojedna\p{L}*|wrogoś\p{L}*|wrog\p{L}*|przyjaźń|przyjaźni|normalizacj\p{L}*|wzajemn\p{L}*|negocjacj\p{L}*|rozmow\p{L}*|konflikt\p{L}*\s+(?:między|pomiędzy))/iu,
+      /\b(?:relations?|relationship|ties|diplomatic|bilateral|agreements?|treaty|treaties|mou|cooperation|dispute|disputes|tensions?|rivals?|rivalry|rivalries|partners?|partnership|allian\w*|allies|allied|reconcil\w*|enmity|friendship|feud\w*|hostilit\w*|normali[sz]\w*|d[ée]tente|rapprochement|antagonism|grievances?|each\s+other|one\s+another|f[ae]ll(?:s|en|ing)?\s+out|clash\w*|quarrel\w*|compet\w*\s+with|cooperat\w*|collaborat\w*|fought|fight(?:s|ing)?\s+(?:over|with)|sided\s+with|negotiat\w*|talks|argu(?:e|es|ed|ing)|spar(?:s|red|ring)?|wrangl\w*|bicker\w*)\b|(?<![\p{L}\p{N}])(?:kłóc\p{L}*|ściera\p{L}*|spier\p{L}*\s+się|walczy\p{L}*\s+z|rywalizuj\p{L}*|współpracuj\p{L}*|pogodzi\p{L}*)|(?<![\p{L}\p{N}])(?:stosunk\p{L}*|relacj\p{L}*|dwustronn\p{L}*|umow\p{L}*|współprac\p{L}*|sp[oó]r\p{L}*|napięci\p{L}*|rywal\p{L}*|partner\p{L}*|sojusz\p{L}*|pojedna\p{L}*|wrogoś\p{L}*|wrog\p{L}*|przyjaźń|przyjaźni|normalizacj\p{L}*|wzajemn\p{L}*|negocjacj\p{L}*|rozmow\p{L}*|konflikt\p{L}*\s+(?:między|pomiędzy))/iu,
     ],
     [
       'SECURITY',
-      /\b(?:security|military|troops|rebels?|refugees?|incursions?|defen[cs]e)\b|(?:bezpieczeństw\p{L}*|wojsk\p{L}*|rebeli\p{L}*|uchodźc\p{L}*|obronn\p{L}*)/iu,
+      /\b(?:security|military|troops|rebels?|refugees?|incursions?|defen[cs]e)\b|(?<![\p{L}\p{N}])(?:bezpieczeństw\p{L}*|wojsk\p{L}*|rebeli\p{L}*|uchodźc\p{L}*|obronn\p{L}*)/iu,
     ],
     [
       'WAR',
-      /\b(?:wars?|warfare|went\s+to\s+war|go(?:es|ne)?\s+to\s+war|at\s+war|fought|invad\w*|invasion|armed\s+conflict|skirmish\w*|hostilities|ceasefire|truce|border\s+war)\b|(?:wojn\p{L}*|walczył\p{L}*|walk\p{L}*\s+zbrojn\p{L}*|inwazj\p{L}*|konflikt\p{L}*\s+zbrojn\p{L}*|rozejm\p{L}*|zawieszeni\p{L}*\s+broni)/iu,
+      /\b(?:wars?|warfare|went\s+to\s+war|go(?:es|ne)?\s+to\s+war|at\s+war|fought|invad\w*|invasion|armed\s+conflict|skirmish\w*|hostilities|ceasefire|truce|border\s+war)\b|(?<![\p{L}\p{N}])(?:wojn\p{L}*|walczył\p{L}*|walk\p{L}*\s+zbrojn\p{L}*|inwazj\p{L}*|konflikt\p{L}*\s+zbrojn\p{L}*|rozejm\p{L}*|zawieszeni\p{L}*\s+broni)/iu,
     ],
     [
       'TERRITORIAL_DISPUTE',
-      /\b(?:territor\w*|sovereignty|claims?\s+(?:over|to)|annex\w*|disputed|islands?|maritime\s+(?:border|boundary|dispute|claims?)|(?:dispute|disputes|quarrel\w*|conflict|clash\w*|standoff|argu(?:e|es|ed|ing)|fight\w*|fought|wrangl\w*|spar(?:s|red|ring)?)\b[^.?!]{0,60}?\bover)\b|(?:terytori\p{L}*|suwerenno\p{L}*|roszczeni\p{L}*|aneksj\p{L}*|sp[oó]r\p{L}*\s+(?:[^.?!]{0,60}?\s)?o\s|sp[oó]r\p{L}*\s+(?:terytorialn\p{L}*|graniczn\p{L}*)|spier\p{L}*\s+się\s+o\s|wysp\p{L}*|granic\p{L}*\s+morsk\p{L}*)/iu,
+      /\b(?:territor\w*|sovereignty|claims?\s+(?:over|to)|annex\w*|disputed|islands?|maritime\s+(?:border|boundary|dispute|claims?)|(?<![\p{L}\p{N}])(?:dispute|disputes|quarrel\w*|conflict|clash\w*|standoff|argu(?:e|es|ed|ing)|fight\w*|fought|wrangl\w*|spar(?:s|red|ring)?)\b[^.?!]{0,60}?\bover)\b|(?<![\p{L}\p{N}])(?:terytori\p{L}*|suwerenno\p{L}*|roszczeni\p{L}*|aneksj\p{L}*|sp[oó]r\p{L}*\s+(?:[^.?!]{0,60}?\s)?o\s|sp[oó]r\p{L}*\s+(?:terytorialn\p{L}*|graniczn\p{L}*)|spier\p{L}*\s+się\s+o\s|wysp\p{L}*|granic\p{L}*\s+morsk\p{L}*)/iu,
     ],
     [
       'ALLIANCE',
-      /\b(?:allian\w*|allies|allied|ally|pact|defen[cs]e\s+(?:treaty|pact|cooperation))\b|(?:sojusz\p{L}*|pakt\p{L}*|sprzymierz\p{L}*)/iu,
+      /\b(?:allian\w*|allies|allied|ally|pact|defen[cs]e\s+(?:treaty|pact|cooperation))\b|(?<![\p{L}\p{N}])(?:sojusz\p{L}*|pakt\p{L}*|sprzymierz\p{L}*)/iu,
     ],
     [
       'COMPETITION',
-      /\b(?:rival\w*|compet\w*|arms\s+race|race\s+for)\b|(?:rywaliz\p{L}*|konkurencj\p{L}*|wyścig\p{L}*\s+zbroje\p{L}*)/iu,
+      /\b(?:rival\w*|compet\w*|arms\s+race|race\s+for)\b|(?<![\p{L}\p{N}])(?:rywaliz\p{L}*|konkurencj\p{L}*|wyścig\p{L}*\s+zbroje\p{L}*)/iu,
     ],
     [
       'POLICY_COORDINATION',
-      /\b(?:coordinat\w*|joint\s+(?:policy|policies|strategy|exercises?|patrols?|position)|cooperat\w*\s+on)\b|(?:koordynacj\p{L}*|wspóln\p{L}*\s+(?:polityk|strategi|ćwicze|stanowisk)\p{L}*)/iu,
+      /\b(?:coordinat\w*|joint\s+(?:policy|policies|strategy|exercises?|patrols?|position)|cooperat\w*\s+on)\b|(?<![\p{L}\p{N}])(?:koordynacj\p{L}*|wspóln\p{L}*\s+(?:polityk|strategi|ćwicze|stanowisk)\p{L}*)/iu,
     ],
     [
       'ECONOMIC',
-      /\b(?:invest\w*|economic\s+(?:ties|relations|cooperation|links)|aid|loans?|debt)\b|(?:inwestycj\p{L}*|gospodarcz\p{L}*|pomoc\p{L}*\s+(?:finansow|gospodarcz)\p{L}*|pożyczk\p{L}*)/iu,
+      /\b(?:invest\w*|economic\s+(?:ties|relations|cooperation|links)|aid|loans?|debt)\b|(?<![\p{L}\p{N}])(?:inwestycj\p{L}*|gospodarcz\p{L}*|pomoc\p{L}*\s+(?:finansow|gospodarcz)\p{L}*|pożyczk\p{L}*)/iu,
     ],
     [
       'HISTORICAL_RELATION',
-      /\b(?:historically|history\s+of|historical\s+(?:relations|ties|grievances|disputes|rivalry)|over\s+the\s+(?:centuries|decades))\b|(?:histori\p{L}*|w\s+przeszłości|na\s+przestrzeni\s+(?:wieków|dekad|lat)|międzywojenn\p{L}*)/iu,
+      /\b(?:historically|history\s+of|historical\s+(?:relations|ties|grievances|disputes|rivalry)|over\s+the\s+(?:centuries|decades))\b|(?<![\p{L}\p{N}])(?:histori\p{L}*|w\s+przeszłości|na\s+przestrzeni\s+(?:wieków|dekad|lat)|międzywojenn\p{L}*)/iu,
     ],
   ] as ReadonlyArray<readonly [RelationKind, RegExp]>
 ).map(([kind, re]) => [kind, plTolerant(re)] as const);
 
 export const BETWEEN = plTolerant(
-  /\b(?:between|across|linking|connecting)\b|(?:między|pomiędzy|łącząc\p{L}*)/iu,
+  /\b(?:between|across|linking|connecting)\b|(?<![\p{L}\p{N}])(?:między|pomiędzy|łącząc\p{L}*)/iu,
 );
 export const COMPARISON = plTolerant(
-  /\b(?:compare|comparison|versus|vs\.?|which\s+is|which\s+has)\b|(?:porównaj|porównani\p{L}*|któr\p{L}*\s+(?:jest|ma))/iu,
+  /\b(?:compare|comparison|versus|vs\.?|which\s+is|which\s+has)\b|(?<![\p{L}\p{N}])(?:porównaj|porównani\p{L}*|któr\p{L}*\s+(?:jest|ma))/iu,
 );
 export const NAMED_CORRIDOR =
   /\b((?:central|northern|southern|lobito|dar\s+es\s+salaam|mombasa)\s+corridor|rusumo(?:\s+(?:border|osbp|bridge))?|[\p{Lu}][\p{L}-]+\s+(?:one-?stop\s+)?border\s+post)\b/iu;
