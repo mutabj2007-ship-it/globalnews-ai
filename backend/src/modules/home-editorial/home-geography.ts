@@ -1,4 +1,4 @@
-import { findCountryByIso3 } from '@globalnews-ai/shared';
+import { EAST_AFRICA_MEMBERS, EU27_MEMBERS, MIDDLE_EAST_MEMBERS, findCountryByIso3 } from '@globalnews-ai/shared';
 import { scoreCountryRelevance } from '../news/country/country-relevance.util';
 import { leadSentence, namesAnyCountry } from './home-eligibility';
 
@@ -19,6 +19,10 @@ import { leadSentence, namesAnyCountry } from './home-eligibility';
  *   1. the HEADLINE names it (place or demonym); or
  *   2. the headline names NO country at all, and the summary's LEAD SENTENCE names it as a place —
  *      not as a person's name ("Councilwoman Kenya Gibson").
+ *
+ * FINAL CORRECTION · R1 — a governed region member the HEADLINE explicitly names supports placement
+ * even when upstream tagging missed it ("Houthis hit Saudi base…" tagged only Yemen/Iran). This is a
+ * presentation relation only: no ArticleCountry row is written and the stored tags are not changed.
  *
  * When the headline names a country (tagged or not), a country found only in the summary is a
  * secondary mention (a comparison, a reaction) and does not move the story into that region.
@@ -49,11 +53,15 @@ function namedAsPerson(lead: string, name: string): boolean {
   return any;
 }
 
-function titleNames(title: string, iso3: string): boolean {
+/* the shared Home region scopes (no local list): the only countries a Home row can be built from */
+const GOVERNED_MEMBERS: readonly string[] = [...new Set([...EAST_AFRICA_MEMBERS, ...EU27_MEMBERS, ...MIDDLE_EAST_MEMBERS])];
+
+/** The canonical scorer's title verdict for one country: its score when the headline names it, else null. */
+function titleScore(title: string, iso3: string): number | null {
   const meta = findCountryByIso3(iso3);
-  if (meta === undefined) return false;
+  if (meta === undefined) return null;
   const r = scoreCountryRelevance({ title, summary: '' }, meta);
-  return !r.reasons.includes(SURNAME_ONLY) && r.reasons.some((x) => PLACE_IN_TITLE.has(x));
+  return !r.reasons.includes(SURNAME_ONLY) && r.reasons.some((x) => PLACE_IN_TITLE.has(x)) ? r.score : null;
 }
 
 function leadNames(lead: string, iso3: string): boolean {
@@ -69,8 +77,15 @@ export function supportedCountries(
   row: { readonly title: string; readonly summary: string | null },
   tagged: readonly TaggedCountry[],
 ): TaggedCountry[] {
-  const inTitle = tagged.filter((c) => titleNames(row.title, c.iso3));
-  if (inTitle.length > 0) return inTitle;
+  const inTitle = tagged.filter((c) => titleScore(row.title, c.iso3) !== null);
+  /* R1 — governed members the headline names, whether or not upstream tagged them */
+  const untagged: TaggedCountry[] = [];
+  for (const iso3 of GOVERNED_MEMBERS) {
+    if (tagged.some((c) => c.iso3 === iso3)) continue;
+    const score = titleScore(row.title, iso3);
+    if (score !== null) untagged.push({ iso3, relevance: score });
+  }
+  if (inTitle.length + untagged.length > 0) return [...inTitle, ...untagged];
   /* the headline locates the story in a country that is not tagged here: the tags are secondary */
   if (namesAnyCountry(row.title)) return [];
   const lead = leadSentence(row.summary);

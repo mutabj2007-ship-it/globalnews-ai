@@ -1,6 +1,6 @@
 import type { NewsCategory } from '@globalnews-ai/shared';
 import { COUNTRIES, COUNTRY_ALIASES_BY_ISO3, getCuratedCityNames } from '@globalnews-ai/shared';
-import { COUNTRY_DEMONYMS_BY_ISO3 } from '../news/country/country-relevance.util';
+import { COUNTRY_DEMONYMS_BY_ISO3, demonymForms } from '../news/country/country-relevance.util';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -119,6 +119,13 @@ const NOT_EVIDENCE: readonly RegExp[] = [
   /\bon duty\b/g,
   /\bduty (free|of care)\b/g,
   /\bfighting (corruption|crime|poverty|disease|malaria|hunger|cancer|for)\b/g,
+  /* FINAL CORRECTION · R2 — BACKGROUND, NOT THE EVENT: who holds a place, or which war a place serves,
+     describes the setting ("fire kills 24 children in rebel-controlled city"; "arrests near a base
+     used for the Iran war"), not what happened. */
+  /\b(rebel|rebels|militia|militant|militants|jihadist|insurgent|army|military|m23|houthi|taliban) (held|controlled|run|occupied|seized|ruled)( [a-z]+)? (city|cities|town|towns|area|areas|territory|territories|region|regions|zone|zones|east|province|capital)\b/g,
+  /\b(used|deployed|stationed|involved|operating)( [a-z0-9]+){0,4} (in|for|during) (the )?([a-z]+ ){0,2}(war|wars|conflict)\b/g,
+  /\b(war|conflict) (torn|ravaged|hit|scarred|weary|affected|stricken)\b/g,
+  /\bin (the )?shadow of( [a-z]+){0,4} (war|wars|conflict)\b/g,
 ];
 
 interface Family {
@@ -126,6 +133,8 @@ interface Family {
   readonly domain: HomeDomain;
   /** STRONG: a governed phrase that states the subject by itself. Otherwise SUPPORT. */
   readonly strong: boolean;
+  /** Corroboration only — never counts toward admission (FINAL CORRECTION · R2). */
+  readonly corroborating?: true;
   readonly re: RegExp;
 }
 
@@ -154,7 +163,7 @@ const FAMILIES: readonly Family[] = [
   { key: 'business-disruption', domain: 'business', strong: true, re: new RegExp(`\\b(business(es)? (disruption|closures?|shut[a-z]*)|(shut|shuts|halts?|halted|suspends?|suspended)${W}? (operations|production|output))\\b`) },
   /* ── BUSINESS · SUPPORT (count only as one of two distinct families) ── */
   { key: 'price-move', domain: 'business', strong: false, re: new RegExp(`\\b(prices?|costs?|fares?|rents?)${W}{0,3} (rise|rises|rising|rose|climb[a-z]*|soar[a-z]*|jump[a-z]*|surg[a-z]*|increas[a-z]*|hike[a-z]*|fall|falls|fell|drop[a-z]*|doubl[a-z]*)\\b`) },
-  { key: 'staples', domain: 'business', strong: false, re: /\b(maize|flour|unga|sugar|wheat|rice|bread|cooking oil|beans|milk|fertili[sz]ers?|coffee|tea exports|cocoa|cotton|cashews?|staples?|foodstuffs?)\b/ },
+  { key: 'staples', domain: 'business', strong: false, re: /\b(maize|flour|unga flour|sugar|wheat|rice|bread|cooking oil|beans|milk|fertili[sz]ers?|coffee|tea exports|cocoa|cotton|cashews?|staples?|foodstuffs?)\b/ },
   { key: 'investment', domain: 'business', strong: false, re: /\b(invest(ment|ments|or|ors|s|ed|ing)?|financing|funding round|fdi|venture capital)\b/ },
   { key: 'trade-flows', domain: 'business', strong: false, re: /\b(exports?|exported|exporters?|imports?|imported|importers?|cargo|shipments?)\b/ },
   { key: 'levy', domain: 'business', strong: false, re: /\b(levy|levies|duty|duties|surcharges?)\b/ },
@@ -170,7 +179,9 @@ const FAMILIES: readonly Family[] = [
   { key: 'tax-policy', domain: 'business', strong: false, re: /\b(vat|taxman|taxpayers?|taxation)\b/ },
   { key: 'tourism', domain: 'business', strong: false, re: /\b(tourism (revenue|earnings|receipts|sector)|tourist arrivals)\b/ },
   /* ── CONFLICT · STRONG ─────────────────────────────────────────────── */
-  { key: 'armed-conflict', domain: 'conflict', strong: true, re: /\b(civil war|armed (conflict|conflicts|groups?|men|clashes|attack|attacks|violence|rebellion)|rebel (alliance|alliances|groups?|forces|held|coalition|movement|offensive|fighters)|naval blockade|military (offensive|occupation|operation|operations|campaign|escalation)|ground (offensive|invasion|assault)|war crimes|humanitarian corridor|forced displacement|escalation of (violence|fighting|hostilities)|hostilities|civilians killed|suicide (bomb|bomber|bombers|bombing)|terror(ist)? attacks?|car bomb|roadside bomb|cross border (attack|attacks|raid|raids|shelling))\b/ },
+  { key: 'armed-conflict', domain: 'conflict', strong: true, re: /\b(civil war|armed (conflict|conflicts|groups?|men|clashes|attack|attacks|violence|rebellion)|rebel (alliance|alliances|groups?|forces|held|coalition|movement|offensive|fighters)|naval blockade|military (offensive|occupation|operation|operations|campaign|escalation)|ground (offensive|invasion|assault)|humanitarian corridor|forced displacement|escalation of (violence|fighting|hostilities)|hostilities|civilians killed|suicide (bomb|bomber|bombers|bombing)|terror(ist)? attacks?|car bomb|roadside bomb|cross border (attack|attacks|raid|raids|shelling))\b/ },
+  /* atrocity crimes are usually NAMED in legal process; under a legal headline they are not a current development */
+  { key: 'atrocity-crimes', domain: 'conflict', strong: true, re: /\b(war crimes|crimes against humanity)\b/ },
   { key: 'ceasefire', domain: 'conflict', strong: true, re: /\b(ceasefire|cease fire|truce|peace (talks|deal|agreement|process|accord|negotiations)|armistice|end (the )?war|end to (the )?(war|fighting))\b/ },
   { key: 'air-war', domain: 'conflict', strong: true, re: /\b(air ?strikes?|drone (strike|strikes|attack|attacks)|shelling|bombardment|rocket (fire|attack|attacks)|missile (strike|strikes|attack|attacks|barrage))\b/ },
   { key: 'named-armed-actor', domain: 'conflict', strong: true, re: /\b(al shabaab|al shabab|m23|hamas|hezbollah|houthis?|isis|islamic state|boko haram|janjaweed|rapid support forces|allied democratic forces|wagner group|lra|lord s resistance army)\b/ },
@@ -178,8 +189,12 @@ const FAMILIES: readonly Family[] = [
   /* ── CONFLICT · SUPPORT ────────────────────────────────────────────── */
   { key: 'armed-actors', domain: 'conflict', strong: false, re: /\b(fighters|rebels?|militants?|insurgents?|insurgency|militias?|jihadists?|gunmen|guerrillas?|paramilitar[a-z]+|troops|bandits)\b/ },
   { key: 'displacement', domain: 'conflict', strong: false, re: /\b(displaced|displacement|refugees?|idps?|fled|flee|flees|fleeing|exodus)\b/ },
-  { key: 'violence', domain: 'conflict', strong: false, re: /\b(raids?|raided|ambush(ed|es)?|massacres?|bombings?|clashes|hostages?|abduct[a-z]*|killings|fighting|assault)\b/ },
-  { key: 'casualties', domain: 'conflict', strong: false, re: /\b(killed|dead|deaths|wounded|casualties|death toll)\b/ },
+  { key: 'violence', domain: 'conflict', strong: false, re: /\b(ambush(ed|es)?|massacres?|bombings?|clashes|hostages?|abduct[a-z]*|fighting)\b/ },
+  /* FINAL CORRECTION · R2 — CORROBORATION ONLY: casualty and generic attack words describe fires, crime,
+     policing and accidents as readily as war. They never count toward admission; they may only add
+     weight to a story some other conflict family already admits. */
+  { key: 'casualties', domain: 'conflict', strong: false, corroborating: true, re: /\b(killed|dead|deaths|wounded|injured|casualties|death toll|killings|violence)\b/ },
+  { key: 'generic-attack', domain: 'conflict', strong: false, corroborating: true, re: /\b(attacks?|attacked|raids?|raided|assault(ed|s)?|shootings?|gunfire|stabbings?)\b/ },
   { key: 'military-ops', domain: 'conflict', strong: false, re: /\b(frontline|front line|siege|blockade|coup|junta|annexation|missiles?|rockets?|mobili[sz]ation|military base|airbase)\b/ },
 ];
 
@@ -192,25 +207,35 @@ const PLACE_PREPOSITIONS: ReadonlySet<string> = new Set(['in', 'on', 'with', 'ag
 const PLACE_FILLERS: ReadonlySet<string> = new Set(['the', 'eastern', 'western', 'northern', 'southern', 'central', 'north', 'south', 'east', 'west']);
 const NON_ARMED_BEFORE: ReadonlySet<string> = new Set(['trade', 'tariff', 'price', 'currency', 'culture', 'cold', 'bidding', 'talent', 'turf', 'tug', 'words', 'legal', 'court', 'political', 'boardroom', 'cyber', 'hybrid', 'verbal', 'personal']);
 
+let countryNames: ReadonlySet<string> | null = null;
 let placeNames: ReadonlySet<string> | null = null;
-function places(): ReadonlySet<string> {
-  if (placeNames !== null) return placeNames;
+function normalizedSet(values: Iterable<string>): Set<string> {
   const out = new Set<string>();
-  const add = (v: string): void => {
+  for (const v of values) {
     const n = normalize(v).trim();
     /* two-letter identifiers ("us", "uk") are ordinary words in prose; never a place here */
     if (n.length > 2) out.add(n);
-  };
-  for (const c of COUNTRIES) if (c.status === undefined) add(c.name);
-  for (const alias of Object.keys(COUNTRY_ALIASES_BY_ISO3)) add(alias);
-  for (const list of Object.values(COUNTRY_DEMONYMS_BY_ISO3)) for (const d of list ?? []) add(d);
-  for (const city of getCuratedCityNames()) add(city);
-  placeNames = out;
+  }
   return out;
 }
+/** Canonical country names, aliases and demonyms (singular and regular plural) — no cities. */
+function countries(): ReadonlySet<string> {
+  if (countryNames !== null) return countryNames;
+  countryNames = normalizedSet([
+    ...COUNTRIES.filter((c) => c.status === undefined).map((c) => c.name),
+    ...Object.keys(COUNTRY_ALIASES_BY_ISO3),
+    ...Object.values(COUNTRY_DEMONYMS_BY_ISO3).flatMap((list) => (list ?? []).flatMap(demonymForms)),
+  ]);
+  return countryNames;
+}
+/** Countries plus the canonical curated cities. */
+function places(): ReadonlySet<string> {
+  if (placeNames !== null) return placeNames;
+  placeNames = new Set([...countries(), ...normalizedSet(getCuratedCityNames())]);
+  return placeNames;
+}
 
-function namesPlaceAt(tokens: readonly string[], from: number, step: 1 | -1): boolean {
-  const set = places();
+function namesPlaceAt(tokens: readonly string[], from: number, step: 1 | -1, set: ReadonlySet<string> = places()): boolean {
   let i = from;
   while (i >= 0 && i < tokens.length && PLACE_FILLERS.has(tokens[i]) && step === 1) i += step;
   for (let len = 1; len <= 3; len++) {
@@ -248,7 +273,9 @@ function placeWar(text: string): boolean {
   const tokens = text.trim().split(' ');
   for (let i = 0; i < tokens.length; i++) {
     if (PLACE_PREFIXED_ONLY.has(tokens[i])) {
-      if (i > 0 && namesPlaceAt(tokens, before(tokens, i), -1)) return true;
+      /* FINAL CORRECTION · R2 — only a COUNTRY or demonym ("Russian attack"); a city never makes a
+         generic attack or raid ("Mombasa raid") armed conflict */
+      if (i > 0 && namesPlaceAt(tokens, before(tokens, i), -1, countries())) return true;
       continue;
     }
     if (!WAR_WORDS.has(tokens[i])) continue;
@@ -309,13 +336,20 @@ function familiesIn(rawText: string, domain: HomeDomain): Set<string> {
   return out;
 }
 
+const LEGAL_PROCESS = /\b(arrest(s|ed|ing)?|charged|charges|charging|jailed|jails|sentenced|sentences|trial|trials|tried|prosecut[a-z]*|court|courts|indicted|indictment|convicted|conviction|extradit[a-z]*|acquitted|lawsuit|sued|tribunal|custody|detained)\b/;
+const LEGAL_BACKGROUND_KEYS: readonly string[] = ['place-war', 'atrocity-crimes'];
+
 const STRONG_KEYS: ReadonlySet<string> = new Set([...FAMILIES.filter((f) => f.strong).map((f) => f.key), 'place-war']);
 
+const CORROBORATING_KEYS: ReadonlySet<string> = new Set(FAMILIES.filter((f) => f.corroborating).map((f) => f.key));
+
 function admits(z: ZoneFamilies): { ok: boolean; families: string[] } {
-  const all = [...new Set([...z.title, ...z.lead])];
-  const titleStrong = [...z.title].some((k) => STRONG_KEYS.has(k));
+  const counts = (k: string): boolean => !CORROBORATING_KEYS.has(k);
+  const all = [...new Set([...z.title, ...z.lead])].filter(counts);
+  const titleCounted = [...z.title].filter(counts);
+  const titleStrong = titleCounted.some((k) => STRONG_KEYS.has(k));
   const leadStrong = [...z.lead].some((k) => STRONG_KEYS.has(k));
-  const ok = titleStrong || (all.length >= 2 && z.title.size >= 1) || (leadStrong && all.length >= 2);
+  const ok = titleStrong || (all.length >= 2 && titleCounted.length >= 1) || (leadStrong && all.length >= 2);
   /* strong families first: they are the stated reason */
   return { ok, families: all.sort((a, b) => Number(STRONG_KEYS.has(b)) - Number(STRONG_KEYS.has(a))) };
 }
@@ -336,7 +370,16 @@ export function assessHomeEligibility(input: HomeEligibilityInput): HomeEligibil
 
   const lead = leadSentence(input.summary);
   const business = admits({ title: familiesIn(titleRaw, 'business'), lead: familiesIn(lead, 'business') });
-  const conflict = admits({ title: familiesIn(titleRaw, 'conflict'), lead: familiesIn(lead, 'conflict') });
+  /* FINAL CORRECTION · R2 — when the headline's event is a legal process (arrest, charge, trial,
+     sentence …), naming a war ("<place> war") or an atrocity crime is the case's background, not a
+     current conflict development: those families do not count; another conflict family must. */
+  const legal = LEGAL_PROCESS.test(stripNotEvidence(title));
+  const conflictZone = (raw: string): Set<string> => {
+    const f = familiesIn(raw, 'conflict');
+    if (legal) for (const k of LEGAL_BACKGROUND_KEYS) f.delete(k);
+    return f;
+  };
+  const conflict = admits({ title: conflictZone(titleRaw), lead: conflictZone(lead) });
   if (!business.ok && !conflict.ok) return { eligible: false, reason: 'NO_BUSINESS_OR_CONFLICT_EVIDENCE' };
 
   const score = (families: readonly string[]): number =>
@@ -370,7 +413,7 @@ const TOPIC_LABELS: ReadonlyArray<{ label: string; keys: readonly string[] }> = 
   { label: 'Public policy and regulation', keys: ['regulation', 'tax-policy', 'subsidy'] },
   { label: 'Infrastructure', keys: ['infrastructure'] },
   { label: 'Growth and the economy', keys: ['growth', 'economy', 'tourism'] },
-  { label: 'Armed conflict', keys: ['armed-conflict', 'air-war', 'named-armed-actor', 'armed-action', 'place-war', 'armed-actors', 'military-ops'] },
+  { label: 'Armed conflict', keys: ['armed-conflict', 'atrocity-crimes', 'air-war', 'named-armed-actor', 'armed-action', 'place-war', 'armed-actors', 'military-ops'] },
   { label: 'Ceasefire and peace efforts', keys: ['ceasefire'] },
   { label: 'Displacement and humanitarian impact', keys: ['displacement'] },
   { label: 'Attacks and security', keys: ['violence', 'casualties'] },

@@ -169,6 +169,8 @@ const COUNTRY_DEMONYMS: Partial<Record<string, string[]>> = {
   ZAF: ['south african'],
   NAM: ['namibian'],
   RWA: ['rwandan'],
+  /* HOME DATA TRUTH R1 · R1 — Burundi had no demonym, so "Burundian(s)" resolved to nothing */
+  BDI: ['burundian'],
   AUS: ['australian'],
   FJI: ['fijian'],
   KOR: ['south korean'],
@@ -859,7 +861,7 @@ function isLikelyProperNameCityMention(rawText: string, city: string): boolean {
  * a place — see scoreCountryRelevance.
  */
 const LONGER_DEMONYMS: Record<string, string[]> = (() => {
-  const all = Object.values(COUNTRY_DEMONYMS).flatMap((list) => list ?? []);
+  const all = Object.values(COUNTRY_DEMONYMS).flatMap((list) => (list ?? []).flatMap(demonymForms));
   const table: Record<string, string[]> = {};
 
   for (const demonym of all) {
@@ -915,7 +917,7 @@ function containsDemonymReference(
   rawText: string,
   country: CountryMeta,
 ): boolean {
-  const demonyms = COUNTRY_DEMONYMS[country.iso3] ?? [];
+  const demonyms = (COUNTRY_DEMONYMS[country.iso3] ?? []).flatMap(demonymForms);
 
   return demonyms.some((demonym) => {
     if (!preparedContainsPhrase(preparedText, demonym)) {
@@ -1359,6 +1361,24 @@ export interface PrimaryCountryResult {
  */
 export const COUNTRY_DEMONYMS_BY_ISO3: Readonly<Partial<Record<string, readonly string[]>>> =
   COUNTRY_DEMONYMS;
+
+/**
+ * HOME DATA TRUTH R1 · R1 — THE PLURAL OF A DEMONYM IS THE SAME EVIDENCE.
+ *
+ * Matching is whole-phrase, so "Burundians", "Kenyans" or "Israelis" never matched the curated
+ * singular. The table stays singular and curated; this derives ONLY the regular English plural of
+ * forms ending in "-an" or "-i" (rwandan → rwandans, iraqi → iraqis). Invariant forms
+ * ("sudanese", "swiss", "french") and irregular ones are not generated, so nothing outside the
+ * curated judgement can appear. Every rule (capitalisation, longest form, non-locative compounds)
+ * applies to the plural exactly as to the singular.
+ *
+ * SCOPE: article relevance (scoreCountryRelevance) only. resolveCountriesByDemonym (Ask query
+ * routing) is deliberately left singular — its behaviour is pinned by the Ask qualification suite
+ * (V4-C3) and Ask routing is out of scope for this correction.
+ */
+export function demonymForms(demonym: string): string[] {
+  return /(an|i)$/.test(demonym) ? [demonym, `${demonym}s`] : [demonym];
+}
 
 /** This file's own normalization, so callers cannot drift from it. */
 export function normalizeForCountryMatch(value: string): string {
