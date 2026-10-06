@@ -67,6 +67,10 @@ export const ASK_ANSWER_STATES = [
   /* ASK TECHNICAL / SCIENTIFIC REASONING CONVERGENCE R1 — a deterministic computation over the
      reader's own stated values: zero model calls, zero sources, never current, never verified. */
   'COMPUTED_RESULT',
+  /* CURRENT-REPORTING TRUTH R1 (B1) — an AI answer supported ONLY by retained / previously
+     retrieved reporting (served after a provider failure, or from the store). AI ran; the
+     reporting is real and dated; it is not current. Never CURRENT_REPORTING, never verified. */
+  'RETAINED_REPORTING',
 ] as const;
 export type AskAnswerState = (typeof ASK_ANSWER_STATES)[number];
 

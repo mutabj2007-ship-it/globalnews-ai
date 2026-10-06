@@ -1150,6 +1150,36 @@ export function resolveEvidenceState(
 }
 
 /**
+ * CURRENT-REPORTING TRUTH R1 (B1) — HOW FRESH IS THE REPORTING AN ANSWER STANDS ON.
+ *
+ * Freshness and provider health are INDEPENDENT facts. `resolveEvidenceState` above folds a
+ * provider failure into 'degraded-fallback' whatever was served; this reads the SAME canonical
+ * state and separates the one question an answer state needs: did at least one item of current
+ * (live) reporting support the answer?
+ *
+ *   current   at least one live item — including a live search that lost a provider lane
+ *             (partial degradation stays current; the failure is disclosed separately through
+ *             fallbackReason 'provider-error' and the provider-failure metadata)
+ *   retained  only previously retrieved reporting was served (outcome RETAINED_ONLY, or the
+ *             store answered: dataMode 'cached')
+ *   none      no usable reporting
+ *
+ * 'mock' is the disclosed demo mode and is read as it always was (not retained).
+ */
+export type ReportingFreshness = 'current' | 'retained' | 'none';
+
+export function resolveReportingFreshness(
+  context: Pick<AnalysisRetrievalContext, 'dataMode' | 'fallbackReason' | 'outcome'>,
+  articleCount: number,
+): ReportingFreshness {
+  const state = resolveEvidenceState(context, articleCount);
+  if (articleCount === 0 || state === 'no-relevant-evidence') return 'none';
+  if (context.outcome === 'RETAINED_ONLY' || context.dataMode === 'cached') return 'retained';
+  if (state === 'retained' && context.dataMode !== 'mock') return 'retained';
+  return 'current';
+}
+
+/**
  * C907 §8 — what retrieval actually did, as one value a machine can branch on.
  *
  * THE FIVE ARE NOT A SEVERITY LADDER; they are five different facts, and

@@ -301,6 +301,7 @@ export const deShellOverlay: ShellLocaleOverlay = {
         insuf: "ZU WENIG BELEGE",
         part: "TEILWEISE BELEGT",
         rec: "GESPEICHERTER DATENSATZ",
+        retrep: "GESPEICHERTE BERICHTE",
         ref: "HINTERGRUNDWISSEN",
         unavail: "FUNKTION NICHT VERFÜGBAR",
         ver: "AKTUELL BESTÄTIGT",

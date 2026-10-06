@@ -37,6 +37,8 @@ export const STORY_BRIEF_QUESTION =
 const CONCLUSION_OF: Readonly<Record<string, StoryBriefConclusion>> = {
   CURRENTLY_VERIFIED: 'READY',
   CURRENT_REPORTING: 'READY',
+  /* CURRENT-REPORTING TRUTH R1 — a produced brief from retained reporting is a conclusion, as before */
+  RETAINED_REPORTING: 'READY',
   RETAINED_RECORD: 'READY',
   COMPUTED_RESULT: 'READY',
   REFERENCE_BACKGROUND: 'READY',
