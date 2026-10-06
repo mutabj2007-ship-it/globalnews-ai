@@ -239,6 +239,27 @@ describe('Sources — one list, panel or sheet, backend identity (H-FREEZE §7, 
     expect(html).toContain('href="https://one.example/a"');
   });
 
+  it('EAST AFRICA E7 — each source date is labelled by its own publishedAtBasis through sourceDateLabel', () => {
+    const dated = [
+      { articleId: 'p', title: 'Pub', publisher: 'P1', url: 'https://p.example/a', publishedAt: '2026-10-05T10:00:00.000Z', publishedAtBasis: 'publisher' },
+      { articleId: 'o', title: 'Obs', publisher: 'P2', url: 'https://o.example/b', publishedAt: '2026-10-05T10:00:00.000Z', publishedAtBasis: 'observed' },
+      { articleId: 'u', title: 'Unk', publisher: 'P3', url: 'https://u.example/c', publishedAt: '2026-10-05T10:00:00.000Z' },
+      { articleId: 'n', title: 'None', publisher: 'P4', url: 'https://n.example/d', publishedAt: null, publishedAtBasis: 'publisher' },
+    ] as unknown as AnalysisSourceRef[];
+    const html = renderToStaticMarkup(createElement(AskSourcesList, { sources: dated, locale: 'en' }));
+    const items = [...html.matchAll(/<li[\s\S]*?<\/li>/g)].map((m) => m[0]);
+    expect(items[0]).toMatch(/P1 · Published 5 Oct 2026, 10:00 UTC/);
+    expect(items[1]).toMatch(/P2 · First seen by GlobalNewsAI 5 Oct 2026, 10:00 UTC/);
+    expect(items[2]).toMatch(/P3 · Report date 5 Oct 2026, 10:00 UTC/);
+    /* no date → no label, never an invented one */
+    expect(items[3]).toMatch(/>P4<\/span>/);
+    expect(items[3]).not.toMatch(/Published|First seen|Report date/);
+    /* one contract: the list does not format a bare date of its own */
+    const panel = code(read('components', 'ask-frame', 'AskSourcesPanel.tsx'));
+    expect(panel).toMatch(/sourceDateLabel\(source\.publishedAt, source\.publishedAtBasis,/);
+    expect(panel).not.toMatch(/formatUtc\(/);
+  });
+
   it('the sheet is a modal dialog with Esc, focus containment and focus return; the column is not modal', () => {
     const panel = code(read('components', 'ask-frame', 'AskSourcesPanel.tsx'));
     expect(panel).toMatch(/role="dialog"\s+aria-modal="true"/);

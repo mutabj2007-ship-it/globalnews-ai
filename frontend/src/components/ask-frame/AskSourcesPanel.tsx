@@ -14,7 +14,8 @@ import {
 } from 'react';
 import { safeExternalHref, type AnalysisSourceRef, type DisplayLocale } from '@globalnews-ai/shared';
 import { isolatedAuto, isolatedLtr } from '@/lib/ask/askDirection';
-import { formatUtc } from '@/lib/ask/askR2View';
+import { sourceDateLabel } from '@/components/ask/AskCompactResult';
+import { askDictionary } from '@/lib/ask/shell/askDictionary';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 
 /**
@@ -63,6 +64,14 @@ export function AskSourcesList({
   readonly locale: DisplayLocale;
   readonly highlight?: number;
 }): JSX.Element {
+  /*
+    EAST AFRICA E7 — a source's date says what it IS, through the one existing contract
+    (sourceDateLabel): publisher → "Published", observed → "First seen by GlobalNewsAI",
+    unknown basis → "Report date". No new date provenance. The reader's locale governs the
+    strings and the formatting; the language argument is only the contract's fallback when no
+    locale is given, and a locale is always given here.
+  */
+  const dateStrings = askDictionary(locale).askAi;
   return (
     <ol className="flex flex-col">
       {sources.map((source, index) => (
@@ -100,7 +109,9 @@ export function AskSourcesList({
               className="text-[0.75rem] leading-[1.3] text-[var(--ask-read-ink3,#8299b4)]"
               {...isolatedAuto()}
             >
-              {[source.publisher, formatUtc(source.publishedAt, locale)].filter(Boolean).join(' · ')}
+              {[source.publisher, sourceDateLabel(source.publishedAt, source.publishedAtBasis, 'en', dateStrings, locale)]
+                .filter(Boolean)
+                .join(' · ')}
             </span>
           </div>
         </li>
