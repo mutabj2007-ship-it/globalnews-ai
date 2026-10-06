@@ -187,3 +187,31 @@ describe('O — the exact live Alpha counterexample (Taarifa, 2026-10-05)', () =
     expect(v.eligible).toBe(false);
   });
 });
+
+describe('A / N — router readings found by the live Production smoke (2026-10-06)', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { routeAskR2 } = require('../ask-router/ask-r2-route');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { specialistRegistryFixture } = require('../ask-router/frozen-c/fixtures/specialist-registry.fixture');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { classifyQueryIntent } = require('../analysis/query/query-intent.util');
+  const route = (q: string) =>
+    routeAskR2(
+      { originalQuestion: q, sourceLanguage: 'en', normalizationLanguage: 'en', displayLanguage: 'en', origin: 'ASK' },
+      { computeConsent: 'GRANTED', requestInstant: '2026-10-06T02:00:00Z' },
+      { specialistRegistry: specialistRegistryFixture },
+    );
+  it('"Compare how Russia and Ukraine are currently doing …" is executable with BOTH members, never a clarification', () => {
+    const r = route('Compare how Russia and Ukraine are currently doing and how this affects the entire world');
+    expect(r.plan.terminalState).toBe('EXECUTABLE');
+    const intent = classifyQueryIntent('Compare how Russia and Ukraine are currently doing and how this affects the entire world');
+    expect(intent.intent).toBe('COMPARISON_RESEARCH');
+    expect(intent.sides.map((c: { iso3: string }) => c.iso3)).toEqual(['RUS', 'UKR']);
+  });
+  it('a bare "Congo" in the Rwanda conflict question is the DR Congo', () => {
+    expect(route('What change have you learned about Rwanda recently in relation to the Congo conflict?').relationship?.countries).toEqual(['RWA', 'COD']);
+  });
+  it('Congo-Brazzaville stays Congo-Brazzaville when the context is not the eastern-Congo conflict', () => {
+    expect(route('How are relations between Congo and Gabon?').relationship?.countries).toEqual(['COG', 'GAB']);
+  });
+});

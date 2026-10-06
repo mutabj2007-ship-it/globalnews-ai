@@ -510,8 +510,19 @@ export function readEntityCandidates(text: string, language: string): EntityCand
           : false,
     );
   };
+  /* ASK RELIABILITY R1 (N) — a bare "Congo" in a question about the eastern-Congo conflict (or one
+     naming its neighbours) is the DEMOCRATIC Republic of the Congo. The registry's short name
+     "Congo" is Congo-Brazzaville, so "Rwanda … in relation to the Congo conflict" became a
+     Rwanda–Congo-Brazzaville relationship with zero matching reports. Brazzaville stays COG
+     whenever it is named. */
+  const easternCongo =
+    /\b(?:rwanda\w*|uganda\w*|burundi\w*|m23|kivu|goma|kinshasa|conflict|war|fighting|rebels?|militias?|minerals?|cobalt|coltan)\b/i.test(text) &&
+    !/\b(?:brazzaville|republic\s+of\s+(?:the\s+)?congo|congo-brazzaville)\b/i.test(text);
   return sorted.filter(confirmed).map(({ needsContext: _n, ...c }) => {
     void _n;
+    if (c.iso3 === 'COG' && easternCongo && /^congo$/i.test(c.surface.trim())) {
+      return { ...c, id: c.id.replace(/COG$/, 'COD'), iso3: 'COD' };
+    }
     return c;
   });
 }

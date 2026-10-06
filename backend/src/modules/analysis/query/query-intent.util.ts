@@ -840,8 +840,8 @@ export function classifyQueryIntent(
     return { intent: 'CURRENT_EVENT', sides: [], countries: [], reason: 'empty query' };
   }
 
-  const countries = resolveNamedCountries(text);
   const isComparison = matchesAny(text, COMPARISON_MARKERS);
+  const countries = withComparisonPair(text, resolveNamedCountries(text), isComparison);
   const sides = countries.slice(0, MAX_SIDES);
 
   /*
@@ -962,4 +962,27 @@ export function classifyQueryIntent(
     countries,
     reason: 'default — a topic in a news product is read as a news topic',
   };
+}
+
+/*
+ * ASK RELIABILITY R1 (A) — "Compare how Russia and Ukraine are currently doing…" is an EXPLICIT
+ * comparison naming two countries as a capitalised pair, but no coordination frame matched the
+ * sentence shape, so it was refused as "naming no determinable members". ONLY for an explicit
+ * comparison, a pair of capitalised country names joined by and / & / vs supplies the members;
+ * every non-comparison classification is unchanged.
+ */
+function withComparisonPair(text: string, found: CountryMeta[], isComparison: boolean): CountryMeta[] {
+  if (!isComparison || found.length >= 2) return found;
+  const pair = /\b(\p{Lu}[\p{L}'’.-]+(?:\s+\p{Lu}[\p{L}'’.-]+){0,2})\s+(?:and|&|vs\.?|versus)\s+(\p{Lu}[\p{L}'’.-]+(?:\s+\p{Lu}[\p{L}'’.-]+){0,2})/gu;
+  for (const m of text.matchAll(pair)) {
+    const a = resolveMemberCountry(m[1]);
+    const b = resolveMemberCountry(m[2]);
+    if (a && b && a.iso3 !== b.iso3) {
+      const out = [...found];
+      pushUnique(out, a);
+      pushUnique(out, b);
+      return out;
+    }
+  }
+  return found;
 }
