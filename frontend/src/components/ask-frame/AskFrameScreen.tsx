@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ASK_PRODUCT_NAME } from '@/lib/ask/askBrand';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import type { StoryContext } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { usePublishStoryContext } from '@/lib/ask/storyContextStore';
@@ -37,7 +37,6 @@ import { AskR2TurnView } from './AskR2TurnView';
 import { AskConversations } from './AskConversations';
 import { AskToastProvider, AskToastSlot } from './AskToast';
 import { useAskNavOptional } from '@/components/ask-nav/AskNavShell';
-import { cleanAskDestination } from '@/lib/ask/askCleanNavigation';
 import { AskDeepConfirm } from './AskDeepConfirm';
 import { ASK_EYEBROW, Composer } from './AskParts';
 import styles from './askDashboard.module.css';
@@ -117,7 +116,6 @@ export function AskFrameScreen({
   const [compact, setCompact] = useState(false);
   /* ASK DESIGN COMPLETENESS R1 — the ≥1024 layout: persistent conversations column. */
   const [wide, setWide] = useState(false);
-  const pathname = usePathname();
   const nav = useAskNavOptional();
   const reader = useRef<HTMLDivElement>(null);
   const layout = useRef<HTMLDivElement>(null);
@@ -207,6 +205,11 @@ export function AskFrameScreen({
   /* operations THIS screen wrote to the address bar: already on screen, never re-opened as a copy
      (Next syncs useSearchParams with history.replaceState) */
   const remembered = useRef(new Set<string>());
+  /* ASK DESIGN COMPLETENESS R2 — is a conversation on screen (read by the reopen effect). */
+  const liveConversation = useRef(false);
+  liveConversation.current = r2.turns.length > 0 || opened !== null;
+  const startNewConversationRef = useRef(r2.startNewConversation);
+  startNewConversationRef.current = r2.startNewConversation;
   const lastR2 = r2.turns[r2.turns.length - 1] ?? opened ?? undefined;
   const lastR2View =
     lastR2?.payload != null
@@ -300,6 +303,17 @@ export function AskFrameScreen({
   useEffect(() => {
     if (operationId === null) return;
     if (remembered.current.has(operationId)) return; // DEFECT F: already on screen
+    /*
+      ASK DESIGN COMPLETENESS R2 — THREADS, NOT TURNS. A conversation opened from the drawer or the
+      conversations column arrives on THIS mounted frame (same route), so whatever conversation
+      was on screen is cleared first: otherwise the reopened thread could not be continued
+      (continueThread keeps an existing thread) and a follow-up would be filed into the PREVIOUS
+      conversation. Local state only — nothing is deleted or sent.
+    */
+    if (liveConversation.current) {
+      startNewConversationRef.current();
+      setOpenedEarlier([]);
+    }
     /* GATE H (H-T12 / H-G4) — an operation arrival is a READ. It revokes any pending
        analysis grant, so no later arrival can spend a grant this navigation did not make. */
     revokeAnalysisConsent();
@@ -462,12 +476,49 @@ export function AskFrameScreen({
     if (outcome === 'legacy') setAskUnavailable(true);
     else if (outcome === 'failed') setRetryKept(true);
   }
-  /* Header "New": the shell's explicit New question — clear now, then a clean document load. */
-  function newQuestion() {
-    const destination = cleanAskDestination(pathname);
-    if (nav !== null) nav.clearAndGo(destination);
-    else window.location.assign(destination);
+  /*
+    ASK DESIGN COMPLETENESS R2 — "New question" (CTO live mobile correction). From an open
+    conversation: the conversation is left as it is on the server (so it stays in Recent — nothing
+    is deleted), the active thread and turns are cleared locally, the composer is emptied and
+    focused, and the operation/question-specific URL state is removed (replaceState, no new history
+    entry, no reload). The governed `return` destination and any context the reader arrived with
+    are kept. From the empty READY state the control is disabled, so it never simulates a reset.
+  */
+  function focusComposer() {
+    requestAnimationFrame(() =>
+      document.querySelector<HTMLTextAreaElement>('[data-ask="composer-input"]')?.focus(),
+    );
   }
+  function newQuestion() {
+    /* Already an empty Ask (e.g. New question from the drawer): nothing to reset, just focus. */
+    if (entryState) {
+      focusComposer();
+      return;
+    }
+    if (!r2.startNewConversation()) return;
+    setOpened(null);
+    setOpenedEarlier([]);
+    remembered.current.clear();
+    setQuestion('');
+    setRetryKept(false);
+    setAskUnavailable(false);
+    setNewBelow(false);
+    rotatingExample.onValue('');
+    const url = new URLSearchParams(window.location.search);
+    url.delete('operation');
+    url.delete('q');
+    const rest = url.toString();
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}${rest === '' ? '' : `?${rest}`}`);
+    focusComposer();
+  }
+  /* Every New question control (header, drawer, column, menu row) runs THIS action. */
+  const newQuestionRef = useRef(newQuestion);
+  newQuestionRef.current = newQuestion;
+  const registerNewQuestion = nav?.registerNewQuestion;
+  useEffect(() => {
+    registerNewQuestion?.(() => newQuestionRef.current());
+    return () => registerNewQuestion?.(null);
+  }, [registerNewQuestion]);
   /* Back / Close: the captured return destination, else the previous page, else Home. */
   /* ALPHA VISUAL ACCEPTANCE REPAIR R1 (F) — a clarification's draft goes to the composer; nothing is sent. */
   function draftQuestion(draft: string) {
@@ -604,10 +655,17 @@ export function AskFrameScreen({
         <span data-ask="header-state" className={styles.visuallyHidden}>
           {lastR2View !== null ? r2s.sourcesLabel(lastR2View.sourceCount) : ''}
         </span>
-        <button type="button" data-ask="new-question" onClick={newQuestion} className={styles.newButton}>
+        {/* New question starts a fresh conversation; it is disabled while Ask is already empty.
+            The menu control (left) is the conversations drawer, never this one. */}
+        <button
+          type="button"
+          data-ask="new-question"
+          onClick={newQuestion}
+          disabled={entryState || isPending}
+          className={styles.newButton}
+        >
           <span aria-hidden="true">+</span>
-          {r2s.read.newShort}
-          <span className={styles.visuallyHidden}>{` — ${shell.askNavStrings.newQuestion}`}</span>
+          {shell.askNavStrings.newQuestion}
         </button>
       </header>
       {/*

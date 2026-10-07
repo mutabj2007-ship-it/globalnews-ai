@@ -496,7 +496,30 @@ export function useAskR2Conversation(
     if (quote !== null) await askV2Api.release(quote.operation.operationId);
   }, [deepQuote]);
 
+  /**
+   * ASK DESIGN COMPLETENESS R2 — "New question": leave the conversation on screen and return to
+   * an empty Ask. A LOCAL reset only. The previous thread is not deleted or altered on the
+   * server (there is no delete call anywhere here), so it stays in Recent; the next explicit Send
+   * opens a new thread. Refused while a request is in flight, so nothing that is running is
+   * orphaned. An open deep-analysis quote is released exactly as "Not now" releases it.
+   */
+  const startNewConversation = useCallback((): boolean => {
+    if (pending !== null) return false;
+    thread.current = null;
+    guestThread.current = null;
+    setTurns([]);
+    setSignInRequired(null);
+    setContextRefused(null);
+    setGuestNotice(null);
+    const quote = deepQuote;
+    setDeepQuote(null);
+    if (quote !== null) void askV2Api.release(quote.operation.operationId);
+    return true;
+  }, [pending, deepQuote]);
+
   return {
+    /* ASK DESIGN COMPLETENESS R2 */
+    startNewConversation,
     turns,
     pending,
     availability,
