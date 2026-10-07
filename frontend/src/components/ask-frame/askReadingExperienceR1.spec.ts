@@ -179,7 +179,8 @@ describe('Answer hierarchy — answer first (H-FREEZE §4)', () => {
     const answer = at('data-ask="answer"');
     const meta = at('data-ask="answer-meta"');
     const basis = at('<AskIntelligenceBasis');
-    const actions = at('data-ask="turn-actions"');
+    /* ASK DESIGN COMPLETENESS R1 — the actions are the Design toolbar component. */
+    const actions = at('<AskAnswerToolbar');
     const handoffs = at('data-ask="handoffs"');
     for (const i of [question, answer, meta, basis, actions, handoffs]) expect(i).toBeGreaterThan(-1);
     expect(question).toBeLessThan(answer);
@@ -252,7 +253,9 @@ describe('Sources — one list, panel or sheet, backend identity (H-FREEZE §7, 
     expect(items[1]).toMatch(/P2 · First seen by GlobalNewsAI 5 Oct 2026, 10:00 UTC/);
     expect(items[2]).toMatch(/P3 · Report date 5 Oct 2026, 10:00 UTC/);
     /* no date → no label, never an invented one */
-    expect(items[3]).toMatch(/>P4<\/span>/);
+    /* ASK DESIGN COMPLETENESS R1 — still no date label and no invented date: the Design's
+       explicit "Date not provided" (C1 / C6) */
+    expect(items[3]).toMatch(/>P4 · Date not provided<\/span>/);
     expect(items[3]).not.toMatch(/Published|First seen|Report date/);
     /* one contract: the list does not format a bare date of its own */
     const panel = code(read('components', 'ask-frame', 'AskSourcesPanel.tsx'));
@@ -287,10 +290,21 @@ describe('Sources — one list, panel or sheet, backend identity (H-FREEZE §7, 
     expect(citation).toMatch(/event\.metaKey \|\| event\.ctrlKey/);
   });
 
-  it('the Sources action renders only with a real list, and Share / Download are not offered', () => {
+  it('the Sources action renders only with a real list; Share only where the platform shares; no Copy link / Download', () => {
+    /*
+      ASK DESIGN COMPLETENESS R1 — the Design toolbar (RECONCILIATION_GUIDE §8): Share uses
+      `navigator.share` "when available, else hide", so it renders only after mount and only where
+      the platform offers it. Copy link (no share-link endpoint, D7) and Download (no export
+      endpoint, D8) have no backing and are not rendered at all.
+    */
     const turn = code(read('components', 'ask-frame', 'AskR2TurnView.tsx'));
-    expect(turn).toMatch(/openSources !== null && answerSources\.length > 0/);
     expect(turn).toMatch(/const answerSources = payload\.analysis\?\.analysis\?\.sources \?\? \[\];/);
+    expect(turn).toMatch(/sources=\{answerSources\}/);
+    const toolbar = code(read('components', 'ask-frame', 'AskAnswerToolbar.tsx'));
+    expect(toolbar).toMatch(/openSources !== null && sources\.length > 0/);
+    expect(toolbar).toMatch(/typeof navigator\.share === 'function'/);
+    expect(toolbar).toMatch(/\{canShare && \(/);
+    expect(toolbar).not.toMatch(/data-ask="(?:copy-link|download)"/);
     expect(turn).not.toMatch(/data-ask="(?:share|copy-link|download)"/);
   });
 });

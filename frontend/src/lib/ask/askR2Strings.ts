@@ -260,8 +260,156 @@ export interface AskR2Strings {
     readonly newTopic: string;
     readonly newTopicStarted: string;
   };
+  /** ASK DESIGN COMPLETENESS R1 — the Claude Design reading-surface copy (see AskReadStrings). */
+  readonly read: AskReadStrings;
   sourcesLabel(n: number): string;
 }
+
+/**
+ * ASK DESIGN COMPLETENESS R1 — the copy the Claude Design Ask Reading Experience R1 package draws
+ * (GLOBALNEWSAI-ASK-READING-EXPERIENCE-R1-DESIGN, SHA-256 e06a8278…3bf1) and the product did not
+ * yet have: the welcome group, the composer placeholders, the conversations list, the answer
+ * reading hierarchy (jump links, More detail, inline uncertainty, footer line), the action
+ * toolbar's Share / More / Saved feedback, the Sources sheet labels and the reopened-answer
+ * date line. Every string is reader-visible and governed: EN/PL here, the five other locales as
+ * overlays (engineering translations pending Claude L qualification, never an English fallback).
+ *
+ * No string names an action without a real backing. Copy link, Download and "What Ask
+ * remembers" have no endpoint (Design D7 / D8 / D6) and have no copy here.
+ */
+export interface AskReadStrings {
+  readonly welcomeSupport: string;
+  readonly welcomeExample: string;
+  readonly placeholderFirst: string;
+  readonly placeholderFollowUp: string;
+  readonly newShort: string;
+  readonly conversations: string;
+  readonly searchConversations: string;
+  readonly inThisAnswer: string;
+  readonly moreDetail: (what: string) => string;
+  readonly show: string;
+  readonly hide: string;
+  readonly background: string;
+  readonly whyMatters: string;
+  readonly whoAffected: string;
+  readonly whatToWatch: string;
+  readonly notYetConfirmed: string;
+  readonly footerReports: (n: number) => string;
+  readonly footerPublishers: (n: number) => string;
+  readonly footerNewest: (date: string) => string;
+  readonly share: string;
+  readonly shareTitle: string;
+  readonly shareIncludes: (n: number) => string;
+  readonly sharePrivacy: string;
+  readonly shareVia: string;
+  readonly more: string;
+  readonly moreTitle: string;
+  readonly refreshReporting: string;
+  readonly refreshNote: string;
+  readonly useInBriefing: string;
+  readonly savedToast: string;
+  readonly undo: string;
+  readonly sourcesCited: (n: number) => string;
+  readonly openOriginal: string;
+  readonly dateNotProvided: string;
+  readonly aboutAnswer: string;
+  readonly reopenedLine: (date: string) => string;
+  readonly editQuestion: string;
+}
+
+const EN_READ: AskReadStrings = {
+  welcomeSupport: 'Understand the news. See what matters to you.',
+  welcomeExample:
+    'You can ask for a quick brief, a plain explanation, or a comparison of how outlets report a story.',
+  placeholderFirst: 'Ask anything…',
+  placeholderFollowUp: 'Ask a follow-up…',
+  newShort: 'New',
+  conversations: 'Conversations',
+  searchConversations: 'Search conversations',
+  inThisAnswer: 'In this answer',
+  moreDetail: (what) => `More detail: ${what}`,
+  show: 'Show',
+  hide: 'Hide',
+  background: 'Background',
+  whyMatters: 'Why this matters',
+  whoAffected: 'Who is affected',
+  whatToWatch: 'What to watch',
+  notYetConfirmed: 'Not yet confirmed:',
+  footerReports: (n) => `Based on ${n} cited ${n === 1 ? 'report' : 'reports'}`,
+  footerPublishers: (n) => `from ${n} ${n === 1 ? 'publisher' : 'publishers'}.`,
+  footerNewest: (date) => `Newest report ${date}.`,
+  share: 'Share',
+  shareTitle: 'Share this answer',
+  shareIncludes: (n) => `Includes ${n} cited ${n === 1 ? 'source' : 'sources'} with links`,
+  sharePrivacy:
+    'Only this answer and its sources are shared. Your other questions in this conversation stay private.',
+  shareVia: 'Share via…',
+  more: 'More',
+  moreTitle: 'More actions',
+  refreshReporting: 'Refresh reporting',
+  refreshNote: 'Looks for newer coverage. This answer stays until the new one is ready.',
+  useInBriefing: 'Use in a briefing',
+  savedToast: 'Saved. You can find it in Saved.',
+  undo: 'Undo',
+  sourcesCited: (n) => `${n} cited`,
+  openOriginal: 'Open original',
+  dateNotProvided: 'Date not provided',
+  aboutAnswer: 'About this answer',
+  reopenedLine: (date) => `Answer from ${date}. Reporting may have changed since then.`,
+  editQuestion: 'Edit question',
+};
+
+/* Polish plurals: 1 · 2–4 (except 12–14) · otherwise. */
+function plPlural(n: number, one: string, few: string, many: string): string {
+  if (n === 1) return one;
+  const t = n % 10;
+  const h = n % 100;
+  return t >= 2 && t <= 4 && !(h >= 12 && h <= 14) ? few : many;
+}
+
+const PL_READ: AskReadStrings = {
+  welcomeSupport: 'Zrozum wiadomości. Zobacz, co jest dla Ciebie ważne.',
+  welcomeExample:
+    'Możesz poprosić o krótkie podsumowanie, proste wyjaśnienie albo porównanie, jak różne media relacjonują daną sprawę.',
+  placeholderFirst: 'Zapytaj o cokolwiek…',
+  placeholderFollowUp: 'Zadaj pytanie uzupełniające…',
+  newShort: 'Nowe',
+  conversations: 'Rozmowy',
+  searchConversations: 'Szukaj w rozmowach',
+  inThisAnswer: 'W tej odpowiedzi',
+  moreDetail: (what) => `Więcej szczegółów: ${what}`,
+  show: 'Pokaż',
+  hide: 'Ukryj',
+  background: 'Tło',
+  whyMatters: 'Dlaczego to ważne',
+  whoAffected: 'Kogo to dotyczy',
+  whatToWatch: 'Na co zwrócić uwagę',
+  notYetConfirmed: 'Jeszcze niepotwierdzone:',
+  footerReports: (n) =>
+    `Na podstawie ${n} ${plPlural(n, 'cytowanego doniesienia', 'cytowanych doniesień', 'cytowanych doniesień')}`,
+  footerPublishers: (n) => `od ${n} ${plPlural(n, 'wydawcy', 'wydawców', 'wydawców')}.`,
+  footerNewest: (date) => `Najnowsze doniesienie: ${date}.`,
+  share: 'Udostępnij',
+  shareTitle: 'Udostępnij tę odpowiedź',
+  shareIncludes: (n) =>
+    `Zawiera ${n} ${plPlural(n, 'cytowane źródło', 'cytowane źródła', 'cytowanych źródeł')} z linkami`,
+  sharePrivacy:
+    'Udostępniana jest tylko ta odpowiedź i jej źródła. Pozostałe pytania z tej rozmowy pozostają prywatne.',
+  shareVia: 'Udostępnij przez…',
+  more: 'Więcej',
+  moreTitle: 'Więcej działań',
+  refreshReporting: 'Odśwież doniesienia',
+  refreshNote: 'Szuka nowszych doniesień. Ta odpowiedź zostaje, dopóki nowa nie będzie gotowa.',
+  useInBriefing: 'Użyj w briefingu',
+  savedToast: 'Zapisano. Znajdziesz to w Zapisanych.',
+  undo: 'Cofnij',
+  sourcesCited: (n) => `${n} ${plPlural(n, 'cytowane', 'cytowane', 'cytowanych')}`,
+  openOriginal: 'Otwórz oryginał',
+  dateNotProvided: 'Brak daty',
+  aboutAnswer: 'O tej odpowiedzi',
+  reopenedLine: (date) => `Odpowiedź z ${date}. Doniesienia mogły się od tego czasu zmienić.`,
+  editQuestion: 'Edytuj pytanie',
+};
 
 const EN: AskR2Strings = {
   askTitle: 'Ask GlobalNewsAI',
@@ -584,6 +732,7 @@ const EN: AskR2Strings = {
       notAvailable: "Your saved information isn't available here yet.",
     },
   },
+  read: EN_READ,
   sourcesLabel: (n) => `${n} ${n === 1 ? 'source' : 'sources'}`,
 };
 
@@ -902,6 +1051,7 @@ const PL: AskR2Strings = {
       notAvailable: 'Twoje zapisane informacje nie są jeszcze tutaj dostępne.',
     },
   },
+  read: PL_READ,
   sourcesLabel: plSources,
 };
 

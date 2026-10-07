@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ASK_PRODUCT_NAME } from '@/lib/ask/askBrand';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import type { StoryContext } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { usePublishStoryContext } from '@/lib/ask/storyContextStore';
@@ -31,10 +31,13 @@ import { authReturnNotice, type GuestNotice } from '@/lib/ask/askGuestTrial';
 import type { AskShellMenuControl } from '@/lib/ask/askShellMenu';
 import { askCountryName } from '@/lib/ask/askCountryName';
 import { AskWorkingStatus } from './AskWorkingStatus';
-import { AskEmblem } from './AskEmblem';
-import { AskSourcesPanelProvider } from './AskSourcesPanel';
+import { AskEmblem, AskEmblemMark } from './AskEmblem';
+import { ASK_SIDE_PANEL_QUERY, AskSourcesPanelProvider } from './AskSourcesPanel';
 import { AskR2TurnView } from './AskR2TurnView';
-import { AskSourcesColumn } from './AskSourcesColumn';
+import { AskConversations } from './AskConversations';
+import { AskToastProvider, AskToastSlot } from './AskToast';
+import { useAskNavOptional } from '@/components/ask-nav/AskNavShell';
+import { cleanAskDestination } from '@/lib/ask/askCleanNavigation';
 import { AskDeepConfirm } from './AskDeepConfirm';
 import { ASK_EYEBROW, Composer } from './AskParts';
 import styles from './askDashboard.module.css';
@@ -112,6 +115,10 @@ export function AskFrameScreen({
   const compareContext = compareRemovedFor === urlKey ? undefined : incomingCompare;
   const [question, setQuestion] = useState(params.get('q') ?? '');
   const [compact, setCompact] = useState(false);
+  /* ASK DESIGN COMPLETENESS R1 — the ≥1024 layout: persistent conversations column. */
+  const [wide, setWide] = useState(false);
+  const pathname = usePathname();
+  const nav = useAskNavOptional();
   const reader = useRef<HTMLDivElement>(null);
   const layout = useRef<HTMLDivElement>(null);
   /*
@@ -217,8 +224,12 @@ export function AskFrameScreen({
     opened !== null ||
     isPending ||
     r2.signInRequired !== null;
-  /* D25 01 region 4 — the Sources column carries the latest R2 turn's own sources. */
-  const withSourcesColumn = showR2 && lastR2?.payload != null;
+  /*
+    ASK DESIGN COMPLETENESS R1 — there is no standing Sources column any more: Design F3 opens
+    Sources as a 380 px NON-MODAL side panel only when the reader asks for it (toolbar or a
+    citation), and as a sheet below 1024. The attribute stays for the stylesheet: always false.
+  */
+  const withSourcesColumn = false;
   /*
     CENTERED COMPOSER R1 — THE ENTRY STATE.
 
@@ -235,6 +246,8 @@ export function AskFrameScreen({
     never drawn beside an answer, a reopened conversation or a sign-in interruption.
   */
   const [composerFocused, setComposerFocused] = useState(false);
+  /* Design A2 — typing collapses the welcome group; only the emblem and the composer remain. */
+  const typing = entryState && (composerFocused || question.trim() !== '');
   const emblemState = isPending
     ? 'leaving'
     : composerFocused || question.trim() !== ''
@@ -334,6 +347,19 @@ export function AskFrameScreen({
     media.addEventListener('change', update);
     return () => media.removeEventListener('change', update);
   }, []);
+  /* ASK DESIGN COMPLETENESS R1 — the drawer marks this conversation as the current one. */
+  const currentThreadId = lastR2?.operation?.threadId ?? null;
+  const setNavThread = nav?.setThreadId;
+  useEffect(() => {
+    setNavThread?.(currentThreadId);
+  }, [currentThreadId, setNavThread]);
+  useEffect(() => {
+    const media = matchMedia(ASK_SIDE_PANEL_QUERY);
+    const update = () => setWide(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
   useEffect(() => {
     /*
       ALPHA ENABLEMENT R1 (D-050/D-052) — the reader follows the CONVERSATION. With nothing
@@ -419,6 +445,29 @@ export function AskFrameScreen({
       setRetryKept(true);
     }
   }
+  /*
+    ASK DESIGN COMPLETENESS R1 — "Refresh reporting": a NEW explicit turn for the same question,
+    through the same submit path as Ask (same context, same refusals). The reader's own draft in
+    the composer is left alone, and the answer on screen stays until the new one arrives.
+  */
+  async function resubmit(again: string) {
+    if (isPending || !again.trim() || askQuestionOverLimit(again)) return;
+    followNext.current = true;
+    setAskUnavailable(false);
+    const compareRef = compareContext === undefined ? undefined : await askCompareRef(compareContext);
+    const outcome = await r2.submit(
+      again,
+      compareRef ?? moduleContext?.ref ?? askContextRefOf(context, undefined),
+    );
+    if (outcome === 'legacy') setAskUnavailable(true);
+    else if (outcome === 'failed') setRetryKept(true);
+  }
+  /* Header "New": the shell's explicit New question — clear now, then a clean document load. */
+  function newQuestion() {
+    const destination = cleanAskDestination(pathname);
+    if (nav !== null) nav.clearAndGo(destination);
+    else window.location.assign(destination);
+  }
   /* Back / Close: the captured return destination, else the previous page, else Home. */
   /* ALPHA VISUAL ACCEPTANCE REPAIR R1 (F) — a clarification's draft goes to the composer; nothing is sent. */
   function draftQuestion(draft: string) {
@@ -495,15 +544,27 @@ export function AskFrameScreen({
       data-ask-read="r4"
       /* CENTERED COMPOSER R1 — the entry geometry is a STATE of this frame; see the CSS. */
       data-ask-entry={entryState ? 'true' : undefined}
+      data-ask-typing={typing ? 'true' : undefined}
       className={styles.frame}
     >
-      {/* ASK READING EXPERIENCE R1 — Sources panel (desktop column) / sheet (otherwise), inside
-          the Ask scope so the sheet inherits its direction, language and theme. */}
-      <AskSourcesPanelProvider
-        locale={interfaceLocale}
-        columnSources={withSourcesColumn ? (lastR2?.payload?.analysis?.analysis?.sources ?? null) : null}
-      >
-      {/* PHONE / 768 PORTRAIT — header 56 (D25 11). Hidden by CSS on wider layouts. */}
+      {/* ASK DESIGN COMPLETENESS R1 — Sources: the ≥1024 non-modal side panel or the sheet,
+          inside the Ask scope so both inherit its direction, language and theme. */}
+      <AskSourcesPanelProvider locale={interfaceLocale}>
+      <AskToastProvider>
+      {/*
+        ASK DESIGN COMPLETENESS R1 — the persistent 280 px conversations column (≥1024, Design
+        F2/F3). Mounted only at that layout, so a phone reads nothing for it; below 1024 the same
+        list lives in the menu drawer.
+      */}
+      <aside data-ask="history" aria-label={r2s.read.conversations} className={styles.history}>
+        {wide && (
+          <AskConversations
+            locale={interfaceLocale}
+            currentThreadId={lastR2?.operation?.threadId ?? null}
+          />
+        )}
+      </aside>
+      {/* PHONE / TABLET (<1024) — the Design header: menu · emblem 24 + wordmark · New. */}
       <header data-ask="header" className={styles.phoneHeader}>
         {/*
           THE LEFT SLOT. One control, 44x44, in the position D25 draws it. Which
@@ -534,16 +595,27 @@ export function AskFrameScreen({
             {returnsToMap ? '←' : '×'}
           </button>
         )}
-        <h1 className="flex-1 truncate text-center text-[16px] font-bold">{r2s.askTitle}</h1>
-        <span
-          data-ask="header-state"
-          className="min-w-11 text-end text-[0.75rem] leading-tight text-[var(--ask-read-ink2,#8fa6c0)]"
-        >
+        {/* The static 24 px mark beside the ONE canonical product name (CTO brand ruling). */}
+        <h1 className={styles.brand}>
+          <AskEmblemMark />
+          <span>{r2s.askTitle}</span>
+        </h1>
+        {/* The source-count readout stays for assistive technology; the Design header shows New. */}
+        <span data-ask="header-state" className={styles.visuallyHidden}>
           {lastR2View !== null ? r2s.sourcesLabel(lastR2View.sourceCount) : ''}
         </span>
+        <button type="button" data-ask="new-question" onClick={newQuestion} className={styles.newButton}>
+          <span aria-hidden="true">+</span>
+          {r2s.read.newShort}
+          <span className={styles.visuallyHidden}>{` — ${shell.askNavStrings.newQuestion}`}</span>
+        </button>
       </header>
-      {/* PHONE / 768 PORTRAIT — context strip 44, chips from the plan only (D25 05, 11). */}
-      {(returnsToMap || lastR2View !== null) && (
+      {/*
+        The return-to-Map strip stays (a governed destination). The scope chips it also carried
+        now read in the answer's own quiet footer, so the Design's reading area starts directly
+        under the header.
+      */}
+      {returnsToMap && (
         <div data-ask="context-strip" className={styles.phoneStrip}>
           {returnsToMap && (
             <button
@@ -554,20 +626,6 @@ export function AskFrameScreen({
             >
               {r2s.returnMap}
             </button>
-          )}
-          {lastR2View !== null &&
-            lastR2View.chips.items.map((chip, i) => (
-              <span
-                key={`${chip.kind}-${i}`}
-                className="shrink-0 rounded-full border border-[var(--ask-read-line,#1d4a73)] bg-[var(--ask-read-sunk,#06223d)] px-2.5 py-1 text-[var(--ask-read-ink,#cfe2f2)]"
-                /* R4 · same isolation as the scope row; this strip renders the same chips. */
-                {...isolatedAuto()}
-              >
-                {chip.label}
-              </span>
-            ))}
-          {lastR2View?.chips.note != null && (
-            <span className="shrink-0 text-[var(--ask-read-ink2,#8fa6c0)]">{lastR2View.chips.note}</span>
           )}
         </div>
       )}
@@ -588,57 +646,6 @@ export function AskFrameScreen({
       >
         <div className={styles.grid}>
           <div data-ask="thread" className={styles.thread}>
-            {compareContext && (
-              <div data-ask="context" data-ask-context-kind="SELECTION" className={styles.contextChip}>
-                <span className="truncate">
-                  {/* R4 · PHASE B — was a bare ternary with a hand-rolled {n} substitution. */}
-                  {shell.askContextStrings.comparingStories(compareContext.length)}
-                </span>
-                <button
-                  type="button"
-                  className="inline-flex min-h-11 min-w-11 items-center justify-center"
-                  aria-label={t.controls.removeContext}
-                  onClick={() => setCompareRemovedFor(urlKey)}
-                >
-                  ×
-                </button>
-              </div>
-            )}
-            {!compareContext && moduleContext && (
-              <div data-ask="context" data-ask-context-kind="MODULE" className={styles.contextChip}>
-                <span className="truncate">
-                  {moduleContext.label || shell.askRecordStrings.moduleRecord[moduleContext.ref.module]}
-                </span>
-                <button
-                  type="button"
-                  className="inline-flex min-h-11 min-w-11 items-center justify-center"
-                  aria-label={t.controls.removeContext}
-                  onClick={() => setModuleRemovedFor(urlKey)}
-                >
-                  ×
-                </button>
-              </div>
-            )}
-            {!compareContext && !moduleContext && context && (
-              <div data-ask="context" className={styles.contextChip}>
-                <span className="truncate">
-                  {/* TRUST R1 — a country-only context (Map → Ask) names its place; it had an empty title. */}
-                  {context.title ||
-                    (context.countryCode
-                      ? (askCountryName(context.countryCode, interfaceLocale) ??
-                        context.countryCode)
-                      : '')}
-                </span>
-                <button
-                  type="button"
-                  className="inline-flex min-h-11 min-w-11 items-center justify-center"
-                  aria-label={t.controls.removeContext}
-                  onClick={() => setContextOverride({ key: urlKey })}
-                >
-                  ×
-                </button>
-              </div>
-            )}
             {showEmblem && <AskEmblem placement="page" state={emblemState} />}
             {!hasQuestion && (
               <section data-ask="empty" data-ask-entry-view="" className={styles.empty}>
@@ -655,12 +662,20 @@ export function AskFrameScreen({
                 </p>
                 {/* R4 · the reader's own composer hint. EN/PL read the released dictionary
                     string through the bounded catalogue, so they are unchanged. */}
-                <h1 className={styles.emptyTitle}>{sevenStrings.composerHint}</h1>
-                {/* R4 · this lead still comes from the EN/PL catalogue, so inside an RTL
-                    scope it is isolated — otherwise its final period is drawn at the left. */}
-                <p className={styles.emptyLead} {...(foreignCopy ?? {})}>
-                  {t.metaDescription}
-                </p>
+                {/*
+                  ASK DESIGN COMPLETENESS R1 — the Design welcome group (A1/F2): headline, support
+                  line and a quiet example sentence (text, not buttons). Typing collapses all three
+                  (A2); the emblem above and the composer below remain.
+                */}
+                <div data-ask-welcome="" className={styles.welcomeCollapsible}>
+                  <h1 className={styles.emptyTitle}>{sevenStrings.composerHint}</h1>
+                  <p data-ask="welcome-support" className={styles.emptyLead}>
+                    {r2s.read.welcomeSupport}
+                  </p>
+                  <p data-ask="welcome-example" className={styles.welcomeExample}>
+                    {r2s.read.welcomeExample}
+                  </p>
+                </div>
                 {/*
                   THE ANSWER-LANGUAGE DISCLOSURE IS REMOVED (PO ruling).
 
@@ -757,6 +772,9 @@ export function AskFrameScreen({
                   context={context}
                   displayOnly
                   onUseQuestion={draftQuestion}
+                  /* Design D7 — a stored answer read back: its date line and Refresh reporting. */
+                  reopenedAt={opened.operation?.acceptedAt ?? null}
+                  onRefresh={guestMode ? undefined : (q) => void resubmit(q)}
                 />
               </div>
             )}
@@ -798,6 +816,7 @@ export function AskFrameScreen({
                   context={context}
                   onRunDeeper={guestMode ? undefined : (q) => void r2.runDeeper(q)}
                   onUseQuestion={draftQuestion}
+                  onRefresh={guestMode ? undefined : (q) => void resubmit(q)}
                 />
                 {guestMode && latestR2.uncounted === true && (
                   <p data-ask="guest-not-counted" className="mt-2 text-[13px] text-[var(--ask-read-ink2,#8fa6c0)]">
@@ -829,6 +848,19 @@ export function AskFrameScreen({
                 </div>
               </section>
             )}
+            {retryKept && !isPending && (
+              /*
+                ASK DESIGN COMPLETENESS R1 — Design D2: the failure is said IN the conversation,
+                with Try again; the question is still in the composer (nothing was lost) and Try
+                again sends exactly that draft through the same Ask path.
+              */
+              <section data-ask="failure" role="alert" className={styles.failurePanel}>
+                <p data-ask="retry-kept">{r2s.retryKept}</p>
+                <button type="button" data-ask="try-again" onClick={() => void ask()}>
+                  {sevenStrings.errorRetry}
+                </button>
+              </section>
+            )}
             {isPending && (
               <section data-ask="pending" className="mb-5">
                 <p className={ASK_EYEBROW}>{r2s.youAsked}</p>
@@ -839,11 +871,6 @@ export function AskFrameScreen({
               </section>
             )}
           </div>
-          {withSourcesColumn && (
-            <div data-ask-read="r4" className={styles.sourcesColumn}>
-              <AskSourcesColumn turn={lastR2} locale={interfaceLocale} />
-            </div>
-          )}
         </div>
       </div>
 
@@ -867,15 +894,6 @@ export function AskFrameScreen({
               {r2s.newAnswerBelow} <span aria-hidden="true">↓</span>
             </button>
           </div>
-        )}
-        {retryKept && (
-          <p
-            data-ask="retry-kept"
-            role="status"
-            className="mx-auto mb-2 max-w-[760px] px-4 md:px-1 text-[13px] leading-[1.45] text-[var(--ask-read-deep-ink,#c9b27a)]"
-          >
-            {r2s.retryKept}
-          </p>
         )}
         {askUnavailable && (
           <p
@@ -922,6 +940,62 @@ export function AskFrameScreen({
           </div>
         )}
         <div className={styles.composerGrid}>
+          {/* Design C5 — Saved feedback, above the composer; it never covers the toolbar. */}
+          <AskToastSlot />
+          {/* Design F5 — the story / record / comparison context, removable, above the composer. */}
+          <div data-ask="context-chips" className="flex flex-wrap gap-2 empty:hidden">
+        {compareContext && (
+          <div data-ask="context" data-ask-context-kind="SELECTION" className={styles.contextChip}>
+            <span className="truncate">
+              {/* R4 · PHASE B — was a bare ternary with a hand-rolled {n} substitution. */}
+              {shell.askContextStrings.comparingStories(compareContext.length)}
+            </span>
+            <button
+              type="button"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center"
+              aria-label={t.controls.removeContext}
+              onClick={() => setCompareRemovedFor(urlKey)}
+            >
+              ×
+            </button>
+          </div>
+        )}
+        {!compareContext && moduleContext && (
+          <div data-ask="context" data-ask-context-kind="MODULE" className={styles.contextChip}>
+            <span className="truncate" {...isolatedAuto()}>
+              {moduleContext.label || shell.askRecordStrings.moduleRecord[moduleContext.ref.module]}
+            </span>
+            <button
+              type="button"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center"
+              aria-label={t.controls.removeContext}
+              onClick={() => setModuleRemovedFor(urlKey)}
+            >
+              ×
+            </button>
+          </div>
+        )}
+        {!compareContext && !moduleContext && context && (
+          <div data-ask="context" className={styles.contextChip}>
+            <span className="truncate" {...isolatedAuto()}>
+              {/* TRUST R1 — a country-only context (Map → Ask) names its place; it had an empty title. */}
+              {context.title ||
+                (context.countryCode
+                  ? (askCountryName(context.countryCode, interfaceLocale) ??
+                    context.countryCode)
+                  : '')}
+            </span>
+            <button
+              type="button"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center"
+              aria-label={t.controls.removeContext}
+              onClick={() => setContextOverride({ key: urlKey })}
+            >
+              ×
+            </button>
+          </div>
+        )}
+          </div>
           <Composer
             value={question}
             onChange={(next) => {
@@ -934,14 +1008,16 @@ export function AskFrameScreen({
             inputLabel={dict.askAi.inputLabel}
             /* R4 · same bounded hint, so the placeholder and the empty-state title cannot
                disagree in any locale. */
-            placeholder={sevenStrings.composerHint}
+            /* Design A1/A5 — "Ask anything…" before the first question, "Ask a follow-up…" after. */
+            placeholder={entryState ? r2s.read.placeholderFirst : r2s.read.placeholderFollowUp}
             submitLabel={dict.askAi.submit}
             costNote={t.states.costNotConfigured}
             /* R4 · still EN/PL copy, so it isolates inside an RTL scope. */
             costNoteProps={foreignCopy}
             onSubmit={() => void ask()}
             pending={isPending}
-            maxHeight={compact ? 140 : 220}
+            /* Design A3 — the field grows to min(168 px, 40 % of the visible height), then scrolls. */
+            maxHeight={168}
             locale={interfaceLocale}
             overLimitMessage={shell.askR2Strings.questionOverLimit}
             /*
@@ -1000,6 +1076,7 @@ export function AskFrameScreen({
           onCancel={() => void r2.cancelDeeper()}
         />
       )}
+      </AskToastProvider>
       </AskSourcesPanelProvider>
     </main>
   );

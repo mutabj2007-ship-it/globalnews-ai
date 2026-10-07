@@ -198,9 +198,15 @@ describe('R2 · D1 — Save as briefing and its server contract', () => {
   });
 
   it('is offered only where Save is, and only for produced answers', () => {
+    /* ASK DESIGN COMPLETENESS R1 — "Use in a briefing" now lives in the answer toolbar's More
+       sheet (Design C3); it is still gated by the same canSave the turn passes, and the turn
+       still hands its own canSave to that toolbar. */
     const turn = read('../ask-frame/AskR2TurnView.tsx');
-    expect(turn).toContain(
-      '{canSave && <AskTurnBrief operation={turn.operation} locale={locale} />}',
+    expect(turn).toContain('canSave={canSave}');
+    const toolbar = read('../ask-frame/AskAnswerToolbar.tsx');
+    expect(toolbar).toContain('{canSave && (');
+    expect(toolbar).toContain(
+      '<AskTurnBrief operation={turn.operation} locale={locale} label={r.useInBriefing} />',
     );
     const brief = read('../ask-frame/AskTurnBrief.tsx');
     expect(brief).toContain('ASK_SAVABLE_ANSWER_STATES.has(state)');

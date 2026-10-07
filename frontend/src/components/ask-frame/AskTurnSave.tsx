@@ -5,6 +5,7 @@ import { useRef, useState } from 'react';
 import { askR2PayloadOf, askV2Api, type AskV2Operation } from '@/lib/api/askV2Api';
 import { askContinuityStrings } from '@/lib/ask/askContinuityStrings';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
+import { useAskToast } from './AskToast';
 
 /**
  * STANDALONE PUBLIC BETA CONVERGENCE R1 — Save / Saved on a stored Ask turn.
@@ -41,6 +42,9 @@ export function AskTurnSave({
   readonly locale: DisplayLocale;
 }): JSX.Element | null {
   const t = askShellStrings(locale).askContinuityStrings;
+  /* ASK DESIGN COMPLETENESS R1 — Saved feedback (Design C5): the server's confirmation, with Undo. */
+  const read = askShellStrings(locale).askR2Strings.read;
+  const toast = useAskToast();
   const [saved, setSaved] = useState(operation?.bookmarked === true);
   const [busy, setBusy] = useState(false);
   const inFlight = useRef(false);
@@ -54,13 +58,19 @@ export function AskTurnSave({
     ASK_SAVABLE_ANSWER_STATES.has(state);
   if (!eligible) return null;
 
-  async function toggle(): Promise<void> {
+  async function toggle(wasSaved: boolean = saved): Promise<void> {
     if (inFlight.current || turnId === null) return;
     inFlight.current = true;
     setBusy(true);
     try {
-      const outcome = saved ? await askV2Api.unbookmark(turnId) : await askV2Api.bookmark(turnId);
-      if (outcome.ok) setSaved(outcome.value.bookmarked);
+      const outcome = wasSaved ? await askV2Api.unbookmark(turnId) : await askV2Api.bookmark(turnId);
+      if (outcome.ok) {
+        setSaved(outcome.value.bookmarked);
+        /* Only a save the server confirmed is announced; Undo is the real unbookmark. */
+        if (!wasSaved && outcome.value.bookmarked) {
+          toast?.({ text: read.savedToast, action: { label: read.undo, run: () => void toggle(true) } });
+        }
+      }
     } finally {
       inFlight.current = false;
       setBusy(false);

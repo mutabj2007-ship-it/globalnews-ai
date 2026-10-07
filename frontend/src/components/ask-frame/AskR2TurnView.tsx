@@ -9,14 +9,12 @@ import { askGovernedConversation } from '@/lib/ask/askGovernedConversation';
 import { askR2View, failedTurnCopy, type AskR2View } from '@/lib/ask/askR2View';
 import { openFullAnalysisHref, type AskR2Turn } from '@/lib/ask/useAskR2Conversation';
 import { askCountryName } from '@/lib/ask/askCountryName';
-import { AskTurnSave } from './AskTurnSave';
-import { AskTurnBrief } from './AskTurnBrief';
-import { AskTurnCopy } from './AskTurnCopy';
 import { AskRecentReporting } from './AskRecentReporting';
+import { AskAnswerToolbar } from './AskAnswerToolbar';
 import { AskAnswerProse } from '@/components/ask/AskAnswerProse';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 import { askLocaleForLegacyCatalogue } from '@/lib/ask/askLocale';
-import { useAskSourcesPanel } from './AskSourcesPanel';
+import { buildBriefTelemetry } from '@/components/analysis-frame/briefModel';
 
 /**
  * ASK R2 CONSOLIDATED INTEGRATION R1 · GATE G — ONE ASK R2 TURN, AS D25 DRAWS IT.
@@ -129,6 +127,8 @@ export function AskR2TurnView({
   onUseQuestion,
   canSave = true,
   storyBookmarks = false,
+  onRefresh,
+  reopenedAt,
 }: {
   readonly turn: AskR2Turn;
   readonly locale: DisplayLocale;
@@ -149,10 +149,20 @@ export function AskR2TurnView({
    * which always offered it, turns it on so the migration loses no visible capability.
    */
   readonly storyBookmarks?: boolean;
+  /**
+   * ASK DESIGN COMPLETENESS R1 — "Refresh reporting": a NEW explicit turn for this question
+   * (More menu, and the reopened answer's own button). Absent → not offered.
+   */
+  readonly onRefresh?: (question: string) => void;
+  /**
+   * ASK DESIGN COMPLETENESS R1 — a REOPENED stored answer (Design D7): when it was produced, for
+   * the quiet date line "Answer from …. Reporting may have changed since then." Only a turn
+   * read back from storage passes it; a live answer never shows a date line.
+   */
+  readonly reopenedAt?: string | null;
 }): JSX.Element {
   const s = askShellStrings(locale).askR2Strings;
-  /* ASK READING EXPERIENCE R1 — the Sources panel/sheet, when this surface provides one. */
-  const openSources = useAskSourcesPanel();
+  const r = s.read;
   const payload = turn.payload ?? null;
 
   if (payload === null) {
@@ -201,9 +211,74 @@ export function AskR2TurnView({
   const guidanceKind = payload.guidance?.kind ?? null;
   /* The SAME array the inline citations number against, so item n is always [n]. */
   const answerSources = payload.analysis?.analysis?.sources ?? [];
+  /*
+    ASK DESIGN COMPLETENESS R1 — THE FOOTER LINE (Design B1): "Based on N cited reports from M
+    publishers. Newest report <date>." Counted from this answer's own source records only —
+    never from retrieval totals — and the date only when a record carries one.
+  */
+  const publishers = new Set(answerSources.map((source) => source.publisher).filter(Boolean)).size;
+  const newest = answerSources
+    .map((source) => Date.parse(source.publishedAt ?? ''))
+    .filter((at) => !Number.isNaN(at))
+    .reduce((max, at) => Math.max(max, at), Number.NEGATIVE_INFINITY);
+  const dayFormat = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  const footerLine =
+    answerSources.length === 0
+      ? null
+      : [
+          `${r.footerReports(answerSources.length)} ${r.footerPublishers(publishers)}`,
+          Number.isFinite(newest) ? r.footerNewest(dayFormat.format(new Date(newest))) : null,
+        ]
+          .filter((part): part is string => part !== null)
+          .join(' ');
+  /* The opening, for the Share preview: the answer's first paragraph, its own words. */
+  const opening = (payload.analysis?.analysis?.summary ?? payload.background?.text ?? '')
+    .split(/\n\s*\n/)
+    .map((part) => part.trim())
+    .find((part) => part !== '' && !part.startsWith('|')) ?? '';
+  /* "About this answer" in the Sources panel: the answer's own status and retrieval figures. */
+  const telemetry = payload.analysis === null ? null : buildBriefTelemetry(payload.analysis, null);
+  const askAi = askShellStrings(locale).dict.askAi;
+  const about = [
+    telemetry === null
+      ? ''
+      : [
+          telemetry.retrievedArticleCount === null ? null : `${telemetry.retrievedArticleCount} ${askAi.telemetryReports}`,
+          telemetry.reportingClusterCount === null ? null : `${telemetry.reportingClusterCount} ${askAi.telemetryClusters}`,
+        ]
+          .filter((part): part is string => part !== null)
+          .join(' · '),
+    [view.badgeText, view.freshness].filter(Boolean).join(' · '),
+    [s.scope, view.chips.items.map((chip) => chip.label).join(' · '), view.chips.note ?? '']
+      .filter(Boolean)
+      .join(' '),
+  ].filter((line) => line.trim() !== '');
+  const reopenedLine =
+    reopenedAt == null || Number.isNaN(Date.parse(reopenedAt))
+      ? null
+      : r.reopenedLine(
+          new Intl.DateTimeFormat(locale, {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          }).format(new Date(reopenedAt)),
+        );
 
   return (
     <article data-ask-turn data-ask="turn" data-ask-state={view.badge} className={TURN}>
+      {reopenedLine !== null && (
+        /* Design D7 — a quiet date line and Refresh reporting; never implies it was rechecked. */
+        <div data-ask="reopened" className="flex flex-col items-start">
+          <p data-ask="reopened-line">{reopenedLine}</p>
+          {onRefresh !== undefined && (
+            <button type="button" data-ask="refresh-reporting" onClick={() => onRefresh(turn.question)}>
+              {r.refreshReporting}
+            </button>
+          )}
+        </div>
+      )}
       <p className="sr-only">{s.youAsked}</p>
       <h2 className={QUESTION}>{turn.question}</h2>
       {/* CTO checkpoint 5 §5 — "And in Kenya?" answered as the earlier question for Kenya: said, never hidden. */}
@@ -540,6 +615,12 @@ export function AskR2TurnView({
               {view.searchLimited ? s.limitedTitle : s.insufficientTitle}
             </p>
           )}
+          {/* Design D1 — "Edit question" puts the reader's own words back in the composer. */}
+          {view.badge === 'insuf' && onUseQuestion !== undefined && (
+            <button type="button" data-ask="edit-question" onClick={() => onUseQuestion(turn.question)}>
+              {r.editQuestion}
+            </button>
+          )}
           {/* ASK FIRST-ANSWER RETRIEVAL R3 — an answer standing on reachable reporting says so. */}
           {view.badge !== 'insuf' && view.searchLimited && (
             <p data-ask="search-limited" className="text-[13px] leading-[1.45] text-[var(--ask-read-deep-ink,#c9b27a)]">
@@ -623,6 +704,9 @@ export function AskR2TurnView({
 
       {/* ASK READING EXPERIENCE R1 — the answer's status footer: what it was scoped to and
           what state it is in, after the answer rather than before it. */}
+      {footerLine !== null && (
+        <p data-ask="answer-footer">{footerLine}</p>
+      )}
       <div data-ask="answer-meta" className="mt-4 flex flex-col gap-2">
         <div data-ask="scope" className="flex flex-wrap items-center gap-1.5">
           <span className={`me-1 ${EYEBROW}`}>{s.scope}</span>
@@ -686,30 +770,21 @@ export function AskR2TurnView({
       />
 
       {/*
-        ASK READING EXPERIENCE R1 — the answer's actions, after the answer and its footer
-        (CAPABILITY-MATRIX §A/§B): only controls with a real backing render. Copy (local
-        clipboard), Save and Save as briefing (their endpoints), Sources (this answer's own
-        list, zero network). Share / Copy link, Download and remembered preferences have no
-        endpoint (D7, D8, D6) and are omitted, never shown disabled.
+        ASK DESIGN COMPLETENESS R1 — the Design toolbar after the answer and its footer:
+        Copy · Share · Save · Sources (n) · More. Only controls with a real backing render
+        (AskAnswerToolbar): Share is the platform share sheet; "Copy link", "Download" and
+        "What Ask remembers" have no endpoint (D7, D8, D6) and are omitted, never disabled.
       */}
-      <div data-ask="turn-actions" className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1.5">
-        {/* TRUST R1 — copy this answer (local clipboard only; nothing is shared or sent). */}
-        <AskTurnCopy locale={locale} />
-        {/* STANDALONE PUBLIC BETA CONVERGENCE R1 — the reader's Save / Saved (0 AI). */}
-        {canSave && <AskTurnSave operation={turn.operation} locale={locale} />}
-        {/* R2 · D1 — Save as briefing (signed-in, produced answers, only when the server has briefings on). */}
-        {canSave && <AskTurnBrief operation={turn.operation} locale={locale} />}
-        {openSources !== null && answerSources.length > 0 && (
-          <button
-            type="button"
-            data-ask="open-sources"
-            onClick={(event) => openSources({ sources: answerSources, opener: event.currentTarget })}
-            className="inline-flex min-h-[44px] items-center rounded-[8px] px-3 text-[0.8125rem] font-semibold text-[var(--ask-read-control-ink,#cfe2f2)] underline decoration-transparent underline-offset-[3px] hover:decoration-current focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ask-read-control-ink,#5abff5)] md:min-h-[32px]"
-          >
-            {s.sourcesLabel(answerSources.length)}
-          </button>
-        )}
-      </div>
+      <AskAnswerToolbar
+        turn={turn}
+        locale={locale}
+        canSave={canSave}
+        sources={answerSources}
+        opening={opening}
+        note={view.searchLimited ? s.limitedNote : null}
+        about={about}
+        onRefresh={onRefresh}
+      />
 
       {((view.handoffs.openFull && !displayOnly) ||
         (view.handoffs.runDeeper && onRunDeeper !== undefined)) &&
