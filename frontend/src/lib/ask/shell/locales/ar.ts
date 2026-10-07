@@ -539,7 +539,7 @@ export const arShellOverlay: ShellLocaleOverlay = {
       },
       questionOverLimit: {
         kind: "pattern",
-        pattern: "يجب ألا يتجاوز عدد أحرف سؤالك الحد الأقصى ({0}).",
+        pattern: "يجب ألا يتجاوز سؤالك {0} حرف.",
       },
       working: "جارٍ العمل على إجابتك…",
       unavailable: "خدمة Ask غير متوفرة حاليًا. لم يُنفَّذ أي شيء.",
