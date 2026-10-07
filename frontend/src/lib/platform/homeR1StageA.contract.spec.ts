@@ -197,16 +197,88 @@ describe('CONVERGENCE — Unified Intelligence Binding R2 is the ONLY Ask contex
     const hook = code(current);
     const BEGIN = '/* APPROVED DEVIATION FROM THE 58f80 BASELINE (CTO checkpoint 5 §3) — BEGIN.';
     const END = '/* APPROVED DEVIATION FROM THE 58f80 BASELINE — END. */';
+    /*
+      ASK DESIGN R3 — CTO GOVERNANCE RULING, OPTION A: exactly ONE second approved block, for the
+      Product-Owner-accepted "New question" reset (startNewConversation) and nothing else. It ends
+      by opening the returned object with that one member, so stripping it restores the 58f80
+      line `  return {` and nothing more.
+    */
+    const NQ_BEGIN =
+      '/* APPROVED DEVIATION FROM THE 58f80 BASELINE (CTO R3 governance ruling, option A) — NEW QUESTION — BEGIN.';
+    const NQ_END = '/* APPROVED DEVIATION FROM THE 58f80 BASELINE — NEW QUESTION — END. */';
+    const lineStartOf = (at: number): number => current.lastIndexOf('\n', at) + 1;
+    const lineEndOf = (at: number): number => current.indexOf('\n', at) + 1;
+    const nqStart = current.indexOf(NQ_BEGIN);
+    const nqEnd = current.indexOf(NQ_END);
+    const nqRaw = current.slice(nqStart, nqEnd);
+    const nq = code(nqRaw);
 
-    it('outside the one marked block, the file is byte-identical to the 58f80 authority', () => {
+    it('outside the two marked blocks, the file is byte-identical to the 58f80 authority', () => {
       const start = current.indexOf(BEGIN);
       const end = current.indexOf(END);
       expect(start).toBeGreaterThan(-1);
       expect(end).toBeGreaterThan(start);
       expect(current.indexOf(BEGIN, start + 1)).toBe(-1);
-      const lineStart = current.lastIndexOf('\n', start) + 1;
-      const lineEnd = current.indexOf('\n', end) + 1;
-      expect(current.slice(0, lineStart) + current.slice(lineEnd)).toBe(r2(PATH));
+      /* exactly one second block, after the first, never nested in it */
+      expect(nqStart).toBeGreaterThan(end);
+      expect(nqEnd).toBeGreaterThan(nqStart);
+      expect(current.indexOf(NQ_BEGIN, nqStart + 1)).toBe(-1);
+      expect(current.indexOf(NQ_END, nqEnd + 1)).toBe(-1);
+      expect(current.match(/APPROVED DEVIATION FROM THE 58f80 BASELINE[^\n]*BEGIN/g)).toHaveLength(2);
+      const without =
+        current.slice(0, lineStartOf(start)) +
+        current.slice(lineEndOf(end), lineStartOf(nqStart)) +
+        '  return {\n' +
+        current.slice(lineEndOf(nqEnd));
+      expect(without).toBe(r2(PATH));
+    });
+
+    describe('the second block (New question) — CTO option A', () => {
+      it('is an in-place client reset: the conversation refs and turns are cleared locally', () => {
+        expect(nq).toMatch(/const startNewConversation = useCallback\(\(\): boolean => \{/);
+        expect(nq).toContain('thread.current = null;');
+        expect(nq).toContain('guestThread.current = null;');
+        expect(nq).toContain('setTurns([]);');
+        /* and it ends by exposing that one member, nothing else */
+        expect(nqRaw.trimEnd()).toMatch(/\n {2}return \{\n {4}startNewConversation,$/);
+      });
+
+      it('refuses while an Ask execution is in flight — its first statement', () => {
+        expect(nq).toMatch(/useCallback\(\(\): boolean => \{\s*if \(pending !== null\) return false;/);
+        expect(nq).toMatch(/\}, \[pending, deepQuote\]\);/);
+      });
+
+      it('makes no request of its own: the ONLY network touch is the governed quote release', () => {
+        expect(nq.match(/askV2Api\.\w+/g)).toEqual(['askV2Api.release']);
+        expect(nq).toMatch(/if \(quote !== null\) void askV2Api\.release\(quote\.operation\.operationId\);/);
+        expect(nq).not.toMatch(/fetch\(|XMLHttpRequest|axios|accountFetch|analyzeNews|navigator\.|sendBeacon/);
+      });
+
+      it('never deletes or mutates the prior server-side thread', () => {
+        expect(nq).not.toMatch(/delete|remove|archive|rename|patch|update|DELETE|PATCH/);
+        expect(nq).not.toMatch(/createThread|guestCreateThread|submit|guestSubmit|continueThread|bookmark/);
+      });
+
+      it('does not touch retrieval, routing, evidence, context selection or compute policy', () => {
+        expect(nq).not.toMatch(
+          /AskV2ContextRef|contextRef|\bcontext\b|retriev|routing|route|evidence|computeClass|intent|runDeeper|confirmDeeper|accept|quoteFor|language|setAvailability/,
+        );
+        /* the only state it writes: the conversation, its notices, and the open quote */
+        const setters = (nq.match(/\bset[A-Z]\w*\(/g) ?? []).sort();
+        expect(setters).toEqual([
+          'setContextRefused(',
+          'setDeepQuote(',
+          'setGuestNotice(',
+          'setSignInRequired(',
+          'setTurns(',
+        ]);
+      });
+
+      it('leaves the original approved block exactly as it was', () => {
+        const block = code(current.slice(current.indexOf(BEGIN), current.indexOf(END)));
+        expect(block).toMatch(/^\s*if \(created\.reason === 'NETWORK'\) \{[\s\S]*?return 'failed';\s*\}\s*$/);
+        expect(nq).not.toContain("created.reason === 'NETWORK'");
+      });
     });
 
     it('the block only turns a first-thread NETWORK failure into the ordinary failed send', () => {
