@@ -673,6 +673,9 @@ export function AskNavShell({
               language={language}
               selected={selectedLocale}
               account={isLoading ? 'pending' : audience}
+              onSignOut={() => {
+                void signOutClean();
+              }}
             />
           ) : (
           <>
