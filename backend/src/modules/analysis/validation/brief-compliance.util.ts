@@ -222,6 +222,14 @@ const SINGLE_SOURCE_ATTRIBUTION: Readonly<Record<string, RegExp>> = {
   en: /\b(?:one|a single|single|only one|sole)\s+(?:qualifying\s+|available\s+|retrieved\s+|independent\s+|published\s+)?(?:report|source|article|outlet)\b/i,
   pl: /(?:\bjed(?:en|no|na|nego|nym|nej)\b|\bjedyn\p{L}*)\s+(?:\p{L}+\s+)?(?:raport\p{L}*|źródł\p{L}*|doniesie\p{L}*|artyku\p{L}*|relacj\p{L}*)/iu,
 };
+
+/**
+ * ASK R2 A/B/C BLOCKER REPAIR R1 — true when `text` already says it rests on one report, by the SAME
+ * attribution vocabulary the check below reads (every language it can read).
+ */
+export function disclosesSingleReport(text: string): boolean {
+  return Object.values(SINGLE_SOURCE_ATTRIBUTION).some((pattern) => pattern.test(text));
+}
 const MULTI_SOURCE_CERTAINTY =
   /\b(?:multiple|several|numerous|many|various)\s+(?:independent\s+)?(?:reports|sources|outlets)\b|\b(?:sources|reports|outlets)\s+(?:agree|concur|confirm)\b|\bwidely\s+reported\b|\bindependently\s+(?:confirmed|verified)\b|\bcorroborat\w*|\bverified\b/i;
 

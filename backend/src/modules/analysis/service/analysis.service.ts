@@ -1,6 +1,11 @@
 import { readOutputContract } from '../prompt/output-contract.util';
 import type { DisplayLocale } from '@globalnews-ai/shared';
-import { withRetrievalDeadline, retrievalBudgetMs } from '../../news/retrieval-budget';
+import {
+  withGatedRetrievalDeadline,
+  retrievalBudgetMs,
+  GENERATION_RESERVE_MS,
+  TABLE_GENERATION_RESERVE_MS,
+} from '../../news/retrieval-budget';
 import { isSameHeadline } from '../../news/identity/headline-identity.util';
 import { createHash } from 'node:crypto';
 import {
@@ -126,7 +131,8 @@ import {
   assessSingleSourceDiscipline,
   detectDevelopmentBreadth,
 } from '../validation/brief-compliance.util';
-import { assessReaderContractShape } from '../validation/reader-contract-shape.util';
+import { assessReaderContractShape, contractBlocks } from '../validation/reader-contract-shape.util';
+import { removedFromEarlierAnswer } from '../prompt/rework-changes.util';
 import { acceptExecutiveBrief, withholdExecutiveBrief } from '../validation/brief-fail-closed.util';
 import { applyBriefRelationIntegrity } from '../validation/entity-role-geography.util';
 import {
@@ -1019,11 +1025,22 @@ export class AnalysisService {
     const responseAbort = new AbortController();
 
     /* ASK R2 LIVE-GATE REPAIR (P0-3) — retrieval has its own deadline INSIDE the one overall
-       budget, leaving GENERATION_RESERVE_MS for the model (news/retrieval-budget.ts). */
+       budget, leaving GENERATION_RESERVE_MS for the model (news/retrieval-budget.ts).
+       ASK R2 A/B/C BLOCKER REPAIR R1 — a reader-requested table leaves TABLE_GENERATION_RESERVE_MS. */
     const retrievalDeadlineAt =
-      Date.now() + retrievalBudgetMs(resolveServerBudgetMs(config.totalBudgetMs));
+      Date.now() +
+      retrievalBudgetMs(
+        resolveServerBudgetMs(config.totalBudgetMs),
+        readOutputContract(normalizedQuery).table !== null ? TABLE_GENERATION_RESERVE_MS : GENERATION_RESERVE_MS,
+      );
+    /* ASK R2 A/B/C BLOCKER REPAIR R1 — a gated question's own evidence gate decides when a fallback
+       tier has enough to stop waiting for a slow peer (news/retrieval-budget.ts peerTailAdmits). */
+    const gatedAnchors = executionPolicy?.questionAnchors?.gated === true ? executionPolicy.questionAnchors : undefined;
     const inFlightOperation: Promise<AnalysisApiResponse> =
-      withRetrievalDeadline(retrievalDeadlineAt, async (): Promise<AnalysisApiResponse> => {
+      withGatedRetrievalDeadline(
+        retrievalDeadlineAt,
+        gatedAnchors === undefined ? undefined : (article) => admitsReport(gatedAnchors, article).admitted,
+        async (): Promise<AnalysisApiResponse> => {
         /**
          * Milestone #51 Phase B — root-cause fix. Previously, retrieval
          * for a story-originated query relied ENTIRELY on
@@ -3581,10 +3598,23 @@ export class AnalysisService {
           supplement (at most two phrases, provider then retained store) is searched and gated the
           same way. Nothing irrelevant is ever padded in: an empty result is the truthful answer.
         */
+        /*
+          ASK R2 A/B/C BLOCKER REPAIR R1 — on a revision that RE-READS the earlier answer's evidence
+          (anchorSupplements: false), what the corrected gate removes is a measured fact the reader
+          asked about ("…and explain what changed"). Live 625f85b/ec50673, C: the Mombasa-only Kenya–
+          Rwanda item was correctly dropped, but generation was never told, so the answer could not
+          say what changed. It is handed over as data, alongside the evidence.
+        */
+        let removedOnReread: Array<{ readonly title: string; readonly missing: readonly string[] }> = [];
         if (executionPolicy?.questionAnchors?.gated === true) {
           const anchors = executionPolicy.questionAnchors;
           const candidates = articles.length;
           const admitted = articles.filter((article) => admitsReport(anchors, article).admitted);
+          if (executionPolicy.anchorSupplements === false) {
+            removedOnReread = articles
+              .map((article) => ({ title: article.title, missing: admitsReport(anchors, article).missing }))
+              .filter((entry) => entry.missing.length > 0);
+          }
           const queries =
             executionPolicy.anchorSupplements === false ? [] : supplementQueries(anchors, admitted);
           const seen = new Set(admitted.map((article) => article.id));
@@ -3821,7 +3851,12 @@ export class AnalysisService {
           readerContract.table !== null ||
           readerContract.openingSentences !== null ||
           readerContract.closing !== null
-            ? { ...developmentBreadth, readerContract: true }
+            ? {
+                ...developmentBreadth,
+                readerContract: true,
+                /* ASK R2 A/B/C BLOCKER REPAIR R1 — a table contract is generated block by block */
+                ...(readerContract.table !== null ? { readerContractTable: true } : {}),
+              }
             : developmentBreadth;
 
         try {
@@ -3896,9 +3931,18 @@ export class AnalysisService {
             ...(executionPolicy?.usageSink === undefined
               ? {}
               : { usageSink: executionPolicy.usageSink }),
-            ...(executionPolicy?.governed === undefined || executionPolicy.governed.rules === ''
-              ? {}
-              : { governed: executionPolicy.governed }),
+            ...(() => {
+              const removals = removedFromEarlierAnswer(removedOnReread);
+              /* no removals: exactly the previous behaviour */
+              if (removals === '') {
+                return executionPolicy?.governed === undefined || executionPolicy.governed.rules === ''
+                  ? {}
+                  : { governed: executionPolicy.governed };
+              }
+              /* ASK R2 A/B/C BLOCKER REPAIR R1 — the re-read's measured removals, as delimited data */
+              const data = [executionPolicy?.governed?.data ?? '', removals].filter((part) => part !== '').join('\n\n');
+              return { governed: { rules: executionPolicy?.governed?.rules ?? '', data } };
+            })(),
             ...(executionPolicy?.reportingWindow === undefined
               ? {}
               : { reportingWindow: executionPolicy.reportingWindow }),
@@ -4014,7 +4058,9 @@ export class AnalysisService {
             this.logger.log(
               `ask brief contract table=${readerContract.table?.columns.length ?? 0} cap=${readerContract.itemCap ?? '-'} ` +
                 `opening=${readerContract.openingSentences ?? '-'} closing=${readerContract.closing !== null} ` +
-                `verdict=${shapeVerdict.compliant ? 'compliant' : (shapeVerdict.reason ?? 'non-compliant')}`,
+                `verdict=${shapeVerdict.compliant ? 'compliant' : (shapeVerdict.reason ?? 'non-compliant')} ` +
+                /* ASK R2 A/B/C BLOCKER REPAIR R1 — the brief's SHAPE only (block kinds, word count), never its text */
+                `shape=${contractBlocks(analysis.summary).map((b) => b.kind[0]).join('') || 'empty'} words=${analysis.summary.split(/\s+/u).filter(Boolean).length}`,
             );
           }
           let briefVerdict = applyBriefRelationIntegrity(shapeVerdict, analysis.summary, deduped);

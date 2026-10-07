@@ -1,4 +1,5 @@
 import { layoutReaderContractSummary } from '../validation/reader-contract-shape.util';
+import { disclosesSingleReport } from '../validation/brief-compliance.util';
 
 /**
  * ============================================================================
@@ -31,7 +32,44 @@ export function normalizeBriefFields(content: unknown): unknown {
     return content;
   }
 
+  /*
+    ASK R2 A/B/C BLOCKER REPAIR R1 — a one-cluster brief carries its single-source disclosure as its
+    own field; it becomes the brief's FIRST paragraph, after the brief's own fields are joined.
+    Mechanical, like every join here: an empty disclosure adds nothing and the unchanged
+    single-source check then withholds the brief exactly as before.
+  */
+  const outer = content as Record<string, unknown>;
+  if (typeof outer.singleReportBasis === 'string') {
+    const { singleReportBasis: basis, ...withoutBasis } = outer;
+    const joined = normalizeBriefFields(withoutBasis) as Record<string, unknown>;
+    const brief = typeof joined.summary === 'string' ? joined.summary : '';
+    /* once, never twice: the field GUARANTEES the disclosure; when the brief itself already makes it
+       (live ec50673, C: the same sentence came back in both), nothing is added — the single-source
+       check reads the whole brief, so it is satisfied either way */
+    if (disclosesSingleReport(brief)) return { ...joined, summary: brief };
+    const summary = [String(basis).trim(), brief.trim()].filter((part) => part !== '').join('\n\n');
+    return { ...joined, summary };
+  }
+
   const record = content as Record<string, unknown>;
+
+  /*
+    ASK R2 A/B/C BLOCKER REPAIR R1 — a TABLE contract brief comes back as three fields; the join is
+    the same mechanical one: contract order, blank-line separated, empty parts dropped. Nothing is
+    judged here — an empty or non-table "briefTable" is refused by assessReaderContractShape.
+  */
+  const opening = record.briefOpening;
+  const table = record.briefTable;
+  const closing = record.briefClosing;
+  if (typeof opening === 'string' && typeof table === 'string' && typeof closing === 'string') {
+    const { briefOpening: _o, briefTable: _t, briefClosing: _c, ...others } = record;
+    const summary = [opening, table, closing]
+      .map((part) => part.trim())
+      .filter((part) => part !== '')
+      .join('\n\n');
+    return { ...others, summary };
+  }
+
   const primary = record.primaryDevelopment;
   const additional = record.additionalDevelopments;
 

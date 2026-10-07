@@ -90,12 +90,15 @@ describe('P0-C · admission: overlap with the governed question dimensions, not 
     expect(anchors.relation).toBe('CORRIDOR');
     const admitted = [
       R('Dar es Salaam port congestion delays Rwanda-bound cargo'),
-      R('Tanzania raises transit fee for trucks heading to Rwanda'),
       R('Mombasa port: Kenya cuts clearance times for transit cargo'),
       R('Dock workers strike at Dar es Salaam port'),
-      R('Rwanda revises customs duty on imported fuel'),
     ];
     const rejected = [
+      /* ASK R2 A/B/C BLOCKER REPAIR R1 (CTO ruling on live 625f85b, B): the reader NAMED the routes,
+         so a report must name one of them (port or corridor) — destination or route COUNTRY relevance
+         alone no longer qualifies */
+      R('Tanzania raises transit fee for trucks heading to Rwanda'),
+      R('Rwanda revises customs duty on imported fuel'),
       /* LIVE */ R('In Rwanda, Uniformed Security Banned From Court Sessions Involving Minors'),
       /* LIVE */ R('Despite High Tax, Tough Regulations – Betting (Urusimbi) is Still a Societal Crisis in Rwanda'),
       /* LIVE */ R('Rwandans Turn To Very Cheap Smuggled Alcohol'),
