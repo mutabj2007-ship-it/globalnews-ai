@@ -554,11 +554,15 @@ describe('H — handoff rows, frontend half (source and behaviour of the /ask su
   const frame = src('components/ask-frame/AskFrameScreen.tsx');
   const turnView = src('components/ask-frame/AskR2TurnView.tsx');
   const hook = src('lib/ask/useAskR2Conversation.ts');
+  /* ASK DESIGN R3 (CTO ruling 6) — the hand-offs are rows of More in the answer toolbar. */
+  const toolbar = src('components/ask-frame/AskAnswerToolbar.tsx');
 
   it('H-T02 / H-G2: Open full analysis carries no grant — no ask-frame source can write one', () => {
-    const writers = [frame, turnView, hook].filter((s) => /grantAnalysisConsent/.test(s)).length;
+    const writers = [frame, turnView, hook, toolbar].filter((s) => /grantAnalysisConsent/.test(s)).length;
+    /* the toolbar draws a plain anchor; the turn view hands it the plain operation href */
     const anchorOnly =
-      /data-ask="open-full-analysis"\s+href=\{openFullAnalysisHref\(operationId\)\}/.test(turnView);
+      /data-ask="open-full-analysis" href=\{openFullHref\}/.test(toolbar) &&
+      /openFullAnalysisHref\(operationId\)/.test(turnView);
     const v = record('H-G2', writers === 0 && anchorOnly, 'source: ask-frame + hook', {
       grantWriters: writers,
       plainAnchor: anchorOnly,
@@ -643,7 +647,8 @@ describe('H — handoff rows, frontend half (source and behaviour of the /ask su
 
   it('H-G7 / H-T14: the deep-compute copy appears only with a deep compute action, never charged, no Sand number (CTO B1)', () => {
     const usedIn = [
-      'components/ask-frame/AskR2TurnView.tsx',
+      /* ASK DESIGN R3 (CTO ruling 6) — the Run-deeper row (and its copy) is in More now. */
+      'components/ask-frame/AskAnswerToolbar.tsx',
       'components/ask-frame/AskDeepConfirm.tsx',
     ].filter((p) => /s\.(runDeepMeta|estimate|runConfirm)/.test(src(p)));
     const onlyWithDeep = /view\.handoffs\.runDeeper && onRunDeeper !== undefined/.test(turnView);

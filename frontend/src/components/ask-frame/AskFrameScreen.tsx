@@ -298,6 +298,9 @@ export function AskFrameScreen({
   useEffect(() => {
     if (operationId === null) return;
     if (remembered.current.has(operationId)) return; // DEFECT F: already on screen
+    /* GATE H (H-T12 / H-G4) — an operation arrival is a READ. It revokes any pending
+       analysis grant, so no later arrival can spend a grant this navigation did not make. */
+    revokeAnalysisConsent();
     /*
       ASK DESIGN COMPLETENESS R2 — THREADS, NOT TURNS. A conversation opened from the drawer or the
       conversations column arrives on THIS mounted frame (same route), so whatever conversation
@@ -309,9 +312,6 @@ export function AskFrameScreen({
       startNewConversationRef.current();
       setOpenedEarlier([]);
     }
-    /* GATE H (H-T12 / H-G4) — an operation arrival is a READ. It revokes any pending
-       analysis grant, so no later arrival can spend a grant this navigation did not make. */
-    revokeAnalysisConsent();
     let live = true;
     let viaGuest = false;
     void askV2Api
