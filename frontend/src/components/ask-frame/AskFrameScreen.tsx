@@ -15,7 +15,6 @@ import { sourceLanguageFor, type DisplayLocale } from '@globalnews-ai/shared';
 import { askLanguageDisposition } from '@/lib/ask/askLocale';
 import { askSevenStrings } from '@/lib/ask/askSevenStrings';
 import { askDirectionProps, askForeignCopyProps, isolatedAuto } from '@/lib/ask/askDirection';
-import { useRotatingExample } from '@/lib/ask/useRotatingExample';
 import { askR2Strings } from '@/lib/ask/askR2Strings';
 import { askR2View } from '@/lib/ask/askR2View';
 import {
@@ -31,7 +30,7 @@ import { authReturnNotice, type GuestNotice } from '@/lib/ask/askGuestTrial';
 import type { AskShellMenuControl } from '@/lib/ask/askShellMenu';
 import { askCountryName } from '@/lib/ask/askCountryName';
 import { AskWorkingStatus } from './AskWorkingStatus';
-import { AskEmblem, AskEmblemMark } from './AskEmblem';
+import { AskEmblem, AskEmblemMark, AskWordmark } from './AskEmblem';
 import { ASK_SIDE_PANEL_QUERY, AskSourcesPanelProvider } from './AskSourcesPanel';
 import { AskR2TurnView } from './AskR2TurnView';
 import { AskConversations } from './AskConversations';
@@ -264,11 +263,6 @@ export function AskFrameScreen({
     every rule decided by the pure machine in `askExampleRotation`. `enabled` is the entry
     state, so no timer runs in the answered workspace.
   */
-  const rotatingExample = useRotatingExample({
-    locale: interfaceLocale,
-    enabled: entryState,
-    compact,
-  });
 
   useEffect(() => {
     setQuestion(new URLSearchParams(urlKey).get('q') ?? '');
@@ -503,7 +497,6 @@ export function AskFrameScreen({
     setRetryKept(false);
     setAskUnavailable(false);
     setNewBelow(false);
-    rotatingExample.onValue('');
     const url = new URLSearchParams(window.location.search);
     url.delete('operation');
     url.delete('q');
@@ -633,7 +626,7 @@ export function AskFrameScreen({
           >
             <span aria-hidden="true" className="block h-[2px] w-[18px] rounded-sm bg-current" />
             <span aria-hidden="true" className="block h-[2px] w-[18px] rounded-sm bg-current" />
-            <span aria-hidden="true" className="block h-[2px] w-[18px] rounded-sm bg-current" />
+            <span aria-hidden="true" className="me-[6px] block h-[2px] w-[12px] rounded-sm bg-current" />
           </button>
         ) : (
           <button
@@ -649,7 +642,7 @@ export function AskFrameScreen({
         {/* The static 24 px mark beside the ONE canonical product name (CTO brand ruling). */}
         <h1 className={styles.brand}>
           <AskEmblemMark />
-          <span>{r2s.askTitle}</span>
+          <AskWordmark name={r2s.askTitle} />
         </h1>
         {/* The source-count readout stays for assistive technology; the Design header shows New. */}
         <span data-ask="header-state" className={styles.visuallyHidden}>
@@ -725,11 +718,16 @@ export function AskFrameScreen({
                   line and a quiet example sentence (text, not buttons). Typing collapses all three
                   (A2); the emblem above and the composer below remain.
                 */}
+                {/* ASK DESIGN AUTHORITY R3 — the prototype's group: [headline + support] (gap 8),
+                    then the example sentence 20 px below (phone/tablet). On desktop the example
+                    sits under the centred composer instead (Design F2), drawn in the composer bar. */}
                 <div data-ask-welcome="" className={styles.welcomeCollapsible}>
-                  <h1 className={styles.emptyTitle}>{sevenStrings.composerHint}</h1>
-                  <p data-ask="welcome-support" className={styles.emptyLead}>
-                    {r2s.read.welcomeSupport}
-                  </p>
+                  <div className={styles.welcomeTitleGroup}>
+                    <h1 className={styles.emptyTitle}>{sevenStrings.composerHint}</h1>
+                    <p data-ask="welcome-support" className={styles.emptyLead}>
+                      {r2s.read.welcomeSupport}
+                    </p>
+                  </div>
                   <p data-ask="welcome-example" className={styles.welcomeExample}>
                     {r2s.read.welcomeExample}
                   </p>
@@ -768,7 +766,8 @@ export function AskFrameScreen({
             {r2.signInRequired !== null && (
               /* SIGNED-OUT FALLBACK REMOVAL R1 — a sign-in requirement, never a reporting failure. */
               <section data-ask="sign-in-required" role="status" className="mb-6">
-                <p className={ASK_EYEBROW}>{r2s.youAsked}</p>
+                {/* A5: no visible "you asked" label; the bubble carries the question, the name stays for AT */}
+                <p className="sr-only">{r2s.youAsked}</p>
                 <h2 className={styles.question}>{r2.signInRequired}</h2>
                 <div className="flex flex-col items-start gap-3 rounded-[12px] border border-[var(--ask-read-control-line,#2a6d9e)] [background:var(--ask-read-answer-bg,linear-gradient(#08263f,#051a2e))] p-3.5 md:p-5">
                   <span className="inline-flex h-[26px] items-center rounded-[6px] border border-[var(--ask-read-control-line,#2a6d9e)] bg-[var(--ask-read-sunk,#0a2a47)] px-2.5 text-[0.75rem] font-bold text-[var(--ask-read-control-ink,#bfe3fb)]">
@@ -875,6 +874,8 @@ export function AskFrameScreen({
                   onRunDeeper={guestMode ? undefined : (q) => void r2.runDeeper(q)}
                   onUseQuestion={draftQuestion}
                   onRefresh={guestMode ? undefined : (q) => void resubmit(q)}
+                  /* Design D2 — the failed turn's own panel resends the kept draft. */
+                  onRetry={retryKept && !isPending ? () => void ask() : undefined}
                 />
                 {guestMode && latestR2.uncounted === true && (
                   <p data-ask="guest-not-counted" className="mt-2 text-[13px] text-[var(--ask-read-ink2,#8fa6c0)]">
@@ -906,13 +907,12 @@ export function AskFrameScreen({
                 </div>
               </section>
             )}
-            {retryKept && !isPending && (
+            {retryKept && !isPending && latestR2?.payload != null && (
               /*
-                ASK DESIGN COMPLETENESS R1 — Design D2: the failure is said IN the conversation,
-                with Try again; the question is still in the composer (nothing was lost) and Try
-                again sends exactly that draft through the same Ask path.
+                Design D2 — a failure that produced no failed turn of its own (e.g. a Refresh
+                reporting re-send) is said here, in the same panel; a failed turn says it itself.
               */
-              <section data-ask="failure" role="alert" className={styles.failurePanel}>
+              <section data-ask="failure" role="alert" className="gna-ask-failure">
                 <p data-ask="retry-kept">{r2s.retryKept}</p>
                 <button type="button" data-ask="try-again" onClick={() => void ask()}>
                   {sevenStrings.errorRetry}
@@ -921,7 +921,8 @@ export function AskFrameScreen({
             )}
             {isPending && (
               <section data-ask="pending" className="mb-5">
-                <p className={ASK_EYEBROW}>{r2s.youAsked}</p>
+                {/* A5: no visible "you asked" label; the bubble carries the question, the name stays for AT */}
+                <p className="sr-only">{r2s.youAsked}</p>
                 <h2 className={styles.question}>{r2.pending}</h2>
                 {/* ASK READING EXPERIENCE R1 — one truthful working line; the 1.8 s simulated
                     stage timer is retired from Ask (H-FREEZE §5). */}
@@ -1037,11 +1038,12 @@ export function AskFrameScreen({
           <div data-ask="context" className={styles.contextChip}>
             <span className="truncate" {...isolatedAuto()}>
               {/* TRUST R1 — a country-only context (Map → Ask) names its place; it had an empty title. */}
-              {context.title ||
-                (context.countryCode
-                  ? (askCountryName(context.countryCode, interfaceLocale) ??
-                    context.countryCode)
-                  : '')}
+              {context.title
+                ? /* Design F5 — a STORY context reads "About this story: <title>". */
+                  r2s.read.aboutStory(context.title)
+                : context.countryCode
+                  ? (askCountryName(context.countryCode, interfaceLocale) ?? context.countryCode)
+                  : ''}
             </span>
             <button
               type="button"
@@ -1058,10 +1060,6 @@ export function AskFrameScreen({
             value={question}
             onChange={(next) => {
               setQuestion(next);
-              /* CENTERED COMPOSER R1 §8 — the rotation is TOLD the value; it never writes it.
-                 One character stops rotation and hides the example; emptying the field starts
-                 the quiet delay before it may resume. */
-              rotatingExample.onValue(next);
             }}
             inputLabel={dict.askAi.inputLabel}
             /* R4 · same bounded hint, so the placeholder and the empty-state title cannot
@@ -1079,31 +1077,18 @@ export function AskFrameScreen({
             locale={interfaceLocale}
             overLimitMessage={shell.askR2Strings.questionOverLimit}
             /*
-              CENTERED COMPOSER R1 — the rotating example, supplied only in the entry state.
-              `onUse` sets the composer's VALUE and submits nothing (§9, §11): from that moment
-              it is ordinary editable text and the reader still has to press Ask or Enter.
+              ASK DESIGN AUTHORITY R3 — NO ROTATING EXAMPLE IN THE FIELD. The Design composer
+              (A1, F2, every frame) shows only its static placeholder "Ask anything…"; the
+              example is the quiet sentence in the welcome group (text, not a control).
             */
-            example={
-              rotatingExample.text === null || rotatingExample.id === null
-                ? undefined
-                : {
-                    text: rotatingExample.text,
-                    id: rotatingExample.id,
-                    useLabel: sevenStrings.exampleUse,
-                    onUse: () => {
-                      rotatingExample.onUse();
-                      draftQuestion(rotatingExample.text ?? '');
-                    },
-                    onFocus: rotatingExample.onFocus,
-                    onBlur: rotatingExample.onBlur,
-                    animationClass: rotatingExample.animate ? styles.exampleEnter : undefined,
-                    generation: rotatingExample.generation,
-                    /* The example is the reader's own locale, so it takes the scope's
-                       direction and is isolated — never a direction of its own. */
-                    directionProps: isolatedAuto(),
-                  }
-            }
           />
+          {entryState && (
+            /* Design F2 — on desktop the example sentence sits under the centred composer
+               (the welcome group's copy is hidden there, so it is never read twice). */
+            <p data-ask="welcome-example-desktop" className={styles.welcomeExampleDesktop}>
+              {r2s.read.welcomeExample}
+            </p>
+          )}
         </div>
         {/* TRUST R1 §12 — the Privacy Notice and Cookies notice, reachable before sign-in and
             before the first question, without interrupting the conversation. */}

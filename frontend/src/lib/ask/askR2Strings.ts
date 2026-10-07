@@ -315,6 +315,12 @@ export interface AskReadStrings {
   readonly aboutAnswer: string;
   readonly reopenedLine: (date: string) => string;
   readonly editQuestion: string;
+  /* ASK DESIGN AUTHORITY R3 — copy the Design specifies verbatim (frames C1, F5, B1/guide §5, D2). */
+  readonly opensNewTab: string;
+  readonly aboutStory: (title: string) => string;
+  readonly demoData: string;
+  readonly failureNetworkTitle: string;
+  readonly failureBody: string;
 }
 
 const EN_READ: AskReadStrings = {
@@ -357,6 +363,11 @@ const EN_READ: AskReadStrings = {
   aboutAnswer: 'About this answer',
   reopenedLine: (date) => `Answer from ${date}. Reporting may have changed since then.`,
   editQuestion: 'Edit question',
+  opensNewTab: ' (opens in new tab)',
+  aboutStory: (title) => `About this story: ${title}`,
+  demoData: 'Demo data.',
+  failureNetworkTitle: 'Couldn’t reach the news service.',
+  failureBody: 'This is usually temporary. Your question is still in the box below.',
 };
 
 /* Polish plurals: 1 · 2–4 (except 12–14) · otherwise. */
@@ -409,6 +420,11 @@ const PL_READ: AskReadStrings = {
   aboutAnswer: 'O tej odpowiedzi',
   reopenedLine: (date) => `Odpowiedź z ${date}. Doniesienia mogły się od tego czasu zmienić.`,
   editQuestion: 'Edytuj pytanie',
+  opensNewTab: ' (otwiera się w nowej karcie)',
+  aboutStory: (title) => `O tej historii: ${title}`,
+  demoData: 'Dane demonstracyjne.',
+  failureNetworkTitle: 'Nie udało się połączyć z serwisem wiadomości.',
+  failureBody: 'Zwykle to chwilowy problem. Twoje pytanie nadal jest w polu poniżej.',
 };
 
 const EN: AskR2Strings = {

@@ -276,6 +276,25 @@ export function askFormatDate(
 }
 
 /**
+ * The reader's LOCAL calendar day and clock, in the same product order as `askFormatDate`
+ * ("28 Sep 2026", "14:20"), for the conversation list — whose Today / Yesterday / Earlier bands
+ * are the reader's own days, so the label must be too.
+ */
+export function askFormatLocalDay(at: Date, locale: DisplayLocale): string {
+  const parts = dateTimeFormatter(locale, { day: 'numeric', month: 'short', year: 'numeric' }).formatToParts(at);
+  const part = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((p) => p.type === type)?.value ?? '';
+  return `${part('day')} ${part('month')} ${part('year')}`;
+}
+
+export function askFormatLocalTime(at: Date, locale: DisplayLocale): string {
+  const parts = dateTimeFormatter(locale, { hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(at);
+  const part = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((p) => p.type === type)?.value ?? '';
+  return `${part('hour')}:${part('minute')}`;
+}
+
+/**
  * A count, in the locale's own numerals.
  *
  * This is why Arabic needs `Intl` rather than string interpolation: `ar-u-nu-arab` renders

@@ -1,7 +1,7 @@
 'use client';
 import type { DisplayLocale } from '@globalnews-ai/shared';
 
-import { isolatedAuto, isolatedLtr } from '@/lib/ask/askDirection';
+import { askFormatDate, isolatedAuto, isolatedLtr } from '@/lib/ask/askDirection';
 import type { StoryContext } from '@globalnews-ai/shared';
 import { AskCompactResult } from '@/components/ask/AskCompactResult';
 import { AskIntelligenceBasis } from './AskIntelligenceBasis';
@@ -14,6 +14,7 @@ import { AskAnswerToolbar } from './AskAnswerToolbar';
 import { AskAnswerProse } from '@/components/ask/AskAnswerProse';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 import { askLocaleForLegacyCatalogue } from '@/lib/ask/askLocale';
+import { askSevenStrings } from '@/lib/ask/askSevenStrings';
 import { buildBriefTelemetry } from '@/components/analysis-frame/briefModel';
 
 /**
@@ -84,6 +85,11 @@ const META = 'text-[0.8125rem] leading-[1.5] text-[var(--ask-read-ink3,#8299b4)]
 const NOTE = 'text-[0.8125rem] leading-[1.5] text-[var(--ask-read-ink2,#9fb4cc)]';
 const CAUTION = 'text-[0.8125rem] leading-[1.45] text-[var(--ask-read-deep-ink,#c9b27a)]';
 const TURN = 'mb-6 flex flex-col';
+/** Design D2 — sending the same question again can only help a transient failure. */
+function retryable(failure: string | undefined): boolean {
+  /* Production line: a spent budget is the only non-transient failed-turn code it knows. */
+  return !(failure?.startsWith('BUDGET_') ?? false);
+}
 /*
   ASK READING EXPERIENCE R1 — THE QUESTION IS A COMPACT BUBBLE, NOT A DISPLAY HEADING.
 
@@ -129,6 +135,7 @@ export function AskR2TurnView({
   storyBookmarks = false,
   onRefresh,
   reopenedAt,
+  onRetry,
 }: {
   readonly turn: AskR2Turn;
   readonly locale: DisplayLocale;
@@ -160,6 +167,8 @@ export function AskR2TurnView({
    * read back from storage passes it; a live answer never shows a date line.
    */
   readonly reopenedAt?: string | null;
+  /** ASK DESIGN AUTHORITY R3 — Design D2 "Try again": resend this (latest, failed) question. */
+  readonly onRetry?: () => void;
 }): JSX.Element {
   const s = askShellStrings(locale).askR2Strings;
   const r = s.read;
@@ -170,15 +179,34 @@ export function AskR2TurnView({
       <article data-ask-turn data-ask="turn" data-ask-state="unavail" className={TURN}>
         <p className="sr-only">{s.youAsked}</p>
         <h2 className={QUESTION}>{turn.question}</h2>
-        <p
+        {/*
+          ASK DESIGN AUTHORITY R3 — Design D2: ONE failure panel (err-bg), a bold first line,
+          the reassurance that the question is still in the box, and an accent "Try again".
+          A dropped connection takes the Design's own wording; every other failure keeps its
+          governed sentence (budget, deadline, length) in the same panel. "Try again" only where
+          sending the same question again can help, and only for the latest turn (onRetry).
+        */}
+        <div
           role="alert"
           data-ask="unavailable"
           data-ask-failure={turn.failure === 'NETWORK' ? 'network' : undefined}
-          className={`rounded-[12px] p-3.5 text-[15px] leading-[1.55] md:p-5 ${CARD_CLASS.unavailable}`}
+          className="gna-ask-failure"
         >
-          {/* LIVE ACCEPTANCE REPAIR R1 (budget) + R3 L-3 (a dropped connection is not an outage) */}
-          {failedTurnCopy(turn.failure, s)}
-        </p>
+          <p data-ask="failure-title">
+            {/* LIVE ACCEPTANCE REPAIR R1 (budget) + R3 L-3 (a dropped connection is not an outage) */}
+            {turn.failure === 'NETWORK' ? r.failureNetworkTitle : failedTurnCopy(turn.failure, s)}
+          </p>
+          {onRetry !== undefined && retryable(turn.failure) && (
+            <>
+              <p data-ask="retry-kept">{r.failureBody}</p>
+              <div>
+                <button type="button" data-ask="try-again" onClick={onRetry}>
+                  {askSevenStrings(locale).errorRetry}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </article>
     );
   }
@@ -221,11 +249,15 @@ export function AskR2TurnView({
     .map((source) => Date.parse(source.publishedAt ?? ''))
     .filter((at) => !Number.isNaN(at))
     .reduce((max, at) => Math.max(max, at), Number.NEGATIVE_INFINITY);
-  const dayFormat = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  /* Design: "Newest report 5 Oct 2026" — day month year; English renders the Design's own order. */
+  const dayFormat = { format: (at: Date) => askFormatDate(at.toISOString(), locale) ?? '' };
+  /* RECONCILIATION_GUIDE §5 — a demo (mock) answer is disclosed as the footer line's prefix. */
+  const demo = payload.analysis?.analysis?.analysisMode === 'mock-ai';
   const footerLine =
     answerSources.length === 0
       ? null
       : [
+          demo ? r.demoData : null,
           `${r.footerReports(answerSources.length)} ${r.footerPublishers(publishers)}`,
           Number.isFinite(newest) ? r.footerNewest(dayFormat.format(new Date(newest))) : null,
         ]
@@ -611,15 +643,9 @@ export function AskR2TurnView({
               </div>
             )}
           {view.badge === 'insuf' && (
-            <p className="text-[19px] font-bold leading-[1.2] md:text-[22px]">
+            <p data-ask="insufficient-title" className="text-[19px] font-bold leading-[1.2] md:text-[22px]">
               {view.searchLimited ? s.limitedTitle : s.insufficientTitle}
             </p>
-          )}
-          {/* Design D1 — "Edit question" puts the reader's own words back in the composer. */}
-          {view.badge === 'insuf' && onUseQuestion !== undefined && (
-            <button type="button" data-ask="edit-question" onClick={() => onUseQuestion(turn.question)}>
-              {r.editQuestion}
-            </button>
           )}
           {/* ASK FIRST-ANSWER RETRIEVAL R3 — an answer standing on reachable reporting says so. */}
           {view.badge !== 'insuf' && view.searchLimited && (
@@ -699,6 +725,13 @@ export function AskR2TurnView({
               {s.noCitable}
             </p>
           )}
+          {/* Design D1 — "Edit question" comes last, after what can be tried, and puts the reader's
+              own words back in the composer. */}
+          {view.badge === 'insuf' && onUseQuestion !== undefined && (
+            <button type="button" data-ask="edit-question" onClick={() => onUseQuestion(turn.question)}>
+              {r.editQuestion}
+            </button>
+          )}
         </section>
       )}
 
@@ -707,7 +740,17 @@ export function AskR2TurnView({
       {footerLine !== null && (
         <p data-ask="answer-footer">{footerLine}</p>
       )}
-      <div data-ask="answer-meta" className="mt-4 flex flex-col gap-2">
+      {/*
+        ASK DESIGN AUTHORITY R3 — the Design footer is the footer line and then the toolbar. The
+        scope, state badge and freshness are "About this answer" (Sources) wherever Sources exist;
+        an answer with no sources has no Sources panel to hold them, so there they stay here,
+        quiet (listed for CTO ruling: GAP-4).
+      */}
+      <div
+        data-ask="answer-meta"
+        data-ask-meta-placement={answerSources.length > 0 ? 'about' : 'inline'}
+        className="mt-4 flex flex-col gap-2"
+      >
         <div data-ask="scope" className="flex flex-wrap items-center gap-1.5">
           <span className={`me-1 ${EYEBROW}`}>{s.scope}</span>
           {view.chips.items.map((chip, i) => (

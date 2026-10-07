@@ -1210,8 +1210,9 @@ html[data-gna-schedule='dark'] [data-gna-theme='scheduled'],
 
   The block is its own size container, so the decision follows the width the table really has
   (a dock, a phone, a desktop column), not the viewport. The stacked threshold is in REM: at the
-  default 16px it is 360px; at 150% text it is 540px and at 200% 720px, so enlarged text moves a
-  table to the stacked form without any script reading the font size. The page never scrolls
+  default 16px it is 320px — the reading column of a 360px phone (Design B5: stacked at ≤360 px;
+  B4: a 390px phone keeps the contained scroll); at 200% text it is 640px, so enlarged text moves
+  a table to the stacked form without any script reading the font size. The page never scrolls
   sideways in any mode.
 */
 .gna-ask-table {
@@ -1219,7 +1220,7 @@ html[data-gna-schedule='dark'] [data-gna-theme='scheduled'],
   max-width: 100%;
   margin-block: 0.5rem;
 }
-@container (max-width: 22.5rem) {
+@container (max-width: 20rem) {
   /* the hint has nothing to point at once nothing scrolls */
   .gna-ask-table[data-ask-table-cols-wide='true'] .gna-ask-table-hint {
     display: none;

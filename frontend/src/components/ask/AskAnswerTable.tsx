@@ -89,7 +89,10 @@ export function AskAnswerTable({
                 <th
                   key={`h${i}`}
                   scope="col"
-                  className={`border-b border-[var(--ask-read-line-soft,var(--gt-line,#d6dde8))] bg-[var(--ask-read-sunk,var(--gt-sunk,#f1f4f8))] px-2.5 py-2 text-start font-semibold ${
+                  /* a column whose every body cell is a number is headed at the same edge (Design B4) */
+                  className={`border-b border-[var(--ask-read-line-soft,var(--gt-line,#d6dde8))] bg-[var(--ask-read-sunk,var(--gt-sunk,#f1f4f8))] px-2.5 py-2 font-semibold ${
+                    i > 0 && rows.length > 0 && numeric.every((row) => row[i] === true) ? 'text-end' : 'text-start'
+                  } ${
                     wide && i === 0 ? 'gna-ask-table-sticky' : ''
                   }`}
                 >

@@ -580,6 +580,14 @@ export const frShellOverlay: ShellLocaleOverlay = {
           pattern: "Réponse du {0}. Les reportages ont pu changer depuis.",
         },
         editQuestion: "Modifier la question",
+        opensNewTab: " (s’ouvre dans un nouvel onglet)",
+        aboutStory: {
+          kind: "pattern",
+          pattern: "À propos de cet article : {0}",
+        },
+        demoData: "Données de démonstration.",
+        failureNetworkTitle: "Impossible de joindre le service d’actualités.",
+        failureBody: "C’est généralement temporaire. Votre question est toujours dans la zone ci-dessous.",
       },
       questionOverLimit: {
         kind: "pattern",

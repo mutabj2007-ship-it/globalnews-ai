@@ -104,7 +104,7 @@ describe('inference and unsupported labels', () => {
   it.each([
     ['en', 'Analytical inference:', 'Not established by the reporting:'],
     ['pl', 'Wniosek analityczny:', 'Nieustalone w doniesieniach:'],
-  ] as const)('%s: inference and unsupported sentences are labelled and never cited', (language, inference, unsupported) => {
+  ] as const)('%s: inference and unsupported sentences carry their kind as DATA, are never cited, and show no reader-facing label (CTO ruling, ASK DESIGN AUTHORITY R3)', (language, inference, unsupported) => {
     const summary = `${S1} ${S3} Rwanda closed its border.`;
     const r0 = withBrief(summary, []);
     const r = withBrief(summary, [
@@ -113,8 +113,9 @@ describe('inference and unsupported labels', () => {
       { text: 'Rwanda closed its border.', kind: 'UNSUPPORTED', sourceArticleIds: [] },
     ]);
     const html = render(r, language);
-    expect(html).toContain(inference);
-    expect(html).toContain(unsupported);
+    expect(html).not.toContain(inference);
+    expect(html).not.toContain(unsupported);
+    expect(html).toMatch(/data-statement-kind="UNSUPPORTED"/);
     expect(citations(html)).toEqual([1]);
     expect(html).toMatch(/data-statement-kind="ANALYTICAL_INFERENCE"[^]*<em>The loss of senior officers could affect command continuity\.<\/em>/);
   });

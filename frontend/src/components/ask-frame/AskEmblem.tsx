@@ -234,3 +234,25 @@ export function AskEmblemMark(): JSX.Element {
     </span>
   );
 }
+
+/**
+ * ASK DESIGN AUTHORITY R3 — THE WORDMARK (Design header, every frame): Space Grotesk 500 18 px,
+ * -0.01em, ink, with the trailing "AI" in `--wordmark-ai` (teal light / signal-blue navy). The
+ * TEXT is the one canonical product name (CTO brand ruling); only the Design's two-tone
+ * treatment is applied to it. A name without a trailing "AI" renders in one colour.
+ */
+export function AskWordmark({ name }: { readonly name: string }): JSX.Element {
+  const match = /^(.*?)(AI)$/.exec(name);
+  return (
+    <span data-ask="wordmark" className="gna-ask-wordmark">
+      {match === null ? (
+        name
+      ) : (
+        <>
+          {match[1]}
+          <span className="gna-ask-wordmark-ai">{match[2]}</span>
+        </>
+      )}
+    </span>
+  );
+}

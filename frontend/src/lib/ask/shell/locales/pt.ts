@@ -580,6 +580,14 @@ export const ptShellOverlay: ShellLocaleOverlay = {
           pattern: "Resposta de {0}. A cobertura pode ter mudado desde então.",
         },
         editQuestion: "Editar a pergunta",
+        opensNewTab: " (abre em uma nova aba)",
+        aboutStory: {
+          kind: "pattern",
+          pattern: "Sobre esta notícia: {0}",
+        },
+        demoData: "Dados de demonstração.",
+        failureNetworkTitle: "Não foi possível acessar o serviço de notícias.",
+        failureBody: "Isso costuma ser temporário. Sua pergunta continua na caixa abaixo.",
       },
       questionOverLimit: {
         kind: "pattern",

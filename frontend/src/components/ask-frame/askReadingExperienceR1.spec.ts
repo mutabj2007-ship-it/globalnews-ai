@@ -221,7 +221,10 @@ describe('Answer hierarchy — answer first (H-FREEZE §4)', () => {
 
   it('no full-paragraph italics: the inference run keeps <em> but not its slant', () => {
     const prose = code(read('components', 'ask', 'AskAnswerProse.tsx'));
-    expect(prose).toMatch(/className="text-ink-secondary \[&_em\]:not-italic"/);
+    /* R3 (CTO design-authority reset): the inference run reads in the body ink like the Design's
+       prose — no dimmed run and no "Analytical inference:" label; the kind stays on the span. */
+    expect(prose).toMatch(/className="\[&_em\]:not-italic"/);
+    expect(prose).not.toMatch(/statement-qualifier/);
     expect(prose).not.toMatch(/font-mono text-\[10px\] uppercase/);
   });
 });
@@ -342,7 +345,8 @@ describe('Tables (RESPONSIVE-FREEZE §5)', () => {
   it('the stacked form is a container query in rem (narrow OR enlarged text), never a page scroll', () => {
     const t = globals.slice(globals.indexOf('.gna-ask-table {'));
     expect(t).toMatch(/\.gna-ask-table \{\s*container-type: inline-size;/);
-    expect(t).toMatch(/@container \(max-width: 22\.5rem\)/);
+    /* Design B4/B5: a 390 phone keeps the contained scroll; ≤360 (a 312 px column) stacks. */
+    expect(t).toMatch(/@container \(max-width: 20rem\)/);
     expect(t).toMatch(/content: attr\(data-label\);/);
   });
 
