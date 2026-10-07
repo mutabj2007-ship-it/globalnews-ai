@@ -1,4 +1,4 @@
-import { Fragment, type JSX, type ReactNode } from 'react';
+import { Fragment, useId, type JSX, type ReactNode } from 'react';
 import { projectSummaryStatements, safeExternalHref, type DisplayLocale } from '@globalnews-ai/shared';
 import type { AnalysisSourceRef, LanguageCode, SummaryStatement } from '@globalnews-ai/shared';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
@@ -86,6 +86,44 @@ export function AskAnswerProse({
   const shell = askShellStrings(language);
   const t = shell.dict.askAi;
   const blocks = parseAnswerBlocks(source);
+  /*
+    ASK DESIGN COMPLETENESS R1 — "In this answer" (Design B2): a long answer (3+ sections the
+    ANSWER itself authored) gets jump links after its opening. A jump scrolls the answer's own
+    scroll area to the heading and moves focus to it (`tabIndex={-1}`); nothing is invented —
+    the links are the answer's own headings, in order.
+  */
+  const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '');
+  const headings = blocks
+    .map((block, index) => ({ block, index }))
+    .filter((entry): entry is { block: Extract<AskBlock, { kind: 'heading' }>; index: number } => entry.block.kind === 'heading');
+  const jumpNav =
+    headings.length >= 3 ? (
+      <nav key="answer-nav" data-ask="answer-nav" aria-label={shell.askR2Strings.read.inThisAnswer}>
+        <p>{shell.askR2Strings.read.inThisAnswer}</p>
+        <ul>
+          {headings.map(({ block, index }) => (
+            <li key={`nav-${index}`}>
+              {/* A button, not a link: the renderer's only href stays the governed citation. */}
+              <button
+                type="button"
+                data-ask="answer-jump"
+                aria-controls={`${uid}-h${index}`}
+                onClick={() => {
+                  const target = document.getElementById(`${uid}-h${index}`);
+                  if (target === null) return;
+                  target.scrollIntoView({ block: 'start' });
+                  target.focus({ preventScroll: true });
+                }}
+              >
+                {block.text.replace(/[*_`]/g, '')}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    ) : null;
+  /* after the opening: the first block that is not a heading */
+  const navAfter = blocks.findIndex((block) => block.kind !== 'heading');
   let remaining: readonly SummaryStatement[] = statements ?? [];
 
   /** One run of answer text: statements placed first, then emphasis inside each segment. */
@@ -153,11 +191,24 @@ export function AskAnswerProse({
     <div data-ask="brief" data-ask-prose className="flex flex-col">
       {blocks.map((block: AskBlock, index) => {
         const key = `${index}-${block.kind}`;
+        const rendered = renderBlock(block, index, key);
+        return index === navAfter && jumpNav !== null ? [rendered, jumpNav] : rendered;
+      })}
+    </div>
+  );
+
+  function renderBlock(block: AskBlock, index: number, key: string): ReactNode {
         if (block.kind === 'heading') {
           /* The question is the page's h1; an answer's own section title is h3/h4 under it. */
           const Tag = block.level === 2 ? 'h3' : 'h4';
           return (
-            <Tag key={key} data-ask="answer-heading" data-ask-heading-level={block.level}>
+            <Tag
+              key={key}
+              id={headings.length >= 3 ? `${uid}-h${index}` : undefined}
+              tabIndex={headings.length >= 3 ? -1 : undefined}
+              data-ask="answer-heading"
+              data-ask-heading-level={block.level}
+            >
               <Inline text={block.text} />
             </Tag>
           );
@@ -217,9 +268,7 @@ export function AskAnswerProse({
             {run(block.text, key)}
           </p>
         );
-      })}
-    </div>
-  );
+  }
 }
 
 /**

@@ -17,32 +17,42 @@ import { isolatedAuto, isolatedLtr } from '@/lib/ask/askDirection';
 import { sourceDateLabel } from '@/components/ask/AskCompactResult';
 import { askDictionary } from '@/lib/ask/shell/askDictionary';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
+import styles from './askDashboard.module.css';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
- * ASK READING EXPERIENCE R1 — SOURCES AS A PANEL (DESKTOP) OR A SHEET (PHONE / TABLET / DOCK)
+ * ASK DESIGN COMPLETENESS R1 — SOURCES: A SIDE PANEL (≥1024) OR A SHEET (BELOW, AND THE DOCK)
  * ════════════════════════════════════════════════════════════════════════════
  *
- * H-FREEZE §12 / CAPABILITY-MATRIX §B. One list, two presentations, no new data:
+ * Design C1 / C6 / F3 and RECONCILIATION_GUIDE §8. One list, two presentations, no new data:
  *
  *   - the list is `analysis.sources` of the ONE answer whose control was used, in its own order,
- *     so item n is exactly the source an inline `[n]` carries (identity is the backend article
- *     id; the number is an answer-local label derived from the same payload). Nothing is
- *     re-ranked, counted or invented, and "cited" vs "also consulted" is not guessed (D2);
- *   - desktop: the existing NON-MODAL Sources column is the panel — a citation scrolls the
- *     column to its item and focuses it; the reading column does not move;
- *   - otherwise: an accessible sheet (`role="dialog"`, `aria-modal`), focus kept inside while it
- *     is open, Esc / Close / backdrop close it, focus returns to the control that opened it with
- *     `preventScroll`, and the conversation's scroll position is never touched — there is no
- *     body scroll lock that could reset it.
+ *     so item n is exactly the source an inline citation n carries (identity is the backend
+ *     article id; the number is an answer-local label derived from the same payload). Nothing is
+ *     re-ranked, counted or invented;
+ *   - ≥1024: a 380 px NON-MODAL side panel beside the reading column — the answer stays readable
+ *     and scrollable, focus moves to the item asked for and returns to the opener on Close;
+ *   - below 1024 and in the dock: an accessible sheet (`role="dialog"`, `aria-modal`), ~82 %
+ *     high, focus kept inside while open, Esc / Close / scrim close it, focus returns to the
+ *     opener with `preventScroll`, and the reading position is never touched — no body scroll
+ *     lock that could reset it.
  *
- * Opening Sources is a display action: zero network, zero AI (STATE-MATRIX §5).
+ * Each item: number, title (wraps), publisher · date — "Date not provided" when the record has
+ * none, never a guessed date — and "Open original ↗" (new tab, `safeExternalHref` the only href
+ * source). "About this answer" (collapsed) holds the method/status lines the answer turn hands
+ * over. CAPABILITY-BLOCKED: "Cited in this answer" vs "Also consulted" — the backend does not
+ * distinguish cited from consulted articles (Design D2), so ONE list is shown and nothing is
+ * guessed. Opening Sources is a display action: zero network, zero AI.
  */
 export interface AskSourcesOpenRequest {
   readonly sources: readonly AnalysisSourceRef[];
   /** 1-based answer-local number to bring into view, if a citation was used. */
   readonly at?: number;
   readonly opener: HTMLElement | null;
+  /** The limited-reporting note, repeated at the top (Design C6) — only where the answer has one. */
+  readonly note?: string | null;
+  /** "About this answer": the answer's own status lines, verbatim. */
+  readonly about?: readonly string[];
 }
 
 type OpenSources = (request: AskSourcesOpenRequest) => void;
@@ -54,7 +64,11 @@ export function useAskSourcesPanel(): OpenSources | null {
   return useContext(SourcesPanelContext);
 }
 
-/** The one rendering of a source list, shared by the desktop column and the sheet. */
+/** The desktop side-panel breakpoint (the frame's persistent-column layout). */
+export const ASK_SIDE_PANEL_QUERY =
+  '(min-width: 1024px) and (orientation: landscape), (min-width: 1101px)';
+
+/** The one rendering of a source list. */
 export function AskSourcesList({
   sources,
   locale,
@@ -67,55 +81,64 @@ export function AskSourcesList({
   /*
     EAST AFRICA E7 — a source's date says what it IS, through the one existing contract
     (sourceDateLabel): publisher → "Published", observed → "First seen by GlobalNewsAI",
-    unknown basis → "Report date". No new date provenance. The reader's locale governs the
-    strings and the formatting; the language argument is only the contract's fallback when no
-    locale is given, and a locale is always given here.
+    unknown basis → "Report date". No new date provenance. No date at all → the Design's
+    "Date not provided", never a guessed date.
   */
   const dateStrings = askDictionary(locale).askAi;
+  const r = askShellStrings(locale).askR2Strings.read;
   return (
     <ol className="flex flex-col">
-      {sources.map((source, index) => (
-        <li
-          key={source.articleId}
-          data-ask="source"
-          data-source-number={index + 1}
-          data-ask-source-highlight={highlight === index + 1 ? 'true' : undefined}
-          className="flex scroll-mt-4 gap-2.5 border-t border-[var(--ask-read-line-soft,#0a2744)] py-2.5 data-[ask-source-highlight=true]:bg-[var(--ask-read-sunk,#06223d)]"
-        >
-          {/* R4 · the citation number is a left-to-right token whatever the thread's
-              direction, and it is bracketed by borders rather than by characters — so it
-              is pinned LTR and isolated rather than left to the paragraph. */}
-          <span
-            className="flex h-[22px] min-w-[28px] shrink-0 items-center justify-center rounded-[5px] border border-[var(--ask-read-line,#2b4a6b)] px-[5px] text-[0.75rem] font-bold tabular-nums text-[var(--ask-read-ink,#d5e4f2)]"
-            {...isolatedLtr()}
+      {sources.map((source, index) => {
+        const href = safeExternalHref(source.url);
+        // prettier-ignore
+        const date = sourceDateLabel(source.publishedAt, source.publishedAtBasis, 'en', dateStrings, locale);
+        return (
+          <li
+            key={source.articleId}
+            data-ask="source"
+            data-source-number={index + 1}
+            data-ask-source-highlight={highlight === index + 1 ? 'true' : undefined}
+            className="flex scroll-mt-4 gap-3 py-3.5"
           >
-            {index + 1}
-          </span>
-          <div className="flex min-w-0 flex-1 flex-col gap-1">
-            {/* R4 · a publisher's headline is prose of unknown direction. Isolated in the
-                inherited direction so its own punctuation stays with it. */}
-            <a
-              href={safeExternalHref(source.url)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[0.875rem] font-semibold leading-[1.3] text-[var(--ask-read-ink,#e6eef6)] underline decoration-transparent underline-offset-4 hover:decoration-[var(--ask-read-control-line,#5abff5)]"
-              {...isolatedAuto()}
-            >
-              {source.title}
-            </a>
-            {/* R4 · publisher name and a UTC stamp: one run, isolated, so the stamp's
-                Latin "UTC" cannot reorder against an Arabic publisher. */}
+            {/* R4 · the citation number is a left-to-right token whatever the thread's
+                direction — pinned LTR and isolated rather than left to the paragraph. */}
             <span
-              className="text-[0.75rem] leading-[1.3] text-[var(--ask-read-ink3,#8299b4)]"
-              {...isolatedAuto()}
+              className="flex h-[22px] min-w-[22px] shrink-0 items-center justify-center rounded-[6px] bg-[var(--ad-accent-soft,#16223f)] px-[6px] text-[0.8125rem] font-semibold tabular-nums text-[var(--ad-accent-soft-ink,#a8c5ff)]"
+              {...isolatedLtr()}
             >
-              {[source.publisher, sourceDateLabel(source.publishedAt, source.publishedAtBasis, 'en', dateStrings, locale)]
-                .filter(Boolean)
-                .join(' · ')}
+              {index + 1}
             </span>
-          </div>
-        </li>
-      ))}
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              {/* R4 · a publisher's headline is prose of unknown direction: isolated. */}
+              <p
+                data-ask="source-title"
+                className="text-[0.9375rem] font-semibold leading-[1.35] text-[var(--ad-ink,#edeff5)]"
+                {...isolatedAuto()}
+              >
+                {source.title}
+              </p>
+              <span
+                className="text-[0.8125rem] leading-[1.4] text-[var(--ad-ink-3,#7d89a1)]"
+                {...isolatedAuto()}
+              >
+                {[source.publisher, date ?? r.dateNotProvided].filter(Boolean).join(' · ')}
+              </span>
+              {href !== undefined && (
+                <a
+                  data-ask="source-open"
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 inline-flex min-h-[32px] w-fit items-center gap-1 text-[0.875rem] font-medium text-[var(--ad-accent-text,#6c93ff)] underline underline-offset-2"
+                >
+                  {r.openOriginal}
+                  <span aria-hidden="true">↗</span>
+                </a>
+              )}
+            </div>
+          </li>
+        );
+      })}
     </ol>
   );
 }
@@ -123,47 +146,116 @@ export function AskSourcesList({
 function focusable(root: HTMLElement): HTMLElement[] {
   return [
     ...root.querySelectorAll<HTMLElement>(
-      'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      'a[href], button:not([disabled]), summary, [tabindex]:not([tabindex="-1"])',
     ),
   ];
 }
 
-function AskSourcesSheet({
+function SourcesBody({
   request,
   locale,
+}: {
+  readonly request: AskSourcesOpenRequest;
+  readonly locale: DisplayLocale;
+}): JSX.Element {
+  const r = askShellStrings(locale).askR2Strings.read;
+  return (
+    <>
+      {request.note != null && request.note !== '' && (
+        <p data-ask="sources-note" className={styles.sheetNote}>
+          {request.note}
+        </p>
+      )}
+      <AskSourcesList sources={request.sources} locale={locale} highlight={request.at} />
+      {request.about !== undefined && request.about.length > 0 && (
+        <details data-ask="about-answer" className={styles.about}>
+          <summary>{r.aboutAnswer}</summary>
+          <div>
+            {request.about.map((line) => (
+              <p key={line}>{line}</p>
+            ))}
+          </div>
+        </details>
+      )}
+    </>
+  );
+}
+
+function AskSourcesSurface({
+  request,
+  locale,
+  panel,
   onClose,
 }: {
   readonly request: AskSourcesOpenRequest;
   readonly locale: DisplayLocale;
+  /** true: the ≥1024 non-modal side panel; false: the modal sheet. */
+  readonly panel: boolean;
   readonly onClose: () => void;
 }): JSX.Element {
   const s = askShellStrings(locale).askR2Strings;
-  const dialog = useRef<HTMLDivElement>(null);
+  const box = useRef<HTMLElement>(null);
   const titleId = useId();
 
   useEffect(() => {
-    const root = dialog.current;
+    const root = box.current;
     if (root === null) return;
     const target =
       request.at === undefined
         ? null
         : root.querySelector<HTMLElement>(`[data-source-number="${request.at}"]`);
     target?.scrollIntoView?.({ block: 'nearest' });
-    (target?.querySelector<HTMLElement>('a[href]') ?? root.querySelector<HTMLElement>('[data-ask="sources-close"]'))?.focus({
-      preventScroll: true,
-    });
+    (
+      target?.querySelector<HTMLElement>('a[href]') ??
+      root.querySelector<HTMLElement>('[data-ask="sources-close"]')
+    )?.focus({ preventScroll: true });
   }, [request]);
 
+  const head = (
+    <div className={styles.sheetHead}>
+      <div className="min-w-0">
+        <h2 id={titleId}>{s.sources}</h2>
+        <p>{s.read.sourcesCited(request.sources.length)}</p>
+      </div>
+      <button type="button" data-ask="sources-close" onClick={onClose} className={styles.sheetClose}>
+        {s.close}
+      </button>
+    </div>
+  );
+
+  if (panel) {
+    return (
+      /* Non-modal: a labelled complementary region; Esc still closes it from inside. */
+      <aside
+        ref={box}
+        data-ask="sources-panel"
+        aria-labelledby={titleId}
+        className={styles.sidePanel}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') {
+            event.stopPropagation();
+            onClose();
+          }
+        }}
+      >
+        {head}
+        <div className={styles.sheetBody}>
+          <SourcesBody request={request} locale={locale} />
+        </div>
+      </aside>
+    );
+  }
+
   return (
-    <div data-ask="sources-sheet-layer" className="fixed inset-0 z-[70] flex items-end justify-center">
+    <div data-ask="sources-sheet-layer" className={styles.sheetLayer}>
       <div
         aria-hidden="true"
         data-ask="sources-backdrop"
         onClick={onClose}
-        className="absolute inset-0 bg-[rgba(1,10,25,0.55)]"
+        className={styles.sheetScrim}
       />
       <div
-        ref={dialog}
+        ref={box as React.RefObject<HTMLDivElement>}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -174,8 +266,8 @@ function AskSourcesSheet({
             onClose();
             return;
           }
-          if (event.key !== 'Tab' || dialog.current === null) return;
-          const items = focusable(dialog.current);
+          if (event.key !== 'Tab' || box.current === null) return;
+          const items = focusable(box.current);
           if (items.length === 0) return;
           const first = items[0];
           const last = items[items.length - 1];
@@ -187,26 +279,11 @@ function AskSourcesSheet({
             first.focus();
           }
         }}
-        className="relative flex max-h-[82dvh] w-full max-w-[40rem] flex-col rounded-t-[16px] border border-[var(--ask-read-line,#1d4a73)] bg-[var(--ask-read-answer-bg,#03152a)] pb-[max(0.5rem,env(safe-area-inset-bottom))] text-[var(--ask-read-ink,#e6eef6)] shadow-2xl"
+        className={styles.sheet}
       >
-        <div className="flex items-center justify-between gap-3 border-b border-[var(--ask-read-line-soft,#0e2d4d)] px-4 py-2">
-          <h2 id={titleId} className="text-[1rem] font-semibold">
-            {s.sources}{' '}
-            <span className="text-[0.875rem] font-normal text-[var(--ask-read-ink3,#8299b4)]">
-              {s.sourcesLabel(request.sources.length)}
-            </span>
-          </h2>
-          <button
-            type="button"
-            data-ask="sources-close"
-            onClick={onClose}
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[8px] px-2 text-[0.875rem] font-semibold text-[var(--ask-read-control-ink,#cfe2f2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ask-read-control-ink,#5abff5)]"
-          >
-            {s.close}
-          </button>
-        </div>
-        <div className="min-h-0 overflow-y-auto overscroll-contain px-4">
-          <AskSourcesList sources={request.sources} locale={locale} highlight={request.at} />
+        {head}
+        <div className={styles.sheetBody}>
+          <SourcesBody request={request} locale={locale} />
         </div>
       </div>
     </div>
@@ -215,43 +292,33 @@ function AskSourcesSheet({
 
 export function AskSourcesPanelProvider({
   locale,
-  columnSources,
+  presentation = 'auto',
   children,
 }: {
   readonly locale: DisplayLocale;
   /**
-   * The sources the desktop column currently lists (the latest answer's), or null when the
-   * surface has no column. A request for exactly these is served by the column when it is shown.
+   * `auto` — the side panel at the frame's ≥1024 layout, the sheet below it. `sheet` — always
+   * the sheet (the dock is always the phone layout, Design §2).
    */
-  readonly columnSources?: readonly AnalysisSourceRef[] | null;
+  readonly presentation?: 'auto' | 'sheet';
   readonly children: ReactNode;
 }): JSX.Element {
   const [request, setRequest] = useState<AskSourcesOpenRequest | null>(null);
+  const [panel, setPanel] = useState(false);
   const opener = useRef<HTMLElement | null>(null);
 
   const open = useCallback<OpenSources>(
     (next) => {
-      if (columnSources != null && next.sources === columnSources) {
-        const column = document.querySelector<HTMLElement>('[data-ask="sources-column"]');
-        /* `offsetParent` is null while the column is display:none (below its breakpoint). */
-        if (column !== null && column.offsetParent !== null) {
-          const item =
-            next.at === undefined
-              ? null
-              : column.querySelector<HTMLElement>(`[data-source-number="${next.at}"]`);
-          column
-            .querySelectorAll('[data-ask-source-highlight]')
-            .forEach((el) => el.removeAttribute('data-ask-source-highlight'));
-          item?.setAttribute('data-ask-source-highlight', 'true');
-          item?.scrollIntoView?.({ block: 'nearest' });
-          (item?.querySelector<HTMLElement>('a[href]') ?? column).focus({ preventScroll: true });
-          return;
-        }
-      }
       opener.current = next.opener;
+      setPanel(
+        presentation === 'auto' &&
+          typeof window !== 'undefined' &&
+          typeof window.matchMedia === 'function' &&
+          window.matchMedia(ASK_SIDE_PANEL_QUERY).matches,
+      );
       setRequest(next);
     },
-    [columnSources],
+    [presentation],
   );
 
   const close = useCallback(() => {
@@ -264,7 +331,9 @@ export function AskSourcesPanelProvider({
   return (
     <SourcesPanelContext.Provider value={value}>
       {children}
-      {request !== null && <AskSourcesSheet request={request} locale={locale} onClose={close} />}
+      {request !== null && (
+        <AskSourcesSurface request={request} locale={locale} panel={panel} onClose={close} />
+      )}
     </SourcesPanelContext.Provider>
   );
 }

@@ -444,7 +444,11 @@ describe('H-5 · source chips and mixed LTR/RTL URLs are direction-safe', () => 
     const frame = code(src('components', 'ask-frame', 'AskFrameScreen.tsx'));
     expect(frame).toMatch(/const foreignCopy = askForeignCopyProps\(interfaceLocale\)/);
     expect(frame).toMatch(/costNoteProps=\{foreignCopy\}/);
-    expect(frame).toMatch(/\{\.\.\.\(foreignCopy \?\? \{\}\)\}/);
+    /* ASK DESIGN COMPLETENESS R1 — the entry lead was the last EN/PL-only line spread with
+       `foreignCopy`; the Design support line that replaced it is a governed seven-locale string
+       (askR2Strings.read.welcomeSupport), so it needs no foreign-copy isolation. The cost note is
+       still EN/PL copy and still isolated (above). */
+    expect(frame).toMatch(/r2s\.read\.welcomeSupport/);
   });
 
   it('every chip and URL helper is locale-driven, with no hardcoded left or right', () => {

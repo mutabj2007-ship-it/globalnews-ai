@@ -197,7 +197,7 @@ export function Composer({
   readonly onSubmit?: () => void;
   readonly pending?: boolean;
   /** D25 04: 220 on desktop, 140 on full-screen phone / 768 portrait. */
-  readonly maxHeight: 220 | 140;
+  readonly maxHeight: 220 | 168 | 140;
   /** CENTERED COMPOSER R1 — the rotating example. Absent for every other caller. */
   readonly example?: ComposerExample;
   /** ASK R2 — the documented input limit's copy (askR2Strings); the limit itself is shared. */
@@ -309,16 +309,20 @@ export function Composer({
           type="submit"
           data-ask="send"
           disabled={!ready}
-          className={`inline-flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-[10px] border border-[#1b6fa8] px-[18px] text-[14px] font-bold text-[#e6f5ff] ${
-            ready ? 'bg-[#0a6bd6]' : 'bg-[var(--ask-read-sunk,#07304f)] opacity-55'
-          }`}
+          data-ask-ready={ready ? 'true' : 'false'}
+          /* ASK DESIGN COMPLETENESS R1 — colour comes from the Design tokens (askDashboard.module.css):
+             no literal palette class here, so no theme adapter can repaint the Design's send. */
+          className="inline-flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-[10px] px-[18px] text-[14px] font-bold"
         >
+          {/*
+            ASK DESIGN COMPLETENESS R1 — the Design's 44 px round send: an arrow mark, the label
+            still the button's accessible name (visually hidden inside the frame's stylesheet,
+            visible everywhere this primitive is reused without it).
+          */}
           {submitLabel}
-          {ready && (
-            <span aria-hidden="true" className="text-[15px] leading-none">
-              ↑
-            </span>
-          )}
+          <svg aria-hidden="true" data-ask="send-icon" viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10 16V4M5 9l5-5 5 5" />
+          </svg>
         </button>
       </div>
       <AskQuestionLimitNote id="ask-frame-composer-limit" state={limit} copy={limitCopy} />

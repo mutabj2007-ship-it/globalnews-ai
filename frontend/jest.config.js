@@ -16,6 +16,8 @@ module.exports = {
       tests passes for the wrong reason.
     */
     '^@globalnews-ai/shared$': '<rootDir>/../shared/src/index.ts',
+    /* ASK DESIGN COMPLETENESS R1 — CSS modules are class-name maps under jest (see the stub). */
+    '\\.module\\.css$': '<rootDir>/jest.cssModuleStub.js',
   },
   transform: {
     '^.+\.tsx?$': [

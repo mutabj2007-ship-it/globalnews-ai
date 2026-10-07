@@ -11,7 +11,7 @@ import { usePathname } from 'next/navigation';
 import type { DisplayLocale, LanguageCode } from '@globalnews-ai/shared';
 import { askDirectionProps } from '@/lib/ask/askDirection';
 import { AskWorkingStatus } from '@/components/ask-frame/AskWorkingStatus';
-import { AskEmblem } from '@/components/ask-frame/AskEmblem';
+import { AskEmblem, AskEmblemMark } from '@/components/ask-frame/AskEmblem';
 import { AskSourcesPanelProvider } from '@/components/ask-frame/AskSourcesPanel';
 import { AskR2TurnView } from '@/components/ask-frame/AskR2TurnView';
 import { COMPACT_TOP_PX } from '@/components/ask/launcherAnchor';
@@ -766,8 +766,8 @@ function GlobalAskAiDock({
                 : 'flex items-center justify-between gap-3 border-b border-border bg-surface-raised/95 px-4 py-3 backdrop-blur'
             }
           >
-            <h2 className={onMap ? 'flex items-center gap-2 text-[15px] font-semibold text-[#ece8ff]' : 'font-display text-base font-medium text-ink-primary'}>
-              {onMap ? <span aria-hidden="true" className="font-mono text-[11px] text-[#a78bfa]">◆</span> : null}
+            <h2 className={onMap ? 'flex items-center gap-2 text-[15px] font-semibold text-[#ece8ff]' : 'flex items-center gap-2 font-display text-base font-medium text-ink-primary'}>
+              {onMap ? <span aria-hidden="true" className="font-mono text-[11px] text-[#a78bfa]">◆</span> : <AskEmblemMark />}
               <a data-ask="dashboard-entry" href={dashboardHref(question, storyContext)}>{t.title} ↗</a>
             </h2>
             <button
@@ -791,7 +791,7 @@ function GlobalAskAiDock({
             data-ask-scroll="conversation"
           >
             {/* ASK READING EXPERIENCE R1 — the dock is always the phone layout: Sources open as a sheet. */}
-            <AskSourcesPanelProvider locale={r2Locale}>
+            <AskSourcesPanelProvider locale={r2Locale} presentation="sheet">
             {/*
               UNIFIED INTELLIGENCE BINDING R2C — the canonical turn view, the SAME component /ask
               renders: answer state, provenance, sources, Save, and "Open full analysis" (a

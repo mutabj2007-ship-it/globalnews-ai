@@ -37,6 +37,8 @@ import type { AskComparisonTable } from '@/lib/api/askV2Api';
 import { AskEvidenceTable } from './AskEvidenceTable';
 import { resolveAskLocale } from '@/lib/ask/askLocale';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
+import { useAskSourcesPanel } from '@/components/ask-frame/AskSourcesPanel';
+import { AskAnswerDetail } from './AskAnswerDetail';
 
 /**
  * ═══ ASK AI REV A §6 — THE COMPACT RESULT ════════════════════════════════
@@ -253,19 +255,31 @@ export function AskCompactResult({
         ? t.resultNoAnswerProvider
         : t.resultNoAnswerEvidence;
   const canOpenFullAnalysis = hasAnalysis || response.articles.length > 0;
-
-  return (
-    <div data-ask="compact-result" className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+  /*
+    ASK DESIGN COMPLETENESS R1 — ANSWER FIRST (RECONCILIATION_GUIDE §5). On the Ask reading
+    surface (a reader locale is given) the execution-mode badge and the retrieval telemetry are
+    the answer's FOOTER, not its head: the first thing read is the opening. The freshness notice
+    stays ABOVE the opening, because it only renders when reporting was cached or unavailable —
+    exactly when the guide asks for the note before the answer. Where a Sources panel exists the
+    inline list is the panel's (kept in the DOM, hidden, so Copy still carries the links).
+  */
+  const readingSurface = locale !== undefined;
+  const sourcesPanel = useAskSourcesPanel();
+  const modeRow = (
+      <div data-ask="answer-mode" className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <AnalysisModeBadge provenance={response.provenance} language={language} locale={locale} />
-        <EvidenceFreshnessNotice
-          retrievalContext={response.retrievalContext}
-          articleCount={response.articles.length}
-          language={language}
-          locale={locale}
-        />
-        {telemetry.retrievedArticleCount === null &&
-        telemetry.reportingClusterCount === null ? null : (
+        {readingSurface ? null : (
+          <EvidenceFreshnessNotice
+            retrievalContext={response.retrievalContext}
+            articleCount={response.articles.length}
+            language={language}
+            locale={locale}
+          />
+        )}
+        {/* On the Ask reading surface the retrieval figures are "About this answer" (Sources). */}
+        {readingSurface ||
+        (telemetry.retrievedArticleCount === null &&
+          telemetry.reportingClusterCount === null) ? null : (
           <span
             data-ask="telemetry"
             className="text-[0.75rem] text-ink-tertiary"
@@ -282,6 +296,20 @@ export function AskCompactResult({
           </span>
         )}
       </div>
+  );
+
+  const freshnessNotice = (
+    <EvidenceFreshnessNotice
+      retrievalContext={response.retrievalContext}
+      articleCount={response.articles.length}
+      language={language}
+      locale={locale}
+    />
+  );
+
+  return (
+    <div data-ask="compact-result" className="flex flex-col gap-3">
+      {readingSurface ? freshnessNotice : modeRow}
 
       {response.retrievalContext.comparisonCoverage?.length ? (
         <section
@@ -467,7 +495,18 @@ export function AskCompactResult({
             />
           ) : null}
 
-          <div data-ask="sources" className="flex flex-col gap-2">
+          {/* ASK DESIGN COMPLETENESS R1 — inline uncertainty + "More detail" (validated fields). */}
+          {briefAccepted && readingSurface && analysis !== null ? (
+            <AskAnswerDetail analysis={analysis} locale={uiLocale} />
+          ) : null}
+
+          {readingSurface ? modeRow : null}
+
+          <div
+            data-ask="sources"
+            className="flex flex-col gap-2"
+            hidden={readingSurface && sourcesPanel !== null && shown.length > 0 ? true : undefined}
+          >
             <p className="text-[0.75rem] text-ink-tertiary">
               {t.resultSourcesHeading}
             </p>

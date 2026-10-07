@@ -127,71 +127,110 @@ export function AskEmblem({
       data-ask-emblem-short={short ? 'true' : undefined}
       className="gna-ask-emblem"
     >
-      <svg viewBox="0 0 40 40" width="40" height="40" overflow="visible" focusable="false">
-        <defs>
-          <radialGradient id={`${id}-glow`} cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#22d3ee" stopOpacity=".42" />
-            <stop offset="55%" stopColor="#0e7490" stopOpacity=".16" />
-            <stop offset="100%" stopColor="#04060c" stopOpacity="0" className="gna-ask-emblem-glow-edge" />
-          </radialGradient>
-          <filter id={`${id}-blur`} x="-80%" y="-80%" width="260%" height="260%">
-            <feGaussianBlur stdDeviation="1.4" result="b" />
-            <feMerge>
-              <feMergeNode in="b" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-        <circle cx="20" cy="20" r="19" fill={`url(#${id}-glow)`} />
-        <circle cx="20" cy="20" r="18" fill="none" stroke="rgba(34,211,238,.62)" strokeWidth="1.3" />
-        <g className="gna-arc gna-ask-emblem-arc">
-          <circle
-            cx="20"
-            cy="20"
-            r="18"
-            fill="none"
-            stroke="rgba(103,232,249,.95)"
-            strokeWidth="1.3"
-            strokeLinecap="round"
-            strokeDasharray="15 98"
-          />
-        </g>
-        <circle cx="20" cy="20" r="13.5" fill="none" stroke="rgba(34,211,238,.3)" strokeWidth="1" />
-        <circle
-          cx="20"
-          cy="20"
-          r="9"
-          fill="none"
-          stroke="rgba(34,211,238,.5)"
-          strokeWidth="1"
-          strokeDasharray="3 5"
-        />
-        <g stroke="rgba(103,232,249,.75)" strokeWidth="1.2" strokeLinecap="round">
-          <path d="M20 0.6 v3.4" />
-          <path d="M20 36 v3.4" />
-          <path d="M0.6 20 h3.4" />
-          <path d="M36 20 h3.4" />
-        </g>
-        <g className="gna-sweep gna-ask-emblem-sweep">
-          <path
-            d="M20 20 L20 4.5"
-            stroke="rgba(103,232,249,.55)"
-            strokeWidth="1.1"
-            strokeLinecap="round"
-            fill="none"
-          />
-        </g>
-        {/* The source's expanding "ping" ring is NOT used in Ask: static at r7, opacity .55. */}
-        <circle cx="20" cy="20" r="7" fill="none" stroke="#67e8f9" strokeWidth="1" opacity=".55" />
-        <circle
-          className="gna-core gna-ask-emblem-core"
-          cx="20"
-          cy="20"
-          r="4.6"
-          fill="#22d3ee"
-          filter={`url(#${id}-blur)`}
-        />
-      </svg>
+      <AskEmblemSvg id={id} />
     </div>
+  );
+}
+
+/**
+ * ASK DESIGN COMPLETENESS R1 — the ONE inlined drawing of the owner-approved emblem, shared by
+ * the animated welcome emblem above and the static header mark below, so the geometry exists
+ * exactly once in the bundle. Classes are the motion hooks; whether they move is decided by
+ * the wrapper (`gna-ask-emblem` animates them only under reduced-motion: no-preference; the
+ * header mark never does).
+ */
+function AskEmblemSvg({
+  id,
+  size = 40,
+  still = false,
+}: {
+  readonly id: string;
+  readonly size?: number;
+  /** The header mark: the motion hooks keep their light-adaptation classes but never animate. */
+  readonly still?: boolean;
+}): JSX.Element {
+  const motion = still ? { style: { animation: 'none' } } : {};
+  return (
+    <svg viewBox="0 0 40 40" width={size} height={size} overflow="visible" focusable="false">
+      <defs>
+        <radialGradient id={`${id}-glow`} cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#22d3ee" stopOpacity=".42" />
+          <stop offset="55%" stopColor="#0e7490" stopOpacity=".16" />
+          <stop offset="100%" stopColor="#04060c" stopOpacity="0" className="gna-ask-emblem-glow-edge" />
+        </radialGradient>
+        <filter id={`${id}-blur`} x="-80%" y="-80%" width="260%" height="260%">
+          <feGaussianBlur stdDeviation="1.4" result="b" />
+          <feMerge>
+            <feMergeNode in="b" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+      <circle cx="20" cy="20" r="19" fill={`url(#${id}-glow)`} />
+      <circle cx="20" cy="20" r="18" fill="none" stroke="rgba(34,211,238,.62)" strokeWidth="1.3" />
+      <g className="gna-arc gna-ask-emblem-arc" {...motion}>
+        <circle
+          cx="20"
+          cy="20"
+          r="18"
+          fill="none"
+          stroke="rgba(103,232,249,.95)"
+          strokeWidth="1.3"
+          strokeLinecap="round"
+          strokeDasharray="15 98"
+        />
+      </g>
+      <circle cx="20" cy="20" r="13.5" fill="none" stroke="rgba(34,211,238,.3)" strokeWidth="1" />
+      <circle
+        cx="20"
+        cy="20"
+        r="9"
+        fill="none"
+        stroke="rgba(34,211,238,.5)"
+        strokeWidth="1"
+        strokeDasharray="3 5"
+      />
+      <g stroke="rgba(103,232,249,.75)" strokeWidth="1.2" strokeLinecap="round">
+        <path d="M20 0.6 v3.4" />
+        <path d="M20 36 v3.4" />
+        <path d="M0.6 20 h3.4" />
+        <path d="M36 20 h3.4" />
+      </g>
+      <g className="gna-sweep gna-ask-emblem-sweep" {...motion}>
+        <path
+          d="M20 20 L20 4.5"
+          stroke="rgba(103,232,249,.55)"
+          strokeWidth="1.1"
+          strokeLinecap="round"
+          fill="none"
+        />
+      </g>
+      {/* The source's expanding "ping" ring is NOT used in Ask: static at r7, opacity .55. */}
+      <circle cx="20" cy="20" r="7" fill="none" stroke="#67e8f9" strokeWidth="1" opacity=".55" />
+      <circle
+        className="gna-core gna-ask-emblem-core"
+          {...motion}
+        cx="20"
+        cy="20"
+        r="4.6"
+        fill="#22d3ee"
+        filter={`url(#${id}-blur)`}
+      />
+    </svg>
+  );
+}
+
+/**
+ * ASK DESIGN COMPLETENESS R1 — THE HEADER MARK (MOTION_SPEC "Header mark": 24 px, every state,
+ * opacity 1, no motion — the static file). It sits beside the wordmark in the 56 px header, is
+ * decorative (`aria-hidden`) and carries none of the idle motion hooks' animation: the
+ * `gna-ask-emblem-mark` scope has no animation rule, so nothing here can ever read as progress.
+ */
+export function AskEmblemMark(): JSX.Element {
+  const id = useId().replace(/[^a-zA-Z0-9_-]/g, '');
+  return (
+    <span aria-hidden="true" data-ask="emblem-mark" className="gna-ask-emblem-mark inline-flex h-6 w-6 shrink-0">
+      <AskEmblemSvg id={id} size={24} still />
+    </span>
   );
 }

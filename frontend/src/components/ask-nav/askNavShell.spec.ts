@@ -126,11 +126,18 @@ describe('ASK SHELL — the D25 geometry it must not disturb', () => {
     expect(frame).toContain("{returnsToMap ? '←' : '×'}");
   });
 
-  it('the header still holds exactly three slots, centred title intact', () => {
+  it('the header is the Design header: one left control, the mark + product name, New', () => {
+    /*
+      ASK DESIGN COMPLETENESS R1 — the Claude Design 56 px header (menu · 24 px emblem + the ONE
+      canonical product name · New). The left slot is still exactly one control whichever branch
+      wins, the product name is still the frozen title string, and the source-count readout is
+      still in the DOM for assistive technology.
+    */
     const header = frame.slice(frame.indexOf('className={styles.phoneHeader}'));
     const inside = header.slice(0, header.indexOf('</header>'));
-    expect(inside).toContain('flex-1 truncate text-center');
+    expect(inside).toContain('<AskEmblemMark />');
     expect(inside).toContain('data-ask="header-state"');
+    expect(inside).toContain('data-ask="new-question"');
     /* One left control rendered, whichever branch wins — never both. */
     expect(inside.match(/min-h-11 min-w-11/g) ?? []).toHaveLength(2);
     expect(inside).toContain('{r2s.askTitle}');
