@@ -122,6 +122,20 @@ export const NO_CURRENT_FINDINGS_RULE =
   'or advisory part of the question (for example which checks to make and why), clearly as general ' +
   'guidance; if no such part exists, stop after stating that no verified current findings exist.';
 
+/**
+ * ASK R2 LIVE-GATE REPAIR (P0-6) — the sources for current reporting could not be reached this turn
+ * (rate-limited, timed out, unavailable). That is NOT "nothing happened" and NOT "nothing was
+ * found": the reasoning model says the current search could not be completed and supplies nothing
+ * current from memory.
+ */
+export const SOURCES_UNAVAILABLE_RULE =
+  'SOURCES UNAVAILABLE: the current-reporting sources could not be reached for this question right ' +
+  'now (they were rate-limited, timed out or unavailable), so the current part could not be checked. ' +
+  'Say so plainly in your first sentence — it is not evidence that nothing happened. Do not name, ' +
+  'list, date or describe any recent development, event, notice, figure or disruption as if it ' +
+  'happened, and never fill a requested table of developments. Then answer ONLY the general or ' +
+  'advisory part of the question, clearly as general guidance; if none exists, stop.';
+
 const ARTIFACT_RULE =
   'MEMORY: if your answer establishes a reusable structure — a conceptual framework, a diagnosis, ' +
   'a comparison, decision criteria, recommendations, a plan or a summary — end your reply with ' +

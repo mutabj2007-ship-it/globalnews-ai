@@ -46,6 +46,7 @@ import {
   jobRulesFor,
   NO_CURRENT_FINDINGS_RULE,
   RECHECK_UNVERIFIED_RULE,
+  SOURCES_UNAVAILABLE_RULE,
 } from './job-execution';
 import type { BoundedConversationState } from '../ask-router/semantic-ir/interpret-turn';
 import {
@@ -1506,10 +1507,14 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       outcome = noEvidence
         ? 'REFUSAL'
         : response.analysis === null && response.analysisError !== undefined
-          ? 'FAILURE'
+          ? /* ASK R2 LIVE-GATE REPAIR (P0-5) — a provider timeout is a TIMEOUT, not a failure */
+            isTimeoutFailure(response.analysisError)
+            ? 'TIMEOUT'
+            : 'FAILURE'
           : 'SUCCESS';
     } catch (error) {
-      outcome = /timeout|deadline/i.test((error as Error)?.message ?? '') ? 'TIMEOUT' : 'FAILURE';
+      /* ASK R2 LIVE-GATE REPAIR (P0-5) — a deadline is a TIMEOUT, whatever its wording */
+      outcome = isTimeoutFailure(error) ? 'TIMEOUT' : 'FAILURE';
     } finally {
       /* 5 · settle on actual units (null keeps the estimate — the safe direction). */
       const used = usage as { promptTokens: number; completionTokens: number } | null;
@@ -1564,7 +1569,9 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         route,
         operationId,
         draft,
-        noEvidence ? 'NO_EVIDENCE' : 'UNAVAILABLE',
+        /* ASK R2 LIVE-GATE REPAIR (P0-6) — an empty result because the SOURCES failed is not the
+           same fact as a search that found nothing: it is UNAVAILABLE, said as such */
+        noEvidence && !retrievalFailed(response) ? 'NO_EVIDENCE' : 'UNAVAILABLE',
         undefined,
         contract.stableQuestion ?? undefined,
       );
@@ -1946,7 +1953,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
           undefined,
           {
             ...policy(
-              rework.priorOutcome === 'NO_FINDINGS' ? contract.answerRules : REWORK_RESEARCH_RULES,
+              rework.priorOutcome === 'FINDINGS' ? REWORK_RESEARCH_RULES : contract.answerRules,
             ),
             ...(window === null
               ? {}
@@ -1967,10 +1974,14 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       outcome = noEvidence
         ? 'REFUSAL'
         : response.analysis === null && response.analysisError !== undefined
-          ? 'FAILURE'
+          ? /* ASK R2 LIVE-GATE REPAIR (P0-5) — a provider timeout is a TIMEOUT, not a failure */
+            isTimeoutFailure(response.analysisError)
+            ? 'TIMEOUT'
+            : 'FAILURE'
           : 'SUCCESS';
     } catch (error) {
-      outcome = /timeout|deadline/i.test((error as Error)?.message ?? '') ? 'TIMEOUT' : 'FAILURE';
+      /* ASK R2 LIVE-GATE REPAIR (P0-5) — a deadline is a TIMEOUT, whatever its wording */
+      outcome = isTimeoutFailure(error) ? 'TIMEOUT' : 'FAILURE';
     } finally {
       const used = usage as { promptTokens: number; completionTokens: number } | null;
       const actual =
@@ -2119,10 +2130,14 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       outcome = noEvidence
         ? 'REFUSAL'
         : response.analysis === null && response.analysisError !== undefined
-          ? 'FAILURE'
+          ? /* ASK R2 LIVE-GATE REPAIR (P0-5) — a provider timeout is a TIMEOUT, not a failure */
+            isTimeoutFailure(response.analysisError)
+            ? 'TIMEOUT'
+            : 'FAILURE'
           : 'SUCCESS';
     } catch (error) {
-      outcome = /timeout|deadline/i.test((error as Error)?.message ?? '') ? 'TIMEOUT' : 'FAILURE';
+      /* ASK R2 LIVE-GATE REPAIR (P0-5) — a deadline is a TIMEOUT, whatever its wording */
+      outcome = isTimeoutFailure(error) ? 'TIMEOUT' : 'FAILURE';
     } finally {
       const used = usage as { promptTokens: number; completionTokens: number } | null;
       const actual =
@@ -2404,7 +2419,11 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       /* ASK R2 (contract §7/§10 G) — this turn's search found no usable current reporting (or a
          source failed): the reasoning model is told so, explicitly, and may not supply
          "developments" from memory (replayed: TEST C with no evidence reached this call). */
-      partialCurrent === undefined ? '' : NO_CURRENT_FINDINGS_RULE,
+      partialCurrent === undefined
+        ? ''
+        : partialCurrent === 'UNAVAILABLE'
+          ? SOURCES_UNAVAILABLE_RULE
+          : NO_CURRENT_FINDINGS_RULE,
     ]
       .filter((r) => r !== '')
       .join('\n\n');
@@ -2820,7 +2839,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     /** ASK RETRIEVAL / CONVERSATION R2 (§7) — a follow-up executed on the earlier answer */
     rework: {
       readonly form: string;
-      readonly outcome: 'FINDINGS' | 'NO_FINDINGS';
+      readonly outcome: 'FINDINGS' | 'NO_FINDINGS' | 'INCOMPLETE';
       readonly evidence: 'REUSED' | 'SEARCHED_AGAIN';
       readonly excluded: readonly string[];
     } | null = null,
@@ -3026,4 +3045,45 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       validUntil: plan.validUntil,
     };
   }
+}
+
+/**
+ * ASK R2 LIVE-GATE REPAIR (P0-5) — live Alpha 2026-10-06 10:42Z: the analysis budget expired
+ * ("Analysis did not complete within the total synchronous budget of 28000 ms" /
+ * "OpenAI request cancelled because the analysis response deadline expired"), the operation was
+ * released MODEL_FAILURE and the reader saw "Ask is unavailable right now". A deadline, a budget
+ * expiry or a provider timeout is MODEL_TIMEOUT — "couldn't finish in time, retry" — never a
+ * disabled capability, an unavailable provider or a spent quota.
+ */
+export function isTimeoutFailure(error: unknown): boolean {
+  const text =
+    typeof error === 'string'
+      ? error
+      : error instanceof Error
+        ? `${error.name} ${error.message}`
+        : '';
+  return /timeout|timed\s+out|deadline|did not complete within|synchronous budget|provider-timeout/i.test(text);
+}
+
+/**
+ * ASK R2 LIVE-GATE REPAIR (P0-6) — did the empty result come from failing SOURCES rather than from a
+ * search that found nothing? Read from the retrieval facts the analysis already returns (no new
+ * call): every attempted provider failed or was cut by the budget, or the landed path stamped a
+ * provider-limited outcome.
+ */
+export function retrievalFailed(response: { retrievalContext?: unknown } | null | undefined): boolean {
+  const ctx = response?.retrievalContext as
+    | {
+        providers?: readonly string[];
+        providerFailures?: readonly unknown[];
+        fallbackReason?: string;
+        outcome?: string;
+        dataMode?: string;
+      }
+    | undefined;
+  if (ctx === undefined) return false;
+  if ((ctx.outcome ?? '').startsWith('PROVIDER_')) return true;
+  const answered = (ctx.providers ?? []).length;
+  const failed = (ctx.providerFailures ?? []).length;
+  return answered === 0 && (failed > 0 || ctx.fallbackReason === 'provider-error' || ctx.dataMode === 'unavailable');
 }

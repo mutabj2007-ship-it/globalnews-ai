@@ -58,7 +58,11 @@ import { askRequestContext } from './ask-request-context';
 import { isReusableStoredPayload } from './stored-result-reuse';
 import { conversationPlaceOf, PLACE_LOOKBACK } from './conversation/conversation-place';
 import { readConversationalTurn, type ConversationalTurn } from './conversation/conversation-state';
-import { validateStoredArtifact, type PriorArtifact } from './conversation/conversation-artifact';
+import {
+  incompleteTurnArtifact,
+  validateStoredArtifact,
+  type PriorArtifact,
+} from './conversation/conversation-artifact';
 import { isSubjectFollowUp } from '../analysis/anchor/conversation-subject.util';
 import { isAnaphoricFollowUp } from '../analysis/anchor/event-anchor.util';
 import { ComputeMeterService } from '../compute-controls/compute-meter.service';
@@ -244,12 +248,38 @@ export async function priorArtifactIn(
     take: ARTIFACT_LOOKBACK,
     select: {
       operationId: true,
-      operation: { select: { storedResult: { select: { payload: true } } } },
+      question: true,
+      createdAt: true,
+      operation: {
+        select: {
+          status: true,
+          failureCode: true,
+          plan: true,
+          storedResult: { select: { payload: true } },
+        },
+      },
     },
   });
   for (const t of turns) {
     const payload = t.operation?.storedResult?.payload as
       Record<string, unknown> | null | undefined;
+    /* ASK R2 LIVE-GATE REPAIR (P0-4) — a turn whose execution FAILED (released with a failure
+       code, nothing stored) still carries the reader's intent: its question, typed places and
+       window become a bounded, no-findings, incomplete record — never evidence — so a correction
+       ("…through Dar es Salaam, not Mombasa. Revise your answer…") revises THAT question. */
+    if (
+      payload == null &&
+      t.operation?.status === 'RELEASED' &&
+      typeof t.operation.failureCode === 'string'
+    ) {
+      const planScope = (t.operation.plan as { scope?: unknown } | null)?.scope;
+      const incomplete = incompleteTurnArtifact({
+        question: t.question,
+        planScope,
+        askedAt: t.createdAt,
+      });
+      if (incomplete !== null) return { ...incomplete, sourceOperationId: t.operationId };
+    }
     /* R4 ALPHA R-3 — a stored answer's memory: model-emitted or server-derived (bounded either way) */
     const artifact = validateStoredArtifact(payload?.artifact);
     if (artifact !== null) return { ...artifact, sourceOperationId: t.operationId };

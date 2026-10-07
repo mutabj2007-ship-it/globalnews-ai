@@ -1,3 +1,4 @@
+import { supportedWindowHours } from '../../ask-router/reporting-window';
 /**
  * ════════════════════════════════════════════════════════════════════════════
  * CTO R4 — CONVERSATION ARTIFACTS: memory of work this assistant itself produced
@@ -96,6 +97,13 @@ export interface ConversationArtifact {
    * beside a named gap, never findings. A follow-up on it says so instead of revising "findings".
    */
   readonly currentFindings?: 'NONE';
+  /**
+   * ASK R2 LIVE-GATE REPAIR (P0-4) — the earlier turn did NOT COMPLETE (its execution failed:
+   * MODEL_FAILURE / a deadline / a refusal): server-derived from the stored turn, never emitted by
+   * a model. Its question and scope survive so a correction keeps the reader's intent; it carries
+   * no findings and is never evidence.
+   */
+  readonly incomplete?: true;
 }
 
 /** The artifact as it is handed to a later turn: with the turn that produced it. */
@@ -106,7 +114,9 @@ export interface PriorArtifact extends ConversationArtifact {
 export const ARTIFACT_MAX_COMPONENTS = 8;
 const MAX_LABEL = 80;
 const MAX_COMPONENT = 80;
-const MAX_SCOPE_QUESTION = 300;
+/* ASK R2 LIVE-GATE REPAIR (P0-4) — the WHOLE earlier question (its output contract — table,
+   columns, closing — is at its end; 300 characters cut it off), bounded by the documented limit */
+const MAX_SCOPE_QUESTION = 4000;
 const MAX_EVIDENCE_REFS = 8;
 const EVIDENCE_REF = /^[A-Za-z0-9:._-]{1,120}$/;
 const EVIDENCE_URL = /^https?:\/\/[^\s<>"'`]{1,2040}$/i;
@@ -183,6 +193,7 @@ export function validateStoredArtifact(candidate: unknown): ConversationArtifact
     ...(provenance === 'SOURCED_REPORTING' && refs.length > 0 ? { evidenceRefs: refs } : {}),
     ...(provenance === 'SOURCED_REPORTING' && urls.length > 0 ? { evidenceUrls: urls } : {}),
     ...(server && c.currentFindings === 'NONE' ? { currentFindings: 'NONE' as const } : {}),
+    ...(server && c.incomplete === true ? { incomplete: true as const } : {}),
   };
 }
 
@@ -309,4 +320,68 @@ export function artifactIdentity(artifact: ConversationArtifact): string {
     (artifact.provenance === 'SOURCED_REPORTING' ? '|SOURCED' : '') +
     (artifact.scope === undefined ? '' : `|${artifact.scope.question}`)
   );
+}
+
+/* the relative windows reporting-window.ts honours, read from an earlier question's own words */
+const PRIOR_RELATIVE_WINDOW =
+  /(?:(?:over|in|during|within|for)\s+)?(?:the\s+)?(?:last|past|previous)\s+(?:\d{1,3}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fourteen|fifteen|twenty|thirty)\s+(?:days?|hours?)(?![\p{L}\p{N}])|\b(?:the\s+)?past\s+week\b/iu;
+
+/**
+ * ASK R2 LIVE-GATE REPAIR (P0-4) — the record of an earlier turn that did NOT complete.
+ *
+ * Live Alpha 2026-10-06 (fe96eb1): the corridor question (B) released MODEL_FAILURE, so it left no
+ * stored answer and no memory; "My shipment goes through Dar es Salaam, not Mombasa. Revise your
+ * answer…" then lost Rwanda (destination), the seven-day window, the import purpose and the
+ * requested structure. The TURN itself is stored (its question, its plan's typed places and its
+ * time), so the server derives a bounded record from those facts — no findings, never evidence,
+ * marked incomplete — and the existing follow-up contract revises THAT question honestly.
+ */
+export function incompleteTurnArtifact(input: {
+  readonly question: string;
+  readonly planScope: unknown;
+  readonly askedAt: Date;
+}): ConversationArtifact | null {
+  const question = clean(input.question, MAX_SCOPE_QUESTION);
+  if (question === null) return null;
+  let countries: string[] = [];
+  try {
+    const scope =
+      typeof input.planScope === 'string' ? (JSON.parse(input.planScope) as { geography?: unknown }) : null;
+    countries = Array.isArray(scope?.geography)
+      ? [
+          ...new Set(
+            scope.geography
+              .filter((g): g is string => typeof g === 'string')
+              .map((g) => g.split(':').pop() ?? '')
+              .filter((iso3) => /^[A-Z]{3}$/.test(iso3)),
+          ),
+        ].slice(0, 8)
+      : [];
+  } catch {
+    countries = [];
+  }
+  const period = PRIOR_RELATIVE_WINDOW.exec(question)?.[0]?.trim();
+  const hours = period === undefined ? null : supportedWindowHours(period);
+  const to = input.askedAt.getTime();
+  const window =
+    period !== undefined && hours !== null && Number.isFinite(to)
+      ? { statedPeriod: period, from: new Date(to - hours * 3_600_000).toISOString(), to: new Date(to).toISOString() }
+      : null;
+  return {
+    kind: 'REASONED_ANSWER',
+    label: 'Earlier search did not complete',
+    components: [],
+    provenance: 'MODEL_REASONING',
+    citable: false,
+    scope: {
+      question,
+      job: null,
+      countries,
+      relation: null,
+      freshness: 'CURRENT',
+      ...(window === null ? {} : { window }),
+    },
+    currentFindings: 'NONE',
+    incomplete: true,
+  };
 }
