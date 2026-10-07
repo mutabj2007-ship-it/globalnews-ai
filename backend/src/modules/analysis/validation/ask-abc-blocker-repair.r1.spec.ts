@@ -19,6 +19,7 @@ import {
 } from '../../news/retrieval-budget';
 import type { DevelopmentBreadth } from './brief-compliance.util';
 import { normalizeBriefFields } from '../providers/normalize-brief-fields.util';
+import { removedFromEarlierAnswer } from '../prompt/rework-changes.util';
 import { assessReaderContractShape, opensWithNothingVerified } from './reader-contract-shape.util';
 
 /**
@@ -306,6 +307,33 @@ describe('Single report · C: one qualifying report must still reach the reader,
       summary: 'Several sources agree cargo rose.',
     }) as { summary: string };
     expect(assessSingleSourceDiscipline(corroborated.summary, one, 'en').compliant).toBe(false);
+  });
+
+  it('round 5 · the disclosure appears ONCE when the brief already makes it (exact repeat or reworded)', () => {
+    const basis = 'Only one qualifying report was found: KT Press, 2 October 2026.';
+    const live = normalizeBriefFields({
+      singleReportBasis: basis,
+      summary: `${basis} The report states that cargo through Dar es Salaam rose 24%.`,
+    }) as { summary: string };
+    expect(live.summary.split(basis).length - 1).toBe(1);
+    const reworded = normalizeBriefFields({
+      singleReportBasis: basis,
+      summary: 'One qualifying report currently indicates cargo through Dar es Salaam rose 24%.',
+    }) as { summary: string };
+    expect(reworded.summary).not.toContain(basis);
+    expect(assessSingleSourceDiscipline(reworded.summary, one, 'en').compliant).toBe(true);
+  });
+
+  it('round 5 · a re-read revision is told, as data, what was removed and why', () => {
+    const text = removedFromEarlierAnswer([
+      { title: KEN_RWA_DEALS.title, missing: ['not via Mombasa', 'route Dar es Salaam'] },
+      { title: KIBEHO.title, missing: ['route Dar es Salaam'] },
+    ]);
+    expect(text).toMatch(/CHANGED SINCE YOUR EARLIER ANSWER/);
+    expect(text).toContain(`"${KEN_RWA_DEALS.title}" — its only route link is Mombasa, which the reader has now ruled out.`);
+    expect(text).toContain("it does not name the reader's corrected route (Dar es Salaam)");
+    expect(text).toMatch(/state the single-report disclosure only once/);
+    expect(removedFromEarlierAnswer([])).toBe('');
   });
 
   it('it composes with a table brief: disclosure first, then opening, table, closing', () => {

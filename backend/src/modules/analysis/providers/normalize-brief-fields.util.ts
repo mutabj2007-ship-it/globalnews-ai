@@ -1,4 +1,5 @@
 import { layoutReaderContractSummary } from '../validation/reader-contract-shape.util';
+import { disclosesSingleReport } from '../validation/brief-compliance.util';
 
 /**
  * ============================================================================
@@ -42,6 +43,10 @@ export function normalizeBriefFields(content: unknown): unknown {
     const { singleReportBasis: basis, ...withoutBasis } = outer;
     const joined = normalizeBriefFields(withoutBasis) as Record<string, unknown>;
     const brief = typeof joined.summary === 'string' ? joined.summary : '';
+    /* once, never twice: the field GUARANTEES the disclosure; when the brief itself already makes it
+       (live ec50673, C: the same sentence came back in both), nothing is added — the single-source
+       check reads the whole brief, so it is satisfied either way */
+    if (disclosesSingleReport(brief)) return { ...joined, summary: brief };
     const summary = [String(basis).trim(), brief.trim()].filter((part) => part !== '').join('\n\n');
     return { ...joined, summary };
   }

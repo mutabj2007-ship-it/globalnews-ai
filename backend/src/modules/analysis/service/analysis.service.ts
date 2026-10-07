@@ -132,6 +132,7 @@ import {
   detectDevelopmentBreadth,
 } from '../validation/brief-compliance.util';
 import { assessReaderContractShape, contractBlocks } from '../validation/reader-contract-shape.util';
+import { removedFromEarlierAnswer } from '../prompt/rework-changes.util';
 import { acceptExecutiveBrief, withholdExecutiveBrief } from '../validation/brief-fail-closed.util';
 import { applyBriefRelationIntegrity } from '../validation/entity-role-geography.util';
 import {
@@ -3597,10 +3598,23 @@ export class AnalysisService {
           supplement (at most two phrases, provider then retained store) is searched and gated the
           same way. Nothing irrelevant is ever padded in: an empty result is the truthful answer.
         */
+        /*
+          ASK R2 A/B/C BLOCKER REPAIR R1 — on a revision that RE-READS the earlier answer's evidence
+          (anchorSupplements: false), what the corrected gate removes is a measured fact the reader
+          asked about ("…and explain what changed"). Live 625f85b/ec50673, C: the Mombasa-only Kenya–
+          Rwanda item was correctly dropped, but generation was never told, so the answer could not
+          say what changed. It is handed over as data, alongside the evidence.
+        */
+        let removedOnReread: Array<{ readonly title: string; readonly missing: readonly string[] }> = [];
         if (executionPolicy?.questionAnchors?.gated === true) {
           const anchors = executionPolicy.questionAnchors;
           const candidates = articles.length;
           const admitted = articles.filter((article) => admitsReport(anchors, article).admitted);
+          if (executionPolicy.anchorSupplements === false) {
+            removedOnReread = articles
+              .map((article) => ({ title: article.title, missing: admitsReport(anchors, article).missing }))
+              .filter((entry) => entry.missing.length > 0);
+          }
           const queries =
             executionPolicy.anchorSupplements === false ? [] : supplementQueries(anchors, admitted);
           const seen = new Set(admitted.map((article) => article.id));
@@ -3917,9 +3931,18 @@ export class AnalysisService {
             ...(executionPolicy?.usageSink === undefined
               ? {}
               : { usageSink: executionPolicy.usageSink }),
-            ...(executionPolicy?.governed === undefined || executionPolicy.governed.rules === ''
-              ? {}
-              : { governed: executionPolicy.governed }),
+            ...(() => {
+              const removals = removedFromEarlierAnswer(removedOnReread);
+              /* no removals: exactly the previous behaviour */
+              if (removals === '') {
+                return executionPolicy?.governed === undefined || executionPolicy.governed.rules === ''
+                  ? {}
+                  : { governed: executionPolicy.governed };
+              }
+              /* ASK R2 A/B/C BLOCKER REPAIR R1 — the re-read's measured removals, as delimited data */
+              const data = [executionPolicy?.governed?.data ?? '', removals].filter((part) => part !== '').join('\n\n');
+              return { governed: { rules: executionPolicy?.governed?.rules ?? '', data } };
+            })(),
             ...(executionPolicy?.reportingWindow === undefined
               ? {}
               : { reportingWindow: executionPolicy.reportingWindow }),
