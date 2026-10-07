@@ -6,6 +6,7 @@ import {
   MIDDLE_EAST_MEMBERS,
   findCountryByIso3,
 } from '@globalnews-ai/shared';
+import { readTradeCorridor, type TradeCorridor } from './trade-corridor.util';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -33,12 +34,19 @@ export interface AnchorGroup {
   readonly terms: readonly string[];
   /** Topic groups only: the plain search phrase for an anchored retrieval. */
   readonly query?: string;
+  /** CORRIDOR actors only: the destination country, or one named route. */
+  readonly role?: 'DESTINATION' | 'ROUTE';
 }
 
 export interface QuestionAnchors {
   readonly actors: readonly AnchorGroup[];
   readonly topics: readonly AnchorGroup[];
-  readonly relation: 'LINKED' | 'SET' | 'NONE';
+  /**
+   * CORRIDOR (ASK R2 · geography): a trade / shipping corridor — the destination and each named
+   * route are alternatives (a report about ONE of them is evidence), the reader's coverage areas
+   * are alternatives too, and each route is searched (see supplementQueries).
+   */
+  readonly relation: 'LINKED' | 'SET' | 'CORRIDOR' | 'NONE';
   /** True when the gate should be applied (see `gateApplies`). */
   readonly gated: boolean;
 }
@@ -133,6 +141,9 @@ export function normalizeText(value: string): string {
     /* possessives: "Kenya's economy" names Kenya */
     .replace(/'s\b/g, '')
     .replace(/[^\p{L}\p{N}.']+/gu, ' ')
+    /* ASK R2 · geography — a sentence-final full stop is not part of a name: "…or Dar es
+       Salaam. Cover ports" never matched "dar es salaam" (inner dots, as in "u.s.", are kept) */
+    .replace(/\.+(?=\s|$)/g, '')
     .replace(/\s+/g, ' ')
     .trim()} `;
 }
@@ -196,10 +207,63 @@ export function regionsNamedIn(question: string): string[] {
   return REGIONS.filter((r) => r.cues.some((cue) => (cue === 'eu' ? /\bEU\b/.test(question) : hasPhrase(text, cue)))).map((r) => r.key);
 }
 
-export function questionAnchorsOf(question: string): QuestionAnchors {
+/**
+ * ASK R2 · geography — every coverage area a corridor question can list is evidence for it:
+ * ports, borders, transport, customs, fuel, security. Added to a corridor's topic families.
+ */
+const CORRIDOR_LOGISTICS: AnchorGroup = {
+  key: 'corridor-logistics',
+  label: 'ports, borders and transport',
+  query: 'port',
+  terms: [
+    'port', 'ports', 'harbour', 'harbor', 'cargo', 'freight', 'shipping', 'shipment', 'shipments', 'vessel',
+    'vessels', 'container', 'containers', 'transit', 'corridor', 'logistics', 'truck', 'trucks', 'trucker',
+    'truckers', 'lorry', 'lorries', 'road', 'roads', 'highway', 'railway', 'rail', 'sgr', 'border', 'borders',
+    'customs', 'clearance', 'import', 'imports', 'importers', 'export', 'exports', 'tariff', 'tariffs', 'tax',
+    'levy', 'fuel', 'diesel', 'petrol', 'strike', 'protest', 'protests', 'security', 'congestion', 'delays',
+  ],
+};
+
+function corridorAnchors(corridor: TradeCorridor, topics: readonly AnchorGroup[]): QuestionAnchors {
+  const actors: AnchorGroup[] = [];
+  if (corridor.destination !== null) {
+    const g = countryGroup(corridor.destination.iso3);
+    if (g !== null) actors.push({ ...g, role: 'DESTINATION' });
+  }
+  for (const route of corridor.routes) {
+    const g = countryGroup(route.iso3);
+    if (g === null) continue;
+    const city = route.city === null ? [] : [route.city.toLowerCase()];
+    actors.push({ key: g.key, label: route.label, terms: [...new Set([...city, ...g.terms])], role: 'ROUTE' });
+  }
+  const allTopics = topics.some((t) => t.key === CORRIDOR_LOGISTICS.key) ? topics : [...topics, CORRIDOR_LOGISTICS];
+  return { actors, topics: allTopics, relation: 'CORRIDOR', gated: actors.length > 0 };
+}
+
+/**
+ * The question's anchors. `corridor`: the route's corridor reading (with the earlier turn's
+ * destination when the reader only named a route) — `null` when the route read none (a bilateral
+ * relationship keeps its own scope); omitted, the question itself is read for one.
+ */
+export function questionAnchorsOf(question: string, corridor?: TradeCorridor | null): QuestionAnchors {
   const text = normalizeText(question);
   const actors: AnchorGroup[] = [];
+  const reading = corridor === undefined ? readTradeCorridor(question) : corridor;
+  if (reading !== null && (reading.destination !== null || reading.routes.length > 0)) {
+    return corridorAnchors(
+      reading,
+      TOPICS.filter((t) => t.key !== 'economy' && t.cues.test(text)).map((t) => ({
+        key: t.key,
+        label: t.label,
+        terms: t.terms,
+        query: t.query,
+      })),
+    );
+  }
+  /* a place the reader ruled out ("not Mombasa") is never an anchor */
+  const excluded = new Set((reading?.excluded ?? []).map((p) => p.iso3));
   for (const iso3 of countriesNamedIn(question)) {
+    if (excluded.has(iso3)) continue;
     const g = countryGroup(iso3);
     if (g !== null) actors.push(g);
   }
@@ -236,7 +300,13 @@ export function admitsReport(anchors: QuestionAnchors, report: { title: string; 
   } else if (anchors.actors.length > 0 && !anchors.actors.some(has)) {
     missing.push(anchors.actors.map((a) => a.label).join(' / '));
   }
-  for (const t of anchors.topics) if (!has(t)) missing.push(t.label);
+  if (anchors.relation === 'CORRIDOR') {
+    /* the reader's coverage areas are alternatives: one of them is enough */
+    if (anchors.topics.length > 0 && !anchors.topics.some(has))
+      missing.push(anchors.topics.map((t) => t.label).join(' / '));
+  } else {
+    for (const t of anchors.topics) if (!has(t)) missing.push(t.label);
+  }
   return { admitted: missing.length === 0, missing };
 }
 
@@ -253,11 +323,51 @@ export function anchorsKey(anchors: QuestionAnchors): string {
  */
 export function anchoredQueries(anchors: QuestionAnchors): string[] {
   if (!anchors.gated) return [];
+  if (anchors.relation === 'CORRIDOR') return corridorQueries(anchors, anchors.actors);
   const topic = anchors.topics.map((t) => t.query ?? t.label).slice(0, 2).join(' ');
   if (anchors.relation === 'LINKED' || anchors.actors.length <= 1) {
     return [[...anchors.actors.map((a) => a.label), topic].filter((part) => part !== '').join(' ')];
   }
   return anchors.actors.slice(0, 2).map((a) => [a.label, topic].filter((part) => part !== '').join(' '));
+}
+
+/** The same bound as every anchored supplement: at most two searches. */
+const MAX_SUPPLEMENT_QUERIES = 2;
+
+/**
+ * CORRIDOR — one search per named route, linked to the destination ("Mombasa Rwanda", "Dar es
+ * Salaam Rwanda"); with no route, the destination with the first coverage area.
+ */
+function corridorQueries(anchors: QuestionAnchors, actors: readonly AnchorGroup[]): string[] {
+  const destination = anchors.actors.find((a) => a.role === 'DESTINATION');
+  const routes = actors.filter((a) => a.role === 'ROUTE');
+  const topic = anchors.topics[0]?.query ?? 'trade';
+  if (routes.length === 0)
+    return destination === undefined || !actors.includes(destination) ? [] : [`${destination.label} ${topic}`];
+  return routes
+    .slice(0, MAX_SUPPLEMENT_QUERIES)
+    .map((r) => (destination === undefined ? `${r.label} ${topic}` : `${r.label} ${destination.label}`));
+}
+
+/**
+ * The bounded anchored supplement for a gated question, given the reports already admitted.
+ * Unchanged rule: fewer than three admitted → anchoredQueries. CORRIDOR (ASK R2 · geography): each
+ * named route the admitted evidence does not yet cover is searched — within the same two-search
+ * bound — so "via Mombasa or Dar es Salaam" is never answered from one corridor alone.
+ */
+export function supplementQueries(
+  anchors: QuestionAnchors,
+  admitted: ReadonlyArray<{ title: string; summary?: string | null }>,
+): string[] {
+  if (!anchors.gated) return [];
+  if (anchors.relation === 'CORRIDOR') {
+    const texts = admitted.map((r) => normalizeText(`${r.title} ${r.summary ?? ''}`));
+    const uncovered = anchors.actors.filter(
+      (a) => a.role === 'ROUTE' && !texts.some((t) => a.terms.some((term) => hasPhrase(t, term))),
+    );
+    if (uncovered.length > 0) return corridorQueries(anchors, uncovered);
+  }
+  return admitted.length >= 3 ? [] : anchoredQueries(anchors);
 }
 
 const SUBJECT_STOP = new Set([

@@ -181,15 +181,16 @@ export function classifyCompute(request: AskRequest, plan: AskPlan, stored: bool
   if (stored) return 'STORED';
   if (request.intent === 'research-report' || plan.reportRequested) return 'RESEARCH_REPORT';
   if (plan.contextual) return 'CONTEXTUAL';
-  if (
-    request.intent === 'deep-analysis' ||
-    plan.deepRequested ||
-    plan.countryCount >= 3 ||
-    plan.domainCount >= 3 ||
-    plan.timeWindowDays >= 180 ||
-    [plan.countryCount > 1, plan.domainCount > 1, plan.timeWindowDays >= 90].filter(Boolean)
-      .length >= 2
-  ) {
+  /*
+    ASK RETRIEVAL / CONVERSATION R2 — BREADTH ALONE NEVER PARKS AN ORDINARY QUESTION.
+    A plain `ask` that named several places or topics ("ports, borders, customs, fuel and
+    security" — the R2 corridor prompt, domainCount 3) used to be reclassified DEEP_ANALYSIS,
+    which stops at a quote nobody had asked for; the composer then showed "Ask is unavailable"
+    and nothing ran (Alpha 2026-10-06 06:36 / 06:45 UTC, ComputeOperation QUOTED). Breadth is
+    served by the one bounded engine like any other question (the meter, search budget and
+    breaker still bound it). Deeper work stays an explicit reader choice (`deep-analysis`).
+  */
+  if (request.intent === 'deep-analysis' || plan.deepRequested || plan.timeWindowDays >= 180) {
     return 'DEEP_ANALYSIS';
   }
   return 'FRESH_BOUNDED';

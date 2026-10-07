@@ -19,9 +19,16 @@ export class CreateThreadDto {
   @IsIn(ASK_LANGUAGES as readonly string[]) language!: Language;
   @IsOptional() @IsString() @Length(1, 500) returnPath?: string;
 }
+/**
+ * ASK RETRIEVAL / CONVERSATION R2 — a TRANSPORT backstop only. The reader-facing limit is
+ * ASK_INPUT_MAX_CHARS (shared/src/ask-input.ts), enforced in AskV2Service.quote with the typed
+ * refusal ASK_INPUT_TOO_LONG so the composer can say why; this bound only stops abuse far
+ * above it (the 64 kb body limit still applies).
+ */
+export const ASK_QUESTION_TRANSPORT_MAX = 16_000;
 export class QuoteTurnDto {
   @IsString() @Length(1, 128) idempotencyKey!: string;
-  @IsString() @Length(2, 1000) question!: string;
+  @IsString() @Length(2, ASK_QUESTION_TRANSPORT_MAX) question!: string;
   @IsIn(ASK_LANGUAGES as readonly string[]) language!: Language;
   @IsIn(['ask', 'deep-analysis', 'research-report']) intent!: Intent;
   /**

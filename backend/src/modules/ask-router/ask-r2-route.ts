@@ -71,6 +71,11 @@ import { interpretTurn, type BoundedConversationState } from './semantic-ir/inte
 import type { SemanticResolution } from './semantic-ir/semantic-interpreter';
 import { SEMANTIC_IR_VERSION, type SemanticTurnIR } from './semantic-ir/semantic-turn-ir';
 import { isDisplayLocale } from '@globalnews-ai/shared';
+import {
+  corridorCountries,
+  readTradeCorridor,
+  type TradeCorridor,
+} from '../analysis/query/trade-corridor.util';
 
 /** The vocabulary frozen C derives axes in (its `DERIVATION_COVERAGE`). */
 export const NORMALIZATION_VOCABULARY = 'en';
@@ -236,6 +241,13 @@ export interface AskR2Route {
    * C's envelope (TYPED_GEOGRAPHY …) is untouched; consumers read this field as inherited.
    */
   readonly inheritedScope?: InheritedScope;
+  /**
+   * ASK R2 · GEOGRAPHY — a trade / shipping corridor question (trade-corridor.util.ts): the
+   * destination, every route the reader named, and the places they ruled out. Each kept place is
+   * a TYPED_GEOGRAPHY candidate (destination first); an excluded place never is. Null otherwise
+   * (and always null for a bilateral relationship, which keeps its own two-sided scope).
+   */
+  readonly corridor?: TradeCorridor | null;
   readonly outcome: NormalizationOutcome;
   readonly source: EnvelopeSource;
   readonly envelope: AskQuestionEnvelope;
@@ -401,6 +413,9 @@ export function statedPeriodIsConstraint(
   const stated = reading.statedTime;
   if (stated === undefined) return false;
   const phrase = stated.statedPeriod.trim().toLowerCase();
+  /* ASK R2 — an "as of" date that is not the request's own day is a constraint (unchanged rule:
+     never silently re-anchor a past or future date on "now"). */
+  if (stated.asOf !== undefined && !asOfIsRequestDay(stated.asOf, requestInstant)) return true;
   if (stated.anchor === 'RELATIVE_TO_ASK' && SAME_DAY_PERIODS.has(phrase)) return false;
   /* BETA-ASK-005 — a supported relative window is honoured by the executor (reporting-window.ts). */
   if (reportingWindowFor(stated.statedPeriod, stated.anchor, requestInstant) !== null) return false;
@@ -776,14 +791,43 @@ export function routeAskR2(
           : 'EXPLANATION') as typeof landedReading.queryIntent,
       }
     : landedReading;
-  const composedSource = composeEnvelopeSource(
+  /*
+    ASK R2 · GEOGRAPHY — A CORRIDOR KEEPS EVERY PLACE THE READER NAMED. The canonical resolver
+    answers ONE place per text (its city tier wins: "…into Rwanda via Mombasa or Dar es Salaam"
+    read only TZA), so a corridor question lost its destination and its other route. The corridor
+    reading names the destination (the primary typed place), every route (further typed places,
+    appended to the envelope below) and the excluded places ("not Mombasa", never retrieved). A
+    bilateral relationship keeps its own two-sided scope, untouched.
+  */
+  const corridorRead =
+    ctx.questionIsStoryHeadline === true ||
+    (reading.sourceLanguage !== 'en' && reading.sourceLanguage !== 'pl')
+      ? null
+      : readTradeCorridor(reading.originalQuestion, {
+          language: reading.sourceLanguage,
+          ...(ctx.priorQuestion === undefined ? {} : { priorQuestion: ctx.priorQuestion }),
+        });
+  const corridor = corridorRead !== null && d.relationship === null ? corridorRead : null;
+  const corridorPrimary = corridor?.destination?.iso3 ?? corridor?.routes[0]?.iso3;
+  const composedFromReading = composeEnvelopeSource(
     reading,
     composedLanded,
     eligibility,
     ctx,
     capability.source,
-    d.typedGeographyOverride ?? undefined,
+    corridorPrimary ?? d.typedGeographyOverride ?? undefined,
   );
+  /* only an exclusion was read ("not via Mombasa"): the resolver's place may be the excluded one */
+  const composedSource: EnvelopeSource =
+    corridor !== null &&
+    corridorPrimary === undefined &&
+    composedFromReading.typedGeography !== undefined &&
+    corridor.excluded.some((p) => p.iso3 === composedFromReading.typedGeography?.value)
+      ? (({ typedGeography: _excluded, ...rest }) => {
+          void _excluded;
+          return rest;
+        })(composedFromReading)
+      : composedFromReading;
   const {
     knowledge,
     historicalOverride,
@@ -869,7 +913,34 @@ export function routeAskR2(
     void _terms;
     source = rest as EnvelopeSource;
   }
-  const derived = buildEnvelope({ ...source, questionLanguage: NORMALIZATION_VOCABULARY });
+  const built = buildEnvelope({ ...source, questionLanguage: NORMALIZATION_VOCABULARY });
+  /* ASK R2 · GEOGRAPHY — the corridor's further typed places, right after the primary one (frozen
+     C's envelope carries one typed place; its planner carries every candidate as a constraint).
+     Only when the composed source kept typed geography (a stable / reasoning turn drops it). */
+  const corridorExtra =
+    corridor === null || source.typedGeography === undefined
+      ? []
+      : corridorCountries(corridor).filter(
+          (iso3) => !built.geography.candidates.some((c) => c.value === iso3),
+        );
+  const derived: typeof built =
+    corridorExtra.length === 0
+      ? built
+      : (() => {
+          const at =
+            built.geography.candidates.findIndex((c) => c.source === 'TYPED_GEOGRAPHY') + 1;
+          const candidates = [...built.geography.candidates];
+          candidates.splice(
+            at,
+            0,
+            ...corridorExtra.map((value) => ({
+              source: 'TYPED_GEOGRAPHY' as const,
+              value,
+              precision: 'COUNTRY' as const,
+            })),
+          );
+          return { ...built, geography: { ...built.geography, candidates } };
+        })();
   const envelope: AskQuestionEnvelope = {
     ...derived,
     rawQuestion: reading.originalQuestion,
@@ -902,6 +973,7 @@ export function routeAskR2(
     semanticClarification: d.semanticClarification,
     priorReferenceUnresolved: d.priorReferenceUnresolved,
     ...(d.priorAnswerRequest === null ? {} : { priorAnswerRequest: d.priorAnswerRequest }),
+    corridor,
     outcome,
     source,
     envelope,
@@ -937,4 +1009,17 @@ export function routeAskR2(
                 : null,
     },
   };
+}
+
+/**
+ * ASK RETRIEVAL / CONVERSATION R2 — "As of 6 October 2026" asked ON 6 October 2026 anchors the
+ * stated window on the request itself. Within 36 hours of the request instant covers every reader
+ * timezone; anything else (or no instant) is not the request's day.
+ */
+export function asOfIsRequestDay(asOf: string, requestInstant: string | undefined): boolean {
+  if (requestInstant === undefined) return false;
+  const at = Date.parse(`${asOf.replace(',', '')} 12:00 UTC`);
+  const now = Date.parse(requestInstant);
+  if (!Number.isFinite(at) || !Number.isFinite(now)) return false;
+  return Math.abs(now - at) <= 36 * 3_600_000;
 }

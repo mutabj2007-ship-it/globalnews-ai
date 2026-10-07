@@ -2021,14 +2021,28 @@ export class NewsService {
         /* A counter must never decide what a provider did. */
       }
 
+      /* ASK R2 (contract §4) — one redacted line per provider attempt: id, capability, latency,
+         result count or failure kind. Never the query, key, URL or payload. Logged even when the
+         tier stopped awaiting this peer (late=true), so a straggler's real outcome is on record. */
+      const startedAt = Date.now();
       try {
         const articles = await operation(provider);
+        logWithRequestId(
+          this.logger,
+          'log',
+          `provider-attempt provider=${provider.id} capability=${capability} ms=${Date.now() - startedAt} result=ok count=${articles.length}${sealed ? ' late=true' : ''}`,
+        );
 
         if (sealed) return;
 
         outcomes.set(provider.id, { articles });
         startGraceIfAdmissible(provider.id, articles);
       } catch (error) {
+        logWithRequestId(
+          this.logger,
+          'log',
+          `provider-attempt provider=${provider.id} capability=${capability} ms=${Date.now() - startedAt} result=failed kind=${resolveProviderFailureKind(error)}${sealed ? ' late=true' : ''}`,
+        );
         if (sealed) return;
 
         outcomes.set(provider.id, { error });

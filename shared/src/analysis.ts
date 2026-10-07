@@ -877,6 +877,15 @@ export interface AnalysisRetrievalContext {
   retrievalTrace?: AnalysisRetrievalTrace;
 
   /**
+   * ASK RETRIEVAL / CONVERSATION R2 — WHICH provider failed, and HOW (rate-limited, quota,
+   * timeout, auth, unreachable, …), carried from NewsService's failure channel. Without it a
+   * GNews 429 behind a publisher-feed success read as "GNews … checked" (Alpha 2026-10-06
+   * 06:24 UTC). Provider ids and failure kinds only — no query, key or payload. Absent when
+   * every attempted provider answered.
+   */
+  providerFailures?: Array<{ providerId: string; kind: string }>;
+
+  /**
    * ASK TRUTHFUL RETRIEVAL R2A — per-claim verification states for an event question, decided
    * deterministically from the admitted evidence BEFORE prose (never by the model).
    */
