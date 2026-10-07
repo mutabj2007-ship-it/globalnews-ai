@@ -20,8 +20,8 @@ import styles from './askNav.module.css';
  * Design's own footer slot at the bottom of the conversations column (≥1024) and of the drawer:
  *
  * - the reader's language and appearance (Light is the default; Navy stays one choice away),
- * - ONE account entry — Settings when signed in (Recent, Saved, Help and sign-out live on that
- *   Ask page's own shell), Sign in when signed out,
+ * - Saved and Help & feedback as explicit standalone Ask utilities,
+ * - Settings plus an explicit session action: Sign out when signed in, Sign in when signed out,
  * - the quiet legal row: Privacy · Cookies (TRUST R1 §12: reachable before sign-in and before
  *   the first question), moved off the composer so it no longer distorts the READY composition.
  *
@@ -31,12 +31,15 @@ export function AskReadingFooter({
   language,
   selected,
   account,
+  onSignOut,
 }: {
   /** The shell catalogue locale (askNavStrings). */
   readonly language: DisplayLocale;
   /** The reader's own selection (shown back to them; the legal row's language). */
   readonly selected: DisplayLocale;
   readonly account: 'pending' | 'signed-in' | 'signed-out';
+  /** Uses the shell's existing governed sign-out path; no second session read. */
+  readonly onSignOut?: () => void;
 }): JSX.Element {
   const theme = useContext(ThemeScopeContext);
   const router = useRouter();
@@ -67,10 +70,25 @@ export function AskReadingFooter({
         {theme !== null && (
           <ThemeControl language={language as LanguageCode} locale={language} initial={theme} tone="surface" />
         )}
+      </div>
+      <div className={styles.readingFooterRow}>
+        {account === 'signed-in' && (
+          <Link href="/saved" prefetch={false} data-ask-nav="footer-saved" className={styles.readingFooterLink}>
+            {s.saved}
+          </Link>
+        )}
+        <Link href="/support" prefetch={false} data-ask-nav="footer-help" className={styles.readingFooterLink}>
+          {s.help}
+        </Link>
         {account === 'signed-in' && (
           <Link href="/account/settings" prefetch={false} data-ask-nav="footer-settings" className={styles.readingFooterLink}>
             {s.settings}
           </Link>
+        )}
+        {account === 'signed-in' && onSignOut !== undefined && (
+          <button type="button" data-ask-nav="footer-sign-out" className={styles.readingFooterLink} onClick={onSignOut}>
+            {s.signOut}
+          </button>
         )}
         {account === 'signed-out' && (
           <a href={accountSignInUrl(pathname ?? undefined)} data-ask-nav="footer-sign-in" className={styles.readingFooterLink}>
