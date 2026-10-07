@@ -161,7 +161,8 @@ describe('what the composer must never do', () => {
     expect(adaptive).toContain('maxViewportFraction = 0.38');
     expect(readFileSync(join(__dirname, '../ask/AskAiDock.tsx'), 'utf8')).toContain('maxHeight={420}');
     /* ASK R2 CLAUDE DESIGN RECONCILIATION R1 — /ask's ceiling is D25 04's (220 desktop / 140 phone). */
-    expect(readFileSync(join(__dirname, '../ask-frame/AskFrameScreen.tsx'), 'utf8')).toContain('maxHeight={compact ? 140 : 220}');
+    /* ASK DESIGN COMPLETENESS R1 — /ask follows the Claude Design composer: min(168 px, 40 %). */
+    expect(readFileSync(join(__dirname, '../ask-frame/AskFrameScreen.tsx'), 'utf8')).toContain('maxHeight={168}');
     expect(readFileSync(join(__dirname, '../home/HeroAskField.tsx'), 'utf8')).toContain('maxHeight={280}');
   });
 
