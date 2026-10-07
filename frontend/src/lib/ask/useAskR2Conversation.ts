@@ -496,13 +496,14 @@ export function useAskR2Conversation(
     if (quote !== null) await askV2Api.release(quote.operation.operationId);
   }, [deepQuote]);
 
-  /**
-   * ASK DESIGN COMPLETENESS R2 — "New question": leave the conversation on screen and return to
-   * an empty Ask. A LOCAL reset only. The previous thread is not deleted or altered on the
-   * server (there is no delete call anywhere here), so it stays in Recent; the next explicit Send
-   * opens a new thread. Refused while a request is in flight, so nothing that is running is
-   * orphaned. An open deep-analysis quote is released exactly as "Not now" releases it.
-   */
+  /* APPROVED DEVIATION FROM THE 58f80 BASELINE (CTO R3 governance ruling, option A) — NEW QUESTION — BEGIN.
+     "New question" (ASK DESIGN COMPLETENESS R2, accepted by the Product Owner): leave the
+     conversation on screen and return to an empty Ask. A LOCAL, in-place reset only — no request
+     of its own; the previous thread is not deleted or altered on the server, so it stays in
+     Recent and the next explicit Send opens a new thread. Refused while a request is in flight.
+     An open deep-analysis quote is released through the same askV2Api.release path "Not now"
+     uses. The block ends by opening the returned object with this one member; outside it the
+     file is the 58f80 authority, byte for byte (homeR1StageA.contract.spec.ts). */
   const startNewConversation = useCallback((): boolean => {
     if (pending !== null) return false;
     thread.current = null;
@@ -518,8 +519,8 @@ export function useAskR2Conversation(
   }, [pending, deepQuote]);
 
   return {
-    /* ASK DESIGN COMPLETENESS R2 */
     startNewConversation,
+    /* APPROVED DEVIATION FROM THE 58f80 BASELINE — NEW QUESTION — END. */
     turns,
     pending,
     availability,
