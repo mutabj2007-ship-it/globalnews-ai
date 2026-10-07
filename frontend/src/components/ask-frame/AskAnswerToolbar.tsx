@@ -100,6 +100,8 @@ export function AskAnswerToolbar({
   note,
   about,
   onRefresh,
+  openFullHref,
+  onRunDeeper,
 }: {
   readonly turn: AskR2Turn;
   readonly locale: DisplayLocale;
@@ -114,6 +116,13 @@ export function AskAnswerToolbar({
   readonly about: readonly string[];
   /** Refresh reporting — a new explicit turn for this question. Absent → not offered. */
   readonly onRefresh?: (question: string) => void;
+  /**
+   * ASK DESIGN AUTHORITY R3 — CTO RULING 6. The legacy hand-offs leave the reading flow; where
+   * they still do something real they are rows of More. Absent → not offered.
+   */
+  readonly openFullHref?: string;
+  /** Run deeper analysis — asks for confirmation before anything runs (AskDeepConfirm). */
+  readonly onRunDeeper?: () => void;
 }): JSX.Element {
   const s = askShellStrings(locale).askR2Strings;
   const r = s.read;
@@ -129,8 +138,8 @@ export function AskAnswerToolbar({
     setSheet(null);
     opener.current?.focus({ preventScroll: true });
   };
-  /* More always holds Refresh reporting; a More that could open empty is never offered. */
-  const offerMore = onRefresh !== undefined;
+  /* More is offered only when it holds a real action; a More that could open empty never is. */
+  const offerMore = onRefresh !== undefined || openFullHref !== undefined || onRunDeeper !== undefined;
 
   return (
     <>
@@ -219,9 +228,28 @@ export function AskAnswerToolbar({
               <span>{r.refreshNote}</span>
             </button>
           )}
+          {onRunDeeper !== undefined && (
+            <button
+              type="button"
+              data-ask="run-deeper"
+              className={styles.actionRow}
+              onClick={() => {
+                close();
+                onRunDeeper();
+              }}
+            >
+              <span>{s.runDeep}</span>
+              <span>{s.runDeepMeta}</span>
+            </button>
+          )}
+          {openFullHref !== undefined && (
+            <a data-ask="open-full-analysis" href={openFullHref} className={styles.actionRow}>
+              <span>{s.openFull}</span>
+            </a>
+          )}
           {canSave && (
             /* R2 · D1 — Use in a briefing: shown only when the server has briefings switched on. */
-            <div data-ask="more-briefing" className="border-t border-[var(--ad-line,#1e2636)] first:border-t-0">
+            <div data-ask="more-briefing">
               <AskTurnBrief operation={turn.operation} locale={locale} label={r.useInBriefing} />
             </div>
           )}

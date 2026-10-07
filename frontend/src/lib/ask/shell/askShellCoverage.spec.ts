@@ -113,15 +113,15 @@ describe('B-6 · the shell is one catalogue over seven locales', () => {
     const overlayManaged = askShellKeyPaths().length;
     const alreadySeven = shellKeyPaths(askSevenStrings('en')).length;
     expect(alreadySeven).toBe(25);
-    expect(overlayManaged).toBe(577);
-    expect(overlayManaged + alreadySeven).toBe(602);
+    expect(overlayManaged).toBe(580);
+    expect(overlayManaged + alreadySeven).toBe(605);
     /*
       EIGHT, not five: the CTO's brand ruling moved the three product-NAME keys out of the
       translation scope. A key nobody should translate does not belong in a translator's
       manifest, and leaving it there is what let three authorities give three answers.
     */
     expect(ASK_SHELL_PROPER_NOUNS).toHaveLength(8);
-    expect(overlayManaged - ASK_SHELL_PROPER_NOUNS.length).toBe(569);
+    expect(overlayManaged - ASK_SHELL_PROPER_NOUNS.length).toBe(572);
   });
 
   it('each proper noun names a key that actually exists', () => {
@@ -216,7 +216,7 @@ describe('B-7 · no English fallback is ever silent', () => {
       expect(coverage.qualification).toBe('SOURCE');
       expect(coverage.fallbacks).toEqual([]);
       expect(coverage.complete).toBe(true);
-      expect(coverage.localizedKeys).toBe(569);
+      expect(coverage.localizedKeys).toBe(572);
     }
   });
 
@@ -236,8 +236,9 @@ describe('B-7 · no English fallback is ever silent', () => {
       expect(coverage.qualification).toBe('CLAUDE_L_QUALIFIED');
       expect(coverage.complete).toBe(true);
       expect(coverage.fallbacks).toEqual([]);
-      expect(coverage.localizedKeys).toBe(569);
-      /* 569 localized + 0 unqualified + 8 not-translated = the 577 overlay-managed keys. */
+      expect(coverage.localizedKeys).toBe(572);
+      /* 572 localized + 0 unqualified + 8 not-translated = the 580 overlay-managed keys
+         (R3 CTO rulings 4 · 8 added three provisional reader strings). */
       expect(coverage.localizedKeys + coverage.fallbacks.length + coverage.properNouns).toBe(
         coverage.totalKeys,
       );
@@ -251,10 +252,10 @@ describe('B-7 · no English fallback is ever silent', () => {
       misses a leaf kind. So the denominator is asserted directly: if a future catalogue adds
       a leaf shape nobody handles, this count stops matching and the suite fails here.
     */
-    expect(askShellKeyPaths()).toHaveLength(577);
+    expect(askShellKeyPaths()).toHaveLength(580);
     for (const locale of L_LOCALES) {
       const coverage = askShellCoverage(locale);
-      expect(coverage.totalKeys).toBe(577);
+      expect(coverage.totalKeys).toBe(580);
     }
   });
 

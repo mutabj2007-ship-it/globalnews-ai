@@ -588,6 +588,9 @@ export const deShellOverlay: ShellLocaleOverlay = {
         demoData: "Demodaten.",
         failureNetworkTitle: "Der Nachrichtendienst war nicht erreichbar.",
         failureBody: "Das ist meist nur vorübergehend. Ihre Frage steht noch im Feld unten.",
+        generalExplanationLine: "Allgemeine Erklärung — aktuelle Quellen sind dafür nicht nötig.",
+        noReportingTitle: "Ich konnte keine passende Berichterstattung zu dieser Frage bestätigen.",
+        searchIncomplete: "Einige Quellenkanäle waren nicht erreichbar, daher war die Suche nicht vollständig.",
       },
       questionOverLimit: {
         kind: "pattern",

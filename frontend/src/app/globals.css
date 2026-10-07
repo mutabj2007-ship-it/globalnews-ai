@@ -1277,3 +1277,20 @@ html[data-gna-schedule='dark'] [data-gna-theme='scheduled'],
   z-index: 1;
   background: var(--ask-read-answer-bg, #03152a);
 }
+
+/*
+  ASK DESIGN AUTHORITY R3 — CTO THEME RULING. The document behind a Light Ask page (iOS overscroll,
+  the safe areas around a notch) is the Ask page colour, not the platform's navy `bg-void`, so a
+  Light reader never sees a navy band. Navy Ask pages and every non-Ask page are unchanged.
+*/
+body:has([data-ask-standalone][data-gna-theme='light']) {
+  background-color: #faf9f7;
+}
+html[data-gna-schedule='light'] body:has([data-ask-standalone][data-gna-theme='scheduled']) {
+  background-color: #faf9f7;
+}
+@media (prefers-color-scheme: light) {
+  body:has([data-ask-standalone][data-gna-theme='system']) {
+    background-color: #faf9f7;
+  }
+}

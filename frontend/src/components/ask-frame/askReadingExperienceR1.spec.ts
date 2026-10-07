@@ -177,20 +177,24 @@ describe('Answer hierarchy — answer first (H-FREEZE §4)', () => {
     /* Production line: the turn view renders the compact question <h2> itself (no AskSubmittedQuestion) */
     const question = at('<h2 className={QUESTION}>');
     const answer = at('data-ask="answer"');
-    const meta = at('data-ask="answer-meta"');
+    /* R3 — the meta block is one helper (Sources "About" or the inline About); its PLACE is the call. */
+    const meta = at("answerMeta('about')");
     const basis = at('<AskIntelligenceBasis');
     /* ASK DESIGN COMPLETENESS R1 — the actions are the Design toolbar component. */
     const actions = at('<AskAnswerToolbar');
-    const handoffs = at('data-ask="handoffs"');
+    /* CTO R3 ruling 6 — the hand-offs are More rows, handed to the toolbar, never a card row. */
+    const handoffs = at('openFullHref={');
+    expect(at('data-ask="handoffs"')).toBe(-1);
     for (const i of [question, answer, meta, basis, actions, handoffs]) expect(i).toBeGreaterThan(-1);
     expect(question).toBeLessThan(answer);
     expect(answer).toBeLessThan(meta);
     expect(meta).toBeLessThan(basis);
     expect(basis).toBeLessThan(actions);
     expect(actions).toBeLessThan(handoffs);
-    /* scope chips and the engine-state line live in the footer, not above the answer */
-    expect(at('data-ask="scope"')).toBeGreaterThan(meta);
-    expect(at('data-ask="engine-state"')).toBeGreaterThan(meta);
+    /* scope chips and the engine-state line live in the meta helper, never above the answer */
+    const helper = turn.slice(at('const answerMeta ='), at('const showReference ='));
+    expect(helper).toContain('data-ask="scope"');
+    expect(helper).toContain('data-ask="engine-state"');
   });
 
   it('the question is a compact 17px bubble (≤85%), still an <h2> (Production line: rendered by the turn view)', () => {

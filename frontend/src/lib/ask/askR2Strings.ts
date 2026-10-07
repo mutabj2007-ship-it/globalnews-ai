@@ -321,6 +321,12 @@ export interface AskReadStrings {
   readonly demoData: string;
   readonly failureNetworkTitle: string;
   readonly failureBody: string;
+  /** CTO R3 ruling 4 — the one quiet reader line under a general (unsourced) explanation. */
+  readonly generalExplanationLine: string;
+  /** CTO R3 ruling 8 — nothing could be verified for this question. */
+  readonly noReportingTitle: string;
+  /** CTO R3 ruling 8 — said only when the search was incomplete (a source channel unavailable). */
+  readonly searchIncomplete: string;
 }
 
 const EN_READ: AskReadStrings = {
@@ -368,6 +374,9 @@ const EN_READ: AskReadStrings = {
   demoData: 'Demo data.',
   failureNetworkTitle: 'Couldn’t reach the news service.',
   failureBody: 'This is usually temporary. Your question is still in the box below.',
+  generalExplanationLine: 'General explanation — no current sources needed.',
+  noReportingTitle: 'I couldn’t verify relevant reporting for this question.',
+  searchIncomplete: 'Some source channels were unavailable, so this was not a complete search.',
 };
 
 /* Polish plurals: 1 · 2–4 (except 12–14) · otherwise. */
@@ -425,6 +434,9 @@ const PL_READ: AskReadStrings = {
   demoData: 'Dane demonstracyjne.',
   failureNetworkTitle: 'Nie udało się połączyć z serwisem wiadomości.',
   failureBody: 'Zwykle to chwilowy problem. Twoje pytanie nadal jest w polu poniżej.',
+  generalExplanationLine: 'Ogólne wyjaśnienie — aktualne źródła nie są tu potrzebne.',
+  noReportingTitle: 'Nie udało mi się zweryfikować doniesień na temat tego pytania.',
+  searchIncomplete: 'Część kanałów źródłowych była niedostępna, więc wyszukiwanie nie było pełne.',
 };
 
 const EN: AskR2Strings = {

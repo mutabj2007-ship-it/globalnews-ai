@@ -588,6 +588,9 @@ export const esShellOverlay: ShellLocaleOverlay = {
         demoData: "Datos de demostración.",
         failureNetworkTitle: "No se pudo conectar con el servicio de noticias.",
         failureBody: "Suele ser temporal. Tu pregunta sigue en el cuadro de abajo.",
+        generalExplanationLine: "Explicación general: no hacen falta fuentes actuales.",
+        noReportingTitle: "No pude verificar información relevante para esta pregunta.",
+        searchIncomplete: "Algunos canales de fuentes no estaban disponibles, así que la búsqueda no fue completa.",
       },
       questionOverLimit: {
         kind: "pattern",

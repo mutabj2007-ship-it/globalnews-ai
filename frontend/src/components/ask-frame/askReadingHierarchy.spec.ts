@@ -248,9 +248,12 @@ describe('C-4 · nothing truthful was removed with the box around it', () => {
   });
 
   it('the AI-cost meta line under a hand-off control is demoted, never deleted', () => {
-    /* A control that runs AI must say so BEFORE it is pressed. */
-    expect(strip(turnView)).toContain('{s.runDeepMeta}');
-    expect(strip(turnView)).toContain('{s.openFullMeta}');
+    /* A control that runs AI must say so BEFORE it is pressed. ASK DESIGN AUTHORITY R3 (CTO
+       ruling 6): the hand-offs are rows of More now, and Run deeper analysis still carries its
+       "asks before running" line there. Open full analysis runs nothing, so it has no cost line. */
+    const toolbar = strip(readFileSync(join(__dirname, 'AskAnswerToolbar.tsx'), 'utf8'));
+    expect(toolbar).toContain('{s.runDeepMeta}');
+    expect(strip(turnView)).not.toContain('data-ask="handoffs"');
     expect(strip(phaseC())).toMatch(
       /\[data-ask='run-deeper'\] span:last-child\)\s*\{\s*color:\s*var\(--ask-read-ink3/,
     );

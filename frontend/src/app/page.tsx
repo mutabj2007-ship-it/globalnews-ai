@@ -1,6 +1,6 @@
 import { resolveAskLocale } from '@/lib/ask/askLocale';
 import { cookies } from 'next/headers';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { NavBar } from '@/components/navigation/NavBar';
 import { MobileBottomNav } from '@/components/navigation/MobileBottomNav';
 import { WhatsHappeningNow } from '@/components/home/WhatsHappeningNow';
@@ -30,6 +30,7 @@ import { ASK_SOCIAL_PREVIEW } from '@/lib/seo/socialPreview';
 import { homeR1Gates } from '@/lib/platform/homeR1Gates';
 import { HomeR1Page } from '@/components/home/r1/HomeR1Page';
 import { THEME_COOKIE_NAME, parseThemePreference } from '@/lib/theme/theme';
+import { askThemeColor, parseAskThemePreference } from '@/lib/ask/askTheme';
 
 /**
  * HOME WELCOME & DISCOVERY R1 REV A — THE HOME COMPOSITION.
@@ -82,6 +83,13 @@ import { THEME_COOKIE_NAME, parseThemePreference } from '@/lib/theme/theme';
  * explicit `index, follow`, and Open Graph/Twitter metadata that follows
  * that canonical.
  */
+/** ASK DESIGN AUTHORITY R3 — on the standalone Ask root the browser chrome follows the Ask
+    treatment (Light unless the reader saved another); the platform Home keeps the layout's. */
+export function generateViewport(): Viewport {
+  if (!standaloneAskRoot()) return {};
+  return { themeColor: askThemeColor(parseAskThemePreference(cookies().get(THEME_COOKIE_NAME)?.value)) };
+}
+
 export async function generateMetadata(): Promise<Metadata> {
   const languageCookie = cookies().get(LANGUAGE_COOKIE_NAME)?.value;
   const language = languageCookie && isActiveLanguageCode(languageCookie) ? languageCookie : 'en';
@@ -112,7 +120,7 @@ export default async function HomePage(): Promise<JSX.Element> {
   /* STANDALONE PUBLIC BETA CONVERGENCE R1 — `/` is the standalone Ask entry surface; the
      Home composition below is served only when GNA_PUBLIC_ROOT=platform. No Home feed is
      fetched for the Ask root. Ask serves EN/PL, like /ask. TRUST R1 — themed from the cookie. */
-  const askTheme = parseThemePreference(cookies().get(THEME_COOKIE_NAME)?.value);
+  const askTheme = parseAskThemePreference(cookies().get(THEME_COOKIE_NAME)?.value);
   /* R4 · the standalone Ask root reads the reader's own locale. It previously re-read the RAW
      cookie with a ternary, bypassing the `language` resolved above. The predicate below is
      unchanged, and the note is kept out of it so the gate stays one readable statement. */

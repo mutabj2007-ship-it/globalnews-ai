@@ -1,3 +1,4 @@
+import type { Viewport } from 'next';
 import { askLanguageDisposition } from '@/lib/ask/askLocale';
 import { askDirectionProps } from '@/lib/ask/askDirection';
 import { resolveAskLocale } from '@/lib/ask/askLocale';
@@ -5,10 +6,17 @@ import { cookies } from 'next/headers';
 import { AccountSettingsBody } from '@/components/account/AccountSettingsBody';
 import { AskNavProvider, AskNavShell } from '@/components/ask-nav/AskNavShell';
 import { AskThemedSurface } from '@/components/ask-nav/AskThemedSurface';
-import { THEME_COOKIE_NAME, parseThemePreference } from '@/lib/theme/theme';
+import { THEME_COOKIE_NAME } from '@/lib/theme/theme';
+import { askThemeColor, parseAskThemePreference } from '@/lib/ask/askTheme';
 import { AskContinuityHeader } from '@/components/ask-nav/AskContinuityHeader';
 import { AskClearedBoundary } from '@/components/ask-nav/AskClearedBoundary';
 import { LANGUAGE_COOKIE_NAME } from '@/lib/i18n/languages';
+
+/** ASK DESIGN AUTHORITY R3 — the browser chrome follows the reader's Ask treatment (Light unless
+    they saved another), so a Light page is not framed by the layout's navy status-bar colour. */
+export function generateViewport(): Viewport {
+  return { themeColor: askThemeColor(parseAskThemePreference(cookies().get(THEME_COOKIE_NAME)?.value)) };
+}
 
 /**
  * ALPHA VISUAL ACCEPTANCE REPAIR R1 — the server wrapper of the account settings surface.
@@ -46,7 +54,7 @@ export default function AccountSettingsPage(): JSX.Element {
     de / pt to English and bypassed Claude L's qualified overlay for all five new languages.
   */
   return (
-    <AskThemedSurface theme={parseThemePreference(cookies().get(THEME_COOKIE_NAME)?.value)}>
+    <AskThemedSurface theme={parseAskThemePreference(cookies().get(THEME_COOKIE_NAME)?.value)}>
       <AskNavProvider>
         <AskNavShell language={chrome} selected={locale} />
         <AskContinuityHeader locale={chrome} surface="settings" />
