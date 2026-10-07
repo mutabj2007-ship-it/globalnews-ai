@@ -331,14 +331,18 @@ export function LanguageSelector({
     ? 'absolute right-[12px] top-[calc(100%+8px)] z-[60] box-border max-h-[60vh] w-[176px] overflow-y-auto rounded-cd-12 border border-cd-edge-control-active-32 bg-cd-fill-popup p-cd-5 shadow-cd-popup-m'
     : 'absolute right-0 top-[calc(100%+8px)] z-[60] box-border max-h-[60vh] w-[168px] overflow-y-auto rounded-cd-10 border border-cd-edge-control-active-32 bg-cd-fill-popup p-cd-5 shadow-cd-popup';
   /*
-    ALPHA VISUAL ACCEPTANCE REPAIR R1 — anchor 'self': the SAME mobile popup (same tokens,
-    width, radius, offset, z), positioned from this control's own left edge instead of the
-    header row's right inset, and fully opaque (the drawer below it is a list of live controls).
+    NAV COMPLETENESS R1 — anchor 'self': the SAME mobile popup (same tokens,
+    width, radius, offset, z), positioned from this control's own left edge and opening UPWARD
+    from the footer trigger so all seven languages stay inside the visible drawer viewport.
+    It remains fully opaque because the drawer below it is a list of live controls.
     Derived, not duplicated, so the released geometry stays one string.
   */
   const anchoredToSelf = isMobile && anchor === 'self';
   const shownPopupClass = anchoredToSelf
-    ? popupClass.replace('right-[12px]', 'left-0').replace('bg-cd-fill-popup', 'bg-[rgb(6,12,24)]')
+    ? popupClass
+        .replace('right-[12px]', 'left-0')
+        .replace('top-[calc(100%+8px)]', 'bottom-[calc(100%+8px)] top-auto')
+        .replace('bg-cd-fill-popup', 'bg-[rgb(6,12,24)]')
     : popupClass;
 
   /*
