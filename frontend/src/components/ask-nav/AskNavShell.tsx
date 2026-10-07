@@ -34,6 +34,8 @@ import {
 import styles from './askNav.module.css';
 import { askProductName, askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 import { askDirectionProps } from '@/lib/ask/askDirection';
+import { AskConversations } from '@/components/ask-frame/AskConversations';
+import { AskEmblemMark } from '@/components/ask-frame/AskEmblem';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -139,7 +141,20 @@ interface AskNavState {
   readonly clearAndGo: (url: string) => void;
   /** Hide private Ask content now (sign-out clears before its request resolves). */
   readonly clear: () => void;
+  /**
+   * ASK DESIGN COMPLETENESS R1 — the reader's session as the shell's ONE `GET /users/me` read
+   * resolved it. The conversations list reads this instead of reading the session again, so the
+   * request count on /ask is unchanged; it asks for the reader's threads only once this says
+   * 'signed-in'.
+   */
+  readonly account: AskNavAccount;
+  readonly setAccount: (next: AskNavAccount) => void;
+  /** ASK DESIGN COMPLETENESS R1 — the conversation on screen, marked current in the drawer. */
+  readonly threadId: string | null;
+  readonly setThreadId: (next: string | null) => void;
 }
+
+export type AskNavAccount = 'pending' | 'signed-in' | 'signed-out';
 
 const AskNavContext = createContext<AskNavState | null>(null);
 
@@ -151,6 +166,8 @@ const AskNavContext = createContext<AskNavState | null>(null);
 export function AskNavProvider({ children }: { readonly children: React.ReactNode }): JSX.Element {
   const [open, setOpen] = useState(false);
   const [cleared, setCleared] = useState(false);
+  const [account, setAccount] = useState<AskNavAccount>('pending');
+  const [threadId, setThreadId] = useState<string | null>(null);
   const clear = useCallback(() => {
     setOpen(false);
     setCleared(true);
@@ -163,8 +180,8 @@ export function AskNavProvider({ children }: { readonly children: React.ReactNod
     [clear],
   );
   const value = useMemo<AskNavState>(
-    () => ({ open, setOpen, cleared, clearAndGo, clear }),
-    [open, cleared, clearAndGo, clear],
+    () => ({ open, setOpen, cleared, clearAndGo, clear, account, setAccount, threadId, setThreadId }),
+    [open, cleared, clearAndGo, clear, account, threadId],
   );
   return <AskNavContext.Provider value={value}>{children}</AskNavContext.Provider>;
 }
@@ -188,6 +205,15 @@ export function useAskNav(): AskNavState {
  */
 export function useAskNavCleared(): boolean {
   return useContext(AskNavContext)?.cleared ?? false;
+}
+
+/**
+ * ASK DESIGN COMPLETENESS R1 — the shell's state without the loud failure, for the
+ * conversations list (rendered in the frame's column and in the drawer). Outside the standalone
+ * shell it is null and the list reads nothing.
+ */
+export function useAskNavOptional(): AskNavState | null {
+  return useContext(AskNavContext);
 }
 
 /** The label a row renders. Falls back to the model's English wording so a
@@ -227,7 +253,7 @@ export function AskNavShell({
    */
   readonly theme?: ThemePreference;
 }): JSX.Element {
-  const { open, setOpen, clearAndGo, clear } = useAskNav();
+  const { open, setOpen, clearAndGo, clear, setAccount, threadId } = useAskNav();
   /* TRUST R1 — the page passes its server-read theme, or the nearest theme scope supplies it. */
   const scopeTheme = useContext(ThemeScopeContext);
   const controlTheme = theme ?? scopeTheme ?? undefined;
@@ -235,6 +261,10 @@ export function AskNavShell({
   const router = useRouter();
   /* THE ONE SESSION READ. See this file's header. */
   const { user, isLoading, signOut } = useAccount();
+  /* ASK DESIGN COMPLETENESS R1 — publish what the one session read found (no second read). */
+  useEffect(() => {
+    setAccount(isLoading ? 'pending' : user === null ? 'signed-out' : 'signed-in');
+  }, [isLoading, user, setAccount]);
   const [accountOpen, setAccountOpen] = useState(false);
   const accountRef = useRef<HTMLDivElement | null>(null);
   const drawerRef = useRef<HTMLDivElement | null>(null);
@@ -384,8 +414,8 @@ export function AskNavShell({
   }, [open, setOpen]);
 
   const itemClass =
-    'flex min-h-11 items-center rounded-[9px] px-3 font-cd-body text-[14px] text-[#cfe2f2] transition-colors hover:bg-[rgba(56,189,248,0.10)] hover:text-white';
-  const drawerRowClass = 'flex min-h-[52px] items-center font-cd-body text-[17px] text-[#e6eef6]';
+    'flex min-h-11 items-center rounded-[22px] px-3 font-cd-body text-[0.9375rem] text-[var(--ad-ink-2,#cfe2f2)] transition-colors hover:bg-[var(--ad-surface-2,rgba(56,189,248,0.10))] hover:text-[var(--ad-ink,#ffffff)]';
+  const drawerRowClass = 'flex min-h-[52px] items-center font-cd-body text-[1.0625rem] text-[var(--ad-ink,#e6eef6)]';
 
   function renderRoutes(className: string, onNavigate?: () => void): JSX.Element[] {
     return items.map((entry) => (
@@ -415,7 +445,7 @@ export function AskNavShell({
         href={accountSignInUrl(pathname ?? undefined)}
         data-ask-nav="utility"
         data-ask-nav-id={signInEntry.id}
-        className="flex min-h-11 items-center rounded-[9px] border border-[#1d4a73] px-3 font-cd-body text-[14px] text-[#cfe2f2] hover:border-[rgba(34,211,238,0.55)]"
+        className="flex min-h-11 items-center rounded-[22px] border border-[var(--ad-line-strong,#1d4a73)] px-4 font-cd-body text-[0.9375rem] text-[var(--ad-ink,#cfe2f2)] hover:bg-[var(--ad-surface-2,transparent)]"
       >
         {labelOf(signInEntry, s)}
       </a>
@@ -443,7 +473,7 @@ export function AskNavShell({
         dir={shellDirection.dir}
         data-ask-nav-dir={shellDirection.dir}
         data-ask-nav-audience={isLoading ? 'pending' : audience}
-        className={`${styles.shell} sticky top-0 z-50 h-[62px] items-center border-b border-[#0a2744] bg-[rgba(2,15,32,0.96)] backdrop-blur-[10px]`}
+        className={`${styles.shell} sticky top-0 z-50 h-[62px] items-center border-b border-[var(--ad-line,#0a2744)] bg-[var(--ad-bg,rgba(2,15,32,0.96))]`}
       >
         <div className="mx-auto flex h-[62px] w-full max-w-cd-page items-center gap-6 px-[26px]">
           {/*
@@ -453,7 +483,9 @@ export function AskNavShell({
             control that is on neither the keep list nor the remove list is not
             this round's decision to make. The string is the frozen D25 title.
           */}
-          <span className="shrink-0 font-cd-display text-[15px] font-semibold tracking-[-0.01em] text-white">
+          {/* ASK DESIGN COMPLETENESS R1 — the Design header: 24 px static mark + wordmark. */}
+          <span className="inline-flex shrink-0 items-center gap-2 text-[1.125rem] font-medium text-[var(--ad-ink,#ffffff)]">
+            <AskEmblemMark />
             {askProductName(language)}
           </span>
 
@@ -513,7 +545,7 @@ export function AskNavShell({
                   aria-controls="ask-nav-account-panel"
                   aria-label={s.accountMenuAriaLabel}
                   onClick={() => setAccountOpen(!accountOpen)}
-                  className="flex min-h-11 items-center rounded-[9px] border border-[#1d4a73] px-3 font-cd-body text-[14px] text-[#cfe2f2] hover:border-[rgba(34,211,238,0.55)]"
+                  className="flex min-h-11 items-center rounded-[22px] border border-[var(--ad-line-strong,#1d4a73)] px-4 font-cd-body text-[0.9375rem] text-[var(--ad-ink,#cfe2f2)] hover:bg-[var(--ad-surface-2,transparent)]"
                 >
                   {s.account}
                 </button>
@@ -521,14 +553,14 @@ export function AskNavShell({
                   <div
                     id="ask-nav-account-panel"
                     data-ask-nav="account-menu"
-                    className="absolute end-0 top-[calc(100%+6px)] z-[60] flex w-[240px] flex-col gap-1 rounded-[10px] border border-[#1d4a73] bg-[rgba(2,15,32,0.98)] p-2"
+                    className="absolute end-0 top-[calc(100%+6px)] z-[60] flex w-[240px] flex-col gap-1 rounded-[12px] border border-[var(--ad-line,#1d4a73)] bg-[var(--ad-surface,rgba(2,15,32,0.98))] p-2"
                   >
                     <button
                       type="button"
                       data-ask-nav="utility"
                       data-ask-nav-id={signOutEntry.id}
                       onClick={() => void signOutClean()}
-                      className="flex min-h-11 items-center rounded-[8px] px-2 text-start font-cd-body text-[14px] text-[#cfe2f2] hover:bg-[rgba(56,189,248,0.10)]"
+                      className="flex min-h-11 items-center rounded-[8px] px-2 text-start font-cd-body text-[0.9375rem] text-[var(--ad-ink,#cfe2f2)] hover:bg-[var(--ad-surface-2,rgba(56,189,248,0.10))]"
                     >
                       {labelOf(signOutEntry, s)}
                     </button>
@@ -555,7 +587,8 @@ export function AskNavShell({
           className={styles.drawer}
         >
           <div className={styles.drawerHead}>
-            <span className="font-cd-display text-[15px] font-semibold text-white">
+            <span className="inline-flex items-center gap-2 text-[1.0625rem] font-medium text-[var(--ad-ink,#ffffff)]">
+              <AskEmblemMark />
               {askProductName(language)}
             </span>
             <button
@@ -563,10 +596,23 @@ export function AskNavShell({
               type="button"
               aria-label={s.closeMenuAriaLabel}
               onClick={() => setOpen(false)}
-              className="inline-flex min-h-11 min-w-11 items-center justify-center text-[20px] text-[#cfe2f2]"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center text-[20px] text-[var(--ad-ink-2,#cfe2f2)]"
             >
               ×
             </button>
+          </div>
+
+          {/*
+            ASK DESIGN COMPLETENESS R1 — Design D4: the drawer leads with the reader's
+            Conversations (New question, search, Today / Earlier). Read only while the drawer is
+            open and only for a signed-in reader; the ruled menu and utilities follow.
+          */}
+          <div className={styles.drawerGroup} data-ask-nav="conversations">
+            <AskConversations
+              locale={selected ?? displayLocaleOf(language)}
+              currentThreadId={threadId}
+              onNavigate={() => setOpen(false)}
+            />
           </div>
 
           <nav aria-label={s.navAriaLabel} className={styles.drawerGroup}>

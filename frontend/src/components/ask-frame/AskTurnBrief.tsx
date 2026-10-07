@@ -30,9 +30,16 @@ export const BRIEFING_MENU_LIMIT = 5;
 export function AskTurnBrief({
   operation,
   locale,
+  label,
 }: {
   readonly operation: AskV2Operation | undefined;
   readonly locale: DisplayLocale;
+  /**
+   * ASK DESIGN COMPLETENESS R1 — the Design's More-menu wording ("Use in a briefing"). The
+   * control still renders ONLY when the server has briefings on, so the label never appears
+   * beside nothing.
+   */
+  readonly label?: string;
 }): JSX.Element | null {
   const t = askShellStrings(locale).briefingStrings;
   const [available, setAvailable] = useState(false);
@@ -96,10 +103,10 @@ export function AskTurnBrief({
   }
 
   const item =
-    'block w-full rounded-[6px] px-2.5 py-2 text-start text-[12.5px] text-[#d6e2f0] hover:bg-[#07304f] disabled:opacity-60';
+    'block min-h-[44px] w-full rounded-[6px] px-2.5 py-2 text-start text-[0.9375rem] text-[var(--ad-ink,#edeff5)] hover:bg-[var(--ad-surface-2,#161d2c)] disabled:opacity-60';
 
   return (
-    <div data-ask="brief" className="relative inline-flex items-center gap-2">
+    <div data-ask="brief" className="flex w-full flex-col items-start gap-1">
       <button
         type="button"
         data-ask="brief-save"
@@ -107,15 +114,15 @@ export function AskTurnBrief({
         aria-haspopup="menu"
         disabled={busy}
         onClick={() => void toggleMenu()}
-        className="inline-flex min-h-[32px] items-center gap-1.5 rounded-[8px] border border-[#1d4a73] px-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-[#b6c9de] hover:border-[#5abff5] disabled:opacity-60"
+        className="inline-flex min-h-[44px] items-center gap-1.5 rounded-[8px] px-0 text-start text-[1.0625rem] text-[var(--ad-ink,#edeff5)] disabled:opacity-60"
       >
-        {busy ? t.saving : t.save}
+        {busy ? t.saving : (label ?? t.save)}
       </button>
       {open && (
         <div
           role="menu"
           data-ask="brief-menu"
-          className="absolute end-0 top-full z-20 mt-1 w-[260px] rounded-[10px] border border-[#1d4a73] bg-[#04162b] p-1 shadow-lg"
+          className="mt-1 w-full rounded-[10px] border border-[var(--ad-line,#1e2636)] bg-[var(--ad-surface,#0f1420)] p-1"
         >
           <button
             type="button"
@@ -128,7 +135,7 @@ export function AskTurnBrief({
             {t.newBriefing}
           </button>
           {mine.length > 0 && (
-            <p className="px-2.5 pb-1 pt-2 text-[11px] text-[#8299b4]">{t.addTo}</p>
+            <p className="px-2.5 pb-1 pt-2 text-[0.8125rem] text-[var(--ad-ink-3,#7d89a1)]">{t.addTo}</p>
           )}
           {mine.map((b) => (
             <button
@@ -146,12 +153,12 @@ export function AskTurnBrief({
         </div>
       )}
       {result === 'failed' && (
-        <span data-ask="brief-failed" role="status" className="text-[12px] text-[#c9b27a]">
+        <span data-ask="brief-failed" role="status" className="text-[0.8125rem] text-[var(--ad-err,#ff8a7a)]">
           {t.failed}
         </span>
       )}
       {result !== null && result !== 'failed' && (
-        <span data-ask="brief-saved" role="status" className="text-[12px] text-[#8fd3ff]">
+        <span data-ask="brief-saved" role="status" className="text-[0.8125rem] text-[var(--ad-accent-text,#6c93ff)]">
           {t.savedAs(result.version)} ·{' '}
           <Link href={briefingHref(result.id)} className="underline">
             {t.open}

@@ -428,11 +428,13 @@ describe('ELASTIC COMPOSER R2 — long pasted questions stay readable', () => {
     expect(hero).toContain('maxHeight={280}');
     /* COMPOSER GEOMETRY R1 — Search's bounded ceiling lives in searchComposerGeometry.ts. */
     expect(search).toContain('maxHeight={SEARCH_COMPOSER_GEOMETRY.maxHeight}');
-    /* ASK R2 CLAUDE DESIGN RECONCILIATION R1 — /ask follows D25 04: ~6 lines, 220 desktop / 140 phone. */
+    /* ASK DESIGN COMPLETENESS R1 — /ask follows the Claude Design composer (A3): the field grows
+       to min(168 px, 40 % of the visible height) and then scrolls inside itself. */
     expect(askParts).toContain('maxHeight={maxHeight}');
+    expect(askParts).toContain('maxViewportFraction={0.4}');
     expect(
       readFileSync(join(__dirname, '../ask-frame/AskFrameScreen.tsx'), 'utf8'),
-    ).toContain('maxHeight={compact ? 140 : 220}');
+    ).toContain('maxHeight={168}');
     expect(CODE).toContain('maxHeight={420}');
   });
 });
