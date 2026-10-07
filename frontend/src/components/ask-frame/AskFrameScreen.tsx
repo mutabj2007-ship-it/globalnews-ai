@@ -39,6 +39,7 @@ import { AskDeepConfirm } from './AskDeepConfirm';
 import { ASK_EYEBROW, Composer } from './AskParts';
 import styles from './askDashboard.module.css';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
+import { askQuestionOverLimit } from '@/lib/ask/askQuestionLength';
 
 /**
  * ASK R2 CLAUDE DESIGN RECONCILIATION R1 — /ask AS THE FROZEN D25 AUTHORITY DRAWS IT.
@@ -382,7 +383,8 @@ export function AskFrameScreen({
   }, []);
 
   async function ask() {
-    if (isPending || !question.trim()) return;
+    /* H PROD-1 — a draft past the bound is never sent (Enter / requestSubmit bypass the button). */
+    if (isPending || !question.trim() || askQuestionOverLimit(question)) return;
     const draft = question;
     setQuestion('');
     setRetryKept(false);
@@ -940,6 +942,8 @@ export function AskFrameScreen({
             onSubmit={() => void ask()}
             pending={isPending}
             maxHeight={compact ? 140 : 220}
+            locale={interfaceLocale}
+            overLimitMessage={shell.askR2Strings.questionOverLimit}
             /*
               CENTERED COMPOSER R1 — the rotating example, supplied only in the entry state.
               `onUse` sets the composer's VALUE and submits nothing (§9, §11): from that moment

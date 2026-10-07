@@ -200,7 +200,8 @@ describe('opening the panel is not a question', () => {
 
   it('an empty question cannot be submitted', () => {
     expect(CODE).toMatch(/if \(asked\.length === 0\) return;/);
-    expect(CODE).toMatch(/disabled=\{question\.trim\(\)\.length === 0 \|\| isPending\}/);
+    /* H PROD-1 — Send also waits while the draft is over the 1,000-character bound. */
+    expect(CODE).toMatch(/disabled=\{question\.trim\(\)\.length === 0 \|\| isPending \|\| overLimit\}/);
   });
 });
 

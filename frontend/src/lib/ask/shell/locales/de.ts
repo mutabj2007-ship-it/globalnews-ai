@@ -509,6 +509,10 @@ export const deShellOverlay: ShellLocaleOverlay = {
         kind: "pattern",
         pattern: "Seitlich scrollen, um alle {0} Spalten zu sehen",
       },
+      questionOverLimit: {
+        kind: "pattern",
+        pattern: "Ihre Frage darf höchstens {0} Zeichen lang sein.",
+      },
       working: "Ihre Antwort wird erstellt…",
       unavailable: "Ask ist derzeit nicht verfügbar. Es wurde nichts ausgeführt.",
       unavailableBecause: {

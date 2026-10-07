@@ -102,6 +102,11 @@ export interface AskR2Strings {
   readonly working: string;
   /** ASK READING EXPERIENCE R1 — a wide table's scroll hint, shown only when it overflows. */
   readonly tableScrollHint: (columns: number) => string;
+  /**
+   * H PROD-1 — a draft past the Production backend's 1,000-character bound: the draft is kept
+   * whole and Send waits. The limit arrives as a number and is written in the reader's format.
+   */
+  readonly questionOverLimit: (limit: number) => string;
   /** TRUST R1 — a failed Send keeps the draft; the reader retries by pressing Ask. */
   /** TRUST R1 §12 — pre-login links under the composer. */
   readonly privacyLink: string;
@@ -361,6 +366,8 @@ const EN: AskR2Strings = {
   newAnswerBelow: 'New answer below',
   working: 'Working on your answer…',
   tableScrollHint: (columns) => `Scroll sideways to see all ${columns} columns`,
+  questionOverLimit: (limit) =>
+    `Your question must be ${new Intl.NumberFormat('en').format(limit)} characters or fewer.`,
   budgetRefused:
     'You have reached today’s Ask limit, so nothing was run and nothing was charged. Questions answered from retained records still work.',
   retainedAnswer: 'Answered from a retained governed record — no AI was used.',
@@ -701,6 +708,8 @@ const PL: AskR2Strings = {
   newAnswerBelow: 'Nowa odpowiedź poniżej',
   working: 'Pracuję nad odpowiedzią…',
   tableScrollHint: (columns) => `Przewiń w bok, aby zobaczyć wszystkie kolumny (${columns})`,
+  questionOverLimit: (limit) =>
+    `Pytanie może mieć najwyżej ${new Intl.NumberFormat('pl').format(limit)} znaków.`,
   budgetRefused:
     'Wykorzystano dzisiejszy limit Zapytaj AI, więc nic nie uruchomiono ani nie naliczono. Pytania, na które odpowiadają zachowane zapisy, nadal działają.',
   retainedAnswer: 'Odpowiedź z zachowanego, zweryfikowanego zapisu — bez użycia AI.',

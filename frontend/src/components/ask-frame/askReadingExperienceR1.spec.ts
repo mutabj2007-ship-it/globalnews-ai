@@ -346,6 +346,9 @@ describe('Tables (RESPONSIVE-FREEZE §5)', () => {
   The Production backend (324c45b) accepts a question of 2–1000 characters
   (ask-v2.dto.ts: @Length(2, 1000)), so every composer on this line keeps maxLength={1000}: a
   larger client limit would only send a question the server refuses.
+  H PROD-1: the two Ask composers (AskParts Composer, AskAiDock) no longer set maxLength — they keep
+  the whole draft and hold Send past 1,000 (askComposerOverLimit.spec, askDockRequestCount.spec).
+  The composers listed below are outside that ruling and are unchanged.
 */
 describe('Input limit — matches the Production backend (1000), never a larger client literal', () => {
   it.each([

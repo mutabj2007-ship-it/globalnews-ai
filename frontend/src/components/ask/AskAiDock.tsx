@@ -29,6 +29,8 @@ import {
 } from '@/lib/ask/useAskR2Conversation';
 import { askContextKey, askContextRefOf } from '@/lib/ask/askContextRef';
 import { askR2Strings } from '@/lib/ask/askR2Strings';
+import { askQuestionOverLimit } from '@/lib/ask/askQuestionLength';
+import { AskQuestionOverLimit } from '@/components/ask/AskQuestionOverLimit';
 import { ASK_SIGN_IN_HREF, keepQuestion } from '@/lib/ask/askKeptQuestion';
 import { localisedCountryName } from '@/lib/map/geography/displayName';
 import { getDictionary } from '@/lib/i18n/dictionaries';
@@ -300,6 +302,8 @@ function GlobalAskAiDock({
   const askDisposition = askLanguageDisposition(resolveAskLocale(language));
   const r2Locale = askDisposition.catalogueLocale;
   const r2s = askShellStrings(r2Locale).askR2Strings;
+  /* H PROD-1 — measured on every render; the draft itself is never cut. */
+  const overLimit = askQuestionOverLimit(question);
 
   /*
     UNIFIED INTELLIGENCE BINDING R2C — THE CANONICAL CONVERSATION.
@@ -580,6 +584,10 @@ function GlobalAskAiDock({
   useEffect(() => {
     if (!homeSendPending || !isOpen || formRef.current === null) return;
     setHomeSendPending(false);
+    /* H PROD-1 — the only programmatic path into the form: an over-limit question is staged whole
+       and NOT submitted; the composer shows the over-limit state and Send waits. (The submit
+       handler itself stays byte-identical to the R2 authority; its button is disabled.) */
+    if (askQuestionOverLimit(question)) return;
     formRef.current.requestSubmit();
   }, [homeSendPending, isOpen, question]);
 
@@ -916,12 +924,21 @@ function GlobalAskAiDock({
                   value={question}
                   onChange={(event) => setQuestion(event.target.value)}
                   placeholder={t.inputPlaceholder}
-                  maxLength={1000}
+                  /* H PROD-1 — no maxLength: the browser would cut the overflow off silently. */
+                  aria-invalid={overLimit || undefined}
+                  aria-describedby={overLimit ? 'ask-ai-question-over-limit' : undefined}
                   minHeight={isIdle ? 58 : 44}
                   maxHeight={220}
                   maxViewportFraction={0.3}
                   keepVisible={false}
                   className="w-full rounded-[10px] border border-[#3c2f7a] bg-[#12263f] px-[12px] py-[10px] text-[16px] leading-[1.45] text-[#eef2f8] placeholder:text-[#8fa6c0] focus:border-[#a78bfa] focus:outline-none"
+                />
+                <AskQuestionOverLimit
+                  id="ask-ai-question-over-limit"
+                  draft={question}
+                  locale={r2Locale}
+                  message={r2s.questionOverLimit}
+                  toneClassName="text-[#e5d2b0]"
                 />
                 <div className="flex items-center justify-between gap-[10px]">
                   <p data-ask="compute-notice" className="min-w-0 text-[12px] leading-[1.4] text-[#e5d2b0]">
@@ -931,7 +948,7 @@ function GlobalAskAiDock({
                   <button
                     type="submit"
                     data-ask="submit"
-                    disabled={question.trim().length === 0 || isPending}
+                    disabled={question.trim().length === 0 || isPending || overLimit}
                     className="min-h-[44px] min-w-[96px] shrink-0 rounded-[10px] border border-[#d9b98a] bg-[linear-gradient(105deg,#412d9f,#1f328a)] px-5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {t.submit}
@@ -956,12 +973,21 @@ function GlobalAskAiDock({
               value={question}
               onChange={(event) => setQuestion(event.target.value)}
               placeholder={t.inputPlaceholder}
-              maxLength={1000}
+              /* H PROD-1 — no maxLength: the browser would cut the overflow off silently. */
+              aria-invalid={overLimit || undefined}
+              aria-describedby={overLimit ? 'ask-ai-question-over-limit' : undefined}
               minHeight={isIdle ? 58 : 44}
               maxHeight={420}
               maxViewportFraction={0.46}
               keepVisible={false}
               className="w-full rounded-2xl border border-border-strong bg-surface px-4 py-3 text-[16px] leading-6 text-ink-primary shadow-inner placeholder:text-ink-secondary/70 focus:border-signal focus:outline-none"
+            />
+            <AskQuestionOverLimit
+              id="ask-ai-question-over-limit"
+              draft={question}
+              locale={r2Locale}
+              message={r2s.questionOverLimit}
+              toneClassName="text-ink-primary"
             />
             <div className="flex flex-wrap items-center justify-between gap-2">
               {/*
@@ -1003,7 +1029,7 @@ function GlobalAskAiDock({
               <button
                 type="submit"
                 data-ask="submit"
-                disabled={question.trim().length === 0 || isPending}
+                disabled={question.trim().length === 0 || isPending || overLimit}
                 className="min-h-[44px] rounded-2xl bg-signal px-5 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(61,111,255,0.22)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:shadow-none disabled:opacity-50"
               >
                 {t.submit}

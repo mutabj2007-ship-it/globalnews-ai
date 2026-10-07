@@ -509,6 +509,10 @@ export const esShellOverlay: ShellLocaleOverlay = {
         kind: "pattern",
         pattern: "Desplázate hacia los lados para ver las {0} columnas",
       },
+      questionOverLimit: {
+        kind: "pattern",
+        pattern: "Tu pregunta debe tener como máximo {0} caracteres.",
+      },
       working: "Preparando tu respuesta…",
       unavailable: "Ask no está disponible ahora. No se ejecutó nada.",
       unavailableBecause: {

@@ -2,7 +2,10 @@
 
 import type { IsolatedAutoProps, IsolatedRunProps } from '@/lib/ask/askDirection';
 import { useRef, type JSX } from 'react';
+import type { DisplayLocale } from '@globalnews-ai/shared';
 import { AdaptiveTextarea } from '@/components/ui/AdaptiveTextarea';
+import { AskQuestionOverLimit } from '@/components/ask/AskQuestionOverLimit';
+import { askQuestionOverLimit } from '@/lib/ask/askQuestionLength';
 
 /**
  * ASK R2 CLAUDE DESIGN RECONCILIATION R1 — presentation primitives of the frozen D25
@@ -175,6 +178,8 @@ export function Composer({
   pending = false,
   maxHeight,
   example,
+  locale,
+  overLimitMessage,
 }: {
   readonly value: string;
   readonly onChange: (next: string) => void;
@@ -194,8 +199,14 @@ export function Composer({
   readonly maxHeight: 220 | 140;
   /** CENTERED COMPOSER R1 — the rotating example. Absent for every other caller. */
   readonly example?: ComposerExample;
+  /** H PROD-1 — the reader's locale, for the over-limit count's number format. */
+  readonly locale: DisplayLocale;
+  /** H PROD-1 — `askR2Strings.questionOverLimit`, resolved for the reader's locale. */
+  readonly overLimitMessage: (limit: number) => string;
 }): JSX.Element {
-  const ready = !pending && value.trim().length > 0 && onSubmit !== undefined;
+  /* H PROD-1 — a draft past the bound is kept whole and simply not ready to send. */
+  const overLimit = askQuestionOverLimit(value);
+  const ready = !pending && value.trim().length > 0 && !overLimit && onSubmit !== undefined;
   /*
     CROSS-PLATFORM PARITY — latched evidence of a physical keyboard. A ref, not state: it must
     not re-render, and it only ever turns on.
@@ -212,6 +223,8 @@ export function Composer({
       data-ask="composer"
       onSubmit={(event) => {
         event.preventDefault();
+        /* H PROD-1 — an over-limit draft is never handed on, whatever triggered the submit. */
+        if (overLimit) return;
         onSubmit?.();
       }}
       className="flex min-w-0 flex-col gap-2"
@@ -252,7 +265,9 @@ export function Composer({
               if (action === 'SUBMIT') event.currentTarget.form?.requestSubmit();
             }}
             placeholder={showExample ? '' : placeholder}
-            maxLength={1000}
+            /* H PROD-1 — no maxLength: the browser would cut the overflow off silently. */
+            aria-invalid={overLimit || undefined}
+            aria-describedby={overLimit ? 'ask-frame-composer-over-limit' : undefined}
             minHeight={32}
             maxHeight={maxHeight}
             maxViewportFraction={0.4}
@@ -310,6 +325,13 @@ export function Composer({
           )}
         </button>
       </div>
+      <AskQuestionOverLimit
+        id="ask-frame-composer-over-limit"
+        draft={value}
+        locale={locale}
+        message={overLimitMessage}
+        toneClassName="text-[var(--ask-read-deep-ink,#c9b27a)]"
+      />
       <p
         data-ask="cost-note"
         className="text-[0.75rem] leading-[1.3] text-[var(--ask-read-ink3,#6f89a8)]"

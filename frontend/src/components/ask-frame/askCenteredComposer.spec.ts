@@ -270,7 +270,8 @@ describe('C-5 · the keyboard ruling — one submit pipeline', () => {
     /* One form, one onSubmit, one handler for both paths. */
     expect(parts.match(/onSubmit\?\.\(\)/g)).toHaveLength(1);
     expect(parts).toMatch(
-      /onSubmit=\{\(event\) => \{\s*event\.preventDefault\(\);\s*onSubmit\?\.\(\);/,
+      /* H PROD-1 — the one handler also refuses an over-limit draft. */
+      /onSubmit=\{\(event\) => \{\s*event\.preventDefault\(\);\s*if \(overLimit\) return;\s*onSubmit\?\.\(\);/,
     );
   });
 
@@ -296,7 +297,8 @@ describe('C-5 · the keyboard ruling — one submit pipeline', () => {
     const html = render({ example: example('en') });
     expect(html).toMatch(/<button type="submit"[^>]*disabled=""/);
     expect(parts).toMatch(
-      /const ready = !pending && value\.trim\(\)\.length > 0 && onSubmit !== undefined;/,
+      /* H PROD-1 — an over-limit draft is not ready either (askComposerOverLimit.spec). */
+      /const ready = !pending && value\.trim\(\)\.length > 0 && !overLimit && onSubmit !== undefined;/,
     );
   });
 
@@ -314,7 +316,8 @@ describe('C-5 · the keyboard ruling — one submit pipeline', () => {
     ).toBe('SUPPRESS');
     /* Three independent layers, none of them new: the ready gate, the screen's own guard,
        and the conversation hook's in-flight ref. No second quota or compute mechanism. */
-    expect(screen).toMatch(/if \(isPending \|\| !question\.trim\(\)\) return;/);
+    /* H PROD-1 adds the over-limit refusal to the same guard. */
+    expect(screen).toMatch(/if \(isPending \|\| !question\.trim\(\) \|\| askQuestionOverLimit\(question\)\) return;/);
     expect(screen).toMatch(/setQuestion\(''\);/);
     expect(
       code(readFileSync(join(__dirname, '../../lib/ask/useAskR2Conversation.ts'), 'utf8')),

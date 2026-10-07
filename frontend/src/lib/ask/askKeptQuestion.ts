@@ -12,14 +12,14 @@ import { accountSignInUrl } from '@/lib/api/accountLinks';
  * simply retypes.
  */
 export const ASK_KEPT_QUESTION_KEY = 'globalnews-ai:ask-kept-question';
-/** The composer's own bound. */
-const MAX_KEPT_LENGTH = 1000;
+/* H PROD-1 — no length cut here: a draft past the bound survives the sign-in round trip whole,
+   and the composer shows the over-limit state when it is restored. */
 
 /** Where "Sign in to ask" goes: the existing Google sign-in, back to /ask. */
 export const ASK_SIGN_IN_HREF = accountSignInUrl('/ask');
 
 export function keepQuestion(question: string): void {
-  const q = question.trim().slice(0, MAX_KEPT_LENGTH);
+  const q = question.trim();
   if (q.length === 0) return;
   try {
     sessionStorage.setItem(ASK_KEPT_QUESTION_KEY, q);
@@ -33,7 +33,7 @@ export function readKeptQuestion(): string | null {
   try {
     const q = sessionStorage.getItem(ASK_KEPT_QUESTION_KEY);
     sessionStorage.removeItem(ASK_KEPT_QUESTION_KEY);
-    return q !== null && q.trim().length > 0 ? q.slice(0, MAX_KEPT_LENGTH) : null;
+    return q !== null && q.trim().length > 0 ? q : null;
   } catch {
     return null;
   }

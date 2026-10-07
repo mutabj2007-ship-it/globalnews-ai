@@ -509,6 +509,10 @@ export const ptShellOverlay: ShellLocaleOverlay = {
         kind: "pattern",
         pattern: "Role na horizontal para ver todas as {0} colunas",
       },
+      questionOverLimit: {
+        kind: "pattern",
+        pattern: "Sua pergunta deve ter no máximo {0} caracteres.",
+      },
       working: "Preparando sua resposta…",
       unavailable: "O Ask está indisponível agora. Nada foi executado.",
       unavailableBecause: {

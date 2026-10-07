@@ -2,6 +2,7 @@ import { createElement } from 'react';
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
 import { askV2Api } from '@/lib/api/askV2Api';
 import { openGlobalAsk } from '@/lib/ask/openGlobalAsk';
+import { submitGlobalAsk } from '@/lib/ask/submitGlobalAsk';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -154,9 +155,119 @@ describe('Home Ask dock — request counts', () => {
     expect(JSON.stringify(transport.mock.calls[1])).not.toContain('MODEL OUTPUT');
   });
 
-  it('the composer stays bounded to the 1,000-character transport limit', async () => {
+  it('the composer meets the 1,000-character transport limit without cutting the draft (H PROD-1)', async () => {
     act(() => openGlobalAsk());
-    expect(field().props.maxLength).toBe(1000);
+    expect(field().props.maxLength).toBeUndefined();
+  });
+});
+
+/*
+  H PROD-1 — the dock composer's over-limit state. The Production backend's 1,000-character bound
+  stays authoritative; the dock no longer enforces it by silently cutting the draft
+  (maxLength): it keeps the whole draft, discloses the count and the limit, and holds Send.
+*/
+describe('H PROD-1 — dock composer over the 1,000-character bound', () => {
+  const textOf = (node: ReactTestInstance | string): string =>
+    typeof node === 'string' ? node : node.children.map(textOf).join('');
+  const submitButton = (): ReactTestInstance => byAsk('submit')[0];
+  const notice = (): ReactTestInstance[] => byAsk('question-over-limit');
+  const chars = (n: number): string => 'a'.repeat(n);
+
+  it('999 characters → Send enabled, no notice', () => {
+    act(() => openGlobalAsk());
+    type(chars(999));
+    expect(submitButton().props.disabled).toBe(false);
+    expect(notice()).toHaveLength(0);
+    expect(field().props['aria-invalid']).toBeUndefined();
+  });
+
+  it('exactly 1,000 characters → Send enabled and the whole question is sent', async () => {
+    transport.mockReturnValue(new Promise(() => undefined));
+    act(() => openGlobalAsk());
+    type(chars(1000));
+    expect(submitButton().props.disabled).toBe(false);
+    expect(notice()).toHaveLength(0);
+    await act(async () => send());
+    expect(transport).toHaveBeenCalledTimes(1);
+    expect(transport.mock.calls[0][1]).toBe(chars(1000));
+  });
+
+  it('1,001 characters → full draft preserved, Send disabled, count and limit shown, nothing sent', async () => {
+    act(() => openGlobalAsk());
+    const draft = chars(1001);
+    type(draft);
+    expect(field().props.value).toBe(draft);
+    expect(field().props.value).toHaveLength(1001);
+    expect(submitButton().props.disabled).toBe(true);
+    expect(notice()).toHaveLength(1);
+    expect(notice()[0].props.role).toBe('alert');
+    expect(textOf(notice()[0])).toContain('1,001 / 1,000');
+    expect(textOf(notice()[0])).toContain('Your question must be 1,000 characters or fewer.');
+    expect(field().props['aria-invalid']).toBe(true);
+    expect(field().props['aria-describedby']).toBe(notice()[0].props.id);
+    /* The dock textarea has no Enter-to-send; the one programmatic path into the form (Home
+       Send's requestSubmit) is refused below. Nothing was sent and the draft is untouched. */
+    expect(transport).toHaveBeenCalledTimes(0);
+    expect(field().props.value).toBe(draft);
+  });
+
+  it('editing 1,001 → 1,000 re-enables Send and removes the notice', async () => {
+    transport.mockReturnValue(new Promise(() => undefined));
+    act(() => openGlobalAsk());
+    type(chars(1001));
+    expect(submitButton().props.disabled).toBe(true);
+    type(chars(1000));
+    expect(submitButton().props.disabled).toBe(false);
+    expect(notice()).toHaveLength(0);
+    await act(async () => send());
+    expect(transport).toHaveBeenCalledTimes(1);
+  });
+
+  it('a pasted long text arrives whole — no substring, no truncation', () => {
+    act(() => openGlobalAsk());
+    const pasted = `${'Long pasted briefing paragraph. '.repeat(150)}Finish with three practical steps.`;
+    expect(pasted.length).toBeGreaterThan(4000);
+    type(pasted);
+    expect(field().props.value).toBe(pasted);
+    expect(String(field().props.value).endsWith('Finish with three practical steps.')).toBe(true);
+    expect(submitButton().props.disabled).toBe(true);
+    expect(notice()).toHaveLength(1);
+  });
+
+  it('multiline text keeps its line breaks and is measured as sent', () => {
+    act(() => openGlobalAsk());
+    const under = `${chars(400)}\n${chars(400)}\n${chars(198)}`;
+    expect(under).toHaveLength(1000);
+    type(under);
+    expect(field().props.value).toBe(under);
+    expect(submitButton().props.disabled).toBe(false);
+    const over = `${under}\nb`;
+    type(over);
+    expect(field().props.value).toBe(over);
+    expect(String(field().props.value).split('\n')).toHaveLength(4);
+    expect(submitButton().props.disabled).toBe(true);
+  });
+
+  it('a Home Send of an over-limit question stages it whole and sends nothing', async () => {
+    const draft = chars(1200);
+    /* Home Send ends in `form.requestSubmit()`; route it to the form's CURRENT submit handler. */
+    act(() => renderer.unmount());
+    act(() => {
+      renderer = create(createElement(AskAiDock, { language: 'en' }), {
+        createNodeMock: (element) =>
+          element.type === 'form'
+            ? { requestSubmit: () => byAsk('form')[0].props.onSubmit({ preventDefault() {} }) }
+            : { focus() {} },
+      });
+    });
+    await act(async () => {
+      submitGlobalAsk(draft);
+    });
+    expect(transport).toHaveBeenCalledTimes(0);
+    expect(byAsk('panel')).toHaveLength(1);
+    expect(field().props.value).toBe(draft);
+    expect(submitButton().props.disabled).toBe(true);
+    expect(notice()).toHaveLength(1);
   });
 });
 

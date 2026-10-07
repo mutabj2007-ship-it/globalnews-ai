@@ -127,7 +127,8 @@ describe('ASK ON THE MAP — the dock keeps every contract', () => {
     expect(mapComposer).toContain('id="ask-ai-question"');
     expect(mapComposer).toContain('data-ask="context-affordance"');
     expect(mapComposer).toContain("showStoryLabel\n                      ? t.contextChipAnchored");
-    expect(mapComposer).toContain('disabled={question.trim().length === 0 || isPending}');
+    /* H PROD-1 — Send also waits while the draft is over the 1,000-character bound. */
+    expect(mapComposer).toContain('disabled={question.trim().length === 0 || isPending || overLimit}');
     /* 16px so iOS does not zoom the page when the composer takes focus. */
     expect(mapComposer).toContain('text-[16px]');
   });

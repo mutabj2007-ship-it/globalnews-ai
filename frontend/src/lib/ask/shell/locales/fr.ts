@@ -509,6 +509,10 @@ export const frShellOverlay: ShellLocaleOverlay = {
         kind: "pattern",
         pattern: "Faites défiler horizontalement pour voir les {0} colonnes",
       },
+      questionOverLimit: {
+        kind: "pattern",
+        pattern: "Votre question doit comporter au maximum {0} caractères.",
+      },
       working: "Préparation de votre réponse…",
       unavailable: "Ask est indisponible pour le moment. Rien n’a été exécuté.",
       unavailableBecause: {
