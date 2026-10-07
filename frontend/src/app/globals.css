@@ -1283,6 +1283,10 @@ html[data-gna-schedule='dark'] [data-gna-theme='scheduled'],
   the safe areas around a notch) is the Ask page colour, not the platform's navy `bg-void`, so a
   Light reader never sees a navy band. Navy Ask pages and every non-Ask page are unchanged.
 */
+/* CTO NAVY CORRECTION — behind a Navy Ask page the document is the Navy page colour too. */
+body:has([data-ask-standalone]) {
+  background-color: #102a43;
+}
 body:has([data-ask-standalone][data-gna-theme='light']) {
   background-color: #faf9f7;
 }
