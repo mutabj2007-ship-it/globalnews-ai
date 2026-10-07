@@ -132,7 +132,11 @@ const REWORK_COMMON =
   'place and period. If the reader corrected or excluded a place, route or option, keep only the ' +
   'items relevant to the corrected scope, drop the excluded ones and say what changed. Distinguish ' +
   'reported facts from your own analysis. Never add a development that the reporting provided ' +
-  'does not support; if fewer items qualify, give fewer. The earlier answer is not evidence.';
+  'does not support; if fewer items qualify, give fewer. A report belongs in the answer only when ' +
+  'its own text establishes the connection to the scope (the place, route or purpose); never ' +
+  'connect a report to it by speculation ("may affect", "could influence") and never keep an item ' +
+  'only to have something to say — if none qualifies, say that no relevant development is ' +
+  'evidenced. The earlier answer is not evidence.';
 
 export const REWORK_REUSE_RULES =
   'FOLLOW-UP ON YOUR EARLIER ANSWER. The reader is working on your own earlier answer (the ' +

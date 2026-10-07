@@ -759,8 +759,11 @@ export function buildDevelopmentBreadthSection(breadth?: AnalysisDevelopmentBrea
       `clusters across ${breadth.categories} editorial domains.\n\n` +
       'HOW THE BRIEF IS REQUESTED HERE: ONE "summary" field that follows THE READER\'S OUTPUT ' +
       'CONTRACT in the user message, in its order (opening, table, limits, closing). Separate its ' +
-      'blocks with a BLANK LINE; a brief that reads as a single paragraph is WITHHELD. Cover what ' +
-      'the evidence establishes and nothing more.'
+      'blocks with a BLANK LINE. A requested table is ONE well-formed Markdown table — header row, ' +
+      '|---| separator, one row per development, every row with the same number of cells as the ' +
+      'header — and is WITHHELD if malformed, missing (in a long answer) or longer than the requested ' +
+      'number of items. Fewer rows is correct when the evidence supports fewer; if nothing can be ' +
+      'verified, say so briefly instead of a table. Cover what the evidence establishes and nothing more.'
     );
   }
 

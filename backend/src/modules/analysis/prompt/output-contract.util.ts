@@ -155,6 +155,10 @@ export function renderOutputContract(c: OutputContract): string {
     lines.push(
       `${step++}. At most ${c.itemCap} development${c.itemCap === 1 ? '' : 's'}${c.fewerAllowed ? '; give fewer if the evidence supports fewer, and say so' : ''}. Never fill a slot with a weakly related report.`,
     );
+  /* ASK R2 CONTENT QUALITY REPAIR — relevance is established by the report, never by a guess */
+  lines.push(
+    `${step++}. Include a development only when its own report establishes the connection to the reader's subject (place, route, business or purpose). Never link a report to it by speculation ("may affect", "could influence"); fewer rows, or none, is the correct answer when the evidence supports fewer.`,
+  );
   if (c.factsVsAnalysis)
     lines.push(`${step++}. Keep reported FACTS apart from your ANALYSIS: label analysis as analysis.`);
   if (c.closing !== null)

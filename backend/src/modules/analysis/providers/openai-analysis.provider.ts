@@ -5,7 +5,7 @@ import type { AnalysisProvider, AnalysisProviderInput } from '../interfaces';
 import type { AnalysisDevelopmentBreadth } from '../interfaces/analysis-provider.interface';
 import { AnalysisConfigService, type AnalysisConfig } from '../config/analysis-config.service';
 import { isUsableOpenAiApiKey } from './provider.tokens';
-import { normalizeBriefFields } from './normalize-brief-fields.util';
+import { layoutReaderContractBrief, normalizeBriefFields } from './normalize-brief-fields.util';
 import {
   buildAnalysisMessages,
   buildAnalysisJsonSchema,
@@ -399,7 +399,18 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
         string before the payload leaves this provider. A no-op on every response
         that does not carry both, so the narrow path is untouched.
       */
-      return { content: normalizeBriefFields(JSON.parse(content)), usage: payload.usage };
+      /*
+        ASK R2 CONTENT QUALITY REPAIR (P0-B) — under a structural reader contract the brief's blocks
+        (opening, table, closing) are laid out with the blank-line separator every downstream
+        reader splits on. Whitespace only (layoutReaderContractSummary); no-op on every other path.
+      */
+      return {
+        content: layoutReaderContractBrief(
+          normalizeBriefFields(JSON.parse(content)),
+          developmentBreadth?.readerContract === true,
+        ),
+        usage: payload.usage,
+      };
     } catch (error) {
       this.logger.warn('OpenAI returned non-JSON content in a structured-output call');
       throw new OpenAiAnalysisError(

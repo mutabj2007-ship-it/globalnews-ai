@@ -36,6 +36,13 @@ export interface AnchorGroup {
   readonly query?: string;
   /** CORRIDOR actors only: the destination country, or one named route. */
   readonly role?: 'DESTINATION' | 'ROUTE';
+  /**
+   * ASK R2 CONTENT QUALITY REPAIR — words too general to stand alone ("security", "tax", "road"):
+   * they count for this group only beside a named ROUTE (Mombasa, Dar es Salaam), never with the
+   * destination country alone. Live Alpha: "In Rwanda, Uniformed Security Banned From Court
+   * Sessions Involving Minors" and a Rwandan betting-tax story were admitted as corridor evidence.
+   */
+  readonly weakTerms?: readonly string[];
 }
 
 export interface QuestionAnchors {
@@ -119,6 +126,33 @@ const TOPICS: ReadonlyArray<{ key: string; label: string; query: string; cues: R
     query: 'economy',
     cues: /\b(econom\w*|gdp|growth|central bank|interest rates?|budget|debt|currency|shilling|investment|business(es)?)\b/,
     terms: ['economy', 'economic', 'gdp', 'growth', 'inflation', 'central bank', 'interest rate', 'budget', 'debt', 'currency', 'shilling', 'franc', 'investment', 'investors', 'business', 'businesses', 'tax', 'taxes', 'imf', 'world bank', 'exports', 'imports', 'trade', 'jobs', 'prices', 'revenue', 'bond', 'loan'],
+  },
+  {
+    /*
+      ASK R2 CONTENT QUALITY REPAIR — "developments … that could affect a small shop owner in
+      Kenya" named a place and a PURPOSE but no topic family, so the question was not gated and the
+      Kenya country feed reached the model as it came (Alpha gate 2: a prisoners' chess feature, a
+      royalty-system vendor profile). A business-impact purpose is a topic: a report qualifies when
+      its own text concerns what a business operates under — prices, taxes, fuel and power,
+      currency and credit, supply, trade and transport, regulation and licences, disruption.
+    */
+    key: 'business-impact',
+    label: 'business operating conditions',
+    query: 'business',
+    cues: /\b(shops?|shopkeepers?|shop ?owners?|store ?owners?|small business(es)?|small firms?|business ?owners?|smes?|msmes?|traders?|retailers?|merchants?|vendors?|importers?|importing|exporters?|exporting|suppliers?|sklep\w*|przedsi(e|ę)biorc\w*|importer\w*)\b/,
+    terms: [
+      'price', 'prices', 'inflation', 'cost of living', 'tax', 'taxes', 'levy', 'levies', 'vat', 'excise',
+      'duty', 'duties', 'tariff', 'tariffs', 'fuel', 'petrol', 'diesel', 'kerosene', 'electricity',
+      'power outage', 'power outages', 'blackout', 'blackouts', 'shilling', 'franc', 'currency',
+      'exchange rate', 'interest rate', 'interest rates', 'central bank', 'loan', 'loans', 'credit',
+      'rent', 'wage', 'wages', 'minimum wage', 'business', 'businesses', 'trader', 'traders', 'retail',
+      'retailers', 'shop', 'shops', 'shopkeepers', 'market', 'markets', 'supply', 'supplies', 'shortage',
+      'shortages', 'import', 'imports', 'export', 'exports', 'customs', 'port', 'border', 'transport',
+      'fares', 'regulation', 'regulations', 'licence', 'license', 'licences', 'licenses', 'permit',
+      'permits', 'budget', 'finance bill', 'finance act', 'revenue authority', 'kra', 'mpesa', 'm-pesa',
+      'mobile money', 'strike', 'strikes', 'protest', 'protests', 'demonstrations', 'curfew', 'consumer',
+      'consumers', 'sales', 'sme', 'smes', 'small business', 'small businesses', 'economy', 'economic',
+    ],
   },
   {
     key: 'elections',
@@ -218,10 +252,12 @@ const CORRIDOR_LOGISTICS: AnchorGroup = {
   terms: [
     'port', 'ports', 'harbour', 'harbor', 'cargo', 'freight', 'shipping', 'shipment', 'shipments', 'vessel',
     'vessels', 'container', 'containers', 'transit', 'corridor', 'logistics', 'truck', 'trucks', 'trucker',
-    'truckers', 'lorry', 'lorries', 'road', 'roads', 'highway', 'railway', 'rail', 'sgr', 'border', 'borders',
-    'customs', 'clearance', 'import', 'imports', 'importers', 'export', 'exports', 'tariff', 'tariffs', 'tax',
-    'levy', 'fuel', 'diesel', 'petrol', 'strike', 'protest', 'protests', 'security', 'congestion', 'delays',
+    'truckers', 'lorry', 'lorries', 'highway', 'railway', 'rail', 'sgr', 'border', 'borders', 'customs',
+    'clearance', 'import', 'imports', 'importers', 'export', 'exports', 'tariff', 'tariffs', 'levy', 'fuel',
+    'diesel', 'petrol', 'congestion',
   ],
+  /* ASK R2 CONTENT QUALITY REPAIR — general words count only beside a named route (see weakTerms) */
+  weakTerms: ['road', 'roads', 'tax', 'taxes', 'strike', 'strikes', 'protest', 'protests', 'security', 'insecurity', 'delays'],
 };
 
 function corridorAnchors(corridor: TradeCorridor, topics: readonly AnchorGroup[]): QuestionAnchors {
@@ -252,7 +288,9 @@ export function questionAnchorsOf(question: string, corridor?: TradeCorridor | n
   if (reading !== null && (reading.destination !== null || reading.routes.length > 0)) {
     return corridorAnchors(
       reading,
-      TOPICS.filter((t) => t.key !== 'economy' && t.cues.test(text)).map((t) => ({
+      /* a corridor's own logistics family decides; the broad economy and business-impact
+         families would admit any destination-country story ("tax", "market") as route evidence */
+      TOPICS.filter((t) => t.key !== 'economy' && t.key !== 'business-impact' && t.cues.test(text)).map((t) => ({
         key: t.key,
         label: t.label,
         terms: t.terms,
@@ -293,7 +331,11 @@ export interface AnchorVerdict {
 export function admitsReport(anchors: QuestionAnchors, report: { title: string; summary?: string | null }): AnchorVerdict {
   if (!anchors.gated) return { admitted: true, missing: [] };
   const text = normalizeText(`${report.title} ${report.summary ?? ''}`);
-  const has = (g: AnchorGroup): boolean => g.terms.some((t) => hasPhrase(text, t));
+  const strong = (g: AnchorGroup): boolean => g.terms.some((t) => hasPhrase(text, t));
+  /* a weak term counts only beside a named ROUTE actor, never with the destination alone */
+  const routeNamed = anchors.actors.some((a) => a.role === 'ROUTE' && strong(a));
+  const has = (g: AnchorGroup): boolean =>
+    strong(g) || (routeNamed && (g.weakTerms ?? []).some((t) => hasPhrase(text, t)));
   const missing: string[] = [];
   if (anchors.relation === 'LINKED') {
     for (const a of anchors.actors) if (!has(a)) missing.push(a.label);
