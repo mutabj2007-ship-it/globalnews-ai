@@ -1,5 +1,6 @@
 import type { DisplayLocale } from '@globalnews-ai/shared';
 import { readOutputContract, renderOutputContract } from './output-contract.util';
+import { questionAnchorsOf, routesNamedIn } from '../query/question-anchors.util';
 import type {
   AnalysisDevelopmentBreadth,
   EvidenceFreshnessFact,
@@ -586,10 +587,23 @@ export function buildAnalysisUserPrompt(
   /* ANCHORING R1 — each item's relation to the anchored event, only when anchored. */
   const relationTag = (index: number): string =>
     eventEvidenceRelations?.[index] ? ` [relation: ${eventEvidenceRelations[index]}]` : '';
+  /* ASK R2 A/B/C BLOCKER REPAIR R1 — for a corridor question that names its routes, each report is
+     tagged with the requested routes ITS OWN TEXT names (measured, not inferred), so a route cell
+     can only repeat what the report says. */
+  const corridorAnchors = questionAnchorsOf(query);
+  const routeTag = (article: NormalizedArticleForPrompt): string => {
+    const named = routesNamedIn(corridorAnchors, article);
+    return named === null ? '' : ` [requested routes named in this report: ${named.length > 0 ? named.join(', ') : 'none'}]`;
+  };
+  const routeRule = articles.some((article) => routeTag(article) !== '')
+    ? '\nROUTES: a route cell or route statement for a report names ONLY the routes in that report\'s ' +
+      '[requested routes named in this report] tag — never a route the report does not name, and ' +
+      'never "both" because the reader asked about both.\n'
+    : '';
   const articleBlocks = articles
     .map(
       (article, index) =>
-        `${index + 1}. [evidenceId: ${article.evidenceId}]${relationTag(index)} "${article.title}" \u2014 ${article.sourceName}${serializeArticleTimestamp(article, evidenceState)}\n${article.summary}`,
+        `${index + 1}. [evidenceId: ${article.evidenceId}]${relationTag(index)}${routeTag(article)} "${article.title}" \u2014 ${article.sourceName}${serializeArticleTimestamp(article, evidenceState)}\n${article.summary}`,
     )
     .join('\n\n');
 
@@ -598,7 +612,7 @@ export function buildAnalysisUserPrompt(
   return `User question: "${query}"
 ${outputContract === '' ? '' : `
 ${outputContract}
-`}
+`}${routeRule}
 Evidence (cite these exact evidenceId values in "evidenceIds" fields — never invent new ones, never cite anything else):
 
 ${articleBlocks}
@@ -743,7 +757,10 @@ export function buildSingleSourceBasisSection(breadth: AnalysisDevelopmentBreadt
     'question (duplicate or syndicated copies of one report count once). Present every claim ' +
     'as that one report\'s account — for example, open with "One qualifying report currently ' +
     'indicates…" — and do NOT state a national, regional or overall conclusion, trend or ' +
-    'consensus from it, and do NOT describe anything as verified or confirmed on its basis.'
+    'consensus from it, and do NOT describe anything as verified or confirmed on its basis. ' +
+    /* ASK R2 A/B/C BLOCKER REPAIR R1 */
+    'Write the single-report disclosure in the "singleReportBasis" field — it opens the brief — and ' +
+    'do not repeat it in the brief\'s other fields.'
   );
 }
 
@@ -1216,11 +1233,32 @@ export function buildAnalysisJsonSchema(
         }
       : { summary: { type: 'string' } };
 
-  const briefRequired: string[] = multiDevelopment
-    ? ['primaryDevelopment', 'additionalDevelopments']
-    : developmentBreadth?.readerContractTable === true
-      ? ['briefOpening', 'briefTable', 'briefClosing']
-      : ['summary'];
+  /*
+    ASK R2 A/B/C BLOCKER REPAIR R1 — exactly ONE independent reporting cluster: the single-source
+    disclosure that assessSingleSourceDiscipline requires is its own REQUIRED field, placed first in
+    the brief by the provider. Live Alpha 625f85b, C: the one qualifying Dar es Salaam report produced
+    a correct revision that was withheld because the brief never said it rested on one report — the
+    prompt's SINGLE-SOURCE BASIS instruction was given and not followed. The check is unchanged.
+  */
+  const singleReport = !multiDevelopment && developmentBreadth?.clusters === 1;
+  const singleReportProperties: Record<string, unknown> = singleReport
+    ? {
+        singleReportBasis: {
+          type: 'string',
+          description:
+            'ONE sentence that opens the brief and says it rests on a single report, naming that report\'s publisher and date — for example "Only one qualifying report was found: KT Press, 6 October 2026." Never imply corroboration, agreement between sources or verification.',
+        },
+      }
+    : {};
+
+  const briefRequired: string[] = [
+    ...(multiDevelopment
+      ? ['primaryDevelopment', 'additionalDevelopments']
+      : developmentBreadth?.readerContractTable === true
+        ? ['briefOpening', 'briefTable', 'briefClosing']
+        : ['summary']),
+    ...(singleReport ? ['singleReportBasis'] : []),
+  ];
 
   return {
     name: 'news_analysis',
@@ -1232,6 +1270,7 @@ export function buildAnalysisJsonSchema(
         headline: { type: 'string' },
         // C910 - one `summary` string, or the two required brief fields.
         ...briefProperties,
+        ...singleReportProperties,
         /*
           INLINE CITATIONS R1 — the brief annotated sentence by sentence. Every
           entry is re-validated by summary-statements.util.ts: exact placement,

@@ -31,6 +31,21 @@ export function normalizeBriefFields(content: unknown): unknown {
     return content;
   }
 
+  /*
+    ASK R2 A/B/C BLOCKER REPAIR R1 — a one-cluster brief carries its single-source disclosure as its
+    own field; it becomes the brief's FIRST paragraph, after the brief's own fields are joined.
+    Mechanical, like every join here: an empty disclosure adds nothing and the unchanged
+    single-source check then withholds the brief exactly as before.
+  */
+  const outer = content as Record<string, unknown>;
+  if (typeof outer.singleReportBasis === 'string') {
+    const { singleReportBasis: basis, ...withoutBasis } = outer;
+    const joined = normalizeBriefFields(withoutBasis) as Record<string, unknown>;
+    const brief = typeof joined.summary === 'string' ? joined.summary : '';
+    const summary = [String(basis).trim(), brief.trim()].filter((part) => part !== '').join('\n\n');
+    return { ...joined, summary };
+  }
+
   const record = content as Record<string, unknown>;
 
   /*

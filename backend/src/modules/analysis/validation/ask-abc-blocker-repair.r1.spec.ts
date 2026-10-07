@@ -2,10 +2,16 @@ import {
   admitsReport,
   BUSINESS_IMPACT_LEAD_WORDS,
   questionAnchorsOf,
+  routesNamedIn,
 } from '../query/question-anchors.util';
+import { assessSingleSourceDiscipline } from './brief-compliance.util';
 import { readTradeCorridor } from '../query/trade-corridor.util';
 import { readOutputContract, renderOutputContract } from '../prompt/output-contract.util';
-import { buildAnalysisJsonSchema, buildDevelopmentBreadthSection } from '../prompt/build-analysis-prompt.util';
+import {
+  buildAnalysisJsonSchema,
+  buildAnalysisUserPrompt,
+  buildDevelopmentBreadthSection,
+} from '../prompt/build-analysis-prompt.util';
 import {
   GENERATION_RESERVE_MS,
   retrievalBudgetMs,
@@ -183,11 +189,41 @@ describe('B · Rwanda corridor gate', () => {
     expect(admitsReport(anchors, report).admitted).toBe(false);
   });
 
-  it('keeps customs digitisation, the corridor deals and a named-port logistics report', () => {
-    expect(admitsReport(anchors, RWA_TAXMAN).admitted).toBe(true);
+  it('keeps reports that name a requested route: the Northern Corridor deals and named-port logistics', () => {
     expect(admitsReport(anchors, KEN_RWA_DEALS).admitted).toBe(true);
     expect(admitsReport(anchors, MOMBASA_ONLY).admitted).toBe(true);
     expect(admitsReport(anchors, DAR_PORT).admitted).toBe(true);
+    expect(admitsReport(anchors, KT_DAR).admitted).toBe(true);
+  });
+
+  /* live 625f85b, B: the reader named the routes, so generic destination-country relevance is not enough */
+  it.each([
+    ['customs digitisation in Rwanda (no route named)', RWA_TAXMAN],
+    ['an EAC China-trade scheme (Tanzania named as a country only)', EAC_CHINA],
+    ['pilgrimage traders (no route named)', KIBEHO],
+  ])('round 4 · rejects %s', (_label, report) => {
+    expect(admitsReport(anchors, report).admitted).toBe(false);
+  });
+
+  it('round 4 · each report is tagged with only the requested routes its own text names', () => {
+    expect(routesNamedIn(anchors, KEN_RWA_DEALS)).toEqual(['Mombasa']); /* Northern Corridor, not Dar es Salaam */
+    expect(routesNamedIn(anchors, KT_DAR)).toEqual(['Dar es Salaam']);
+    expect(routesNamedIn(anchors, RWA_TAXMAN)).toEqual([]);
+    expect(routesNamedIn(questionAnchorsOf(LIVE_A), KEN_RWA_DEALS)).toBeNull();
+  });
+
+  it('round 4 · the generation prompt carries those tags and the route-cell rule', () => {
+    const prompt = buildAnalysisUserPrompt(LIVE_B, [
+      { evidenceId: 'e1', title: KEN_RWA_DEALS.title, summary: KEN_RWA_DEALS.summary, sourceName: 'Taarifa Rwanda' },
+      { evidenceId: 'e2', title: KT_DAR.title, summary: KT_DAR.summary, sourceName: 'KT Press' },
+    ] as never);
+    expect(prompt).toMatch(/\[evidenceId: e1\] \[requested routes named in this report: Mombasa\]/);
+    expect(prompt).toMatch(/\[evidenceId: e2\] \[requested routes named in this report: Dar es Salaam\]/);
+    expect(prompt).toMatch(/names ONLY the routes in that report's/);
+    /* a non-corridor question carries no route tags */
+    expect(buildAnalysisUserPrompt(LIVE_A, [{ evidenceId: 'e1', title: 't', summary: 's', sourceName: 'x' }] as never)).not.toMatch(
+      /requested routes named/,
+    );
   });
 
   it('a weak word ("delays") counts beside the PORT name, not beside the country name', () => {
@@ -241,8 +277,46 @@ describe('C · "Dar es Salaam, not Mombasa" — the re-gate of the earlier evide
     expect(admitsReport(a, KT_DAR).admitted).toBe(true);
   });
 
-  it('the same customs story is still evidence for the UNNARROWED corridor question (B)', () => {
-    expect(admitsReport(questionAnchorsOf(LIVE_B), RWA_TAXMAN).admitted).toBe(true);
+});
+
+describe('Single report · C: one qualifying report must still reach the reader, disclosed as one report', () => {
+  const one = { clusters: 1, categories: 1, multiDevelopment: false } as const;
+
+  it('a one-cluster brief asks for a REQUIRED single-report disclosure field', () => {
+    const schema = buildAnalysisJsonSchema(one).schema as { properties: Record<string, unknown>; required: string[] };
+    expect(schema.required).toEqual(expect.arrayContaining(['summary', 'singleReportBasis']));
+    expect(JSON.stringify(schema.properties.singleReportBasis)).toMatch(/Never imply corroboration/);
+    const broad = buildAnalysisJsonSchema({ clusters: 3, categories: 1, multiDevelopment: false }).schema as { required: string[] };
+    expect(broad.required).not.toContain('singleReportBasis');
+  });
+
+  it('the disclosure opens the brief, and the unchanged single-source check then accepts it', () => {
+    const joined = normalizeBriefFields({
+      singleReportBasis: 'Only one qualifying report was found: KT Press, 6 October 2026.',
+      summary: 'Rwandan cargo through Dar es Salaam rose 24 percent. The earlier Mombasa items were removed.',
+    }) as { summary: string };
+    expect(joined.summary.startsWith('Only one qualifying report was found')).toBe(true);
+    expect(assessSingleSourceDiscipline(joined.summary, one, 'en').compliant).toBe(true);
+  });
+
+  it('the safeguard is not weakened: without the disclosure, or with corroboration wording, it still refuses', () => {
+    expect(assessSingleSourceDiscipline('Rwandan cargo through Dar es Salaam rose 24 percent.', one, 'en').compliant).toBe(false);
+    const corroborated = normalizeBriefFields({
+      singleReportBasis: 'Only one qualifying report was found.',
+      summary: 'Several sources agree cargo rose.',
+    }) as { summary: string };
+    expect(assessSingleSourceDiscipline(corroborated.summary, one, 'en').compliant).toBe(false);
+  });
+
+  it('it composes with a table brief: disclosure first, then opening, table, closing', () => {
+    const joined = normalizeBriefFields({
+      singleReportBasis: 'Only one qualifying report was found: KT Press.',
+      briefOpening: 'Cargo via Dar es Salaam rose.',
+      briefTable: '| a | b |\n|---|---|\n| 1 | 2 |',
+      briefClosing: 'Check your forwarder.',
+    }) as { summary: string };
+    expect(joined.summary.split('\n\n')[0]).toBe('Only one qualifying report was found: KT Press.');
+    expect(joined.summary.indexOf('Cargo via')).toBeLessThan(joined.summary.indexOf('| a | b |'));
   });
 });
 

@@ -435,19 +435,22 @@ export function admitsReport(anchors: QuestionAnchors, report: { title: string; 
       missing.push(`not via ${excluded.map((e) => e.label).join(' / ')}`);
     }
     /*
-      ASK R2 A/B/C BLOCKER REPAIR R1 (live 09d7a5e, C) — once the reader has NARROWED the route
-      ("Dar es Salaam, not Mombasa"), the question is about THAT route: a report is evidence only when
-      it names the kept route itself (its port or corridor; its country when no port was named). A
-      destination-country business, customs or trade story with no route relationship is not — its
-      table row would read "affected route: not reported". Unnarrowed corridor questions (B) keep
-      the destination-or-route rule above.
+      ASK R2 A/B/C BLOCKER REPAIR R1 — a corridor question that NAMES its routes ("via Mombasa or Dar
+      es Salaam", live B) or NARROWS them ("Dar es Salaam, not Mombasa", live C) is about those routes:
+      a report is evidence only when its own text names one of them (the port, or its corridor; the
+      route's country only when the reader named no port). A destination-country business, customs,
+      trade or border story with no route relationship is not — its table row would read "affected
+      route: not reported" or be given a route by inference (live 625f85b, B: a smuggling story, a tax
+      digitisation story, an EAC trade scheme and a pilgrimage-traders story). A corridor named only by
+      its destination keeps the destination-or-route rule above.
     */
-    if (excluded.length > 0) {
-      const keptRoutes = anchors.actors.filter((a) => a.role === 'ROUTE');
+    const keptRoutes = anchors.actors.filter((a) => a.role === 'ROUTE');
+    const routesNamedByPlace = keptRoutes.some((a) => (a.places ?? []).length > 0);
+    if (keptRoutes.length > 0 && (routesNamedByPlace || excluded.length > 0)) {
       const routeEvidenced = keptRoutes.some((a) =>
         (a.places ?? []).length > 0 ? (a.places ?? []).some((p) => hasPhrase(text, p)) : strong(a),
       );
-      if (keptRoutes.length > 0 && !routeEvidenced) missing.push(`route ${keptRoutes.map((r) => r.label).join(' / ')}`);
+      if (!routeEvidenced) missing.push(`route ${keptRoutes.map((r) => r.label).join(' / ')}`);
     }
   } else {
     for (const t of anchors.topics) {
@@ -460,6 +463,29 @@ export function admitsReport(anchors: QuestionAnchors, report: { title: string; 
     }
   }
   return { admitted: missing.length === 0, missing };
+}
+
+/**
+ * ASK R2 A/B/C BLOCKER REPAIR R1 — the requested routes a report's OWN text names (its port or
+ * corridor; the route's country only when the reader named no port), by the reader's route label.
+ * `null` when the question names no routes. Live 625f85b, B: a Kenya–Rwanda deals report that names
+ * only the Northern Corridor was rendered with "affected route: Mombasa, Dar es Salaam".
+ */
+export function routesNamedIn(
+  anchors: QuestionAnchors,
+  report: { title: string; summary?: string | null },
+): string[] | null {
+  if (anchors.relation !== 'CORRIDOR') return null;
+  const routes = anchors.actors.filter((a) => a.role === 'ROUTE');
+  if (routes.length === 0) return null;
+  const text = normalizeText(`${report.title} ${report.summary ?? ''}`);
+  return routes
+    .filter((a) =>
+      (a.places ?? []).length > 0
+        ? (a.places ?? []).some((p) => hasPhrase(text, p))
+        : a.terms.some((t) => hasPhrase(text, t)),
+    )
+    .map((a) => a.label);
 }
 
 /** A stable short key for caches and diagnostics. */
