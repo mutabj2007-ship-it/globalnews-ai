@@ -1179,7 +1179,16 @@ export function buildAnalysisJsonSchema(
             'The OTHER material developments the supplied evidence establishes, distinct from the one in "primaryDevelopment". Separate them from each other with a blank line where there is more than one. There is no required number: cover what the evidence actually establishes and nothing more. Do NOT pad, do NOT invent a second development, and do NOT emit one per article or per source - if the evidence genuinely supports only a thin second strand, say so plainly and briefly rather than inflating it.',
         },
       }
-    : { summary: { type: 'string' } };
+    : developmentBreadth?.readerContract === true
+      ? {
+          /* ASK R2 A/B/C BLOCKER REPAIR R1 — the whole contract brief, not the reader's "summary" */
+          summary: {
+            type: 'string',
+            description:
+              "The WHOLE brief in THE READER'S OUTPUT CONTRACT order: the opening sentences, then the requested Markdown table, then the requested closing paragraph, blocks separated by a blank line. When the reader asks for a \"summary\" they mean only the opening — this field must still contain the table and the closing.",
+          },
+        }
+      : { summary: { type: 'string' } };
 
   const briefRequired: string[] = multiDevelopment
     ? ['primaryDevelopment', 'additionalDevelopments']

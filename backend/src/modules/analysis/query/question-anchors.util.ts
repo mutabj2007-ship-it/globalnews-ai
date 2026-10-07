@@ -200,6 +200,13 @@ function hasPhrase(text: string, phrase: string): boolean {
   return p !== '' && text.includes(` ${p} `);
 }
 
+/** ASK R2 A/B/C BLOCKER REPAIR R1 — the East African corridor named for each port country's main route. */
+const ROUTE_CORRIDOR_NAMES: Readonly<Record<string, readonly string[]>> = {
+  KEN: ['northern corridor'],
+  TZA: ['central corridor'],
+};
+/** ASK R2 A/B/C BLOCKER REPAIR R1 — distinct business-impact terms a report needs (one generic word is not enough). */
+export const BUSINESS_IMPACT_MIN_TERMS = 2;
 /** ASK R2 A/B/C BLOCKER REPAIR R1 — how much of a report counts as its lead (after the title). */
 export const BUSINESS_IMPACT_LEAD_WORDS = 60;
 /** ASK R2 A/B/C BLOCKER REPAIR R1 — distinct coverage-area terms a corridor report needs without a route place. */
@@ -310,7 +317,9 @@ function corridorAnchors(corridor: TradeCorridor, topics: readonly AnchorGroup[]
     const g = countryGroup(route.iso3);
     if (g === null) continue;
     const city = route.city === null ? [] : [route.city.toLowerCase()];
-    actors.push({ key: g.key, label: route.label, terms: [...new Set([...city, ...g.terms])], role: 'ROUTE', places: city });
+    /* the named corridor out of a port is the same route ("Northern Corridor" = Mombasa) */
+    const places = city.length === 0 ? [] : [...city, ...(ROUTE_CORRIDOR_NAMES[g.key] ?? [])];
+    actors.push({ key: g.key, label: route.label, terms: [...new Set([...city, ...g.terms])], role: 'ROUTE', places });
   }
   /* a route the reader ruled out keeps its whole country and city, so its reports can be recognised */
   const excluded: AnchorGroup[] = [];
@@ -425,8 +434,30 @@ export function admitsReport(anchors: QuestionAnchors, report: { title: string; 
     ) {
       missing.push(`not via ${excluded.map((e) => e.label).join(' / ')}`);
     }
+    /*
+      ASK R2 A/B/C BLOCKER REPAIR R1 (live 09d7a5e, C) — once the reader has NARROWED the route
+      ("Dar es Salaam, not Mombasa"), the question is about THAT route: a report is evidence only when
+      it names the kept route itself (its port or corridor; its country when no port was named). A
+      destination-country business, customs or trade story with no route relationship is not — its
+      table row would read "affected route: not reported". Unnarrowed corridor questions (B) keep
+      the destination-or-route rule above.
+    */
+    if (excluded.length > 0) {
+      const keptRoutes = anchors.actors.filter((a) => a.role === 'ROUTE');
+      const routeEvidenced = keptRoutes.some((a) =>
+        (a.places ?? []).length > 0 ? (a.places ?? []).some((p) => hasPhrase(text, p)) : strong(a),
+      );
+      if (keptRoutes.length > 0 && !routeEvidenced) missing.push(`route ${keptRoutes.map((r) => r.label).join(' / ')}`);
+    }
   } else {
-    for (const t of anchors.topics) if (!has(t)) missing.push(t.label);
+    for (const t of anchors.topics) {
+      /* ASK R2 A/B/C BLOCKER REPAIR R1 (live 09d7a5e, A) — business impact needs more than one generic
+         word: a maternal-health story ("supplies"), a bank appointment ("business") and a climate
+         summit ("fuel") each qualified on one. Two distinct terms, plurals folded. */
+      const ok =
+        t.key === 'business-impact' ? distinctTermsFound(text, [t]) >= BUSINESS_IMPACT_MIN_TERMS : has(t);
+      if (!ok) missing.push(t.label);
+    }
   }
   return { admitted: missing.length === 0, missing };
 }

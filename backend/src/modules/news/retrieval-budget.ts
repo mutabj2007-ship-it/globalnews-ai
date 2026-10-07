@@ -31,6 +31,13 @@ const storage = new AsyncLocalStorage<RetrievalBudget>();
 
 /** Generation needs this much of the overall budget left (OpenAI measured 11.6 s live). */
 export const GENERATION_RESERVE_MS = 13_000;
+/**
+ * ASK R2 A/B/C BLOCKER REPAIR R1 — a reader-requested TABLE is a longer generation. Live Alpha
+ * 09d7a5e: the Dar es Salaam table brief took 12.1 s (1,261 completion tokens), and the Rwanda
+ * corridor table (6 columns, up to 5 rows) was cancelled at the 28 s budget after 14.5 s of
+ * generation, because retrieval had used its full 15 s share. Only table contracts reserve more.
+ */
+export const TABLE_GENERATION_RESERVE_MS = 17_000;
 /** A provider is not started with less than this left: it could not answer usefully. */
 export const MIN_PROVIDER_START_MS = 1_500;
 /** Retrieval always gets at least this much, even under a very small overall budget. */
@@ -43,8 +50,8 @@ export const MIN_RETRIEVAL_BUDGET_MS = 4_000;
 export const TIER_SHARE = 0.6;
 
 /** The retrieval share of an overall synchronous budget. */
-export function retrievalBudgetMs(totalBudgetMs: number): number {
-  return Math.max(MIN_RETRIEVAL_BUDGET_MS, totalBudgetMs - GENERATION_RESERVE_MS);
+export function retrievalBudgetMs(totalBudgetMs: number, generationReserveMs: number = GENERATION_RESERVE_MS): number {
+  return Math.max(MIN_RETRIEVAL_BUDGET_MS, totalBudgetMs - generationReserveMs);
 }
 
 export function withRetrievalDeadline<T>(

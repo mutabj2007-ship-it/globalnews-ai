@@ -4,8 +4,13 @@ import {
   questionAnchorsOf,
 } from '../query/question-anchors.util';
 import { readTradeCorridor } from '../query/trade-corridor.util';
-import { readOutputContract } from '../prompt/output-contract.util';
-import { buildDevelopmentBreadthSection } from '../prompt/build-analysis-prompt.util';
+import { readOutputContract, renderOutputContract } from '../prompt/output-contract.util';
+import { buildAnalysisJsonSchema, buildDevelopmentBreadthSection } from '../prompt/build-analysis-prompt.util';
+import {
+  GENERATION_RESERVE_MS,
+  retrievalBudgetMs,
+  TABLE_GENERATION_RESERVE_MS,
+} from '../../news/retrieval-budget';
 import type { DevelopmentBreadth } from './brief-compliance.util';
 import { assessReaderContractShape, opensWithNothingVerified } from './reader-contract-shape.util';
 
@@ -84,6 +89,40 @@ const DAR_PORT = {
   summary: 'Tanzania Ports Authority says the Dar es Salaam backlog of Rwanda transit containers has cleared and dwell times fell.',
 };
 
+/* ── round 2 (live 09d7a5e) shapes ───────────────────────────────────────── */
+const EADB_2 = {
+  title: 'EADB Appoints Anne Juuko as Director General',
+  summary: 'Nairobi, Kenya — The East African Development Bank has named a new Director General to lead the regional business lender.',
+};
+const MATERNAL = {
+  title: 'Kenya’s maternal health crisis: Why postpartum bleeding is still killing mothers',
+  summary: 'Hospitals in Kenya report shortfalls in blood supplies for mothers after childbirth.',
+};
+const CLIMATE = {
+  title: 'Global Leaders Warn of "Climate Overshoot," Call for Fossil Fuel Phase-Out',
+  summary: 'At a summit attended by delegates from Kenya and Nairobi-based agencies, leaders urged an end to fossil fuel use.',
+};
+const PACKAGING = {
+  title: 'Couple started packaging business with Sh250,000 in Kenya - here’s how',
+  summary: 'A couple in Nairobi, Kenya describe how they grew their packaging business from savings.',
+};
+const FOOD_PRICES = {
+  title: 'Food prices rising in Kenya as climate change strains supply',
+  summary: 'Shoppers in Nairobi markets face higher prices as drought cuts the supply of staples; consumers are paying more.',
+};
+const KT_DAR = {
+  title: 'Rwanda Cargo Through Dar es Salaam Rises 24% as Trade Routes Shift',
+  summary: 'Rwandan cargo through the port of Dar es Salaam rose 24 percent as importers shifted to the Central Corridor.',
+};
+const EAC_CHINA = {
+  title: 'EAC’s 100 Businesses Scheme for Larger Share Of China Trade',
+  summary: 'One hundred firms from Rwanda, Tanzania and other EAC states will pursue exports and imports with Chinese buyers.',
+};
+const KIBEHO = {
+  title: 'Kibeho Traders Harvesting Money From Selling Holly Water',
+  summary: 'Traders in Kibeho, Rwanda sell holy water in containers to pilgrims.',
+};
+
 describe('A · Kenya small-business gate (business-impact)', () => {
   const anchors = questionAnchorsOf(LIVE_A);
 
@@ -102,6 +141,19 @@ describe('A · Kenya small-business gate (business-impact)', () => {
     expect(admitsReport(anchors, KEN_RWA_DEALS).admitted).toBe(true);
     expect(admitsReport(anchors, DANGOTE).admitted).toBe(true);
     expect(admitsReport(anchors, KEN_FUEL_LEAD).admitted).toBe(true);
+  });
+
+  it.each([
+    ['the second EADB article (one generic word, "business")', EADB_2],
+    ['a maternal-health story (one generic word, "supplies")', MATERNAL],
+    ['a climate summit (one generic word, "fuel")', CLIMATE],
+    ['a start-up feature (one generic word, "business")', PACKAGING],
+  ])('round 2 · rejects %s', (_label, report) => {
+    expect(admitsReport(anchors, report).admitted).toBe(false);
+  });
+
+  it('round 2 · keeps a real cost-of-doing-business development (food prices, supply, markets)', () => {
+    expect(admitsReport(anchors, FOOD_PRICES).admitted).toBe(true);
   });
 
   it('a non-business country question is not tightened (the lead rule is business-impact only)', () => {
@@ -165,6 +217,61 @@ describe('C · "Dar es Salaam, not Mombasa" — the re-gate of the earlier evide
 
   it('keeps Dar es Salaam evidence', () => {
     expect(admitsReport(anchors, DAR_PORT).admitted).toBe(true);
+  });
+
+  /* round 2 (live 09d7a5e): B timed out, so C ran ONE new search whose anchors were read from the
+     whole retrieval question — both anchor readings must apply the narrowed-route rule */
+  const searchAgain = questionAnchorsOf(`${LIVE_B}\n${LIVE_C}`);
+
+  it.each([
+    ['the reuse anchors', anchors],
+    ['the search-again anchors', searchAgain],
+  ])('round 2 · %s: generic Rwanda business / customs / trade stories with no Dar relationship are rejected', (_l, a) => {
+    expect((a.excluded ?? []).map((e) => e.key)).toContain('KEN');
+    for (const report of [RWA_TAXMAN, EAC_CHINA, KIBEHO, SEX_ARTICLE]) {
+      expect(admitsReport(a, report).admitted).toBe(false);
+    }
+  });
+
+  it.each([
+    ['the reuse anchors', anchors],
+    ['the search-again anchors', searchAgain],
+  ])('round 2 · %s: the route-specific KT Press Dar es Salaam cargo story is kept', (_l, a) => {
+    expect(admitsReport(a, KT_DAR).admitted).toBe(true);
+  });
+
+  it('the same customs story is still evidence for the UNNARROWED corridor question (B)', () => {
+    expect(admitsReport(questionAnchorsOf(LIVE_B), RWA_TAXMAN).admitted).toBe(true);
+  });
+});
+
+describe('Contract · the "summary" field holds the whole brief (A: "Start with a two-sentence summary")', () => {
+  it('the rendered contract says the reader’s "summary" is only the opening of the one field', () => {
+    const text = renderOutputContract(readOutputContract(LIVE_A));
+    expect(text).toMatch(/The brief is the WHOLE "summary" field/);
+    expect(text).toMatch(/only the START of the brief/);
+    expect(text).toMatch(/is not a row/);
+  });
+
+  it('the generation schema describes "summary" as the whole contract brief', () => {
+    const schema = JSON.stringify(
+      buildAnalysisJsonSchema({ clusters: 3, categories: 1, multiDevelopment: false, readerContract: true }),
+    );
+    expect(schema).toMatch(/The WHOLE brief in THE READER'S OUTPUT CONTRACT order/);
+  });
+
+  it('a contract with only a word limit does not claim the one-field shape', () => {
+    expect(renderOutputContract(readOutputContract('What happened in Kenya this week? Under 100 words.'))).not.toMatch(
+      /WHOLE "summary" field/,
+    );
+  });
+});
+
+describe('Budget · a reader-requested table reserves more generation time', () => {
+  it('table contracts leave 17 s for generation; every other request keeps 13 s', () => {
+    expect(retrievalBudgetMs(28_000, TABLE_GENERATION_RESERVE_MS)).toBe(11_000);
+    expect(retrievalBudgetMs(28_000)).toBe(28_000 - GENERATION_RESERVE_MS);
+    expect(GENERATION_RESERVE_MS).toBe(13_000);
   });
 });
 

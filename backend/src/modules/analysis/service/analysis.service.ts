@@ -1,6 +1,11 @@
 import { readOutputContract } from '../prompt/output-contract.util';
 import type { DisplayLocale } from '@globalnews-ai/shared';
-import { withRetrievalDeadline, retrievalBudgetMs } from '../../news/retrieval-budget';
+import {
+  withRetrievalDeadline,
+  retrievalBudgetMs,
+  GENERATION_RESERVE_MS,
+  TABLE_GENERATION_RESERVE_MS,
+} from '../../news/retrieval-budget';
 import { isSameHeadline } from '../../news/identity/headline-identity.util';
 import { createHash } from 'node:crypto';
 import {
@@ -1019,9 +1024,14 @@ export class AnalysisService {
     const responseAbort = new AbortController();
 
     /* ASK R2 LIVE-GATE REPAIR (P0-3) — retrieval has its own deadline INSIDE the one overall
-       budget, leaving GENERATION_RESERVE_MS for the model (news/retrieval-budget.ts). */
+       budget, leaving GENERATION_RESERVE_MS for the model (news/retrieval-budget.ts).
+       ASK R2 A/B/C BLOCKER REPAIR R1 — a reader-requested table leaves TABLE_GENERATION_RESERVE_MS. */
     const retrievalDeadlineAt =
-      Date.now() + retrievalBudgetMs(resolveServerBudgetMs(config.totalBudgetMs));
+      Date.now() +
+      retrievalBudgetMs(
+        resolveServerBudgetMs(config.totalBudgetMs),
+        readOutputContract(normalizedQuery).table !== null ? TABLE_GENERATION_RESERVE_MS : GENERATION_RESERVE_MS,
+      );
     const inFlightOperation: Promise<AnalysisApiResponse> =
       withRetrievalDeadline(retrievalDeadlineAt, async (): Promise<AnalysisApiResponse> => {
         /**
