@@ -187,7 +187,8 @@ export function Composer({
   readonly inputLabel: string;
   readonly placeholder: string;
   readonly submitLabel: string;
-  readonly costNote: string;
+  /** ASK DESIGN AUTHORITY R3 (CTO ruling 3) — absent on standalone Ask: no cost line under the composer. */
+  readonly costNote?: string;
   /**
    * R4 · bidi props for the cost note when it is still EN/PL copy inside an RTL scope.
    * Optional and absent by default, so a left-to-right reader's markup is unchanged. Typed
@@ -324,13 +325,15 @@ export function Composer({
         </button>
       </div>
       <AskQuestionLimitNote id="ask-frame-composer-limit" state={limit} copy={limitCopy} />
-      <p
-        data-ask="cost-note"
-        className="text-[0.75rem] leading-[1.3] text-[var(--ask-read-ink3,#6f89a8)]"
-        {...(costNoteProps ?? {})}
-      >
-        {costNote}
-      </p>
+      {costNote !== undefined && (
+        <p
+          data-ask="cost-note"
+          className="text-[0.75rem] leading-[1.3] text-[var(--ask-read-ink3,#6f89a8)]"
+          {...(costNoteProps ?? {})}
+        >
+          {costNote}
+        </p>
+      )}
     </form>
   );
 }

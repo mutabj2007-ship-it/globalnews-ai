@@ -1,6 +1,6 @@
 'use client';
 
-import { useSyncExternalStore } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 import {
   parseThemeSchedule,
   readThemeCookie,
@@ -85,6 +85,21 @@ export function setThemePreference(
  * the cookie, so hydration never disagrees with the first frame.
  */
 export function useThemePreference(serverPreference: ThemePreference = 'system'): ThemePreference {
+  /*
+    ASK DESIGN AUTHORITY R3 — CTO THEME RULING. With NO theme cookie and no choice made in this
+    session, a scope keeps the preference its server render read: standalone Ask's is Light (the
+    approved Design), the platform's is System — so neither changes after hydration. A stored or
+    newly chosen preference wins exactly as before.
+  */
+  const snapshot = useCallback(
+    (): ThemePreference =>
+      override === null &&
+      typeof document !== 'undefined' &&
+      readThemeCookieValue(document.cookie) === undefined
+        ? serverPreference
+        : current(),
+    [serverPreference],
+  );
   return useSyncExternalStore(
     (listener) => {
       listeners.add(listener);
@@ -92,7 +107,7 @@ export function useThemePreference(serverPreference: ThemePreference = 'system')
       if (listeners.size === 1) syncSchedule();
       return () => listeners.delete(listener);
     },
-    current,
+    snapshot,
     () => serverPreference,
   );
 }

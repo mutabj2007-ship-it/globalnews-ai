@@ -37,8 +37,9 @@ import { AskR2TurnView } from './AskR2TurnView';
 import { AskConversations } from './AskConversations';
 import { AskToastProvider, AskToastSlot } from './AskToast';
 import { useAskNavOptional } from '@/components/ask-nav/AskNavShell';
+import { AskReadingFooter } from '@/components/ask-nav/AskReadingFooter';
 import { AskDeepConfirm } from './AskDeepConfirm';
-import { ASK_EYEBROW, Composer } from './AskParts';
+import { Composer } from './AskParts';
 import styles from './askDashboard.module.css';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 
@@ -606,6 +607,15 @@ export function AskFrameScreen({
             currentThreadId={lastR2?.operation?.threadId ?? null}
           />
         )}
+        {/* ASK DESIGN AUTHORITY R3 — the column's footer slot (CTO rulings 1–3): language,
+            appearance, one account entry and the quiet legal row; the standalone shell only. */}
+        {wide && nav !== null && (
+          <AskReadingFooter
+            language={disposition.catalogueLocale}
+            selected={interfaceLocale}
+            account={nav.account}
+          />
+        )}
       </aside>
       {/* PHONE / TABLET (<1024) — the Design header: menu · emblem 24 + wordmark · New. */}
       <header data-ask="header" className={styles.phoneHeader}>
@@ -793,7 +803,11 @@ export function AskFrameScreen({
                 </div>
               </section>
             )}
-            {/* CTO P0 · DEFECT F — the reopened conversation's earlier turns, collapsed. */}
+            {/*
+              CTO P0 · DEFECT F — the reopened conversation's earlier turns. ASK DESIGN AUTHORITY R3
+              (CTO ruling 10): the complete sequence, in order — each earlier question with its own
+              answer, read like the latest one, no "Earlier" label and nothing folded away.
+            */}
             {opened !== null && !openedInLive && openedEarlier.length > 0 && (
               <section
                 data-ask="earlier"
@@ -802,25 +816,15 @@ export function AskFrameScreen({
                 className="mb-5 flex flex-col gap-2"
               >
                 {openedEarlier.map((turn, i) => (
-                  <details key={`restored-${i}`} data-ask="earlier-turn" data-ask-read="r4" className={styles.earlier}>
-                    <summary className="cursor-pointer list-none">
-                      <span data-ask-earlier-eyebrow="" className={ASK_EYEBROW}>
-                        {r2s.earlier}
-                      </span>
-                      <span className="mt-2 block text-[15px] font-bold leading-[1.3] text-[var(--ask-read-ink,#e6eef6)]">
-                        {turn.question}
-                      </span>
-                    </summary>
-                    <div className="mt-3">
-                      <AskR2TurnView
-                        canSave={!guestMode}
-                        turn={turn}
-                        locale={interfaceLocale}
-                        context={context}
-                        displayOnly
-                      />
-                    </div>
-                  </details>
+                  <div key={`restored-${i}`} data-ask="earlier-turn" data-ask-read="r4">
+                    <AskR2TurnView
+                      canSave={!guestMode}
+                      turn={turn}
+                      locale={interfaceLocale}
+                      context={context}
+                      displayOnly
+                    />
+                  </div>
                 ))}
               </section>
             )}
@@ -845,26 +849,17 @@ export function AskFrameScreen({
                 aria-label={r2s.earlier}
                 className="mb-5 flex flex-col gap-2"
               >
+                {/* CTO R3 ruling 10 — the live conversation's earlier turns, in full and in order. */}
                 {earlierR2.map((turn, i) => (
-                  <details key={`r2-${i}`} data-ask="earlier-turn" data-ask-read="r4" className={styles.earlier}>
-                    <summary className="cursor-pointer list-none">
-                      <span data-ask-earlier-eyebrow="" className={ASK_EYEBROW}>
-                        {r2s.earlier}
-                      </span>
-                      <span className="mt-2 block text-[15px] font-bold leading-[1.3] text-[var(--ask-read-ink,#e6eef6)]">
-                        {turn.question}
-                      </span>
-                    </summary>
-                    <div className="mt-3">
-                      <AskR2TurnView
-                        canSave={!guestMode}
-                        turn={turn}
-                        locale={interfaceLocale}
-                        context={context}
-                        onRunDeeper={guestMode ? undefined : (q) => void r2.runDeeper(q)}
-                      />
-                    </div>
-                  </details>
+                  <div key={`r2-${i}`} data-ask="earlier-turn" data-ask-read="r4">
+                    <AskR2TurnView
+                      canSave={!guestMode}
+                      turn={turn}
+                      locale={interfaceLocale}
+                      context={context}
+                      onRunDeeper={guestMode ? undefined : (q) => void r2.runDeeper(q)}
+                    />
+                  </div>
                 ))}
               </section>
             )}
@@ -1076,7 +1071,9 @@ export function AskFrameScreen({
             /* Design A1/A5 — "Ask anything…" before the first question, "Ask a follow-up…" after. */
             placeholder={entryState ? r2s.read.placeholderFirst : r2s.read.placeholderFollowUp}
             submitLabel={dict.askAi.submit}
-            costNote={t.states.costNotConfigured}
+            /* ASK DESIGN AUTHORITY R3 (CTO ruling 3) — no operational / cost line under the
+               composer on standalone Ask; a frame mounted elsewhere keeps it as before. */
+            costNote={nav === null ? t.states.costNotConfigured : undefined}
             /* R4 · still EN/PL copy, so it isolates inside an RTL scope. */
             costNoteProps={foreignCopy}
             onSubmit={() => void ask()}
@@ -1100,7 +1097,10 @@ export function AskFrameScreen({
           )}
         </div>
         {/* TRUST R1 §12 — the Privacy Notice and Cookies notice, reachable before sign-in and
-            before the first question, without interrupting the conversation. */}
+            before the first question, without interrupting the conversation. ASK DESIGN
+            AUTHORITY R3 (CTO ruling 3): on standalone Ask they are the quiet legal row of the
+            conversations footer (drawer / column), not a line under the composer. */}
+        {nav === null && (
         <p
           data-ask="privacy-links"
           className="mx-auto mt-1 flex max-w-[760px] gap-3 px-4 md:px-1 text-[0.75rem] text-[var(--ask-read-ink3,#6f89a8)]"
@@ -1112,6 +1112,7 @@ export function AskFrameScreen({
             {r2s.cookiesLink}
           </a>
         </p>
+        )}
       </div>
       {entryState && (
         /*

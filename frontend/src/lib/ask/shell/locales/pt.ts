@@ -600,6 +600,9 @@ export const ptShellOverlay: ShellLocaleOverlay = {
         demoData: "Dados de demonstração.",
         failureNetworkTitle: "Não foi possível acessar o serviço de notícias.",
         failureBody: "Isso costuma ser temporário. Sua pergunta continua na caixa abaixo.",
+        generalExplanationLine: "Explicação geral — não são necessárias fontes atuais.",
+        noReportingTitle: "Não consegui verificar reportagens relevantes para esta pergunta.",
+        searchIncomplete: "Alguns canais de fontes estavam indisponíveis, então a busca não foi completa.",
       },
       questionOverLimit: {
         kind: "pattern",

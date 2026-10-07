@@ -138,3 +138,69 @@
 .drawer .drawerGroup {
   border-bottom: 1px solid var(--ad-line, rgba(10, 39, 68, 0.7));
 }
+
+/*
+  ASK DESIGN AUTHORITY R3 — the conversations footer (AskReadingFooter): the Design's footer
+  slot at the bottom of the drawer / the 280 px column. Quiet: a hairline above, the reader's
+  language · appearance · one account entry on one wrapping row, and the legal row in 13 px ink-3.
+*/
+.readingFooter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: auto;
+  padding: 10px 4px 0;
+  border-top: 1px solid var(--ad-line, rgba(10, 39, 68, 0.7));
+  font-family: var(--font-body), Inter, system-ui, sans-serif;
+}
+.drawer .drawerGroup[data-ask-nav='conversations'] {
+  border-bottom: 0;
+}
+.readingFooterRow {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  color: var(--ad-ink-2, #93a0b8);
+  font-size: var(--ad-t-sm, 0.9375rem);
+}
+.readingFooterLink {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 22px;
+  color: var(--ad-ink, #edeff5);
+  font-size: var(--ad-t-sm, 0.9375rem);
+  font-weight: 500;
+}
+.readingFooterLink:hover {
+  background: var(--ad-surface-2, rgba(56, 189, 248, 0.1));
+}
+.legalRow {
+  display: flex;
+  gap: 14px;
+  margin: 0;
+  padding: 0 10px;
+  font-size: var(--ad-t-xs, 0.8125rem);
+  line-height: 1;
+  color: var(--ad-ink-3, #7d89a1);
+}
+.legalRow a {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  text-underline-offset: 2px;
+}
+.legalRow a:hover {
+  text-decoration: underline;
+}
+/* The footer's language control reads in the Design's secondary ink, not the platform blue. */
+.readingFooter[data-ask-nav='reading-footer'] .readingFooterRow :global(.border-cd-ink-glyph-header) {
+  border-color: var(--ad-ink-2, #93a0b8);
+}
+.readingFooter[data-ask-nav='reading-footer'] .readingFooterRow :global(.font-cd-mono),
+.readingFooter[data-ask-nav='reading-footer'] .readingFooterRow :global(.text-cd-ink-meta) {
+  color: var(--ad-ink-2, #93a0b8);
+}

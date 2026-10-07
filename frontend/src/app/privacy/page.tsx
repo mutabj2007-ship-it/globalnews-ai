@@ -1,8 +1,9 @@
 import { cookies } from 'next/headers';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { NavBar } from '@/components/navigation/NavBar';
 import { AskThemedSurface } from '@/components/ask-nav/AskThemedSurface';
-import { THEME_COOKIE_NAME, parseThemePreference } from '@/lib/theme/theme';
+import { THEME_COOKIE_NAME } from '@/lib/theme/theme';
+import { askThemeColor, parseAskThemePreference } from '@/lib/ask/askTheme';
 import { Footer } from '@/components/layout/Footer';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { surfaceLocale } from '@/lib/i18n/displayLocale.server';
@@ -43,6 +44,12 @@ export async function generateMetadata(): Promise<Metadata> {
   });
 }
 
+/** ASK DESIGN AUTHORITY R3 — the browser chrome follows the reader's Ask treatment (Light unless
+    they saved another), so a Light page is not framed by the layout's navy status-bar colour. */
+export function generateViewport(): Viewport {
+  return { themeColor: askThemeColor(parseAskThemePreference(cookies().get(THEME_COOKIE_NAME)?.value)) };
+}
+
 export default async function PrivacyPage(): Promise<JSX.Element> {
   const surface = surfaceLocale('privacy');
   const language = surface.language;
@@ -54,7 +61,7 @@ export default async function PrivacyPage(): Promise<JSX.Element> {
   return (
     /* TRUST R1 §16 — the legal pages take the same theme as the Standalone surfaces (read from the
        theme cookie on the server; changing it touches no network and no Ask). Wording unchanged. */
-    <AskThemedSurface theme={parseThemePreference(cookies().get(THEME_COOKIE_NAME)?.value)}>
+    <AskThemedSurface theme={parseAskThemePreference(cookies().get(THEME_COOKIE_NAME)?.value)}>
       <div className="flex min-h-screen flex-col bg-void">
         <NavBar language={language} />
         <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-10 sm:py-14">

@@ -149,7 +149,9 @@ describe('no theme flash — the first frame is already the reader’s theme', (
     expect(read('components', 'ask-nav', 'AskStandaloneRoot.tsx')).toMatch(/<AskThemedPage/);
     const askPage = read('app', 'ask', 'page.tsx');
     expect(askPage).toMatch(/<AskThemedPage/);
-    expect(askPage).toContain('parseThemePreference(cookies().get(THEME_COOKIE_NAME)?.value)');
+    /* ASK DESIGN AUTHORITY R3 — CTO theme ruling: no stored preference opens Ask in the Light
+       Design; a saved preference still wins (askTheme.spec.ts). Still one scope, no flash. */
+    expect(askPage).toContain('parseAskThemePreference(cookies().get(THEME_COOKIE_NAME)?.value)');
     /* the answer components themselves stay unforked: no theme logic inside the frame */
     expect(read('components', 'ask-frame', 'AskFrameScreen.tsx')).not.toMatch(
       /data-gna-theme|ThemeScope|useThemePreference/,

@@ -36,6 +36,7 @@ import { askProductName, askShellStrings } from '@/lib/ask/shell/askShellCatalog
 import { askDirectionProps } from '@/lib/ask/askDirection';
 import { AskConversations } from '@/components/ask-frame/AskConversations';
 import { AskEmblemMark } from '@/components/ask-frame/AskEmblem';
+import { AskReadingFooter } from './AskReadingFooter';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -262,6 +263,7 @@ export function AskNavShell({
   language,
   selected,
   theme,
+  surface,
 }: {
   readonly language: DisplayLocale;
   /**
@@ -284,7 +286,16 @@ export function AskNavShell({
    * page with no theme scope offers no switch that would change nothing).
    */
   readonly theme?: ThemePreference;
+  /**
+   * ASK DESIGN AUTHORITY R3 — CTO RULINGS 1–2. 'reading' is standalone Ask's reading surface
+   * (`/ask`, the standalone `/`): the Claude Design compact Ask header (in the frame) is the
+   * only header, so this platform bar is not rendered, and the drawer holds the conversations
+   * and their footer only. Every other Ask page (Recent, Saved, Settings, Help…) keeps the bar —
+   * those are the product locations Account, Settings and Help are reached from.
+   */
+  readonly surface?: 'reading';
 }): JSX.Element {
+  const reading = surface === 'reading';
   const { open, setOpen, clearAndGo, clear, setAccount, threadId, runNewQuestion } = useAskNav();
   /* TRUST R1 — the page passes its server-read theme, or the nearest theme scope supplies it. */
   const scopeTheme = useContext(ThemeScopeContext);
@@ -501,6 +512,7 @@ export function AskNavShell({
         direction table. Nothing here decides a direction; a component that computed its own
         would be the second authority the shared contract exists to prevent.
       */}
+      {!reading && (
       <header
         data-ask-nav="shell"
         lang={shellDirection.lang}
@@ -605,6 +617,7 @@ export function AskNavShell({
           </div>
         </div>
       </header>
+      )}
 
       {open && (
         /* Design D4 — the conversation behind the drawer stays visible under a scrim; a tap on
@@ -655,6 +668,14 @@ export function AskNavShell({
             />
           </div>
 
+          {reading ? (
+            <AskReadingFooter
+              language={language}
+              selected={selectedLocale}
+              account={isLoading ? 'pending' : audience}
+            />
+          ) : (
+          <>
           <nav aria-label={s.navAriaLabel} className={styles.drawerGroup}>
             {renderRoutes(drawerRowClass, () => setOpen(false))}
           </nav>
@@ -709,6 +730,8 @@ export function AskNavShell({
               </>
             )}
           </div>
+          </>
+          )}
         </div>
       )}
     </>

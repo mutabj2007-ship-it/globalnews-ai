@@ -37,7 +37,7 @@ export function AskStandaloneRoot({
     <AskThemedPage theme={theme} root="standalone">
       <SiteStructuredData />
       <AskNavProvider>
-        <AskNavShell language={disposition.catalogueLocale} selected={locale} theme={theme} />
+        <AskNavShell language={disposition.catalogueLocale} selected={locale} theme={theme} surface="reading" />
         <Suspense fallback={<main className="min-h-0 flex-1 bg-void" />}>
           <AskShellFrame locale={locale} />
         </Suspense>

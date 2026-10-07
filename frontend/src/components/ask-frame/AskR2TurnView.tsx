@@ -290,6 +290,88 @@ export function AskR2TurnView({
       .filter(Boolean)
       .join(' '),
   ].filter((line) => line.trim() !== '');
+  /* The answer's scope · state · freshness (placement: Sources "About" or the inline About). */
+  const answerMeta = (placement: 'about' | 'inline'): JSX.Element => (
+        <div
+          data-ask="answer-meta"
+          data-ask-meta-placement={placement}
+          className="mt-4 flex flex-col gap-2"
+        >
+          <div data-ask="scope" className="flex flex-wrap items-center gap-1.5">
+            <span className={`me-1 ${EYEBROW}`}>{s.scope}</span>
+            {view.chips.items.map((chip, i) => (
+              <span
+                key={`${chip.kind}-${i}`}
+                data-ask-chip={chip.kind}
+                data-ask-chip-kept={chip.kept ? 'true' : undefined}
+                /* R4 · a chip is a self-contained run: a publisher name, a domain or the
+                   reader's own words. Isolated so its boundaries cannot reorder the row — a
+                   DOMAIN chip beside an Arabic TOPIC chip is the case this exists for. */
+                {...isolatedAuto()}
+                className={`inline-flex min-h-7 items-center rounded-[14px] border bg-[var(--ask-read-sunk,#06223d)] px-2.5 text-[0.8125rem] font-semibold text-[var(--ask-read-ink,#cfe2f2)] ${chip.kept ? 'border-dashed border-[var(--ask-read-rule-insufficient,rgba(201,138,138,0.6))]' : 'border-[var(--ask-read-line,#1d4a73)]'}`}
+              >
+                {chip.label}
+              </span>
+            ))}
+            {view.chips.note !== null && (
+              <span className={META} {...isolatedAuto()}>
+                {view.chips.note}
+              </span>
+            )}
+          </div>
+
+          <div data-ask="engine-state" className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+            {governed !== null ? (
+              /* Restrained: the machine state is metadata, never the headline of the answer. */
+              <span data-ask-badge={view.badge} data-ask-badge-restrained="true" className={EYEBROW}>
+                {view.badgeText}
+              </span>
+            ) : (
+              <>
+                <span
+                  data-ask-badge={view.badge}
+                  className={`inline-flex min-h-[26px] items-center rounded-[6px] px-2.5 text-[0.75rem] font-semibold tracking-[0.04em] ${TONE_CLASS[view.tone]}`}
+                >
+                  {view.badgeText}
+                </span>
+                <span data-ask="freshness" className={META}>
+                  {view.freshness}
+                </span>
+              </>
+            )}
+            {/* ASK RELIABILITY R1 (L) — a reporting re-use window passing does not make a timeless
+                explanation or a computed result "expired": the note is shown only for answers that
+                rest on CURRENT reporting, where re-checking genuinely matters. */}
+            {turn.expired === true && payload.answer.state !== 'REFERENCE_BACKGROUND' && payload.answer.state !== 'COMPUTED_RESULT' && (
+              <span data-ask="expired" className={META}>
+                {s.expiredNote}
+              </span>
+            )}
+          </div>
+        </div>
+  );
+  /* CTO R3 ruling 4 — the governed reference note, kept whole for "About this answer". */
+  const showReference = view.badge === 'ref' && !view.citable;
+  const referenceTitle =
+    guidanceKind === 'DECISION_SUPPORT'
+      ? s.r3.decisionNoteTitle
+      : guidanceKind === 'CONCEPTUAL_ANALYSIS'
+        ? s.r4.conceptualNoteTitle
+        : guidanceKind === 'CONVERSATION_WORK'
+          ? s.r4.workNoteTitle
+          : guidanceKind !== null && guidanceKind !== 'MIXED_REFERENCE_CURRENT'
+            ? s.guidanceNoteTitle
+            : s.referenceNoteTitle;
+  const referenceBody =
+    guidanceKind === 'DECISION_SUPPORT'
+      ? s.r3.decisionNoteBody
+      : guidanceKind === 'CONCEPTUAL_ANALYSIS'
+        ? s.r4.conceptualNoteBody
+        : guidanceKind === 'CONVERSATION_WORK'
+          ? s.r4.workNoteBody
+          : guidanceKind !== null && guidanceKind !== 'MIXED_REFERENCE_CURRENT'
+            ? s.guidanceNoteBody
+            : s.referenceNoteBody;
   const reopenedLine =
     reopenedAt == null || Number.isNaN(Date.parse(reopenedAt))
       ? null
@@ -596,43 +678,6 @@ export function AskR2TurnView({
           <p data-ask-eyebrow="answer" className={EYEBROW}>
             {s.answer}
           </p>
-          {view.badge === 'ref' && !view.citable && (
-            <div
-              data-ask="reference-note"
-              /* R4 · PHASE C — compact metadata beside the answer header, same words. */
-              data-ask-read="r4"
-              className="rounded-[8px] border border-dashed border-[var(--ask-read-line,#4a5a6e)] bg-[var(--ask-read-sunk,#121a26)] px-3 py-2.5 text-[13px] leading-[1.45] text-[var(--ask-read-ink2,#a9b6c6)]"
-            >
-              {/* CTO P0 — advice is labelled as general guidance, never as current sourced research */}
-              <p className="font-bold text-[var(--ask-read-ink,#d3dbe5)]">
-                {guidanceKind === 'DECISION_SUPPORT'
-                  ? s.r3.decisionNoteTitle
-                  : guidanceKind === 'CONCEPTUAL_ANALYSIS'
-                    ? s.r4.conceptualNoteTitle
-                    : guidanceKind === 'CONVERSATION_WORK'
-                      ? s.r4.workNoteTitle
-                      : guidanceKind !== null && guidanceKind !== 'MIXED_REFERENCE_CURRENT'
-                        ? s.guidanceNoteTitle
-                        : s.referenceNoteTitle}
-              </p>
-              <p>
-                {guidanceKind === 'DECISION_SUPPORT'
-                  ? s.r3.decisionNoteBody
-                  : guidanceKind === 'CONCEPTUAL_ANALYSIS'
-                    ? s.r4.conceptualNoteBody
-                    : guidanceKind === 'CONVERSATION_WORK'
-                      ? s.r4.workNoteBody
-                      : guidanceKind !== null && guidanceKind !== 'MIXED_REFERENCE_CURRENT'
-                        ? s.guidanceNoteBody
-                        : s.referenceNoteBody}
-              </p>
-              {payload.guidance?.objective != null && (
-                <p data-ask="decision-objective">
-                  {s.r3.decisionObjective}: {payload.guidance.objective}
-                </p>
-              )}
-            </div>
-          )}
           {/* R4 ALPHA R-2 — a MIXED answer whose current part was SOURCED has no current gap to
               name; if its explanatory part could not be produced, that is said instead */}
           {payload.guidance?.currentPart === 'SOURCED' &&
@@ -646,8 +691,12 @@ export function AskR2TurnView({
             )}
           {view.badge === 'insuf' && (
             <p data-ask="insufficient-title" className="text-[19px] font-bold leading-[1.2] md:text-[22px]">
-              {view.searchLimited ? s.limitedTitle : s.insufficientTitle}
+              {r.noReportingTitle}
             </p>
+          )}
+          {/* CTO R3 ruling 8 — nothing verified vs search incomplete: the difference is kept. */}
+          {view.badge === 'insuf' && view.searchLimited && (
+            <p data-ask="search-incomplete">{r.searchIncomplete}</p>
           )}
           {/* ASK FIRST-ANSWER RETRIEVAL R3 — an answer standing on reachable reporting says so. */}
           {view.badge !== 'insuf' && view.searchLimited && (
@@ -745,9 +794,16 @@ export function AskR2TurnView({
           {payload.analysis === null && payload.recentReporting != null && (
             <AskRecentReporting reporting={payload.recentReporting} locale={locale} />
           )}
-          {view.badge === 'ref' && view.sourceCount === 0 && (
-            <p data-ask="no-citable" className="text-[0.75rem] text-[var(--ask-read-ink2,#8fa6c0)]">
-              {s.noCitable}
+          {/*
+            ASK DESIGN AUTHORITY R3 — CTO RULING 4. A general (unsourced) explanation says so in ONE
+            quiet reader line (Design B7), after its text. The governed kind stays on the element;
+            the full note (its title, body and any objective) is under "About this answer".
+            A MIXED answer whose current part is missing says that instead (the gap note below),
+            so it never claims that no current sources were needed.
+          */}
+          {showReference && guidanceKind !== 'MIXED_REFERENCE_CURRENT' && (
+            <p data-ask="reference-note" data-ask-read="r4" data-ask-guidance-kind={guidanceKind ?? 'REFERENCE'}>
+              {r.generalExplanationLine}
             </p>
           )}
           {/* Design D1 — "Edit question" comes last, after what can be tried, and puts the reader's
@@ -771,63 +827,32 @@ export function AskR2TurnView({
         an answer with no sources has no Sources panel to hold them, so there they stay here,
         quiet (listed for CTO ruling: GAP-4).
       */}
-      <div
-        data-ask="answer-meta"
-        data-ask-meta-placement={answerSources.length > 0 ? 'about' : 'inline'}
-        className="mt-4 flex flex-col gap-2"
-      >
-        <div data-ask="scope" className="flex flex-wrap items-center gap-1.5">
-          <span className={`me-1 ${EYEBROW}`}>{s.scope}</span>
-          {view.chips.items.map((chip, i) => (
-            <span
-              key={`${chip.kind}-${i}`}
-              data-ask-chip={chip.kind}
-              data-ask-chip-kept={chip.kept ? 'true' : undefined}
-              /* R4 · a chip is a self-contained run: a publisher name, a domain or the
-                 reader's own words. Isolated so its boundaries cannot reorder the row — a
-                 DOMAIN chip beside an Arabic TOPIC chip is the case this exists for. */
-              {...isolatedAuto()}
-              className={`inline-flex min-h-7 items-center rounded-[14px] border bg-[var(--ask-read-sunk,#06223d)] px-2.5 text-[0.8125rem] font-semibold text-[var(--ask-read-ink,#cfe2f2)] ${chip.kept ? 'border-dashed border-[var(--ask-read-rule-insufficient,rgba(201,138,138,0.6))]' : 'border-[var(--ask-read-line,#1d4a73)]'}`}
-            >
-              {chip.label}
-            </span>
-          ))}
-          {view.chips.note !== null && (
-            <span className={META} {...isolatedAuto()}>
-              {view.chips.note}
-            </span>
+      {/*
+        ASK DESIGN AUTHORITY R3 — CTO RULING 4. The scope, state and freshness are diagnostic detail,
+        never the reading flow: with sources they are "About this answer" in the Sources panel;
+        without sources they are this collapsed "About this answer" (with the governed reference
+        note and the no-citable statement). Nothing of the truth state is dropped.
+      */}
+      {answerSources.length > 0 ? (
+        answerMeta('about')
+      ) : (
+        <details data-ask="about-answer">
+          <summary>{r.aboutAnswer}</summary>
+          {showReference && (
+            <div data-ask="reference-detail">
+              <p>{referenceTitle}</p>
+              <p>{referenceBody}</p>
+              {payload.guidance?.objective != null && (
+                <p data-ask="decision-objective">
+                  {s.r3.decisionObjective}: {payload.guidance.objective}
+                </p>
+              )}
+            </div>
           )}
-        </div>
-
-        <div data-ask="engine-state" className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-          {governed !== null ? (
-            /* Restrained: the machine state is metadata, never the headline of the answer. */
-            <span data-ask-badge={view.badge} data-ask-badge-restrained="true" className={EYEBROW}>
-              {view.badgeText}
-            </span>
-          ) : (
-            <>
-              <span
-                data-ask-badge={view.badge}
-                className={`inline-flex min-h-[26px] items-center rounded-[6px] px-2.5 text-[0.75rem] font-semibold tracking-[0.04em] ${TONE_CLASS[view.tone]}`}
-              >
-                {view.badgeText}
-              </span>
-              <span data-ask="freshness" className={META}>
-                {view.freshness}
-              </span>
-            </>
-          )}
-          {/* ASK RELIABILITY R1 (L) — a reporting re-use window passing does not make a timeless
-              explanation or a computed result "expired": the note is shown only for answers that
-              rest on CURRENT reporting, where re-checking genuinely matters. */}
-          {turn.expired === true && payload.answer.state !== 'REFERENCE_BACKGROUND' && payload.answer.state !== 'COMPUTED_RESULT' && (
-            <span data-ask="expired" className={META}>
-              {s.expiredNote}
-            </span>
-          )}
-        </div>
-      </div>
+          {view.badge === 'ref' && view.sourceCount === 0 && <p data-ask="no-citable">{s.noCitable}</p>}
+          {answerMeta('inline')}
+        </details>
+      )}
 
       {/* ASK INTELLIGENCE BINDING R1 — the governed structured basis of this one answer. */}
       <AskIntelligenceBasis
@@ -852,43 +877,19 @@ export function AskR2TurnView({
         note={view.searchLimited ? s.limitedNote : null}
         about={about}
         onRefresh={onRefresh}
+        /* CTO R3 ruling 6 — the legacy hand-offs are More rows, not cards in the reading flow. */
+        openFullHref={
+          view.handoffs.openFull && !displayOnly && operationId !== undefined
+            ? openFullAnalysisHref(operationId)
+            : undefined
+        }
+        onRunDeeper={
+          view.handoffs.runDeeper && onRunDeeper !== undefined && operationId !== undefined
+            ? () => onRunDeeper(turn.question)
+            : undefined
+        }
       />
 
-      {((view.handoffs.openFull && !displayOnly) ||
-        (view.handoffs.runDeeper && onRunDeeper !== undefined)) &&
-        operationId !== undefined && (
-          <div data-ask="handoffs" className="mt-4 flex flex-wrap gap-2.5">
-            {view.handoffs.openFull && !displayOnly && (
-              <a
-                data-ask="open-full-analysis"
-                href={openFullAnalysisHref(operationId)}
-                className="flex min-h-[56px] flex-[1_1_220px] flex-col justify-center gap-1 rounded-[12px] border border-[var(--ask-read-control-line,#1b6fa8)] px-4 py-2.5 hover:bg-[var(--ask-read-sunk,#07304f)]"
-              >
-                <span className="text-[15px] font-bold leading-[1.1] text-[var(--ask-read-ink,#cfe2f2)]">
-                  {s.openFull}
-                </span>
-                <span className="text-[0.75rem] leading-[1.2] text-[var(--ask-read-ink3,#8299b4)]">
-                  {s.openFullMeta}
-                </span>
-              </a>
-            )}
-            {view.handoffs.runDeeper && onRunDeeper !== undefined && (
-              <button
-                type="button"
-                data-ask="run-deeper"
-                onClick={() => onRunDeeper(turn.question)}
-                className="flex min-h-[56px] flex-[1_1_220px] flex-col justify-center gap-1 rounded-[12px] border-2 border-[var(--ask-read-deep-line,#6a5634)] bg-[var(--ask-read-deep-bg,#2e2618)] px-4 py-2.5 text-left hover:bg-[var(--ask-read-deep-bg,#3a3020)]"
-              >
-                <span className="text-[15px] font-bold leading-[1.1] text-[var(--ask-read-deep-ink,#d9b98a)]">
-                  {s.runDeep}
-                </span>
-                <span className="text-[0.75rem] leading-[1.2] text-[var(--ask-read-deep-ink,#c9b48c)]">
-                  {s.runDeepMeta}
-                </span>
-              </button>
-            )}
-          </div>
-        )}
     </article>
   );
 }

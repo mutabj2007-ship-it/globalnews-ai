@@ -2730,3 +2730,176 @@
 .thread :global([data-ask='answer'] > [data-ask='edit-question']) {
   align-self: flex-start;
 }
+
+/*
+  ══════════════════════════════════════════════════════════════════════════════
+  ASK DESIGN AUTHORITY R3 — CTO PRODUCT RULINGS
+  ══════════════════════════════════════════════════════════════════════════════
+
+  RULING 1 — standalone Ask (/ask, the standalone /) has ONE header at every width: the Claude
+  Design compact Ask header drawn by this frame. The platform bar is no longer rendered there
+  (AskNavShell surface="reading"). ≥1024 it sits over the reading column beside the persistent
+  conversations column, so the column's menu control is not drawn.
+*/
+.page[data-ask-standalone] .frame .phoneHeader {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  height: 56px;
+  padding: 0 8px;
+}
+@media (min-width: 1024px) and (orientation: landscape), (min-width: 1101px) {
+  .page[data-ask-standalone] .frame {
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      'history header side'
+      'history reader side'
+      'history composer side'
+      'history spacer side';
+  }
+  .page[data-ask-standalone] .frame[data-ask-entry='true'] {
+    grid-template-rows: auto minmax(0, 1fr) minmax(0, max-content) auto minmax(0, 1fr);
+    grid-template-areas:
+      'history header side'
+      'history . side'
+      'history reader side'
+      'history composer side'
+      'history spacer side';
+  }
+  .page[data-ask-standalone] .frame .phoneHeader {
+    grid-area: header;
+    padding: 0 16px 0 20px;
+  }
+  .page[data-ask-standalone] .frame :global([data-ask='shell-menu']) {
+    display: none;
+  }
+}
+
+/*
+  RULING 5 — the canonical brand "Ask GlobalNewsAI" and "+ New question" are both always
+  readable: the brand never truncates. The header compresses instead — padding and gaps first,
+  then a slightly smaller wordmark and mark, and on the narrowest phones (≤340) the decorative
+  mark gives way before any word does.
+*/
+.page[data-ask-standalone] .frame .brand {
+  flex: 0 0 auto;
+}
+.page[data-ask-standalone] .frame .brand > :global(span:last-child) {
+  overflow: visible;
+  text-overflow: clip;
+}
+.page[data-ask-standalone] .frame .newButton {
+  margin-inline-start: auto;
+  white-space: nowrap;
+}
+@media (max-width: 440px) {
+  .page[data-ask-standalone] .frame .phoneHeader {
+    gap: 2px;
+    padding: 0 4px;
+  }
+  .page[data-ask-standalone] .frame .brand {
+    gap: 6px;
+    padding-inline-start: 2px;
+  }
+  .page[data-ask-standalone] .frame .newButton {
+    gap: 4px;
+    padding-inline: 6px 8px;
+  }
+}
+@media (max-width: 380px) {
+  .page[data-ask-standalone] .frame .brand :global(.gna-ask-wordmark) {
+    font-size: 16px;
+  }
+  .page[data-ask-standalone] .frame .brand > :global([data-ask='emblem-mark']),
+  .page[data-ask-standalone] .frame .brand > :global([data-ask='emblem-mark'] svg) {
+    width: 20px;
+    height: 20px;
+  }
+  .page[data-ask-standalone] .frame .newButton {
+    font-size: 14px;
+  }
+}
+@media (max-width: 340px) {
+  .page[data-ask-standalone] .frame .brand > :global([data-ask='emblem-mark']) {
+    display: none;
+  }
+}
+
+/*
+  RULINGS 4 · 8 · 10 — reader language in the main flow.
+  · The "Answer" eyebrow stays for assistive technology on EVERY turn (earlier turns are now read
+    in full, not folded under a label).
+  · A MIXED answer's missing-current-part note is a quiet line, not a coloured card.
+  · "About this answer" (an answer with no Sources panel) is a collapsed, quiet disclosure; the
+    diagnostic taxonomy inside it is detail, never the reading flow.
+  · "Some source channels were unavailable…" is a quiet line under the no-reporting sentence.
+*/
+.thread :global([data-ask='answer'] > p[data-ask-eyebrow='answer']) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.thread :global([data-ask='earlier']) {
+  gap: 24px;
+  margin-bottom: 24px;
+}
+.thread :global([data-ask='guidance-current-gap']) {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: none;
+  font-size: var(--ad-t-sm, 0.9375rem);
+  line-height: 1.5;
+  color: var(--ad-ink-2, #93a0b8);
+}
+.thread :global([data-ask='guidance-current-gap'] p) {
+  font-weight: 400;
+}
+.thread :global([data-ask='search-incomplete']) {
+  margin: 0;
+  font-size: var(--ad-t-sm, 0.9375rem);
+  line-height: 1.5;
+  color: var(--ad-ink-2, #93a0b8);
+}
+.thread :global([data-ask='about-answer']) {
+  margin-top: 4px;
+  font-size: var(--ad-t-sm, 0.9375rem);
+  line-height: 1.5;
+  color: var(--ad-ink-2, #93a0b8);
+}
+.thread :global([data-ask='about-answer'] > summary) {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  cursor: pointer;
+  list-style: none;
+  color: var(--ad-ink-2, #93a0b8);
+  font-weight: 500;
+}
+.thread :global([data-ask='about-answer'] > summary::-webkit-details-marker) {
+  display: none;
+}
+.thread :global([data-ask='about-answer'] > summary)::after {
+  content: '⌄';
+  margin-inline-start: 6px;
+  font-size: 0.9em;
+}
+.thread :global([data-ask='about-answer'][open] > summary)::after {
+  content: '⌃';
+}
+.thread :global([data-ask='about-answer'] [data-ask='reference-detail']),
+.thread :global([data-ask='about-answer'] [data-ask='no-citable']) {
+  margin: 0 0 6px;
+}
+.thread :global([data-ask='about-answer'] [data-ask='reference-detail'] p:first-child) {
+  font-weight: 600;
+  color: var(--ad-ink, #edeff5);
+}
+.thread :global([data-ask='about-answer'] [data-ask='answer-meta']) {
+  display: flex;
+  margin-top: 6px;
+}

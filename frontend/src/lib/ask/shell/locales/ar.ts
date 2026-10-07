@@ -645,6 +645,9 @@ export const arShellOverlay: ShellLocaleOverlay = {
         demoData: "بيانات تجريبية.",
         failureNetworkTitle: "تعذّر الوصول إلى خدمة الأخبار.",
         failureBody: "يكون هذا عادةً مؤقتًا. سؤالك لا يزال في المربع أدناه.",
+        generalExplanationLine: "شرح عام — لا حاجة إلى مصادر حالية.",
+        noReportingTitle: "لم أتمكن من التحقق من تغطية إخبارية ذات صلة بهذا السؤال.",
+        searchIncomplete: "كانت بعض قنوات المصادر غير متاحة، لذا لم يكن البحث كاملًا.",
       },
       questionOverLimit: {
         kind: "pattern",

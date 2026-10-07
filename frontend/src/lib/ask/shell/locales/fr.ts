@@ -601,6 +601,9 @@ export const frShellOverlay: ShellLocaleOverlay = {
         demoData: "Données de démonstration.",
         failureNetworkTitle: "Impossible de joindre le service d’actualités.",
         failureBody: "C’est généralement temporaire. Votre question est toujours dans la zone ci-dessous.",
+        generalExplanationLine: "Explication générale — aucune source d’actualité nécessaire.",
+        noReportingTitle: "Je n’ai pas pu vérifier de reportages pertinents pour cette question.",
+        searchIncomplete: "Certains canaux de sources étaient indisponibles ; la recherche n’était donc pas complète.",
       },
       questionOverLimit: {
         kind: "pattern",

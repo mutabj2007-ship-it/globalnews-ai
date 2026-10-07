@@ -2,17 +2,24 @@ import { askLanguageDisposition } from '@/lib/ask/askLocale';
 import { ASK_PRODUCT_NAME } from '@/lib/ask/askBrand';
 import { Suspense } from 'react';
 import { cookies } from 'next/headers';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { AskNavProvider, AskNavShell } from '@/components/ask-nav/AskNavShell';
 import { AskShellFrame } from '@/components/ask-nav/AskShellFrame';
 import { AskThemedPage } from '@/components/ask-nav/AskThemedPage';
-import { THEME_COOKIE_NAME, parseThemePreference } from '@/lib/theme/theme';
+import { THEME_COOKIE_NAME } from '@/lib/theme/theme';
+import { askThemeColor, parseAskThemePreference } from '@/lib/ask/askTheme';
 import { surfaceLocale } from '@/lib/i18n/displayLocale.server';
 export const metadata: Metadata = {
   /* R4 · CTO brand ruling — one canonical product name, never an authored variant */
   title: ASK_PRODUCT_NAME,
   robots: { index: false, follow: false },
 };
+/** ASK DESIGN AUTHORITY R3 — the browser chrome follows the reader's Ask treatment (Light unless
+    they saved another), so a Light page is not framed by the layout's navy status-bar colour. */
+export function generateViewport(): Viewport {
+  return { themeColor: askThemeColor(parseAskThemePreference(cookies().get(THEME_COOKIE_NAME)?.value)) };
+}
+
 /**
  * STANDALONE ASK — /ask NO LONGER RENDERS THE PLATFORM HEADER.
  *
@@ -46,11 +53,11 @@ export default function AskPage(): JSX.Element {
      reader's locale. Reading both from one disposition is what stops them drifting. */
   const chrome = askLanguageDisposition(locale).catalogueLocale;
   /* TRUST R1 — the column is also the theme scope (AskThemedPage), rendered from the cookie. */
-  const theme = parseThemePreference(cookies().get(THEME_COOKIE_NAME)?.value);
+  const theme = parseAskThemePreference(cookies().get(THEME_COOKIE_NAME)?.value);
   return (
     <AskThemedPage theme={theme}>
       <AskNavProvider>
-        <AskNavShell language={chrome} selected={locale} theme={theme} />
+        <AskNavShell language={chrome} selected={locale} theme={theme} surface="reading" />
         <Suspense fallback={<main className="min-h-0 flex-1 bg-void" />}>
           <AskShellFrame locale={locale} />
         </Suspense>

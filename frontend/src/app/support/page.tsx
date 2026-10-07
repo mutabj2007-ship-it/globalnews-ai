@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import type { LanguageCode } from '@globalnews-ai/shared';
 import { surfaceLocale } from '@/lib/i18n/displayLocale.server';
 import { effectiveWithin } from '@/lib/i18n/surfaceLocale';
@@ -8,7 +8,8 @@ import { buildPageMetadata } from '@/lib/seo/metadata';
 import { SupportScreen } from '@/components/support/SupportScreen';
 import { AskNavProvider, AskNavShell } from '@/components/ask-nav/AskNavShell';
 import { AskThemedSurface } from '@/components/ask-nav/AskThemedSurface';
-import { THEME_COOKIE_NAME, parseThemePreference } from '@/lib/theme/theme';
+import { THEME_COOKIE_NAME } from '@/lib/theme/theme';
+import { askThemeColor, parseAskThemePreference } from '@/lib/ask/askTheme';
 import { AskContinuityHeader } from '@/components/ask-nav/AskContinuityHeader';
 import { AskClearedBoundary } from '@/components/ask-nav/AskClearedBoundary';
 import { standaloneAskRoot } from '@/lib/ask/standaloneRoot';
@@ -60,6 +61,12 @@ export async function generateMetadata(): Promise<Metadata> {
   });
 }
 
+/** ASK DESIGN AUTHORITY R3 — the browser chrome follows the reader's Ask treatment (Light unless
+    they saved another), so a Light page is not framed by the layout's navy status-bar colour. */
+export function generateViewport(): Viewport {
+  return { themeColor: askThemeColor(parseAskThemePreference(cookies().get(THEME_COOKIE_NAME)?.value)) };
+}
+
 export default function SupportPage(): JSX.Element {
   /*
     SUPPORT-AI-1 — the language travels as data, not only as a dictionary.
@@ -83,7 +90,7 @@ export default function SupportPage(): JSX.Element {
   */
   if (standaloneAskRoot()) {
     return (
-      <AskThemedSurface theme={parseThemePreference(cookies().get(THEME_COOKIE_NAME)?.value)}>
+      <AskThemedSurface theme={parseAskThemePreference(cookies().get(THEME_COOKIE_NAME)?.value)}>
         <AskNavProvider>
           <AskNavShell language={language} />
           <AskContinuityHeader locale={language} surface="help" />
