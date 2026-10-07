@@ -32,6 +32,24 @@ export function normalizeBriefFields(content: unknown): unknown {
   }
 
   const record = content as Record<string, unknown>;
+
+  /*
+    ASK R2 A/B/C BLOCKER REPAIR R1 — a TABLE contract brief comes back as three fields; the join is
+    the same mechanical one: contract order, blank-line separated, empty parts dropped. Nothing is
+    judged here — an empty or non-table "briefTable" is refused by assessReaderContractShape.
+  */
+  const opening = record.briefOpening;
+  const table = record.briefTable;
+  const closing = record.briefClosing;
+  if (typeof opening === 'string' && typeof table === 'string' && typeof closing === 'string') {
+    const { briefOpening: _o, briefTable: _t, briefClosing: _c, ...others } = record;
+    const summary = [opening, table, closing]
+      .map((part) => part.trim())
+      .filter((part) => part !== '')
+      .join('\n\n');
+    return { ...others, summary };
+  }
+
   const primary = record.primaryDevelopment;
   const additional = record.additionalDevelopments;
 

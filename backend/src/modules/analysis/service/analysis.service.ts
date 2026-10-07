@@ -1,7 +1,7 @@
 import { readOutputContract } from '../prompt/output-contract.util';
 import type { DisplayLocale } from '@globalnews-ai/shared';
 import {
-  withRetrievalDeadline,
+  withGatedRetrievalDeadline,
   retrievalBudgetMs,
   GENERATION_RESERVE_MS,
   TABLE_GENERATION_RESERVE_MS,
@@ -131,7 +131,7 @@ import {
   assessSingleSourceDiscipline,
   detectDevelopmentBreadth,
 } from '../validation/brief-compliance.util';
-import { assessReaderContractShape } from '../validation/reader-contract-shape.util';
+import { assessReaderContractShape, contractBlocks } from '../validation/reader-contract-shape.util';
 import { acceptExecutiveBrief, withholdExecutiveBrief } from '../validation/brief-fail-closed.util';
 import { applyBriefRelationIntegrity } from '../validation/entity-role-geography.util';
 import {
@@ -1032,8 +1032,14 @@ export class AnalysisService {
         resolveServerBudgetMs(config.totalBudgetMs),
         readOutputContract(normalizedQuery).table !== null ? TABLE_GENERATION_RESERVE_MS : GENERATION_RESERVE_MS,
       );
+    /* ASK R2 A/B/C BLOCKER REPAIR R1 — a gated question's own evidence gate decides when a fallback
+       tier has enough to stop waiting for a slow peer (news/retrieval-budget.ts peerTailAdmits). */
+    const gatedAnchors = executionPolicy?.questionAnchors?.gated === true ? executionPolicy.questionAnchors : undefined;
     const inFlightOperation: Promise<AnalysisApiResponse> =
-      withRetrievalDeadline(retrievalDeadlineAt, async (): Promise<AnalysisApiResponse> => {
+      withGatedRetrievalDeadline(
+        retrievalDeadlineAt,
+        gatedAnchors === undefined ? undefined : (article) => admitsReport(gatedAnchors, article).admitted,
+        async (): Promise<AnalysisApiResponse> => {
         /**
          * Milestone #51 Phase B — root-cause fix. Previously, retrieval
          * for a story-originated query relied ENTIRELY on
@@ -3831,7 +3837,12 @@ export class AnalysisService {
           readerContract.table !== null ||
           readerContract.openingSentences !== null ||
           readerContract.closing !== null
-            ? { ...developmentBreadth, readerContract: true }
+            ? {
+                ...developmentBreadth,
+                readerContract: true,
+                /* ASK R2 A/B/C BLOCKER REPAIR R1 — a table contract is generated block by block */
+                ...(readerContract.table !== null ? { readerContractTable: true } : {}),
+              }
             : developmentBreadth;
 
         try {
@@ -4024,7 +4035,9 @@ export class AnalysisService {
             this.logger.log(
               `ask brief contract table=${readerContract.table?.columns.length ?? 0} cap=${readerContract.itemCap ?? '-'} ` +
                 `opening=${readerContract.openingSentences ?? '-'} closing=${readerContract.closing !== null} ` +
-                `verdict=${shapeVerdict.compliant ? 'compliant' : (shapeVerdict.reason ?? 'non-compliant')}`,
+                `verdict=${shapeVerdict.compliant ? 'compliant' : (shapeVerdict.reason ?? 'non-compliant')} ` +
+                /* ASK R2 A/B/C BLOCKER REPAIR R1 — the brief's SHAPE only (block kinds, word count), never its text */
+                `shape=${contractBlocks(analysis.summary).map((b) => b.kind[0]).join('') || 'empty'} words=${analysis.summary.split(/\s+/u).filter(Boolean).length}`,
             );
           }
           let briefVerdict = applyBriefRelationIntegrity(shapeVerdict, analysis.summary, deduped);

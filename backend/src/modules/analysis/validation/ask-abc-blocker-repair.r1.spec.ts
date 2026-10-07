@@ -12,6 +12,7 @@ import {
   TABLE_GENERATION_RESERVE_MS,
 } from '../../news/retrieval-budget';
 import type { DevelopmentBreadth } from './brief-compliance.util';
+import { normalizeBriefFields } from '../providers/normalize-brief-fields.util';
 import { assessReaderContractShape, opensWithNothingVerified } from './reader-contract-shape.util';
 
 /**
@@ -245,24 +246,71 @@ describe('C · "Dar es Salaam, not Mombasa" — the re-gate of the earlier evide
   });
 });
 
-describe('Contract · the "summary" field holds the whole brief (A: "Start with a two-sentence summary")', () => {
-  it('the rendered contract says the reader’s "summary" is only the opening of the one field', () => {
+describe('Contract · a table brief is generated block by block (A: "Start with a two-sentence summary")', () => {
+  it('the rendered contract says the reader’s "summary" is only the opening of the one brief', () => {
     const text = renderOutputContract(readOutputContract(LIVE_A));
-    expect(text).toMatch(/The brief is the WHOLE "summary" field/);
+    expect(text).toMatch(/Every step below is part of the ONE brief/);
     expect(text).toMatch(/only the START of the brief/);
     expect(text).toMatch(/is not a row/);
   });
 
-  it('the generation schema describes "summary" as the whole contract brief', () => {
-    const schema = JSON.stringify(
-      buildAnalysisJsonSchema({ clusters: 3, categories: 1, multiDevelopment: false, readerContract: true }),
-    );
-    expect(schema).toMatch(/The WHOLE brief in THE READER'S OUTPUT CONTRACT order/);
+  it('a TABLE contract asks for three required fields — opening, table, closing — not one "summary"', () => {
+    const schema = buildAnalysisJsonSchema({
+      clusters: 3,
+      categories: 1,
+      multiDevelopment: false,
+      readerContract: true,
+      readerContractTable: true,
+    }).schema as { properties: Record<string, unknown>; required: string[] };
+    expect(schema.required).toEqual(expect.arrayContaining(['briefOpening', 'briefTable', 'briefClosing']));
+    expect(schema.required).not.toContain('summary');
+    expect(Object.keys(schema.properties)).not.toContain('summary');
+    expect(JSON.stringify(schema.properties.briefTable)).toMatch(/ONLY the requested Markdown table/);
+    const section = buildDevelopmentBreadthSection({
+      clusters: 3,
+      categories: 1,
+      multiDevelopment: false,
+      readerContract: true,
+      readerContractTable: true,
+    });
+    expect(section).toMatch(/THREE fields that together are the brief/);
   });
 
-  it('a contract with only a word limit does not claim the one-field shape', () => {
+  it('a contract WITHOUT a table keeps the one "summary" field, described as the whole brief', () => {
+    const schema = buildAnalysisJsonSchema({ clusters: 3, categories: 1, multiDevelopment: false, readerContract: true }).schema as {
+      required: string[];
+      properties: Record<string, unknown>;
+    };
+    expect(schema.required).toContain('summary');
+    expect(JSON.stringify(schema.properties.summary)).toMatch(/The WHOLE brief in THE READER'S OUTPUT CONTRACT order/);
+  });
+
+  it('the provider joins the three blocks in contract order, and the unchanged shape check judges the join', () => {
+    const joined = normalizeBriefFields({
+      briefOpening: 'Two developments qualify. Fuel costs rose.',
+      briefTable:
+        '| What changed | Date | Why it matters to the shop | Source link |\n|---|---|---|---|\n| Pump prices up | 2026-10-05 | Delivery costs | Africanews |',
+      briefClosing: 'Check your supplier’s delivery charge this week.',
+      headline: 'h',
+    }) as Record<string, unknown>;
+    expect(Object.keys(joined)).not.toEqual(expect.arrayContaining(['briefOpening']));
+    const summary = String(joined.summary);
+    expect(summary.indexOf('Two developments')).toBeLessThan(summary.indexOf('| What changed'));
+    expect(summary.indexOf('| What changed')).toBeLessThan(summary.indexOf('Check your supplier'));
+    const contract = readOutputContract(LIVE_A);
+    const breadth: DevelopmentBreadth = { clusters: 3, categories: 1, multiDevelopment: false };
+    expect(assessReaderContractShape(summary, contract, breadth).compliant).toBe(true);
+
+    /* an empty table block is NOT a pass: the join has no table and the guard refuses it */
+    const empty = normalizeBriefFields({ briefOpening: 'Fuel costs rose.', briefTable: '', briefClosing: 'Check prices.' }) as {
+      summary: string;
+    };
+    expect(assessReaderContractShape(empty.summary, contract, breadth).compliant).toBe(false);
+  });
+
+  it('a contract with only a word limit does not claim the one-brief shape', () => {
     expect(renderOutputContract(readOutputContract('What happened in Kenya this week? Under 100 words.'))).not.toMatch(
-      /WHOLE "summary" field/,
+      /part of the ONE brief/,
     );
   });
 });

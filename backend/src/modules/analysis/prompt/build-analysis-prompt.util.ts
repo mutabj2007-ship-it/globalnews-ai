@@ -760,9 +760,16 @@ export function buildDevelopmentBreadthSection(breadth?: AnalysisDevelopmentBrea
     return (
       `\n\nMEASURED EVIDENCE BREADTH FOR THIS REQUEST: ${breadth.clusters} distinct reporting ` +
       `clusters across ${breadth.categories} editorial domains.\n\n` +
-      'HOW THE BRIEF IS REQUESTED HERE: ONE "summary" field that follows THE READER\'S OUTPUT ' +
-      'CONTRACT in the user message, in its order (opening, table, limits, closing). Separate its ' +
-      'blocks with a BLANK LINE. A requested table is ONE well-formed Markdown table — header row, ' +
+      (breadth.readerContractTable === true
+        ? /* ASK R2 A/B/C BLOCKER REPAIR R1 — one required field per contract block */
+          'HOW THE BRIEF IS REQUESTED HERE: THREE fields that together are the brief, in THE READER\'S ' +
+          'OUTPUT CONTRACT order — "briefOpening" (only the opening the contract asks for), "briefTable" ' +
+          '(only the requested Markdown table) and "briefClosing" (limits or gaps, then the requested ' +
+          'closing). They are joined in that order. '
+        : 'HOW THE BRIEF IS REQUESTED HERE: ONE "summary" field that follows THE READER\'S OUTPUT ' +
+          'CONTRACT in the user message, in its order (opening, table, limits, closing). Separate its ' +
+          'blocks with a BLANK LINE. ') +
+      'A requested table is ONE well-formed Markdown table — header row, ' +
       '|---| separator, one row per development, every row with the same number of cells as the ' +
       'header — and is WITHHELD if malformed, missing while any supplied report supports a row, or ' +
       'longer than the requested number of items. Fewer rows is correct when the evidence supports ' +
@@ -1179,7 +1186,26 @@ export function buildAnalysisJsonSchema(
             'The OTHER material developments the supplied evidence establishes, distinct from the one in "primaryDevelopment". Separate them from each other with a blank line where there is more than one. There is no required number: cover what the evidence actually establishes and nothing more. Do NOT pad, do NOT invent a second development, and do NOT emit one per article or per source - if the evidence genuinely supports only a thin second strand, say so plainly and briefly rather than inflating it.',
         },
       }
-    : developmentBreadth?.readerContract === true
+    : developmentBreadth?.readerContractTable === true
+      ? {
+          /* ASK R2 A/B/C BLOCKER REPAIR R1 — a table contract brief, one required field per block */
+          briefOpening: {
+            type: 'string',
+            description:
+              "The OPENING of the brief exactly as THE READER'S OUTPUT CONTRACT asks (for example its requested number of summary sentences). If nothing could be verified, say so here in one sentence. No table here.",
+          },
+          briefTable: {
+            type: 'string',
+            description:
+              'ONLY the requested Markdown table: header row with the requested columns in order, a |---| separator row, then one row per qualifying development (fewer rows when the evidence supports fewer). Cells only from the supplied evidence. Empty string ONLY when no supplied report qualifies.',
+          },
+          briefClosing: {
+            type: 'string',
+            description:
+              'After the table: any limits or coverage gaps, then the closing the reader asked for (for example the practical check), as short paragraphs.',
+          },
+        }
+      : developmentBreadth?.readerContract === true
       ? {
           /* ASK R2 A/B/C BLOCKER REPAIR R1 — the whole contract brief, not the reader's "summary" */
           summary: {
@@ -1192,7 +1218,9 @@ export function buildAnalysisJsonSchema(
 
   const briefRequired: string[] = multiDevelopment
     ? ['primaryDevelopment', 'additionalDevelopments']
-    : ['summary'];
+    : developmentBreadth?.readerContractTable === true
+      ? ['briefOpening', 'briefTable', 'briefClosing']
+      : ['summary'];
 
   return {
     name: 'news_analysis',

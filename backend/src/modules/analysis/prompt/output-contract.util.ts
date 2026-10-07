@@ -177,8 +177,8 @@ export function renderOutputContract(c: OutputContract): string {
     'shape of the answer, not a topic to research)' +
     /* structural contracts are generated as ONE "summary" field (analysis.service generationBreadth) */
     (c.openingSentences !== null || c.table !== null || c.closing !== null
-      ? '. The brief is the WHOLE "summary" field: every step below goes into that one field, in this ' +
-        'order — the reader’s word "summary" means only the opening, never the whole field'
+      ? '. Every step below is part of the ONE brief, in this order — the reader’s word "summary" ' +
+        'means only its opening, never the whole brief'
       : '') +
     ':\n' +
     lines.join('\n')

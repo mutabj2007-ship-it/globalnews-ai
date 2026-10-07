@@ -5,6 +5,7 @@ import {
   MIN_PROVIDER_START_MS,
   RETRIEVAL_BUDGET_EXHAUSTED,
   remainingRetrievalMs,
+  retrievalPeerTailAdmits,
   withinRetrievalBudget,
 } from './retrieval-budget';
 import { resolveCountryByAnyIdentifier, type CountryMeta } from '@globalnews-ai/shared';
@@ -864,10 +865,16 @@ export class NewsService {
      * "return fewer results than before" on an endpoint that has no latency
      * defect. `undefined` restores the pre-R1 `Promise.allSettled` exactly.
      */
+    /* ASK R2 A/B/C BLOCKER REPAIR R1 — inside an Ask analysis whose question is gated, the gate that
+       will judge these articles IS the admission rule (see RetrievalBudget.peerTailAdmits); outside
+       one (Home, the public search endpoint) nothing changes. */
+    const analysisGate = retrievalPeerTailAdmits();
     const peerTailPolicy: PeerTailPolicy | undefined =
       relevanceMode.type !== 'none' || requestedSource !== undefined
         ? { admits: admitsForPeerTail, graceMs: PEER_TAIL_GRACE_MS }
-        : undefined;
+        : analysisGate !== undefined
+          ? { admits: (article: NewsArticle) => analysisGate(article), graceMs: PEER_TAIL_GRACE_MS }
+          : undefined;
 
     const excluded = new Set(options?.excludeProviderIds ?? []);
     const windowFrom = options?.from;

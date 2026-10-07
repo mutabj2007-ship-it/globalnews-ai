@@ -25,6 +25,15 @@ export interface RetrievalBudget {
   readonly deadlineAt: number;
   /** the whole retrieval share, ms (for the per-tier cap) */
   readonly totalMs: number;
+  /**
+   * ASK R2 A/B/C BLOCKER REPAIR R1 — the analysis's own evidence gate (the question's anchors), when
+   * it has one. NewsService uses it as the fallback-tier peer-tail admission rule for searches that
+   * carry no relevance mode of their own, so once one provider has returned evidence the gate would
+   * admit, a slow peer gets the existing short grace instead of the whole tier cap. Live Alpha
+   * 8ade90e, B: publisher feeds answered in 0.5 s and 0.8 s, then 6.6 s + 2.8 s of an 11 s retrieval
+   * share went on waiting for GDELT, which never delivered; generation was then cut off at 28 s.
+   */
+  readonly peerTailAdmits?: (article: { readonly title: string; readonly summary?: string | null }) => boolean;
 }
 
 const storage = new AsyncLocalStorage<RetrievalBudget>();
@@ -58,8 +67,23 @@ export function withRetrievalDeadline<T>(
   deadlineAt: number,
   work: () => Promise<T>,
   totalMs: number = Math.max(0, deadlineAt - Date.now()),
+  peerTailAdmits?: RetrievalBudget['peerTailAdmits'],
 ): Promise<T> {
-  return storage.run({ deadlineAt, totalMs }, work);
+  return storage.run({ deadlineAt, totalMs, ...(peerTailAdmits === undefined ? {} : { peerTailAdmits }) }, work);
+}
+
+/** withRetrievalDeadline, carrying the analysis's evidence gate for peer-tail admission. */
+export function withGatedRetrievalDeadline<T>(
+  deadlineAt: number,
+  peerTailAdmits: RetrievalBudget['peerTailAdmits'],
+  work: () => Promise<T>,
+): Promise<T> {
+  return withRetrievalDeadline(deadlineAt, work, undefined, peerTailAdmits);
+}
+
+/** ASK R2 A/B/C BLOCKER REPAIR R1 — the analysis's evidence gate for peer-tail admission, if any. */
+export function retrievalPeerTailAdmits(): RetrievalBudget['peerTailAdmits'] {
+  return storage.getStore()?.peerTailAdmits;
 }
 
 /** Remaining retrieval budget in ms, or undefined when no analysis deadline applies. */
