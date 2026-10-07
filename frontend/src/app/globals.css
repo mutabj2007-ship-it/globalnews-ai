@@ -1096,15 +1096,17 @@ html[data-gna-schedule='dark'] [data-gna-theme='scheduled'],
 .gna-ask-emblem[data-ask-emblem-state='typing'] {
   opacity: var(--ask-read-emblem-typing, 0.45);
 }
-/* typing size — also the size a mark leaving FROM typing keeps while it fades */
+/* typing size — also the size a mark leaving FROM typing keeps while it fades. Declared as the
+   NOMINAL typing size (--emblem-typing-size), which AskEmblem measures against; the rendered size
+   follows it below unless the mark has to fit a short visible viewport. */
 .gna-ask-emblem[data-ask-emblem-state='typing'],
 .gna-ask-emblem[data-ask-emblem-from='typing'] {
-  --emblem-size: 64px;
+  --emblem-typing-size: 64px;
 }
 @container ask-root (min-width: 700px) {
   .gna-ask-emblem[data-ask-emblem-state='typing'],
   .gna-ask-emblem[data-ask-emblem-from='typing'] {
-    --emblem-size: 72px;
+    --emblem-typing-size: 72px;
   }
 }
 .gna-ask-emblem[data-ask-emblem-placement='dock'] {
@@ -1112,10 +1114,28 @@ html[data-gna-schedule='dark'] [data-gna-theme='scheduled'],
 }
 .gna-ask-emblem[data-ask-emblem-placement='dock'][data-ask-emblem-state='typing'],
 .gna-ask-emblem[data-ask-emblem-placement='dock'][data-ask-emblem-from='typing'] {
-  --emblem-size: 48px;
+  --emblem-typing-size: 48px;
 }
-/* Typing with less than 480px of VISIBLE height (keyboard open): the composer wins. */
-.gna-ask-emblem[data-ask-emblem-short='true'] {
+.gna-ask-emblem[data-ask-emblem-state='typing'],
+.gna-ask-emblem[data-ask-emblem-from='typing'],
+.gna-ask-emblem[data-ask-emblem-placement='dock'][data-ask-emblem-state='typing'],
+.gna-ask-emblem[data-ask-emblem-placement='dock'][data-ask-emblem-from='typing'] {
+  --emblem-size: var(--emblem-typing-size);
+}
+/*
+  PHONE TYPING EMBLEM REPAIR R1 — a short VISIBLE viewport (a phone keyboard, iPhone Safari
+  included) keeps a COMPACT typing mark; it is no longer hidden. AskEmblem measures the space the
+  mark has inside its scroll container and, only when the typing size does not fit, releases the
+  mark's own spacing and sizes it to the space there is (never under 48px). The composer is outside
+  that container, so it always keeps its place above the keyboard. `none` is the last resort when
+  not even 48px fits (e.g. a landscape phone with the keyboard open).
+*/
+.gna-ask-emblem[data-ask-emblem-fit='compact'],
+.gna-ask-emblem[data-ask-emblem-placement='dock'][data-ask-emblem-fit='compact'] {
+  --emblem-size: var(--emblem-fit-size, 48px);
+  margin-bottom: 0;
+}
+.gna-ask-emblem[data-ask-emblem-fit='none'] {
   display: none;
 }
 /* Research: the mark leaves — motion stopped, faded, then the component unmounts. */
