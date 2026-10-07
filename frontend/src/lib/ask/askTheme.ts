@@ -21,7 +21,7 @@ export function parseAskThemePreference(value: string | null | undefined): Theme
 
 /** The Ask page surface in each treatment (the `--ad-bg` tokens of askDashboard.module.css). */
 export const ASK_LIGHT_PAGE = '#faf9f7';
-export const ASK_NAVY_PAGE = '#080b12';
+export const ASK_NAVY_PAGE = '#102a43';
 
 /**
  * The browser chrome colour (iOS Safari tints its status bar / toolbar with it) for an Ask page,

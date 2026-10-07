@@ -937,34 +937,41 @@
   without a second set of literals. `[data-ask-standalone]` doubles the specificity so this
   scope wins over the platform-wide theme resets in globals.css.
 */
+/*
+  ASK DESIGN R3 — CTO NAVY CORRECTION. The package's alternate token (--bg #080B12) rendered
+  near-black; the Product Owner's navy is visibly blue. The CTO's palette, with two accessibility
+  adjustments validated at ≥4.5:1 for normal text: tertiary text #9AABC0 (the given #8FA0B6 is
+  4.36:1 on the #163A5F surface) and link-accent text #8AA9FF (#6C93FF is 4.0:1 on that surface;
+  it stays the accent FILL — send, focus). Light is unchanged (its own blocks below).
+*/
 .page[data-ask-standalone] {
-  --ad-bg: #080b12;
-  --ad-bg-2: #0b0f18;
-  --ad-surface: #0f1420;
-  --ad-surface-2: #161d2c;
-  --ad-ink: #edeff5;
-  --ad-ink-2: #93a0b8;
-  --ad-ink-3: #7d89a1;
-  --ad-line: #1e2636;
-  --ad-line-strong: #2a3548;
-  --ad-line-input: #5a6682;
+  --ad-bg: #102a43;
+  --ad-bg-2: #0d2238;
+  --ad-surface: #163a5f;
+  --ad-surface-2: #1d466c;
+  --ad-ink: #f3f7fb;
+  --ad-ink-2: #c1d0dc;
+  --ad-ink-3: #9aabc0;
+  --ad-line: #2d5575;
+  --ad-line-strong: #3a6789;
+  --ad-line-input: #7d98b3;
   --ad-accent: #6c93ff;
   --ad-accent-hover: #8aa9ff;
   --ad-accent-pressed: #5279e8;
   --ad-accent-ink: #080b12;
-  --ad-accent-text: #6c93ff;
-  --ad-accent-soft: #16223f;
+  --ad-accent-text: #8aa9ff;
+  --ad-accent-soft: #1f4a75;
   --ad-accent-soft-ink: #a8c5ff;
   --ad-focus: #6c93ff;
   --ad-focus-soft: rgba(108, 147, 255, 0.28);
-  --ad-q-bg: #141b2b;
-  --ad-warn-bg: #2a2210;
+  --ad-q-bg: #173b5b;
+  --ad-warn-bg: #3a3118;
   --ad-warn-ink: #e9cf8e;
   --ad-err: #ff8a7a;
   --ad-err-ink: #080b12;
-  --ad-err-bg: #2a1414;
-  --ad-disabled-bg: #161d2c;
-  --ad-disabled-ink: #5c6780;
+  --ad-err-bg: #3d1f24;
+  --ad-disabled-bg: #1d466c;
+  --ad-disabled-ink: #9aabc0;
   --ad-scrim: rgba(0, 0, 0, 0.55);
   --ad-toast-bg: #edeff5;
   --ad-toast-ink: #080b12;

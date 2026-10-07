@@ -60,9 +60,20 @@ describe('tokens — the Design roles, light and navy, scoped to the standalone 
   const css = read('components', 'ask-frame', 'askDashboard.module.css');
   it('carries tokens.css values for both sets on the Ask theme scope', () => {
     const block = css.slice(css.indexOf('.page[data-ask-standalone] {'));
-    expect(block).toMatch(/--ad-bg: #080b12;/);
+    /* CTO NAVY CORRECTION — the alternate is visibly navy blue, not the package's near-black
+       #080B12 (tertiary text lifted to #9AABC0 for 4.5:1 on the #163A5F surface). */
+    expect(block).toMatch(/--ad-bg: #102a43;/);
+    expect(block).toMatch(/--ad-bg-2: #0d2238;/);
+    expect(block).toMatch(/--ad-surface: #163a5f;/);
+    expect(block).toMatch(/--ad-surface-2: #1d466c;/);
+    expect(block).toMatch(/--ad-q-bg: #173b5b;/);
+    expect(block).toMatch(/--ad-line: #2d5575;/);
+    expect(block).toMatch(/--ad-line-strong: #3a6789;/);
+    expect(block).toMatch(/--ad-ink: #f3f7fb;/);
+    expect(block).toMatch(/--ad-ink-2: #c1d0dc;/);
+    expect(block).toMatch(/--ad-ink-3: #9aabc0;/);
     expect(block).toMatch(/--ad-accent: #6c93ff;/);
-    expect(block).toMatch(/--ad-ink-3: #7d89a1;/);
+    expect(block.slice(0, block.indexOf('}'))).not.toMatch(/--ad-bg: #080b12;/);
     expect(css).toMatch(/\[data-gna-theme='light'\][\s\S]*--ad-bg: #faf9f7;[\s\S]*--ad-accent: #2d7077;[\s\S]*--ad-ink: #292923;/);
     expect(css).toMatch(/prefers-color-scheme: light[\s\S]*\[data-gna-theme='system'\]/);
   });
