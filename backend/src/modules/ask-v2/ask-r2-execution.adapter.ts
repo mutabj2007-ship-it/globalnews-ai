@@ -2017,8 +2017,14 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       (response.analysis.keyFacts?.length ?? 0) === 0 &&
       (response.analysis.trustState?.distinctSourceArticleCount ?? 0) === 0;
     const answered = response.analysis !== null && response.articles.length > 0 && !groundedNothing;
+    /* CURRENT-REPORTING TRUTH R1 (B1) · ALPHA-LINE ADAPTATION — the Ask R2 rework path is the third
+       place this line decides CURRENT_REPORTING; it was unconditional. Same rule as the selection
+       re-read: reworked evidence that is retained-only is RETAINED_REPORTING, never current. */
+    const freshness = resolveReportingFreshness(response.retrievalContext, response.articles.length);
     const answer: AnswerDecision = answered
-      ? { state: 'CURRENT_REPORTING', basis: 'REQUIRED_EVIDENCE_OBTAINED', missingRoles: [] }
+      ? freshness === 'retained'
+        ? { state: 'RETAINED_REPORTING', basis: 'RETAINED_REPORTING_ONLY', missingRoles: [] }
+        : { state: 'CURRENT_REPORTING', basis: 'REQUIRED_EVIDENCE_OBTAINED', missingRoles: [] }
       : { state: 'INSUFFICIENT', basis: 'NO_REQUIRED_EVIDENCE_OBTAINED', missingRoles: ['REPORTING'] };
     const aiExecuted = response.analysis !== null;
     const specialistItems = specialistItemsOf(contributions);

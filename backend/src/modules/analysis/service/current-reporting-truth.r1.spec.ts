@@ -101,5 +101,13 @@ describe('B1 · the adapter passes the canonical state; no unconditional CURRENT
     /* no remaining literal that makes a produced answer current regardless of evidence */
     expect(adapter).not.toMatch(/produced\s*\?\s*\{\s*state: 'CURRENT_REPORTING'/);
   });
+
+  it('ALPHA LINE — every CURRENT_REPORTING decision (incl. the Ask R2 rework path) is guarded by the resolver', () => {
+    /* no `<cond> ? { state: 'CURRENT_REPORTING' …` that is not the retained-checked branch */
+    expect(adapter).not.toMatch(/\w+\s*\?\s*\{\s*state: 'CURRENT_REPORTING'/);
+    expect(adapter).toMatch(
+      /const answered =[\s\S]{0,400}const freshness = resolveReportingFreshness\(response\.retrievalContext, response\.articles\.length\);[\s\S]{0,120}answered\s*\?\s*freshness === 'retained'/,
+    );
+  });
 });
 
