@@ -752,8 +752,11 @@ export function buildDevelopmentBreadthSection(breadth?: AnalysisDevelopmentBrea
     return '';
   }
 
-  /* ASK R2 LIVE-GATE REPAIR (P0-2) — the reader's own output contract decides the brief's shape */
-  if (breadth.multiDevelopment && breadth.readerContract === true) {
+  /* ASK R2 LIVE-GATE REPAIR (P0-2) — the reader's own output contract decides the brief's shape.
+     ASK R2 A/B/C BLOCKER REPAIR R1 — whatever the measured breadth: a narrow evidence set used to
+     get "one well-written paragraph is a correct and fully accepted answer" instead, which overrode
+     the reader's requested table and closing (live Alpha bb08e49, test A: one editorial domain). */
+  if (breadth.readerContract === true) {
     return (
       `\n\nMEASURED EVIDENCE BREADTH FOR THIS REQUEST: ${breadth.clusters} distinct reporting ` +
       `clusters across ${breadth.categories} editorial domains.\n\n` +
@@ -761,9 +764,11 @@ export function buildDevelopmentBreadthSection(breadth?: AnalysisDevelopmentBrea
       'CONTRACT in the user message, in its order (opening, table, limits, closing). Separate its ' +
       'blocks with a BLANK LINE. A requested table is ONE well-formed Markdown table — header row, ' +
       '|---| separator, one row per development, every row with the same number of cells as the ' +
-      'header — and is WITHHELD if malformed, missing (in a long answer) or longer than the requested ' +
-      'number of items. Fewer rows is correct when the evidence supports fewer; if nothing can be ' +
-      'verified, say so briefly instead of a table. Cover what the evidence establishes and nothing more.'
+      'header — and is WITHHELD if malformed, missing while any supplied report supports a row, or ' +
+      'longer than the requested number of items. Fewer rows is correct when the evidence supports ' +
+      'fewer (one row is a table); only if NOTHING can be verified, say so plainly instead of a table. ' +
+      'Cover what the evidence establishes and nothing more.' +
+      buildSingleSourceBasisSection(breadth)
     );
   }
 

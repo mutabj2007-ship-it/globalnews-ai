@@ -43,6 +43,14 @@ export interface AnchorGroup {
    * Sessions Involving Minors" and a Rwandan betting-tax story were admitted as corridor evidence.
    */
   readonly weakTerms?: readonly string[];
+  /**
+   * ASK R2 A/B/C BLOCKER REPAIR R1 — CORRIDOR ROUTE actors only: the route PLACE the reader named
+   * (the port city, "Mombasa", "Dar es Salaam"). `terms` also carries the route's whole country so a
+   * report about Tanzania still counts as being about that route; but only a PLACE unlocks the
+   * weak terms. Live Alpha bb08e49: a bank appointment mentioning "Tanzania" plus "profit before
+   * tax", and Ethiopia's election mentioning "Kenya" plus "security", were admitted as route evidence.
+   */
+  readonly places?: readonly string[];
 }
 
 export interface QuestionAnchors {
@@ -56,6 +64,11 @@ export interface QuestionAnchors {
   readonly relation: 'LINKED' | 'SET' | 'CORRIDOR' | 'NONE';
   /** True when the gate should be applied (see `gateApplies`). */
   readonly gated: boolean;
+  /**
+   * ASK R2 A/B/C BLOCKER REPAIR R1 — CORRIDOR only: routes the reader ruled out ("Dar es Salaam,
+   * not Mombasa"). A report whose only route link is one of these is not evidence for this turn.
+   */
+  readonly excluded?: readonly AnchorGroup[];
 }
 
 const DEMONYMS: Readonly<Record<string, string>> = {
@@ -187,6 +200,33 @@ function hasPhrase(text: string, phrase: string): boolean {
   return p !== '' && text.includes(` ${p} `);
 }
 
+/** ASK R2 A/B/C BLOCKER REPAIR R1 — how much of a report counts as its lead (after the title). */
+export const BUSINESS_IMPACT_LEAD_WORDS = 60;
+/** ASK R2 A/B/C BLOCKER REPAIR R1 — distinct coverage-area terms a corridor report needs without a route place. */
+export const CORRIDOR_MIN_TOPIC_TERMS_WITHOUT_PLACE = 2;
+
+function leadWords(summary: string, count: number): string {
+  return summary.split(/\s+/u).filter((w) => w.length > 0).slice(0, count).join(' ');
+}
+
+/* "taxes" → "tax", "borders" → "border", "prices" → "price"; "customs" and "news"-like words stay */
+function singular(term: string): string {
+  if (/(?:x|ch|sh|ss)es$/u.test(term)) return term.slice(0, -2);
+  if (term.endsWith('s') && !term.endsWith('ss') && term !== 'customs') return term.slice(0, -1);
+  return term;
+}
+
+/* distinct STRONG terms of these groups present in the text; a plural and its singular count once */
+function distinctTermsFound(text: string, groups: readonly AnchorGroup[]): number {
+  const found = new Set<string>();
+  for (const g of groups) {
+    for (const t of g.terms) {
+      if (hasPhrase(text, t)) found.add(singular(normalizeText(t).trim()));
+    }
+  }
+  return found.size;
+}
+
 function countryGroup(iso3: string): AnchorGroup | null {
   const meta = findCountryByIso3(iso3);
   if (meta === undefined) return null;
@@ -270,10 +310,18 @@ function corridorAnchors(corridor: TradeCorridor, topics: readonly AnchorGroup[]
     const g = countryGroup(route.iso3);
     if (g === null) continue;
     const city = route.city === null ? [] : [route.city.toLowerCase()];
-    actors.push({ key: g.key, label: route.label, terms: [...new Set([...city, ...g.terms])], role: 'ROUTE' });
+    actors.push({ key: g.key, label: route.label, terms: [...new Set([...city, ...g.terms])], role: 'ROUTE', places: city });
+  }
+  /* a route the reader ruled out keeps its whole country and city, so its reports can be recognised */
+  const excluded: AnchorGroup[] = [];
+  for (const place of corridor.excluded) {
+    const g = countryGroup(place.iso3);
+    if (g === null || actors.some((a) => a.key === g.key)) continue;
+    const city = place.city === null ? [] : [place.city.toLowerCase()];
+    excluded.push({ key: g.key, label: place.label, terms: [...new Set([...city, ...g.terms])] });
   }
   const allTopics = topics.some((t) => t.key === CORRIDOR_LOGISTICS.key) ? topics : [...topics, CORRIDOR_LOGISTICS];
-  return { actors, topics: allTopics, relation: 'CORRIDOR', gated: actors.length > 0 };
+  return { actors, topics: allTopics, relation: 'CORRIDOR', gated: actors.length > 0, excluded };
 }
 
 /**
@@ -332,20 +380,51 @@ export function admitsReport(anchors: QuestionAnchors, report: { title: string; 
   if (!anchors.gated) return { admitted: true, missing: [] };
   const text = normalizeText(`${report.title} ${report.summary ?? ''}`);
   const strong = (g: AnchorGroup): boolean => g.terms.some((t) => hasPhrase(text, t));
-  /* a weak term counts only beside a named ROUTE actor, never with the destination alone */
-  const routeNamed = anchors.actors.some((a) => a.role === 'ROUTE' && strong(a));
+  /*
+    ASK R2 A/B/C BLOCKER REPAIR R1 — a weak term counts only beside a named route PLACE (the port
+    city), never beside the route's country name alone and never with the destination alone.
+  */
+  const routePlaceNamed = anchors.actors.some(
+    (a) => a.role === 'ROUTE' && (a.places ?? []).some((p) => hasPhrase(text, p)),
+  );
   const has = (g: AnchorGroup): boolean =>
-    strong(g) || (routeNamed && (g.weakTerms ?? []).some((t) => hasPhrase(text, t)));
+    strong(g) || (routePlaceNamed && (g.weakTerms ?? []).some((t) => hasPhrase(text, t)));
+  /*
+    ASK R2 A/B/C BLOCKER REPAIR R1 — a business-impact question is about conditions IN the named
+    place, so the place must be what the report is about: named in its title or lead, not met in
+    passing deep in the text. Live Alpha bb08e49: a regional bank's Director General appointment was
+    admitted for "a small shop owner in Kenya" because her CV mentions "Citibank Kenya" 141 words in
+    and the bank's results say "profit before tax" and "loan disbursements".
+  */
+  const lead = normalizeText(`${report.title} ${leadWords(report.summary ?? '', BUSINESS_IMPACT_LEAD_WORDS)}`);
+  const businessImpact = anchors.relation !== 'CORRIDOR' && anchors.topics.some((t) => t.key === 'business-impact');
+  const actorHas = (g: AnchorGroup): boolean =>
+    businessImpact ? g.terms.some((t) => hasPhrase(lead, t)) : has(g);
   const missing: string[] = [];
   if (anchors.relation === 'LINKED') {
-    for (const a of anchors.actors) if (!has(a)) missing.push(a.label);
-  } else if (anchors.actors.length > 0 && !anchors.actors.some(has)) {
+    for (const a of anchors.actors) if (!actorHas(a)) missing.push(a.label);
+  } else if (anchors.actors.length > 0 && !anchors.actors.some(actorHas)) {
     missing.push(anchors.actors.map((a) => a.label).join(' / '));
   }
   if (anchors.relation === 'CORRIDOR') {
-    /* the reader's coverage areas are alternatives: one of them is enough */
-    if (anchors.topics.length > 0 && !anchors.topics.some(has))
-      missing.push(anchors.topics.map((t) => t.label).join(' / '));
+    /* the reader's coverage areas are alternatives: one of them is enough — beside a route place.
+       Without one, a single generic word ("border", "traders") beside a country is not route
+       evidence: at least two distinct coverage-area terms are required. */
+    if (anchors.topics.length > 0) {
+      const enough = routePlaceNamed
+        ? anchors.topics.some(has)
+        : distinctTermsFound(text, anchors.topics) >= CORRIDOR_MIN_TOPIC_TERMS_WITHOUT_PLACE;
+      if (!enough) missing.push(anchors.topics.map((t) => t.label).join(' / '));
+    }
+    /* a route the reader ruled out is not evidence: a report whose only route link is the
+       excluded one ("Dar es Salaam, not Mombasa" → a Kenya-only story) is not admitted */
+    const excluded = anchors.excluded ?? [];
+    if (
+      excluded.some(strong) &&
+      !anchors.actors.some((a) => a.role === 'ROUTE' && strong(a))
+    ) {
+      missing.push(`not via ${excluded.map((e) => e.label).join(' / ')}`);
+    }
   } else {
     for (const t of anchors.topics) if (!has(t)) missing.push(t.label);
   }
