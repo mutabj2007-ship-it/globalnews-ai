@@ -291,7 +291,8 @@ export const HOME_CLICK_CONTRACT: readonly HomeClickRow[] = [
     signedOut: 'a guest reopens its own operation through the guest surface', back: 'document-navigation',
     unavailable: 'shown only for a stored, reopenable answer', external: false,
     aiCost: 'none', network: '1 display-only read (0 AI, 0 provider)',
-    evidence: { file: 'components/ask-frame/AskR2TurnView.tsx', contains: 'data-ask="open-full-analysis"' },
+    /* ASK DESIGN R3 (CTO ruling 6) — a row of More, rendered by the answer toolbar. */
+    evidence: { file: 'components/ask-frame/AskAnswerToolbar.tsx', contains: 'data-ask="open-full-analysis"' },
   },
   {
     id: 'dock.dashboard-entry', label: 'Ask GlobalNews AI ↗ (dashboard)', breakpoints: ALL, element: 'a',
