@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useRef, useState, type JSX } from 'react';
+import { useEffect, useId, useRef, useState, type CSSProperties, type JSX } from 'react';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -32,6 +32,73 @@ export type AskEmblemState = 'ready' | 'typing' | 'leaving';
 
 const LEAVE_MS = 200;
 
+/**
+ * PHONE TYPING EMBLEM REPAIR R1 — how the typing mark fits a short VISIBLE viewport.
+ *
+ * The approved Design keeps an understated emblem visible while typing; only a SUBMIT removes it.
+ * The previous rule hid it outright whenever `visualViewport.height < 480`, which is exactly the
+ * iPhone Safari keyboard-open state, so the mark vanished on iOS while other phones kept it.
+ *
+ * The decision is now made from the SPACE the mark actually has, never from a device or a single
+ * height threshold: inside its scroll container (the Ask reader / the dock body) the free space is
+ * `container height − (content height without the emblem's own box)`. The composer lives outside
+ * that container, so it always keeps its place above the keyboard; the emblem only ever adapts:
+ *   full     the CSS typing size fits — nothing changes (desktop, tablets, taller phones);
+ *   compact  it does not: the emblem's own spacing goes first, then the mark shrinks toward
+ *            COMPACT_MIN_PX, using exactly the space there is;
+ *   none     not even COMPACT_MIN_PX fits (e.g. a landscape phone with the keyboard open): the
+ *            composer wins and the mark steps aside — the last resort, not the rule.
+ */
+export type AskEmblemFit = 'full' | 'compact' | 'none';
+export const COMPACT_MIN_PX = 48;
+/** The emblem's resting bottom margin (`.gna-ask-emblem`), released first when space is short. */
+const RESTING_MARGIN_PX = 4;
+
+/**
+ * Pure fit decision. `free` is the vertical space available to the emblem's box including its
+ * margin; `nominal` is the CSS typing size for this placement and container width.
+ */
+export function emblemTypingFit(free: number, nominal: number): { fit: AskEmblemFit; size: number } {
+  if (!Number.isFinite(free) || !Number.isFinite(nominal) || nominal <= 0) return { fit: 'full', size: nominal };
+  if (free >= nominal + RESTING_MARGIN_PX) return { fit: 'full', size: nominal };
+  const size = Math.floor(Math.min(nominal, free));
+  if (size >= COMPACT_MIN_PX) return { fit: 'compact', size };
+  return { fit: 'none', size: 0 };
+}
+
+/** The nearest ancestor that scrolls vertically — the box the emblem has to fit inside. */
+function scrollContainerOf(el: HTMLElement): HTMLElement | null {
+  let node = el.parentElement;
+  while (node !== null) {
+    const overflowY = window.getComputedStyle(node).overflowY;
+    if (overflowY === 'auto' || overflowY === 'scroll') return node;
+    node = node.parentElement;
+  }
+  return null;
+}
+
+/**
+ * Free vertical space for the emblem's box inside `container`: its inner height minus the height
+ * of everything else it holds. Measured from the children's boxes (not `scrollHeight`), so a
+ * bottom-aligned column whose content overflows upward is still measured correctly.
+ */
+function freeSpaceFor(el: HTMLElement, container: HTMLElement): number {
+  const style = window.getComputedStyle(container);
+  const inner =
+    container.clientHeight - (parseFloat(style.paddingTop) || 0) - (parseFloat(style.paddingBottom) || 0);
+  let top = Infinity;
+  let bottom = -Infinity;
+  for (const child of Array.from(container.children)) {
+    const box = child.getBoundingClientRect();
+    if (box.height === 0 && box.width === 0) continue;
+    top = Math.min(top, box.top);
+    bottom = Math.max(bottom, box.bottom);
+  }
+  const content = Number.isFinite(top) ? bottom - top : 0;
+  const own = el.getBoundingClientRect().height + (parseFloat(window.getComputedStyle(el).marginBottom) || 0);
+  return inner - (content - own);
+}
+
 function prefersReducedMotion(): boolean {
   return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
     ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -50,7 +117,7 @@ export function AskEmblem({
   const node = useRef<HTMLDivElement>(null);
   const [gone, setGone] = useState(false);
   const [paused, setPaused] = useState(false);
-  const [short, setShort] = useState(false);
+  const [fit, setFit] = useState<{ fit: AskEmblemFit; size: number }>({ fit: 'full', size: 0 });
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, '');
   /* Leaving keeps the size it had (typing, almost always): it fades, it never grows back. */
   const from = useRef<'ready' | 'typing'>('ready');
@@ -93,24 +160,50 @@ export function AskEmblem({
     };
   }, [gone]);
 
-  /* Typing: hidden while the VISIBLE height is under 480 (a phone with its keyboard open). */
+  /*
+    PHONE TYPING EMBLEM REPAIR R1 — typing fits the mark to the space it has (see emblemTypingFit).
+    Ready is never measured (136 is the Design's entry size); leaving keeps the fit it had while it
+    fades, so a compact mark never grows back for its last 200 ms.
+  */
   useEffect(() => {
+    if (state === 'leaving') return;
     if (state !== 'typing') {
-      setShort(false);
+      setFit({ fit: 'full', size: 0 });
       return;
     }
-    if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') return;
-    const viewport = window.visualViewport ?? undefined;
+    const el = node.current;
+    /* Only a laid-out DOM element can be measured (not SSR, not a test renderer's mock ref). */
+    if (typeof HTMLElement === 'undefined' || !(el instanceof HTMLElement)) return;
+    const container = scrollContainerOf(el);
+    if (container === null) return;
+    let frame = 0;
     const measure = () => {
-      const height = viewport?.height ?? window.innerHeight;
-      setShort(typeof height === 'number' && height < 480);
+      frame = 0;
+      /* The CSS typing size for this placement and container width (64 · 72 · 48 dock). */
+      const nominal = parseFloat(window.getComputedStyle(el).getPropertyValue('--emblem-typing-size')) || 0;
+      const next = emblemTypingFit(freeSpaceFor(el, container), nominal);
+      setFit((prev) => (prev.fit === next.fit && prev.size === next.size ? prev : next));
+    };
+    const schedule = () => {
+      if (frame === 0) frame = window.requestAnimationFrame(measure);
     };
     measure();
-    viewport?.addEventListener('resize', measure);
-    window.addEventListener('resize', measure);
+    const viewport = window.visualViewport ?? undefined;
+    viewport?.addEventListener('resize', schedule);
+    viewport?.addEventListener('scroll', schedule);
+    window.addEventListener('resize', schedule);
+    let observer: ResizeObserver | undefined;
+    if (typeof ResizeObserver === 'function') {
+      observer = new ResizeObserver(schedule);
+      observer.observe(container);
+      for (const child of Array.from(container.children)) observer.observe(child);
+    }
     return () => {
-      viewport?.removeEventListener('resize', measure);
-      window.removeEventListener('resize', measure);
+      if (frame !== 0) window.cancelAnimationFrame(frame);
+      viewport?.removeEventListener('resize', schedule);
+      viewport?.removeEventListener('scroll', schedule);
+      window.removeEventListener('resize', schedule);
+      observer?.disconnect();
     };
   }, [state]);
 
@@ -124,7 +217,8 @@ export function AskEmblem({
       data-ask-emblem-from={state === 'leaving' ? from.current : undefined}
       data-ask-emblem-placement={placement}
       data-ask-emblem-paused={paused ? 'true' : undefined}
-      data-ask-emblem-short={short ? 'true' : undefined}
+      data-ask-emblem-fit={fit.fit === 'full' ? undefined : fit.fit}
+      style={fit.fit === 'compact' ? ({ '--emblem-fit-size': `${fit.size}px` } as CSSProperties) : undefined}
       className="gna-ask-emblem"
     >
       <AskEmblemSvg id={id} />
