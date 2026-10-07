@@ -133,6 +133,7 @@ export function AskSourcesList({
                 >
                   {r.openOriginal}
                   <span aria-hidden="true">↗</span>
+                  <span className="sr-only">{r.opensNewTab}</span>
                 </a>
               )}
             </div>

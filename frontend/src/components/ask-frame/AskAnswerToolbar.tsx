@@ -48,7 +48,7 @@ function ActionSheet({
     box.current?.querySelector<HTMLElement>('[data-ask="sheet-close"]')?.focus({ preventScroll: true });
   }, []);
   return (
-    <div data-ask="sheet-layer" className={styles.sheetLayer}>
+    <div data-ask="sheet-layer" className={`${styles.sheetLayer} ${styles.actionLayer}`}>
       <div aria-hidden="true" onClick={onClose} className={styles.sheetScrim} />
       <div
         ref={box}
@@ -56,7 +56,7 @@ function ActionSheet({
         aria-modal="true"
         aria-labelledby={titleId}
         data-ask="action-sheet"
-        className={styles.sheet}
+        className={`${styles.sheet} ${styles.actionSheet}`}
         onKeyDown={(event) => {
           if (event.key === 'Escape') {
             event.stopPropagation();
@@ -190,7 +190,7 @@ export function AskAnswerToolbar({
             <button
               type="button"
               data-ask="share-via"
-              className={styles.primaryButton}
+              className={styles.secondaryWide}
               onClick={() => {
                 /* Only this answer: its question, opening and its own source links. */
                 const links = sources.map((source) => `- ${source.title} ${source.url}`).join('\n');

@@ -156,7 +156,16 @@ export function englishLeaks(
   locale: DisplayLocale,
 ): string[] {
   const en = new Set(english);
-  const allowed = declaredUnchanged(locale);
+  const allowed = new Set(declaredUnchanged(locale));
+  /* AskWordmark draws a declared brand ending in "AI" as two runs ("Ask GlobalNews" + accented
+     "AI", Design header). Those two runs ARE the declared value, so they are allowed as such. */
+  for (const v of [...allowed]) {
+    const m = /^(.*?)(AI)$/.exec(v);
+    if (m !== null && m[1].trim() !== '') {
+      allowed.add(m[1].trim());
+      allowed.add(m[2]);
+    }
+  }
   return [
     ...new Set(
       localized.filter(

@@ -250,9 +250,9 @@ describe('A — official unavailable (G8) and a spent budget (live G3–G9) are 
   });
 
   it('a BUDGET refusal is never "Ask is unavailable": it says today’s limit is reached and nothing was charged', () => {
-    const [card] = byData(render(null, 'BUDGET_REFUSED:ip-day'), 'unavailable');
+    const [card] = byData(render(null, 'BUDGET_REFUSED:ip-day'), 'failure-title');
     expect(card.props.children).toMatch(/today’s Ask limit/);
-    const [other] = byData(render(null, 'THREAD_UNAVAILABLE'), 'unavailable');
+    const [other] = byData(render(null, 'THREAD_UNAVAILABLE'), 'failure-title');
     expect(other.props.children).toBe('Ask is unavailable right now. Nothing was run.');
   });
 });

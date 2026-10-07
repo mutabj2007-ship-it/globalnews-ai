@@ -593,6 +593,14 @@ export const deShellOverlay: ShellLocaleOverlay = {
           pattern: "Antwort vom {0}. Die Berichterstattung kann sich seitdem geändert haben.",
         },
         editQuestion: "Frage bearbeiten",
+        opensNewTab: " (öffnet sich in einem neuen Tab)",
+        aboutStory: {
+          kind: "pattern",
+          pattern: "Zu dieser Meldung: {0}",
+        },
+        demoData: "Demodaten.",
+        failureNetworkTitle: "Der Nachrichtendienst war nicht erreichbar.",
+        failureBody: "Das ist meist nur vorübergehend. Ihre Frage steht noch im Feld unten.",
       },
       questionOverLimit: {
         kind: "pattern",

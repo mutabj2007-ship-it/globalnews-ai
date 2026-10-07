@@ -14,6 +14,7 @@ import {
 } from '@/lib/ask/askRecentGrouping';
 import { cleanAskDestination, isAskConversationSurface, isPlainClick } from '@/lib/ask/askCleanNavigation';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
+import { askFormatLocalDay, askFormatLocalTime } from '@/lib/ask/askDirection';
 import { useAskNavOptional } from '@/components/ask-nav/AskNavShell';
 import styles from './askDashboard.module.css';
 
@@ -41,12 +42,15 @@ export function AskConversations({
   locale,
   currentThreadId,
   onNavigate,
+  showTitle = true,
 }: {
   readonly locale: DisplayLocale;
   /** The conversation on screen, marked `aria-current="page"`. */
   readonly currentThreadId?: string | null;
   /** The drawer closes itself when a row or New question is used. */
   readonly onNavigate?: () => void;
+  /** The drawer carries the title in its own header (Design D4); the column shows it here. */
+  readonly showTitle?: boolean;
 }): JSX.Element {
   const shell = askShellStrings(locale);
   const r = shell.askR2Strings.read;
@@ -77,12 +81,14 @@ export function AskConversations({
     () => groupRecentThreads(filtered, loaded?.loadedAt ?? new Date()),
     [filtered, loaded],
   );
-  const time = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' });
-  const day = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric' });
+  /* Design D4: "Today, 14:20" and "2 Oct 2026" — the product's day-month-year order and a
+     24-hour clock, as the turn footer and the Sources sheet read. */
+  const time = { format: (at: Date) => askFormatLocalTime(at, locale) };
+  const day = { format: (at: Date) => askFormatLocalDay(at, locale) };
 
   return (
     <nav data-ask="conversations" aria-label={r.conversations} className={styles.conversations}>
-      <h2>{r.conversations}</h2>
+      {showTitle && <h2>{r.conversations}</h2>}
       <a
         data-ask="conversations-new"
         href={cleanAskDestination(pathname)}

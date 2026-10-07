@@ -268,7 +268,7 @@ export function Composer({
             maxHeight={maxHeight}
             maxViewportFraction={0.4}
             keepVisible
-            className="w-full min-w-0 flex-1 bg-transparent py-1.5 text-[16px] leading-[1.45] text-white placeholder:text-[var(--ask-read-ink3,#6f89a8)] focus:outline-none"
+            className="w-full min-w-0 flex-1 bg-transparent py-1.5 text-[16px] leading-[1.45] text-[var(--ad-ink,#edeff5)] placeholder:text-[var(--ask-read-ink3,#6f89a8)] focus:outline-none"
           />
           {showExample && example !== undefined && (
             /*
@@ -320,9 +320,7 @@ export function Composer({
             visible everywhere this primitive is reused without it).
           */}
           {submitLabel}
-          <svg aria-hidden="true" data-ask="send-icon" viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M10 16V4M5 9l5-5 5 5" />
-          </svg>
+          <span aria-hidden="true" data-ask="send-glyph">↑</span>
         </button>
       </div>
       <AskQuestionLimitNote id="ask-frame-composer-limit" state={limit} copy={limitCopy} />

@@ -607,6 +607,11 @@ export function AskNavShell({
       </header>
 
       {open && (
+        /* Design D4 — the conversation behind the drawer stays visible under a scrim; a tap on
+           it closes the drawer. */
+        <div aria-hidden="true" data-ask-nav="drawer-scrim" className={styles.drawerScrim} onClick={() => setOpen(false)} />
+      )}
+      {open && (
         <div
           ref={drawerRef}
           role="dialog"
@@ -620,19 +625,19 @@ export function AskNavShell({
           dir={shellDirection.dir}
           className={styles.drawer}
         >
+          {/* Design D4 — "Conversations" and a text Close, 56 px. */}
           <div className={styles.drawerHead}>
-            <span className="inline-flex items-center gap-2 text-[1.0625rem] font-medium text-[var(--ad-ink,#ffffff)]">
-              <AskEmblemMark />
-              {askProductName(language)}
-            </span>
+            <h2 className="m-0 text-[0.9375rem] font-semibold text-[var(--ad-ink,#ffffff)]">
+              {askShellStrings(selected ?? displayLocaleOf(language)).askR2Strings.read.conversations}
+            </h2>
             <button
               ref={closeRef}
               type="button"
               aria-label={s.closeMenuAriaLabel}
               onClick={() => setOpen(false)}
-              className="inline-flex min-h-11 min-w-11 items-center justify-center text-[20px] text-[var(--ad-ink-2,#cfe2f2)]"
+              className="inline-flex min-h-11 items-center justify-center rounded-[22px] px-3 text-[0.9375rem] font-medium text-[var(--ad-ink-2,#cfe2f2)] hover:bg-[var(--ad-surface-2,transparent)]"
             >
-              ×
+              {askShellStrings(selected ?? displayLocaleOf(language)).askR2Strings.close}
             </button>
           </div>
 
@@ -646,6 +651,7 @@ export function AskNavShell({
               locale={selected ?? displayLocaleOf(language)}
               currentThreadId={threadId}
               onNavigate={() => setOpen(false)}
+              showTitle={false}
             />
           </div>
 

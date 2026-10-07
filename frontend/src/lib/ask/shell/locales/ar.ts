@@ -637,6 +637,14 @@ export const arShellOverlay: ShellLocaleOverlay = {
           pattern: "إجابة بتاريخ {0}. ربما تغيّرت التغطية منذ ذلك الحين.",
         },
         editQuestion: "تعديل السؤال",
+        opensNewTab: " (يُفتح في علامة تبويب جديدة)",
+        aboutStory: {
+          kind: "pattern",
+          pattern: "حول هذه القصة: {0}",
+        },
+        demoData: "بيانات تجريبية.",
+        failureNetworkTitle: "تعذّر الوصول إلى خدمة الأخبار.",
+        failureBody: "يكون هذا عادةً مؤقتًا. سؤالك لا يزال في المربع أدناه.",
       },
       questionOverLimit: {
         kind: "pattern",

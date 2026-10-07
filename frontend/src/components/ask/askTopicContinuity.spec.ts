@@ -90,7 +90,7 @@ describe('the continued subject on the Ask dock', () => {
 });
 
 describe('PRE-MI QUALITY CLOSURE — the resolved compact result carries B and D together', () => {
-  it('Continuing chip + compact event note + inline citations + inference label in one answer', () => {
+  it('Continuing chip + compact event note + inline citations + inference marking in one answer', () => {
     const base = fixture({}) as AnalysisApiResponse;
     const firstSource = base.analysis!.sources[0];
     const fact = 'The regulation sets obligations for high-risk AI providers.';
@@ -125,7 +125,9 @@ describe('PRE-MI QUALITY CLOSURE — the resolved compact result carries B and D
     expect(html).toContain('data-ask="product-applicability"');
     expect(html).toContain('data-event-anchor-variant="compact"');
     expect(html).toContain('data-citation="1"');
-    expect(html).toContain('Analytical inference:');
+    /* R3: the inference is marked on the statement, not with a jargon label in the reading flow. */
+    expect(html).toContain('data-statement-kind="ANALYTICAL_INFERENCE"');
+    expect(html).not.toContain('Analytical inference:');
     /* D's block sits before the (compact) event note, which sits before the brief. */
     expect(html.indexOf('data-ask="continuing"')).toBeLessThan(html.indexOf('data-event-anchor="notice"'));
     expect(html.indexOf('data-event-anchor="notice"')).toBeLessThan(html.indexOf('data-ask="brief"'));

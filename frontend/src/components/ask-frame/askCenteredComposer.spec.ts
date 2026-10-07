@@ -89,10 +89,12 @@ describe('C-1 · the entry state, and nothing outside it', () => {
     );
   });
 
-  it('rotates only in the entry state, so no timer runs in the answered workspace', () => {
-    expect(screen).toMatch(
-      /useRotatingExample\(\{\s*locale: interfaceLocale,\s*enabled: entryState,/,
-    );
+  /* ASK DESIGN AUTHORITY R3 (CTO reset): the Design (A1/F2) shows ONE quiet example line in the
+     welcome group and the placeholder "Ask anything…" in the field — no rotating example inside
+     the composer, so no rotation timer exists on the Ask screen at all. */
+  it('runs no rotating example: the welcome group carries one quiet example line instead', () => {
+    expect(screen).not.toMatch(/useRotatingExample/);
+    expect(screen).toMatch(/<p data-ask="welcome-example" className=\{styles\.welcomeExample\}>/);
   });
 
   it('keeps ONE composer instance — a second one would be a second submit path', () => {
@@ -203,9 +205,8 @@ describe('C-3 · the example lives inside the composer', () => {
     expect(css).toMatch(
       /@media \(prefers-reduced-motion: reduce\) \{\s*\.exampleEnter \{\s*animation: none;/,
     );
-    expect(screen).toContain(
-      'animationClass: rotatingExample.animate ? styles.exampleEnter : undefined',
-    );
+    /* R3: the Ask screen no longer passes an example; the Composer capability stays guarded. */
+    expect(screen).not.toContain('animationClass:');
     expect(code(read('../../lib/ask/useRotatingExample.ts'))).toContain(
       "'(prefers-reduced-motion: reduce)'",
     );
@@ -230,17 +231,20 @@ describe('C-4 · selection fills the composer and submits nothing', () => {
     expect(parts).not.toMatch(/onClick=\{example\.onUse\}/);
   });
 
-  it('puts the example into the draft through the shared draft path, then focuses it', () => {
-    expect(screen).toMatch(
-      /onUse: \(\) => \{\s*rotatingExample\.onUse\(\);\s*draftQuestion\(rotatingExample\.text \?\? ''\);/,
-    );
-    expect(screen).toMatch(/function draftQuestion\(draft: string\) \{\s*setQuestion\(draft\);/);
-    expect(screen).toMatch(/\[data-ask="composer-input"\]'\)\?\.focus\(\)/);
+  /* R3 (Design A1 "Example line is quiet text, not buttons"): the welcome example is a plain
+     paragraph — no selection path exists to fill, focus or submit anything. The shared draft path
+     remains for "Edit question" (D1) and the reopened question. */
+  it('the welcome example is a paragraph with no handler — it cannot fill or submit', () => {
+    const line = screen.split('<p data-ask="welcome-example"')[1].split('</p>')[0];
+    expect(line).not.toMatch(/onClick|onUse|tabIndex|role=/);
+    expect(screen).not.toMatch(/onUse: \(\) =>/);
   });
 
-  it('does not submit: nothing in the selection path reaches ask() or the form', () => {
-    const onUse = screen.split('onUse: () => {')[1].split('},')[0];
-    expect(onUse).not.toMatch(/ask\(\)|requestSubmit|onSubmit/);
+  it('draftQuestion still fills the composer and focuses it, and never submits', () => {
+    expect(screen).toMatch(/function draftQuestion\(draft: string\) \{\s*setQuestion\(draft\);/);
+    expect(screen).toMatch(/\[data-ask="composer-input"\]'\)\?\.focus\(\)/);
+    const body = screen.split('function draftQuestion(draft: string) {')[1].split('\n  }')[0];
+    expect(body).not.toMatch(/ask\(\)|requestSubmit|onSubmit/);
   });
 
   it('leaves the inserted text ordinary and editable — the composer is uncontrolled by it', () => {
@@ -451,7 +455,8 @@ describe('C-7 · seven languages and Arabic RTL', () => {
       const html = render({ example: example(locale) });
       expect(html).toContain(QUESTION_EXAMPLES[0].text[locale]);
     }
-    expect(screen).toMatch(/locale: interfaceLocale,/);
+    /* R3: the screen's welcome example reads the reader's own catalogue (r2s = askShellStrings). */
+    expect(screen).toMatch(/\{r2s\.read\.welcomeExample\}/);
   });
 
   it('uses the reader s existing language selection — no second Ask-only selector', () => {

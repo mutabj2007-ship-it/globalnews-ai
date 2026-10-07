@@ -149,14 +149,11 @@ export function AskAnswerProse({
             key={key}
             data-ask="statement"
             data-statement-kind={statement.kind}
-            className="text-ink-secondary [&_em]:not-italic"
+            className="[&_em]:not-italic"
           >
-            <span
-              data-ask="statement-qualifier"
-              className="me-0.5 rounded-[4px] bg-[var(--ask-read-deep-bg,rgba(217,185,138,0.12))] px-1 text-[0.8125rem] font-semibold text-[var(--ask-read-deep-ink,#d9b98a)]"
-            >
-              {statement.kind === 'ANALYTICAL_INFERENCE' ? t.inferenceLabel : t.unsupportedLabel}
-            </span>{' '}
+            {/* ASK DESIGN AUTHORITY R3 (CTO ruling) — the inference / unsupported classification
+                is data and validation only: no reader-visible label ("Analytical inference:")
+                in the reading flow, upright body type, and still never cited. */}
             <em>
               <Inline text={segment.text} />
             </em>

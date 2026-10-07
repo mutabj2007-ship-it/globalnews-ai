@@ -2058,6 +2058,11 @@
 .thread :global([data-ask='citation'])::after {
   content: attr(data-citation);
   font-size: var(--ad-t-xs, 0.8125rem);
+  /* set on the number itself: the anchor's own colour is repainted by the theme adapter */
+  color: var(--ad-accent-soft-ink, #a8c5ff);
+}
+.thread :global([data-ask='citation']):hover::after {
+  color: var(--ad-accent-ink, #080b12);
 }
 /* The story / record / comparison chip, above the composer (Design F5). */
 .frame .contextChip {
@@ -2130,4 +2135,598 @@
   .frame[data-ask-entry='true'] .entrySpacer {
     display: none;
   }
+}
+
+/*
+  ══════════════════════════════════════════════════════════════════════════════
+  ASK DESIGN AUTHORITY R3 — THE PROTOTYPE'S OWN VALUES (AskReadingPrototype.dc.html)
+  ══════════════════════════════════════════════════════════════════════════════
+
+  Every value below is read from the Design package's prototype source or a board frame
+  annotation (e06a8278…3bf1), not chosen. Where this block overrides an earlier rule in this
+  file, the earlier rule was an engineering approximation of the same Design element.
+*/
+
+/* Type: one family, Inter (the product's self-hosted --font-body); Space Grotesk only for the
+   wordmark (rootStyle fontFamily; header wordmark). */
+.page[data-ask-standalone],
+.page[data-ask-standalone] .frame,
+.page[data-ask-standalone] :global(.font-cd-body) {
+  font-family: var(--font-body), Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+.page[data-ask-standalone] {
+  --ad-wordmark-ai: var(--ad-accent, #6c93ff);
+  -webkit-font-smoothing: antialiased;
+}
+.page[data-ask-standalone] :global(.gna-ask-wordmark) {
+  font-family: var(--font-display), 'Space Grotesk', Inter, sans-serif;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--ad-ink, #edeff5);
+  white-space: nowrap;
+}
+.page[data-ask-standalone] :global(.gna-ask-wordmark-ai) {
+  color: var(--ad-wordmark-ai, #6c93ff);
+}
+
+/* Header (all frames): 56, padding 0 8, gap 4; brand group padding-left 6 / gap 8; "+ New". */
+.frame .brand {
+  gap: 8px;
+  padding-inline-start: 6px;
+}
+.frame .newButton {
+  min-height: 44px;
+  padding-block: 0;
+  padding-inline: 10px 14px;
+  gap: 6px;
+  border-radius: 22px;
+  font-size: var(--ad-t-sm, 0.9375rem);
+  font-weight: 500;
+  color: var(--ad-ink, #edeff5);
+}
+.frame .newButton > :global(span[aria-hidden]) {
+  font-size: 20px;
+  color: var(--ad-accent, #6c93ff);
+}
+
+/* READY (A1 · F2): one centred column, gap 20, padding 24 clamp(16,5cqi,32). */
+.frame[data-ask-entry='true'] .grid {
+  padding: 24px clamp(16px, 5cqi, 32px);
+}
+.frame[data-ask-entry='true'] :global(.gna-ask-emblem) {
+  margin-bottom: 20px;
+}
+.frame[data-ask-entry='true'] .empty,
+.frame .welcomeCollapsible {
+  gap: 20px;
+}
+.welcomeTitleGroup {
+  display: flex;
+  max-width: 36em;
+  flex-direction: column;
+  gap: 8px;
+}
+.frame .emptyTitle,
+.frame[data-ask-entry='true'] .emptyTitle {
+  font-size: var(--ad-t-title, 1.5rem);
+  line-height: 1.25;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-wrap: balance;
+}
+.frame .emptyLead {
+  font-size: var(--ad-t-body, 1.0625rem);
+  line-height: 1.5;
+  color: var(--ad-ink-2, #93a0b8);
+}
+.frame .welcomeExample,
+.welcomeExampleDesktop {
+  max-width: 28em;
+  margin: 0;
+  font-size: var(--ad-t-sm, 0.9375rem);
+  line-height: 1.6;
+  color: var(--ad-ink-3, #7d89a1);
+  text-wrap: pretty;
+}
+/* phone/tablet: the example is in the group; desktop: under the centred composer (F2) */
+.welcomeExampleDesktop {
+  display: none;
+}
+
+/* The composer (every frame): white field, 3:1 line, radius 26, a 1px soft shadow; the
+   textarea 50 tall (13 / 4 / 13 / 18), the 44 round send 3px inside. Focus = a 3px soft halo;
+   too long = the error line. Disabled send = disabled-bg / disabled-ink, exactly. */
+.frame :global([data-ask='composer']) > div:first-child,
+.frame[data-ask-entry='true'] :global([data-ask='composer']) > div:first-child {
+  min-height: 0;
+  align-items: flex-end;
+  gap: 4px;
+  padding: 0;
+  border: 1px solid var(--ad-line-input, #5a6682);
+  border-radius: var(--ad-radius-composer, 26px);
+  background: var(--ad-surface, #0f1420);
+  box-shadow: 0 1px 2px rgba(41, 41, 35, 0.06);
+}
+.frame :global([data-ask='composer']) > div:first-child:focus-within {
+  border-color: var(--ad-line-input, #5a6682);
+  box-shadow: 0 0 0 3px var(--ad-focus-soft, rgba(108, 147, 255, 0.28));
+}
+.frame :global([data-ask='composer']) > div:first-child:has([aria-invalid='true']) {
+  border-color: var(--ad-err, #ff8a7a);
+}
+.frame :global([data-ask='composer']) > div:first-child > div {
+  align-self: stretch;
+}
+.frame :global([data-ask='composer-input']) {
+  min-height: 50px;
+  padding: 13px 4px 13px 18px;
+  font-size: max(16px, 1.0625rem);
+  line-height: 1.45;
+  box-sizing: border-box;
+}
+.frame :global([data-ask='send']),
+.frame :global([data-ask='send']):disabled {
+  margin: 3px;
+  border: 0;
+}
+.frame :global([data-ask='send']):disabled {
+  background: var(--ad-disabled-bg, #161d2c);
+  color: var(--ad-disabled-ink, #5c6780);
+}
+.frame :global([data-ask='send-glyph']) {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1;
+}
+/* the composer bar: padding 8 clamp(12,4cqi,24) 8+safe; its top rule only once a turn exists */
+.frame .composerBar {
+  position: relative;
+  padding: 8px clamp(12px, 4cqi, 24px) calc(8px + env(safe-area-inset-bottom));
+}
+.frame .composerGrid {
+  max-width: var(--ad-composer-max, 720px);
+  padding: 0;
+}
+.frame[data-ask-keyboard] .composerBar {
+  padding-bottom: 8px;
+}
+
+/* Research (A4): the pulse dot and one line at t-sm in ink. */
+.frame :global([data-ask='working']) {
+  font-size: var(--ad-t-sm, 0.9375rem);
+  line-height: 1.45;
+  color: var(--ad-ink, #edeff5);
+}
+
+/* The answer turn (A5 · B1–B7): column gap 16; the question bubble 10/14, 18-18-4-18. */
+.thread :global([data-ask='turn']) {
+  gap: 16px;
+  margin-bottom: 28px;
+}
+.thread :global([data-ask='turn']) > :global(*) {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+.frame .question,
+.thread :global([data-ask='turn'] > h2),
+.thread :global([data-ask='turn'] [data-ask='submitted-question'] h2) {
+  margin: 0;
+  margin-inline-start: auto;
+  padding: 10px 14px;
+  border-radius: 18px;
+  border-end-end-radius: 4px;
+  font-size: var(--ad-t-q, 1.0625rem);
+  font-weight: 400;
+  line-height: 1.45;
+}
+.thread :global([data-ask-prose]) > * + * {
+  margin-top: 14px;
+}
+.thread :global([data-ask='answer-heading']),
+.thread :global([data-ask='detail-heading']) {
+  margin-top: 20px;
+  font-size: var(--ad-t-h, 1.1875rem);
+  line-height: 1.3;
+  font-weight: 600;
+}
+.thread :global([data-ask='answer-bullets']),
+.thread :global([data-ask='answer-steps']),
+.thread :global([data-ask='more-detail-body'] ul) {
+  gap: 8px;
+  padding-inline-start: 1.25em;
+  line-height: 1.5;
+}
+.thread :global([data-ask='answer-steps']) {
+  padding-inline-start: 1.4em;
+}
+/* "In this answer" (B2): a 13/600 ink-3 label; 40 px pills with the decorative line. */
+.thread :global([data-ask='answer-nav'] > p) {
+  font-size: var(--ad-t-xs, 0.8125rem);
+  font-weight: 600;
+  color: var(--ad-ink-3, #7d89a1);
+}
+.thread :global([data-ask='answer-nav'] button) {
+  min-height: 40px;
+  border-color: var(--ad-line, #1e2636);
+  border-radius: 20px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+/* "More detail: …" (A5 · B3): 48 tall, 1.35 leading. */
+.thread :global([data-ask='more-detail-toggle']) {
+  min-height: 48px;
+  line-height: 1.35;
+}
+.thread :global([data-ask='more-detail-body']) {
+  gap: 14px;
+}
+/* B7: the general-explanation note is a quiet t-sm ink-2 line AFTER the prose. */
+.thread :global([data-ask='reference-note'][data-ask-read='r4']) {
+  order: 20;
+  border: 0;
+  padding: 0;
+  font-size: var(--ad-t-sm, 0.9375rem);
+  line-height: 1.5;
+  color: var(--ad-ink-2, #93a0b8);
+}
+.thread :global([data-ask='reference-note'][data-ask-read='r4'] p),
+.thread :global([data-ask='reference-note'][data-ask-read='r4'] p:first-child) {
+  display: inline;
+  font-size: inherit;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: inherit;
+}
+.thread :global([data-ask='reference-note'][data-ask-read='r4'] p + p)::before {
+  content: ' ';
+}
+/* B6: limited reporting is an inline warn note. */
+.thread :global([data-ask='search-limited']) {
+  border-radius: var(--ad-radius-card, 12px);
+  padding: 12px 14px;
+  background: var(--ad-warn-bg, #2a2210);
+  color: var(--ad-warn-ink, #e9cf8e);
+  font-size: var(--ad-t-sm, 0.9375rem);
+  line-height: 1.5;
+}
+/* D1: the empty / insufficient lead is a 600 body line, not a 19–22 px display line. */
+.thread :global([data-ask='insufficient-title']) {
+  font-size: var(--ad-t-body, 1.0625rem);
+  line-height: 1.55;
+  font-weight: 600;
+}
+.thread :global([data-ask='edit-question']) {
+  border-color: var(--ad-line-input, #5a6682);
+  padding: 0 18px;
+  font-weight: 600;
+}
+/* D7: the date line and Refresh reporting share a wrapping row. */
+.thread :global([data-ask='reopened']) {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.thread :global([data-ask='reopened-line']) {
+  flex: 1 1 14em;
+  margin: 0;
+  line-height: 1.45;
+}
+.thread :global([data-ask='refresh-reporting']) {
+  margin: 0;
+  border-color: var(--ad-line-input, #5a6682);
+  padding: 0 16px;
+}
+/* B1: the footer line then the toolbar (gap 10); toolbar buttons on the decorative line. */
+.thread :global([data-ask='answer-footer']) {
+  margin: 0;
+  padding-top: 6px;
+}
+.thread :global([data-ask='answer-meta'][data-ask-meta-placement='about']) {
+  display: none;
+}
+.thread :global([data-ask='turn-actions']) {
+  margin-top: -6px;
+}
+.thread :global([data-ask='turn-actions'] button) {
+  border-color: var(--ad-line, #1e2636);
+  line-height: 1.2;
+}
+/* D2: one failure panel. */
+.frame :global(.gna-ask-failure) {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-radius: var(--ad-radius-card, 12px);
+  padding: 14px 16px;
+  background: var(--ad-err-bg, #2a1414);
+  color: var(--ad-ink, #edeff5);
+}
+.frame :global(.gna-ask-failure [data-ask='failure-title']) {
+  font-size: var(--ad-t-body, 1.0625rem);
+  line-height: 1.5;
+  font-weight: 600;
+}
+.frame :global(.gna-ask-failure [data-ask='retry-kept']) {
+  font-size: var(--ad-t-sm, 0.9375rem);
+  line-height: 1.5;
+}
+.frame :global(.gna-ask-failure [data-ask='try-again']) {
+  min-height: 44px;
+  border: 0;
+  border-radius: 22px;
+  padding: 0 18px;
+  background: var(--ad-accent, #6c93ff);
+  color: var(--ad-accent-ink, #080b12);
+  font-size: var(--ad-t-sm, 0.9375rem);
+  font-weight: 600;
+}
+
+/* Sources (C1 · C6 · F3): header 56, summary ink-2; body 12/20, gap 16; items 12 0 with a
+   bottom rule; chip 24; title 15/600; publisher·date 13 ink-2; Open original 13/600, 36 tall. */
+.sheetHead p {
+  color: var(--ad-ink-2, #93a0b8);
+}
+.sheetHead {
+  min-height: 56px;
+  padding: 8px 8px 8px 20px;
+}
+.sheetBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 12px 20px calc(20px + env(safe-area-inset-bottom));
+}
+.sheetBody :global([data-ask='source']),
+.sheetBody :global([data-ask='source']):first-child {
+  gap: 12px;
+  border-top: 0;
+  border-bottom: 1px solid var(--ad-line, #1e2636);
+  padding: 12px 0;
+}
+.sheetBody :global([data-ask='source'] > span:first-child) {
+  min-width: 24px;
+  height: 24px;
+  border-radius: 6px;
+}
+.sheetBody :global([data-ask='source-title']) {
+  font-size: var(--ad-t-sm, 0.9375rem);
+  line-height: 1.4;
+  font-weight: 600;
+}
+.sheetBody :global([data-ask='source'] div > span) {
+  font-size: var(--ad-t-xs, 0.8125rem);
+  line-height: 1.4;
+  color: var(--ad-ink-2, #93a0b8);
+}
+.sheetBody :global([data-ask='source-open']) {
+  min-height: 36px;
+  margin-top: 0;
+  font-size: var(--ad-t-xs, 0.8125rem);
+  font-weight: 600;
+  text-underline-offset: 3px;
+}
+.sheet {
+  height: 82%;
+  max-height: 88%;
+}
+.about {
+  margin-top: 0;
+  padding: 0 14px;
+  background: transparent;
+}
+.about > summary {
+  padding: 0;
+}
+.about > div {
+  padding: 0 0 12px;
+  font-size: var(--ad-t-sm, 0.9375rem);
+}
+
+/* Share / More (C2 · C3): a bottom sheet below 700, a centred 460 dialog from 700 up. */
+.actionSheet {
+  height: auto;
+  max-height: 88%;
+}
+.actionSheet::before {
+  display: none;
+}
+@container ask-root (min-width: 700px) {
+  .actionLayer {
+    align-items: center;
+  }
+  .actionSheet {
+    width: min(92%, 460px);
+    max-height: 80%;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  }
+}
+.sharePreview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 0;
+  padding: 14px;
+  background: var(--ad-bg, #080b12);
+}
+.sharePreview > p:first-child {
+  line-height: 1.4;
+}
+.sharePreview > p:nth-child(2),
+.sharePreview > p:last-child {
+  margin-top: 0;
+}
+.secondaryWide {
+  display: inline-flex;
+  min-height: 48px;
+  flex: 1 1 10em;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--ad-line-input, #5a6682);
+  border-radius: 24px;
+  padding: 0 18px;
+  background: var(--ad-surface, #0f1420);
+  color: var(--ad-ink, #edeff5);
+  font-size: var(--ad-t-sm, 0.9375rem);
+  font-weight: 600;
+  line-height: 1.2;
+}
+.actionRow {
+  min-height: 56px;
+  border-top: 0;
+  border-bottom: 1px solid var(--ad-line, #1e2636);
+}
+.actionRow > span:first-child {
+  font-size: var(--ad-t-body, 1.0625rem);
+  font-weight: 500;
+}
+.actionRow > span + span {
+  color: var(--ad-ink-2, #93a0b8);
+  line-height: 1.4;
+}
+
+/* The Saved toast (C5): floating above the composer, centred, radius 24. */
+.frame .toast {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  z-index: 5;
+  max-width: calc(100% - 32px);
+  margin: 0;
+  transform: translateX(-50%);
+  border-radius: 24px;
+  padding: 6px 6px 6px 16px;
+  line-height: 1.35;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+}
+.frame .toast > button {
+  min-height: 36px;
+  border-radius: 18px;
+  padding: 0 12px;
+}
+
+/* The story chip (F5): 36 tall, radius 18, 13 px. */
+.frame .contextChip {
+  min-height: 36px;
+  border-radius: 18px;
+  padding-block: 0;
+  padding-inline: 12px 4px;
+  line-height: 1.3;
+}
+
+@media (min-width: 1024px) and (orientation: landscape), (min-width: 1101px) {
+  /* F2: the example sits under the centred composer; the composer is 640 wide in READY. */
+  .frame[data-ask-entry='true'] .welcomeExample {
+    display: none;
+  }
+  .frame[data-ask-entry='true'] .welcomeExampleDesktop {
+    display: block;
+    margin: 20px auto 0;
+    text-align: center;
+  }
+  .frame[data-ask-entry='true'] .composerGrid {
+    max-width: 640px;
+  }
+}
+
+/* A citation inside an uncertainty / limited-reporting note: surface chip, warn ink (prototype). */
+.thread :global([data-ask='uncertainty-note']) :global([data-ask='citation']) {
+  background: var(--ad-surface, #0f1420);
+}
+.thread :global([data-ask='uncertainty-note']) :global([data-ask='citation'])::after {
+  color: var(--ad-warn-ink, #e9cf8e);
+}
+
+/*
+  R3 — desktop READY (F2) and the emblem (A1 · A2 · F2). The board frames and the prototype draw
+  the idle emblem at 136 at every width and 64 while typing; the package's MOTION_SPEC prose
+  says 144 / 160 at wider widths — the frames are the visual authority (reported as a package
+  inconsistency). The prototype's wide (≥1024) title token is 28.
+*/
+.frame :global(.gna-ask-emblem) {
+  --emblem-size: 136px;
+}
+.frame :global(.gna-ask-emblem[data-ask-emblem-state='typing']),
+.frame :global(.gna-ask-emblem[data-ask-emblem-from='typing']) {
+  --emblem-size: 64px;
+}
+/* F2: the welcome group (emblem → example) is centred in the reading column — an empty
+   flexible row above the content-sized reader and the flexible spacer below share the free
+   space equally. (The reader may still shrink and scroll on a short window.) */
+@media (min-width: 1024px) and (orientation: landscape), (min-width: 1101px) {
+  /* the frame is the ask-root container itself, so its own width is read by media query */
+  .frame {
+    --ad-t-title: 1.75rem;
+  }
+  .frame[data-ask-entry='true'] {
+    grid-template-rows: minmax(0, 1fr) minmax(0, max-content) auto minmax(0, 1fr);
+    grid-template-areas:
+      'history . side'
+      'history reader side'
+      'history composer side'
+      'history spacer side';
+  }
+  .frame[data-ask-entry='true'] .entrySpacer {
+    height: auto;
+  }
+}
+
+/* R3 — the answer table (prototype B4 / F4): 15 / 1.4 cells padded 10 14, header ink-2 on the
+   surface, a 12 px bordered region on the surface, the hint 13 px ink-3 at the end edge. */
+.thread :global([data-ask-prose]) :global(.gna-ask-table) {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.thread :global([data-ask-prose]) :global(.gna-ask-table-hint) {
+  align-self: flex-end;
+  margin: 0;
+  font-size: var(--ad-t-xs, 0.8125rem);
+  line-height: 1.4;
+  color: var(--ad-ink-3, #7d89a1);
+}
+.thread :global([data-ask-prose]) :global(.gna-ask-table-region) {
+  border: 1px solid var(--ad-line, #1e2636);
+  border-radius: 12px;
+  background: var(--ad-surface, #0f1420);
+}
+.thread :global([data-ask-prose]) :global(.gna-ask-table-grid) {
+  font-size: var(--ad-t-sm, 0.9375rem);
+  line-height: 1.4;
+  color: var(--ad-ink, #edeff5);
+}
+.thread :global([data-ask-prose]) :global(.gna-ask-table-grid th),
+.thread :global([data-ask-prose]) :global(.gna-ask-table-grid td) {
+  padding: 10px 14px;
+  border-top: 0;
+  border-bottom: 1px solid var(--ad-line, #1e2636);
+}
+.thread :global([data-ask-prose]) :global(.gna-ask-table-grid tbody tr:last-child th),
+.thread :global([data-ask-prose]) :global(.gna-ask-table-grid tbody tr:last-child td) {
+  border-bottom: 0;
+}
+.thread :global([data-ask-prose]) :global(.gna-ask-table-grid thead th) {
+  background: var(--ad-surface, #0f1420);
+  color: var(--ad-ink-2, #93a0b8);
+  white-space: nowrap;
+}
+.thread :global([data-ask-prose]) :global(.gna-ask-table-grid .gna-ask-table-sticky) {
+  background: var(--ad-surface, #0f1420);
+}
+
+/* R3 — qualified answers are plain flow too (B6 · B7 "no headings, no cards" · D1). The state
+   is carried by the governed state line / footer text, not by a start-rule box. */
+.thread :global([data-ask='answer'][data-ask-read-rule]) {
+  border: 0;
+  border-inline-start: 0;
+  padding: 0;
+  background: none;
+}
+/* D1: "Edit question" sits at its own width, not stretched across the column. */
+.thread :global([data-ask='answer'] > [data-ask='edit-question']) {
+  align-self: flex-start;
 }

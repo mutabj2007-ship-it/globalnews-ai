@@ -592,6 +592,14 @@ export const esShellOverlay: ShellLocaleOverlay = {
           pattern: "Respuesta del {0}. La cobertura puede haber cambiado desde entonces.",
         },
         editQuestion: "Editar la pregunta",
+        opensNewTab: " (se abre en una pestaña nueva)",
+        aboutStory: {
+          kind: "pattern",
+          pattern: "Sobre esta noticia: {0}",
+        },
+        demoData: "Datos de demostración.",
+        failureNetworkTitle: "No se pudo conectar con el servicio de noticias.",
+        failureBody: "Suele ser temporal. Tu pregunta sigue en el cuadro de abajo.",
       },
       questionOverLimit: {
         kind: "pattern",

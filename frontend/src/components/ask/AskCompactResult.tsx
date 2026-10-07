@@ -500,7 +500,9 @@ export function AskCompactResult({
             <AskAnswerDetail analysis={analysis} locale={uiLocale} />
           ) : null}
 
-          {readingSurface ? modeRow : null}
+          {/* ASK DESIGN AUTHORITY R3 — on the reading surface the mode badge is not drawn: a demo
+              answer is disclosed by the footer line's "Demo data." prefix (guide §5), and the
+              retrieval figures live in Sources → About this answer. */}
 
           <div
             data-ask="sources"
