@@ -2095,3 +2095,39 @@
   max-width: calc(var(--ad-composer-max, 720px) + 48px);
   padding-inline: clamp(16px, 5cqi, 24px);
 }
+
+/*
+  ASK DESIGN COMPLETENESS R2 — CTO live mobile correction.
+
+  New question is disabled while Ask is already empty: subdued, never a fake reset.
+*/
+.newButton:disabled {
+  cursor: default;
+  opacity: 0.45;
+  background: transparent;
+}
+/*
+  The READY send control was too faint on the iPhone (disabled-bg on a near-white page). It
+  stays disabled until there is text, but reads as a control: a visible rim and a legible arrow.
+*/
+.frame :global([data-ask='send']):disabled {
+  border: 1px solid var(--ad-line-strong, #2a3548);
+  background: var(--ad-surface-2, #161d2c);
+  color: var(--ad-ink-2, #93a0b8);
+}
+/*
+  READY on a phone (Design A1): the welcome group is centred in the free space between the
+  header and the composer, and the composer rests at the bottom near the thumb — no band of dead
+  space above the emblem and no group crammed against the composer.
+*/
+@media (max-width: 860px), (orientation: portrait) and (max-width: 1100px) {
+  .frame[data-ask-entry='true'] .reader {
+    justify-content: center;
+  }
+  .frame[data-ask-entry='true'] .grid {
+    padding-bottom: 16px;
+  }
+  .frame[data-ask-entry='true'] .entrySpacer {
+    display: none;
+  }
+}

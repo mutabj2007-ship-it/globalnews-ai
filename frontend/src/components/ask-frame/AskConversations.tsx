@@ -10,7 +10,7 @@ import {
   askReopenHref,
   filterRecent,
   groupRecentThreads,
-  recentRowPreview,
+
 } from '@/lib/ask/askRecentGrouping';
 import { cleanAskDestination, isAskConversationSurface, isPlainClick } from '@/lib/ask/askCleanNavigation';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
@@ -88,9 +88,11 @@ export function AskConversations({
         href={cleanAskDestination(pathname)}
         onClick={(event) => {
           onNavigate?.();
-          /* The same explicit New question the shell's menu runs: clear now, then a clean load. */
           if (nav === null || !isAskConversationSurface(pathname) || !isPlainClick(event)) return;
           event.preventDefault();
+          /* ASK DESIGN COMPLETENESS R2 — the frame's in-place New question (new thread, drawer
+             closed, composer focused); the clean document load only when no frame is mounted. */
+          if (nav.runNewQuestion()) return;
           nav.clearAndGo(cleanAskDestination(pathname));
         }}
       >
@@ -133,17 +135,19 @@ export function AskConversations({
               <ul>
                 {grouped[group].map((row) => {
                   const href = askReopenHref(row);
-                  const preview = recentRowPreview(row);
                   const at = new Date(row.lastActiveAt);
                   const when = Number.isNaN(at.getTime())
                     ? ''
                     : group === 'earlier'
                       ? day.format(at)
                       : `${t.groups[group]}, ${time.format(at)}`;
-                  const title =
-                    preview.primary === null
-                      ? t.noQuestionStored
-                      : `${preview.primary}${preview.primaryTruncated ? '…' : ''}`;
+                  /*
+                    ASK DESIGN COMPLETENESS R2 — ONE ROW = ONE CONVERSATION, with a STABLE title:
+                    the thread's root question (sequence 1), never its latest follow-up. A
+                    follow-up is part of the conversation it continues; it never becomes the
+                    conversation's name. (No persisted thread title exists in the API.)
+                  */
+                  const title = conversationTitle(row, t.noQuestionStored);
                   return (
                     <li key={row.id} data-ask-conversation={row.id}>
                       {href === null ? (
@@ -172,4 +176,22 @@ export function AskConversations({
       )}
     </nav>
   );
+}
+
+/**
+ * ASK DESIGN COMPLETENESS R2 — the stable conversation title: the thread's root question
+ * (`firstQuestion`, the reader's own words at sequence 1). Only a thread whose root turn is not
+ * stored falls back to the latest question. Never generated.
+ */
+export function conversationTitle(
+  row: Pick<
+    AskV2RecentThread,
+    'firstQuestion' | 'firstQuestionTruncated' | 'latestQuestion' | 'latestQuestionTruncated'
+  >,
+  noQuestionStored: string,
+): string {
+  if (row.firstQuestion !== null) return `${row.firstQuestion}${row.firstQuestionTruncated ? '…' : ''}`;
+  const latest = row.latestQuestion ?? null;
+  if (latest !== null) return `${latest}${row.latestQuestionTruncated === true ? '…' : ''}`;
+  return noQuestionStored;
 }

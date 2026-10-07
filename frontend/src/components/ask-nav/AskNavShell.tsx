@@ -152,6 +152,15 @@ interface AskNavState {
   /** ASK DESIGN COMPLETENESS R1 — the conversation on screen, marked current in the drawer. */
   readonly threadId: string | null;
   readonly setThreadId: (next: string | null) => void;
+  /**
+   * ASK DESIGN COMPLETENESS R2 — the Ask frame on this page registers its in-place "New
+   * question" (clear the active thread locally, empty + focus the composer, drop the
+   * operation URL state). Every New question control — header, drawer, column, menu row —
+   * runs the SAME action through `runNewQuestion`; it returns false when no frame is mounted,
+   * and the caller then falls back to the clean document load.
+   */
+  readonly registerNewQuestion: (handler: (() => void) | null) => void;
+  readonly runNewQuestion: () => boolean;
 }
 
 export type AskNavAccount = 'pending' | 'signed-in' | 'signed-out';
@@ -179,9 +188,32 @@ export function AskNavProvider({ children }: { readonly children: React.ReactNod
     },
     [clear],
   );
+  const newQuestionHandler = useRef<(() => void) | null>(null);
+  const registerNewQuestion = useCallback((handler: (() => void) | null) => {
+    newQuestionHandler.current = handler;
+  }, []);
+  const runNewQuestion = useCallback((): boolean => {
+    const handler = newQuestionHandler.current;
+    if (handler === null) return false;
+    setOpen(false);
+    handler();
+    return true;
+  }, []);
   const value = useMemo<AskNavState>(
-    () => ({ open, setOpen, cleared, clearAndGo, clear, account, setAccount, threadId, setThreadId }),
-    [open, cleared, clearAndGo, clear, account, threadId],
+    () => ({
+      open,
+      setOpen,
+      cleared,
+      clearAndGo,
+      clear,
+      account,
+      setAccount,
+      threadId,
+      setThreadId,
+      registerNewQuestion,
+      runNewQuestion,
+    }),
+    [open, cleared, clearAndGo, clear, account, threadId, registerNewQuestion, runNewQuestion],
   );
   return <AskNavContext.Provider value={value}>{children}</AskNavContext.Provider>;
 }
@@ -253,7 +285,7 @@ export function AskNavShell({
    */
   readonly theme?: ThemePreference;
 }): JSX.Element {
-  const { open, setOpen, clearAndGo, clear, setAccount, threadId } = useAskNav();
+  const { open, setOpen, clearAndGo, clear, setAccount, threadId, runNewQuestion } = useAskNav();
   /* TRUST R1 — the page passes its server-read theme, or the nearest theme scope supplies it. */
   const scopeTheme = useContext(ThemeScopeContext);
   const controlTheme = theme ?? scopeTheme ?? undefined;
@@ -326,6 +358,8 @@ export function AskNavShell({
   const onNewQuestion = (event: React.MouseEvent<HTMLAnchorElement>): void => {
     if (!isAskConversationSurface(pathname) || !isPlainClick(event)) return;
     event.preventDefault();
+    /* ASK DESIGN COMPLETENESS R2 — the frame's in-place New question when one is mounted. */
+    if (runNewQuestion()) return;
     clearAndGo(cleanAskDestination(pathname));
   };
 

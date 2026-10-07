@@ -82,7 +82,8 @@ describe('header and welcome group (A1/A2, F2)', () => {
   const frame = code(read('components', 'ask-frame', 'AskFrameScreen.tsx'));
   it('the header is menu · static 24 px mark + the canonical name · New', () => {
     expect(frame).toMatch(/<AskEmblemMark \/>[\s\S]*\{r2s\.askTitle\}/);
-    expect(frame).toMatch(/data-ask="new-question" onClick=\{newQuestion\}/);
+    /* R2 CTO correction: the control reads "New question" and is disabled while Ask is empty. */
+    expect(frame).toMatch(/data-ask="new-question"\s+onClick=\{newQuestion\}\s+disabled=\{entryState \|\| isPending\}/);
     const emblem = code(read('components', 'ask-frame', 'AskEmblem.tsx'));
     expect(emblem).toMatch(/<AskEmblemSvg id=\{id\} size=\{24\} still \/>/);
     expect(emblem).toMatch(/still \? \{ style: \{ animation: 'none' \} \} : \{\}/);
