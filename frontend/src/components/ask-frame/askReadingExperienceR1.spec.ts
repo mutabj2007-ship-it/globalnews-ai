@@ -310,7 +310,16 @@ describe('Sources — one list, panel or sheet, backend identity (H-FREEZE §7, 
     const toolbar = code(read('components', 'ask-frame', 'AskAnswerToolbar.tsx'));
     expect(toolbar).toMatch(/openSources !== null && sources\.length > 0/);
     expect(toolbar).toMatch(/typeof navigator\.share === 'function'/);
-    expect(toolbar).toMatch(/\{canShare && \(/);
+    /*
+      SUPERSEDED BY CLAUDE DESIGN R3 §10 (D06 revision 2, 9 Oct 2026) · this read
+      `/\{canShare && \(/`. The guarantee is unchanged — Share renders only where the platform
+      shares — but R3 §10 gives it two homes, the row and (while the row is narrow) the first
+      row of More, so BOTH are asserted to be platform-gated. Share is never in neither and
+      never in both: the row guard and the More guard are complements of the same `compact`.
+    */
+    expect(toolbar).toMatch(/\{canShare && !compact && \(/);
+    expect(toolbar).toMatch(/const shareInMore = canShare && compact;/);
+    expect(toolbar).toMatch(/\{shareInMore && \(/);
     expect(toolbar).not.toMatch(/data-ask="(?:copy-link|download)"/);
     expect(turn).not.toMatch(/data-ask="(?:share|copy-link|download)"/);
   });

@@ -17,6 +17,7 @@ import { askLanguageDisposition } from '@/lib/ask/askLocale';
 import { askSevenStrings } from '@/lib/ask/askSevenStrings';
 import { askDirectionProps, askForeignCopyProps, isolatedAuto } from '@/lib/ask/askDirection';
 import { askR2Strings } from '@/lib/ask/askR2Strings';
+import { useRotatingExample } from '@/lib/ask/useRotatingExample';
 import { askR2View } from '@/lib/ask/askR2View';
 import {
   sanitizeReturnPath,
@@ -267,7 +268,25 @@ export function AskFrameScreen({
     The rotating examples. Client-side, zero compute, zero network, zero personalisation, and
     every rule decided by the pure machine in `askExampleRotation`. `enabled` is the entry
     state, so no timer runs in the answered workspace.
+
+    REINSTATED BY PRODUCT OWNER DIRECTIVE 9 Oct 2026 / CLAUDE DESIGN R3 §11 (Welcome R1-C).
+    The comment block above kept its place while the call below was absent: ASK DESIGN AUTHORITY
+    R3 had removed the in-field example (its superseded reasoning is recorded at the `Composer`
+    call site). R1-C puts it back, inside the composer, on a 5.2 s hold with 400 ms fades.
+
+    `suspended` is R1-C's overlay rule. Both expressions below are real reader-interrupting
+    states, and both are currently UNREACHABLE while `entryState` is true, because
+    `hasQuestion` already includes `r2.signInRequired !== null` (see its definition above) and
+    `deepQuote` requires a submitted turn. It is wired as a guard, not as a live path: if a
+    later lane makes an overlay reachable in the entry state, the example freezes instead of
+    rotating behind it. Verified at db95d4e: no entry-state overlay exists today.
   */
+  const rotatingExample = useRotatingExample({
+    locale: interfaceLocale,
+    enabled: entryState,
+    compact,
+    suspended: r2.signInRequired !== null || r2.deepQuote !== null,
+  });
 
   useEffect(() => {
     setQuestion(new URLSearchParams(urlKey).get('q') ?? '');
@@ -1082,6 +1101,8 @@ export function AskFrameScreen({
             value={question}
             onChange={(next) => {
               setQuestion(next);
+              /* R1-C · typing stops the rotation at once. The value is READ, never written. */
+              rotatingExample.onValue(next);
             }}
             inputLabel={dict.askAi.inputLabel}
             /* R4 · same bounded hint, so the placeholder and the empty-state title cannot
@@ -1101,10 +1122,43 @@ export function AskFrameScreen({
             maxHeight={168}
             limitCopy={r2s}
             /*
-              ASK DESIGN AUTHORITY R3 — NO ROTATING EXAMPLE IN THE FIELD. The Design composer
-              (A1, F2, every frame) shows only its static placeholder "Ask anything…"; the
-              example is the quiet sentence in the welcome group (text, not a control).
+              SUPERSEDED BY PRODUCT OWNER DIRECTIVE 9 Oct 2026 / CLAUDE DESIGN R3 §11 (R1-C).
+
+              The superseded position, kept on the record with its reasoning:
+
+                "ASK DESIGN AUTHORITY R3 — NO ROTATING EXAMPLE IN THE FIELD. The Design composer
+                 (A1, F2, every frame) shows only its static placeholder 'Ask anything…'; the
+                 example is the quiet sentence in the welcome group (text, not a control)."
+
+              R1-C reverses the first half and keeps the second: "one example at a time fades
+              inside the empty, unfocused composer (5.2 s hold, 400 ms fades)", and it is still
+              not a control — the layer takes no pointer events, the words are `aria-hidden`
+              plain text, nothing is typed, tapped, submitted or announced, and the field's own
+              accessible name (`inputLabel`, via the `sr-only` label) never changes. The static
+              placeholder below is still what a reduced-motion reader sees, and the only thing
+              an empty field shows once the reader types or focuses it.
+
+              `welcome-example-desktop` (just below) still renders. R1-C also says "example list
+              removed from D01/D02", but that is a D01/D02 COMPOSITION change and not one of the
+              four refinements the 9 Oct directive approved, so the quiet sentence is left in
+              place and listed for a CTO ruling rather than repealed here. OPEN QUESTION H-R3-1:
+              with the in-field example back, a desktop reader sees a rotating example in the
+              field AND a static one under it. Neither is untrue; one of them is redundant.
             */
+            example={
+              rotatingExample.visible && rotatingExample.text !== null
+                ? {
+                    text: rotatingExample.text,
+                    id: rotatingExample.id ?? '',
+                    onFocus: rotatingExample.onFocus,
+                    onBlur: rotatingExample.onBlur,
+                    animationClass: rotatingExample.animate ? styles.exampleEnter : undefined,
+                    generation: rotatingExample.generation,
+                    /* The example's own run direction, independent of the reader's chrome. */
+                    directionProps: isolatedAuto(),
+                  }
+                : undefined
+            }
           />
           {entryState && (
             /* Design F2 — on desktop the example sentence sits under the centred composer

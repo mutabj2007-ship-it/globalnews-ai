@@ -183,7 +183,20 @@ describe('conversations (D4 drawer · F2 column) — real reads only, no dummy c
 describe('the toolbar (B1, C1–C5) — only real capability renders', () => {
   const toolbar = code(read('components', 'ask-frame', 'AskAnswerToolbar.tsx'));
   it('is role="toolbar": Copy · Share · Save · Sources (n) · More, in that order', () => {
-    expect(toolbar).toMatch(/data-ask="turn-actions" role="toolbar"/);
+    /*
+      SUPERSEDED BY CLAUDE DESIGN R3 §10 (D06 revision 2) · this read
+      `/data-ask="turn-actions" role="toolbar"/`, which held only while the two attributes sat on
+      one source line. R3 §10 gave the element a ref, a key handler and two state attributes, so
+      its attributes are now one per line. The assertion was coupled to the formatting, not to the
+      guarantee; both attributes are still asserted, and the row is still the only `role="toolbar"`
+      in the file — "do not create a second toolbar".
+    */
+    expect(toolbar).toMatch(/data-ask="turn-actions"/);
+    expect(toolbar).toMatch(/role="toolbar"/);
+    expect(toolbar.match(/role="toolbar"/g)).toHaveLength(1);
+    /* R3 §10 · one line at every width, and Follow is no longer one of the row's actions. */
+    expect(toolbar).not.toMatch(/flex-wrap/);
+    expect(toolbar).toMatch(/data-ask="turn-continuity"/);
     const order = ['<AskTurnCopy', 'data-ask="share"', '<AskTurnSave', 'data-ask="open-sources"', 'data-ask="more"'].map((n) => toolbar.indexOf(n));
     expect(order.every((i) => i > -1)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);

@@ -229,8 +229,16 @@ describe('R-4 · taking an example', () => {
 
 describe('R-5 · timing', () => {
   it('is tunable from ONE constant and sits inside the contract bands', () => {
-    expect(EXAMPLE_ROTATION.dwellMs).toBeGreaterThanOrEqual(3_000);
-    expect(EXAMPLE_ROTATION.dwellMs).toBeLessThanOrEqual(5_000);
+    /*
+      SUPERSEDED BY PRODUCT OWNER / CLAUDE DESIGN R3 §11 (Welcome R1-C, 9 Oct 2026). This was a
+      band assertion, `>= 3_000` and `<= 5_000`, taken from the original contract's "suggested
+      band 3–5 s". The band is obsolete, not merely exceeded: R1-C specifies the hold EXACTLY,
+      at 5.2 s, because the example now sits inside the composer where it must be readable in
+      full. An exact assertion is also the stronger one — a band would have let a later edit
+      drift the hold without a ruling.
+    */
+    expect(EXAMPLE_ROTATION.dwellMs).toBe(5_200);
+    expect(EXAMPLE_ROTATION.fadeMs).toBe(400);
     expect(EXAMPLE_ROTATION.resumeAfterClearMs).toBeGreaterThanOrEqual(8_000);
     expect(EXAMPLE_ROTATION.resumeAfterClearMs).toBeLessThanOrEqual(15_000);
     expect(Object.isFrozen(EXAMPLE_ROTATION)).toBe(true);

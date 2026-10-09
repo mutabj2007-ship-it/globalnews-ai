@@ -33,10 +33,24 @@ export interface RotationTiming {
 }
 
 export const EXAMPLE_ROTATION: RotationTiming = Object.freeze({
-  /** Dwell per example. The contract's suggested band is 3–5 s; this sits in the middle. */
-  dwellMs: 4_000,
-  /** The soft transition. Restrained fade + a few pixels of rise — never a typewriter. */
-  fadeMs: 420,
+  /**
+   * Dwell per example.
+   *
+   * SUPERSEDED BY PRODUCT OWNER / CLAUDE DESIGN R3 §11 (Welcome R1-C, 9 Oct 2026) · this was
+   * 4_000 with the reason "the contract's suggested band is 3–5 s; this sits in the middle".
+   * The band and the midpoint reasoning are kept on the record; R1-C sets the hold exactly,
+   * at 5.2 s (`WELCOME_PLACEHOLDER_SPEC.md`), which is above the old band's ceiling because
+   * the example now sits INSIDE the composer where it must be readable in full.
+   */
+  dwellMs: 5_200,
+  /**
+   * The soft transition. Restrained fade + a few pixels of rise — never a typewriter.
+   *
+   * SUPERSEDED BY CLAUDE DESIGN R3 §11 · was 420 ms; R1-C specifies 400 ms fades. This number
+   * is the ONE source: the view sets `animation-duration` from it, so the stylesheet and the
+   * machine cannot drift apart.
+   */
+  fadeMs: 400,
   /** Quiet delay before rotation resumes after the reader empties the field (band 8–15 s). */
   resumeAfterClearMs: 10_000,
   /** How often the driver asks the machine whether anything is due. */
@@ -51,7 +65,14 @@ export type RotationPhase =
   /** The reader typed, or took an example into the field: rotation is over for this draft. */
   | 'STOPPED'
   /** The field was emptied again: waiting out the quiet delay before resuming. */
-  | 'RESUMING';
+  | 'RESUMING'
+  /**
+   * CLAUDE DESIGN R3 §11 (R1-C) — the reader cannot see the example: the tab is hidden, or an
+   * overlay owns the screen. The example STAYS as it is and the clock stops; it never advances
+   * where it cannot be read, and it never advances in the instant the reader comes back
+   * (`RESUME` restarts the dwell from `now`).
+   */
+  | 'PAUSED_AWAY';
 
 export interface RotationState {
   readonly phase: RotationPhase;
@@ -77,7 +98,11 @@ export type RotationEvent =
   /** The composer value changed. `value` is the reader's text — never written back. */
   | { readonly type: 'VALUE'; readonly now: number; readonly value: string }
   /** The reader clicked/tapped the visible example and it went into the field. */
-  | { readonly type: 'USE_EXAMPLE'; readonly now: number };
+  | { readonly type: 'USE_EXAMPLE'; readonly now: number }
+  /** R1-C — the tab went hidden, or an overlay opened over the composer. */
+  | { readonly type: 'SUSPEND'; readonly now: number }
+  /** R1-C — the tab came back, or the overlay closed. */
+  | { readonly type: 'RESUME'; readonly now: number };
 
 export function initialRotationState(now = 0): RotationState {
   return {
@@ -97,7 +122,9 @@ export function initialRotationState(now = 0): RotationState {
  *   · typing hides the example at once and stops rotation (section 8);
  *   · focus freezes the CURRENT example rather than clearing it (section 8);
  *   · emptying the field resumes only after the quiet delay (section 8);
- *   · taking an example stops rotation and hands the text to the composer (section 9).
+ *   · taking an example stops rotation and hands the text to the composer (section 9);
+ *   · R1-C: it does not advance while the reader cannot see it, and the dwell restarts rather
+ *     than expiring in the instant they come back.
  */
 export function rotationReducer(
   state: RotationState,
@@ -138,6 +165,27 @@ export function rotationReducer(
 
     case 'BLUR':
       if (state.phase === 'STOPPED') return still({});
+      return still({ phase: 'ROTATING', visible: true, shownAt: event.now, resumeAt: null });
+
+    /*
+      R1-C — away and back.
+
+      FOCUS outranks AWAY in both directions: a reader who is in the field has already frozen
+      the example deliberately, and coming back from another tab must not un-freeze it under a
+      caret that never moved. STOPPED outranks everything, as everywhere else.
+
+      RESUME restarts the dwell from `now` rather than honouring the deadline that passed while
+      the tab was hidden — otherwise a reader returning after a minute would watch the example
+      change in the same instant they looked at it, which is the one thing the dwell exists to
+      prevent. A `RESUMING` quiet delay interrupted this way also restarts as a full dwell: the
+      field is empty and the reader was away, so there is nothing left to be quiet about.
+    */
+    case 'SUSPEND':
+      if (state.phase === 'STOPPED' || state.phase === 'PAUSED_FOCUS') return still({});
+      return still({ phase: 'PAUSED_AWAY', visible: true, resumeAt: null });
+
+    case 'RESUME':
+      if (state.phase !== 'PAUSED_AWAY') return still({});
       return still({ phase: 'ROTATING', visible: true, shownAt: event.now, resumeAt: null });
 
     case 'TICK': {

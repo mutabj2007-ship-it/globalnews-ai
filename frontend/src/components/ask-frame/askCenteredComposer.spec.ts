@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { DISPLAY_LOCALES, type DisplayLocale } from '@globalnews-ai/shared';
 import { Composer, composerKeyAction, enterSends, physicalKeyboardEvidence } from './AskParts';
 import { QUESTION_EXAMPLES, exampleText } from '@/lib/ask/askQuestionExamples';
-import { buildExampleQueue } from '@/lib/ask/askExampleRotation';
+import { EXAMPLE_ROTATION, buildExampleQueue } from '@/lib/ask/askExampleRotation';
 import { askSevenStrings } from '@/lib/ask/askSevenStrings';
 import { askDirectionProps, isolatedAuto } from '@/lib/ask/askDirection';
 import { getDictionary } from '@/lib/i18n/dictionaries';
@@ -92,8 +92,22 @@ describe('C-1 · the entry state, and nothing outside it', () => {
   /* ASK DESIGN AUTHORITY R3 (CTO reset): the Design (A1/F2) shows ONE quiet example line in the
      welcome group and the placeholder "Ask anything…" in the field — no rotating example inside
      the composer, so no rotation timer exists on the Ask screen at all. */
-  it('runs no rotating example: the welcome group carries one quiet example line instead', () => {
-    expect(screen).not.toMatch(/useRotatingExample/);
+  it('runs the rotating example inside the composer, and keeps the quiet welcome line', () => {
+    /*
+      SUPERSEDED BY PRODUCT OWNER DIRECTIVE 9 Oct 2026 / CLAUDE DESIGN R3 §11 (Welcome R1-C).
+      This test was "runs no rotating example: the welcome group carries one quiet example line
+      instead" and asserted `expect(screen).not.toMatch(/useRotatingExample/)`, under ASK DESIGN
+      AUTHORITY R3's ruling that the field shows only its static placeholder. R1-C reverses that
+      half: "one example at a time fades inside the empty, unfocused composer". The assertion is
+      inverted rather than removed, so the reinstatement stays pinned.
+
+      The quiet welcome line is still asserted, unchanged. R1-C also says "example list removed
+      from D01/D02", which is a D01/D02 composition change outside the four approved refinements;
+      it is left in place and raised for a CTO ruling (OPEN QUESTION H-R3-1), and this assertion
+      is what will have to change if that ruling removes it.
+    */
+    expect(screen).toMatch(/useRotatingExample\(\{/);
+    expect(screen).toMatch(/enabled: entryState,/);
     expect(screen).toMatch(/<p data-ask="welcome-example" className=\{styles\.welcomeExample\}>/);
   });
 
@@ -201,14 +215,33 @@ describe('C-3 · the example lives inside the composer', () => {
     expect(moving).toContain('gn-example-fade');
     const still = render({ example: { ...example('en'), animationClass: undefined } });
     expect(still).not.toContain('gn-example-fade');
-    expect(rule('.exampleEnter')).toMatch(/animation: exampleEnter 420ms/);
+    /*
+      SUPERSEDED BY CLAUDE DESIGN R3 §11 (R1-C) · this read `420ms`. Asserted against the
+      constant rather than against a second literal, so the stylesheet and `EXAMPLE_ROTATION`
+      cannot drift apart — which is the whole reason the contract put timing in one place.
+    */
+    expect(rule('.exampleEnter')).toContain(`animation: exampleEnter ${EXAMPLE_ROTATION.fadeMs}ms`);
     expect(css).toMatch(
       /@media \(prefers-reduced-motion: reduce\) \{\s*\.exampleEnter \{\s*animation: none;/,
     );
-    /* R3: the Ask screen no longer passes an example; the Composer capability stays guarded. */
-    expect(screen).not.toContain('animationClass:');
+    /*
+      SUPERSEDED BY PRODUCT OWNER DIRECTIVE 9 Oct 2026 / CLAUDE DESIGN R3 §11 · this asserted
+      `expect(screen).not.toContain('animationClass:')` with the reason "R3: the Ask screen no
+      longer passes an example; the Composer capability stays guarded." ASK DESIGN AUTHORITY R3
+      had removed the in-field example; R1-C reinstates it, so the assertion is inverted rather
+      than deleted — the screen MUST pass one, and it must pass the stylesheet's own class.
+    */
+    expect(screen).toContain('animationClass: rotatingExample.animate ? styles.exampleEnter');
+    expect(screen).toContain('useRotatingExample({');
     expect(code(read('../../lib/ask/useRotatingExample.ts'))).toContain(
       "'(prefers-reduced-motion: reduce)'",
+    );
+    /*
+      R1-C reverses what reduced motion MEANS here: not "rotate without moving" but "do not
+      rotate". The reversal is asserted on the hook's own output gate, where it is decided.
+    */
+    expect(code(read('../../lib/ask/useRotatingExample.ts'))).toContain(
+      'const visible = enabled && !reducedMotion &&',
     );
   });
 

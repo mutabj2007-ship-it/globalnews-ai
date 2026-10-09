@@ -148,10 +148,17 @@ export interface ComposerExample {
   readonly text: string;
   /** Canonical catalogue id — proof and future analytics, never display. */
   readonly id: string;
-  /** Accessible name of the control, in the reader's language. */
-  readonly useLabel: string;
-  /** Take the example into the composer. Never submits (section 9). */
-  readonly onUse: () => void;
+  /**
+   * SUPERSEDED BY PRODUCT OWNER / ASK RELIABILITY R1 §8 — these two described the example while
+   * it was a real control ("Accessible name of the control, in the reader's language" and "Take
+   * the example into the composer. Never submits (section 9)"). §8 ruled the example is visible
+   * GUIDANCE ONLY: plain `aria-hidden` text that is not clickable or focusable. CLAUDE DESIGN R3
+   * §11 (R1-C) confirms it — "Not clickable, never submitted, never starts research." Both are
+   * therefore OPTIONAL and are no longer read when rendering; they are kept in the type so a
+   * later owner ruling that restores tap-to-use has somewhere to land instead of a new shape.
+   */
+  readonly useLabel?: string;
+  readonly onUse?: () => void;
   readonly onFocus: () => void;
   readonly onBlur: () => void;
   /**
@@ -277,11 +284,17 @@ export function Composer({
               · The layer itself takes no pointer events, so clicking anywhere else in the
                 field focuses the composer exactly as before; only the WORDS are clickable,
                 which is precisely "the reader taps the visible example".
-              · It is a real <button>, keyboard reachable, named by a visually hidden verb
-                phrase plus the question, so a screen reader hears what activating it does.
+              · SUPERSEDED BY PRODUCT OWNER / ASK RELIABILITY R1 §8 — this bullet read "It is a
+                real <button>, keyboard reachable, named by a visually hidden verb phrase plus
+                the question, so a screen reader hears what activating it does." §8 ruled the
+                example is guidance only; it is now the `aria-hidden` span below and there is no
+                control here at all. CLAUDE DESIGN R3 §11 confirms it.
               · There is NO aria-live region. The example changes every few seconds; a live
-                region would announce it every few seconds. Rotation also PAUSES on focus, so
-                the example a reader is reading never changes under them.
+                region would announce it every few seconds — R1-C: "never an unsolicited
+                screenreader announcement". Rotation also PAUSES on focus, STOPS on typing and
+                freezes while the tab is hidden, so the example a reader is reading never
+                changes under them. The field's accessible name comes from its own `sr-only`
+                label (`inputLabel`) and never from the example, so it is stable.
             */
             <div
               data-ask="composer-example-layer"

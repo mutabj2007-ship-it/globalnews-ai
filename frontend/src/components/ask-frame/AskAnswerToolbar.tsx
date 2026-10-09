@@ -1,6 +1,14 @@
 'use client';
 
-import { useEffect, useId, useRef, useState, type JSX, type ReactNode } from 'react';
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type JSX,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+} from 'react';
 import type { AnalysisSourceRef, DisplayLocale } from '@globalnews-ai/shared';
 import type { AskR2Turn } from '@/lib/ask/useAskR2Conversation';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
@@ -16,7 +24,17 @@ import styles from './askDashboard.module.css';
  * ASK DESIGN COMPLETENESS R1 — THE ANSWER TOOLBAR (Design B1 · C1–C5 · §8)
  * ════════════════════════════════════════════════════════════════════════════
  *
- *   Copy · Share · Save · Sources (n) · More      `role="toolbar"`, text labels, 44 px, wraps.
+ *   Copy · Share · Save · Sources (n) · More      `role="toolbar"`, text labels, 44 px, ONE row.
+ *
+ * SUPERSEDED BY PRODUCT OWNER / CLAUDE DESIGN R3 §10 (D06 revision 2, 9 Oct 2026) · the row line
+ * above ended "wraps". It no longer wraps at any width. The superseded rationale is kept on the
+ * record: wrapping was accepted while every action was a bordered text pill of equal weight, so a
+ * second line cost nothing but height. R3 §10 replaces that with one row of fixed order and a
+ * flexible gap before More, and moves the secondary action (Share) into More where the row is
+ * narrow — so nothing is dropped, nothing is duplicated and nothing wraps.
+ *
+ * "Follow this question" left this row entirely (R3 §10: "stays outside the row, in its own card
+ * below, as the deliberate continuity action"). It is rendered below as `turn-continuity`.
  *
  * Only real capability renders (the Design's own rule: "Remove actions that are not
  * implemented. Do not show dummy controls."):
@@ -28,10 +46,30 @@ import styles from './askDashboard.module.css';
  *   Save       the reader's bookmark (`/ask-v2/bookmarks`), Saved feedback + Undo
  *   Sources n  this answer's own list in the panel / sheet; hidden when n = 0
  *   More       Refresh reporting (a NEW explicit turn for the same question — the answer on
- *              screen stays until the new one arrives) and Use in a briefing (`/ask-v2/briefings`).
+ *              screen stays until the new one arrives) and Use in a briefing (`/ask-v2/briefings`),
+ *              plus Share as its first row while the row is narrow (R3 §10).
  *              CAPABILITY-BLOCKED — "Download" (no export endpoint, D8) and "What Ask remembers"
- *              (no preferences store, D6): omitted, never shown disabled.
+ *              (no preferences store, D6): omitted, never shown disabled. R3 §10 also lists
+ *              "Download briefing", "Compare reporting", "Listen · coming later" and "Delete
+ *              conversation" as More rows: NOT rendered. The first two have no endpoint, the third
+ *              is a disabled control the same Design forbids, and conversation delete belongs to
+ *              the conversation, not to one answer (CLAUDE CODE R3-H01 §3; CTO: no dummy features).
  */
+/**
+ * CLAUDE DESIGN R3 §10 (D06 revision 2) — below this width the row carries Copy · Save ·
+ * Sources (n) · More and Share is the first row of More instead.
+ *
+ * DECLARED DEVIATION from R3 §10's "Below 360 px". The Design's 360 px follows from its own
+ * 44 × 44 icon buttons ("Row then needs about 230 px at 320"). This row keeps TEXT labels — the
+ * icon treatment is new Design artwork and is not one of the four refinements the CTO approved,
+ * so it is not implemented here. Five text pills do not fit one line at 390 px in English, and
+ * German and Polish are longer again, so the width at which Share has to move is measured from
+ * the labels, not from the icons: 600 px, which is already a breakpoint in this stylesheet.
+ * Nothing is hidden at any width; Share is in the row or in More, never in neither and never in
+ * both.
+ */
+export const ASK_TOOLBAR_COMPACT_QUERY = '(max-width: 599px)';
+
 function ActionSheet({
   title,
   closeLabel,
@@ -131,23 +169,85 @@ export function AskAnswerToolbar({
   const [canShare, setCanShare] = useState(false);
   const [sheet, setSheet] = useState<'share' | 'more' | null>(null);
   const opener = useRef<HTMLElement | null>(null);
+  const row = useRef<HTMLDivElement>(null);
+  /*
+    The server render starts at the NARROW shape (compact = true). A row that must never wrap is
+    safest rendered at its narrowest before the viewport is known: the only post-mount change a
+    wide reader sees is Share moving out of More into the row, never a wrapped first paint.
+  */
+  const [compact, setCompact] = useState(true);
   /* After mount only: the server render never claims a platform capability. */
   useEffect(() => {
     setCanShare(typeof navigator !== 'undefined' && typeof navigator.share === 'function');
+  }, []);
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      setCompact(false);
+      return;
+    }
+    const media = window.matchMedia(ASK_TOOLBAR_COMPACT_QUERY);
+    const read = (): void => setCompact(media.matches === true);
+    read();
+    /* Optional, as elsewhere in Ask: a host that stubs `matchMedia` down to `{ matches }` still
+       gets the right row for its width; it just does not follow a later resize. */
+    media.addEventListener?.('change', read);
+    return () => media.removeEventListener?.('change', read);
   }, []);
   const close = () => {
     setSheet(null);
     opener.current?.focus({ preventScroll: true });
   };
+  /* R3 §10 — while the row is narrow, Share is a More row rather than a row button. */
+  const shareInMore = canShare && compact;
   /* More is offered only when it holds a real action; a More that could open empty never is. */
-  const offerMore = onRefresh !== undefined || openFullHref !== undefined || onRunDeeper !== undefined;
+  const offerMore =
+    shareInMore || onRefresh !== undefined || openFullHref !== undefined || onRunDeeper !== undefined;
+
+  /*
+    R3 §10 — `role="toolbar"` gains the arrow-key movement ARIA expects of it: Left/Right
+    (mirrored under `dir="rtl"` by reading the resolved direction, not the locale, so an embedded
+    Ask inherits its host), Home and End.
+
+    DECLARED DEVIATION from R3 §10's "Tab enters and leaves": a roving tabindex would take four of
+    the five actions out of the Tab order, and the accepted row lets Tab reach every one of them.
+    The CTO's directive is to preserve keyboard and screenreader targets, so arrow keys are ADDED
+    and nothing the keyboard could reach before became unreachable.
+  */
+  const onToolbarKey = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
+    if (row.current === null) return;
+    const { key } = event;
+    if (key !== 'ArrowLeft' && key !== 'ArrowRight' && key !== 'Home' && key !== 'End') return;
+    const items = [...row.current.querySelectorAll<HTMLElement>('button:not([disabled])')];
+    if (items.length === 0) return;
+    const rtl = getComputedStyle(row.current).direction === 'rtl';
+    const here = items.indexOf(document.activeElement as HTMLElement);
+    let next: number;
+    if (key === 'Home') next = 0;
+    else if (key === 'End') next = items.length - 1;
+    else {
+      if (here < 0) return;
+      next = (here + ((key === 'ArrowRight') === rtl ? -1 : 1) + items.length) % items.length;
+    }
+    const target = items[next];
+    if (target === undefined) return;
+    event.preventDefault();
+    target.focus({ preventScroll: true });
+  };
 
   return (
     <>
-      <div data-ask="turn-actions" role="toolbar" aria-label={r.moreTitle} className="flex flex-wrap items-center">
+      <div
+        ref={row}
+        data-ask="turn-actions"
+        role="toolbar"
+        aria-label={r.moreTitle}
+        data-ask-toolbar-row={compact ? 'compact' : 'full'}
+        onKeyDown={onToolbarKey}
+        className="flex items-center"
+      >
         {/* TRUST R1 — copy this answer (local clipboard only; nothing is shared or sent). */}
         <AskTurnCopy locale={locale} />
-        {canShare && (
+        {canShare && !compact && (
           <button
             type="button"
             data-ask="share"
@@ -161,8 +261,6 @@ export function AskAnswerToolbar({
         )}
         {/* STANDALONE PUBLIC BETA CONVERGENCE R1 — the reader's Save / Saved (0 AI). */}
         {canSave && <AskTurnSave operation={turn.operation} locale={locale} />}
-        {/* REASON TO RETURN R1 · §8 — follow this question (My updates); server-gated, 0 AI. */}
-        {canSave && <AskTurnFollow operation={turn.operation} question={turn.question} locale={locale} />}
         {openSources !== null && sources.length > 0 && (
           <button
             type="button"
@@ -190,6 +288,21 @@ export function AskAnswerToolbar({
           </button>
         )}
       </div>
+      {/*
+        REASON TO RETURN R1 · §8 — follow this question (My updates); server-gated, 0 AI.
+
+        R3 §10 moved it out of the row above into its own card: it is the deliberate continuity
+        action, not a sibling of Copy and Share. Still ONE store (a Briefing with scope
+        ASK_QUESTION) and still nothing scheduled — every check is one the reader starts.
+        `AskTurnFollow` renders null when the answer is not followable or briefings are off, and
+        the card then has no children, so CSS collapses it (`:empty`) rather than drawing an
+        empty box. The card is the same at every width: nothing here is responsive.
+      */}
+      {canSave && (
+        <div data-ask="turn-continuity">
+          <AskTurnFollow operation={turn.operation} question={turn.question} locale={locale} />
+        </div>
+      )}
       {sheet === 'share' && (
         <ActionSheet title={r.shareTitle} closeLabel={s.close} onClose={close}>
           <div data-ask="share-preview" className={styles.sharePreview}>
@@ -217,6 +330,22 @@ export function AskAnswerToolbar({
       )}
       {sheet === 'more' && (
         <ActionSheet title={r.moreTitle} closeLabel={s.close} onClose={close}>
+          {/*
+            R3 §10 — Share, while the row is narrow. The SAME platform share sheet the row button
+            opens (`r.share`, already qualified in all seven locales): one capability, one code
+            path, reached from the row or from here, never from both at once. `opener` still points
+            at More, so closing returns focus there.
+          */}
+          {shareInMore && (
+            <button
+              type="button"
+              data-ask="share-in-more"
+              className={styles.actionRow}
+              onClick={() => setSheet('share')}
+            >
+              <span>{r.share}</span>
+            </button>
+          )}
           {onRefresh !== undefined && (
             <button
               type="button"
