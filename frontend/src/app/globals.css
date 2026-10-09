@@ -1353,7 +1353,8 @@ html[data-gna-schedule='light'] body:has([data-ask-standalone][data-gna-theme='s
   .gna-ask-progress-row {
     animation: gnaAskWorkRow 200ms ease-out;
   }
-  .gna-ask-rm-only {
+  /* specific enough to win over the base rule below, wherever it sits in the file */
+  .gna-ask-progress-row .gna-ask-rm-only {
     display: none;
   }
 }

@@ -60,7 +60,8 @@ describe('priority 4 — the ORIGINAL emblem beside the real running line', () =
     /* shown by default, hidden only inside the working layer's no-preference block (no new reduce block) */
     expect(css).toMatch(/\.gna-ask-rm-only \{\s*display: inline;/);
     const layer = css.slice(css.indexOf('ASK R3 PROGRESS R1 — THE WORKING MOTION'));
-    expect(layer).toMatch(/@media \(prefers-reduced-motion: no-preference\) \{[\s\S]*\.gna-ask-rm-only \{\s*display: none;/);
+    /* browser finding: an equal-specificity hide rule lost to the later base rule — the hide must out-rank it */
+    expect(layer).toMatch(/@media \(prefers-reduced-motion: no-preference\) \{[\s\S]*\.gna-ask-progress-row \.gna-ask-rm-only \{\s*display: none;/);
     /* E-4 emblem freeze: the working mount animates opacity only, never scale */
     expect(layer).not.toMatch(/scale\(/);
   });
