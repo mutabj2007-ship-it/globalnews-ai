@@ -12,6 +12,7 @@ import {
 import type { AnalysisSourceRef, DisplayLocale } from '@globalnews-ai/shared';
 import type { AskR2Turn } from '@/lib/ask/useAskR2Conversation';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
+import { AskActionGlyph } from './AskActionGlyph';
 import { AskTurnCopy } from './AskTurnCopy';
 import { AskTurnSave } from './AskTurnSave';
 import { AskTurnBrief } from './AskTurnBrief';
@@ -56,19 +57,18 @@ import styles from './askDashboard.module.css';
  *              the conversation, not to one answer (CLAUDE CODE R3-H01 §3; CTO: no dummy features).
  */
 /**
- * CLAUDE DESIGN R3 §10 (D06 revision 2) — below this width the row carries Copy · Save ·
- * Sources (n) · More and Share is the first row of More instead.
+ * CLAUDE DESIGN R3 §10 (D06 revision 2) — "Below 360 px: Share moves to the top of More".
  *
- * DECLARED DEVIATION from R3 §10's "Below 360 px". The Design's 360 px follows from its own
- * 44 × 44 icon buttons ("Row then needs about 230 px at 320"). This row keeps TEXT labels — the
- * icon treatment is new Design artwork and is not one of the four refinements the CTO approved,
- * so it is not implemented here. Five text pills do not fit one line at 390 px in English, and
- * German and Polish are longer again, so the width at which Share has to move is measured from
- * the labels, not from the icons: 600 px, which is already a breakpoint in this stylesheet.
- * Nothing is hidden at any width; Share is in the row or in More, never in neither and never in
- * both.
+ * This is the package's own breakpoint, read from its own prototype: `small = s.w > 0 && s.w < 360`
+ * and `showShareInline: !small`.
+ *
+ * SUPERSEDED: this lane briefly used 600 px, because it had substituted TEXT LABELS for the
+ * approved icon row and five text pills do not fit one line at 390 px. The CTO DESIGN R3
+ * COMPLETION CONTRACT of 9 Oct 2026 withdrew that substitution — "The previously introduced 600px
+ * Share-to-More rule is not an approved visual requirement" — and the icon row restores the
+ * geometry the 360 px figure was derived from. The measurements are in GEOMETRY-MEASUREMENT.md.
  */
-export const ASK_TOOLBAR_COMPACT_QUERY = '(max-width: 599px)';
+export const ASK_TOOLBAR_COMPACT_QUERY = '(max-width: 359px)';
 
 function ActionSheet({
   title,
@@ -251,40 +251,55 @@ export function AskAnswerToolbar({
           <button
             type="button"
             data-ask="share"
+            aria-label={r.share}
+            title={r.share}
             onClick={(event) => {
               opener.current = event.currentTarget;
               setSheet('share');
             }}
           >
-            {r.share}
+            <AskActionGlyph name="share" />
           </button>
         )}
         {/* STANDALONE PUBLIC BETA CONVERGENCE R1 — the reader's Save / Saved (0 AI). */}
         {canSave && <AskTurnSave operation={turn.operation} locale={locale} />}
         {openSources !== null && sources.length > 0 && (
+          /*
+            §10 keeps Sources a TEXT control: "a text button: count chip + 'sources'". The chip
+            precedes the word, as the package renders it, and both are `aria-hidden` because the
+            button's own label already says the whole thing ("3 cited sources. Open source list").
+            The count is this answer's own cited sources — never a retrieval total.
+          */
           <button
             type="button"
             data-ask="open-sources"
+            aria-haspopup="dialog"
+            aria-label={`${s.sourcesLabel(sources.length)} — ${s.sources}`}
             onClick={(event) =>
               openSources({ sources, opener: event.currentTarget, note, about })
             }
           >
-            {s.sources}
-            <span data-count="">{sources.length}</span>
-            <span className={styles.visuallyHidden}>{` (${s.sourcesLabel(sources.length)})`}</span>
+            <span aria-hidden="true" data-count="">
+              {sources.length}
+            </span>
+            <span aria-hidden="true">{s.sources}</span>
           </button>
         )}
+        {/* §10's own flexible gap: the package uses a spacer flex item, not an auto margin. */}
+        <span aria-hidden="true" data-ask="turn-actions-gap" />
         {offerMore && (
           <button
             type="button"
             data-ask="more"
             aria-haspopup="dialog"
+            aria-label={r.moreTitle}
+            title={r.moreTitle}
             onClick={(event) => {
               opener.current = event.currentTarget;
               setSheet('more');
             }}
           >
-            {r.more}
+            <AskActionGlyph name="more" />
           </button>
         )}
       </div>
@@ -303,6 +318,7 @@ export function AskAnswerToolbar({
           <AskTurnFollow operation={turn.operation} question={turn.question} locale={locale} />
         </div>
       )}
+
       {sheet === 'share' && (
         <ActionSheet title={r.shareTitle} closeLabel={s.close} onClose={close}>
           <div data-ask="share-preview" className={styles.sharePreview}>

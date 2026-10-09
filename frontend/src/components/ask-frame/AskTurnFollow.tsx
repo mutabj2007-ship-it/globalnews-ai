@@ -107,13 +107,20 @@ export function AskTurnFollow({
 
   return (
     <>
+      {/*
+        CLAUDE DESIGN R3 §10 / the package's own `showFollow` card: a help sentence beside the
+        action, not a bare button. The sentence is `followNote`, which was already authored and
+        qualified and was previously reachable only as a `title` — a tooltip no touch reader
+        ever sees. It lives in the card so the card still collapses (`:empty`) when this
+        component renders nothing.
+      */}
+      <p data-ask="follow-note">{s.followNote}</p>
       <button
         type="button"
         data-ask="follow"
         data-ask-follow-state={state}
         disabled={state === 'busy'}
         onClick={() => void follow()}
-        title={s.followNote}
       >
         {s.follow}
       </button>

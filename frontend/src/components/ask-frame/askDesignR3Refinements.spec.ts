@@ -24,6 +24,9 @@ const strip = (src: string): string =>
 
 const read = (...p: readonly string[]): string => readFileSync(join(__dirname, ...p), 'utf8');
 const raw = {
+  glyphs: read('AskActionGlyph.tsx'),
+  copy: read('AskTurnCopy.tsx'),
+  save: read('AskTurnSave.tsx'),
   toolbar: read('AskAnswerToolbar.tsx'),
   follow: read('AskTurnFollow.tsx'),
   css: read('askDashboard.module.css'),
@@ -33,6 +36,9 @@ const raw = {
   machine: read('../../lib/ask/askExampleRotation.ts'),
 };
 const code = {
+  glyphs: strip(raw.glyphs),
+  copy: strip(raw.copy),
+  save: strip(raw.save),
   toolbar: strip(raw.toolbar),
   css: strip(raw.css),
   screen: strip(raw.screen),
@@ -40,11 +46,100 @@ const code = {
   hook: strip(raw.hook),
 };
 
-describe('D06 · one row, no wrap, nothing dropped', () => {
+/**
+ * The four glyphs EXACTLY as Claude Design supplies them in `AskPrototype.dc.html`. These
+ * literals are the authority, not a description of the code: if an implementation ever re-paths,
+ * simplifies or re-proportions a glyph, these fail.
+ */
+const APPROVED_GLYPH_PATHS = {
+  copy: [
+    '<rect x="7" y="7" width="10" height="10" rx="2"',
+    'd="M13 7V5.5A2.5 2.5 0 0 0 10.5 3h-5A2.5 2.5 0 0 0 3 5.5v5A2.5 2.5 0 0 0 5.5 13H7"',
+  ],
+  share: [
+    'd="M10 12.5V3"',
+    'd="M6.5 6.5 10 3l3.5 3.5"',
+    'd="M4 11v3.5A2.5 2.5 0 0 0 6.5 17h7a2.5 2.5 0 0 0 2.5-2.5V11"',
+  ],
+  save: ['d="M5.5 3h9a.5.5 0 0 1 .5.5V17l-5-3.4L5 17V3.5a.5.5 0 0 1 .5-.5Z"'],
+  more: ['cx="4.5" cy="10" r="1.5"', 'cx="10" cy="10" r="1.5"', 'cx="15.5" cy="10" r="1.5"'],
+} as const;
+
+describe('D06 \u00b7 the approved glyphs, as supplied', () => {
+  it('every path is the package\'s own, unmodified', () => {
+    for (const paths of Object.values(APPROVED_GLYPH_PATHS)) {
+      for (const d of paths) expect(code.glyphs).toContain(d);
+    }
+  });
+
+  it('keeps the approved geometry: 20x20 viewBox, 1.6 stroke, round joins', () => {
+    expect(code.glyphs).toContain("viewBox: '0 0 20 20'");
+    expect(code.glyphs).toContain('strokeWidth: 1.6');
+    expect(code.glyphs).toContain("strokeLinejoin: 'round'");
+    expect(code.glyphs).toContain("strokeLinecap: 'round'");
+    expect(code.glyphs).toContain('viewBox="0 0 20 20"');
+    expect(code.glyphs).toContain('strokeWidth={1.6}');
+    /* No size, stroke or colour was chosen here: colour is inherited via currentColor. */
+    expect(code.glyphs).toMatch(/stroke="currentColor"/);
+    expect(code.glyphs).not.toMatch(/#[0-9a-fA-F]{3,8}/);
+  });
+
+  it('Save carries the approved selected/unselected appearance in its fill', () => {
+    expect(code.glyphs).toContain("fill={selected ? 'currentColor' : 'none'}");
+    expect(code.save).toContain('<AskActionGlyph name="save" selected={saved} />');
+    /* The state is still programmatic, not only visual. */
+    expect(code.save).toContain('aria-pressed={saved}');
+  });
+
+  it('every glyph is hidden from assistive tech; the BUTTON carries the name', () => {
+    expect(code.glyphs).toMatch(/aria-hidden/);
+    expect(code.glyphs).toMatch(/focusable: 'false'|focusable="false"/);
+    /* Each icon control names itself from the existing qualified catalogue \u2014 no new string. */
+    expect(code.copy).toContain('aria-label={label}');
+    expect(code.copy).toContain('title={label}');
+    expect(code.save).toContain('aria-label={saved ? t.saved : t.save}');
+    expect(code.toolbar).toContain('aria-label={r.share}');
+    expect(code.toolbar).toContain('aria-label={r.moreTitle}');
+  });
+
+  it('Copy still reports its result to a screen reader without a visible label', () => {
+    expect(code.copy).toMatch(/aria-live="polite"/);
+    expect(code.copy).toContain('styles.visuallyHidden');
+  });
+
+  it('Sources stays a TEXT control with its count chip, per \u00a710', () => {
+    expect(code.toolbar).toContain("<span aria-hidden=\"true\" data-count=\"\">");
+    expect(code.toolbar).toContain('{s.sources}');
+    expect(code.toolbar).not.toMatch(/AskActionGlyph name="sources"/);
+    expect(code.css).toMatch(/\[data-ask='open-sources'\] > span\[data-count\]\)[^}]*background: var\(--ad-accent-soft/);
+  });
+
+  it('the row uses Design\'s colours and dimensions, not this lane\'s', () => {
+    const row = code.css.slice(code.css.lastIndexOf(":global([data-ask='turn-actions'])"));
+    expect(row).toMatch(/margin-inline: -10px/);
+    expect(row).toMatch(/width: var\(--ad-target, 44px\)/);
+    expect(row).toMatch(/height: var\(--ad-target, 44px\)/);
+    expect(row).toMatch(/border: 0/);
+    expect(row).toMatch(/background: transparent/);
+    expect(row).toMatch(/color: var\(--ad-ink-2, #93a0b8\)/);
+    expect(row).toMatch(/background: var\(--ad-surface-2, #161d2c\)/);
+    expect(row).toMatch(/outline: 2px solid var\(--ad-focus, #6c93ff\)/);
+    expect(row).toMatch(/outline-offset: -2px/);
+  });
+
+  it('Share moves to More below 360px \u2014 the package\'s own breakpoint', () => {
+    expect(code.toolbar).toContain("ASK_TOOLBAR_COMPACT_QUERY = '(max-width: 359px)'");
+  });
+});
+
+describe('D06 \u00b7 one row, no wrap, nothing dropped', () => {
   it('the row does not wrap at any width — not in the markup and not in the stylesheet', () => {
     expect(code.toolbar).not.toMatch(/flex-wrap/);
-    expect(code.css).toMatch(/\[data-ask='turn-actions'\]\)\s*\{[^}]*flex-wrap:\s*nowrap/);
-    expect(code.css).not.toMatch(/\[data-ask='turn-actions'\]\)\s*\{[^}]*flex-wrap:\s*wrap/);
+    const at = code.css.lastIndexOf(":global([data-ask='turn-actions'])");
+    /* The row's OWN rule only: the Follow card below it wraps by design. */
+    const rule = code.css.slice(at, code.css.indexOf('}', at));
+    expect(rule).toMatch(/flex-wrap: nowrap/);
+    expect(rule).not.toMatch(/flex-wrap: wrap/);
   });
 
   it('keeps ONE toolbar: the directive forbids a second one', () => {

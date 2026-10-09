@@ -1,5 +1,6 @@
 'use client';
 import type { DisplayLocale } from '@globalnews-ai/shared';
+import { AskActionGlyph } from './AskActionGlyph';
 
 import { useRef, useState } from 'react';
 import { askR2PayloadOf, askV2Api, type AskV2Operation } from '@/lib/api/askV2Api';
@@ -85,16 +86,21 @@ export function AskTurnSave({
       aria-pressed={saved}
       disabled={busy}
       onClick={() => void toggle()}
-      /* ASK READING EXPERIENCE R1 — one of the answer actions now (after the answer), so it no longer
-         pushes itself to the row end, and it is reading type rather than 11px monospace caps. */
-      className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-[8px] border px-2.5 text-[0.8125rem] font-semibold disabled:opacity-60 md:min-h-[32px] ${
-        saved
-          ? 'border-[var(--ask-read-control-line,#1b6fa8)] bg-[var(--ask-read-sunk,#07304f)] text-[var(--ask-read-control-ink,#8fd3ff)]'
-          : 'border-[var(--ask-read-line,#1d4a73)] text-[var(--ask-read-ink2,#b6c9de)] hover:border-[var(--ask-read-control-line,#5abff5)]'
-      }`}
+      /*
+        ASK READING EXPERIENCE R1 — one of the answer actions now (after the answer), so it no
+        longer pushes itself to the row end.
+
+        SUPERSEDED BY PRODUCT OWNER / CLAUDE DESIGN R3 §10 · the bordered pill with the ★ / ☆
+        character and a text label is replaced by the package's own bookmark glyph, whose FILL
+        is the approved selected/unselected appearance (`saveFill: saved ? 'currentColor' :
+        'none'`). `aria-pressed` still carries the state programmatically, and `aria-label` /
+        `title` carry the same qualified word the label carried. Geometry, colour and the hover
+        and focus states are the stylesheet's, per the package.
+      */
+      aria-label={saved ? t.saved : t.save}
+      title={saved ? t.saved : t.save}
     >
-      <span aria-hidden="true">{saved ? '★' : '☆'}</span>
-      {saved ? t.saved : t.save}
+      <AskActionGlyph name="save" selected={saved} />
     </button>
   );
 }
