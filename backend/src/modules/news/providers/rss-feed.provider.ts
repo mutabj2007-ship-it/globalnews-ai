@@ -45,6 +45,44 @@ import {
 
 const REQUEST_TIMEOUT_MS = 8_000;
 const MAX_ITEMS_PER_FEED = 25;
+/*
+  REASON TO RETURN R1 · §5 — fetched content is bounded. A feed is a few hundred kilobytes; a body
+  past this is refused (counted as that feed's failure), never buffered whole into memory.
+*/
+export const MAX_FEED_BYTES = 2_000_000;
+
+/** The response body as text, refusing a declared or actual size past `limit` bytes. */
+export async function readBoundedText(
+  response: Pick<Response, 'text'> & Partial<Pick<Response, 'headers' | 'body'>>,
+  limit: number,
+): Promise<string> {
+  const declared = Number(response.headers?.get?.('content-length') ?? NaN);
+  if (Number.isFinite(declared) && declared > limit) {
+    throw new Error(`Feed body of ${declared} bytes exceeds the ${limit}-byte limit.`);
+  }
+  /* a response without a readable stream (a minimal fetch double): bound the text it returns */
+  if (!response.body || typeof response.body.getReader !== 'function') {
+    const text = await response.text();
+    if (Buffer.byteLength(text, 'utf8') > limit) {
+      throw new Error(`Feed body exceeds the ${limit}-byte limit.`);
+    }
+    return text;
+  }
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > limit) {
+      await reader.cancel().catch(() => undefined);
+      throw new Error(`Feed body exceeds the ${limit}-byte limit.`);
+    }
+    chunks.push(value);
+  }
+  return new TextDecoder('utf-8').decode(Buffer.concat(chunks));
+}
 
 /**
  * Health does NOT probe. Publisher feeds are somebody else's bandwidth, and an
@@ -307,7 +345,7 @@ export class RssFeedProvider implements NewsProvider {
         throw new Error(`${source.displayName} feed responded with status ${response.status}.`);
       }
 
-      body = await response.text();
+      body = await readBoundedText(response, MAX_FEED_BYTES);
       this.lastSuccessAt = new Date().toISOString();
     } finally {
       clearTimeout(timeout);
