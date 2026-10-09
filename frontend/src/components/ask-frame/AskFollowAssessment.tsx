@@ -1,7 +1,7 @@
 'use client';
 
 import type { JSX } from 'react';
-import type { DisplayLocale } from '@globalnews-ai/shared';
+import { safeExternalHref, type DisplayLocale } from '@globalnews-ai/shared';
 import type { AskV2ChangedEvidence, AskV2FollowedCheck } from '@/lib/api/askV2Api';
 import { followStrings } from '@/lib/ask/followStrings';
 import { askFormatLocalDay } from '@/lib/ask/askDirection';
@@ -24,18 +24,26 @@ export function AskFollowAssessment({
   const a = check.assessment;
   const evidence = (items: readonly AskV2ChangedEvidence[]) => (
     <ul className="flex flex-col gap-1">
-      {items.map((item) => (
+      {items.map((item) => {
+        /* B-1 — every external href goes through the one boundary; an unsafe URL is text only */
+        const href = safeExternalHref(item.url);
+        return (
         <li key={item.id}>
-          <a href={item.url} target="_blank" rel="noopener noreferrer nofollow">
-            {item.title}
-          </a>
+          {href === undefined ? (
+            <span>{item.title}</span>
+          ) : (
+            <a href={href} target="_blank" rel="noopener noreferrer nofollow">
+              {item.title}
+            </a>
+          )}
           <span>
             {' · '}
             {item.publisher}
             {item.publishedAt === null ? '' : ` · ${askFormatLocalDay(new Date(item.publishedAt), locale)}`}
           </span>
         </li>
-      ))}
+        );
+      })}
     </ul>
   );
 
