@@ -31,7 +31,7 @@ import { ASK_SIGN_IN_HREF, keepQuestion, readKeptQuestion } from '@/lib/ask/askK
 import { authReturnNotice, type GuestNotice } from '@/lib/ask/askGuestTrial';
 import type { AskShellMenuControl } from '@/lib/ask/askShellMenu';
 import { askCountryName } from '@/lib/ask/askCountryName';
-import { AskWorkingStatus } from './AskWorkingStatus';
+import { AskProgressRunning, AskSearchActivity } from './AskProgressPanel';
 import { AskEmblem, AskEmblemMark, AskWordmark } from './AskEmblem';
 import { ASK_SIDE_PANEL_QUERY, AskSourcesPanelProvider } from './AskSourcesPanel';
 import { AskR2TurnView } from './AskR2TurnView';
@@ -133,6 +133,13 @@ export function AskFrameScreen({
   const persistentRail = wide && shellMenu === undefined;
   /* R3 FULL DESIGN · J01 — the optional job setup sheet (opening it runs nothing). */
   const [jobSheetOpen, setJobSheetOpen] = useState(false);
+  /*
+    ASK R3 PROGRESS R1 — the answer whose search finished in THIS session (its collapsed "Search
+    activity" record). Set only on the real pending → settled transition, cleared by the next
+    question; a reopened or restored answer never gets one (R3: no replay on reopen).
+  */
+  const [searchCompletedKey, setSearchCompletedKey] = useState<string | null>(null);
+  const wasPending = useRef(false);
   const reader = useRef<HTMLDivElement>(null);
   const layout = useRef<HTMLDivElement>(null);
   /*
@@ -240,6 +247,19 @@ export function AskFrameScreen({
       : null;
   const showR2 = r2.availability === 'r2' || opened !== null;
   const isPending = r2.pending !== null;
+  useEffect(() => {
+    if (isPending) {
+      wasPending.current = true;
+      setSearchCompletedKey(null);
+      return;
+    }
+    if (!wasPending.current) return;
+    wasPending.current = false;
+    const latest = r2.turns[r2.turns.length - 1];
+    /* only an answer that really searched (an evidence analysis) records a search */
+    if (latest?.payload != null && latest.payload.analysis != null)
+      setSearchCompletedKey(latest.operation?.operationId ?? `turn-${r2.turns.length}`);
+  }, [isPending, r2.turns]);
   const hasQuestion =
     r2.turns.length > 0 ||
     opened !== null ||
@@ -583,6 +603,7 @@ export function AskFrameScreen({
   /* D25 01 region 3 — earlier turns collapse; each opens in place to its full answer. */
   const earlierR2 = r2.turns.slice(0, -1);
   const latestR2 = r2.turns[r2.turns.length - 1];
+  const latestKey = latestR2 === undefined ? null : (latestR2.operation?.operationId ?? `turn-${r2.turns.length}`);
   /* a guest's own restore (the hook) may already hold the reopened turn: never render it twice */
   const openedInLive =
     opened?.operation !== undefined &&
@@ -943,6 +964,9 @@ export function AskFrameScreen({
             )}
             {latestR2 !== undefined && (
               <div data-ask-latest="">
+                {searchCompletedKey !== null && latestKey === searchCompletedKey && (
+                  <AskSearchActivity locale={interfaceLocale} />
+                )}
                 <AskR2TurnView
                   canSave={!guestMode}
                   turn={latestR2}
@@ -1016,7 +1040,7 @@ export function AskFrameScreen({
                 />
                 {/* ASK READING EXPERIENCE R1 — one truthful working line; the 1.8 s simulated
                     stage timer is retired from Ask (H-FREEZE §5). */}
-                <AskWorkingStatus label={r2s.working} />
+                <AskProgressRunning locale={interfaceLocale} label={r2s.working} />
               </section>
             )}
           </div>

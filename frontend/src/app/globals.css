@@ -1318,3 +1318,69 @@ html[data-gna-schedule='light'] body:has([data-ask-standalone][data-gna-theme='s
     background-color: #faf9f7;
   }
 }
+
+/*
+  ASK R3 PROGRESS R1 — THE WORKING MOTION (Claude Design R3 PROGRESS_MOTION_SPEC.md; addendum §5).
+  A SEPARATE layer from the idle welcome motion, used only inside the progress area and only while
+  a request is really in flight: sweep 2.4 s/turn, arc 7.2 s/turn (linear), core opacity 1→.5→1
+  over 1.6 s, mount opacity 0→1 + scale .8→1 in 200 ms. Composited properties only; paused while
+  the document is hidden; static under reduced motion (the visible "In progress ·" prefix carries
+  the state instead). The idle 32 s / 96 s / 8 s values above are never reused or sped up here.
+*/
+.gna-ask-working-emblem .gna-ask-emblem-sweep,
+.gna-ask-working-emblem .gna-ask-emblem-arc,
+.gna-ask-working-emblem .gna-ask-emblem-core {
+  animation: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .gna-ask-working-emblem svg {
+    animation: gnaAskWorkIn 200ms ease-out;
+  }
+  .gna-ask-working-emblem .gna-ask-emblem-sweep {
+    animation: gnaAskEmblemTurn 2.4s linear infinite;
+  }
+  .gna-ask-working-emblem .gna-ask-emblem-arc {
+    animation: gnaAskEmblemTurn 7.2s linear infinite;
+  }
+  .gna-ask-working-emblem .gna-ask-emblem-core {
+    animation: gnaAskWorkCore 1.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  }
+  .gna-ask-working-emblem[data-ask-paused='true'] .gna-ask-emblem-sweep,
+  .gna-ask-working-emblem[data-ask-paused='true'] .gna-ask-emblem-arc,
+  .gna-ask-working-emblem[data-ask-paused='true'] .gna-ask-emblem-core {
+    animation-play-state: paused;
+  }
+  .gna-ask-progress-row {
+    animation: gnaAskWorkRow 200ms ease-out;
+  }
+}
+@keyframes gnaAskWorkCore {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+@keyframes gnaAskWorkIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+@keyframes gnaAskWorkRow {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+/* ASK R3 PROGRESS R1 — reduced motion: the static emblem cannot say "running", so the words do */
+.gna-ask-rm-only {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .gna-ask-rm-only {
+    display: inline;
+  }
+}

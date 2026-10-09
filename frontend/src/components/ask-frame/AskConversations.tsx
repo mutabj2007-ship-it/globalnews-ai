@@ -272,9 +272,15 @@ export function AskConversations({
                         disabled={deleting !== null}
                         aria-label={`${f.deleteConversation}: ${title}`}
                         onClick={(event) => setConfirming({ id: row.id, title, opener: event.currentTarget })}
-                        className="min-h-[44px] shrink-0 px-2 text-[0.8125rem] text-[var(--ad-ink-2,#93a0b8)]"
+                        /* R3 D12 — the row affordance is the 44 px "⋯" glyph; its name stays
+                           "Delete conversation: {title}" for assistive technology */
+                        className="min-h-[44px] min-w-[44px] shrink-0 rounded-[10px] px-2 text-[18px] font-medium leading-none text-[var(--ad-ink-2,#93a0b8)]"
                       >
-                        {deleting === row.id ? f.deleteConversationBusy : f.deleteConversation}
+                        {deleting === row.id ? (
+                          <span className="text-[0.8125rem]">{f.deleteConversationBusy}</span>
+                        ) : (
+                          <span aria-hidden="true">⋯</span>
+                        )}
                       </button>
                     </li>
                   );

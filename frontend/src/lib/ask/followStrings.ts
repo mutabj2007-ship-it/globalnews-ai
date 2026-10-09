@@ -195,7 +195,7 @@ const EN: FollowStrings = {
   nameInvalid: 'Use letters, spaces, apostrophes, hyphens or full stops — not an email address or a link.',
   nameTooLong: 'Use 40 characters or fewer.',
   nameFailed: 'Not saved. Your name is unchanged.',
-  greeting: (name) => `Welcome back, ${name}.`,
+  greeting: (name) => `Welcome back, ${name}`,
 };
 
 const PL: FollowStrings = {
@@ -299,7 +299,7 @@ const PL: FollowStrings = {
   nameInvalid: 'Użyj liter, spacji, apostrofów, łączników lub kropek — nie adresu e-mail ani linku.',
   nameTooLong: 'Użyj maksymalnie 40 znaków.',
   nameFailed: 'Nie zapisano. Imię bez zmian.',
-  greeting: (name) => `Witaj ponownie, ${name}.`,
+  greeting: (name) => `Witaj ponownie, ${name}`,
 };
 
 const BY_LOCALE: Readonly<Record<string, FollowStrings>> = { en: EN, pl: PL, fr: FR, de: DE, es: ES, pt: PT, ar: AR };

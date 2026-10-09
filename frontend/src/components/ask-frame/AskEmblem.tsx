@@ -350,3 +350,48 @@ export function AskWordmark({ name }: { readonly name: string }): JSX.Element {
     </span>
   );
 }
+
+/**
+ * ASK R3 PROGRESS R1 — THE WORKING EMBLEM (Claude Design R3 PROGRESS_MOTION_SPEC.md, addendum §5:
+ * "The ORIGINAL radar logo performs a gentle sweep/pulse beside the currently active line").
+ *
+ * The same original geometry as the welcome emblem and the header mark (no redraw), 24 px, under
+ * the separate working-motion scope `gna-ask-working-emblem` (2.4 s sweep, 7.2 s arc, 1.6 s core).
+ * It exists only while a request is really in flight: the caller mounts it for the running row and
+ * unmounts it the moment that row completes, so its motion can never outlive the work it marks.
+ * Paused while the document is hidden; static under reduced motion (CSS).
+ */
+export function AskWorkingEmblem(): JSX.Element {
+  const id = useId().replace(/[^a-zA-Z0-9_-]/g, '');
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => {
+    if (typeof document === 'undefined' || typeof document.addEventListener !== 'function') return;
+    const sync = (): void => setHidden(document.visibilityState === 'hidden');
+    sync();
+    document.addEventListener('visibilitychange', sync);
+    return () => document.removeEventListener('visibilitychange', sync);
+  }, []);
+  return (
+    <span
+      aria-hidden="true"
+      data-ask="working-emblem"
+      data-ask-paused={hidden ? 'true' : 'false'}
+      className="gna-ask-working-emblem inline-flex h-6 w-6 shrink-0"
+    >
+      <AskEmblemSvg id={id} size={24} />
+    </span>
+  );
+}
+
+/**
+ * ASK R3 PROGRESS R1 — the collapsed "Search activity" mark (ProgressPanel.dc.html: the static
+ * emblem, 18 px, opacity .8). Still: a finished search never animates again.
+ */
+export function AskStaticEmblem({ size = 18 }: { readonly size?: number }): JSX.Element {
+  const id = useId().replace(/[^a-zA-Z0-9_-]/g, '');
+  return (
+    <span aria-hidden="true" data-ask="static-emblem" className="inline-flex shrink-0" style={{ opacity: 0.8 }}>
+      <AskEmblemSvg id={id} size={size} still />
+    </span>
+  );
+}
