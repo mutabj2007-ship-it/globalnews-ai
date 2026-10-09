@@ -441,7 +441,7 @@ export interface AskV2FollowedCheckSummary {
   readonly newEvidenceCount: number;
   readonly possibleCorrectionCount: number;
   readonly supportedChangeCount: number;
-  /** CTO R1-B §3 — governed specialist records new / late-admitted / revised; absent on older rows. */
+  /** CTO R1-B §3 — governed specialist records new / late-admitted / content-changed; absent on older rows. */
   readonly structuredChangeCount?: number;
   readonly structuredUnassessed?: readonly string[];
   readonly partial: boolean;
@@ -487,7 +487,7 @@ export interface AskV2FollowedAssessment {
     readonly applicable: boolean;
     readonly newEvents: readonly AskV2StructuredRecordChange[];
     readonly lateAdmitted: readonly AskV2StructuredRecordChange[];
-    readonly revised: readonly AskV2StructuredRecordChange[];
+    readonly contentChanged: readonly AskV2StructuredRecordChange[];
     readonly carriedOverCount: number;
     readonly notSeenThisCheckCount: number;
     readonly notPreviouslyShownCount: number;
@@ -557,6 +557,8 @@ export interface AskV2BriefingVersion {
     }[];
     readonly comparisonTable: AskComparisonTable | null;
     readonly background: { readonly text: string; readonly citable: false } | null;
+    /** The governed specialist basis the answer used (payload.intelligence), as stored; absent on old versions. */
+    readonly intelligence?: AskR2Payload['intelligence'] | null;
   };
   readonly evidenceRefs: readonly AskV2BriefingEvidenceRef[];
   readonly evidenceRevision: string;

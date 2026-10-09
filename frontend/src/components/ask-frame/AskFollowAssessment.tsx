@@ -118,10 +118,11 @@ export function AskFollowAssessment({
       {st !== undefined && st.unassessed.length > 0 && (
         <p data-ask="follow-structured-unassessed">{s.structuredUnassessed(st.unassessed.join(', '))}</p>
       )}
-      {st !== undefined && st.revised.length > 0 && (
-        <section data-ask="follow-structured-revised">
-          <h4 className="mt-1 font-semibold">{s.structuredRevised}</h4>
-          {records(st.revised)}
+      {st !== undefined && (st.contentChanged ?? []).length > 0 && (
+        <section data-ask="follow-structured-content-changed">
+          <h4 className="mt-1 font-semibold">{s.structuredContentChanged}</h4>
+          <p>{s.structuredContentChangedNote}</p>
+          {records(st.contentChanged ?? [])}
         </section>
       )}
       {st !== undefined && st.newEvents.length > 0 && (

@@ -256,7 +256,7 @@ describe('CTO R1-B §3 — governed specialist records in a followed-question ch
     expect(a.outcome).toBe('NEW_EVIDENCE');
     expect(a.structured.carriedOverCount).toBe(1);
     expect(a.structured.newEvents).toEqual([]);
-    expect(a.structured.revised).toEqual([]);
+    expect(a.structured.contentChanged).toEqual([]);
   });
 
   it('C′ · a record admitted after the baseline about an EARLIER period → NEW_EVIDENCE (late-admitted)', () => {
@@ -280,15 +280,29 @@ describe('CTO R1-B §3 — governed specialist records in a followed-question ch
     expect(a.structured.notPreviouslyShownCount).toBe(1);
   });
 
-  it('D · the source revises a record (same identity, new content) → CORRECTION', () => {
+  it('D · a record whose content changed (same identity) → NEW_EVIDENCE "content changed", NEVER a correction', () => {
     const revised = obs('ucdp:1', { value: '7', retainedAt: '2026-10-06T00:00:00.000Z' });
     const a = assessFollowedCheck(
       baseline([news], { intelligence: intel(conflict('USED', [e1, e2])) }),
       candidate([news], [], {}, { intelligence: intel(conflict('USED', [revised, e2])) }),
     );
+    /* CTO review of cf7a5d1: the contract has no authoritative revision metadata */
+    expect(a.outcome).toBe('NEW_EVIDENCE');
+    expect(a.reasons[0]).toBe('STRUCTURED_RECORD_CONTENT_CHANGED');
+    expect(a.reasons).not.toContain('CORRECTION_HEADLINE');
+    expect(a.structured.contentChanged.map((r) => r.reference)).toEqual(['ucdp:1']);
+  });
+
+  it("D″ · only a publisher's own correction headline is a CORRECTION — even beside changed record content", () => {
+    const changedRec = obs('ucdp:1', { value: '7', retainedAt: '2026-10-06T00:00:00.000Z' });
+    const corr = ref('h', '2026-10-06T10:00:00Z', 'Correction: casualty figure revised');
+    const a = assessFollowedCheck(
+      baseline([news], { intelligence: intel(conflict('USED', [e1])) }),
+      candidate([news, corr], [], {}, { intelligence: intel(conflict('USED', [changedRec])) }),
+    );
     expect(a.outcome).toBe('CORRECTION');
-    expect(a.reasons[0]).toBe('STRUCTURED_RECORD_REVISED');
-    expect(a.structured.revised.map((r) => r.reference)).toEqual(['ucdp:1']);
+    expect(a.reasons[0]).toBe('CORRECTION_HEADLINE');
+    expect(a.possibleCorrections.map((e) => e.id)).toEqual(['h']);
   });
 
   it('D′ · a record no longer returned is never treated as a retraction', () => {
@@ -298,7 +312,7 @@ describe('CTO R1-B §3 — governed specialist records in a followed-question ch
     );
     expect(a.outcome).toBe('UNCHANGED');
     expect(a.structured.notSeenThisCheckCount).toBe(1);
-    expect(a.structured.revised).toEqual([]);
+    expect(a.structured.contentChanged).toEqual([]);
   });
 
   it('a re-ingest of identical content (only retainedAt moved) is not a change', () => {

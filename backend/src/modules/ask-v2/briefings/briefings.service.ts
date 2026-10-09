@@ -94,7 +94,7 @@ function summaryOfCheck(check: {
     structured?: {
       newEvents?: unknown[];
       lateAdmitted?: unknown[];
-      revised?: unknown[];
+      contentChanged?: unknown[];
       unassessed?: unknown[];
     };
   };
@@ -108,11 +108,11 @@ function summaryOfCheck(check: {
     newEvidenceCount: a.newEvidence?.length ?? 0,
     possibleCorrectionCount: a.possibleCorrections?.length ?? 0,
     supportedChangeCount: a.supportedChanges?.length ?? 0,
-    /* CTO R1-B §3 — governed specialist records: new / late-admitted / revised, and the holes */
+    /* CTO R1-B §3 — governed specialist records: new / late-admitted / content-changed, and the holes */
     structuredChangeCount:
       (a.structured?.newEvents?.length ?? 0) +
       (a.structured?.lateAdmitted?.length ?? 0) +
-      (a.structured?.revised?.length ?? 0),
+      (a.structured?.contentChanged?.length ?? 0),
     structuredUnassessed,
     partial: (a.unassessedSources?.length ?? 0) > 0 || structuredUnassessed.length > 0,
   };

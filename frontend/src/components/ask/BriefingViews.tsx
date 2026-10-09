@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { safeExternalHref, type DisplayLocale } from '@globalnews-ai/shared';
 import type { AnalysisSourceRef } from '@globalnews-ai/shared';
 import type {
+  AskR2Payload,
   AskV2BriefingDetail,
   AskV2BriefingSummary,
   AskV2BriefingUpdate,
@@ -10,6 +11,7 @@ import type {
 import { formatUtc } from '@/lib/ask/askR2View';
 import { briefingStrings } from '@/lib/ask/briefingStrings';
 import { AskEvidenceTable } from './AskEvidenceTable';
+import { AskIntelligenceBasis } from '@/components/ask-frame/AskIntelligenceBasis';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 
 /**
@@ -210,6 +212,22 @@ export function BriefingVersionView({
         sources={sources}
         language={locale}
       />
+
+      {/*
+        CTO review of cf7a5d1 (Politics 4a0e501 reconciliation) — the governed specialist basis the
+        saved answer used is STORED (blocks.intelligence) and is now SHOWN, through the SAME component
+        and view rules as the live answer: only USED, non-context contributions, never a raw record.
+        Old versions without the field show nothing (unknown, not none).
+      */}
+      {version.blocks.intelligence != null && (
+        <div data-briefing="intelligence">
+          <AskIntelligenceBasis
+            payload={{ intelligence: version.blocks.intelligence } as unknown as AskR2Payload}
+            locale={locale}
+            reportingSourceCount={sources.length}
+          />
+        </div>
+      )}
 
       <section data-briefing="gaps" className="flex flex-col gap-1">
         <h2 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-tertiary">

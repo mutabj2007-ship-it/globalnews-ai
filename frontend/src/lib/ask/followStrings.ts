@@ -51,7 +51,8 @@ export interface FollowStrings {
   readonly structuredNew: string;
   readonly structuredLate: string;
   readonly structuredLateNote: string;
-  readonly structuredRevised: string;
+  readonly structuredContentChanged: string;
+  readonly structuredContentChangedNote: string;
   readonly structuredUnassessed: (classes: string) => string;
   readonly structuredNotSeen: (n: number) => string;
   readonly structuredCarried: (n: number) => string;
@@ -131,7 +132,7 @@ const EN: FollowStrings = {
   outcome: {
     INCOMPLETE_CHECK: 'Check incomplete',
     INSUFFICIENT_BASELINE: 'New starting point saved',
-    CORRECTION: 'Correction reported',
+    CORRECTION: 'Correction reported by a publisher',
     MATERIAL_CHANGE: 'Change reported',
     NEW_EVIDENCE: 'New reporting',
     UNCHANGED: 'No new reporting',
@@ -143,7 +144,7 @@ const EN: FollowStrings = {
     INSUFFICIENT_BASELINE:
       'There was no sourced answer to compare with (or the question was edited), so this check is the new starting point.',
     CORRECTION:
-      'A source revised one of its own governed records, or a newly published report says it corrects earlier reporting. Open it to see what changed.',
+      'A newly published report says it corrects or clarifies earlier reporting. Open it to see what it changes.',
     MATERIAL_CHANGE: 'New reporting published since your last saved answer supports the points below.',
     NEW_EVIDENCE: 'New reporting was published since your last saved answer. It is listed below.',
     UNCHANGED:
@@ -154,7 +155,8 @@ const EN: FollowStrings = {
   structuredNew: 'New governed records',
   structuredLate: 'Governed records added now about earlier dates',
   structuredLateNote: 'Admitted after your last saved answer but dated before it. Not counted as a new event.',
-  structuredRevised: 'Records revised by their source',
+  structuredContentChanged: 'Records whose content changed',
+  structuredContentChangedNote: 'The source has not stated whether this is a correction, a revision or a data update. Ask does not treat it as a correction.',
   structuredUnassessed: (classes) => `Structured evidence not assessed in this check: ${classes}.`,
   structuredNotSeen: (n) => `${n} earlier governed record${n === 1 ? ' was' : 's were'} not returned this time. That is not a retraction.`,
   structuredCarried: (n) => `${n} governed record${n === 1 ? '' : 's'} unchanged since your last saved answer.`,
@@ -233,7 +235,7 @@ const PL: FollowStrings = {
   outcome: {
     INCOMPLETE_CHECK: 'Sprawdzenie niepełne',
     INSUFFICIENT_BASELINE: 'Zapisano nowy punkt wyjścia',
-    CORRECTION: 'Zgłoszono korektę',
+    CORRECTION: 'Wydawca zgłosił korektę',
     MATERIAL_CHANGE: 'Zgłoszono zmianę',
     NEW_EVIDENCE: 'Nowe doniesienia',
     UNCHANGED: 'Brak nowych doniesień',
@@ -245,7 +247,7 @@ const PL: FollowStrings = {
     INSUFFICIENT_BASELINE:
       'Nie było odpowiedzi opartej na źródłach do porównania (albo pytanie zmieniono), więc to sprawdzenie jest nowym punktem wyjścia.',
     CORRECTION:
-      'Źródło zmieniło jeden ze swoich zarządzanych rekordów albo nowo opublikowany materiał informuje, że koryguje wcześniejsze doniesienia. Otwórz go, aby zobaczyć, co się zmieniło.',
+      'Nowo opublikowany materiał informuje, że koryguje lub wyjaśnia wcześniejsze doniesienia. Otwórz go, aby zobaczyć, co zmienia.',
     MATERIAL_CHANGE: 'Nowe doniesienia opublikowane od ostatniej zapisanej odpowiedzi potwierdzają poniższe punkty.',
     NEW_EVIDENCE: 'Od ostatniej zapisanej odpowiedzi opublikowano nowe doniesienia. Są wymienione poniżej.',
     UNCHANGED:
@@ -256,7 +258,8 @@ const PL: FollowStrings = {
   structuredNew: 'Nowe rekordy zarządzane',
   structuredLate: 'Rekordy dodane teraz o wcześniejszych datach',
   structuredLateNote: 'Przyjęte po ostatniej zapisanej odpowiedzi, ale datowane wcześniej. Nie liczone jako nowe zdarzenie.',
-  structuredRevised: 'Rekordy zmienione przez źródło',
+  structuredContentChanged: 'Rekordy, których treść się zmieniła',
+  structuredContentChangedNote: 'Źródło nie podało, czy to korekta, zmiana czy aktualizacja danych. Ask nie traktuje tego jako korekty.',
   structuredUnassessed: (classes) => `Dane strukturalne nieocenione w tym sprawdzeniu: ${classes}.`,
   structuredNotSeen: (n) => `Wcześniejsze rekordy niezwrócone tym razem: ${n}. To nie jest odwołanie.`,
   structuredCarried: (n) => `Rekordy bez zmian od ostatniej zapisanej odpowiedzi: ${n}.`,

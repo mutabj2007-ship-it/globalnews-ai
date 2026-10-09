@@ -42,7 +42,7 @@ export const FR: FollowStrings = {
   outcome: {
     INCOMPLETE_CHECK: 'Vérification incomplète',
     INSUFFICIENT_BASELINE: 'Nouveau point de départ enregistré',
-    CORRECTION: 'Correction signalée',
+    CORRECTION: 'Correction signalée par un éditeur',
     MATERIAL_CHANGE: 'Changement signalé',
     NEW_EVIDENCE: 'Nouveaux articles',
     UNCHANGED: 'Aucun nouvel article',
@@ -54,7 +54,7 @@ export const FR: FollowStrings = {
     INSUFFICIENT_BASELINE:
       'Il n’y avait pas de réponse sourcée à comparer (ou la question a été modifiée) : cette vérification devient le nouveau point de départ.',
     CORRECTION:
-      'Une source a révisé l’un de ses enregistrements gouvernés, ou un article récent indique corriger des informations antérieures. Ouvrez-le pour voir ce qui a changé.',
+      'Un article publié récemment indique corriger ou préciser des informations antérieures. Ouvrez-le pour voir ce qu’il change.',
     MATERIAL_CHANGE: 'Des articles publiés depuis votre dernière réponse enregistrée confirment les points ci-dessous.',
     NEW_EVIDENCE: 'De nouveaux articles ont été publiés depuis votre dernière réponse enregistrée. Ils sont listés ci-dessous.',
     UNCHANGED:
@@ -65,7 +65,8 @@ export const FR: FollowStrings = {
   structuredNew: 'Nouveaux enregistrements gouvernés',
   structuredLate: 'Enregistrements ajoutés maintenant sur des dates antérieures',
   structuredLateNote: 'Admis après votre dernière réponse enregistrée mais datés avant. Non comptés comme un nouvel événement.',
-  structuredRevised: 'Enregistrements révisés par leur source',
+  structuredContentChanged: 'Enregistrements dont le contenu a changé',
+  structuredContentChangedNote: 'La source n’a pas indiqué s’il s’agit d’une correction, d’une révision ou d’une mise à jour des données. Ask ne le traite pas comme une correction.',
   structuredUnassessed: (classes) => `Données structurées non évaluées lors de cette vérification : ${classes}.`,
   structuredNotSeen: (n) => `Enregistrement(s) antérieur(s) non renvoyé(s) cette fois : ${n}. Ce n’est pas un retrait.`,
   structuredCarried: (n) => `Enregistrements inchangés depuis votre dernière réponse enregistrée : ${n}.`,
@@ -143,7 +144,7 @@ export const DE: FollowStrings = {
   outcome: {
     INCOMPLETE_CHECK: 'Prüfung unvollständig',
     INSUFFICIENT_BASELINE: 'Neuer Ausgangspunkt gespeichert',
-    CORRECTION: 'Korrektur gemeldet',
+    CORRECTION: 'Von einem Verlag gemeldete Korrektur',
     MATERIAL_CHANGE: 'Änderung gemeldet',
     NEW_EVIDENCE: 'Neue Berichte',
     UNCHANGED: 'Keine neuen Berichte',
@@ -155,7 +156,7 @@ export const DE: FollowStrings = {
     INSUFFICIENT_BASELINE:
       'Es gab keine belegte Antwort zum Vergleich (oder die Frage wurde geändert), daher ist diese Prüfung der neue Ausgangspunkt.',
     CORRECTION:
-      'Eine Quelle hat einen ihrer verwalteten Datensätze überarbeitet, oder ein neu veröffentlichter Bericht gibt an, frühere Berichte zu korrigieren. Öffnen Sie ihn, um zu sehen, was sich geändert hat.',
+      'Ein neu veröffentlichter Bericht gibt an, frühere Berichte zu korrigieren oder klarzustellen. Öffnen Sie ihn, um zu sehen, was er ändert.',
     MATERIAL_CHANGE: 'Seit Ihrer zuletzt gespeicherten Antwort veröffentlichte Berichte belegen die folgenden Punkte.',
     NEW_EVIDENCE: 'Seit Ihrer zuletzt gespeicherten Antwort wurden neue Berichte veröffentlicht. Sie sind unten aufgeführt.',
     UNCHANGED:
@@ -166,7 +167,8 @@ export const DE: FollowStrings = {
   structuredNew: 'Neue verwaltete Datensätze',
   structuredLate: 'Jetzt hinzugefügte Datensätze zu früheren Daten',
   structuredLateNote: 'Nach Ihrer zuletzt gespeicherten Antwort aufgenommen, aber davor datiert. Nicht als neues Ereignis gezählt.',
-  structuredRevised: 'Von der Quelle überarbeitete Datensätze',
+  structuredContentChanged: 'Datensätze mit geändertem Inhalt',
+  structuredContentChangedNote: 'Die Quelle hat nicht angegeben, ob es sich um eine Korrektur, Überarbeitung oder Datenaktualisierung handelt. Ask behandelt es nicht als Korrektur.',
   structuredUnassessed: (classes) => `Strukturierte Daten in dieser Prüfung nicht bewertet: ${classes}.`,
   structuredNotSeen: (n) => `Frühere Datensätze diesmal nicht geliefert: ${n}. Das ist kein Widerruf.`,
   structuredCarried: (n) => `Unveränderte Datensätze seit Ihrer zuletzt gespeicherten Antwort: ${n}.`,
@@ -244,7 +246,7 @@ export const ES: FollowStrings = {
   outcome: {
     INCOMPLETE_CHECK: 'Comprobación incompleta',
     INSUFFICIENT_BASELINE: 'Nuevo punto de partida guardado',
-    CORRECTION: 'Corrección publicada',
+    CORRECTION: 'Corrección publicada por un medio',
     MATERIAL_CHANGE: 'Cambio publicado',
     NEW_EVIDENCE: 'Nuevas informaciones',
     UNCHANGED: 'Sin nuevas informaciones',
@@ -256,7 +258,7 @@ export const ES: FollowStrings = {
     INSUFFICIENT_BASELINE:
       'No había una respuesta con fuentes para comparar (o se editó la pregunta), así que esta comprobación es el nuevo punto de partida.',
     CORRECTION:
-      'Una fuente revisó uno de sus registros gobernados, o una información publicada recientemente dice que corrige informaciones anteriores. Ábrela para ver qué cambió.',
+      'Una información publicada recientemente dice que corrige o aclara informaciones anteriores. Ábrela para ver qué cambia.',
     MATERIAL_CHANGE: 'Las informaciones publicadas desde tu última respuesta guardada respaldan los puntos siguientes.',
     NEW_EVIDENCE: 'Se publicaron nuevas informaciones desde tu última respuesta guardada. Aparecen a continuación.',
     UNCHANGED:
@@ -267,7 +269,8 @@ export const ES: FollowStrings = {
   structuredNew: 'Nuevos registros gobernados',
   structuredLate: 'Registros añadidos ahora sobre fechas anteriores',
   structuredLateNote: 'Admitidos después de tu última respuesta guardada pero con fecha anterior. No cuentan como un evento nuevo.',
-  structuredRevised: 'Registros revisados por su fuente',
+  structuredContentChanged: 'Registros cuyo contenido cambió',
+  structuredContentChangedNote: 'La fuente no ha indicado si se trata de una corrección, una revisión o una actualización de datos. Ask no lo trata como una corrección.',
   structuredUnassessed: (classes) => `Datos estructurados no evaluados en esta comprobación: ${classes}.`,
   structuredNotSeen: (n) => `Registros anteriores no devueltos esta vez: ${n}. Eso no es una retractación.`,
   structuredCarried: (n) => `Registros sin cambios desde tu última respuesta guardada: ${n}.`,
@@ -345,7 +348,7 @@ export const PT: FollowStrings = {
   outcome: {
     INCOMPLETE_CHECK: 'Verificação incompleta',
     INSUFFICIENT_BASELINE: 'Novo ponto de partida guardado',
-    CORRECTION: 'Correção noticiada',
+    CORRECTION: 'Correção noticiada por um editor',
     MATERIAL_CHANGE: 'Alteração noticiada',
     NEW_EVIDENCE: 'Novas notícias',
     UNCHANGED: 'Sem novas notícias',
@@ -357,7 +360,7 @@ export const PT: FollowStrings = {
     INSUFFICIENT_BASELINE:
       'Não havia uma resposta com fontes para comparar (ou a pergunta foi editada), por isso esta verificação é o novo ponto de partida.',
     CORRECTION:
-      'Uma fonte reviu um dos seus registos governados, ou uma notícia publicada recentemente diz que corrige notícias anteriores. Abra-a para ver o que mudou.',
+      'Uma notícia publicada recentemente diz que corrige ou esclarece notícias anteriores. Abra-a para ver o que altera.',
     MATERIAL_CHANGE: 'Notícias publicadas desde a sua última resposta guardada confirmam os pontos abaixo.',
     NEW_EVIDENCE: 'Foram publicadas novas notícias desde a sua última resposta guardada. Estão listadas abaixo.',
     UNCHANGED:
@@ -368,7 +371,8 @@ export const PT: FollowStrings = {
   structuredNew: 'Novos registos governados',
   structuredLate: 'Registos adicionados agora sobre datas anteriores',
   structuredLateNote: 'Admitidos depois da sua última resposta guardada, mas datados antes. Não contam como novo acontecimento.',
-  structuredRevised: 'Registos revistos pela fonte',
+  structuredContentChanged: 'Registos cujo conteúdo mudou',
+  structuredContentChangedNote: 'A fonte não indicou se se trata de uma correção, revisão ou atualização de dados. O Ask não o trata como uma correção.',
   structuredUnassessed: (classes) => `Dados estruturados não avaliados nesta verificação: ${classes}.`,
   structuredNotSeen: (n) => `Registos anteriores não devolvidos desta vez: ${n}. Isso não é uma retratação.`,
   structuredCarried: (n) => `Registos inalterados desde a sua última resposta guardada: ${n}.`,
@@ -446,7 +450,7 @@ export const AR: FollowStrings = {
   outcome: {
     INCOMPLETE_CHECK: 'تحقق غير مكتمل',
     INSUFFICIENT_BASELINE: 'حُفظت نقطة بداية جديدة',
-    CORRECTION: 'أُبلغ عن تصحيح',
+    CORRECTION: 'تصحيح أبلغ عنه ناشر',
     MATERIAL_CHANGE: 'أُبلغ عن تغيير',
     NEW_EVIDENCE: 'تقارير جديدة',
     UNCHANGED: 'لا تقارير جديدة',
@@ -458,7 +462,7 @@ export const AR: FollowStrings = {
     INSUFFICIENT_BASELINE:
       'لم تكن هناك إجابة مستندة إلى مصادر للمقارنة (أو عُدّل السؤال)، لذا يصبح هذا التحقق نقطة البداية الجديدة.',
     CORRECTION:
-      'راجع مصدرٌ أحد سجلاته الموثّقة، أو يذكر تقرير نُشر حديثًا أنه يصحح تقارير سابقة. افتحه لترى ما الذي تغيّر.',
+      'تقرير نُشر حديثًا يذكر أنه يصحح تقارير سابقة أو يوضحها. افتحه لترى ما الذي يغيّره.',
     MATERIAL_CHANGE: 'تقارير نُشرت منذ آخر إجابة محفوظة تدعم النقاط أدناه.',
     NEW_EVIDENCE: 'نُشرت تقارير جديدة منذ آخر إجابة محفوظة. وهي مدرجة أدناه.',
     UNCHANGED:
@@ -469,7 +473,8 @@ export const AR: FollowStrings = {
   structuredNew: 'سجلات موثّقة جديدة',
   structuredLate: 'سجلات أُضيفت الآن عن تواريخ سابقة',
   structuredLateNote: 'قُبلت بعد آخر إجابة محفوظة لكنها مؤرخة قبلها. لا تُحتسب حدثًا جديدًا.',
-  structuredRevised: 'سجلات راجعها مصدرها',
+  structuredContentChanged: 'سجلات تغيّر محتواها',
+  structuredContentChangedNote: 'لم يذكر المصدر ما إذا كان هذا تصحيحًا أو مراجعة أو تحديثًا للبيانات. لا يعدّه Ask تصحيحًا.',
   structuredUnassessed: (classes) => `بيانات منظَّمة لم تُقيَّم في هذا التحقق: ${classes}.`,
   structuredNotSeen: (n) => `سجلات سابقة لم تُرجَع هذه المرة: ${n}. هذا ليس سحبًا.`,
   structuredCarried: (n) => `سجلات لم تتغير منذ آخر إجابة محفوظة: ${n}.`,

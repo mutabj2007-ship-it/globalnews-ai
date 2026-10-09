@@ -43,7 +43,7 @@ const check = (over: Partial<AskV2FollowedCheck['assessment']>): AskV2FollowedCh
       applicable: true,
       newEvents: [rec('ucdp:3', 'https://ucdp.uu.se/'), rec('ucdp:4', 'javascript:alert(1)')],
       lateAdmitted: [],
-      revised: [],
+      contentChanged: [],
       carriedOverCount: 2,
       notSeenThisCheckCount: 0,
       notPreviouslyShownCount: 0,

@@ -17,9 +17,11 @@ import { compareStructured, type StructuredRecordChange } from './structured-cha
  *   MATERIAL_CHANGE        a supported change in the underlying event/condition/claim: a key point of
  *                          the new answer cites reporting published after the baseline, or a newly
  *                          admitted structured record whose source period starts after the baseline
- *   CORRECTION             a governed record revised by its source (same identity, new content), or
- *                          a newly published report whose headline announces a correction/retraction
- *                          (flagged — Ask does not adjudicate what it overturns)
+ *   CORRECTION             ONLY a publisher's own statement: a newly published report whose headline
+ *                          announces a correction / retraction / clarification (flagged — Ask does not
+ *                          adjudicate what it overturns). A governed record whose content changed is
+ *                          NOT a correction: the observation contract carries no authoritative revision
+ *                          metadata (CTO review of cf7a5d1), so it is NEW_EVIDENCE (content changed)
  *   UNCHANGED              (≙ R1-B NO_RELEVANT_UPDATE, complete) every relevant class was compared
  *                          and the same relevant evidence was found; new wording is never a change
  *   NO_RELEVANT_UPDATE     (≙ R1-B NO_RELEVANT_UPDATE, complete) the check completed and found no
@@ -116,7 +118,7 @@ export interface FollowedAssessment {
     readonly applicable: boolean;
     readonly newEvents: readonly StructuredRecordChange[];
     readonly lateAdmitted: readonly StructuredRecordChange[];
-    readonly revised: readonly StructuredRecordChange[];
+    readonly contentChanged: readonly StructuredRecordChange[];
     readonly carriedOverCount: number;
     readonly notSeenThisCheckCount: number;
     readonly notPreviouslyShownCount: number;
@@ -200,7 +202,7 @@ const EMPTY_STRUCTURED = {
   applicable: false,
   newEvents: [],
   lateAdmitted: [],
-  revised: [],
+  contentChanged: [],
   carriedOverCount: 0,
   notSeenThisCheckCount: 0,
   notPreviouslyShownCount: 0,
@@ -302,7 +304,7 @@ export function assessFollowedCheck(
     applicable: s.applicable,
     newEvents: s.newEvents,
     lateAdmitted: s.lateAdmitted,
-    revised: s.revised,
+    contentChanged: s.contentChanged,
     carriedOverCount: s.carriedOverCount,
     notSeenThisCheckCount: s.notSeenThisCheckCount,
     notPreviouslyShownCount: s.notPreviouslyShownCount,
@@ -324,11 +326,12 @@ export function assessFollowedCheck(
     reasons: [...reasons, ...partial],
   });
 
-  if (s.revised.length > 0) return result('CORRECTION', ['STRUCTURED_RECORD_REVISED']);
   if (corrections.length > 0) return result('CORRECTION', ['CORRECTION_HEADLINE']);
   if (s.newEvents.length > 0) return result('MATERIAL_CHANGE', ['STRUCTURED_RECORD_NEW_PERIOD']);
   if (supportedChanges.length > 0) return result('MATERIAL_CHANGE', ['KEY_POINT_CITES_NEW_EVIDENCE']);
   if (fresh.length > 0) return result('NEW_EVIDENCE', ['NEW_REPORTING_AFTER_BASELINE']);
+  /* changed evidence CONTENT with no source-stated reason — never a correction (no revision metadata) */
+  if (s.contentChanged.length > 0) return result('NEW_EVIDENCE', ['STRUCTURED_RECORD_CONTENT_CHANGED']);
   if (s.lateAdmitted.length > 0) return result('NEW_EVIDENCE', ['STRUCTURED_RECORD_LATE_ADMITTED']);
   if (late.length > 0) return result('NEW_EVIDENCE', ['EARLIER_DATED_REPORTING_FOUND']);
 

@@ -24,8 +24,11 @@ import type { BriefingIntelligence } from './briefing-snapshot';
  *                         → MATERIAL_CHANGE when its source-stated period starts after the baseline
  *                           (a new underlying event / period), otherwise NEW_EVIDENCE
  *                           (late-admitted, earlier-dated: found now ≠ happened now)
- *   revised               same identity, different fingerprint → CORRECTION (the store's own
- *                         revision of its record: publication authority is the governed source)
+ *   content changed       same identity, different fingerprint → the record's CONTENT differs from
+ *                         the baseline. CTO review of cf7a5d1: the shared observation contract carries
+ *                         NO authoritative revision/correction metadata, so this is NEVER called a
+ *                         correction or retraction — it is changed evidence content (NEW_EVIDENCE),
+ *                         and the reader is told the source has not stated why it changed
  *   not previously shown  a record not in the baseline that was ALREADY retained before it (a
  *                         reader window / ordering effect) → listed, never a change
  *   not seen this check   a baseline record the check did not return → counted, NEVER a retraction
@@ -57,7 +60,8 @@ export interface StructuredComparison {
   readonly baselineMissing: boolean;
   readonly newEvents: readonly StructuredRecordChange[];
   readonly lateAdmitted: readonly StructuredRecordChange[];
-  readonly revised: readonly StructuredRecordChange[];
+  /** Same identity, different source-stated content — NOT a source-authorized correction. */
+  readonly contentChanged: readonly StructuredRecordChange[];
   readonly notPreviouslyShownCount: number;
   readonly notSeenThisCheckCount: number;
   readonly carriedOverCount: number;
@@ -144,7 +148,7 @@ export function compareStructured(
   const empty = {
     newEvents: [],
     lateAdmitted: [],
-    revised: [],
+    contentChanged: [],
     notPreviouslyShownCount: 0,
     notSeenThisCheckCount: 0,
     carriedOverCount: 0,
@@ -188,7 +192,7 @@ export function compareStructured(
   const candRecords = recordsOf(candidate ?? null);
   const newEvents: StructuredRecordChange[] = [];
   const lateAdmitted: StructuredRecordChange[] = [];
-  const revised: StructuredRecordChange[] = [];
+  const contentChanged: StructuredRecordChange[] = [];
   let notPreviouslyShownCount = 0;
   let carriedOverCount = 0;
   for (const [key, rec] of candRecords) {
@@ -204,7 +208,7 @@ export function compareStructured(
       if (start !== null && start > baselineMs) newEvents.push(rec.change);
       else lateAdmitted.push(rec.change);
     } else if (prior.fingerprint !== rec.fingerprint) {
-      revised.push(rec.change);
+      contentChanged.push(rec.change);
     } else {
       carriedOverCount += 1;
     }
@@ -219,7 +223,7 @@ export function compareStructured(
     baselineMissing,
     newEvents,
     lateAdmitted,
-    revised,
+    contentChanged,
     notPreviouslyShownCount,
     notSeenThisCheckCount,
     carriedOverCount,
