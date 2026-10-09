@@ -147,7 +147,7 @@ describe('conversations (D4 drawer · F2 column) — real reads only, no dummy c
     expect(byAsk('conversations-new')).toHaveLength(1);
   });
 
-  it('signed in: one read, Today/Earlier groups, the current conversation marked, no rename/delete', async () => {
+  it('signed in: one read, Today/Earlier groups, the current conversation marked, Delete per row, no Rename', async () => {
     threads.mockReset();
     const now = Date.now();
     threads.mockResolvedValue({
@@ -163,14 +163,20 @@ describe('conversations (D4 drawer · F2 column) — real reads only, no dummy c
     expect(current).toHaveLength(1);
     expect(byAsk('conversations-search')).toHaveLength(1);
     const html = JSON.stringify(renderer.toJSON());
-    expect(html).not.toMatch(/Rename|Delete|Options for/);
+    expect(html).not.toMatch(/Rename|Options for/);
+    /* REASON TO RETURN R1 · G7 — Delete is a real endpoint now: one control per row */
+    expect(byAsk('conversation-delete')).toHaveLength(2);
   });
 
-  it('CAPABILITY-BLOCKED — rename and delete have no endpoint, so the list offers neither', () => {
+  it('REASON TO RETURN R1 — Delete is backed by DELETE /ask-v2/threads/:id; Rename still has no endpoint', () => {
     const api = code(read('lib', 'api', 'askV2Api.ts'));
-    expect(api).not.toMatch(/threads\/\$\{[^}]*\}`,\s*'(?:PATCH|DELETE)'/);
+    expect(api).toMatch(/threads\/\$\{encodeURIComponent\(threadId\)\}`,\s*'DELETE'/);
+    expect(api).not.toMatch(/threads\/\$\{[^}]*\}`,\s*'PATCH'/);
     const list = code(read('components', 'ask-frame', 'AskConversations.tsx'));
-    expect(list).not.toMatch(/rename|'DELETE'|deleteThread/i);
+    expect(list).toMatch(/askV2Api\.deleteThread\(id\)/);
+    /* deleting is confirmed first */
+    expect(list).toMatch(/window\.confirm\(/);
+    expect(list).not.toMatch(/rename/i);
   });
 });
 

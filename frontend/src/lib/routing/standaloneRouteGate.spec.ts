@@ -187,6 +187,9 @@ describe('every application page is classified (no accidental exposure)', () => 
       '/history',
       '/privacy',
       '/saved',
+      /* REASON TO RETURN R1 §8 — My updates + saved answers (server-gated by ASK_BRIEFINGS_ENABLED) */
+      '/saved/briefing',
+      '/saved/updates',
       '/source-policy',
       '/support',
       '/terms',

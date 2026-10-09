@@ -27,6 +27,14 @@ const STANDALONE_PAGES: ReadonlySet<string> = new Set([
   '/',
   '/ask',
   '/saved',
+  /*
+    REASON TO RETURN R1 (PO contract 2026-10-09 §8) — My updates and a followed question's saved
+    answers. Both are server-gated by ASK_BRIEFINGS_ENABLED: with it off they render the honest
+    "not available" state, so serving the pages exposes no capability the backend has not enabled.
+    (Supersedes the earlier note that kept /saved/briefing Alpha-only.)
+  */
+  '/saved/updates',
+  '/saved/briefing',
   '/history',
   '/account/settings',
   '/support',

@@ -16,6 +16,7 @@ import { cleanAskDestination, isAskConversationSurface, isPlainClick } from '@/l
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 import { askFormatLocalDay, askFormatLocalTime } from '@/lib/ask/askDirection';
 import { useAskNavOptional } from '@/components/ask-nav/AskNavShell';
+import { followStrings } from '@/lib/ask/followStrings';
 import styles from './askDashboard.module.css';
 
 /**
@@ -34,9 +35,12 @@ import styles from './askDashboard.module.css';
  * reader the shell's one session read found signed in; a signed-out reader is told, never shown
  * an empty list that would claim their work is gone.
  *
- * CAPABILITY-BLOCKED — the Design's per-row "⋯" → Rename / Delete: the backend has no thread
- * rename or delete endpoint (`/ask-v2/threads/:id` is GET only). The control is omitted, never
- * shown disabled. "What Ask remembers" (Design D6) has no preferences endpoint and is omitted.
+ * REASON TO RETURN R1 · G7 — Delete is real now (`DELETE /ask-v2/threads/:id`, owner-scoped,
+ * CSRF, confirmed first; it removes the conversation and its answers, never followed questions).
+ * Search goes to the server (`?q=`) and matches EVERY turn of the reader's own conversations,
+ * not only the previews on screen; the local filter still answers instantly while it runs.
+ * CAPABILITY-BLOCKED — Rename: there is no thread title store (the title is the reader's own
+ * first question, by design). "What Ask remembers" (Design D6) has no preferences endpoint.
  */
 export function AskConversations({
   locale,
@@ -63,6 +67,12 @@ export function AskConversations({
     readonly loadedAt: Date;
   } | null>(null);
   const [term, setTerm] = useState('');
+  const f = followStrings(locale);
+  /* REASON TO RETURN R1 — the server's matches for `term` (every turn), once they arrive */
+  const [found, setFound] = useState<{ readonly term: string; readonly ids: ReadonlySet<string> } | null>(null);
+  const [removed, setRemoved] = useState<ReadonlySet<string>>(new Set());
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleteNote, setDeleteNote] = useState<string | null>(null);
 
   useEffect(() => {
     if (account !== 'signed-in') return;
@@ -75,8 +85,53 @@ export function AskConversations({
     };
   }, [account]);
 
-  const rows = useMemo(() => (loaded?.outcome.ok === true ? loaded.outcome.value : []), [loaded]);
-  const filtered = useMemo(() => filterRecent(rows, term), [rows, term]);
+  useEffect(() => {
+    const q = term.trim();
+    if (account !== 'signed-in' || q === '') {
+      setFound(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      void askV2Api.threads(q).then((outcome) => {
+        if (!cancelled && outcome.ok) setFound({ term: q, ids: new Set(outcome.value.map((t) => t.id)) });
+      });
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [account, term]);
+
+  const rows = useMemo(
+    () => (loaded?.outcome.ok === true ? loaded.outcome.value.filter((t) => !removed.has(t.id)) : []),
+    [loaded, removed],
+  );
+  /* the server's answer for this exact term wins; until then the instant local filter */
+  const filtered = useMemo(
+    () =>
+      found !== null && found.term === term.trim()
+        ? rows.filter((row) => found.ids.has(row.id))
+        : filterRecent(rows, term),
+    [rows, term, found],
+  );
+
+  async function removeConversation(id: string, title: string): Promise<void> {
+    if (deleting !== null) return;
+    if (!window.confirm(`${f.deleteConversationConfirm(title)}\n\n${f.deleteConversationNote}`)) return;
+    setDeleting(id);
+    setDeleteNote(null);
+    const outcome = await askV2Api.deleteThread(id);
+    setDeleting(null);
+    if (outcome.ok) {
+      setRemoved((prev) => new Set([...prev, id]));
+      setDeleteNote(f.conversationDeleted);
+      /* the conversation on screen was this one: leave it for a clean Ask */
+      if (id === currentThreadId && nav !== null) nav.clearAndGo(cleanAskDestination(pathname));
+    } else {
+      setDeleteNote(f.deleteConversationFailed);
+    }
+  }
   const grouped = useMemo(
     () => groupRecentThreads(filtered, loaded?.loadedAt ?? new Date()),
     [filtered, loaded],
@@ -117,6 +172,11 @@ export function AskConversations({
           />
         </label>
       )}
+      {deleteNote !== null && (
+        <p data-ask="conversations-delete-note" role="status">
+          {deleteNote}
+        </p>
+      )}
       {account === 'signed-out' ? (
         <p data-ask="conversations-note">{t.states.signedOut}</p>
       ) : loaded === null ? null : loaded.outcome.ok === false ? (
@@ -155,7 +215,8 @@ export function AskConversations({
                   */
                   const title = conversationTitle(row, t.noQuestionStored);
                   return (
-                    <li key={row.id} data-ask-conversation={row.id}>
+                    <li key={row.id} data-ask-conversation={row.id} className="flex items-stretch">
+                      <div className="min-w-0 flex-1">
                       {href === null ? (
                         <span className="flex flex-col gap-0.5 px-2.5 py-2.5">
                           <span>{title}</span>
@@ -172,6 +233,17 @@ export function AskConversations({
                           <span>{when}</span>
                         </Link>
                       )}
+                      </div>
+                      <button
+                        type="button"
+                        data-ask="conversation-delete"
+                        disabled={deleting !== null}
+                        aria-label={`${f.deleteConversation}: ${title}`}
+                        onClick={() => void removeConversation(row.id, title)}
+                        className="min-h-[44px] shrink-0 px-2 text-[0.8125rem] text-[var(--ad-ink-2,#93a0b8)]"
+                      >
+                        {deleting === row.id ? f.deleteConversationBusy : f.deleteConversation}
+                      </button>
                     </li>
                   );
                 })}

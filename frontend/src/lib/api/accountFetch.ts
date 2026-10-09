@@ -31,7 +31,8 @@ function readCsrfCookie(): string | undefined {
 }
 
 export interface AccountFetchOptions {
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  /* PATCH: Reason to Return R1 (profile name, followed-question edits) — a mutation like the rest */
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
   /**
    * ASK GUEST TRIAL R3 — additional request headers (e.g. the non-simple
@@ -41,7 +42,7 @@ export interface AccountFetchOptions {
   headers?: Readonly<Record<string, string>>;
 }
 
-const MUTATING_METHODS = new Set(['POST', 'PUT', 'DELETE']);
+const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 export async function accountFetch(
   path: string,

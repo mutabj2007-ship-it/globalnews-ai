@@ -178,6 +178,16 @@ export const PRIVATE_ROUTES: readonly RouteEntry[] = [
       'readable only inside their session; not a public document.',
   },
   {
+    path: '/saved/updates',
+    indexability: 'noindex',
+    sitemap: false,
+    userDependent: true,
+    ruling: 'authorization',
+    rationale:
+      "§B: user-specific. My updates (Reason to Return R1): one reader's own followed questions " +
+      'and their check history; private, readable only inside their session.',
+  },
+  {
     path: '/account/settings',
     indexability: 'noindex',
     sitemap: false,

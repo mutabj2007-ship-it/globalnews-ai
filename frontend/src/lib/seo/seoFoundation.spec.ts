@@ -654,7 +654,11 @@ describe('N10/N11/N12 — routing, product contracts and providers are untouched
     /* PHONE-FIRST HOME CORRECTION R1 — sixty: /stories, the persisted story search behind the
        corrected Home's "Search stories". noindex, absent from the sitemap, outside the Standalone
        allowlist (Production redirects it), a query (?q=&region=…) not a dynamic segment, so N5 holds. */
-    expect(pages).toHaveLength(60);
+    /* REASON TO RETURN R1 — sixty-one: /saved/updates, My updates (one reader's own followed
+       questions; noindex, signed-in, absent from the sitemap, no dynamic segment). */
+    expect(pages).toHaveLength(61);
+    expect(pages).toContain('/saved/updates');
+    expect(classify('/saved/updates').indexability).toBe('noindex');
     expect(pages).toContain('/stories');
     expect(pages).toContain('/visual');
     expect(pages).toContain('/admin/news/stories');

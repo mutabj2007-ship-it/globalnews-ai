@@ -32,6 +32,18 @@ export function keepQuestion(question: string): void {
   }
 }
 
+/**
+ * REASON TO RETURN R1 · G7 — forget any kept draft. Called on sign-out and account deletion: a
+ * question one reader typed must not be placed in the next reader's composer on a shared device.
+ */
+export function clearKeptQuestion(): void {
+  try {
+    sessionStorage.removeItem(ASK_KEPT_QUESTION_KEY);
+  } catch {
+    /* storage is optional */
+  }
+}
+
 /** Read once and forget. */
 export function readKeptQuestion(): string | null {
   try {

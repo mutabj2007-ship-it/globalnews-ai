@@ -420,6 +420,64 @@ export interface AskV2BriefingSummary {
   readonly updatedAt: string;
   readonly latestVersion: number | null;
   readonly latestAsOf: string | null;
+  /** REASON TO RETURN R1 — absent from a backend that predates followed-question checks. */
+  readonly latestCheck?: AskV2FollowedCheckSummary | null;
+  readonly lastSuccessfulCheckAt?: string | null;
+}
+
+/* ════ REASON TO RETURN R1 · §8 — followed-question checks (backend followed-change.ts) ════ */
+export type AskV2FollowedOutcome =
+  | 'INCOMPLETE_CHECK'
+  | 'INSUFFICIENT_BASELINE'
+  | 'POSSIBLE_CORRECTION'
+  | 'MATERIAL_CHANGE'
+  | 'NEW_EVIDENCE'
+  | 'UNCHANGED'
+  | 'NO_RELEVANT_UPDATE';
+export interface AskV2FollowedCheckSummary {
+  readonly outcome: AskV2FollowedOutcome;
+  readonly checkedAt: string;
+  readonly resultingVersion: number | null;
+  readonly newEvidenceCount: number;
+  readonly possibleCorrectionCount: number;
+  readonly supportedChangeCount: number;
+  readonly partial: boolean;
+}
+export interface AskV2ChangedEvidence {
+  readonly id: string;
+  readonly url: string;
+  readonly title: string;
+  readonly publisher: string;
+  readonly publishedAt: string | null;
+}
+export interface AskV2FollowedAssessment {
+  readonly schema: 'followed-assessment/1';
+  readonly outcome: AskV2FollowedOutcome;
+  readonly reasons: readonly string[];
+  readonly baselineVersion: number | null;
+  readonly baselineAsOf: string | null;
+  readonly checkedAsOf: string | null;
+  readonly newEvidence: readonly AskV2ChangedEvidence[];
+  readonly earlierReportingFoundNow: readonly AskV2ChangedEvidence[];
+  readonly possibleCorrections: readonly AskV2ChangedEvidence[];
+  readonly supportedChanges: readonly {
+    readonly claim: string;
+    readonly sourceArticleIds: readonly string[];
+  }[];
+  readonly carriedOverCount: number;
+  readonly notSeenThisCheckCount: number;
+  readonly unassessedSources: readonly string[];
+  readonly expiredNotices: 'NOT_ASSESSED';
+}
+export interface AskV2FollowedCheck {
+  readonly id: string;
+  readonly turnId: string;
+  readonly outcome: AskV2FollowedOutcome;
+  readonly assessment: AskV2FollowedAssessment;
+  readonly baselineVersion: number | null;
+  readonly resultingVersion: number | null;
+  readonly checkedAt: string;
+  readonly aiExecuted: false;
 }
 export interface AskV2BriefingUpdate {
   readonly kind: 'STORY_MATERIAL_UPDATE';
@@ -444,6 +502,8 @@ export interface AskV2BriefingDetail {
     readonly createdAt: string;
   }[];
   readonly update: AskV2BriefingUpdate | null;
+  /** REASON TO RETURN R1 — newest first; absent from an older backend. */
+  readonly checks?: readonly AskV2FollowedCheck[];
 }
 export interface AskV2BriefingEvidenceRef {
   readonly id: string;
@@ -555,7 +615,7 @@ const GUEST_UNAVAILABLE_ON_404: readonly string[] = [
 
 async function call<T>(
   path: string,
-  method: 'GET' | 'POST' | 'DELETE',
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
   body?: unknown,
   headers?: Readonly<Record<string, string>>,
 ): Promise<AskV2Outcome<T>> {
@@ -568,6 +628,10 @@ async function call<T>(
   } catch {
     return { ok: false, reason: 'NETWORK' };
   }
+  /* a search (`?q=`) on a collection is still that collection */
+  const collection = path.split('?')[0];
+  if (response.status === 404 && method === 'GET' && UNAVAILABLE_ON_404.includes(collection))
+    return { ok: false, reason: 'UNAVAILABLE', status: 404 };
   if (response.status === 404 && UNAVAILABLE_ON_404.includes(path))
     return { ok: false, reason: 'UNAVAILABLE', status: 404 };
   if (response.status === 404 && GUEST_UNAVAILABLE_ON_404.includes(path))
@@ -640,8 +704,19 @@ export const askV2Api = {
    * Signed out is `SIGNED_OUT` and Ask V2 off is `UNAVAILABLE`; neither is an
    * empty list, because an empty list would say "you have no conversations".
    */
-  threads() {
-    return call<readonly AskV2RecentThread[]>('/ask-v2/threads', 'GET');
+  threads(search?: string) {
+    const q = search?.trim() ?? '';
+    return call<readonly AskV2RecentThread[]>(
+      q === '' ? '/ask-v2/threads' : `/ask-v2/threads?q=${encodeURIComponent(q.slice(0, 200))}`,
+      'GET',
+    );
+  },
+  /** REASON TO RETURN R1 · G7 — delete one of the reader's own conversations (CSRF). */
+  deleteThread(threadId: string) {
+    return call<{ readonly id: string; readonly removed: boolean }>(
+      `/ask-v2/threads/${encodeURIComponent(threadId)}`,
+      'DELETE',
+    );
   },
   /** Saved -> Questions. A read of the bookmark relation joined to its turns. */
   bookmarks() {
@@ -680,6 +755,25 @@ export const askV2Api = {
     return call<AskV2BriefingVersion>(
       `/ask-v2/briefings/${encodeURIComponent(id)}/versions/${encodeURIComponent(String(version))}`,
       'GET',
+    );
+  },
+  /** REASON TO RETURN R1 · §8 — record a manual check: the turn already ran; 0 AI here. */
+  recordFollowedCheck(briefingId: string, turnId: string) {
+    return call<AskV2FollowedCheck>(
+      `/ask-v2/briefings/${encodeURIComponent(briefingId)}/checks`,
+      'POST',
+      { turnId },
+    );
+  },
+  /** REASON TO RETURN R1 · G8 — rename, pause/resume, or edit the followed question. */
+  updateBriefing(
+    id: string,
+    change: { readonly title?: string; readonly status?: 'ACTIVE' | 'PAUSED'; readonly question?: string },
+  ) {
+    return call<{ readonly id: string; readonly title: string; readonly status: string }>(
+      `/ask-v2/briefings/${encodeURIComponent(id)}`,
+      'PATCH',
+      change,
     );
   },
   deleteBriefing(id: string) {

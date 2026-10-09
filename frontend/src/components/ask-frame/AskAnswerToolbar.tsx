@@ -7,6 +7,7 @@ import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 import { AskTurnCopy } from './AskTurnCopy';
 import { AskTurnSave } from './AskTurnSave';
 import { AskTurnBrief } from './AskTurnBrief';
+import { AskTurnFollow } from './AskTurnFollow';
 import { useAskSourcesPanel } from './AskSourcesPanel';
 import styles from './askDashboard.module.css';
 
@@ -160,6 +161,8 @@ export function AskAnswerToolbar({
         )}
         {/* STANDALONE PUBLIC BETA CONVERGENCE R1 — the reader's Save / Saved (0 AI). */}
         {canSave && <AskTurnSave operation={turn.operation} locale={locale} />}
+        {/* REASON TO RETURN R1 · §8 — follow this question (My updates); server-gated, 0 AI. */}
+        {canSave && <AskTurnFollow operation={turn.operation} question={turn.question} locale={locale} />}
         {openSources !== null && sources.length > 0 && (
           <button
             type="button"

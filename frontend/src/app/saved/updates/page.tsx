@@ -1,6 +1,5 @@
 import { askLanguageDisposition } from '@/lib/ask/askLocale';
 import { ASK_PRODUCT_NAME } from '@/lib/ask/askBrand';
-import { askDirectionProps } from '@/lib/ask/askDirection';
 import { cookies } from 'next/headers';
 import type { Metadata, Viewport } from 'next';
 import { AskNavProvider, AskNavShell } from '@/components/ask-nav/AskNavShell';
@@ -8,21 +7,20 @@ import { AskThemedSurface } from '@/components/ask-nav/AskThemedSurface';
 import { THEME_COOKIE_NAME } from '@/lib/theme/theme';
 import { askThemeColor, parseAskThemePreference } from '@/lib/ask/askTheme';
 import { AskContinuityHeader } from '@/components/ask-nav/AskContinuityHeader';
-import { BriefingDetailClient } from '@/components/ask/BriefingDetailClient';
+import { AskClearedBoundary } from '@/components/ask-nav/AskClearedBoundary';
+import { MyUpdatesClient } from '@/components/ask/MyUpdatesClient';
 import { surfaceLocale } from '@/lib/i18n/displayLocale.server';
 
 /**
- * R2 · D1 — `/saved/briefing?id=…&v=…`: one of the reader's briefings, a stored version at a time.
- * A query, not a dynamic segment: the app has none by design (N5, seoFoundation.spec).
+ * REASON TO RETURN R1 · §8 — `/saved/updates`: My updates, the reader's followed questions.
  *
- * NOINDEX and signed-in only (the server answers 401 / 404, and the page reports it). Same
- * standalone shell and theme as `/saved`. REASON TO RETURN R1 (PO contract 2026-10-09): in the
- * Standalone allowlist as a followed question's saved answers; the capability itself stays off
- * wherever ASK_BRIEFINGS_ENABLED is not 'true' (the page then reports "not available").
+ * Grouped by followed question only (no regional feed, no unsolicited items). NOINDEX and
+ * signed-in only: the server answers 401 / 404 (ASK_BRIEFINGS_ENABLED off) and the page reports
+ * it. Same standalone shell, theme and governed `saved` locale surface as `/saved`.
  */
 export const metadata: Metadata = {
   /* R4 · CTO brand ruling — one canonical product name, never an authored variant */
-  title: `Briefing — ${ASK_PRODUCT_NAME}`,
+  title: `My updates — ${ASK_PRODUCT_NAME}`,
   robots: { index: false, follow: false },
 };
 
@@ -32,11 +30,7 @@ export function generateViewport(): Viewport {
   return { themeColor: askThemeColor(parseAskThemePreference(cookies().get(THEME_COOKIE_NAME)?.value)) };
 }
 
-export default function BriefingPage({
-  searchParams,
-}: {
-  readonly searchParams: { readonly id?: string; readonly v?: string };
-}): JSX.Element {
+export default function MyUpdatesPage(): JSX.Element {
   /* R4 · SEVEN-LANGUAGE ASK FRONTEND — the reader's own locale, resolved once and not clamped.
      This line was `=== 'pl' ? 'pl' : 'en'`; see lib/ask/askLocale.ts for the one declared
      boundary between the seven-locale interface and the two-locale answer engine. */
@@ -47,22 +41,15 @@ export default function BriefingPage({
      catalogues (`askNavStrings` / `askContinuityStrings`); the Ask frame renders in the
      reader's locale. Reading both from one disposition is what stops them drifting. */
   const chrome = askLanguageDisposition(locale).catalogueLocale;
-  const v = Number(searchParams.v);
-  const requestedVersion = Number.isInteger(v) && v >= 1 ? v : null;
 
   return (
     <AskThemedSurface theme={parseAskThemePreference(cookies().get(THEME_COOKIE_NAME)?.value)}>
       <AskNavProvider>
         <AskNavShell language={chrome} selected={locale} />
         <AskContinuityHeader locale={chrome} surface="saved" />
-        {/* R4 · the detail is outside the nav shell's direction scope: Arabic laid it out LTR */}
-        <div className="contents" {...askDirectionProps(locale)}>
-          <BriefingDetailClient
-            id={typeof searchParams.id === 'string' ? searchParams.id : ''}
-            requestedVersion={requestedVersion}
-            locale={locale}
-          />
-        </div>
+        <AskClearedBoundary>
+          <MyUpdatesClient locale={chrome} />
+        </AskClearedBoundary>
       </AskNavProvider>
     </AskThemedSurface>
   );

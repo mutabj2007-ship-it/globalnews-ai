@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { NavBar } from '@/components/navigation/NavBar';
 import { Footer } from '@/components/layout/Footer';
 import { DeleteAccountDangerZone } from '@/components/account/DeleteAccountDangerZone';
+import { DisplayNameEditor } from '@/components/account/DisplayNameEditor';
 import { useAccount } from '@/lib/hooks/useAccount';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import type { DisplayLocale, LanguageCode } from '@globalnews-ai/shared';
@@ -40,7 +41,7 @@ export function AccountSettingsBody({
   /** 'platform' renders NavBar + Footer exactly as before; 'standalone' the body only. */
   readonly chrome: 'platform' | 'standalone';
 }): JSX.Element {
-  const { user, isLoading, deleteAccount } = useAccount();
+  const { user, isLoading, deleteAccount, updateDisplayName } = useAccount();
   /*
     Deleting clears the session, so `user` becomes null and the signed-in
     branch below unmounts in the same render. Without this the caller's last
@@ -85,6 +86,14 @@ export function AccountSettingsBody({
               <span className="block">{dictionary.navBar.signedInAs}</span>
               <span className="block font-medium text-ink-primary">{user.email}</span>
             </p>
+
+            {/* REASON TO RETURN R1 · G6 — the name Ask may use: the reader's own, or none */}
+            <DisplayNameEditor
+              key={user.id}
+              current={user.displayName}
+              locale={locale ?? language}
+              onSave={updateDisplayName}
+            />
 
             <DeleteAccountDangerZone
               email={user.email}

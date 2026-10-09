@@ -20,6 +20,7 @@ import {
   isPlainClick,
 } from '@/lib/ask/askCleanNavigation';
 import { useAccount } from '@/lib/hooks/useAccount';
+import { addressableName } from '@globalnews-ai/shared';
 import { persistLanguageSelection, displayLocaleOf } from '@/lib/i18n/languages';
 import { LanguageSelector } from '@/components/search/LanguageSelector';
 import { ThemeControl, ThemeScopeContext } from '@/components/platform/ThemeControl';
@@ -150,6 +151,13 @@ interface AskNavState {
    */
   readonly account: AskNavAccount;
   readonly setAccount: (next: AskNavAccount) => void;
+  /**
+   * REASON TO RETURN R1 · G6 — the name Ask may address the reader by: ONLY the name the reader
+   * saved (passed through the shared rule), from the same one session read. Null whenever no
+   * one is signed in, so a guest can never inherit a signed-in name; null when none was saved.
+   */
+  readonly displayName: string | null;
+  readonly setDisplayName: (next: string | null) => void;
   /** ASK DESIGN COMPLETENESS R1 — the conversation on screen, marked current in the drawer. */
   readonly threadId: string | null;
   readonly setThreadId: (next: string | null) => void;
@@ -177,6 +185,7 @@ export function AskNavProvider({ children }: { readonly children: React.ReactNod
   const [open, setOpen] = useState(false);
   const [cleared, setCleared] = useState(false);
   const [account, setAccount] = useState<AskNavAccount>('pending');
+  const [displayName, setDisplayName] = useState<string | null>(null);
   const [threadId, setThreadId] = useState<string | null>(null);
   const clear = useCallback(() => {
     setOpen(false);
@@ -209,12 +218,14 @@ export function AskNavProvider({ children }: { readonly children: React.ReactNod
       clear,
       account,
       setAccount,
+      displayName,
+      setDisplayName,
       threadId,
       setThreadId,
       registerNewQuestion,
       runNewQuestion,
     }),
-    [open, cleared, clearAndGo, clear, account, threadId, registerNewQuestion, runNewQuestion],
+    [open, cleared, clearAndGo, clear, account, displayName, threadId, registerNewQuestion, runNewQuestion],
   );
   return <AskNavContext.Provider value={value}>{children}</AskNavContext.Provider>;
 }
@@ -296,7 +307,8 @@ export function AskNavShell({
   readonly surface?: 'reading';
 }): JSX.Element {
   const reading = surface === 'reading';
-  const { open, setOpen, clearAndGo, clear, setAccount, threadId, runNewQuestion } = useAskNav();
+  const { open, setOpen, clearAndGo, clear, setAccount, setDisplayName, threadId, runNewQuestion } =
+    useAskNav();
   /* TRUST R1 — the page passes its server-read theme, or the nearest theme scope supplies it. */
   const scopeTheme = useContext(ThemeScopeContext);
   const controlTheme = theme ?? scopeTheme ?? undefined;
@@ -307,7 +319,9 @@ export function AskNavShell({
   /* ASK DESIGN COMPLETENESS R1 — publish what the one session read found (no second read). */
   useEffect(() => {
     setAccount(isLoading ? 'pending' : user === null ? 'signed-out' : 'signed-in');
-  }, [isLoading, user, setAccount]);
+    /* REASON TO RETURN R1 · G6 — the reader's own saved name only; null for a guest */
+    setDisplayName(user === null ? null : addressableName(user.displayName));
+  }, [isLoading, user, setAccount, setDisplayName]);
   const [accountOpen, setAccountOpen] = useState(false);
   const accountRef = useRef<HTMLDivElement | null>(null);
   const drawerRef = useRef<HTMLDivElement | null>(null);

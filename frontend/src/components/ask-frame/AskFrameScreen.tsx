@@ -34,6 +34,8 @@ import { AskWorkingStatus } from './AskWorkingStatus';
 import { AskEmblem, AskEmblemMark, AskWordmark } from './AskEmblem';
 import { ASK_SIDE_PANEL_QUERY, AskSourcesPanelProvider } from './AskSourcesPanel';
 import { AskR2TurnView } from './AskR2TurnView';
+import { AskFollowCheck } from './AskFollowCheck';
+import { followStrings } from '@/lib/ask/followStrings';
 import { AskConversations } from './AskConversations';
 import { AskToastProvider, AskToastSlot } from './AskToast';
 import { useAskNavOptional } from '@/components/ask-nav/AskNavShell';
@@ -199,6 +201,8 @@ export function AskFrameScreen({
   };
   const notice = r2.guestNotice !== null ? (noticeText[r2.guestNotice] ?? null) : null;
   const operationId = params.get('operation');
+  /* REASON TO RETURN R1 · §8 — a followed question's "Check for changes" arrival (an id only) */
+  const followId = params.get('follow');
   const [opened, setOpened] = useState<AskR2Turn | null>(null);
   /* CTO P0 · DEFECT F — the reopened conversation's earlier turns (display-only). */
   const [openedEarlier, setOpenedEarlier] = useState<AskR2Turn[]>([]);
@@ -285,7 +289,7 @@ export function AskFrameScreen({
   */
   useEffect(() => {
     const url = new URLSearchParams(window.location.search);
-    if (url.has('q') || url.has('operation')) return;
+    if (url.has('q') || url.has('operation') || url.has('follow')) return;
     const kept = readKeptQuestion();
     if (kept !== null) setQuestion(kept);
   }, []);
@@ -732,6 +736,12 @@ export function AskFrameScreen({
                     sits under the centred composer instead (Design F2), drawn in the composer bar. */}
                 <div data-ask-welcome="" className={styles.welcomeCollapsible}>
                   <div className={styles.welcomeTitleGroup}>
+                    {/* REASON TO RETURN R1 · G6 — only a name the reader saved; otherwise nothing */}
+                    {!guestMode && nav?.displayName != null && (
+                      <p data-ask="welcome-greeting" className={styles.emptyLead}>
+                        {followStrings(interfaceLocale).greeting(nav.displayName)}
+                      </p>
+                    )}
                     <h1 className={styles.emptyTitle}>{sevenStrings.composerHint}</h1>
                     <p data-ask="welcome-support" className={styles.emptyLead}>
                       {r2s.read.welcomeSupport}
@@ -882,6 +892,14 @@ export function AskFrameScreen({
                   </p>
                 )}
               </div>
+            )}
+            {followId !== null && !guestMode && (
+              <AskFollowCheck
+                followId={followId}
+                turns={r2.turns}
+                locale={interfaceLocale}
+                onDraft={setQuestion}
+              />
             )}
             {guestExhausted && (
               /*
