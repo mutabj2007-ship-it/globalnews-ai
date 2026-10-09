@@ -145,6 +145,8 @@ describe('C-1 · the entry state, and nothing outside it', () => {
         selector.includes("[data-ask-entry='true']") ||
         selector.startsWith('.entry') ||
         selector.startsWith('.exampleEnter') ||
+        /* R1-C's overlay geometry: scoped to the example itself, not to the workspace. */
+        selector.startsWith('.composerExample') ||
         selector.startsWith('from') ||
         selector.startsWith('to');
       expect({ selector, scoped }).toEqual({ selector, scoped: true });
@@ -217,7 +219,16 @@ describe('C-3 · the example lives inside the composer', () => {
      visible GUIDANCE ONLY — plain text, not clickable, not focusable; it never fills, submits, navigates or
      steals focus. This supersedes the earlier C-3/C-4/C-6/C-10 'tap the example to fill' contract. */
     const html = render({ example: example('en') });
-    expect(html).toMatch(/data-ask="composer-example-layer"[^>]*class="[^"]*pointer-events-none/);
+    /*
+      SUPERSEDED BY PRODUCT OWNER / CLAUDE DESIGN R3 §11 (R1-C), CTO 9 Oct 2026. The assertion
+      read the overlay's Tailwind utility classes. R1-C specifies the overlay's geometry exactly
+      ("inline-start 19 px, inline-end 54 px to clear Send", `top: 1px; height: 50px`,
+      `white-space: nowrap; text-overflow: ellipsis`), so those values moved into the stylesheet
+      as `.composerExampleLayer` / `.composerExampleText`. The GUARANTEE is unchanged and is
+      asserted where it now lives.
+    */
+    expect(html).toMatch(/data-ask="composer-example-layer"[^>]*class="[^"]*composerExampleLayer/);
+    expect(rule('.composerExampleLayer')).toMatch(/pointer-events: none/);
     expect(html).not.toMatch(/data-ask="composer-example"[^>]*class="[^"]*pointer-events-auto/);
   });
 
@@ -231,9 +242,16 @@ describe('C-3 · the example lives inside the composer', () => {
       constant rather than against a second literal, so the stylesheet and `EXAMPLE_ROTATION`
       cannot drift apart — which is the whole reason the contract put timing in one place.
     */
-    expect(rule('.exampleEnter')).toContain(`animation: exampleEnter ${EXAMPLE_ROTATION.fadeMs}ms`);
+    /*
+      SUPERSEDED BY PRODUCT OWNER / CLAUDE DESIGN R3 §11 (R1-C), CTO 9 Oct 2026. R1-C: "Only
+      opacity animates", and the sequence is a CROSS-FADE ("1→0 over 400 ms ease-in → swap text
+      → 0→1 over 400 ms ease-out"), which a keyframe ENTER animation cannot express because the
+      text changes half way through. The keyframes and the six-pixel rise are withdrawn; the
+      approved mechanism is a transition on one persistent element's opacity.
+    */
+    expect(rule('.exampleEnter')).toContain(`transition: opacity ${EXAMPLE_ROTATION.fadeMs}ms ease-out`);
     expect(css).toMatch(
-      /@media \(prefers-reduced-motion: reduce\) \{\s*\.exampleEnter \{\s*animation: none;/,
+      /@media \(prefers-reduced-motion: reduce\) \{\s*\.exampleEnter \{\s*transition: none;/,
     );
     /*
       SUPERSEDED BY PRODUCT OWNER DIRECTIVE 9 Oct 2026 / CLAUDE DESIGN R3 §11 · this asserted
@@ -256,11 +274,19 @@ describe('C-3 · the example lives inside the composer', () => {
     );
   });
 
-  it('fades and rises only — no typewriter, no bounce, no horizontal travel', () => {
-    const keyframes = css.split('@keyframes exampleEnter')[1].split('\n}')[0];
-    expect(keyframes).toMatch(/opacity: 0;/);
-    expect(keyframes).toMatch(/transform: translateY\(6px\);/);
-    expect(keyframes).not.toMatch(/translateX|scale|width:|steps\(/);
+  it('fades ONLY — no rise, no typewriter, no bounce, no horizontal travel', () => {
+    /*
+      SUPERSEDED BY PRODUCT OWNER / CLAUDE DESIGN R3 §11 (R1-C), CTO 9 Oct 2026. R1-C: "Only
+      opacity animates", and the sequence is a CROSS-FADE ("1→0 over 400 ms ease-in → swap text
+      → 0→1 over 400 ms ease-out"), which a keyframe ENTER animation cannot express because the
+      text changes half way through. The keyframes and the six-pixel rise are withdrawn; the
+      approved mechanism is a transition on one persistent element's opacity.
+    */
+    const block = css.slice(css.indexOf('.exampleEnter'), css.indexOf('.composerExampleLayer'));
+    expect(block).toMatch(/transition: opacity 400ms ease-out/);
+    expect(block).toMatch(/opacity: 0;/);
+    expect(block).not.toMatch(/transform|translateY|translateX|scale|steps\(/);
+    expect(css).not.toMatch(/@keyframes exampleEnter/);
   });
 });
 
@@ -550,13 +576,31 @@ describe('C-7 · seven languages and Arabic RTL', () => {
   });
 
   it('the rotating transition cannot break RTL: it moves only on the vertical axis', () => {
-    const keyframes = css.split('@keyframes exampleEnter')[1].split('\n}')[0];
-    expect(keyframes).not.toMatch(/translateX|left:|right:|margin-left|margin-right/);
+    /*
+      SUPERSEDED BY PRODUCT OWNER / CLAUDE DESIGN R3 §11 (R1-C), CTO 9 Oct 2026. R1-C: "Only
+      opacity animates", and the sequence is a CROSS-FADE ("1→0 over 400 ms ease-in → swap text
+      → 0→1 over 400 ms ease-out"), which a keyframe ENTER animation cannot express because the
+      text changes half way through. The keyframes and the six-pixel rise are withdrawn; the
+      approved mechanism is a transition on one persistent element's opacity.
+    */
+    const block = css.slice(css.indexOf('.exampleEnter'), css.indexOf('.composerExampleText'));
+    expect(block).not.toMatch(/translateX|left:|right:|margin-left|margin-right/);
+    /* And the overlay's own insets are LOGICAL, so RTL mirrors with no second rule. */
+    expect(rule('.composerExampleLayer')).toMatch(/inset-inline-start: 19px/);
+    expect(rule('.composerExampleLayer')).toMatch(/inset-inline-end: 54px/);
   });
 
   it('aligns the example to the reading start, not to the left', () => {
     const html = render({ example: example('ar') });
-    expect(html).toMatch(/data-ask="composer-example"[^>]*class="[^"]*text-start/);
+    /*
+      SUPERSEDED BY PRODUCT OWNER / CLAUDE DESIGN R3 §11 (R1-C), CTO 9 Oct 2026. The assertion
+      read the overlay's Tailwind utility classes. R1-C specifies the overlay's geometry exactly
+      ("inline-start 19 px, inline-end 54 px to clear Send", `top: 1px; height: 50px`,
+      `white-space: nowrap; text-overflow: ellipsis`), so those values moved into the stylesheet
+      as `.composerExampleLayer` / `.composerExampleText`. The GUARANTEE is unchanged and is
+      asserted where it now lives.
+    */
+    expect(rule('.composerExampleText')).toMatch(/text-align: start/);
     expect(html).not.toMatch(/data-ask="composer-example"[^>]*class="[^"]*text-left/);
   });
 
@@ -597,8 +641,17 @@ describe('C-8 · responsive widths', () => {
 
   it('the example cannot overflow its field at any width', () => {
     const html = render({ example: example('en') });
-    expect(html).toMatch(/data-ask="composer-example"[^>]*class="[^"]*max-w-full/);
-    expect(html).toMatch(/data-ask="composer-example"[^>]*class="[^"]*truncate/);
+    /*
+      SUPERSEDED BY PRODUCT OWNER / CLAUDE DESIGN R3 §11 (R1-C), CTO 9 Oct 2026. The assertion
+      read the overlay's Tailwind utility classes. R1-C specifies the overlay's geometry exactly
+      ("inline-start 19 px, inline-end 54 px to clear Send", `top: 1px; height: 50px`,
+      `white-space: nowrap; text-overflow: ellipsis`), so those values moved into the stylesheet
+      as `.composerExampleLayer` / `.composerExampleText`. The GUARANTEE is unchanged and is
+      asserted where it now lives.
+    */
+    expect(rule('.composerExampleText')).toMatch(/max-width: 100%/);
+    expect(rule('.composerExampleText')).toMatch(/text-overflow: ellipsis/);
+    expect(rule('.composerExampleText')).toMatch(/white-space: nowrap/);
   });
 });
 
@@ -609,7 +662,15 @@ describe('C-9 · themes', () => {
        so the identity this test protects holds in light as well as dark. */
     const placeholderInk = /placeholder:text-\[var\(--ask-read-ink3,#6f89a8\)\]/;
     expect(parts).toMatch(placeholderInk);
-    expect(html).toMatch(/data-ask="composer-example"[^>]*class="[^"]*text-\[var\(--ask-read-ink3,#6f89a8\)\]/);
+    /*
+      SUPERSEDED BY PRODUCT OWNER / CLAUDE DESIGN R3 §11 (R1-C), CTO 9 Oct 2026. The assertion
+      read the overlay's Tailwind utility classes. R1-C specifies the overlay's geometry exactly
+      ("inline-start 19 px, inline-end 54 px to clear Send", `top: 1px; height: 50px`,
+      `white-space: nowrap; text-overflow: ellipsis`), so those values moved into the stylesheet
+      as `.composerExampleLayer` / `.composerExampleText`. The GUARANTEE is unchanged and is
+      asserted where it now lives.
+    */
+    expect(rule('.composerExampleText')).toMatch(/color: var\(--ask-read-ink3, #6f89a8\)/);
   });
 
   it('the entry chrome uses the themed tokens that retarget in Light', () => {

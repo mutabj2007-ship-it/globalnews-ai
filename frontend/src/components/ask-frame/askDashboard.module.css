@@ -357,25 +357,75 @@
   reduced motion, AND the media query below removes the animation even if some other caller
   applies the class. A motion preference should not depend on one component remembering.
 */
+/*
+  SUPERSEDED BY PRODUCT OWNER / CLAUDE DESIGN R3 §11 (R1-C), CTO 9 Oct 2026.
+
+  This was a keyframe ENTER animation that faded in AND rose six pixels:
+    `animation: exampleEnter 400ms cubic-bezier(.22,.61,.36,1) both` over
+    `from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none }`.
+  Both halves are withdrawn. R1-C specifies "Only opacity animates", and the vertical rise was
+  never approved. It also specifies a CROSS-FADE, not an enter: "hold 5,200 ms → opacity 1→0
+  over 400 ms ease-in → swap text → 0→1 over 400 ms ease-out", which an enter-only animation
+  cannot express because the swap happens half way through.
+
+  The approved mechanism is the package's own: a transition on ONE persistent element's opacity,
+  with the easing switching direction (`opacity:{{ rotorO }}; transition:opacity 400ms
+  {{ rotorEase }}`). `.exampleEnter` is kept as the class the frame passes so the motion decision
+  still belongs to the frame, but it now only grants the transition.
+*/
 .exampleEnter {
-  /* CLAUDE DESIGN R3 §11 (R1-C) · was 420ms. This figure is tied to
-     EXAMPLE_ROTATION.fadeMs by askCenteredComposer.spec.ts, so the two cannot drift. */
-  animation: exampleEnter 400ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  transition: opacity 400ms ease-out;
 }
-@keyframes exampleEnter {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+.exampleEnter[data-ask-example-fading='true'] {
+  opacity: 0;
+  transition: opacity 400ms ease-in;
 }
 @media (prefers-reduced-motion: reduce) {
   .exampleEnter {
-    animation: none;
+    transition: none;
   }
+}
+
+/*
+  R1-C · the overlay, at Claude Design's own values: "inset-inline-start 19 px, inset-inline-end
+  54 px to clear Send", `top: 1px; height: 50px`, centred, inert to pointers. Logical insets, so
+  RTL mirrors with no second rule.
+*/
+.composerExampleLayer {
+  position: absolute;
+  inset-inline-start: 19px;
+  inset-inline-end: 54px;
+  top: 1px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+/*
+  "same font as the input, --ink-3", and a single line that ellipsizes rather than wrapping.
+
+  DECLARED CONFLICT, resolved in favour of the released product and reported, not substituted:
+  R1-C names `--ink-3`, which in Claude Design's dark tokens is #7D89A1 (`--ad-ink-3` here). The
+  Ask reading surface's RELEASED placeholder ink is `--ask-read-ink3` #6F89A8, and the composer's
+  own `placeholder:` colour is exactly that. Using Design's literal token would make the rotating
+  example a DIFFERENT colour from the static placeholder it hands over to the instant the reader
+  focuses the field — a visible flicker, and a break of the accepted Ask Reading Experience R1
+  invariant that the example is drawn in exactly the released placeholder ink so it cannot differ
+  between themes. The released ink is kept; the discrepancy is listed for Claude Design.
+*/
+.composerExampleText {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  user-select: none;
+  text-align: start;
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--ask-read-ink3, #6f89a8);
+  opacity: 1;
 }
 
 /* Phone ONLY: the composer stays near the thumb and the software keyboard, so the group is

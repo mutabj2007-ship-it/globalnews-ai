@@ -32,6 +32,12 @@ export interface RotatingExample {
   readonly visible: boolean;
   /** True only when a soft transition should run: a change happened AND motion is allowed. */
   readonly animate: boolean;
+  /**
+   * R1-C · true for the 400 ms the current example is fading OUT, before the text swaps. The
+   * view holds ONE element and transitions its opacity; it must not remount on the swap, or the
+   * fade back in would have nothing to transition from.
+   */
+  readonly fading: boolean;
   /** Bumped on every change so the view can key its transition. */
   readonly generation: number;
   readonly onFocus: () => void;
@@ -129,19 +135,27 @@ export function useRotatingExample({
     deadline and sleep exactly that long: ~1 wake per example instead of ~16, and nothing
     pending when there is nothing to do.
   */
+  /*
+    R1-C has TWO deadlines per cycle, not one: the hold expiring (fade out begins) and the fade
+    completing (text swaps, fade in begins). The driver still sleeps exactly until the next one.
+  */
   const deadline =
     state.phase === 'ROTATING'
-      ? state.shownAt + EXAMPLE_ROTATION.dwellMs
+      ? state.fading
+        ? (state.fadeAt ?? 0) + EXAMPLE_ROTATION.fadeMs
+        : state.shownAt + EXAMPLE_ROTATION.dwellMs
       : state.phase === 'RESUMING'
         ? (state.resumeAt ?? null)
         : null;
 
   useEffect(() => {
     if (!enabled || deadline === null) return;
-    const wait = Math.max(EXAMPLE_ROTATION.tickMs, deadline - Date.now());
+    /* The fade half is shorter than one tick, so it sets its own floor. */
+    const floor = state.fading ? 0 : EXAMPLE_ROTATION.tickMs;
+    const wait = Math.max(floor, deadline - Date.now());
     const timer = window.setTimeout(() => dispatch({ type: 'TICK', now: Date.now() }), wait);
     return () => window.clearTimeout(timer);
-  }, [enabled, deadline]);
+  }, [enabled, deadline, state.fading]);
 
   /*
     R1-C — THE HIDDEN TAB, and the overlay the caller declares.
@@ -193,6 +207,7 @@ export function useRotatingExample({
     visible,
     /* Nothing visible is ever un-animated now: under reduced motion nothing is visible. */
     animate: visible,
+    fading: visible && state.fading,
     generation: generation.current,
     onFocus,
     onBlur,

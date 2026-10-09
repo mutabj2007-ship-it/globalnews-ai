@@ -86,6 +86,15 @@ export interface RotationState {
   readonly resumeAt: number | null;
   /** Set for one transition so the view can run its fade; never read as state. */
   readonly changed: boolean;
+  /**
+   * R1-C · the approved sequence is "hold 5,200 ms → opacity 1→0 over 400 ms ease-in → swap
+   * text → 0→1 over 400 ms ease-out. Cycle ≈ 6.0 s." The swap therefore happens in the MIDDLE
+   * of a transition, not at its start, so the machine has to own the half-way point: `fading`
+   * is true for the 400 ms before the text changes and false the instant it does.
+   */
+  readonly fading: boolean;
+  /** When the current fade-out began. Null whenever `fading` is false. */
+  readonly fadeAt: number | null;
 }
 
 export type RotationEvent =
@@ -112,6 +121,8 @@ export function initialRotationState(now = 0): RotationState {
     shownAt: now,
     resumeAt: null,
     changed: false,
+    fading: false,
+    fadeAt: null,
   };
 }
 
@@ -126,7 +137,9 @@ export function initialRotationState(now = 0): RotationState {
  *   · emptying the field resumes only after the quiet delay (section 8);
  *   · taking an example stops rotation and hands the text to the composer (section 9);
  *   · R1-C: it does not advance while the reader cannot see it, and the dwell restarts rather
- *     than expiring in the instant they come back.
+ *     than expiring in the instant they come back;
+ *   · R1-C: the text swaps HALF WAY through the transition — 400 ms out, swap, 400 ms in — and
+ *     any interruption cancels the fade rather than letting the swap land behind it.
  */
 export function rotationReducer(
   state: RotationState,
@@ -134,9 +147,17 @@ export function rotationReducer(
   queueLength: number,
   timing: RotationTiming = EXAMPLE_ROTATION,
 ): RotationState {
+  /*
+    Any event that moves the machine cancels a fade in progress: a reader who focuses, types or
+    leaves the tab half-way through a 400 ms cross-fade must not be left looking at a half-faded
+    example, and must never see the swap land afterwards. Callers that WANT a fade say so
+    explicitly after the spread.
+  */
   const still = (next: Partial<RotationState>): RotationState => ({
     ...state,
     changed: false,
+    fading: false,
+    fadeAt: null,
     ...next,
   });
 
@@ -213,15 +234,31 @@ export function rotationReducer(
       }
       if (state.phase !== 'ROTATING') return still({});
       if (queueLength <= 1) return still({});
+      /*
+        R1-C's two halves. FIRST the hold expires and the current example fades OUT; only when
+        that fade has run its 400 ms does the text swap and fade back IN.
+      */
+      if (state.fading) {
+        if (state.fadeAt === null || event.now - state.fadeAt < timing.fadeMs) return still({ fading: true, fadeAt: state.fadeAt });
+        return {
+          ...state,
+          cursor: (state.cursor + 1) % queueLength,
+          visible: true,
+          /*
+            The hold is measured from the moment the NEW example is fully visible, which is one
+            fade-in after the swap. That is what makes the cycle 5,200 + 400 + 400 ≈ 6.0 s rather
+            than 5,600 ms. `shownAt` is never rendered, so a timestamp slightly in the future is
+            a scheduling value, not a claim about the clock.
+          */
+          shownAt: event.now + timing.fadeMs,
+          resumeAt: null,
+          changed: true,
+          fading: false,
+          fadeAt: null,
+        };
+      }
       if (event.now - state.shownAt < timing.dwellMs) return still({});
-      return {
-        ...state,
-        cursor: (state.cursor + 1) % queueLength,
-        visible: true,
-        shownAt: event.now,
-        resumeAt: null,
-        changed: true,
-      };
+      return still({ fading: true, fadeAt: event.now });
     }
   }
 }

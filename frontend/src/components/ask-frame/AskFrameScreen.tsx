@@ -274,18 +274,18 @@ export function AskFrameScreen({
     R3 had removed the in-field example (its superseded reasoning is recorded at the `Composer`
     call site). R1-C puts it back, inside the composer, on a 5.2 s hold with 400 ms fades.
 
-    `suspended` is R1-C's overlay rule. Both expressions below are real reader-interrupting
-    states, and both are currently UNREACHABLE while `entryState` is true, because
-    `hasQuestion` already includes `r2.signInRequired !== null` (see its definition above) and
-    `deepQuote` requires a submitted turn. It is wired as a guard, not as a live path: if a
-    later lane makes an overlay reachable in the entry state, the example freezes instead of
-    rotating behind it. Verified at db95d4e: no entry-state overlay exists today.
+    `suspended` is R1-C's rule that rotation "Runs only when ALL are true: … no sheet/drawer/
+    dialog open". `nav.open` is the conversations DRAWER, which IS reachable from the entry
+    screen and is the live path here. The other two are guards: `hasQuestion` already includes
+    `r2.signInRequired !== null`, and `deepQuote` requires a submitted turn, so neither can
+    co-occur with `entryState` today — they are wired so that if a later lane makes either
+    reachable on the welcome view, the example stops instead of rotating behind it.
   */
   const rotatingExample = useRotatingExample({
     locale: interfaceLocale,
     enabled: entryState,
     compact,
-    suspended: r2.signInRequired !== null || r2.deepQuote !== null,
+    suspended: nav?.open === true || r2.signInRequired !== null || r2.deepQuote !== null,
   });
 
   useEffect(() => {
@@ -1159,6 +1159,8 @@ export function AskFrameScreen({
                     onFocus: rotatingExample.onFocus,
                     onBlur: rotatingExample.onBlur,
                     animationClass: rotatingExample.animate ? styles.exampleEnter : undefined,
+                    /* R1-C · 400 ms out, swap, 400 ms in. The view transitions one element. */
+                    fading: rotatingExample.fading,
                     generation: rotatingExample.generation,
                     /* The example's own run direction, independent of the reader's chrome. */
                     directionProps: isolatedAuto(),

@@ -1,6 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { EXAMPLE_ROTATION, initialRotationState, rotationReducer } from '@/lib/ask/askExampleRotation';
+import {
+  EXAMPLE_ROTATION,
+  initialRotationState,
+  rotationReducer,
+  type RotationEvent,
+} from '@/lib/ask/askExampleRotation';
 import { QUESTION_EXAMPLES } from '@/lib/ask/askQuestionExamples';
 
 /**
@@ -213,7 +218,14 @@ describe('D01-D03 · R1-C timing comes from one constant', () => {
   });
 
   it('the stylesheet reads its fade from that constant, so the two cannot drift', () => {
-    expect(code.css).toContain(`animation: exampleEnter ${EXAMPLE_ROTATION.fadeMs}ms`);
+    /*
+      SUPERSEDED BY CLAUDE DESIGN R3 §11 (R1-C) · this read
+      `animation: exampleEnter ${EXAMPLE_ROTATION.fadeMs}ms`. R1-C's mechanism is a TRANSITION on
+      one persistent element, not a keyframe animation, because the text swaps half way through.
+      The tie to the constant is what matters and is kept, now on both halves.
+    */
+    expect(code.css).toContain(`transition: opacity ${EXAMPLE_ROTATION.fadeMs}ms ease-out`);
+    expect(code.css).toContain(`transition: opacity ${EXAMPLE_ROTATION.fadeMs}ms ease-in`);
   });
 
   it('the machine still holds no literal millisecond figure', () => {
@@ -246,8 +258,13 @@ describe('D01-D03 · the example never advances where it cannot be read', () => 
     expect(st.phase).toBe('ROTATING');
     /* The deadline that passed while hidden is gone: a tick one ms short still holds. */
     st = rotationReducer(st, at(back + EXAMPLE_ROTATION.dwellMs - 1), Q);
+    expect(st.fading).toBe(false);
     expect(st.changed).toBe(false);
+    /* R1-C · the hold expiring begins the fade OUT; the swap is one fade later. */
     st = rotationReducer(st, at(back + EXAMPLE_ROTATION.dwellMs), Q);
+    expect(st.fading).toBe(true);
+    expect(st.changed).toBe(false);
+    st = rotationReducer(st, at(back + EXAMPLE_ROTATION.dwellMs + EXAMPLE_ROTATION.fadeMs), Q);
     expect(st.changed).toBe(true);
   });
 
@@ -271,9 +288,118 @@ describe('D01-D03 · the example never advances where it cannot be read', () => 
   });
 });
 
+describe('D01-D03 · the approved fade sequence, overlay geometry and suspension', () => {
+  const Q2 = QUESTION_EXAMPLES.length;
+  const tick = (t: number): RotationEvent => ({ type: 'TICK', now: t });
+
+  it('holds 5200 ms, fades OUT 400, swaps, and the next hold starts after the fade in', () => {
+    /* R1-C: "hold 5,200 ms -> opacity 1->0 over 400 ms ease-in -> swap text -> 0->1 over 400 ms
+       ease-out. Cycle ~ 6.0 s." The swap is HALF WAY through, not at the start. */
+    let st = initialRotationState(0);
+    st = rotationReducer(st, tick(EXAMPLE_ROTATION.dwellMs - 1), Q2);
+    expect(st.fading).toBe(false);
+    expect(st.changed).toBe(false);
+
+    st = rotationReducer(st, tick(EXAMPLE_ROTATION.dwellMs), Q2);
+    expect(st.fading).toBe(true);
+    expect(st.changed).toBe(false);
+    expect(st.cursor).toBe(0);
+
+    st = rotationReducer(st, tick(EXAMPLE_ROTATION.dwellMs + EXAMPLE_ROTATION.fadeMs - 1), Q2);
+    expect(st.fading).toBe(true);
+    expect(st.cursor).toBe(0);
+
+    const swapAt = EXAMPLE_ROTATION.dwellMs + EXAMPLE_ROTATION.fadeMs;
+    st = rotationReducer(st, tick(swapAt), Q2);
+    expect(st.changed).toBe(true);
+    expect(st.fading).toBe(false);
+    expect(st.cursor).toBe(1);
+    /* The hold begins when the new example is fully visible: one fade-in after the swap, so the
+       whole cycle is 5200 + 400 + 400 = 6000 ms. */
+    expect(st.shownAt).toBe(EXAMPLE_ROTATION.dwellMs + EXAMPLE_ROTATION.fadeMs * 2);
+  });
+
+  it('an interruption cancels the fade: the swap never lands behind it', () => {
+    const interruptions: readonly RotationEvent[] = [
+      { type: 'FOCUS', now: 5_400 },
+      { type: 'VALUE', now: 5_400, value: 'w' },
+      { type: 'SUSPEND', now: 5_400 },
+    ];
+    for (const event of interruptions) {
+      let st = rotationReducer(initialRotationState(0), tick(EXAMPLE_ROTATION.dwellMs), Q2);
+      expect(st.fading).toBe(true);
+      st = rotationReducer(st, event, Q2);
+      expect(st.fading).toBe(false);
+      expect(st.fadeAt).toBeNull();
+      expect(st.cursor).toBe(0);
+    }
+  });
+
+  it('only opacity animates \u2014 the unauthorized vertical rise is gone', () => {
+    const enter = code.css.slice(code.css.indexOf('.exampleEnter'));
+    const block = enter.slice(0, enter.indexOf('.composerExampleLayer'));
+    expect(block).toMatch(/transition: opacity 400ms ease-out/);
+    expect(block).toMatch(/\[data-ask-example-fading='true'\][^}]*opacity: 0/);
+    expect(block).toMatch(/transition: opacity 400ms ease-in/);
+    expect(block).not.toMatch(/transform|translateY/);
+    expect(code.css).not.toMatch(/@keyframes exampleEnter/);
+  });
+
+  it('reduced motion removes the transition as well as the overlay', () => {
+    expect(code.css).toMatch(
+      /@media \(prefers-reduced-motion: reduce\) \{\s*\.exampleEnter \{\s*transition: none;/,
+    );
+  });
+
+  it('uses the approved overlay geometry, not substituted spacing', () => {
+    const layer = code.css.slice(code.css.indexOf('.composerExampleLayer'));
+    expect(layer).toMatch(/inset-inline-start: 19px/);
+    expect(layer).toMatch(/inset-inline-end: 54px/);
+    expect(layer).toMatch(/top: 1px/);
+    expect(layer).toMatch(/height: 50px/);
+    const text = code.css.slice(code.css.indexOf('.composerExampleText'));
+    expect(text).toMatch(/white-space: nowrap/);
+    expect(text).toMatch(/text-overflow: ellipsis/);
+    /* DECLARED CONFLICT · R1-C says `--ink-3`; the RELEASED Ask placeholder ink is
+       `--ask-read-ink3`, and the example must match the placeholder it hands over to on focus.
+       The released ink wins and the discrepancy is reported. See the stylesheet comment. */
+    expect(text).toMatch(/color: var\(--ask-read-ink3, #6f89a8\)/);
+  });
+
+  it('the overlay is measured from the FIELD, so the 54px clears Send', () => {
+    const after = code.parts.slice(code.parts.indexOf('data-ask="composer-example-layer"'));
+    expect(after).toMatch(/<button\s+type="submit"/);
+    expect(code.parts).toMatch(/relative flex min-h-\[56px\]/);
+  });
+
+  it('rotation stops while a sheet, drawer or dialog is open', () => {
+    /* R1-C: "Runs only when ALL are true: ... no sheet/drawer/dialog open". nav.open is the
+       conversations drawer, which IS reachable from the welcome view. */
+    expect(code.screen).toMatch(/suspended: nav\?\.open === true/);
+    expect(code.hook).toMatch(/const away = suspended \|\| document\.visibilityState === 'hidden';/);
+  });
+
+  it('focus shows the native static placeholder; blur restores a FULL hold', () => {
+    let st = rotationReducer(initialRotationState(0), { type: 'FOCUS', now: 100 }, Q2);
+    expect(st.visible).toBe(false);
+    st = rotationReducer(st, { type: 'BLUR', now: 200 }, Q2);
+    expect(st.visible).toBe(true);
+    expect(st.cursor).toBe(0);
+    /* "rotation resumes from the current example after a full hold (no instant change)" */
+    st = rotationReducer(st, tick(200 + EXAMPLE_ROTATION.dwellMs - 1), Q2);
+    expect(st.fading).toBe(false);
+    st = rotationReducer(st, tick(200 + EXAMPLE_ROTATION.dwellMs), Q2);
+    expect(st.fading).toBe(true);
+    expect(st.cursor).toBe(0);
+  });
+});
+
 describe('D01-D03 · the overlay is guidance, never a control', () => {
   it('the layer takes no pointer events and the words are aria-hidden plain text', () => {
-    expect(code.parts).toMatch(/data-ask="composer-example-layer"[\s\S]{0,120}pointer-events-none/);
+    /* R1-C's geometry moved to the stylesheet with the approved insets; the rule that matters
+       is unchanged and is asserted where it now lives. */
+    expect(code.parts).toMatch(/data-ask="composer-example-layer"[\s\S]{0,120}composerExampleLayer/);
+    expect(code.css).toMatch(/\.composerExampleLayer[^}]*pointer-events: none/);
     expect(code.parts).toMatch(/data-ask="composer-example"[\s\S]{0,400}aria-hidden="true"/);
     /* Not a button, not focusable, and nothing is submitted or typed from it. */
     const start = code.parts.indexOf('composer-example-layer');
@@ -296,7 +422,9 @@ describe('D01-D03 · the overlay is guidance, never a control', () => {
 
   it('the rotation is wired to the entry state only, and declares its overlay rule', () => {
     expect(code.screen).toMatch(/useRotatingExample\(\{[\s\S]{0,200}enabled: entryState,/);
-    expect(code.screen).toMatch(/suspended: r2\.signInRequired !== null \|\| r2\.deepQuote !== null,/);
+    expect(code.screen).toMatch(
+      /suspended: nav\?\.open === true \|\| r2\.signInRequired !== null \|\| r2\.deepQuote !== null,/,
+    );
   });
 
   it('the composer contract is untouched: no limit change, no viewport observation here', () => {
