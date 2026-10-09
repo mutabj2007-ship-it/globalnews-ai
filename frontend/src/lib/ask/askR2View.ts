@@ -500,12 +500,20 @@ function verificationOf(
 ): AskR2View['verification'] {
   if (retrieval == null) return null;
   const trace = retrieval.retrievalTrace;
+  /* CTO ALPHA CONTENT-INTEGRITY R1 (C) — "I could not verify this claim" only when the reader made a
+     claim. An open question with nothing admitted is told so by its answer state; an incomplete
+     search is still disclosed, without calling the question a claim (existing seven-locale copy). */
+  const hasClaims = (retrieval.claimAssessments ?? []).length > 0;
   const notice =
     retrieval.verificationNotice === undefined
       ? null
-      : retrieval.verificationNotice === 'COVERAGE_INCOMPLETE'
-        ? `${s.verification.notVerified} ${s.verification.coverageIncomplete}`
-        : s.verification.notVerified;
+      : !hasClaims
+        ? retrieval.verificationNotice === 'COVERAGE_INCOMPLETE'
+          ? s.verification.coverageIncomplete
+          : null
+        : retrieval.verificationNotice === 'COVERAGE_INCOMPLETE'
+          ? `${s.verification.notVerified} ${s.verification.coverageIncomplete}`
+          : s.verification.notVerified;
   if (notice === null && trace === undefined && retrieval.claimAssessments === undefined)
     return null;
   const label = (lane: string) => s.verification.lanes[lane] ?? lane;

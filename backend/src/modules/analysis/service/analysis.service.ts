@@ -243,7 +243,7 @@ import {
 import { asksAboutCoverage } from '../query/coverage-question.util';
 import type { AnalysisProviderInput } from '../interfaces';
 import {
-  evidencesRelationship,
+  directlyEvidencesRelationship,
   type RelationshipScope,
 } from '../relevance/relationship-evidence.util';
 
@@ -1707,8 +1707,10 @@ export class AnalysisService {
               members as CountryMeta[],
               requestedLanguage,
             );
+            /* CTO ALPHA CONTENT-INTEGRITY R1 (B) — direct bilateral reporting only; a regional item
+               naming both sides among others is context, never evidence of the relationship. */
             const admitted = perSide.articles.filter((article) =>
-              evidencesRelationship(article, relationship),
+              directlyEvidencesRelationship(article, relationship),
             );
             articles = admitted;
             retrievalContext = {
@@ -3351,85 +3353,6 @@ export class AnalysisService {
           articles = inWindow;
         }
 
-        /*
-          ASK TRUTHFUL RETRIEVAL R2A — WHAT WAS CHECKED, AND WHAT EACH CLAIM RESTS ON.
-          Only for the planned paths (event frame, compound plan) and windowed questions, so every
-          other response is byte-identical. Decided before any prose.
-        */
-        if (plannedTrace !== undefined || reportingWindow !== undefined) {
-          const trace: AnalysisRetrievalTrace = {
-            queryVariants: plannedTrace?.queryVariants ?? [],
-            timeWindow:
-              reportingWindow === undefined
-                ? null
-                : { from: reportingWindow.from, to: reportingWindow.to, basis: 'REQUEST_INSTANT' },
-            languages: plannedTrace?.languages ?? [requestedLanguage],
-            /* ASK R2 — a failed provider is named with its reason, never counted as checked. */
-            lanesAttempted:
-              plannedTrace?.lanesAttempted ?? [
-                ...new Set([
-                  ...retrievalContext.providers,
-                  ...(retrievalContext.providerFailures ?? []).map((f) => f.providerId),
-                ]),
-              ],
-            lanesSucceeded:
-              plannedTrace?.lanesSucceeded ??
-              retrievalContext.providers.filter(
-                (id) => !(retrievalContext.providerFailures ?? []).some((f) => f.providerId === id),
-              ),
-            lanesUnavailable:
-              plannedTrace?.lanesUnavailable ??
-              ((retrievalContext.providerFailures ?? []).length > 0
-                ? (retrievalContext.providerFailures ?? []).map((f) => ({
-                    lane: f.providerId,
-                    reason: laneFailureReason(f.kind),
-                  }))
-                : retrievalContext.fallbackReason === 'provider-error'
-                  ? [{ lane: 'news-providers', reason: 'provider-error' }]
-                  : []),
-            candidatesSeen: plannedTrace?.candidatesSeen ?? articles.length,
-            candidatesAdmitted: articles.length,
-            /* R1G — the same conservative story identity the final evidence uses. */
-            independentClusters: collapseDuplicateStories([...articles]).length,
-          };
-          const coverageIncomplete =
-            /* R2B — a lane that is merely not configured is shown, not "incomplete coverage". */
-            trace.lanesUnavailable.some((u) => u.reason !== 'not-configured') ||
-            retrievalContext.fallbackReason === 'provider-error' ||
-            (retrievalContext.outcome ?? '').startsWith('PROVIDER_');
-          const claims =
-            eventFrame?.claims ??
-            (activeCompoundPlan ? facetClaims(activeCompoundPlan.facets) : []);
-          const claimAssessments = assessClaims(claims, articles, {
-            ...(eventFrame === undefined
-              ? {}
-              : {
-                  event: {
-                    eventType: eventFrame.eventType,
-                    endpoints: eventFrame.endpoints,
-                    identifiers: eventFrame.identifiers,
-                    notBefore: eventFrame.notBefore,
-                  },
-                }),
-            coverageIncomplete,
-          });
-          const core = claimAssessments[0];
-          retrievalContext = {
-            ...retrievalContext,
-            retrievalTrace: trace,
-            ...(claimAssessments.length === 0 ? {} : { claimAssessments }),
-            ...(articles.length === 0 ||
-            core?.state === 'NOT_VERIFIED' ||
-            core?.state === 'COVERAGE_INCOMPLETE'
-              ? {
-                  verificationNotice: coverageIncomplete
-                    ? ('COVERAGE_INCOMPLETE' as const)
-                    : ('NOT_VERIFIED' as const),
-                }
-              : {}),
-          };
-        }
-
         /**
          * Milestone #51 Phase B (CTO final correction) — the selected
          * article itself is now a genuine evidence ANCHOR, not merely
@@ -3609,7 +3532,14 @@ export class AnalysisService {
         if (executionPolicy?.questionAnchors?.gated === true) {
           const anchors = executionPolicy.questionAnchors;
           const candidates = articles.length;
-          const admitted = articles.filter((article) => admitsReport(anchors, article).admitted);
+          /* CTO ALPHA CONTENT-INTEGRITY R1 (B) — a question about a two-country relationship admits only
+             DIRECT bilateral reporting, on the first pass AND for every supplement: the live
+             supplement admitted a regional East Africa–China item (Alpha op 05242618). */
+          const bilateral = executionPolicy.relationship;
+          const admits = (article: NewsArticle): boolean =>
+            admitsReport(anchors, article).admitted &&
+            (bilateral === undefined || directlyEvidencesRelationship(article, bilateral));
+          const admitted = articles.filter(admits);
           if (executionPolicy.anchorSupplements === false) {
             removedOnReread = articles
               .map((article) => ({ title: article.title, missing: admitsReport(anchors, article).missing }))
@@ -3622,7 +3552,7 @@ export class AnalysisService {
           const take = (pool: readonly NewsArticle[]): void => {
             for (const article of pool) {
               if (seen.has(article.id) || seenUrls.has(article.url)) continue;
-              if (!admitsReport(anchors, article).admitted) continue;
+              if (!admits(article)) continue;
               if (executionPolicy.reportingWindow !== undefined && !publishedInsideWindow(article, executionPolicy.reportingWindow.from, executionPolicy.reportingWindow.to)) continue;
               seen.add(article.id);
               seenUrls.add(article.url);
@@ -3634,6 +3564,11 @@ export class AnalysisService {
              12 s GDELT wait, live on Alpha). Pools are merged in query order, so the admitted set
              is deterministic. Each live search is bounded by the budget in NewsService; the
              retained read is a local database query. */
+          /* CTO ALPHA CONTENT-INTEGRITY R1 (D) — what the supplement searches reached, and which
+             provider refused (GNews 429, GDELT 429 live): the source labels are built from these too,
+             so a provider that was contacted is never shown as having checked. */
+          const supplementProviders = new Set<string>();
+          const supplementFailures: ProviderFailure[] = [];
           const pools = await Promise.all(
             queries.map(async (query) => {
               const found: NewsArticle[][] = [];
@@ -3643,6 +3578,8 @@ export class AnalysisService {
                     ? {}
                     : { from: executionPolicy.reportingWindow.from, to: executionPolicy.reportingWindow.to }),
                 });
+                for (const id of response.providers ?? []) supplementProviders.add(id);
+                supplementFailures.push(...readProviderFailures(response));
                 found.push(response.articles);
               } catch {
                 /* a refused or failed supplement never fails the answer; the retained read follows */
@@ -3657,8 +3594,27 @@ export class AnalysisService {
             }),
           );
           for (const found of pools) for (const pool of found) take(pool);
+          if (supplementProviders.size > 0 || supplementFailures.length > 0) {
+            retrievalFailures.push(...supplementFailures);
+            const failed = new Map(
+              (retrievalContext.providerFailures ?? []).map((x) => [x.providerId, x.kind] as const),
+            );
+            for (const x of supplementFailures) if (!failed.has(x.providerId)) failed.set(x.providerId, x.kind);
+            retrievalContext = {
+              ...retrievalContext,
+              providers: [...new Set([...(retrievalContext.providers ?? []), ...supplementProviders])],
+              ...(failed.size === 0
+                ? {}
+                : { providerFailures: [...failed].map(([providerId, kind]) => ({ providerId, kind })) }),
+            };
+          }
+          /* CTO ALPHA CONTENT-INTEGRITY R1 — the counts follow the evidence actually admitted */
           retrievalContext = {
             ...retrievalContext,
+            articlesRetrieved: admitted.length,
+            ...(admitted.length > 0 && retrievalContext.outcome === 'NO_RELEVANT_EVIDENCE'
+              ? { outcome: undefined }
+              : {}),
             questionAnchorGate: {
               key: anchorsKey(anchors),
               candidates,
@@ -3670,6 +3626,88 @@ export class AnalysisService {
             `ask anchor gate key=${anchorsKey(anchors)} candidates=${candidates} admitted=${admitted.length} supplements=${queries.length}`,
           );
           articles = admitted;
+        }
+
+        /*
+          ASK TRUTHFUL RETRIEVAL R2A — WHAT WAS CHECKED, AND WHAT EACH CLAIM RESTS ON.
+          CTO ALPHA CONTENT-INTEGRITY R1 (D) — built AFTER the question-anchor gate (it ran before it):
+          the trace, the lanes and the claim states now describe the evidence actually admitted and
+          every search actually made, including the gate's supplements.
+          Only for the planned paths (event frame, compound plan) and windowed questions, so every
+          other response is byte-identical. Decided before any prose.
+        */
+        if (plannedTrace !== undefined || reportingWindow !== undefined) {
+          const trace: AnalysisRetrievalTrace = {
+            queryVariants: plannedTrace?.queryVariants ?? [],
+            timeWindow:
+              reportingWindow === undefined
+                ? null
+                : { from: reportingWindow.from, to: reportingWindow.to, basis: 'REQUEST_INSTANT' },
+            languages: plannedTrace?.languages ?? [requestedLanguage],
+            /* ASK R2 — a failed provider is named with its reason, never counted as checked. */
+            lanesAttempted:
+              plannedTrace?.lanesAttempted ?? [
+                ...new Set([
+                  ...retrievalContext.providers,
+                  ...(retrievalContext.providerFailures ?? []).map((f) => f.providerId),
+                ]),
+              ],
+            lanesSucceeded:
+              plannedTrace?.lanesSucceeded ??
+              retrievalContext.providers.filter(
+                (id) => !(retrievalContext.providerFailures ?? []).some((f) => f.providerId === id),
+              ),
+            lanesUnavailable:
+              plannedTrace?.lanesUnavailable ??
+              ((retrievalContext.providerFailures ?? []).length > 0
+                ? (retrievalContext.providerFailures ?? []).map((f) => ({
+                    lane: f.providerId,
+                    reason: laneFailureReason(f.kind),
+                  }))
+                : retrievalContext.fallbackReason === 'provider-error'
+                  ? [{ lane: 'news-providers', reason: 'provider-error' }]
+                  : []),
+            candidatesSeen: plannedTrace?.candidatesSeen ?? articles.length,
+            candidatesAdmitted: articles.length,
+            /* R1G — the same conservative story identity the final evidence uses. */
+            independentClusters: collapseDuplicateStories([...articles]).length,
+          };
+          const coverageIncomplete =
+            /* R2B — a lane that is merely not configured is shown, not "incomplete coverage". */
+            trace.lanesUnavailable.some((u) => u.reason !== 'not-configured') ||
+            retrievalContext.fallbackReason === 'provider-error' ||
+            (retrievalContext.outcome ?? '').startsWith('PROVIDER_');
+          const claims =
+            eventFrame?.claims ??
+            (activeCompoundPlan ? facetClaims(activeCompoundPlan.facets) : []);
+          const claimAssessments = assessClaims(claims, articles, {
+            ...(eventFrame === undefined
+              ? {}
+              : {
+                  event: {
+                    eventType: eventFrame.eventType,
+                    endpoints: eventFrame.endpoints,
+                    identifiers: eventFrame.identifiers,
+                    notBefore: eventFrame.notBefore,
+                  },
+                }),
+            coverageIncomplete,
+          });
+          const core = claimAssessments[0];
+          retrievalContext = {
+            ...retrievalContext,
+            retrievalTrace: trace,
+            ...(claimAssessments.length === 0 ? {} : { claimAssessments }),
+            ...(articles.length === 0 ||
+            core?.state === 'NOT_VERIFIED' ||
+            core?.state === 'COVERAGE_INCOMPLETE'
+              ? {
+                  verificationNotice: coverageIncomplete
+                    ? ('COVERAGE_INCOMPLETE' as const)
+                    : ('NOT_VERIFIED' as const),
+                }
+              : {}),
+          };
         }
 
         /*

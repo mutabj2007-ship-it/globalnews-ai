@@ -541,16 +541,75 @@ describe('ASK TRUTHFUL RETRIEVAL R2A — what was checked is shown, never a deni
     ]);
   });
 
-  it('complete coverage that found nothing is still "could not verify", never "did not happen"', () => {
+  /* CTO ALPHA CONTENT-INTEGRITY R1 (C) — amended: the reader asked an OPEN question (no claim was
+     assessed), so the notice never calls it "this claim"; the INSUFFICIENT answer state says nothing
+     matching was found. Still never a denial. With a claim, the original sentence stands (below). */
+  it('complete coverage that found nothing for an OPEN question: no "this claim", never "did not happen"', () => {
     const v = askR2View(
       withRetrieval('INSUFFICIENT', { verificationNotice: 'NOT_VERIFIED' }),
+      EN,
+      'en',
+    );
+    expect(v.verification?.notice ?? null).toBeNull();
+    expect(JSON.stringify(v)).not.toMatch(/this claim/i);
+    expect(JSON.stringify(v)).not.toMatch(/no evidence of|did not (happen|occur)/i);
+  });
+
+  it('an OPEN question whose search was incomplete: the coverage sentence alone, lanes named', () => {
+    const v = askR2View(
+      withRetrieval('INSUFFICIENT', {
+        verificationNotice: 'COVERAGE_INCOMPLETE',
+        retrievalTrace: {
+          queryVariants: [],
+          timeWindow: null,
+          languages: ['en'],
+          lanesAttempted: ['gnews', 'gdelt-doc', 'rss-feeds'],
+          lanesSucceeded: ['rss-feeds'],
+          lanesUnavailable: [
+            { lane: 'gnews', reason: 'rate-limited' },
+            { lane: 'gdelt-doc', reason: 'rate-limited' },
+          ],
+          candidatesSeen: 0,
+          candidatesAdmitted: 0,
+          independentClusters: 0,
+        },
+      }),
+      EN,
+      'en',
+    );
+    expect(v.verification?.notice).toBe(
+      'Verification was incomplete because some source lanes were unavailable.',
+    );
+    expect(v.verification?.lanes.map((l) => [l.label, l.ok])).toEqual([
+      ['Publisher feeds', true],
+      ['GNews', false],
+      ['GDELT', false],
+    ]);
+  });
+
+  it('a CLAIM that could not be verified keeps the claim sentence', () => {
+    const v = askR2View(
+      withRetrieval('INSUFFICIENT', {
+        verificationNotice: 'NOT_VERIFIED',
+        claimAssessments: [
+          {
+            id: 'occurrence',
+            type: 'OCCURRENCE',
+            text: 'A border closure occurred',
+            state: 'NOT_VERIFIED',
+            supportingArticleIds: [],
+            independentFamilies: 0,
+            officialFamily: false,
+            contradictingArticleIds: [],
+          },
+        ],
+      }),
       EN,
       'en',
     );
     expect(v.verification?.notice).toBe(
       'I could not verify this claim from the sources successfully checked.',
     );
-    expect(JSON.stringify(v)).not.toMatch(/no evidence of|did not (happen|occur)/i);
   });
 
   it('an ordinary answer without server verification facts shows no panel', () => {

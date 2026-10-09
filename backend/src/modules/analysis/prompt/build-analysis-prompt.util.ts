@@ -700,7 +700,11 @@ export function buildReportingWindowInstruction(window?: {
     'imply that an event occurred inside the window unless the report itself gives the event ' +
     'date; label event dates and publication dates separately, and where a report does not ' +
     'establish when the event happened, say that its timing is not established. Nothing outside ' +
-    'these reports may be presented as having happened in the window.'
+    'these reports may be presented as having happened in the window. ' +
+    /* CTO ALPHA CONTENT-INTEGRITY R1 (E) — an announcement is not an observed change */
+    'An announced, planned or scheduled programme, agreement, project or event is NOT a change ' +
+    'that happened: name it as announced or scheduled, with its stated future date if the report ' +
+    'gives one, and never present it as an observed development in the window.'
   );
 }
 
