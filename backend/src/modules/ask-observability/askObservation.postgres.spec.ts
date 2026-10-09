@@ -71,7 +71,12 @@ live('R1 — the Ask observation store on PostgreSQL', () => {
       const columns = await columnsOf('AskObservation');
       /* 53 + the nine CTO R4 closeout job-code columns (all nullable) + the thirteen CTO R4
          semantic-IR code columns (20261004100000, additive) */
-      expect(columns.size).toBe(77);
+      /* + Reason to Return R1 §5: retrievalOutcome (text) and the two trace counts (integer) */
+      expect(columns.size).toBe(80);
+      expect(columns.get('retrievalOutcome')).toMatchObject({ data_type: 'text', is_nullable: 'YES' });
+      ['candidatesSeen', 'candidatesAdmitted'].forEach((c) => {
+        expect(columns.get(c)).toMatchObject({ data_type: 'integer', is_nullable: 'YES' });
+      });
       [
         'semanticPath',
         'semanticFreshness',
@@ -341,7 +346,7 @@ live('R1 — the Ask observation store on PostgreSQL', () => {
       ).toBe(true);
       const row = await db.askObservation.findUnique({ where: { operationId: id } });
       expect(row).toMatchObject({
-        schemaVersion: 'ask-observation/4',
+        schemaVersion: 'ask-observation/5',
         jobKind: 'DEEP_CONCEPTUAL_ANALYSIS',
         jobSource: 'DETERMINISTIC',
         jobDepth: 'DEEP',

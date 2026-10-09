@@ -32,7 +32,25 @@ import { ALL_ISO3_CODES } from '@globalnews-ai/shared';
 /* /2 — CTO R4 closeout: the governed user-job codes (jobKind … jobArtifactProducedKind). */
 /* /3 — CTO R4 semantic IR: the turn's interpretation codes (semanticPath … interpreter tokens). */
 /* /4 — CTO R4 semantic-IR hardening: completeness + unresolved routing-material fields. */
-export const ASK_OBSERVATION_SCHEMA = 'ask-observation/4' as const;
+/* /5 — Reason to Return R1 §5: the retrieval outcome code + the trace's seen/admitted counts. */
+export const ASK_OBSERVATION_SCHEMA = 'ask-observation/5' as const;
+
+/*
+  REASON TO RETURN R1 · §5 — WHAT THE SEARCH ITSELF DID, AS ONE CLOSED CODE. A search that
+  completed and matched nothing, a search whose candidates were all removed by the relevance gate,
+  a search whose sources failed and a partial search are different facts; a failed search never
+  proves absence. Derived in the adapter from the retrieval facts the analysis already returned
+  (ask-v2/retrieval-outcome.ts); a value outside this set is dropped (stored as null).
+*/
+export const OBSERVED_RETRIEVAL_OUTCOMES: ReadonlySet<string> = new Set([
+  'MATCHED',
+  'PARTIAL',
+  'PARTIAL_NO_MATCH',
+  'RETAINED_ONLY',
+  'ALL_FILTERED',
+  'COMPLETED_NO_MATCH',
+  'PROVIDER_FAILED',
+]);
 
 /*
   CTO R4 CLOSEOUT — THE GOVERNED USER JOB, AS CODES. Closed vocabularies, copied here on purpose
@@ -335,6 +353,11 @@ export interface AskObservationInput {
   readonly evidenceRolesObtained: readonly string[];
   readonly evidenceRolesMissing: readonly string[];
   readonly reportingItemCount: number | null;
+  /** Reason to Return R1 §5 — one OBSERVED_RETRIEVAL_OUTCOMES code; null = retrieval never ran. */
+  readonly retrievalOutcome: string | null;
+  /** The retrieval trace's own counts: candidates the providers returned / the gate admitted. */
+  readonly candidatesSeen: number | null;
+  readonly candidatesAdmitted: number | null;
   /*
     INTELLIGENCE BINDING R1 — how Ask used governed contributors. Governed contributor IDS
     (e.g. CONFLICT, ECONOMY_CPI) and one count — never content, never a question, never an
@@ -438,6 +461,9 @@ export function newAskObservationDraft(
     evidenceRolesObtained: [],
     evidenceRolesMissing: [],
     reportingItemCount: null,
+    retrievalOutcome: null,
+    candidatesSeen: null,
+    candidatesAdmitted: null,
     contributorsConsidered: [],
     contributorsUsed: [],
     contributorsDegraded: [],

@@ -20,7 +20,13 @@ import { ConfigService } from '@nestjs/config';
 import { RequireAuthGuard } from '../auth/require-auth.guard';
 import { CsrfGuard } from '../auth/csrf.guard';
 import { CurrentUser } from '../users/current-user.decorator';
-import { BookmarkTurnDto, CreateThreadDto, HistoryPageDto, QuoteTurnDto } from './ask-v2.dto';
+import {
+  BookmarkTurnDto,
+  CreateThreadDto,
+  HistoryPageDto,
+  QuoteTurnDto,
+  ThreadListDto,
+} from './ask-v2.dto';
 import { AskV2Service } from './ask-v2.service';
 import { AskRequestContextInterceptor } from './ask-request-context';
 import { AskAccessObservationFilter } from './ask-access-observation.filter';
@@ -85,8 +91,14 @@ export class AskV2Controller {
   @Get('continuation') async continuation(@CurrentUser() user: { id: string }) {
     return { threadId: await this.claims.continuationFor(user.id) };
   }
-  @Get('threads') list(@CurrentUser() user: { id: string }) {
-    return this.ask.listThreads(user.id);
+  @Get('threads') list(@CurrentUser() user: { id: string }, @Query() query: ThreadListDto) {
+    return this.ask.listThreads(user.id, query.q);
+  }
+  /* REASON TO RETURN R1 · G7 — the reader deletes one of their own conversations. */
+  @Delete('threads/:id')
+  @UseGuards(CsrfGuard)
+  removeThread(@CurrentUser() user: { id: string }, @Param('id') id: string) {
+    return this.ask.deleteThread(user.id, id);
   }
   @Get('threads/:id') history(
     @CurrentUser() user: { id: string },

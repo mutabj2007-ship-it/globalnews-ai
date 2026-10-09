@@ -1,10 +1,32 @@
-import { Controller, Delete, Get, HttpCode, Post, Res, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Patch,
+  Post,
+  Res,
+  UseGuards,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import type { Response } from 'express';
+import { IsOptional, IsString, MaxLength, ValidateIf } from 'class-validator';
 import { RequireAuthGuard } from '../auth/require-auth.guard';
 import { CsrfGuard } from '../auth/csrf.guard';
 import { clearAuthCookies } from '../auth/cookie.util';
 import { CurrentUser } from './current-user.decorator';
 import { UsersService, type ReturnStateView, type UserSummary } from './users.service';
+
+/** REASON TO RETURN R1 · G6 — a string to save, or null / empty to clear. Content rule in shared. */
+export class UpdateProfileDto {
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
+  @MaxLength(200)
+  displayName?: string | null;
+}
 
 @Controller('users')
 export class UsersController {
@@ -14,6 +36,20 @@ export class UsersController {
   @UseGuards(RequireAuthGuard)
   async me(@CurrentUser() user: { id: string }): Promise<UserSummary | null> {
     return this.usersService.getById(user.id);
+  }
+
+  /**
+   * PATCH /users/me — REASON TO RETURN R1 · G6. The reader's own preferred name (or null to
+   * clear it). Signed-in + CSRF; only `displayName` is accepted, anything else is a 400.
+   */
+  @Patch('me')
+  @UseGuards(RequireAuthGuard, CsrfGuard)
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+  async updateMe(
+    @CurrentUser() user: { id: string },
+    @Body() dto: UpdateProfileDto,
+  ): Promise<UserSummary> {
+    return this.usersService.updateDisplayName(user.id, dto.displayName ?? null);
   }
 
   /**

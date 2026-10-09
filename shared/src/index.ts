@@ -245,3 +245,5 @@ export * from './my-intelligence';
 export * from './home-editorial';
 /* ASK RETRIEVAL / CONVERSATION R2 — the one documented Ask input limit. */
 export * from './ask-input';
+/* REASON TO RETURN R1 — the one display-name rule (§7 / G6). */
+export * from './display-name';

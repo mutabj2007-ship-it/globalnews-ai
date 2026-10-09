@@ -24,10 +24,16 @@ import {
   OBSERVED_JOB_KINDS,
   OBSERVED_JOB_SOURCES,
   OBSERVED_TRANSFORMATIONS,
+  OBSERVED_RETRIEVAL_OUTCOMES,
   sanitizeGeographyCodes,
   type AskAccessEvent,
   type AskObservationInput,
 } from './ask-observation.contract';
+
+/** A trace count as stored: a non-negative integer, or null (never NaN, never negative). */
+function countOrNull(value: number | null | undefined): number | null {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : null;
+}
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -119,6 +125,9 @@ export class AskObservationService {
             evidenceRolesObtained: [...input.evidenceRolesObtained],
             evidenceRolesMissing: [...input.evidenceRolesMissing],
             reportingItemCount: input.reportingItemCount,
+            retrievalOutcome: governedCode(input.retrievalOutcome, OBSERVED_RETRIEVAL_OUTCOMES),
+            candidatesSeen: countOrNull(input.candidatesSeen),
+            candidatesAdmitted: countOrNull(input.candidatesAdmitted),
             contributorsConsidered: [...input.contributorsConsidered],
             contributorsUsed: [...input.contributorsUsed],
             contributorsDegraded: [...input.contributorsDegraded],

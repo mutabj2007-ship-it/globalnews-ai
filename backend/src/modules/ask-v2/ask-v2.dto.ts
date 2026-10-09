@@ -44,6 +44,10 @@ export class QuoteTurnDto {
 export class HistoryPageDto {
   @IsOptional() @Type(() => Number) @IsInt() @Min(0) @Max(2147483647) after = 0;
 }
+/** REASON TO RETURN R1 · §7 — optional server-side history search over the reader's own turns. */
+export class ThreadListDto {
+  @IsOptional() @IsString() @Length(1, 200) q?: string;
+}
 
 /**
  * PUBLIC BETA ASK CONTINUITY R1 — the body of a bookmark write.

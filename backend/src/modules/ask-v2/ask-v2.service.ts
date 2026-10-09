@@ -94,6 +94,8 @@ const RECENT_THREAD_LIMIT = 50;
 const SAVED_BOOKMARK_LIMIT = 100;
 /* ASK GUEST TRIAL R3 — a guest's own threads (resume after reload / cancelled sign-in). */
 const GUEST_THREAD_LIMIT = 10;
+/* REASON TO RETURN R1 — an operation in one of these states may still be executing. */
+const IN_FLIGHT_OPERATION_STATES: ReadonlySet<string> = new Set(['ACCEPTED', 'RESERVED', 'RUNNING']);
 /*
   ASK R3 CONTINUITY — the question a follow-up continues. Turns newest first; the nearest one
   that is NOT itself a follow-up (by the landed path's own detectors) is the subject-bearing
@@ -535,12 +537,24 @@ export class AskV2Service {
    * expiry is resolved on reopen, by `getOperation`, which is the one place that
    * can tell the truth about it.
    */
-  async listThreads(userId: string) {
+  async listThreads(userId: string, search?: string) {
     this.user(userId);
+    /*
+      REASON TO RETURN R1 · §7 — history search runs on the server over EVERY turn of the reader's
+      own threads (not only the first and latest previews the drawer shows, and not only the 50
+      most recent threads). Plain case-insensitive containment of the reader's own words: no
+      model, and the owner filter is the same `userId` as the list.
+    */
+    const term = search?.trim() ?? '';
 
     return this.atomic(async (tx) => {
       const threads = await tx.askThread.findMany({
-        where: { userId },
+        where: {
+          userId,
+          ...(term === ''
+            ? {}
+            : { turns: { some: { question: { contains: term, mode: 'insensitive' } } } }),
+        },
         orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
         take: RECENT_THREAD_LIMIT,
         select: {
@@ -606,6 +620,50 @@ export class AskV2Service {
           latestComputeClass: latest?.operation?.computeClass ?? null,
         };
       });
+    });
+  }
+
+  /**
+   * REASON TO RETURN R1 · §7 / G7 — DELETE ONE CONVERSATION.
+   *
+   * Removes the thread, its turns (and so any Saved bookmark of them), every operation those
+   * turns ran and each operation's stored result — the same set the retention sweep removes, so
+   * no copy of the reader's question or of our answer outlives the delete. The usage meter is a
+   * separate ledger (ComputeMeter) and is NOT refunded: deleting history never restores quota.
+   *
+   * Owner-scoped exactly like every other thread read: another reader's thread and a missing one
+   * are the same bare 404. A thread with an operation still in flight is refused (409) rather
+   * than deleted underneath a running execution. Followed questions are separate saved artifacts
+   * the reader manages themselves; they keep only a plain turn id and are not removed here.
+   */
+  async deleteThread(userId: string, threadId: string) {
+    this.user(userId);
+    return this.atomic(async (tx) => {
+      const thread = await tx.askThread.findFirst({
+        where: { id: threadId, userId },
+        select: {
+          id: true,
+          turns: {
+            select: {
+              operationId: true,
+              operation: { select: { status: true, storedResultId: true } },
+            },
+          },
+        },
+      });
+      if (!thread) throw new NotFoundException();
+      if (thread.turns.some((turn) => IN_FLIGHT_OPERATION_STATES.has(turn.operation.status))) {
+        throw new ConflictException({ code: 'ASK_THREAD_BUSY' });
+      }
+      const operationIds = thread.turns.map((turn) => turn.operationId);
+      const storedIds = thread.turns
+        .map((turn) => turn.operation.storedResultId)
+        .filter((id): id is string => id !== null);
+      /* thread first: its turns cascade, which releases the turn → operation reference */
+      await tx.askThread.delete({ where: { id: thread.id } });
+      await tx.computeOperation.deleteMany({ where: { id: { in: operationIds }, userId } });
+      await tx.storedResult.deleteMany({ where: { id: { in: storedIds }, userId } });
+      return { id: thread.id, removed: true };
     });
   }
 

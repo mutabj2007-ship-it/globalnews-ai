@@ -117,12 +117,22 @@ describe('ownership is verified server-side, and absence is indistinguishable fr
 
   it('Recent is scoped by userId and reads only this reader’s threads', () => {
     const body = code(methodBody(SERVICE, 'listThreads'));
-    expect(body).toContain('where: { userId }');
+    /* REASON TO RETURN R1 — the optional search adds a turn filter BESIDE the owner, never instead */
+    expect(body).toMatch(/askThread\.findMany\(\{\s*where: \{\s*userId,/);
     expect(body).toContain('threadId: { in: ids }');
   });
 
+  it('REASON TO RETURN R1 — deleting a conversation is scoped by userId at every step', () => {
+    const body = code(methodBody(SERVICE, 'deleteThread'));
+    expect(body).toContain('where: { id: threadId, userId }');
+    expect(body).toContain('computeOperation.deleteMany({ where: { id: { in: operationIds }, userId } })');
+    expect(body).toContain('storedResult.deleteMany({ where: { id: { in: storedIds }, userId } })');
+    const del = CONTROLLER.slice(CONTROLLER.indexOf("@Delete('threads/:id')"));
+    expect(del.slice(0, 120)).toContain('@UseGuards(CsrfGuard)');
+  });
+
   it('every new read and write calls the signed-in assertion first', () => {
-    for (const name of ['listThreads', 'listBookmarks', 'addBookmark', 'removeBookmark']) {
+    for (const name of ['listThreads', 'listBookmarks', 'addBookmark', 'removeBookmark', 'deleteThread']) {
       expect(code(methodBody(SERVICE, name))).toContain('this.user(userId)');
     }
   });

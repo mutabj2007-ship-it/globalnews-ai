@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import { normalizeDisplayName } from '@globalnews-ai/shared';
 import { PrismaService } from '../../database/prisma.service';
 import { RETURN_VISIT_MIN_INTERVAL_MS, VISIT_ACTIVITY_TOUCH_INTERVAL_MS } from './return-state.constants';
 import { TelemetryService } from '../telemetry/telemetry.service';
@@ -44,6 +45,21 @@ export class UsersService {
   async getById(userId: string): Promise<UserSummary | null> {
     return this.prisma.user.findUnique({
       where: { id: userId },
+      select: { id: true, email: true, displayName: true, createdAt: true },
+    });
+  }
+
+  /**
+   * REASON TO RETURN R1 · §7 / G6 — the reader saves (or clears) the name Ask may address them by.
+   * The ONLY write path to `displayName`: sign-in never fills it, and nothing derives it from the
+   * email. Validated by the shared rule; a refused value is a 422 with its code, never stripped.
+   */
+  async updateDisplayName(userId: string, input: string | null): Promise<UserSummary> {
+    const result = normalizeDisplayName(input);
+    if (!result.ok) throw new UnprocessableEntityException({ code: result.code });
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { displayName: result.value },
       select: { id: true, email: true, displayName: true, createdAt: true },
     });
   }

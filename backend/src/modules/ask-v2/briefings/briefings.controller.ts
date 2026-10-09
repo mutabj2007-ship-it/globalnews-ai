@@ -10,13 +10,15 @@ import {
   Param,
   ParseIntPipe,
   ParseUUIDPipe,
+  Patch,
   Post,
   UseGuards,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { IsOptional, IsString, IsUUID, Length, Matches } from 'class-validator';
+import { IsIn, IsOptional, IsString, IsUUID, Length, Matches } from 'class-validator';
+import { ASK_INPUT_MAX_CHARS } from '@globalnews-ai/shared';
 import { RequireAuthGuard } from '../../auth/require-auth.guard';
 import { CsrfGuard } from '../../auth/csrf.guard';
 import { CurrentUser } from '../../users/current-user.decorator';
@@ -32,6 +34,18 @@ export class CreateBriefingDto {
 
 export class AddBriefingVersionDto {
   @IsUUID() turnId!: string;
+}
+
+/** REASON TO RETURN R1 · §8 — the reader's own Ask turn that ran as a check. */
+export class RecordBriefingCheckDto {
+  @IsUUID() turnId!: string;
+}
+
+/** REASON TO RETURN R1 · G8 — rename, pause/resume, edit the followed question. */
+export class UpdateBriefingDto {
+  @IsOptional() @IsString() @Length(1, BRIEFING_TITLE_MAX) title?: string;
+  @IsOptional() @IsIn(['ACTIVE', 'PAUSED']) status?: 'ACTIVE' | 'PAUSED';
+  @IsOptional() @IsString() @Length(2, ASK_INPUT_MAX_CHARS) question?: string;
 }
 
 /**
@@ -87,6 +101,27 @@ export class BriefingsController {
     @Body() dto: AddBriefingVersionDto,
   ) {
     return this.briefings.addVersion(user.id, id, dto.turnId);
+  }
+
+  /* REASON TO RETURN R1 · §8 — record a manual check (the turn already ran; no AI here). */
+  @Post(':id/checks')
+  @UseGuards(CsrfGuard)
+  recordCheck(
+    @CurrentUser() user: { id: string },
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RecordBriefingCheckDto,
+  ) {
+    return this.briefings.recordCheck(user.id, id, dto.turnId);
+  }
+
+  @Patch(':id')
+  @UseGuards(CsrfGuard)
+  update(
+    @CurrentUser() user: { id: string },
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateBriefingDto,
+  ) {
+    return this.briefings.update(user.id, id, dto);
   }
 
   @Delete(':id')

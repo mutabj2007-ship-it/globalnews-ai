@@ -1612,13 +1612,35 @@ model Briefing {
   title     String
   /// The governed scope the briefing follows: { kind, countryCode?, storyId?, language }.
   scope     Json
-  /// ACTIVE | ARCHIVED (CHECK in the migration).
+  /// ACTIVE | PAUSED | ARCHIVED (CHECK in the migrations; PAUSED added by Reason to Return R1).
   status    String            @default("ACTIVE")
   createdAt DateTime          @default(now()) @db.Timestamptz(6)
   updatedAt DateTime          @updatedAt @db.Timestamptz(6)
   versions  BriefingVersion[]
+  checks    BriefingCheck[]
 
   @@index([userId, updatedAt])
+}
+
+/// REASON TO RETURN R1 · §8 — one manual check of a followed question: the reader's own Ask turn,
+/// our deterministic change assessment (codes + evidence references, never source text) and, when
+/// the check produced a usable changed reading, the version it created. Append-only; a failed or
+/// partial check never alters a version. One row per (briefing, turn) makes recording idempotent.
+model BriefingCheck {
+  id               String   @id @default(uuid())
+  briefingId       String
+  briefing         Briefing @relation(fields: [briefingId], references: [id], onDelete: Cascade)
+  /// The Ask turn the check ran as (a plain id: the conversation may later be deleted).
+  turnId           String
+  /// One of FOLLOWED_CHECK_OUTCOMES (CHECK in the migration).
+  outcome          String
+  assessment       Json
+  baselineVersion  Int?
+  resultingVersion Int?
+  checkedAt        DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([briefingId, turnId])
+  @@index([briefingId, checkedAt])
 }
 
 model BriefingVersion {
@@ -1948,6 +1970,12 @@ model AskObservation {
   evidenceRolesMissing   String[]
   /// Admitted reporting items. Null when execution never reached retrieval.
   reportingItemCount     Int?
+  /// REASON TO RETURN R1 · §5 — one closed code (OBSERVED_RETRIEVAL_OUTCOMES): matched,
+  /// completed-no-match, all-filtered, partial, provider-failed, retained-only. Null when
+  /// retrieval never ran. Plus the trace's own counts (seen by providers / admitted by the gate).
+  retrievalOutcome       String?
+  candidatesSeen         Int?
+  candidatesAdmitted     Int?
   /// INTELLIGENCE BINDING R1 — governed contributor ids considered / used / degraded, and
   /// the governed observations used. Ids and a count only — never content.
   contributorsConsidered String[] @default([])

@@ -125,6 +125,7 @@ import { contextIdentityToken, type ResolvedAskContext } from './context/resolve
 import { isSameHeadline } from '../news/identity/headline-identity.util';
 import { AskObservationService } from '../ask-observability/ask-observation.service';
 import { questionAnchorsOf, sameMessageSubject, stableClauseNeedsMessage } from '../analysis/query/question-anchors.util';
+import { observedRetrievalOf } from './retrieval-outcome';
 import { productMetaAnswer, readProductMeta } from './product-meta';
 import { checkWrittenArithmetic } from '../analysis/providers/arithmetic-check.util';
 import {
@@ -1654,6 +1655,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     /* CTO R4 semantic IR — the one bounded interpretation, when it ran, is a model invocation too */
     draft.modelInvocationCount = (aiExecuted ? 1 : 0) + (semanticRun?.calls ?? 0);
     draft.reportingItemCount = response.articles.length;
+    /* REASON TO RETURN R1 · §5 — what the search itself did (no-match vs failed vs filtered) */
+    Object.assign(draft, observedRetrievalOf(response));
     draft.evidenceRolesObtained = [
       ...(response.articles.length > 0 ? ['REPORTING'] : []),
       ...(specialistItems > 0 ? ['SPECIALIST'] : []),
@@ -2032,6 +2035,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     draft.aiExecuted = aiExecuted;
     draft.modelInvocationCount = (aiExecuted ? 1 : 0) + (semanticRun?.calls ?? 0);
     draft.reportingItemCount = response.articles.length;
+    /* REASON TO RETURN R1 · §5 — what the search itself did (no-match vs failed vs filtered) */
+    Object.assign(draft, observedRetrievalOf(response));
     draft.evidenceRolesObtained = [
       ...(response.articles.length > 0 ? ['REPORTING'] : []),
       ...(specialistItems > 0 ? ['SPECIALIST'] : []),
@@ -2192,6 +2197,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     draft.aiExecuted = produced;
     draft.modelInvocationCount = produced ? 1 : 0;
     draft.reportingItemCount = response.articles.length;
+    /* REASON TO RETURN R1 · §5 — what the search itself did (no-match vs failed vs filtered) */
+    Object.assign(draft, observedRetrievalOf(response));
     draft.evidenceRolesObtained = response.articles.length > 0 ? ['REPORTING'] : [];
     const usedNow = usage as { promptTokens: number; completionTokens: number } | null;
     if (usedNow !== null) {
