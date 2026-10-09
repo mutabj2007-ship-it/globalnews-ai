@@ -137,17 +137,24 @@ export function renderOutputContract(c: OutputContract): string {
   if (!hasOutputContract(c)) return '';
   const lines: string[] = [];
   let step = 1;
+  /* ASK R2 A/B/C BLOCKER REPAIR R1 — "Start with a two-sentence summary" named the reader's OPENING;
+     generation filled the whole "summary" field with those two sentences and stopped (live Alpha
+     bb08e49 and 09d7a5e, test A — B and C, which never say "summary", got their tables). */
   if (c.openingSentences !== null)
-    lines.push(`${step++}. OPEN the brief with exactly ${c.openingSentences} sentence${c.openingSentences === 1 ? '' : 's'} summarising the answer.`);
+    lines.push(
+      `${step++}. OPEN the brief with exactly ${c.openingSentences} sentence${c.openingSentences === 1 ? '' : 's'} summarising the answer. ` +
+        'This opening is only the START of the brief: the same field continues with every step below.',
+    );
   if (c.table !== null) {
     const cols =
       c.table.columns.length > 0
         ? `with EXACTLY these columns, in this order: ${c.table.columns.map((x) => `"${x}"`).join(' | ')}`
         : 'with the columns the question names';
     lines.push(
-      `${step++}. Then ONE compact Markdown table (header row, |---| separator, one row per development) ${cols}. ` +
+      `${step++}. ${step > 2 ? 'Then ONE' : 'ONE'} compact Markdown table (header row, |---| separator, one row per development) ${cols}. ` +
         'Cells come only from the supplied evidence; write "not reported" where the evidence is silent. ' +
         (c.sourcePerItem ? 'A source/link cell names the cited report’s publisher exactly as given in the evidence. ' : '') +
+        'A report whose connection to the reader’s subject (its place or route) would read "not reported" is not a row. ' +
         'The table is part of the brief text, never omitted.',
     );
   }
@@ -167,7 +174,13 @@ export function renderOutputContract(c: OutputContract): string {
     lines.push(`${step++}. The whole brief stays under ${c.wordLimit} words.`);
   return (
     "THE READER'S OUTPUT CONTRACT (read from their own question; follow it exactly — it is about the " +
-    'shape of the answer, not a topic to research):\n' +
+    'shape of the answer, not a topic to research)' +
+    /* structural contracts are generated as ONE "summary" field (analysis.service generationBreadth) */
+    (c.openingSentences !== null || c.table !== null || c.closing !== null
+      ? '. Every step below is part of the ONE brief, in this order — the reader’s word "summary" ' +
+        'means only its opening, never the whole brief'
+      : '') +
+    ':\n' +
     lines.join('\n')
   );
 }

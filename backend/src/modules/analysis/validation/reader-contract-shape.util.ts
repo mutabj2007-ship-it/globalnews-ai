@@ -28,6 +28,19 @@ import type { BriefComplianceVerdict, DevelopmentBreadth } from './brief-complia
  *     with a precise reason — validation is narrowed to the right contract, never disabled.
  */
 
+/*
+  ASK R2 A/B/C BLOCKER REPAIR R1 — the honest "nothing could be verified" opening: a negation and a
+  verification verb in the brief's FIRST sentence ("No development in the past seven days could be
+  verified…", "Nothing reported this week establishes…", "I could not find any report…").
+*/
+const NOTHING_VERIFIED =
+  /\b(?:no|none|nothing|not|cannot|could not|couldn't|unable)\b[^.!?]{0,120}\b(?:verif\w*|confirm\w*|found|find|establish\w*|identif\w*|report(?:ed|s)?)\b/iu;
+
+export function opensWithNothingVerified(summary: string): boolean {
+  const first = summary.trim().split(/(?<=[.!?])\s+/u)[0] ?? '';
+  return NOTHING_VERIFIED.test(first);
+}
+
 /** Words below which a single block cannot be a blended multi-development wall. */
 export const SHORT_ANSWER_WORDS = 120;
 
@@ -136,10 +149,22 @@ export function assessReaderContractShape(
   if (contract.table !== null) {
     if (tables.length === 0) {
       if (pipeProse) return refuse('the requested table is malformed');
-      /* no table: acceptable only as an honest short "nothing could be verified" statement */
-      return totalWords <= SHORT_ANSWER_WORDS
-        ? { compliant: true, paragraphs, breadth }
-        : refuse('the requested table is missing and the brief is a long prose block');
+      /*
+        ASK R2 A/B/C BLOCKER REPAIR R1 — no table is acceptable ONLY when there was nothing to put in
+        it: no report reached generation, or the brief is an honest short statement that OPENS by
+        saying nothing could be verified. Short prose alone is not that. Live Alpha bb08e49: A (two
+        sentences of developments) and B ("The following table summarizes…", no table) were both
+        accepted because they were under 120 words.
+      */
+      if (breadth.clusters === 0) return { compliant: true, paragraphs, breadth };
+      if (totalWords <= SHORT_ANSWER_WORDS && opensWithNothingVerified(summary) && !/\btable\b/iu.test(summary)) {
+        return { compliant: true, paragraphs, breadth };
+      }
+      return refuse(
+        totalWords <= SHORT_ANSWER_WORDS
+          ? 'the requested table is missing while the evidence supports at least one row'
+          : 'the requested table is missing and the brief is a long prose block',
+      );
     }
     if (tables.length > 1) return refuse('the brief holds more than one table');
     const shape = tableShape(tables[0]!.lines);

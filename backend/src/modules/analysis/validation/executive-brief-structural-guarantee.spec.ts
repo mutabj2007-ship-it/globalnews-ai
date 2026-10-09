@@ -214,7 +214,20 @@ describe('G4 - the validator still rejects degenerate output', () => {
 
 describe('G5 - single-development and Statistics Poland behaviour unchanged', () => {
   it('the narrow schema is byte-identical to the no-breadth schema', () => {
-    expect(JSON.stringify(schemaFor(NARROW))).toBe(JSON.stringify(schemaFor(undefined)));
+    /* ASK R2 A/B/C BLOCKER REPAIR R1 — NARROW is a ONE-cluster set, which now also carries the
+       required single-report disclosure field (and nothing else); remove it and the rest is identical */
+    const narrow = schemaFor(NARROW);
+    const { singleReportBasis, ...narrowProperties } = narrow.schema.properties as Record<string, unknown>;
+    expect(singleReportBasis).toBeDefined();
+    const stripped = {
+      ...narrow,
+      schema: {
+        ...narrow.schema,
+        properties: narrowProperties,
+        required: narrow.schema.required.filter((key: string) => key !== 'singleReportBasis'),
+      },
+    };
+    expect(JSON.stringify(stripped)).toBe(JSON.stringify(schemaFor(undefined)));
   });
 
   it('the narrow schema still carries one `summary` string', () => {

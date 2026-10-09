@@ -1,5 +1,6 @@
 import type { DisplayLocale } from '@globalnews-ai/shared';
 import { readOutputContract, renderOutputContract } from './output-contract.util';
+import { questionAnchorsOf, routesNamedIn } from '../query/question-anchors.util';
 import type {
   AnalysisDevelopmentBreadth,
   EvidenceFreshnessFact,
@@ -586,10 +587,23 @@ export function buildAnalysisUserPrompt(
   /* ANCHORING R1 — each item's relation to the anchored event, only when anchored. */
   const relationTag = (index: number): string =>
     eventEvidenceRelations?.[index] ? ` [relation: ${eventEvidenceRelations[index]}]` : '';
+  /* ASK R2 A/B/C BLOCKER REPAIR R1 — for a corridor question that names its routes, each report is
+     tagged with the requested routes ITS OWN TEXT names (measured, not inferred), so a route cell
+     can only repeat what the report says. */
+  const corridorAnchors = questionAnchorsOf(query);
+  const routeTag = (article: NormalizedArticleForPrompt): string => {
+    const named = routesNamedIn(corridorAnchors, article);
+    return named === null ? '' : ` [requested routes named in this report: ${named.length > 0 ? named.join(', ') : 'none'}]`;
+  };
+  const routeRule = articles.some((article) => routeTag(article) !== '')
+    ? '\nROUTES: a route cell or route statement for a report names ONLY the routes in that report\'s ' +
+      '[requested routes named in this report] tag — never a route the report does not name, and ' +
+      'never "both" because the reader asked about both.\n'
+    : '';
   const articleBlocks = articles
     .map(
       (article, index) =>
-        `${index + 1}. [evidenceId: ${article.evidenceId}]${relationTag(index)} "${article.title}" \u2014 ${article.sourceName}${serializeArticleTimestamp(article, evidenceState)}\n${article.summary}`,
+        `${index + 1}. [evidenceId: ${article.evidenceId}]${relationTag(index)}${routeTag(article)} "${article.title}" \u2014 ${article.sourceName}${serializeArticleTimestamp(article, evidenceState)}\n${article.summary}`,
     )
     .join('\n\n');
 
@@ -598,7 +612,7 @@ export function buildAnalysisUserPrompt(
   return `User question: "${query}"
 ${outputContract === '' ? '' : `
 ${outputContract}
-`}
+`}${routeRule}
 Evidence (cite these exact evidenceId values in "evidenceIds" fields — never invent new ones, never cite anything else):
 
 ${articleBlocks}
@@ -743,7 +757,10 @@ export function buildSingleSourceBasisSection(breadth: AnalysisDevelopmentBreadt
     'question (duplicate or syndicated copies of one report count once). Present every claim ' +
     'as that one report\'s account — for example, open with "One qualifying report currently ' +
     'indicates…" — and do NOT state a national, regional or overall conclusion, trend or ' +
-    'consensus from it, and do NOT describe anything as verified or confirmed on its basis.'
+    'consensus from it, and do NOT describe anything as verified or confirmed on its basis. ' +
+    /* ASK R2 A/B/C BLOCKER REPAIR R1 */
+    'Write the single-report disclosure in the "singleReportBasis" field — it opens the brief — and ' +
+    'do not repeat it in the brief\'s other fields.'
   );
 }
 
@@ -752,18 +769,30 @@ export function buildDevelopmentBreadthSection(breadth?: AnalysisDevelopmentBrea
     return '';
   }
 
-  /* ASK R2 LIVE-GATE REPAIR (P0-2) — the reader's own output contract decides the brief's shape */
-  if (breadth.multiDevelopment && breadth.readerContract === true) {
+  /* ASK R2 LIVE-GATE REPAIR (P0-2) — the reader's own output contract decides the brief's shape.
+     ASK R2 A/B/C BLOCKER REPAIR R1 — whatever the measured breadth: a narrow evidence set used to
+     get "one well-written paragraph is a correct and fully accepted answer" instead, which overrode
+     the reader's requested table and closing (live Alpha bb08e49, test A: one editorial domain). */
+  if (breadth.readerContract === true) {
     return (
       `\n\nMEASURED EVIDENCE BREADTH FOR THIS REQUEST: ${breadth.clusters} distinct reporting ` +
       `clusters across ${breadth.categories} editorial domains.\n\n` +
-      'HOW THE BRIEF IS REQUESTED HERE: ONE "summary" field that follows THE READER\'S OUTPUT ' +
-      'CONTRACT in the user message, in its order (opening, table, limits, closing). Separate its ' +
-      'blocks with a BLANK LINE. A requested table is ONE well-formed Markdown table — header row, ' +
+      (breadth.readerContractTable === true
+        ? /* ASK R2 A/B/C BLOCKER REPAIR R1 — one required field per contract block */
+          'HOW THE BRIEF IS REQUESTED HERE: THREE fields that together are the brief, in THE READER\'S ' +
+          'OUTPUT CONTRACT order — "briefOpening" (only the opening the contract asks for), "briefTable" ' +
+          '(only the requested Markdown table) and "briefClosing" (limits or gaps, then the requested ' +
+          'closing). They are joined in that order. '
+        : 'HOW THE BRIEF IS REQUESTED HERE: ONE "summary" field that follows THE READER\'S OUTPUT ' +
+          'CONTRACT in the user message, in its order (opening, table, limits, closing). Separate its ' +
+          'blocks with a BLANK LINE. ') +
+      'A requested table is ONE well-formed Markdown table — header row, ' +
       '|---| separator, one row per development, every row with the same number of cells as the ' +
-      'header — and is WITHHELD if malformed, missing (in a long answer) or longer than the requested ' +
-      'number of items. Fewer rows is correct when the evidence supports fewer; if nothing can be ' +
-      'verified, say so briefly instead of a table. Cover what the evidence establishes and nothing more.'
+      'header — and is WITHHELD if malformed, missing while any supplied report supports a row, or ' +
+      'longer than the requested number of items. Fewer rows is correct when the evidence supports ' +
+      'fewer (one row is a table); only if NOTHING can be verified, say so plainly instead of a table. ' +
+      'Cover what the evidence establishes and nothing more.' +
+      buildSingleSourceBasisSection(breadth)
     );
   }
 
@@ -1174,11 +1203,62 @@ export function buildAnalysisJsonSchema(
             'The OTHER material developments the supplied evidence establishes, distinct from the one in "primaryDevelopment". Separate them from each other with a blank line where there is more than one. There is no required number: cover what the evidence actually establishes and nothing more. Do NOT pad, do NOT invent a second development, and do NOT emit one per article or per source - if the evidence genuinely supports only a thin second strand, say so plainly and briefly rather than inflating it.',
         },
       }
-    : { summary: { type: 'string' } };
+    : developmentBreadth?.readerContractTable === true
+      ? {
+          /* ASK R2 A/B/C BLOCKER REPAIR R1 — a table contract brief, one required field per block */
+          briefOpening: {
+            type: 'string',
+            description:
+              "The OPENING of the brief exactly as THE READER'S OUTPUT CONTRACT asks (for example its requested number of summary sentences). If nothing could be verified, say so here in one sentence. No table here.",
+          },
+          briefTable: {
+            type: 'string',
+            description:
+              'ONLY the requested Markdown table: header row with the requested columns in order, a |---| separator row, then one row per qualifying development (fewer rows when the evidence supports fewer). Cells only from the supplied evidence. Empty string ONLY when no supplied report qualifies.',
+          },
+          briefClosing: {
+            type: 'string',
+            description:
+              'After the table: any limits or coverage gaps, then the closing the reader asked for (for example the practical check), as short paragraphs.',
+          },
+        }
+      : developmentBreadth?.readerContract === true
+      ? {
+          /* ASK R2 A/B/C BLOCKER REPAIR R1 — the whole contract brief, not the reader's "summary" */
+          summary: {
+            type: 'string',
+            description:
+              "The WHOLE brief in THE READER'S OUTPUT CONTRACT order: the opening sentences, then the requested Markdown table, then the requested closing paragraph, blocks separated by a blank line. When the reader asks for a \"summary\" they mean only the opening — this field must still contain the table and the closing.",
+          },
+        }
+      : { summary: { type: 'string' } };
 
-  const briefRequired: string[] = multiDevelopment
-    ? ['primaryDevelopment', 'additionalDevelopments']
-    : ['summary'];
+  /*
+    ASK R2 A/B/C BLOCKER REPAIR R1 — exactly ONE independent reporting cluster: the single-source
+    disclosure that assessSingleSourceDiscipline requires is its own REQUIRED field, placed first in
+    the brief by the provider. Live Alpha 625f85b, C: the one qualifying Dar es Salaam report produced
+    a correct revision that was withheld because the brief never said it rested on one report — the
+    prompt's SINGLE-SOURCE BASIS instruction was given and not followed. The check is unchanged.
+  */
+  const singleReport = !multiDevelopment && developmentBreadth?.clusters === 1;
+  const singleReportProperties: Record<string, unknown> = singleReport
+    ? {
+        singleReportBasis: {
+          type: 'string',
+          description:
+            'ONE sentence that opens the brief and says it rests on a single report, naming that report\'s publisher and date — for example "Only one qualifying report was found: KT Press, 6 October 2026." Never imply corroboration, agreement between sources or verification.',
+        },
+      }
+    : {};
+
+  const briefRequired: string[] = [
+    ...(multiDevelopment
+      ? ['primaryDevelopment', 'additionalDevelopments']
+      : developmentBreadth?.readerContractTable === true
+        ? ['briefOpening', 'briefTable', 'briefClosing']
+        : ['summary']),
+    ...(singleReport ? ['singleReportBasis'] : []),
+  ];
 
   return {
     name: 'news_analysis',
@@ -1190,6 +1270,7 @@ export function buildAnalysisJsonSchema(
         headline: { type: 'string' },
         // C910 - one `summary` string, or the two required brief fields.
         ...briefProperties,
+        ...singleReportProperties,
         /*
           INLINE CITATIONS R1 — the brief annotated sentence by sentence. Every
           entry is re-validated by summary-statements.util.ts: exact placement,

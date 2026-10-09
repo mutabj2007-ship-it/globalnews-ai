@@ -52,6 +52,13 @@ export interface AnalysisDevelopmentBreadth {
    * primary/additional split that fought it live. The compliance verdict is unchanged.
    */
   readonly readerContract?: boolean;
+  /**
+   * ASK R2 A/B/C BLOCKER REPAIR R1 — the reader's contract asks for a TABLE: the brief is generated
+   * as three required fields (briefOpening, briefTable, briefClosing) joined in that order into
+   * `summary` inside the provider. Live Alpha A: asked for "a two-sentence summary. Then … a compact
+   * table", the one "summary" field came back as the two sentences only, twice (≈500 tokens).
+   */
+  readonly readerContractTable?: boolean;
 }
 
 export interface AnalysisRelationalContext {
