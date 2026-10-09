@@ -108,7 +108,9 @@ describe('header and welcome group (A1/A2, F2)', () => {
       supporting sentence." The headline and the support line are still pinned here; the example
       sentence is asserted ABSENT below, in both of its old places.
     */
-    expect(frame).toMatch(/data-ask-welcome=""[\s\S]*sevenStrings\.composerHint[\s\S]*r2s\.read\.welcomeSupport/);
+    /* R3 FULL DESIGN (master CTO contract §3): the ONE supporting sentence is now R1-C's
+       "See what changed in the questions that matter to you, with evidence." (r3.welcomeSupport). */
+    expect(frame).toMatch(/data-ask-welcome=""[\s\S]*sevenStrings\.composerHint[\s\S]*r3\.welcomeSupport/);
     const markup = frame.replace(/\{\/\*[\s\S]*?\*\/\}/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
     expect(markup).not.toMatch(/data-ask="welcome-example"/);
     expect(markup).not.toMatch(/data-ask="welcome-example-desktop"/);
@@ -186,8 +188,11 @@ describe('conversations (D4 drawer · F2 column) — real reads only, no dummy c
     expect(api).not.toMatch(/threads\/\$\{[^}]*\}`,\s*'PATCH'/);
     const list = code(read('components', 'ask-frame', 'AskConversations.tsx'));
     expect(list).toMatch(/askV2Api\.deleteThread\(id\)/);
-    /* deleting is confirmed first */
-    expect(list).toMatch(/window\.confirm\(/);
+    /* deleting is confirmed first — SUPERSEDED `window.confirm(`; R3 FULL DESIGN · D12-delete:
+       the Design's own dialog, Keep focused first, the destroy only from its confirm. */
+    expect(list).toMatch(/<AskConfirmDialog/);
+    expect(list).toMatch(/onConfirm=\{\(\) => \{[\s\S]{0,120}void removeConversation\(id\);/);
+    expect(list).not.toMatch(/window\.confirm\(/);
     expect(list).not.toMatch(/rename/i);
   });
 });

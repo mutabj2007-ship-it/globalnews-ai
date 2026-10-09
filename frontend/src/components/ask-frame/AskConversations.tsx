@@ -18,6 +18,8 @@ import { askFormatLocalDay, askFormatLocalTime } from '@/lib/ask/askDirection';
 import { useAskNavOptional } from '@/components/ask-nav/AskNavShell';
 import { followStrings } from '@/lib/ask/followStrings';
 import styles from './askDashboard.module.css';
+import { AskConfirmDialog } from './AskConfirmDialog';
+import { askR3FullStrings } from '@/lib/ask/askR3FullStrings';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -73,6 +75,13 @@ export function AskConversations({
   const [removed, setRemoved] = useState<ReadonlySet<string>>(new Set());
   const [deleting, setDeleting] = useState<string | null>(null);
   const [deleteNote, setDeleteNote] = useState<string | null>(null);
+  /* R3 FULL DESIGN · D12-delete — the conversation awaiting the reader's confirmation. */
+  const [confirming, setConfirming] = useState<{
+    readonly id: string;
+    readonly title: string;
+    readonly opener: HTMLElement | null;
+  } | null>(null);
+  const r3 = askR3FullStrings(locale);
 
   useEffect(() => {
     if (account !== 'signed-in') return;
@@ -116,9 +125,13 @@ export function AskConversations({
     [rows, term, found],
   );
 
-  async function removeConversation(id: string, title: string): Promise<void> {
+  /*
+    SUPERSEDED (R3 FULL DESIGN · D12-delete): the browser's native `window.confirm` box, which
+    could not be themed, mirrored or labelled. The same question, the same note and the same ONE
+    request now go through AskConfirmDialog, where "Keep" holds focus first.
+  */
+  async function removeConversation(id: string): Promise<void> {
     if (deleting !== null) return;
-    if (!window.confirm(`${f.deleteConversationConfirm(title)}\n\n${f.deleteConversationNote}`)) return;
     setDeleting(id);
     setDeleteNote(null);
     const outcome = await askV2Api.deleteThread(id);
@@ -143,6 +156,25 @@ export function AskConversations({
 
   return (
     <nav data-ask="conversations" aria-label={r.conversations} className={styles.conversations}>
+      {confirming !== null && (
+        <AskConfirmDialog
+          title={r3.deleteTitle}
+          body={f.deleteConversationConfirm(confirming.title)}
+          note={f.deleteConversationNote}
+          confirmLabel={f.deleteConversation}
+          cancelLabel={r3.keep}
+          onCancel={() => {
+            const opener = confirming.opener;
+            setConfirming(null);
+            opener?.focus();
+          }}
+          onConfirm={() => {
+            const { id } = confirming;
+            setConfirming(null);
+            void removeConversation(id);
+          }}
+        />
+      )}
       {showTitle && <h2>{r.conversations}</h2>}
       <a
         data-ask="conversations-new"
@@ -239,7 +271,7 @@ export function AskConversations({
                         data-ask="conversation-delete"
                         disabled={deleting !== null}
                         aria-label={`${f.deleteConversation}: ${title}`}
-                        onClick={() => void removeConversation(row.id, title)}
+                        onClick={(event) => setConfirming({ id: row.id, title, opener: event.currentTarget })}
                         className="min-h-[44px] shrink-0 px-2 text-[0.8125rem] text-[var(--ad-ink-2,#93a0b8)]"
                       >
                         {deleting === row.id ? f.deleteConversationBusy : f.deleteConversation}

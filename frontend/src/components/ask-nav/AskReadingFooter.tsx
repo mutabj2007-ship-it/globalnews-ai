@@ -10,6 +10,8 @@ import { LanguageSelector } from '@/components/search/LanguageSelector';
 import { ThemeControl, ThemeScopeContext } from '@/components/platform/ThemeControl';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 import { askDirectionProps } from '@/lib/ask/askDirection';
+import { followStrings } from '@/lib/ask/followStrings';
+import { MY_UPDATES_HREF } from '@/lib/ask/followedQuestions';
 import styles from './askNav.module.css';
 
 /**
@@ -72,6 +74,13 @@ export function AskReadingFooter({
         )}
       </div>
       <div className={styles.readingFooterRow}>
+        {/* R3 FULL DESIGN — My updates is a primary destination (R1 contract §3); it was reachable
+            only from a Follow control. Same governed page, no count (no reviewed state yet). */}
+        {account === 'signed-in' && (
+          <Link href={MY_UPDATES_HREF} prefetch={false} data-ask-nav="footer-updates" className={styles.readingFooterLink}>
+            {followStrings(selected).myUpdates}
+          </Link>
+        )}
         {account === 'signed-in' && (
           <Link href="/saved" prefetch={false} data-ask-nav="footer-saved" className={styles.readingFooterLink}>
             {s.saved}

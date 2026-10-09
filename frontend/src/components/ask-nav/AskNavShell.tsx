@@ -440,6 +440,9 @@ export function AskNavShell({
     if (!open) return;
     closeRef.current?.focus();
     function onKeyDown(event: KeyboardEvent): void {
+      /* R3 FULL DESIGN · D12-delete — a confirmation opened from inside the drawer owns the
+         keyboard (its own Escape and Tab); the drawer stays open beneath it. */
+      if (document.activeElement?.closest('[role="alertdialog"]') != null) return;
       if (event.key === 'Escape') {
         /* ALPHA VISUAL ACCEPTANCE REPAIR R1 — an open language list closes first; the next
            Escape closes the drawer. */

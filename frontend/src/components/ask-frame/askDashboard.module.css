@@ -1328,7 +1328,9 @@
    composer remain (Design A2). 160 ms; instant under reduced motion. */
 .welcomeCollapsible {
   display: flex;
-  max-height: 16em;
+  /* R3 FULL DESIGN — 16em clipped §Composition 6–8 (resume group, job entry, coverage line) on
+     phones; the cap only bounds the collapse transition, so it is set above the tallest group. */
+  max-height: 40em;
   flex-direction: column;
   align-items: center;
   gap: 8px;
@@ -2849,6 +2851,37 @@
 }
 
 /*
+  R3 FULL DESIGN · PRODUCT OWNER RAIL RULING (9 Oct 2026). Supersedes the persistent 288/280 px
+  desktop column (R3 HANDOFF §3/§7, Reading Experience guide §4.10/§9). When the frame has the
+  standalone drawer (data-ask-rail='drawer') Conversations are hidden by default at EVERY width:
+  no column, no reserved track; the menu control stays visible and opens the existing drawer.
+*/
+.frame[data-ask-rail='drawer'] {
+  --ad-history-w: 0px;
+}
+@media (min-width: 1024px) and (orientation: landscape), (min-width: 1101px) {
+  .page[data-ask-standalone] .frame[data-ask-rail='drawer'] {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'header side'
+      'reader side'
+      'composer side'
+      'spacer side';
+  }
+  .page[data-ask-standalone] .frame[data-ask-rail='drawer'][data-ask-entry='true'] {
+    grid-template-areas:
+      'header side'
+      '. side'
+      'reader side'
+      'composer side'
+      'spacer side';
+  }
+  .page[data-ask-standalone] .frame[data-ask-rail='drawer'] :global([data-ask='shell-menu']) {
+    display: inline-flex;
+  }
+}
+
+/*
   RULING 5 — the canonical brand "Ask GlobalNewsAI" and "+ New question" are both always
   readable: the brand never truncates. The header compresses instead — padding and gaps first,
   then a slightly smaller wordmark and mark, and on the narrowest phones (≤340) the decorative
@@ -3119,4 +3152,288 @@
   font-size: var(--ad-t-sm, 0.9375rem);
   line-height: 1.5;
   color: var(--ad-ink-2, #93a0b8);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   ASK R3 FULL DESIGN R1 — welcome entries (§Composition 6–8) and the J01 job sheet.
+   Tokens only (no new colours); geometry from AskPrototype.dc.html.
+   ══════════════════════════════════════════════════════════════════════════════ */
+.r3EntriesWelcome,
+.r3EntriesDesktop {
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  margin-top: 18px;
+  text-align: center;
+}
+.r3EntriesDesktop {
+  display: none;
+}
+@media (min-width: 1024px) and (orientation: landscape), (min-width: 1101px) {
+  /* the centred desktop composer: the entries move under it (spec §Composition 5 → 6–8) */
+  .page[data-ask-standalone] .frame[data-ask-entry='true'] .r3EntriesWelcome {
+    display: none;
+  }
+  .page[data-ask-standalone] .frame[data-ask-entry='true'] .r3EntriesDesktop {
+    display: flex;
+  }
+}
+.r3ResumeGroup {
+  /* the one-line title must not widen the welcome group past the phone gutter (seen at 390) */
+  contain: inline-size;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 400px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  border: 1px solid var(--ad-line, #1e2636);
+  border-radius: 12px;
+  background: var(--ad-surface, #0f1420);
+  text-align: start;
+}
+.r3ResumeGroup > a {
+  display: flex;
+  min-height: var(--ad-target, 44px);
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 14px;
+  color: var(--ad-ink, #edeff5);
+  font-size: var(--ad-t-sm, 0.9375rem);
+  text-decoration: none;
+}
+.r3ResumeGroup > a + a {
+  border-top: 1px solid var(--ad-line, #1e2636);
+}
+.r3ResumeGroup > a > span:first-child {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+}
+.r3ResumeGroup > a > span:last-child {
+  flex: none;
+  color: var(--ad-ink-3, #9aabc0);
+}
+.r3ResumeGroup > a:hover {
+  background: var(--ad-surface-2, transparent);
+}
+.r3OneLine {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.r3JobEntry {
+  display: inline-flex;
+  min-height: var(--ad-target, 44px);
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 22px;
+  background: transparent;
+  color: var(--ad-accent-text, #8aa9ff);
+  font-size: var(--ad-t-sm, 0.9375rem);
+  font-weight: 500;
+  cursor: pointer;
+}
+.r3JobEntry:hover {
+  background: var(--ad-surface-2, transparent);
+}
+.r3Coverage {
+  margin: 0;
+  color: var(--ad-ink-3, #9aabc0);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+.r3Small {
+  margin: 0;
+  color: var(--ad-ink-2, #93a0b8);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+.r3Quiet {
+  margin: 0;
+  color: var(--ad-ink-2, #93a0b8);
+  font-size: var(--ad-t-sm, 0.9375rem);
+  line-height: 1.5;
+}
+/* J01 sheet — bottom sheet on phones (max 88 %), centred dialog (max 520) from 700 px */
+.r3SheetBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 85;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: var(--ad-scrim, rgba(0, 0, 0, 0.55));
+}
+.r3Sheet {
+  display: flex;
+  width: 100%;
+  max-height: 88%;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 20px 20px 0 0;
+  background: var(--ad-surface, #0f1420);
+  color: var(--ad-ink, #edeff5);
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.25);
+}
+@media (min-width: 700px) {
+  .r3SheetBackdrop {
+    align-items: center;
+  }
+  .r3Sheet {
+    width: min(92%, 520px);
+    max-height: 86%;
+    border-radius: 16px;
+  }
+}
+.r3SheetHead {
+  display: flex;
+  min-height: 56px;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 8px 0 18px;
+  border-bottom: 1px solid var(--ad-line, #1e2636);
+}
+.r3SheetHead h2 {
+  margin: 0;
+  font-size: var(--ad-t-sm, 0.9375rem);
+  font-weight: 600;
+}
+.r3SheetBody {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 18px max(18px, env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.r3Field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: var(--ad-t-sm, 0.9375rem);
+  font-weight: 600;
+}
+.r3Field input {
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--ad-line-input, #7d98b3);
+  border-radius: 10px;
+  background: var(--ad-surface, #0f1420);
+  color: var(--ad-ink, #edeff5);
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 1.2;
+}
+.r3TextButton {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 22px;
+  background: transparent;
+  color: var(--ad-accent-text, #8aa9ff);
+  font-size: var(--ad-t-sm, 0.9375rem);
+  font-weight: 600;
+  cursor: pointer;
+}
+.r3SheetHead .r3TextButton {
+  align-self: center;
+  color: var(--ad-ink-2, #93a0b8);
+  font-weight: 500;
+}
+.r3ChipGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.r3ChipGroup > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.r3Chip {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--ad-line-input, #7d98b3);
+  border-radius: 22px;
+  background: var(--ad-surface, #0f1420);
+  color: var(--ad-ink, #edeff5);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.r3Chip[aria-pressed='true'] {
+  border-color: var(--ad-accent, #6c93ff);
+  background: var(--ad-accent-soft, #1f4a75);
+  color: var(--ad-accent-soft-ink, #a8c5ff);
+}
+.r3Primary {
+  min-height: 48px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 24px;
+  background: var(--ad-accent, #6c93ff);
+  color: var(--ad-accent-ink, #080b12);
+  font-size: var(--ad-t-sm, 0.9375rem);
+  font-weight: 600;
+  cursor: pointer;
+}
+.r3Primary:disabled {
+  background: var(--ad-disabled-bg, #1d466c);
+  color: var(--ad-disabled-ink, #9aabc0);
+  cursor: not-allowed;
+}
+.r3Notice {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--ad-surface-2, #1d466c);
+  font-size: var(--ad-t-sm, 0.9375rem);
+  line-height: 1.5;
+}
+.r3Notice p {
+  margin: 0;
+}
+.r3NoticeTitle {
+  font-weight: 600;
+}
+.r3Actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.r3Secondary {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--ad-line-input, #7d98b3);
+  border-radius: 22px;
+  background: var(--ad-surface, #0f1420);
+  color: var(--ad-accent-text, #8aa9ff);
+  font-size: var(--ad-t-sm, 0.9375rem);
+  font-weight: 600;
+  cursor: pointer;
+}
+.r3Destructive {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--ad-err, #ff8a7a);
+  border-radius: 22px;
+  background: transparent;
+  color: var(--ad-err, #ff8a7a);
+  font-size: var(--ad-t-sm, 0.9375rem);
+  font-weight: 600;
+  cursor: pointer;
 }

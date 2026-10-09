@@ -22,6 +22,7 @@ import {
   followOutcomePresentation,
   type FollowOutcomeTone,
 } from '@/lib/ask/followOutcomePresentation';
+import { AskUpdatesChecking } from './AskUpdatesChecking';
 import { AskFollowAssessment } from '@/components/ask-frame/AskFollowAssessment';
 
 /**
@@ -57,6 +58,8 @@ export function MyUpdatesClient({ locale }: { readonly locale: DisplayLocale }):
         <p className="text-[13.5px] text-ink-tertiary">{s.myUpdatesIntro}</p>
       </header>
       {notice !== null && <p role="status" className="text-[13.5px] text-ink-secondary">{notice}</p>}
+      {/* R3 FULL DESIGN · D14 — manual checking only; later options labelled, never active */}
+      {list.ok && <AskUpdatesChecking locale={locale} />}
       {!list.ok ? (
         <p role="status" data-ask="my-updates-state" className="text-[13.5px] text-ink-secondary">
           {list.reason === 'SIGNED_OUT' ? s.signedOut : list.reason === 'NETWORK' ? s.network : s.unavailable}

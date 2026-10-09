@@ -7,6 +7,7 @@ import { askR2PayloadOf, askV2Api, type AskV2Operation } from '@/lib/api/askV2Ap
 import { askContinuityStrings } from '@/lib/ask/askContinuityStrings';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 import { useAskToast } from './AskToast';
+import { askR3FullStrings } from '@/lib/ask/askR3FullStrings';
 
 /**
  * STANDALONE PUBLIC BETA CONVERGENCE R1 — Save / Saved on a stored Ask turn.
@@ -71,6 +72,13 @@ export function AskTurnSave({
         if (!wasSaved && outcome.value.bookmarked) {
           toast?.({ text: read.savedToast, action: { label: read.undo, run: () => void toggle(true) } });
         }
+      } else if (!wasSaved) {
+        /*
+          R3 FULL DESIGN · D15-savefail — a save the server did not confirm was silently dropped.
+          The reader is told, and Retry is the same one request again (nothing is assumed saved).
+        */
+        const r3 = askR3FullStrings(locale);
+        toast?.({ text: r3.saveFailed, action: { label: r3.retry, run: () => void toggle(false) } });
       }
     } finally {
       inFlight.current = false;

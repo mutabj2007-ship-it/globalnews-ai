@@ -42,6 +42,9 @@ import { AskToastProvider, AskToastSlot } from './AskToast';
 import { useAskNavOptional } from '@/components/ask-nav/AskNavShell';
 import { AskReadingFooter } from '@/components/ask-nav/AskReadingFooter';
 import { AskDeepConfirm } from './AskDeepConfirm';
+import { AskJobSetupSheet } from './AskJobSetupSheet';
+import { AskWelcomeEntries, useResumeConversation } from './AskWelcomeEntries';
+import { askR3FullStrings } from '@/lib/ask/askR3FullStrings';
 import { Composer } from './AskParts';
 import styles from './askDashboard.module.css';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
@@ -120,6 +123,16 @@ export function AskFrameScreen({
   /* ASK DESIGN COMPLETENESS R1 — the ≥1024 layout: persistent conversations column. */
   const [wide, setWide] = useState(false);
   const nav = useAskNavOptional();
+  /*
+    R3 FULL DESIGN · PRODUCT OWNER RAIL RULING (9 Oct 2026) — supersedes R3 HANDOFF §3/§7 and the
+    Reading Experience guide's persistent desktop column. Where the standalone shell supplies its
+    drawer (`shellMenu`), Conversations are HIDDEN BY DEFAULT at every width and open only on
+    request through that drawer; no column reserves width. A frame mounted without the drawer keeps
+    the column, so no surface loses its history.
+  */
+  const persistentRail = wide && shellMenu === undefined;
+  /* R3 FULL DESIGN · J01 — the optional job setup sheet (opening it runs nothing). */
+  const [jobSheetOpen, setJobSheetOpen] = useState(false);
   const reader = useRef<HTMLDivElement>(null);
   const layout = useRef<HTMLDivElement>(null);
   /*
@@ -285,8 +298,23 @@ export function AskFrameScreen({
     locale: interfaceLocale,
     enabled: entryState,
     compact,
-    suspended: nav?.open === true || r2.signInRequired !== null || r2.deepQuote !== null,
+    suspended: nav?.open === true || jobSheetOpen || r2.signInRequired !== null || r2.deepQuote !== null,
   });
+  /*
+    R3 FULL DESIGN · D02 — "when genuinely available": the signed-in reader's own latest
+    conversation (a read of their threads; 0 AI). A guest reads nothing here.
+  */
+  const signedInReader = !guestMode && nav?.account === 'signed-in';
+  const resumeConversation = useResumeConversation(signedInReader && entryState);
+  const r3 = askR3FullStrings(interfaceLocale);
+  const closeJobSheet = (): void => {
+    setJobSheetOpen(false);
+    /* focus returns to the entry that opened it (the one placement CSS shows) */
+    requestAnimationFrame(() => {
+      const entries = Array.from(document.querySelectorAll<HTMLElement>('[data-ask="job-entry"]'));
+      entries.find((node) => node.offsetParent !== null)?.focus();
+    });
+  };
 
   useEffect(() => {
     setQuestion(new URLSearchParams(urlKey).get('q') ?? '');
@@ -594,6 +622,7 @@ export function AskFrameScreen({
       data-ask="frame-screen"
       data-ask-locale={interfaceLocale}
       data-ask-dir={askScope.dir}
+      data-ask-rail={persistentRail ? 'column' : 'drawer'}
       data-ask-answer-locale={disposition.answerLocale}
       /* PO ruling — the answer returns in the reader's selected language, so there is no
          answer-language disclosure. What remains is a COPY-coverage fact, exposed as data for
@@ -623,6 +652,7 @@ export function AskFrameScreen({
         F2/F3). Mounted only at that layout, so a phone reads nothing for it; below 1024 the same
         list lives in the menu drawer.
       */}
+      {persistentRail && (
       <aside data-ask="history" aria-label={r2s.read.conversations} className={styles.history}>
         {wide && (
           <AskConversations
@@ -640,6 +670,7 @@ export function AskFrameScreen({
           />
         )}
       </aside>
+      )}
       {/* PHONE / TABLET (<1024) — the Design header: menu · emblem 24 + wordmark · New. */}
       <header data-ask="header" className={styles.phoneHeader}>
         {/*
@@ -766,16 +797,27 @@ export function AskFrameScreen({
                 <div data-ask-welcome="" className={styles.welcomeCollapsible}>
                   <div className={styles.welcomeTitleGroup}>
                     {/* REASON TO RETURN R1 · G6 — only a name the reader saved; otherwise nothing */}
-                    {!guestMode && nav?.displayName != null && (
+                    {/* R3 FULL DESIGN · D02 — the verified name, or the neutral greeting; never a guess. */}
+                    {signedInReader && (
                       <p data-ask="welcome-greeting" className={styles.emptyLead}>
-                        {followStrings(interfaceLocale).greeting(nav.displayName)}
+                        {nav?.displayName != null
+                          ? followStrings(interfaceLocale).greeting(nav.displayName)
+                          : r3.welcomeBack}
                       </p>
                     )}
                     <h1 className={styles.emptyTitle}>{sevenStrings.composerHint}</h1>
+                    {/* R3 FULL DESIGN · WELCOME_PLACEHOLDER_SPEC §Composition 4 (R1-C sentence). */}
                     <p data-ask="welcome-support" className={styles.emptyLead}>
-                      {r2s.read.welcomeSupport}
+                      {r3.welcomeSupport}
                     </p>
                   </div>
+                  <AskWelcomeEntries
+                    locale={interfaceLocale}
+                    signedIn={signedInReader}
+                    latest={resumeConversation}
+                    onOpenJobs={() => setJobSheetOpen(true)}
+                    placement="welcome"
+                  />
                 </div>
                 {/*
                   THE ANSWER-LANGUAGE DISCLOSURE IS REMOVED (PO ruling).
@@ -983,7 +1025,12 @@ export function AskFrameScreen({
 
       <div
         data-ask="composer-footer"
-        onFocusCapture={() => setComposerFocused(true)}
+        /* R3 FULL DESIGN — focusing a desktop welcome entry under the centred composer is not
+           typing; counting it as typing unmounted the entry in the middle of its own click. */
+        onFocusCapture={(event) => {
+          if ((event.target as HTMLElement).closest?.('[data-ask="welcome-entries-desktop"]') != null) return;
+          setComposerFocused(true);
+        }}
         onBlurCapture={() => setComposerFocused(false)}
         className={styles.composerBar}
       >
@@ -1169,6 +1216,16 @@ export function AskFrameScreen({
                 : undefined
             }
           />
+          {/* R3 FULL DESIGN · desktop ≥1024: §Composition 6–8 sit under the centred composer. */}
+          {entryState && !typing && (
+            <AskWelcomeEntries
+              locale={interfaceLocale}
+              signedIn={signedInReader}
+              latest={resumeConversation}
+              onOpenJobs={() => setJobSheetOpen(true)}
+              placement="desktop"
+            />
+          )}
           {/*
             Design F2 put a copy of the example sentence under the centred composer on desktop.
             REMOVED BY CTO DESIGN R3 REVIEW, 9 Oct 2026 (H-R3-1), together with the welcome
@@ -1202,6 +1259,18 @@ export function AskFrameScreen({
           it holds no content and is invisible to assistive technology.
         */
         <div data-ask="entry-spacer" aria-hidden="true" className={styles.entrySpacer} />
+      )}
+      {jobSheetOpen && (
+        <AskJobSetupSheet
+          locale={interfaceLocale}
+          onClose={closeJobSheet}
+          onAskGeneral={() => {
+            setJobSheetOpen(false);
+            requestAnimationFrame(() =>
+              document.querySelector<HTMLTextAreaElement>('[data-ask="composer-input"]')?.focus(),
+            );
+          }}
+        />
       )}
       {r2.deepQuote !== null && (
         <AskDeepConfirm

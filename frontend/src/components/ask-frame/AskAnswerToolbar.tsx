@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
   type JSX,
+  type FocusEvent as ReactFocusEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from 'react';
@@ -19,6 +20,13 @@ import { AskTurnBrief } from './AskTurnBrief';
 import { AskTurnFollow } from './AskTurnFollow';
 import { useAskSourcesPanel } from './AskSourcesPanel';
 import styles from './askDashboard.module.css';
+import { askV2Api } from '@/lib/api/askV2Api';
+import { cleanAskDestination } from '@/lib/ask/askCleanNavigation';
+import { askR3FullStrings } from '@/lib/ask/askR3FullStrings';
+import { followStrings } from '@/lib/ask/followStrings';
+import { useAskNavOptional } from '@/components/ask-nav/AskNavShell';
+import { AskConfirmDialog } from './AskConfirmDialog';
+import { useAskToast } from './AskToast';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -167,7 +175,14 @@ export function AskAnswerToolbar({
   const r = s.read;
   const openSources = useAskSourcesPanel();
   const [canShare, setCanShare] = useState(false);
-  const [sheet, setSheet] = useState<'share' | 'more' | null>(null);
+  const [sheet, setSheet] = useState<'share' | 'more' | 'delete' | null>(null);
+  /* R3 FULL DESIGN · D06 More — Delete conversation (the reader's own, existing DELETE) */
+  const nav = useAskNavOptional();
+  const toast = useAskToast();
+  const r3 = askR3FullStrings(locale);
+  const fs3 = followStrings(locale);
+  const threadId = turn.operation?.threadId ?? null;
+  const canDelete = canSave && threadId !== null && nav !== null;
   const opener = useRef<HTMLElement | null>(null);
   const row = useRef<HTMLDivElement>(null);
   /*
@@ -201,18 +216,50 @@ export function AskAnswerToolbar({
   const shareInMore = canShare && compact;
   /* More is offered only when it holds a real action; a More that could open empty never is. */
   const offerMore =
-    shareInMore || onRefresh !== undefined || openFullHref !== undefined || onRunDeeper !== undefined;
+    shareInMore || onRefresh !== undefined || openFullHref !== undefined || onRunDeeper !== undefined || canDelete;
 
   /*
     R3 §10 — `role="toolbar"` gains the arrow-key movement ARIA expects of it: Left/Right
     (mirrored under `dir="rtl"` by reading the resolved direction, not the locale, so an embedded
     Ask inherits its host), Home and End.
 
-    DECLARED DEVIATION from R3 §10's "Tab enters and leaves": a roving tabindex would take four of
-    the five actions out of the Tab order, and the accepted row lets Tab reach every one of them.
-    The CTO's directive is to preserve keyboard and screenreader targets, so arrow keys are ADDED
-    and nothing the keyboard could reach before became unreachable.
+    SUPERSEDED DEVIATION (kept on the record): "a roving tabindex would take four of the five
+    actions out of the Tab order … so arrow keys are ADDED and nothing the keyboard could reach
+    before became unreachable."
+
+    R3 FULL DESIGN (master CTO contract 2026-10-09 §4 D06 and §6: "keyboard roving navigation",
+    "roving toolbar tab index") rules it: R3 §10's "Tab enters and leaves" is implemented. The row
+    is ONE Tab stop — the last action the reader focused, the first by default — and every action
+    stays reachable with Left/Right/Home/End. The buttons live in child components, so the
+    tabindex is applied to the rendered row (and re-applied when its children change).
   */
+  const rovingIndex = useRef(0);
+  const applyRoving = (): void => {
+    /* a host without a DOM (test renderers) has nothing to rove */
+    if (row.current === null || typeof row.current.querySelectorAll !== 'function') return;
+    const items = [...row.current.querySelectorAll<HTMLElement>('button:not([disabled])')];
+    if (items.length === 0) return;
+    const keep = Math.min(rovingIndex.current, items.length - 1);
+    items.forEach((item, index) => {
+      item.tabIndex = index === keep ? 0 : -1;
+    });
+  };
+  useEffect(() => {
+    applyRoving();
+    if (row.current === null || typeof MutationObserver === 'undefined') return;
+    const observer = new MutationObserver(() => applyRoving());
+    observer.observe(row.current, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled'] });
+    return () => observer.disconnect();
+  });
+  const onToolbarFocus = (event: ReactFocusEvent<HTMLDivElement>): void => {
+    /* a host without a DOM (test renderers) has nothing to rove */
+    if (row.current === null || typeof row.current.querySelectorAll !== 'function') return;
+    const items = [...row.current.querySelectorAll<HTMLElement>('button:not([disabled])')];
+    const here = items.indexOf(event.target as HTMLElement);
+    if (here < 0 || here === rovingIndex.current) return;
+    rovingIndex.current = here;
+    applyRoving();
+  };
   const onToolbarKey = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
     if (row.current === null) return;
     const { key } = event;
@@ -243,6 +290,7 @@ export function AskAnswerToolbar({
         aria-label={r.moreTitle}
         data-ask-toolbar-row={compact ? 'compact' : 'full'}
         onKeyDown={onToolbarKey}
+        onFocus={onToolbarFocus}
         className="flex items-center"
       >
         {/* TRUST R1 — copy this answer (local clipboard only; nothing is shared or sent). */}
@@ -401,7 +449,42 @@ export function AskAnswerToolbar({
               <AskTurnBrief operation={turn.operation} locale={locale} label={r.useInBriefing} />
             </div>
           )}
+          {/*
+            R3 FULL DESIGN · HANDOFF §10 More lists "Delete conversation" — the reader's OWN
+            conversation, the existing owner-scoped DELETE, confirmed first (AskConfirmDialog).
+            Listen ("coming later", aria-disabled), Download briefing and Compare reporting stay
+            OMITTED: no backend does them, and the recorded ruling is omission over a disabled
+            control (CTO R3-H05; open for a Design/PO ruling in 02-MISSING-NOW-AND-DEPS.md).
+          */}
+          {canDelete && (
+            <button
+              type="button"
+              data-ask="more-delete-conversation"
+              className={styles.actionRow}
+              onClick={() => setSheet('delete')}
+            >
+              <span>{r3.deleteConversationAction}</span>
+            </button>
+          )}
         </ActionSheet>
+      )}
+      {sheet === 'delete' && threadId !== null && (
+        <AskConfirmDialog
+          title={r3.deleteTitle}
+          body={fs3.deleteConversationConfirm(turn.question)}
+          note={fs3.deleteConversationNote}
+          confirmLabel={fs3.deleteConversation}
+          cancelLabel={r3.keep}
+          onCancel={close}
+          onConfirm={() => {
+            setSheet(null);
+            void askV2Api.deleteThread(threadId).then((outcome) => {
+              /* the path is read at the moment of deleting, not subscribed to (no router hook here) */
+              if (outcome.ok) nav?.clearAndGo(cleanAskDestination(window.location.pathname));
+              else toast?.({ text: fs3.deleteConversationFailed });
+            });
+          }}
+        />
       )}
     </>
   );

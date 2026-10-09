@@ -448,7 +448,8 @@ describe('H-5 · source chips and mixed LTR/RTL URLs are direction-safe', () => 
        `foreignCopy`; the Design support line that replaced it is a governed seven-locale string
        (askR2Strings.read.welcomeSupport), so it needs no foreign-copy isolation. The cost note is
        still EN/PL copy and still isolated (above). */
-    expect(frame).toMatch(/r2s\.read\.welcomeSupport/);
+    /* R3 FULL DESIGN — the support line is now the seven-locale askR3FullStrings.welcomeSupport. */
+    expect(frame).toMatch(/r3\.welcomeSupport/);
   });
 
   it('every chip and URL helper is locale-driven, with no hardcoded left or right', () => {

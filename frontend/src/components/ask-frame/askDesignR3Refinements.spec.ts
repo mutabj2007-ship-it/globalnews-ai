@@ -162,17 +162,24 @@ describe('D06 \u00b7 one row, no wrap, nothing dropped', () => {
   });
 
   it('More is still offered only when it holds a real action', () => {
+    /* R3 FULL DESIGN — "Delete conversation" (HANDOFF §10 More) is a real, owner-scoped action. */
     expect(code.toolbar).toMatch(
-      /const offerMore =\s*shareInMore \|\| onRefresh !== undefined \|\| openFullHref !== undefined \|\| onRunDeeper !== undefined;/,
+      /const offerMore =\s*shareInMore \|\| onRefresh !== undefined \|\| openFullHref !== undefined \|\| onRunDeeper !== undefined \|\| canDelete;/,
     );
+    expect(code.toolbar).toMatch(/const canDelete = canSave && threadId !== null && nav !== null;/);
   });
 
-  it('adds no unbacked control: no Download, Compare, Listen or per-answer Delete', () => {
+  it('adds no unbacked control: no Download, Compare, Listen or per-ANSWER Delete', () => {
     /* Matched on the CONTROL, not on bare words: `addEventListener` contains "listen", which is
-       how this assertion first failed. */
+       how this assertion first failed.
+       R3 FULL DESIGN — the one delete control allowed is HANDOFF §10's "Delete conversation"
+       (the existing DELETE /ask-v2/threads/:id, confirmed first); a per-answer delete is still
+       absent, as are Download, Compare and Listen. */
     expect(code.toolbar).not.toMatch(
-      /data-ask="[^"]*(?:download|compare|listen|delete)/i,
+      /data-ask="(?![^"]*delete-conversation)[^"]*(?:download|compare|listen|delete)/i,
     );
+    expect(code.toolbar).toMatch(/askV2Api\.deleteThread\(threadId\)/);
+    expect(code.toolbar).toMatch(/<AskConfirmDialog/);
     expect(code.toolbar).not.toMatch(/r\.(?:download|compare|listen)|useInListen/i);
     /* R3 §10 lists "Listen · coming later" as `aria-disabled`; the same Design forbids dummy
        controls, so it is omitted rather than shipped disabled. */
@@ -192,11 +199,16 @@ describe('D06 \u00b7 one row, no wrap, nothing dropped', () => {
     expect(code.css).toMatch(/\[data-ask='turn-continuity'\]:empty\)\s*\{\s*display:\s*none/);
   });
 
-  it('role="toolbar" gains arrow/Home/End movement, RTL-mirrored, and loses no Tab target', () => {
+  it('role="toolbar" gains arrow/Home/End movement, RTL-mirrored, as ONE roving Tab stop', () => {
     expect(code.toolbar).toMatch(/key !== 'ArrowLeft' && key !== 'ArrowRight' && key !== 'Home' && key !== 'End'/);
     expect(code.toolbar).toMatch(/getComputedStyle\(row\.current\)\.direction === 'rtl'/);
-    /* A roving tabindex would take four of five actions out of the Tab order. */
-    expect(code.toolbar).not.toMatch(/tabIndex/);
+    /*
+      SUPERSEDED: "A roving tabindex would take four of five actions out of the Tab order"
+      (`not.toMatch(/tabIndex/)`). R3 FULL DESIGN — master CTO contract §4 D06 / §6 requires the
+      roving tabindex (R3 §10 "Tab enters and leaves"); every action stays reachable by arrows.
+    */
+    expect(code.toolbar).toMatch(/item\.tabIndex = index === keep \? 0 : -1;/);
+    expect(code.toolbar).toMatch(/onFocus=\{onToolbarFocus\}/);
   });
 
   it('the superseded wrap claims are superseded in place, not deleted', () => {
@@ -422,8 +434,9 @@ describe('D01-D03 · the overlay is guidance, never a control', () => {
 
   it('the rotation is wired to the entry state only, and declares its overlay rule', () => {
     expect(code.screen).toMatch(/useRotatingExample\(\{[\s\S]{0,200}enabled: entryState,/);
+    /* R3 FULL DESIGN — the J01 job sheet is a sheet on the welcome view, so it suspends too. */
     expect(code.screen).toMatch(
-      /suspended: nav\?\.open === true \|\| r2\.signInRequired !== null \|\| r2\.deepQuote !== null,/,
+      /suspended: nav\?\.open === true \|\| jobSheetOpen \|\| r2\.signInRequired !== null \|\| r2\.deepQuote !== null,/,
     );
   });
 

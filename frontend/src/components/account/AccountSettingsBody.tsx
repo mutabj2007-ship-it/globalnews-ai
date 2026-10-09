@@ -5,6 +5,7 @@ import { NavBar } from '@/components/navigation/NavBar';
 import { Footer } from '@/components/layout/Footer';
 import { DeleteAccountDangerZone } from '@/components/account/DeleteAccountDangerZone';
 import { DisplayNameEditor } from '@/components/account/DisplayNameEditor';
+import { AskPreferencesSection } from '@/components/account/AskPreferencesSection';
 import { useAccount } from '@/lib/hooks/useAccount';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import type { DisplayLocale, LanguageCode } from '@globalnews-ai/shared';
@@ -94,6 +95,10 @@ export function AccountSettingsBody({
               locale={locale ?? language}
               onSave={updateDisplayName}
             />
+
+            {/* R3 FULL DESIGN · D13 — Language and Appearance, the same two controls as the
+                conversations footer; standalone Ask only (platform mode is unchanged). */}
+            {chrome === 'standalone' && locale !== undefined && <AskPreferencesSection locale={locale} />}
 
             <DeleteAccountDangerZone
               email={user.email}
