@@ -270,7 +270,7 @@ export function AskConversations({
                         type="button"
                         data-ask="conversation-delete"
                         disabled={deleting !== null}
-                        aria-label={`${f.deleteConversation}: ${title}`}
+                        aria-label={`${r3.deleteConversationAction}: ${title}`}
                         onClick={(event) => setConfirming({ id: row.id, title, opener: event.currentTarget })}
                         /* R3 D12 — the row affordance is the 44 px "⋯" glyph; its name stays
                            "Delete conversation: {title}" for assistive technology */

@@ -120,9 +120,10 @@ describe('priorities 1 and 3 — greeting and the drawer row affordance', () => 
   it('the verified-name greeting is the R3 wording, "Welcome back, {name}" (no added period)', () => {
     expect(followStrings('en').greeting('Amina')).toBe('Welcome back, Amina');
   });
-  it('the drawer row delete is the R3 44 px "⋯" glyph; its accessible name is unchanged', () => {
+  it('the drawer row delete is the R3 44 px "⋯" glyph named "Delete conversation: {title}"', () => {
     const rows = read('AskConversations.tsx');
-    expect(rows).toMatch(/aria-label=\{`\$\{f\.deleteConversation\}: \$\{title\}`\}/);
+    /* browser finding: the old name read "Delete: {title}" — with the word gone, the name must be R3's */
+    expect(rows).toMatch(/aria-label=\{`\$\{r3\.deleteConversationAction\}: \$\{title\}`\}/);
     expect(rows).toMatch(/<span aria-hidden="true">⋯<\/span>/);
     expect(rows).toMatch(/min-h-\[44px\] min-w-\[44px\]/);
   });
