@@ -120,7 +120,9 @@ export function initialRotationState(now = 0): RotationState {
  *
  * Read the four guarantees off the branches:
  *   · typing hides the example at once and stops rotation (section 8);
- *   · focus freezes the CURRENT example rather than clearing it (section 8);
+ *   · focus clears the example and freezes the queue — superseded from "freezes the CURRENT
+ *     example rather than clearing it (section 8)" by the CTO review of 9 Oct 2026; see the
+ *     FOCUS branch for the full superseded position and its reasoning;
  *   · emptying the field resumes only after the quiet delay (section 8);
  *   · taking an example stops rotation and hands the text to the composer (section 9);
  *   · R1-C: it does not advance while the reader cannot see it, and the dwell restarts rather
@@ -158,10 +160,24 @@ export function rotationReducer(
       /* The example became ordinary editable text. Nothing was submitted. */
       return still({ phase: 'STOPPED', visible: false, resumeAt: null });
 
+    /*
+      SUPERSEDED BY PRODUCT OWNER / CTO DESIGN R3 REVIEW, 9 Oct 2026 — "suggestions … disappear on
+      focus". This branch kept the example on screen, frozen, and its reason is kept on the record:
+
+        "Leave the currently shown example as non-entered suggestion content." (contract §8)
+
+      That was written while the example was a line of guidance BESIDE the field, where leaving it
+      in place cost the reader nothing. R1-C puts it in the placeholder's own slot, so a frozen
+      example is text sitting in the box at the moment the reader starts to type into it. It now
+      clears, and the composer falls back to its own static placeholder.
+
+      The example is CLEARED, not stopped: the phase is still PAUSED_FOCUS, the cursor does not
+      move, and BLUR on an empty field brings the same queue back with a fresh dwell. Focus is a
+      pause, not the end of rotation — only typing and taking an example STOP it.
+    */
     case 'FOCUS':
       if (state.phase === 'STOPPED') return still({});
-      /* "Leave the currently shown example as non-entered suggestion content." */
-      return still({ phase: 'PAUSED_FOCUS', visible: true, resumeAt: null });
+      return still({ phase: 'PAUSED_FOCUS', visible: false, resumeAt: null });
 
     case 'BLUR':
       if (state.phase === 'STOPPED') return still({});

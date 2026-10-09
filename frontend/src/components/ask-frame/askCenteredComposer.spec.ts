@@ -60,6 +60,11 @@ const example = (locale: DisplayLocale = 'en', compact = false) => ({
   directionProps: isolatedAuto(),
 });
 
+/* House rule: comment-strip before scanning for an ABSENCE. The superseding docblocks in
+   AskFrameScreen name `welcome-example` in order to record that it was removed. */
+const markupOf = (src: string): string =>
+  src.replace(/\{\/\*[\s\S]*?\*\/\}/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+
 const render = (props: Record<string, unknown>) =>
   renderToStaticMarkup(
     createElement(
@@ -108,7 +113,13 @@ describe('C-1 · the entry state, and nothing outside it', () => {
     */
     expect(screen).toMatch(/useRotatingExample\(\{/);
     expect(screen).toMatch(/enabled: entryState,/);
-    expect(screen).toMatch(/<p data-ask="welcome-example" className=\{styles\.welcomeExample\}>/);
+    /*
+      H-R3-1 RESOLVED (CTO DESIGN R3 REVIEW, 9 Oct 2026). This asserted the quiet welcome line
+      was still rendered. The ruling removes it in BOTH places so the rotating questions are the
+      only examples on the entry screen, and only inside the empty, unfocused composer.
+    */
+    expect(markupOf(screen)).not.toMatch(/data-ask="welcome-example"/);
+    expect(markupOf(screen)).not.toMatch(/data-ask="welcome-example-desktop"/);
   });
 
   it('keeps ONE composer instance — a second one would be a second submit path', () => {
@@ -264,13 +275,21 @@ describe('C-4 · selection fills the composer and submits nothing', () => {
     expect(parts).not.toMatch(/onClick=\{example\.onUse\}/);
   });
 
-  /* R3 (Design A1 "Example line is quiet text, not buttons"): the welcome example is a plain
-     paragraph — no selection path exists to fill, focus or submit anything. The shared draft path
-     remains for "Edit question" (D1) and the reopened question. */
-  it('the welcome example is a paragraph with no handler — it cannot fill or submit', () => {
-    const line = screen.split('<p data-ask="welcome-example"')[1].split('</p>')[0];
-    expect(line).not.toMatch(/onClick|onUse|tabIndex|role=/);
+  /*
+    R3 (Design A1 "Example line is quiet text, not buttons"): no example on this screen has a
+    selection path that could fill, focus or submit anything. The shared draft path remains for
+    "Edit question" (D1) and the reopened question.
+
+    SUPERSEDED BY CTO DESIGN R3 REVIEW, 9 Oct 2026 (H-R3-1) — this used to slice the
+    `welcome-example` paragraph out of the screen and assert it carried no handler. That
+    paragraph is gone. The guarantee is unchanged and now belongs to the in-field example, so it
+    is asserted on the screen as a whole and, in full, on the overlay itself in
+    askDesignR3Refinements.spec.ts.
+  */
+  it('no example on the entry screen can fill, focus or submit', () => {
+    expect(markupOf(screen)).not.toMatch(/data-ask="welcome-example"/);
     expect(screen).not.toMatch(/onUse: \(\) =>/);
+    expect(screen).not.toMatch(/onUse: rotatingExample\.onUse/);
   });
 
   it('draftQuestion still fills the composer and focuses it, and never submits', () => {
@@ -488,8 +507,13 @@ describe('C-7 · seven languages and Arabic RTL', () => {
       const html = render({ example: example(locale) });
       expect(html).toContain(QUESTION_EXAMPLES[0].text[locale]);
     }
-    /* R3: the screen's welcome example reads the reader's own catalogue (r2s = askShellStrings). */
-    expect(screen).toMatch(/\{r2s\.read\.welcomeExample\}/);
+    /*
+      SUPERSEDED BY CTO DESIGN R3 REVIEW, 9 Oct 2026 (H-R3-1) — this asserted the screen's static
+      welcome example read the reader's own catalogue. That sentence is removed. The claim the
+      test exists for — the SELECTED LANGUAGE decides the example text — is the loop above, and
+      the in-field example takes the same `interfaceLocale` the rest of the screen uses.
+    */
+    expect(screen).toMatch(/useRotatingExample\(\{\s*locale: interfaceLocale,/);
   });
 
   it('uses the reader s existing language selection — no second Ask-only selector', () => {

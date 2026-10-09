@@ -135,12 +135,20 @@ describe('R-2 · rotation advances on the dwell clock', () => {
 });
 
 describe('R-3 · focus pauses, typing stops, clearing resumes', () => {
-  it('pauses on focus and leaves the CURRENT example in place as a suggestion', () => {
+  it('clears the example on focus and freezes the queue where it stood', () => {
+    /*
+      SUPERSEDED BY PRODUCT OWNER / CTO DESIGN R3 REVIEW, 9 Oct 2026. This test was "pauses on
+      focus and leaves the CURRENT example in place as a suggestion" and asserted
+      `expect(state.visible).toBe(true)`, under contract §8's "leave the currently shown example
+      as non-entered suggestion content". R1-C moved the example into the placeholder's own slot
+      and the CTO ruled it must disappear on focus. The CURSOR assertion is unchanged and is the
+      half that still holds: focus is a pause, not the end of rotation.
+    */
     let state = tick(initialRotationState(0), EXAMPLE_ROTATION.dwellMs);
     const frozenAt = state.cursor;
     state = rotationReducer(state, { type: 'FOCUS', now: 5_000 }, QUEUE_LENGTH);
     expect(state.phase).toBe('PAUSED_FOCUS');
-    expect(state.visible).toBe(true);
+    expect(state.visible).toBe(false);
     expect(state.cursor).toBe(frozenAt);
     /* No amount of ticking moves it while the reader is in the field. */
     state = tick(state, 5_000 + EXAMPLE_ROTATION.dwellMs * 10);

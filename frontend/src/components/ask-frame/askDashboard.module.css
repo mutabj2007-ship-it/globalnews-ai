@@ -2236,6 +2236,14 @@
   line-height: 1.5;
   color: var(--ad-ink-2, #93a0b8);
 }
+/*
+  SUPERSEDED BY PRODUCT OWNER / CTO DESIGN R3 REVIEW, 9 Oct 2026 (H-R3-1) — nothing matches
+  `.welcomeExample` or `.welcomeExampleDesktop` any more: the static welcome-example sentence was
+  removed from the welcome group and from under the centred composer, because R1-C's rotating
+  example now lives inside the empty composer and a second static one beside it was redundant.
+  The rules are kept rather than deleted so the composition they describe is still on the record
+  (including the F2 desktop swap below), and so restoring the sentence stays a one-line change.
+*/
 .frame .welcomeExample,
 .welcomeExampleDesktop {
   max-width: 28em;

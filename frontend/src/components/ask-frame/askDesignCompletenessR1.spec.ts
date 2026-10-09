@@ -99,8 +99,20 @@ describe('header and welcome group (A1/A2, F2)', () => {
     expect(emblem).toMatch(/<AskEmblemSvg id=\{id\} size=\{24\} still \/>/);
     expect(emblem).toMatch(/still \? \{ style: \{ animation: 'none' \} \} : \{\}/);
   });
-  it('the welcome group is headline, support line and a quiet example; typing collapses it', () => {
-    expect(frame).toMatch(/data-ask-welcome=""[\s\S]*sevenStrings\.composerHint[\s\S]*r2s\.read\.welcomeSupport[\s\S]*r2s\.read\.welcomeExample/);
+  it('the welcome group is headline and ONE supporting sentence; typing collapses it', () => {
+    /*
+      SUPERSEDED BY PRODUCT OWNER / CTO DESIGN R3 REVIEW, 9 Oct 2026 (H-R3-1). This asserted a
+      third element, `r2s.read.welcomeExample`, and was titled "… and a quiet example". The
+      ruling: "remove the redundant static welcome-example sentence outside the Ask composer,
+      including the desktop variant … Preserve the original radar, approved headline and one
+      supporting sentence." The headline and the support line are still pinned here; the example
+      sentence is asserted ABSENT below, in both of its old places.
+    */
+    expect(frame).toMatch(/data-ask-welcome=""[\s\S]*sevenStrings\.composerHint[\s\S]*r2s\.read\.welcomeSupport/);
+    const markup = frame.replace(/\{\/\*[\s\S]*?\*\/\}/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+    expect(markup).not.toMatch(/data-ask="welcome-example"/);
+    expect(markup).not.toMatch(/data-ask="welcome-example-desktop"/);
+    expect(markup).not.toMatch(/r2s\.read\.welcomeExample/);
     expect(frame).toMatch(/const typing = entryState && \(composerFocused \|\| question\.trim\(\) !== ''\);/);
     expect(frame).toMatch(/data-ask-typing=\{typing \? 'true' : undefined\}/);
     expect(read('components', 'ask-frame', 'askDashboard.module.css')).toMatch(
