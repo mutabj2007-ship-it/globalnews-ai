@@ -578,7 +578,14 @@ export type AskV2Outcome<T> =
   | {
       readonly ok: false;
       /* ASK R2 — the documented input limit is its own reason (shared ASK_INPUT_TOO_LONG). */
-      readonly reason: 'UNAVAILABLE' | 'SIGNED_OUT' | 'REFUSED' | 'NETWORK' | typeof ASK_INPUT_TOO_LONG;
+      /* CTO P0 ALPHA PROXY TIMEOUT R1 — UNCONFIRMED: the submission may have run; it was not proven either way. */
+      readonly reason:
+        | 'UNAVAILABLE'
+        | 'SIGNED_OUT'
+        | 'REFUSED'
+        | 'NETWORK'
+        | 'UNCONFIRMED'
+        | typeof ASK_INPUT_TOO_LONG;
       readonly status?: number;
       /** ASK GUEST TRIAL R3 — the server's typed refusal code, when it gave one. */
       readonly code?: string;
@@ -703,6 +710,174 @@ export function newIdempotencyKey(): string {
   return `k-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
 }
 
+/*
+  ════════════════════════════════════════════════════════════════════════════
+  CTO P0 ALPHA PROXY TIMEOUT R1 — A LOST RESPONSE IS NOT "NOTHING RAN"
+  ════════════════════════════════════════════════════════════════════════════
+
+  Live Alpha db95d4e: the first-party proxy closed an Ask turn at ~30 s and answered 500 while the
+  backend went on to complete it (201, aiExecuted=true). The reader was told "Nothing was run" —
+  untrue. Once a submission has been DISPATCHED, a dropped connection or a generic gateway/server
+  failure (500/502/503/504 with no typed code) establishes nothing about whether it ran.
+
+  So an ambiguous outcome is RECOVERED, never asserted:
+    1. the SAME idempotency key is replayed. The server answers a replay with the operation that
+       key already created — no planner, no slot, no meter, no second execution (proven on
+       PostgreSQL in ask-v2.lost-response-replay.postgres.spec) — or, if the first request never
+       arrived, runs this ONE submission once;
+    2. while that operation is still running, the reader's own owner-scoped operation read is
+       polled until it settles;
+    3. if nothing can be confirmed in the bounded window, the outcome is UNCONFIRMED ("may have
+       run"), and the key is KEPT for this exact submission: the reader's next Send of the same
+       question in the same thread reuses it, so a manual retry can never run the work twice.
+
+  A genuine pre-dispatch failure — the browser reports itself offline before anything is sent —
+  stays NETWORK: nothing was sent, so "nothing was run" is then true. Typed refusals (4xx, a 5xx
+  with a code) are definitive and returned unchanged. The key lives in this module's memory only
+  (never browser storage), for 15 minutes.
+*/
+const AMBIGUOUS_STATUSES: ReadonlySet<number> = new Set([500, 502, 503, 504]);
+/** The operation statuses that are still on their way to an answer. */
+const SETTLING: ReadonlySet<string> = new Set(['QUOTED', 'ACCEPTED', 'RESERVED', 'RUNNING']);
+export const SUBMIT_RECOVERY = {
+  /** Waits before each same-key replay (ms). */
+  replayDelaysMs: [1_000, 2_000, 4_000, 8_000] as readonly number[],
+  pollIntervalMs: 3_000,
+  /** The backend's RUNNING lease is 300 s; recovery never waits longer than that plus a margin. */
+  settleDeadlineMs: 330_000,
+  sleep: (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)),
+  now: () => Date.now(),
+};
+const UNCONFIRMED_KEY_TTL_MS = 15 * 60_000;
+const unconfirmedKeys = new Map<string, { readonly key: string; readonly at: number }>();
+
+/** True when a POST's outcome says nothing about whether the server ran it. */
+export function isAmbiguousSubmitFailure(outcome: AskV2Outcome<unknown>): boolean {
+  if (outcome.ok) return false;
+  if (outcome.reason === 'NETWORK') return true;
+  return (
+    outcome.reason === 'REFUSED' &&
+    outcome.code === undefined &&
+    outcome.status !== undefined &&
+    AMBIGUOUS_STATUSES.has(outcome.status)
+  );
+}
+
+function submissionIdentity(path: string, body: Readonly<Record<string, unknown>>): string {
+  return JSON.stringify([path, body.question, body.language, body.intent, body.context ?? null]);
+}
+
+/** The key an earlier UNCONFIRMED submission of exactly this question left behind, if any. */
+function keptKeyFor(identity: string): string | null {
+  const kept = unconfirmedKeys.get(identity);
+  if (kept === undefined) return null;
+  if (SUBMIT_RECOVERY.now() - kept.at > UNCONFIRMED_KEY_TTL_MS) {
+    unconfirmedKeys.delete(identity);
+    return null;
+  }
+  return kept.key;
+}
+
+/** Test seam: forget every kept key. */
+export function forgetUnconfirmedSubmissions(): void {
+  unconfirmedKeys.clear();
+}
+
+function browserOffline(): boolean {
+  return typeof navigator !== 'undefined' && navigator.onLine === false;
+}
+
+/**
+ * One logical submission: ONE key, recovered on an ambiguous outcome (see above). `read` is the
+ * reader's own operation read (account or guest surface, matching the submission).
+ */
+async function submitRecovering(
+  path: string,
+  body: Readonly<Record<string, unknown>> & { readonly idempotencyKey: string },
+  headers: Readonly<Record<string, string>> | undefined,
+  read: (operationId: string) => Promise<AskV2Outcome<AskV2Operation>>,
+): Promise<AskV2Outcome<AskV2Operation>> {
+  const identity = submissionIdentity(path, body);
+  const kept = keptKeyFor(identity);
+  const key = kept ?? body.idempotencyKey;
+  const payload = { ...body, idempotencyKey: key };
+  /* genuine pre-dispatch failure: nothing is sent now, so nothing ran — unless an earlier attempt
+     of this same submission is still unconfirmed, which an offline browser cannot settle */
+  if (browserOffline()) return { ok: false, reason: kept === null ? 'NETWORK' : 'UNCONFIRMED' };
+  const send = () => call<AskV2Operation>(path, 'POST', payload, headers).then(namedInputRefusal);
+  const started = SUBMIT_RECOVERY.now();
+
+  const unconfirmed = (status?: number): AskV2Outcome<AskV2Operation> => {
+    unconfirmedKeys.set(identity, { key, at: SUBMIT_RECOVERY.now() });
+    return { ok: false, reason: 'UNCONFIRMED', ...(status === undefined ? {} : { status }) };
+  };
+  const settled = (outcome: AskV2Outcome<AskV2Operation>): AskV2Outcome<AskV2Operation> => {
+    unconfirmedKeys.delete(identity);
+    return outcome;
+  };
+  /* a replay may find the operation still running: follow it through the owner-scoped read */
+  const follow = async (operation: AskV2Operation): Promise<AskV2Outcome<AskV2Operation>> => {
+    let current = operation;
+    while (SETTLING.has(current.status) && !current.requiresAcceptance) {
+      if (SUBMIT_RECOVERY.now() - started >= SUBMIT_RECOVERY.settleDeadlineMs) return unconfirmed();
+      await SUBMIT_RECOVERY.sleep(SUBMIT_RECOVERY.pollIntervalMs);
+      const next = await read(current.operationId);
+      if (next.ok) current = next.value;
+      else if (!isAmbiguousSubmitFailure(next)) return unconfirmed(next.status);
+    }
+    return settled({ ok: true, value: current });
+  };
+
+  let outcome = await send();
+  if (!isAmbiguousSubmitFailure(outcome)) {
+    if (!outcome.ok) return settled(outcome);
+    return SETTLING.has(outcome.value.status) && !outcome.value.requiresAcceptance
+      ? follow(outcome.value)
+      : settled(outcome);
+  }
+  for (const delay of SUBMIT_RECOVERY.replayDelaysMs) {
+    await SUBMIT_RECOVERY.sleep(delay);
+    outcome = await send();
+    if (outcome.ok) return follow(outcome.value);
+    if (!isAmbiguousSubmitFailure(outcome)) return settled(outcome);
+  }
+  return unconfirmed(outcome.ok ? undefined : outcome.status);
+}
+
+/**
+ * The accepted deep run (`execute`) is the other long POST behind the same proxy. The server's
+ * claim is durable and its execute is idempotent — a RUNNING or settled operation is returned,
+ * never dispatched again — so an ambiguous outcome replays the execute and follows the
+ * operation read until it settles; unprovable within the bounded window → UNCONFIRMED.
+ */
+async function executeRecovering(
+  id: string,
+  read: (operationId: string) => Promise<AskV2Outcome<AskV2Operation>>,
+): Promise<AskV2Outcome<AskV2Operation>> {
+  const send = () => call<AskV2Operation>(`/ask-v2/operations/${encodeURIComponent(id)}/execute`, 'POST');
+  const started = SUBMIT_RECOVERY.now();
+  let outcome = await send();
+  for (const delay of SUBMIT_RECOVERY.replayDelaysMs) {
+    if (!isAmbiguousSubmitFailure(outcome)) break;
+    await SUBMIT_RECOVERY.sleep(delay);
+    outcome = await send();
+  }
+  if (!outcome.ok)
+    return isAmbiguousSubmitFailure(outcome)
+      ? { ok: false, reason: 'UNCONFIRMED', ...(outcome.status === undefined ? {} : { status: outcome.status }) }
+      : outcome;
+  let current = outcome.value;
+  while (current.status === 'RUNNING' || current.status === 'RESERVED') {
+    if (SUBMIT_RECOVERY.now() - started >= SUBMIT_RECOVERY.settleDeadlineMs)
+      return { ok: false, reason: 'UNCONFIRMED' };
+    await SUBMIT_RECOVERY.sleep(SUBMIT_RECOVERY.pollIntervalMs);
+    const next = await read(id);
+    if (next.ok) current = next.value;
+    else if (!isAmbiguousSubmitFailure(next)) return { ok: false, reason: 'UNCONFIRMED' };
+  }
+  return { ok: true, value: current };
+}
+
 export const askV2Api = {
   createThread(language: AskV2Language, returnPath: string | null, key = newIdempotencyKey()) {
     return call<AskV2Thread>('/ask-v2/threads', 'POST', {
@@ -720,13 +895,19 @@ export const askV2Api = {
     key = newIdempotencyKey(),
     context?: AskV2ContextRef,
   ) {
-    return call<AskV2Operation>(`/ask-v2/threads/${encodeURIComponent(threadId)}/turns`, 'POST', {
-      idempotencyKey: key,
-      question,
-      language,
-      intent,
-      ...(context === undefined ? {} : { context }),
-    }).then(namedInputRefusal);
+    /* CTO P0 — one key per logical submission; an ambiguous outcome is recovered, never "nothing ran" */
+    return submitRecovering(
+      `/ask-v2/threads/${encodeURIComponent(threadId)}/turns`,
+      {
+        idempotencyKey: key,
+        question,
+        language,
+        intent,
+        ...(context === undefined ? {} : { context }),
+      },
+      undefined,
+      (id) => askV2Api.operation(id),
+    );
   },
   /**
    * PUBLIC BETA ASK CONTINUITY R1 — Recent. A read: 0 AI · 0 provider · 0 Sand.
@@ -821,8 +1002,9 @@ export const askV2Api = {
   reserve(id: string) {
     return call<AskV2Operation>(`/ask-v2/operations/${encodeURIComponent(id)}/reserve`, 'POST');
   },
+  /** CTO P0 — an ambiguous outcome of the accepted run is recovered, never "nothing ran". */
   execute(id: string) {
-    return call<AskV2Operation>(`/ask-v2/operations/${encodeURIComponent(id)}/execute`, 'POST');
+    return executeRecovering(id, (operationId) => askV2Api.operation(operationId));
   },
   release(id: string) {
     return call<AskV2Operation>(`/ask-v2/operations/${encodeURIComponent(id)}/release`, 'POST');
@@ -855,9 +1037,9 @@ export const askV2Api = {
     key = newIdempotencyKey(),
     context?: AskV2ContextRef,
   ) {
-    return call<AskV2Operation>(
+    /* CTO P0 — the same recovery, through the guest's own operation read */
+    return submitRecovering(
       `/ask-v2/guest/threads/${encodeURIComponent(threadId)}/turns`,
-      'POST',
       {
         idempotencyKey: key,
         question,
@@ -866,7 +1048,8 @@ export const askV2Api = {
         ...(context === undefined ? {} : { context }),
       },
       GUEST_FIRST_WRITE,
-    ).then(namedInputRefusal);
+      (id) => askV2Api.guestOperation(id),
+    );
   },
   guestThreads() {
     return call<readonly AskGuestThreadSummary[]>('/ask-v2/guest/threads', 'GET');

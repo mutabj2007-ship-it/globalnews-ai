@@ -290,6 +290,10 @@ function governedGapText(payload: AskR2Payload, s: AskR2Strings): string {
  */
 export function failedTurnCopy(failure: string | undefined, s: AskR2Strings): string {
   if (failure === 'NETWORK') return s.r3.networkFailed;
+  /* CTO P0 ALPHA PROXY TIMEOUT R1 — sent, answer lost: it may have run, so it is never "nothing ran".
+     The existing, L-qualified seven-locale "couldn't finish in time, try again" copy is true here, and
+     the retry it invites reuses the SAME key (askV2Api), so it returns that answer and never runs twice. */
+  if (failure === 'UNCONFIRMED') return s.timedOut;
   if (failure?.startsWith('BUDGET_')) return s.budgetRefused;
   /* ASK R2 LIVE-GATE REPAIR (P0-5) — a deadline is "couldn't finish in time", never "unavailable" */
   if (failure === 'MODEL_TIMEOUT') return s.timedOut;

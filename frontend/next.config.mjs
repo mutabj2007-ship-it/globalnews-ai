@@ -1,6 +1,29 @@
+/**
+ * CTO P0 ALPHA PROXY TIMEOUT R1 — THE FIRST-PARTY PROXY'S DEADLINE, STATED RATHER THAN INHERITED.
+ *
+ * Next 14.2.35 (dist/server/lib/router-utils/proxy-request.js) arms every rewrite with
+ * `proxyTimeout: proxyTimeout === null ? undefined : proxyTimeout || 30000`, fed from
+ * `experimental.proxyTimeout` (router-server.js). Unset, it is 30 s. Live Alpha db95d4e: an
+ * authenticated Ask turn completed on the backend in ~31 s (201, aiExecuted=true) while the
+ * proxy had already closed the socket at ~30,028 ms ("socket hang up") and answered the
+ * browser with a generic 500 — the reader was told nothing ran.
+ *
+ * 120 s, bounded: longer than any Ask turn observed, well inside the backend's own RUNNING
+ * lease (300 s) and the Railway edge's request limit. It only lets an EXISTING response
+ * through; it adds no retry, no route and no header. Analysis keeps its own, stricter server
+ * ceiling (ANALYSIS_FIRST_PARTY_PROXY_CUTOFF_MS, 30 s, in @globalnews-ai/shared) — that
+ * ceiling is conservative under a longer proxy and is deliberately not loosened here. A
+ * response lost anyway (an edge drop, a network change) is recovered by the Ask client from the
+ * reader's own operation, never reported as "nothing ran" (askV2Api.ts, ambiguous failures).
+ */
+export const FIRST_PARTY_PROXY_TIMEOUT_MS = 120_000;
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  experimental: {
+    proxyTimeout: FIRST_PARTY_PROXY_TIMEOUT_MS,
+  },
   images: {
     // Live news providers (GNews and any future real provider) serve
     // article images from an unbounded, provider-controlled set of

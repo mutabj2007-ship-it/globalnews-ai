@@ -921,6 +921,59 @@ export class AskV2Service {
     };
   }
 
+  /**
+   * CTO P0 ALPHA PROXY TIMEOUT R1 — THE SAME KEY IS THE SAME SUBMISSION, EVEN AFTER IT RAN.
+   *
+   * A reader whose response was lost (a proxy timeout, a dropped connection) recovers by
+   * re-sending the SAME idempotency key. The full request hash cannot recognise that replay once
+   * the first submission has written its turn: the composed question, the inherited place and
+   * the prior artifact are all derived from the thread, which now contains the turn itself, so a
+   * replay would be refused as "a different request". The replay is therefore recognised FIRST,
+   * on what the reader actually sent — the same thread, words, language and intent, and the same
+   * server-resolved surface context (or none) — and answered with the existing operation: no
+   * planner, no slot, no meter, no guest allowance, no new work. A key reused for anything else
+   * is still refused.
+   */
+  private async replayOf(
+    p: AskPrincipal,
+    threadId: string,
+    input: QuoteTurnDto,
+    question: string,
+    surface: ResolvedAskContext | undefined,
+  ) {
+    const found = await this.atomic(async (tx) => {
+      await this.thread(tx, p, threadId);
+      const operation = await tx.computeOperation.findFirst({
+        where: { ...ownerOf(p), clientKey: input.idempotencyKey },
+      });
+      if (!operation) return null;
+      const turn = await tx.askTurn.findFirst({
+        where: { operationId: operation.id },
+        select: { threadId: true, question: true, language: true },
+      });
+      return { operation, turn };
+    });
+    if (found === null) return null;
+    const { operation, turn } = found;
+    const persisted = operation.plan as unknown as PersistedAskPlan | null;
+    const sameContext =
+      surface === undefined
+        ? persisted?.context === undefined || isConversationContext(persisted.context)
+        : operation.requestHash ===
+          hashIdentity([threadId, question, input.language, input.intent, contextIdentity(surface)]);
+    if (
+      turn === null ||
+      turn.threadId !== threadId ||
+      turn.question !== question ||
+      turn.language !== input.language ||
+      operation.kind !== input.intent ||
+      !sameContext
+    ) {
+      throw new ConflictException('Idempotency key belongs to a different request');
+    }
+    return this.getOperation(p, operation.id);
+  }
+
   async quote(p: AskPrincipal, threadId: string, input: QuoteTurnDto) {
     this.principal(p);
     const question = input.question.trim();
@@ -930,6 +983,9 @@ export class AskV2Service {
     if (!askInputWithinLimit(question)) throw new AskQuestionTooLong();
     /* R2B — resolved FIRST: before guest preflight, slot, operation, meter and planner. */
     const surface = await this.resolveContext(input.context);
+    /* CTO P0 ALPHA PROXY TIMEOUT R1 — a replay of a submission that already exists is answered here */
+    const replayed = await this.replayOf(p, threadId, input, question, surface);
+    if (replayed !== null) return replayed;
     /*
       CONVERSATIONAL INTELLIGENCE JOURNEY R3 — the governed conversation state of a context-free
       turn (conversation-state.ts), from the reader's own earlier questions in this thread. A turn
