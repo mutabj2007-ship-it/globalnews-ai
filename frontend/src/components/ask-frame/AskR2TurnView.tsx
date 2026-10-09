@@ -409,7 +409,6 @@ export function AskR2TurnView({
         showFullLabel={s.showFullQuestion}
         showLessLabel={s.showLessQuestion}
       />
-      {afterQuestion}
       {/* CTO checkpoint 5 §5 — "And in Kenya?" answered as the earlier question for Kenya: said, never hidden. */}
       {payload.continuation != null && (
         <p data-ask="continuation" className={`-mt-1 mb-3 ${NOTE}`}>
@@ -419,6 +418,8 @@ export function AskR2TurnView({
             : s.continuationNote}
         </p>
       )}
+      {/* ASK R3 PROGRESS R1 — the answer position's record, after the reader's words and the continuation note */}
+      {afterQuestion}
       {/* R2 §7 — a follow-up on an earlier answer whose search found nothing: said, never revised */}
       {/* ASK R2 LIVE-GATE REPAIR (P0-4) — the earlier request did not complete: said, never revised */}
       {payload.priorAnswer?.outcome === 'INCOMPLETE' && (
