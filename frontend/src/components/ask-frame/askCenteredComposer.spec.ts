@@ -695,8 +695,10 @@ describe('C-10 · accessibility', () => {
     expect(html).not.toMatch(/aria-live/);
     expect(parts).not.toMatch(/aria-live|role="status"|role="alert"/);
     /* And the example a reader is actually reading cannot change under them: focus pauses. */
-    expect(parts).toMatch(/onFocus=\{example\?\.onFocus\}/);
-    expect(parts).toMatch(/onBlur=\{example\?\.onBlur\}/);
+    /* R3 INTEGRATION — the handlers are wired for as long as rotation runs (exampleFocus), so blur
+       still reaches the rotation while focus has hidden the example (askExampleBlurWiring.spec). */
+    expect(parts).toMatch(/onFocus=\{exampleFocus\?\.onFocus \?\? example\?\.onFocus\}/);
+    expect(parts).toMatch(/onBlur=\{exampleFocus\?\.onBlur \?\? example\?\.onBlur\}/);
   });
 
   it('behaves as a suggestion, not as an automatically changing value', () => {

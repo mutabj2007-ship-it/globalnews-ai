@@ -1151,6 +1151,7 @@ export function AskFrameScreen({
               now the only examples on the entry screen, and they are only ever inside the empty,
               unfocused composer.
             */
+            exampleFocus={{ onFocus: rotatingExample.onFocus, onBlur: rotatingExample.onBlur }}
             example={
               rotatingExample.visible && rotatingExample.text !== null
                 ? {

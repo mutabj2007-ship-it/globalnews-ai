@@ -207,6 +207,7 @@ export function Composer({
   pending = false,
   maxHeight,
   example,
+  exampleFocus,
   limitCopy,
 }: {
   readonly value: string;
@@ -228,6 +229,13 @@ export function Composer({
   readonly maxHeight: 220 | 168 | 140;
   /** CENTERED COMPOSER R1 — the rotating example. Absent for every other caller. */
   readonly example?: ComposerExample;
+  /**
+   * R3 INTEGRATION (Claude Code) — the rotation's focus / blur, wired for as long as rotation
+   * runs. They used to travel inside `example`, which is undefined while the example is hidden
+   * — and focus hides it — so the field lost its onBlur and BLUR never arrived: after one focus
+   * the example never came back (R1-C: "blur restores a full hold"). Measured in a real browser.
+   */
+  readonly exampleFocus?: { readonly onFocus: () => void; readonly onBlur: () => void };
   /** ASK R2 — the documented input limit's copy (askR2Strings); the limit itself is shared. */
   readonly limitCopy: AskQuestionLimitCopy;
 }): JSX.Element {
@@ -270,8 +278,8 @@ export function Composer({
             data-ask="composer-input"
             value={value}
             onChange={(event) => onChange(event.target.value)}
-            onFocus={example?.onFocus}
-            onBlur={example?.onBlur}
+            onFocus={exampleFocus?.onFocus ?? example?.onFocus}
+            onBlur={exampleFocus?.onBlur ?? example?.onBlur}
             onKeyDown={(event) => {
               /* Observed first, so the very keystroke that proves a keyboard also counts. */
               if (physicalKeyboardEvidence(event)) physicalKeyboard.current = true;
