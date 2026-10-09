@@ -158,17 +158,22 @@ function response(articles: NewsArticle[], providers: string[], failures: Array<
   return failures.length === 0 ? value : attachProviderFailures(value, failures as never);
 }
 
-function harness(supplement: NewsArticle[], perSide: Record<string, NewsArticle[]> = {}) {
+function harness(
+  supplement: NewsArticle[],
+  perSide: Record<string, NewsArticle[]> = {},
+  perSideFailures: Array<{ providerId: string; kind: string }> = [],
+  supplementFailures: Array<{ providerId: string; kind: string }> = [
+    { providerId: 'gnews', kind: 'rate-limited' },
+    { providerId: 'gdelt-doc', kind: 'rate-limited' },
+  ],
+) {
   const search = jest.fn(async (term: string) => {
     const both = /tanzania/i.test(term) && /rwanda/i.test(term);
     if (both)
       /* the supplement: GNews refused (429) after the first search; GDELT 429; feeds answered */
-      return response(supplement, ['rss-feeds'], [
-        { providerId: 'gnews', kind: 'rate-limited' },
-        { providerId: 'gdelt-doc', kind: 'rate-limited' },
-      ]);
+      return response(supplement, ['rss-feeds'], supplementFailures);
     const side = Object.keys(perSide).find((name) => new RegExp(name, 'i').test(term));
-    return response(side === undefined ? [] : perSide[side], ['gnews']);
+    return response(side === undefined ? [] : perSide[side], ['gnews', 'rss-feeds'], perSideFailures);
   });
   const news = {
     search,
@@ -283,5 +288,16 @@ describe('B + C + D · the live shape through the analysis service', () => {
     expect(buildReportingWindowInstruction(policy.reportingWindow)).toMatch(
       /announced, planned or scheduled .* is NOT a change that happened/,
     );
+  });
+
+  it('NO-EVIDENCE PRESENTATION R1 · a lane refused during per-side retrieval is named unavailable, never "checked"; the lanes that answered stay checked', async () => {
+    const h = harness([], {}, [{ providerId: 'gdelt-doc', kind: 'unavailable' }], []);
+    const out = await ask(h);
+    expect(h.analyzeNews).not.toHaveBeenCalled();
+    const t = out.retrievalContext!.retrievalTrace!;
+    expect(t.lanesUnavailable.map((u) => u.lane)).toContain('gdelt-doc');
+    expect(t.lanesSucceeded).not.toContain('gdelt-doc');
+    expect(t.lanesSucceeded).toEqual(expect.arrayContaining(['rss-feeds']));
+    expect(out.retrievalContext!.providerFailures?.map((f) => f.providerId)).toContain('gdelt-doc');
   });
 });

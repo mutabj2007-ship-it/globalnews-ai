@@ -16,6 +16,7 @@ import { askDictionary } from '@/lib/ask/shell/askDictionary';
 import { askComparisonCoverageLines } from '@/lib/ask/askComparisonCoverage';
 import { AnalysisModeBadge } from '@/components/search/AnalysisModeBadge';
 import { EvidenceFreshnessNotice } from '@/components/search/EvidenceFreshnessNotice';
+import { partialOutageWithNoMatches } from '@/components/search/evidenceDisplay';
 import {
   EventAnchorNotice,
   resolveAmbiguousCountryQuestion,
@@ -164,6 +165,14 @@ interface AskCompactResultProps {
   readonly storyBookmarks?: boolean;
   /** R2-S1 — the server's evidence-linked comparison table (Ask R2 payloads only). */
   readonly comparisonTable?: AskComparisonTable | null;
+  /**
+   * ASK NO-EVIDENCE PRESENTATION R1 — the Ask R2 turn already states the no-evidence outcome (its
+   * title, "not a complete search", the lanes checked, Edit question). This card then adds only
+   * what the turn does not say — a question asked instead of searched, an ambiguous place, or a
+   * TOTAL outage — and never the generic "name a place, event or time period" advice, which the
+   * reader's own question may already answer.
+   */
+  readonly noAnswerOwnedByTurn?: boolean;
 }
 
 export function AskCompactResult({
@@ -177,6 +186,7 @@ export function AskCompactResult({
   showFullAnalysisLink = true,
   storyBookmarks = true,
   comparisonTable = null,
+  noAnswerOwnedByTurn = false,
 }: AskCompactResultProps): JSX.Element {
   const dictionary = locale === undefined ? getDictionary(language) : askDictionary(locale);
   const t = dictionary.askAi;
@@ -242,7 +252,10 @@ export function AskCompactResult({
   const retrievalUnavailable =
     (response.retrievalContext.evidenceState ??
       resolveEvidenceState(response.retrievalContext, response.articles.length)) ===
-    'degraded-fallback';
+      'degraded-fallback' &&
+    /* ASK NO-EVIDENCE PRESENTATION R1 — "live reporting is unavailable" only when NO lane answered;
+       a lane that answered with no matches is a search that ran (partial outage, disclosed). */
+    !partialOutageWithNoMatches(response.retrievalContext, response.articles.length);
   /* ANCHORING R1 — an ambiguous country is asked about, never reported as "no evidence". */
   const ambiguousCountry = resolveAmbiguousCountryQuestion(response.retrievalContext, language, locale);
   /* ASK R2 ALPHA ENABLEMENT R1 — asked, not searched (MC-055 / MC-070). */
@@ -254,6 +267,9 @@ export function AskCompactResult({
       : retrievalUnavailable
         ? t.resultNoAnswerProvider
         : t.resultNoAnswerEvidence;
+  /* ASK NO-EVIDENCE PRESENTATION R1 — inside an Ask R2 turn, only what the turn does not say. */
+  const showNoAnswer =
+    !noAnswerOwnedByTurn || !!ambiguousCountry || !!askedNotSearched || retrievalUnavailable;
   const canOpenFullAnalysis = hasAnalysis || response.articles.length > 0;
   /*
     ASK DESIGN COMPLETENESS R1 — ANSWER FIRST (RECONCILIATION_GUIDE §5). On the Ask reading
@@ -418,6 +434,7 @@ export function AskCompactResult({
       ) : null}
 
       {!hasAnalysis ? (
+        showNoAnswer && (
         <div
           data-ask="no-answer"
           data-ask-asked={askedNotSearched?.code}
@@ -439,12 +456,13 @@ export function AskCompactResult({
           ) : null}
           {/* "Try again shortly / ask a narrower question" is advice for a question that WAS
               searched; a question asked instead of searched already says what to do. */}
-          {askedNotSearched ? null : (
+          {askedNotSearched || noAnswerOwnedByTurn ? null : (
             <p className="mt-1.5 text-xs leading-relaxed text-ink-secondary">
               {t.resultNoAnswerSafety}
             </p>
           )}
         </div>
+        )
       ) : (
         <>
           {brief.briefWithheld ? (

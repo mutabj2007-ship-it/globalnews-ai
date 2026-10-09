@@ -66,3 +66,53 @@ export function displayRetrievalContext(
         : { ...context, dataMode: 'unavailable', fallbackReason: 'no-live-results' };
   }
 }
+
+/*
+  ASK NO-EVIDENCE PRESENTATION R1 — A PARTIAL OUTAGE IS NOT "LIVE DATA UNAVAILABLE".
+
+  'degraded-fallback' folds every provider failure together. With nothing admitted, two different
+  facts hide under it (live Alpha op 51794ad5: GNews and the publisher feeds answered with zero
+  matching reports while GDELT was refused):
+
+    partial  at least one lane answered — the search ran and found nothing matching; the refused
+             lane is disclosed by name (the lanes list, "not a complete search")
+    total    no lane answered — live reporting really was unavailable
+
+  Lanes are read from the server's own trace when present (lanesSucceeded), else from the
+  provider list minus the named failures. Without either, nothing can be shown to have answered,
+  and the stricter reading (total) stands.
+*/
+export function someLaneAnswered(context: AnalysisRetrievalContext): boolean {
+  const succeeded = context.retrievalTrace?.lanesSucceeded;
+  if (succeeded !== undefined) return succeeded.length > 0;
+  const failures = context.providerFailures;
+  if (failures === undefined || failures.length === 0) return false;
+  const failed = new Set(failures.map((f) => f.providerId));
+  return (context.providers ?? []).some((p) => !failed.has(p));
+}
+
+/** True only when NO live lane answered and nothing usable was served: a real outage. */
+export function reportingWhollyUnavailable(
+  context: AnalysisRetrievalContext,
+  articleCount?: number,
+): boolean {
+  const count = articleCount ?? context.articlesRetrieved ?? 0;
+  return (
+    displayEvidenceState(context, articleCount) === 'degraded-fallback' &&
+    count === 0 &&
+    !someLaneAnswered(context)
+  );
+}
+
+/** Nothing admitted, a lane refused, and another lane answered with no matching reports. */
+export function partialOutageWithNoMatches(
+  context: AnalysisRetrievalContext,
+  articleCount?: number,
+): boolean {
+  const count = articleCount ?? context.articlesRetrieved ?? 0;
+  return (
+    displayEvidenceState(context, articleCount) === 'degraded-fallback' &&
+    count === 0 &&
+    someLaneAnswered(context)
+  );
+}

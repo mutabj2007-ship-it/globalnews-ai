@@ -489,7 +489,7 @@ export function askR2View(
       suggestion,
       choices,
     },
-    verification: verificationOf(retrieval, s),
+    verification: verificationOf(retrieval, s, badge === 'insuf' && searchLimited),
   };
 }
 
@@ -497,6 +497,8 @@ export function askR2View(
 function verificationOf(
   retrieval: AnalysisRetrievalContext | null | undefined,
   s: AskR2Strings,
+  /** the turn shows its own "not a complete search" line (INSUFFICIENT + search limited) */
+  retrievalOwnsIncompleteLine = false,
 ): AskR2View['verification'] {
   if (retrieval == null) return null;
   const trace = retrieval.retrievalTrace;
@@ -508,9 +510,13 @@ function verificationOf(
     retrieval.verificationNotice === undefined
       ? null
       : !hasClaims
-        ? retrieval.verificationNotice === 'COVERAGE_INCOMPLETE'
-          ? s.verification.coverageIncomplete
-          : null
+        ? /* ASK NO-EVIDENCE PRESENTATION R1 — an INSUFFICIENT turn already says "not a complete
+             search" once (searchIncomplete); the same fact is not repeated here. */
+          retrievalOwnsIncompleteLine
+          ? null
+          : retrieval.verificationNotice === 'COVERAGE_INCOMPLETE'
+            ? s.verification.coverageIncomplete
+            : null
         : retrieval.verificationNotice === 'COVERAGE_INCOMPLETE'
           ? `${s.verification.notVerified} ${s.verification.coverageIncomplete}`
           : s.verification.notVerified;

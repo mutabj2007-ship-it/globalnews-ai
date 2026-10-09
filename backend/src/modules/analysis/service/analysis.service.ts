@@ -5236,10 +5236,15 @@ export class AnalysisService {
     const coverage: ComparisonCountryCoverage[] = [];
     const providers = new Set<string>();
     const failureKinds = new Set<string>();
+    /* ASK NO-EVIDENCE PRESENTATION R1 — which lane refused, so the trace never counts a refused
+       lane as "checked" and a partial outage is told apart from a total one. */
+    const failedLanes = new Map<string, string>();
     for (const side of sides) {
       const result = await this.retrieveMemberEvidence(side, requestedLanguage);
       result.providers.forEach((provider) => providers.add(provider));
       result.failureKinds.forEach((kind) => failureKinds.add(kind));
+      for (const failure of result.failures ?? [])
+        if (!failedLanes.has(failure.providerId)) failedLanes.set(failure.providerId, failure.kind);
       const live = result.dataMode === 'live' ? result.articles : [];
       // Reuse the bounded database-only regional ladder. No provider retry.
       const retainedCandidates =
@@ -5314,6 +5319,9 @@ export class AnalysisService {
               ? 'no-live-results'
               : undefined,
         articlesRetrieved: articles.length,
+        ...(failedLanes.size === 0
+          ? {}
+          : { providerFailures: [...failedLanes].map(([providerId, kind]) => ({ providerId, kind })) }),
         outcome:
           articles.length > 0 && !coverage.some((member) => member.usableLiveEvidenceCount > 0)
             ? 'RETAINED_ONLY'
@@ -5441,6 +5449,8 @@ export class AnalysisService {
     failed: boolean;
     failureKinds: string[];
     attempted: boolean;
+    /** ASK NO-EVIDENCE PRESENTATION R1 — WHICH provider refused (ids + kinds), when known. */
+    failures?: ProviderFailure[];
   }> {
     const isPolish = requestedLanguage === 'pl';
     const term = isPolish ? (polishCountryName(member) ?? member.name) : member.name;
@@ -5499,6 +5509,7 @@ export class AnalysisService {
           failureKinds: failureKinds.length ? failureKinds : ['unavailable'],
           providers,
           attempted: true,
+          failures,
         };
       }
 
@@ -5514,6 +5525,7 @@ export class AnalysisService {
         dataMode: response.dataMode,
         failed: false,
         failureKinds,
+        failures,
       };
     } catch (error) {
       this.logger.warn(

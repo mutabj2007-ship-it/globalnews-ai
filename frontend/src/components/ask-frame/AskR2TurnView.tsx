@@ -741,6 +741,7 @@ export function AskR2TurnView({
               showFullAnalysisLink={false}
               storyBookmarks={storyBookmarks}
               comparisonTable={payload.comparisonTable ?? null}
+              noAnswerOwnedByTurn={view.badge === 'insuf'}
             />
           )}
           {/*

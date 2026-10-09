@@ -1,7 +1,11 @@
 import { Archive, CircleOff, FlaskConical } from 'lucide-react';
 import type { AnalysisRetrievalContext, DisplayLocale, LanguageCode } from '@globalnews-ai/shared';
 import { resolveRetrievalContextText } from '@/components/search/RetrievalContextStatus';
-import { displayEvidenceState, displayRetrievalContext } from '@/components/search/evidenceDisplay';
+import {
+  displayEvidenceState,
+  displayRetrievalContext,
+  partialOutageWithNoMatches,
+} from '@/components/search/evidenceDisplay';
 
 /**
  * ASK/SEARCH ENGINEERING R1 — RETAINED EVIDENCE IS NEVER PRESENTED AS LIVE.
@@ -41,6 +45,9 @@ export function EvidenceFreshnessNotice({
   articleCount?: number;
 }): JSX.Element | null {
   if (evidenceIsLive(retrievalContext, articleCount)) return null;
+  /* ASK NO-EVIDENCE PRESENTATION R1 — a lane answered with no matches while another refused: that is
+     not "live data unavailable". The refused lane is disclosed by name where lanes are listed. */
+  if (partialOutageWithNoMatches(retrievalContext, articleCount)) return null;
 
   const shown = displayRetrievalContext(retrievalContext, articleCount);
   /* A context that still reads 'live' here carried nothing to derive from; disclose it as stored. */
