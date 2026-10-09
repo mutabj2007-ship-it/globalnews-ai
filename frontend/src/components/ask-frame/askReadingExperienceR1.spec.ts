@@ -140,7 +140,12 @@ describe('Research state — truthful, never a timer (H-FREEZE §5)', () => {
     ]) {
       const source = code(read(...file));
       expect(source).not.toMatch(/LoadingStages|setInterval/);
-      expect(source).toMatch(/<AskWorkingStatus label=\{r2s\.working\} \/>/);
+      /* ASK R3 PROGRESS R1 — the standalone frame shows the same ONE truthful line with the original
+         working emblem (R3 single-signal rule); still no timer. The dock keeps AskWorkingStatus.
+         SUPERSEDED pin (frame): <AskWorkingStatus label={r2s.working} /> */
+      expect(source).toMatch(
+        /<AskWorkingStatus label=\{r2s\.working\} \/>|<AskProgressRunning locale=\{interfaceLocale\} label=\{r2s\.working\} \/>/,
+      );
     }
   });
 

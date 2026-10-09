@@ -1353,6 +1353,9 @@ html[data-gna-schedule='light'] body:has([data-ask-standalone][data-gna-theme='s
   .gna-ask-progress-row {
     animation: gnaAskWorkRow 200ms ease-out;
   }
+  .gna-ask-rm-only {
+    display: none;
+  }
 }
 @keyframes gnaAskWorkCore {
   0%,
@@ -1363,10 +1366,11 @@ html[data-gna-schedule='light'] body:has([data-ask-standalone][data-gna-theme='s
     opacity: 0.5;
   }
 }
+/* mount: opacity only — the emblem freeze (E-4: nothing animates r or scale) outranks R3's
+   ".8→1" mount scale until the owner rules (recorded) */
 @keyframes gnaAskWorkIn {
   from {
     opacity: 0;
-    transform: scale(0.8);
   }
 }
 @keyframes gnaAskWorkRow {
@@ -1375,12 +1379,8 @@ html[data-gna-schedule='light'] body:has([data-ask-standalone][data-gna-theme='s
     transform: translateY(4px);
   }
 }
-/* ASK R3 PROGRESS R1 — reduced motion: the static emblem cannot say "running", so the words do */
+/* ASK R3 PROGRESS R1 — reduced motion: the static emblem cannot say "running", so the words do
+   (shown by default; hidden only where motion is allowed — no new reduced-motion block) */
 .gna-ask-rm-only {
-  display: none;
-}
-@media (prefers-reduced-motion: reduce) {
-  .gna-ask-rm-only {
-    display: inline;
-  }
+  display: inline;
 }

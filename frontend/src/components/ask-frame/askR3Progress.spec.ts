@@ -57,7 +57,12 @@ describe('priority 4 — the ORIGINAL emblem beside the real running line', () =
     const root = render();
     expect(textOf(root.find((n) => n.props.className === 'gna-ask-rm-only'))).toBe('In progress · ');
     const css = read('..', '..', 'app', 'globals.css');
-    expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\) \{\s*\.gna-ask-rm-only \{\s*display: inline;/);
+    /* shown by default, hidden only inside the working layer's no-preference block (no new reduce block) */
+    expect(css).toMatch(/\.gna-ask-rm-only \{\s*display: inline;/);
+    const layer = css.slice(css.indexOf('ASK R3 PROGRESS R1 — THE WORKING MOTION'));
+    expect(layer).toMatch(/@media \(prefers-reduced-motion: no-preference\) \{[\s\S]*\.gna-ask-rm-only \{\s*display: none;/);
+    /* E-4 emblem freeze: the working mount animates opacity only, never scale */
+    expect(layer).not.toMatch(/scale\(/);
   });
   it('the working motion is its own layer (2.4 s / 7.2 s / 1.6 s), paused when hidden, never the idle values', () => {
     const css = read('..', '..', 'app', 'globals.css');
