@@ -428,3 +428,39 @@ describe('CTO R1-B §3 — governed specialist records in a followed-question ch
     expect(periodStart('unknown')).toBeNull();
   });
 });
+
+describe('CTO continuation R2 — CORRECTION needs a publisher notice from a publisher the baseline relied on', () => {
+  const kept = ref('k', '2026-09-30T08:00:00Z');
+  const fromOther = (r: BriefingEvidenceRef): BriefingEvidenceRef => ({ ...r, publisher: 'Other Wire', host: 'other.example', url: `https://other.example/${r.id}` });
+
+  it.each([
+    'Minister demands retraction of report on fuel prices',
+    'Police correct death toll after floods',
+    'Ministry issues clarification on new visa rules',
+    'Court orders correction of electoral roll',
+    'Correction of fuel subsidy policy announced',
+    'Opposition seeks correction to budget figures',
+    'Minister demands retraction: report was false',
+  ])('reporting ABOUT a correction is ordinary new reporting, never flagged: %s', (title) => {
+    const a = assessFollowedCheck(baseline([kept]), candidate([kept, ref('n', '2026-10-06T10:00:00Z', title)]));
+    expect(a.outcome).toBe('NEW_EVIDENCE');
+    expect(a.possibleCorrections).toEqual([]);
+    expect(a.reasons).not.toContain('CORRECTION_HEADLINE');
+  });
+
+  it.each(['CORRECTED-Fuel prices rose 4%', 'UPDATE 2-Correction: fuel figure', 'Clarification | visa rules', 'Correction to: our report on fuel', 'Sprostowanie: ceny paliw', 'Rectificatif : prix du carburant'])(
+    "a leading notice from the baseline's own publisher → CORRECTION: %s",
+    (title) => {
+      const a = assessFollowedCheck(baseline([kept]), candidate([kept, ref('c', '2026-10-06T10:00:00Z', title)]));
+      expect(a.outcome).toBe('CORRECTION');
+      expect(a.possibleCorrections.map((e) => e.id)).toEqual(['c']);
+    },
+  );
+
+  it("the same notice from a publisher the baseline did NOT rely on is listed, but is not a CORRECTION of this reading", () => {
+    const a = assessFollowedCheck(baseline([kept]), candidate([kept, fromOther(ref('o', '2026-10-06T10:00:00Z', 'Correction: fuel figure'))]));
+    expect(a.outcome).toBe('NEW_EVIDENCE');
+    expect(a.reasons[0]).toBe('NEW_REPORTING_AFTER_BASELINE');
+    expect(a.possibleCorrections.map((e) => e.id)).toEqual(['o']);
+  });
+});

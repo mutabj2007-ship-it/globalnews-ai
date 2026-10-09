@@ -117,3 +117,15 @@ describe('a saved version with NO summary and NO governed basis still says so', 
     }
   });
 });
+
+describe('CTO continuation R2 — the version view uses the backend isGovernedBasis rule', () => {
+  it('a reference-geography or source-less basis keeps "no sourced answer"', () => {
+    const geoBasis = { ...contribution('CONFLICT', 'USED', [obs('g:1', 'Place')]), temporalBasis: 'REFERENCE_GEOGRAPHY' };
+    const sourceless = contribution('CONFLICT', 'USED', [{ ...obs('x:2', 'No source'), source: { name: ' ', url: null, licence: null } }]);
+    for (const c of [geoBasis, sourceless]) {
+      const v = version({ considered: [c.contributorId], contributions: [c] });
+      (v.blocks as { summary: string | null }).summary = null;
+      expect(render(v)).toContain('no sourced answer');
+    }
+  });
+});

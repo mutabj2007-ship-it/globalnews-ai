@@ -100,13 +100,17 @@ export function BriefingVersionView({
 }): JSX.Element {
   const t = askShellStrings(locale).briefingStrings;
   const when = (iso: string | null) => (iso === null ? null : (formatUtc(iso, locale) ?? iso));
-  /* the saved answer rests on at least one USED, non-context governed record (a structured answer) */
+  /* the saved answer rests on at least one USED, non-context governed record that names its source
+     (a structured answer) — the same rule as the backend briefing snapshot's isGovernedBasis */
   const governedBasis = (version.blocks.intelligence?.contributions ?? []).some(
     (c) =>
       c.status === 'USED' &&
       c.applicability !== 'CONTEXT' &&
       c.contributorId !== 'GEOGRAPHY' &&
-      (c.observations ?? []).length > 0,
+      c.temporalBasis !== 'REFERENCE_GEOGRAPHY' &&
+      c.temporalBasis !== 'NONE' &&
+      !(c.disclosures ?? []).includes('CONTEXT_NOT_EVIDENCE') &&
+      (c.observations ?? []).some((o) => typeof o?.source?.name === 'string' && o.source.name.trim() !== ''),
   );
   /* The table's citation numbers point at this version's own stored references. */
   const sources: AnalysisSourceRef[] = version.evidenceRefs.map((r) => ({

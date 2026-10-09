@@ -82,6 +82,24 @@ function intelligenceOf(value: unknown): BriefingIntelligence | null {
   };
 }
 
+/*
+  A contribution an answer can rest on as its sourced basis: USED, not context, not reference
+  geography (by contributor, temporal basis or disclosure), with at least one observation that names
+  its source. NO_DATA / NO_MATCH / REFUSED / DEGRADED / NOT_ASSESSED, a place resolution and a
+  source-less record never make an answer citable. Mirrored in the frontend BriefingVersionView.
+*/
+function isGovernedBasis(c: AskContribution): boolean {
+  return (
+    c.status === 'USED' &&
+    c.applicability !== 'CONTEXT' &&
+    c.contributorId !== 'GEOGRAPHY' &&
+    c.temporalBasis !== 'REFERENCE_GEOGRAPHY' &&
+    c.temporalBasis !== 'NONE' &&
+    !(c.disclosures ?? []).includes('CONTEXT_NOT_EVIDENCE') &&
+    (c.observations ?? []).some((o) => typeof o?.source?.name === 'string' && o.source.name.trim() !== '')
+  );
+}
+
 function hostOf(url: string): string | null {
   try {
     return new URL(url).hostname || null;
@@ -109,13 +127,7 @@ export function briefingSnapshotOf(payload: unknown): BriefingSnapshot | null {
     Follow for it, but the snapshot used to refuse it (BRIEFING_TURN_NOT_SAVEABLE). It is saveable
     when it rests on at least one USED, non-context governed observation — stored verbatim.
   */
-  const governedBasis = (intelligence?.contributions ?? []).some(
-    (c) =>
-      c.status === 'USED' &&
-      c.applicability !== 'CONTEXT' &&
-      c.contributorId !== 'GEOGRAPHY' &&
-      (c.observations ?? []).length > 0,
-  );
+  const governedBasis = (intelligence?.contributions ?? []).some(isGovernedBasis);
   if (summary === null && backgroundText === null && !governedBasis) return null;
 
   const answerState = typeof p.answer?.state === 'string' ? p.answer.state : null;

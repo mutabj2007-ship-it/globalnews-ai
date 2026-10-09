@@ -17,9 +17,11 @@ import { compareStructured, type StructuredRecordChange } from './structured-cha
  *   MATERIAL_CHANGE        a supported change in the underlying event/condition/claim: a key point of
  *                          the new answer cites reporting published after the baseline, or a newly
  *                          admitted structured record whose source period starts after the baseline
- *   CORRECTION             ONLY a publisher's own statement: a newly published report whose headline
- *                          announces a correction / retraction / clarification (flagged — Ask does not
- *                          adjudicate what it overturns). A governed record whose content changed is
+ *   CORRECTION             ONLY a publisher's own statement: a newly published report from a publisher
+ *                          the baseline relied on, whose headline LEADS with a correction / retraction /
+ *                          clarification notice (flagged — Ask does not adjudicate what it overturns;
+ *                          the same notice from another publisher is listed but stays NEW_EVIDENCE;
+ *                          the word elsewhere in a headline is never flagged). A governed record whose content changed is
  *                          NOT a correction: the observation contract carries no authoritative revision
  *                          metadata (CTO review of cf7a5d1), so it is NEW_EVIDENCE (content changed)
  *   UNCHANGED              (≙ R1-B NO_RELEVANT_UPDATE, complete) every relevant class was compared
@@ -131,11 +133,16 @@ export interface FollowedAssessment {
 }
 
 /*
-  Headlines that announce a correction, retraction or clarification, in the supported languages.
-  A flag for the reader, never a verdict.
+  A publisher's own correction / retraction / clarification NOTICE, in the supported languages: the
+  term LEADS the headline (optionally after "UPDATE n -") and is followed by a separator or by "to".
+  A flag for the reader, never a verdict. CTO continuation 2026-10-09: the term anywhere else in a
+  headline ("Minister demands retraction of report", "Police correct death toll") is reporting ABOUT
+  a correction, not a publisher's notice, so it is never flagged.
 */
-const CORRECTION_HEADLINE =
-  /\b(correction|corrected|corrects|retract(?:s|ed|ion)?|clarification|update:? correction|sprostowanie|korekta|rectificatif|rectification|berichtigung|richtigstellung|correcci[oó]n|rectificaci[oó]n|corre[cç][aã]o|retifica[cç][aã]o)\b|تصحيح/iu;
+const CORRECTION_NOTICE =
+  /^\s*(?:update\s*\d*\s*[-–—:]\s*)?(?:correction|corrected|retraction|clarification|sprostowanie|korekta|rectificatif|rectification|berichtigung|richtigstellung|correcci[oó]n|rectificaci[oó]n|corre[cç][aã]o|retifica[cç][aã]o|تصحيح)(?:\s*[:\-–—|]|\s+(?:to|do|zu|au|à|al|ao)[\s:])/iu;
+
+const publisherKey = (publisher: string) => publisher.trim().toLowerCase();
 
 /** One key per report: the link without fragment, trailing slash or tracking parameters. */
 export function evidenceKey(ref: { readonly url: string; readonly id: string }): string {
@@ -280,7 +287,11 @@ export function assessFollowedCheck(
   const added = newsCompared ? snapshot.evidenceRefs.filter((ref) => !baselineKeys.has(evidenceKey(ref))) : [];
   const fresh = added.filter((ref) => after(ref.publishedAt, baseline.asOf));
   const late = added.filter((ref) => !after(ref.publishedAt, baseline.asOf));
-  const corrections = fresh.filter((ref) => CORRECTION_HEADLINE.test(ref.title));
+  const corrections = fresh.filter((ref) => CORRECTION_NOTICE.test(ref.title));
+  /* Only a notice from a publisher the baseline itself relied on is a CORRECTION of this reading;
+     another publisher's notice is listed (flagged) but stays ordinary new reporting. */
+  const baselinePublishers = new Set(baseline.evidenceRefs.map((ref) => publisherKey(ref.publisher)));
+  const ownCorrections = corrections.filter((ref) => baselinePublishers.has(publisherKey(ref.publisher)));
   const freshIds = new Set(fresh.map((ref) => ref.id));
   const supportedChanges = snapshot.keyFacts
     .filter((fact) => fact.sourceArticleIds.some((id) => freshIds.has(id)))
@@ -326,7 +337,7 @@ export function assessFollowedCheck(
     reasons: [...reasons, ...partial],
   });
 
-  if (corrections.length > 0) return result('CORRECTION', ['CORRECTION_HEADLINE']);
+  if (ownCorrections.length > 0) return result('CORRECTION', ['CORRECTION_HEADLINE']);
   if (s.newEvents.length > 0) return result('MATERIAL_CHANGE', ['STRUCTURED_RECORD_NEW_PERIOD']);
   if (supportedChanges.length > 0) return result('MATERIAL_CHANGE', ['KEY_POINT_CITES_NEW_EVIDENCE']);
   if (fresh.length > 0) return result('NEW_EVIDENCE', ['NEW_REPORTING_AFTER_BASELINE']);

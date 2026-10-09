@@ -157,3 +157,30 @@ describe('PRIMARILY STRUCTURED answers (Opportunities intake finding) — saveab
     }
   });
 });
+
+describe('CTO continuation R2 — only a sourced, evidential governed record makes a structured answer citable', () => {
+  const base = { schema: 'ask-r2-result/1', answer: { state: 'RETAINED_RECORD' }, checkedAt: '2026-10-09T08:00:00Z', analysis: null, background: null };
+  const observation = (sourceName: string) => ({ reference: 'r1', kind: 'K', label: 'L', value: '1', unit: null, period: '2024/2025', geography: 'RWA', source: { name: sourceName, url: null, licence: null }, retainedAt: null });
+  const contribution = (over: Record<string, unknown>) => ({
+    contributorId: 'IMIHIGO', domain: 'governance', status: 'USED', applicability: 'REQUIRED', observations: [observation('NISR')],
+    temporalBasis: 'RETAINED_EVALUATION_CYCLE', geographyBasis: 'RWA', disclosures: [], degradationReason: null, ...over,
+  });
+  const snap = (c: Record<string, unknown>) => briefingSnapshotOf({ ...base, intelligence: { considered: [String(c.contributorId)], contributions: [c] } });
+
+  it('control: a USED, sourced, evidential record is saveable', () => {
+    expect(snap(contribution({}))).not.toBeNull();
+  });
+
+  it.each([
+    ['reference geography under another contributor id', { temporalBasis: 'REFERENCE_GEOGRAPHY' }],
+    ['no temporal basis', { temporalBasis: 'NONE' }],
+    ['disclosed as context, not evidence', { disclosures: ['CONTEXT_NOT_EVIDENCE'] }],
+    ['a record that names no source', { observations: [observation('  ')] }],
+    ['NO_MATCH', { status: 'NO_MATCH' }],
+    ['DEGRADED', { status: 'DEGRADED' }],
+    ['NOT_ASSESSED', { status: 'NOT_ASSESSED' }],
+    ['CONTEXT applicability', { applicability: 'CONTEXT' }],
+  ])('refused: %s', (_label, over) => {
+    expect(snap(contribution(over))).toBeNull();
+  });
+});
