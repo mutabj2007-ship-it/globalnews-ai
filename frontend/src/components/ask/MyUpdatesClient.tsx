@@ -136,6 +136,12 @@ function FollowedRow({
           {s.lastChecked(when(latestCheck.checkedAt))}
         </p>
       )}
+      {/* CTO R1-B §3 — the structured evidence this check could not assess, never hidden */}
+      {latestCheck !== null && (latestCheck.structuredUnassessed ?? []).length > 0 && (
+        <p data-ask="followed-structured-unassessed" className="text-[0.875rem] text-ink-tertiary">
+          {s.structuredUnassessed((latestCheck.structuredUnassessed ?? []).join(', '))}
+        </p>
+      )}
       {latestCheck !== null &&
         latestCheck.outcome === 'INCOMPLETE_CHECK' &&
         row.lastSuccessfulCheckAt != null && (

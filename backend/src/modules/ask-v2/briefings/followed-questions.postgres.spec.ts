@@ -73,6 +73,36 @@ live('REASON TO RETURN R1 — followed questions + conversation delete/search (l
   let facts: { claim: string; sourceArticleIds: string[] }[] = [];
   let failed = false;
   let answerState = 'CURRENT_REPORTING';
+  /* CTO R1-B §3 — the governed specialist basis, exactly as the coordinator writes payload.intelligence */
+  let intelligence: unknown = null;
+  const conflictObs = (reference: string, over: Record<string, unknown> = {}) => ({
+    reference,
+    kind: 'UCDP_STATE_BASED',
+    label: `Event ${reference}`,
+    value: '3',
+    unit: 'best-estimate fatalities',
+    period: '2026-08-20',
+    geography: 'COD',
+    source: { name: 'UCDP GED candidate', url: 'https://ucdp.uu.se/', licence: null },
+    retainedAt: '2026-09-24T00:00:00.000Z',
+    ...over,
+  });
+  const conflictIntel = (status: string, observations: unknown[]) => ({
+    considered: ['CONFLICT'],
+    contributions: [
+      {
+        contributorId: 'CONFLICT',
+        domain: 'security',
+        status,
+        applicability: 'SUPPLEMENTARY',
+        observations,
+        temporalBasis: 'RETAINED_EVENT_RECORD',
+        geographyBasis: 'COD',
+        disclosures: ['RETAINED_NOT_CURRENT'],
+        degradationReason: status === 'DEGRADED' ? 'TIMEOUT' : null,
+      },
+    ],
+  });
   const payload = () => ({
     schema: 'ask-r2-result/1',
     answer: { state: answerState },
@@ -98,6 +128,7 @@ live('REASON TO RETURN R1 — followed questions + conversation delete/search (l
             },
     },
     background: null,
+    intelligence,
   });
 
   const http = () => request(app.getHttpServer());
@@ -173,6 +204,7 @@ live('REASON TO RETURN R1 — followed questions + conversation delete/search (l
     facts = [{ claim: 'Pump prices held in September', sourceArticleIds: ['a1'] }];
     failed = false;
     answerState = 'CURRENT_REPORTING';
+    intelligence = null;
     prepare.mockReset();
     execute.mockReset();
     prepare.mockImplementation(async () => plan());
@@ -305,6 +337,56 @@ live('REASON TO RETURN R1 — followed questions + conversation delete/search (l
     const id = await follow('a');
     await http().patch(`/ask-v2/briefings/${id}`).set('Cookie', as('a')).send({ status: 'PAUSED' }).expect(403);
     await http().post(`/ask-v2/briefings/${id}/checks`).send({ turnId: randomUUID() }).expect(401);
+  });
+
+  describe('CTO R1-B §3 — governed specialist records, through the real recording path', () => {
+    it('A · a new Conflict record with no new news is a MATERIAL_CHANGE, versioned; a degraded reader then keeps the baseline', async () => {
+      intelligence = conflictIntel('USED', [conflictObs('ucdp:1')]);
+      const id = await follow('a');
+      const v1 = await db.briefingVersion.findFirstOrThrow({ where: { briefingId: id, version: 1 } });
+      /* C-2: the followed question's stored version carries payload.intelligence */
+      expect((v1.blocks as { intelligence?: unknown }).intelligence).toEqual(intelligence);
+
+      intelligence = conflictIntel('USED', [
+        conflictObs('ucdp:1'),
+        conflictObs('ucdp:2', { period: '2099-01-02', retainedAt: '2099-01-03T00:00:00.000Z' }),
+      ]);
+      const t1 = await turnIn(ids.a, QUESTION);
+      const c1 = await post('a', `/ask-v2/briefings/${id}/checks`, { turnId: t1.turnId }).expect(201);
+      expect(c1.body).toMatchObject({ outcome: 'MATERIAL_CHANGE', resultingVersion: 2 });
+      expect(c1.body.assessment.structured.newEvents.map((r: { reference: string }) => r.reference)).toEqual(['ucdp:2']);
+
+      intelligence = conflictIntel('DEGRADED', []);
+      const t2 = await turnIn(ids.a, QUESTION);
+      const c2 = await post('a', `/ask-v2/briefings/${id}/checks`, { turnId: t2.turnId }).expect(201);
+      expect(c2.body).toMatchObject({ outcome: 'INCOMPLETE_CHECK', resultingVersion: null, baselineVersion: 2 });
+      expect(c2.body.assessment.structured.unassessed).toEqual(['CONFLICT:COD:DEGRADED']);
+      expect(await db.briefingVersion.count({ where: { briefingId: id } })).toBe(2);
+      const list = await http().get('/ask-v2/briefings').set('Cookie', as('a')).expect(200);
+      expect(list.body[0].latestCheck).toMatchObject({
+        outcome: 'INCOMPLETE_CHECK',
+        partial: true,
+        structuredUnassessed: ['CONFLICT:COD:DEGRADED'],
+      });
+    });
+
+    it('H · two accounts follow similar questions: no check state or specialist evidence crosses between them', async () => {
+      intelligence = conflictIntel('USED', [conflictObs('ucdp:1')]);
+      const idA = await follow('a');
+      intelligence = conflictIntel('USED', [conflictObs('ucdp:B-only', { label: 'B PRIVATE RECORD' })]);
+      const idB = await follow('b');
+      intelligence = conflictIntel('USED', [conflictObs('ucdp:1')]);
+      const tA = await turnIn(ids.a, QUESTION);
+      const cA = await post('a', `/ask-v2/briefings/${idA}/checks`, { turnId: tA.turnId }).expect(201);
+      expect(cA.body.outcome).toBe('UNCHANGED');
+      expect(JSON.stringify(cA.body)).not.toContain('B PRIVATE RECORD');
+      /* A can neither read B's followed question nor record a check against it */
+      await http().get(`/ask-v2/briefings/${idB}`).set('Cookie', as('a')).expect(404);
+      await post('a', `/ask-v2/briefings/${idB}/checks`, { turnId: tA.turnId }).expect(404);
+      const listA = await http().get('/ask-v2/briefings').set('Cookie', as('a')).expect(200);
+      expect(listA.body.map((r: { id: string }) => r.id)).toEqual([idA]);
+      expect(await db.briefingCheck.count({ where: { briefingId: idB } })).toBe(0);
+    });
   });
 
   describe('§7 / G7 — one conversation deleted, and history search', () => {

@@ -48,6 +48,13 @@ export interface FollowStrings {
   readonly history: string;
   readonly outcome: Readonly<Record<AskV2FollowedOutcome, string>>;
   readonly outcomeDetail: Readonly<Record<AskV2FollowedOutcome, string>>;
+  readonly structuredNew: string;
+  readonly structuredLate: string;
+  readonly structuredLateNote: string;
+  readonly structuredRevised: string;
+  readonly structuredUnassessed: (classes: string) => string;
+  readonly structuredNotSeen: (n: number) => string;
+  readonly structuredCarried: (n: number) => string;
   readonly partial: (sources: string) => string;
   readonly newEvidence: string;
   readonly supportedChanges: string;
@@ -124,7 +131,7 @@ const EN: FollowStrings = {
   outcome: {
     INCOMPLETE_CHECK: 'Check incomplete',
     INSUFFICIENT_BASELINE: 'New starting point saved',
-    POSSIBLE_CORRECTION: 'Possible correction reported',
+    CORRECTION: 'Correction reported',
     MATERIAL_CHANGE: 'Change reported',
     NEW_EVIDENCE: 'New reporting',
     UNCHANGED: 'No new reporting',
@@ -135,8 +142,8 @@ const EN: FollowStrings = {
       'The search could not be completed, so this is not a “nothing changed”. Your last saved answer is kept as it was.',
     INSUFFICIENT_BASELINE:
       'There was no sourced answer to compare with (or the question was edited), so this check is the new starting point.',
-    POSSIBLE_CORRECTION:
-      'A newly published report says it corrects or clarifies earlier reporting. Open it to see what it changes.',
+    CORRECTION:
+      'A source revised one of its own governed records, or a newly published report says it corrects earlier reporting. Open it to see what changed.',
     MATERIAL_CHANGE: 'New reporting published since your last saved answer supports the points below.',
     NEW_EVIDENCE: 'New reporting was published since your last saved answer. It is listed below.',
     UNCHANGED:
@@ -144,6 +151,13 @@ const EN: FollowStrings = {
     NO_RELEVANT_UPDATE:
       'The search completed but found no relevant new reporting. That does not mean nothing is happening.',
   },
+  structuredNew: 'New governed records',
+  structuredLate: 'Governed records added now about earlier dates',
+  structuredLateNote: 'Admitted after your last saved answer but dated before it. Not counted as a new event.',
+  structuredRevised: 'Records revised by their source',
+  structuredUnassessed: (classes) => `Structured evidence not assessed in this check: ${classes}.`,
+  structuredNotSeen: (n) => `${n} earlier governed record${n === 1 ? ' was' : 's were'} not returned this time. That is not a retraction.`,
+  structuredCarried: (n) => `${n} governed record${n === 1 ? '' : 's'} unchanged since your last saved answer.`,
   partial: (sources) => `Some sources could not be checked: ${sources}.`,
   newEvidence: 'New reporting',
   supportedChanges: 'What the new reporting supports',
@@ -219,7 +233,7 @@ const PL: FollowStrings = {
   outcome: {
     INCOMPLETE_CHECK: 'Sprawdzenie niepełne',
     INSUFFICIENT_BASELINE: 'Zapisano nowy punkt wyjścia',
-    POSSIBLE_CORRECTION: 'Zgłoszono możliwą korektę',
+    CORRECTION: 'Zgłoszono korektę',
     MATERIAL_CHANGE: 'Zgłoszono zmianę',
     NEW_EVIDENCE: 'Nowe doniesienia',
     UNCHANGED: 'Brak nowych doniesień',
@@ -230,8 +244,8 @@ const PL: FollowStrings = {
       'Wyszukiwania nie udało się ukończyć, więc nie oznacza to „bez zmian”. Ostatnia zapisana odpowiedź pozostaje bez zmian.',
     INSUFFICIENT_BASELINE:
       'Nie było odpowiedzi opartej na źródłach do porównania (albo pytanie zmieniono), więc to sprawdzenie jest nowym punktem wyjścia.',
-    POSSIBLE_CORRECTION:
-      'Nowo opublikowany materiał informuje, że koryguje lub wyjaśnia wcześniejsze doniesienia. Otwórz go, aby zobaczyć, co zmienia.',
+    CORRECTION:
+      'Źródło zmieniło jeden ze swoich zarządzanych rekordów albo nowo opublikowany materiał informuje, że koryguje wcześniejsze doniesienia. Otwórz go, aby zobaczyć, co się zmieniło.',
     MATERIAL_CHANGE: 'Nowe doniesienia opublikowane od ostatniej zapisanej odpowiedzi potwierdzają poniższe punkty.',
     NEW_EVIDENCE: 'Od ostatniej zapisanej odpowiedzi opublikowano nowe doniesienia. Są wymienione poniżej.',
     UNCHANGED:
@@ -239,6 +253,13 @@ const PL: FollowStrings = {
     NO_RELEVANT_UPDATE:
       'Wyszukiwanie zakończyło się, ale nie znalazło istotnych nowych doniesień. Nie znaczy to, że nic się nie dzieje.',
   },
+  structuredNew: 'Nowe rekordy zarządzane',
+  structuredLate: 'Rekordy dodane teraz o wcześniejszych datach',
+  structuredLateNote: 'Przyjęte po ostatniej zapisanej odpowiedzi, ale datowane wcześniej. Nie liczone jako nowe zdarzenie.',
+  structuredRevised: 'Rekordy zmienione przez źródło',
+  structuredUnassessed: (classes) => `Dane strukturalne nieocenione w tym sprawdzeniu: ${classes}.`,
+  structuredNotSeen: (n) => `Wcześniejsze rekordy niezwrócone tym razem: ${n}. To nie jest odwołanie.`,
+  structuredCarried: (n) => `Rekordy bez zmian od ostatniej zapisanej odpowiedzi: ${n}.`,
   partial: (sources) => `Nie udało się sprawdzić niektórych źródeł: ${sources}.`,
   newEvidence: 'Nowe doniesienia',
   supportedChanges: 'Co potwierdzają nowe doniesienia',

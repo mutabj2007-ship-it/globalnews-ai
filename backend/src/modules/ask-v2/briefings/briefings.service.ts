@@ -10,7 +10,11 @@ import { PrismaService } from '../../../database/prisma.service';
 import { Prisma } from '../../../generated/prisma/client';
 import { readStoryMaterialVersion } from '../../stories/story-relation.read';
 import { retrievalFailed } from '../ask-r2-execution.adapter';
-import { briefingSnapshotOf, type BriefingEvidenceRef } from './briefing-snapshot';
+import {
+  briefingSnapshotOf,
+  type BriefingEvidenceRef,
+  type BriefingIntelligence,
+} from './briefing-snapshot';
 import {
   assessFollowedCheck,
   VERSIONING_OUTCOMES,
@@ -50,6 +54,7 @@ function baselineOf(row: {
     answerState?: unknown;
     summary?: unknown;
     scopeRevision?: unknown;
+    intelligence?: unknown;
   };
   return {
     version: row.version,
@@ -57,6 +62,13 @@ function baselineOf(row: {
     answerState: typeof blocks.answerState === 'string' ? blocks.answerState : null,
     summaryPresent: typeof blocks.summary === 'string' && blocks.summary.trim() !== '',
     evidenceRefs: Array.isArray(row.evidenceRefs) ? (row.evidenceRefs as BriefingEvidenceRef[]) : [],
+    /*
+      CTO R1-B §3 — the governed specialist basis that version stored (payload.intelligence as the
+      coordinator wrote it). Absent on versions saved before the field existed: undefined, which
+      the comparison treats as "no comparable structured baseline", never as "none".
+    */
+    intelligence:
+      'intelligence' in blocks ? ((blocks.intelligence ?? null) as BriefingIntelligence | null) : undefined,
     /* versions saved before Reason to Return carry no revision: they are revision 0 */
     scopeRevision: typeof blocks.scopeRevision === 'number' ? blocks.scopeRevision : 0,
   };
@@ -79,7 +91,16 @@ function summaryOfCheck(check: {
     possibleCorrections?: unknown[];
     supportedChanges?: unknown[];
     unassessedSources?: unknown[];
+    structured?: {
+      newEvents?: unknown[];
+      lateAdmitted?: unknown[];
+      revised?: unknown[];
+      unassessed?: unknown[];
+    };
   };
+  const structuredUnassessed = (a.structured?.unassessed ?? []).filter(
+    (u): u is string => typeof u === 'string',
+  );
   return {
     outcome: check.outcome,
     checkedAt: check.checkedAt,
@@ -87,7 +108,13 @@ function summaryOfCheck(check: {
     newEvidenceCount: a.newEvidence?.length ?? 0,
     possibleCorrectionCount: a.possibleCorrections?.length ?? 0,
     supportedChangeCount: a.supportedChanges?.length ?? 0,
-    partial: (a.unassessedSources?.length ?? 0) > 0,
+    /* CTO R1-B §3 — governed specialist records: new / late-admitted / revised, and the holes */
+    structuredChangeCount:
+      (a.structured?.newEvents?.length ?? 0) +
+      (a.structured?.lateAdmitted?.length ?? 0) +
+      (a.structured?.revised?.length ?? 0),
+    structuredUnassessed,
+    partial: (a.unassessedSources?.length ?? 0) > 0 || structuredUnassessed.length > 0,
   };
 }
 
@@ -399,6 +426,8 @@ export class BriefingsService {
                 summaryPresent: snapshot.blocks.summary !== null,
                 keyFacts: snapshot.blocks.keyFacts,
                 evidenceRefs: snapshot.evidenceRefs,
+                /* the specialist contributions THIS check's turn stored — no reader is called here */
+                intelligence: snapshot.blocks.intelligence,
               },
         retrievalFailed: retrievalFailed(analysis as { retrievalContext?: unknown } | null),
         unassessedSources: unassessedSourcesOf(analysis),

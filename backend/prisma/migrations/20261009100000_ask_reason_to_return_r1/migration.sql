@@ -28,7 +28,7 @@ CREATE INDEX "BriefingCheck_briefingId_checkedAt_idx" ON "BriefingCheck"("briefi
 ALTER TABLE "BriefingCheck" ADD CONSTRAINT "BriefingCheck_briefingId_fkey" FOREIGN KEY ("briefingId") REFERENCES "Briefing"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE "BriefingCheck" ADD CONSTRAINT "BriefingCheck_outcome_check" CHECK ("outcome" IN (
-  'INCOMPLETE_CHECK', 'INSUFFICIENT_BASELINE', 'POSSIBLE_CORRECTION', 'MATERIAL_CHANGE',
+  'INCOMPLETE_CHECK', 'INSUFFICIENT_BASELINE', 'CORRECTION', 'MATERIAL_CHANGE',
   'NEW_EVIDENCE', 'UNCHANGED', 'NO_RELEVANT_UPDATE'));
 
 ALTER TABLE "Briefing" DROP CONSTRAINT "Briefing_status_check";

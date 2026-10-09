@@ -42,7 +42,7 @@ export const FR: FollowStrings = {
   outcome: {
     INCOMPLETE_CHECK: 'Vérification incomplète',
     INSUFFICIENT_BASELINE: 'Nouveau point de départ enregistré',
-    POSSIBLE_CORRECTION: 'Correction possible signalée',
+    CORRECTION: 'Correction signalée',
     MATERIAL_CHANGE: 'Changement signalé',
     NEW_EVIDENCE: 'Nouveaux articles',
     UNCHANGED: 'Aucun nouvel article',
@@ -53,8 +53,8 @@ export const FR: FollowStrings = {
       'La recherche n’a pas pu aboutir : ce n’est donc pas un « rien n’a changé ». Votre dernière réponse enregistrée reste telle quelle.',
     INSUFFICIENT_BASELINE:
       'Il n’y avait pas de réponse sourcée à comparer (ou la question a été modifiée) : cette vérification devient le nouveau point de départ.',
-    POSSIBLE_CORRECTION:
-      'Un article publié récemment indique corriger ou préciser des informations antérieures. Ouvrez-le pour voir ce qu’il change.',
+    CORRECTION:
+      'Une source a révisé l’un de ses enregistrements gouvernés, ou un article récent indique corriger des informations antérieures. Ouvrez-le pour voir ce qui a changé.',
     MATERIAL_CHANGE: 'Des articles publiés depuis votre dernière réponse enregistrée confirment les points ci-dessous.',
     NEW_EVIDENCE: 'De nouveaux articles ont été publiés depuis votre dernière réponse enregistrée. Ils sont listés ci-dessous.',
     UNCHANGED:
@@ -62,6 +62,13 @@ export const FR: FollowStrings = {
     NO_RELEVANT_UPDATE:
       'La recherche s’est terminée sans trouver de nouvel article pertinent. Cela ne signifie pas qu’il ne se passe rien.',
   },
+  structuredNew: 'Nouveaux enregistrements gouvernés',
+  structuredLate: 'Enregistrements ajoutés maintenant sur des dates antérieures',
+  structuredLateNote: 'Admis après votre dernière réponse enregistrée mais datés avant. Non comptés comme un nouvel événement.',
+  structuredRevised: 'Enregistrements révisés par leur source',
+  structuredUnassessed: (classes) => `Données structurées non évaluées lors de cette vérification : ${classes}.`,
+  structuredNotSeen: (n) => `Enregistrement(s) antérieur(s) non renvoyé(s) cette fois : ${n}. Ce n’est pas un retrait.`,
+  structuredCarried: (n) => `Enregistrements inchangés depuis votre dernière réponse enregistrée : ${n}.`,
   partial: (sources) => `Certaines sources n’ont pas pu être vérifiées : ${sources}.`,
   newEvidence: 'Nouveaux articles',
   supportedChanges: 'Ce que confirment les nouveaux articles',
@@ -136,7 +143,7 @@ export const DE: FollowStrings = {
   outcome: {
     INCOMPLETE_CHECK: 'Prüfung unvollständig',
     INSUFFICIENT_BASELINE: 'Neuer Ausgangspunkt gespeichert',
-    POSSIBLE_CORRECTION: 'Mögliche Korrektur gemeldet',
+    CORRECTION: 'Korrektur gemeldet',
     MATERIAL_CHANGE: 'Änderung gemeldet',
     NEW_EVIDENCE: 'Neue Berichte',
     UNCHANGED: 'Keine neuen Berichte',
@@ -147,8 +154,8 @@ export const DE: FollowStrings = {
       'Die Suche konnte nicht abgeschlossen werden – das heißt also nicht „nichts hat sich geändert“. Ihre zuletzt gespeicherte Antwort bleibt unverändert.',
     INSUFFICIENT_BASELINE:
       'Es gab keine belegte Antwort zum Vergleich (oder die Frage wurde geändert), daher ist diese Prüfung der neue Ausgangspunkt.',
-    POSSIBLE_CORRECTION:
-      'Ein neu veröffentlichter Bericht gibt an, frühere Berichte zu korrigieren oder klarzustellen. Öffnen Sie ihn, um zu sehen, was er ändert.',
+    CORRECTION:
+      'Eine Quelle hat einen ihrer verwalteten Datensätze überarbeitet, oder ein neu veröffentlichter Bericht gibt an, frühere Berichte zu korrigieren. Öffnen Sie ihn, um zu sehen, was sich geändert hat.',
     MATERIAL_CHANGE: 'Seit Ihrer zuletzt gespeicherten Antwort veröffentlichte Berichte belegen die folgenden Punkte.',
     NEW_EVIDENCE: 'Seit Ihrer zuletzt gespeicherten Antwort wurden neue Berichte veröffentlicht. Sie sind unten aufgeführt.',
     UNCHANGED:
@@ -156,6 +163,13 @@ export const DE: FollowStrings = {
     NO_RELEVANT_UPDATE:
       'Die Suche wurde abgeschlossen, fand aber keine relevanten neuen Berichte. Das heißt nicht, dass nichts geschieht.',
   },
+  structuredNew: 'Neue verwaltete Datensätze',
+  structuredLate: 'Jetzt hinzugefügte Datensätze zu früheren Daten',
+  structuredLateNote: 'Nach Ihrer zuletzt gespeicherten Antwort aufgenommen, aber davor datiert. Nicht als neues Ereignis gezählt.',
+  structuredRevised: 'Von der Quelle überarbeitete Datensätze',
+  structuredUnassessed: (classes) => `Strukturierte Daten in dieser Prüfung nicht bewertet: ${classes}.`,
+  structuredNotSeen: (n) => `Frühere Datensätze diesmal nicht geliefert: ${n}. Das ist kein Widerruf.`,
+  structuredCarried: (n) => `Unveränderte Datensätze seit Ihrer zuletzt gespeicherten Antwort: ${n}.`,
   partial: (sources) => `Einige Quellen konnten nicht geprüft werden: ${sources}.`,
   newEvidence: 'Neue Berichte',
   supportedChanges: 'Was die neuen Berichte belegen',
@@ -230,7 +244,7 @@ export const ES: FollowStrings = {
   outcome: {
     INCOMPLETE_CHECK: 'Comprobación incompleta',
     INSUFFICIENT_BASELINE: 'Nuevo punto de partida guardado',
-    POSSIBLE_CORRECTION: 'Posible corrección publicada',
+    CORRECTION: 'Corrección publicada',
     MATERIAL_CHANGE: 'Cambio publicado',
     NEW_EVIDENCE: 'Nuevas informaciones',
     UNCHANGED: 'Sin nuevas informaciones',
@@ -241,8 +255,8 @@ export const ES: FollowStrings = {
       'La búsqueda no pudo completarse, así que esto no es un «nada ha cambiado». Tu última respuesta guardada se mantiene igual.',
     INSUFFICIENT_BASELINE:
       'No había una respuesta con fuentes para comparar (o se editó la pregunta), así que esta comprobación es el nuevo punto de partida.',
-    POSSIBLE_CORRECTION:
-      'Una información publicada recientemente dice que corrige o aclara informaciones anteriores. Ábrela para ver qué cambia.',
+    CORRECTION:
+      'Una fuente revisó uno de sus registros gobernados, o una información publicada recientemente dice que corrige informaciones anteriores. Ábrela para ver qué cambió.',
     MATERIAL_CHANGE: 'Las informaciones publicadas desde tu última respuesta guardada respaldan los puntos siguientes.',
     NEW_EVIDENCE: 'Se publicaron nuevas informaciones desde tu última respuesta guardada. Aparecen a continuación.',
     UNCHANGED:
@@ -250,6 +264,13 @@ export const ES: FollowStrings = {
     NO_RELEVANT_UPDATE:
       'La búsqueda terminó sin encontrar informaciones nuevas relevantes. Eso no significa que no esté pasando nada.',
   },
+  structuredNew: 'Nuevos registros gobernados',
+  structuredLate: 'Registros añadidos ahora sobre fechas anteriores',
+  structuredLateNote: 'Admitidos después de tu última respuesta guardada pero con fecha anterior. No cuentan como un evento nuevo.',
+  structuredRevised: 'Registros revisados por su fuente',
+  structuredUnassessed: (classes) => `Datos estructurados no evaluados en esta comprobación: ${classes}.`,
+  structuredNotSeen: (n) => `Registros anteriores no devueltos esta vez: ${n}. Eso no es una retractación.`,
+  structuredCarried: (n) => `Registros sin cambios desde tu última respuesta guardada: ${n}.`,
   partial: (sources) => `No se pudieron comprobar algunas fuentes: ${sources}.`,
   newEvidence: 'Nuevas informaciones',
   supportedChanges: 'Lo que respaldan las nuevas informaciones',
@@ -324,7 +345,7 @@ export const PT: FollowStrings = {
   outcome: {
     INCOMPLETE_CHECK: 'Verificação incompleta',
     INSUFFICIENT_BASELINE: 'Novo ponto de partida guardado',
-    POSSIBLE_CORRECTION: 'Possível correção noticiada',
+    CORRECTION: 'Correção noticiada',
     MATERIAL_CHANGE: 'Alteração noticiada',
     NEW_EVIDENCE: 'Novas notícias',
     UNCHANGED: 'Sem novas notícias',
@@ -335,8 +356,8 @@ export const PT: FollowStrings = {
       'A pesquisa não pôde ser concluída, por isso isto não é um «nada mudou». A sua última resposta guardada mantém-se.',
     INSUFFICIENT_BASELINE:
       'Não havia uma resposta com fontes para comparar (ou a pergunta foi editada), por isso esta verificação é o novo ponto de partida.',
-    POSSIBLE_CORRECTION:
-      'Uma notícia publicada recentemente diz que corrige ou esclarece notícias anteriores. Abra-a para ver o que altera.',
+    CORRECTION:
+      'Uma fonte reviu um dos seus registos governados, ou uma notícia publicada recentemente diz que corrige notícias anteriores. Abra-a para ver o que mudou.',
     MATERIAL_CHANGE: 'Notícias publicadas desde a sua última resposta guardada confirmam os pontos abaixo.',
     NEW_EVIDENCE: 'Foram publicadas novas notícias desde a sua última resposta guardada. Estão listadas abaixo.',
     UNCHANGED:
@@ -344,6 +365,13 @@ export const PT: FollowStrings = {
     NO_RELEVANT_UPDATE:
       'A pesquisa terminou sem encontrar notícias novas relevantes. Isso não significa que nada esteja a acontecer.',
   },
+  structuredNew: 'Novos registos governados',
+  structuredLate: 'Registos adicionados agora sobre datas anteriores',
+  structuredLateNote: 'Admitidos depois da sua última resposta guardada, mas datados antes. Não contam como novo acontecimento.',
+  structuredRevised: 'Registos revistos pela fonte',
+  structuredUnassessed: (classes) => `Dados estruturados não avaliados nesta verificação: ${classes}.`,
+  structuredNotSeen: (n) => `Registos anteriores não devolvidos desta vez: ${n}. Isso não é uma retratação.`,
+  structuredCarried: (n) => `Registos inalterados desde a sua última resposta guardada: ${n}.`,
   partial: (sources) => `Não foi possível verificar algumas fontes: ${sources}.`,
   newEvidence: 'Novas notícias',
   supportedChanges: 'O que as novas notícias confirmam',
@@ -418,7 +446,7 @@ export const AR: FollowStrings = {
   outcome: {
     INCOMPLETE_CHECK: 'تحقق غير مكتمل',
     INSUFFICIENT_BASELINE: 'حُفظت نقطة بداية جديدة',
-    POSSIBLE_CORRECTION: 'أُبلغ عن تصحيح محتمل',
+    CORRECTION: 'أُبلغ عن تصحيح',
     MATERIAL_CHANGE: 'أُبلغ عن تغيير',
     NEW_EVIDENCE: 'تقارير جديدة',
     UNCHANGED: 'لا تقارير جديدة',
@@ -429,8 +457,8 @@ export const AR: FollowStrings = {
       'تعذّر إكمال البحث، لذا فهذا ليس «لا شيء تغيّر». تبقى آخر إجابة محفوظة كما هي.',
     INSUFFICIENT_BASELINE:
       'لم تكن هناك إجابة مستندة إلى مصادر للمقارنة (أو عُدّل السؤال)، لذا يصبح هذا التحقق نقطة البداية الجديدة.',
-    POSSIBLE_CORRECTION:
-      'تقرير نُشر حديثًا يذكر أنه يصحح تقارير سابقة أو يوضحها. افتحه لترى ما الذي يغيّره.',
+    CORRECTION:
+      'راجع مصدرٌ أحد سجلاته الموثّقة، أو يذكر تقرير نُشر حديثًا أنه يصحح تقارير سابقة. افتحه لترى ما الذي تغيّر.',
     MATERIAL_CHANGE: 'تقارير نُشرت منذ آخر إجابة محفوظة تدعم النقاط أدناه.',
     NEW_EVIDENCE: 'نُشرت تقارير جديدة منذ آخر إجابة محفوظة. وهي مدرجة أدناه.',
     UNCHANGED:
@@ -438,6 +466,13 @@ export const AR: FollowStrings = {
     NO_RELEVANT_UPDATE:
       'اكتمل البحث ولم يعثر على تقارير جديدة ذات صلة. هذا لا يعني أن لا شيء يحدث.',
   },
+  structuredNew: 'سجلات موثّقة جديدة',
+  structuredLate: 'سجلات أُضيفت الآن عن تواريخ سابقة',
+  structuredLateNote: 'قُبلت بعد آخر إجابة محفوظة لكنها مؤرخة قبلها. لا تُحتسب حدثًا جديدًا.',
+  structuredRevised: 'سجلات راجعها مصدرها',
+  structuredUnassessed: (classes) => `بيانات منظَّمة لم تُقيَّم في هذا التحقق: ${classes}.`,
+  structuredNotSeen: (n) => `سجلات سابقة لم تُرجَع هذه المرة: ${n}. هذا ليس سحبًا.`,
+  structuredCarried: (n) => `سجلات لم تتغير منذ آخر إجابة محفوظة: ${n}.`,
   partial: (sources) => `تعذّر التحقق من بعض المصادر: ${sources}.`,
   newEvidence: 'تقارير جديدة',
   supportedChanges: 'ما تدعمه التقارير الجديدة',

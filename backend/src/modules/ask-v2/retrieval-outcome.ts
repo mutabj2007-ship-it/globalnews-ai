@@ -1,5 +1,7 @@
 /**
- * REASON TO RETURN R1 · §5 — WHAT THE SEARCH DID, AS ONE CLOSED CODE (observation only).
+ * REASON TO RETURN R1 · §5 — WHAT THE NEWS SEARCH DID, AS ONE CLOSED CODE (observation only).
+ * EA C-4: this is the news-retrieval outcome; governed specialist evidence is reported separately
+ * (AskObservation.contributorsUsed), so a news COMPLETED_NO_MATCH beside a USED contributor is valid.
  *
  * Read from the retrieval facts the analysis response ALREADY carries (`retrievalContext`,
  * its `retrievalTrace`, `providerFailures`, `outcome`) — no new call, no classifier, no question

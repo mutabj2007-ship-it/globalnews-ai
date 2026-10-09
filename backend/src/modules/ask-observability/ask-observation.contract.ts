@@ -353,7 +353,11 @@ export interface AskObservationInput {
   readonly evidenceRolesObtained: readonly string[];
   readonly evidenceRolesMissing: readonly string[];
   readonly reportingItemCount: number | null;
-  /** Reason to Return R1 §5 — one OBSERVED_RETRIEVAL_OUTCOMES code; null = retrieval never ran. */
+  /**
+   * Reason to Return R1 §5 — one OBSERVED_RETRIEVAL_OUTCOMES code for the NEWS retrieval only; null
+   * = news retrieval never ran. EA C-4: COMPLETED_NO_MATCH can coexist with governed specialist
+   * evidence — any empty-answer diagnosis reads it together with contributorsUsed.
+   */
   readonly retrievalOutcome: string | null;
   /** The retrieval trace's own counts: candidates the providers returned / the gate admitted. */
   readonly candidatesSeen: number | null;

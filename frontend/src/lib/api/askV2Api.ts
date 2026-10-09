@@ -429,7 +429,7 @@ export interface AskV2BriefingSummary {
 export type AskV2FollowedOutcome =
   | 'INCOMPLETE_CHECK'
   | 'INSUFFICIENT_BASELINE'
-  | 'POSSIBLE_CORRECTION'
+  | 'CORRECTION'
   | 'MATERIAL_CHANGE'
   | 'NEW_EVIDENCE'
   | 'UNCHANGED'
@@ -441,7 +441,22 @@ export interface AskV2FollowedCheckSummary {
   readonly newEvidenceCount: number;
   readonly possibleCorrectionCount: number;
   readonly supportedChangeCount: number;
+  /** CTO R1-B §3 — governed specialist records new / late-admitted / revised; absent on older rows. */
+  readonly structuredChangeCount?: number;
+  readonly structuredUnassessed?: readonly string[];
   readonly partial: boolean;
+}
+/** CTO R1-B §3 — one governed specialist record that changed (source-stated fields only). */
+export interface AskV2StructuredRecordChange {
+  readonly contributorId: string;
+  readonly scope: string | null;
+  readonly reference: string;
+  readonly kind: string;
+  readonly label: string | null;
+  readonly period: string;
+  readonly geography: string;
+  readonly source: { readonly name: string; readonly url: string | null };
+  readonly retainedAt: string | null;
 }
 export interface AskV2ChangedEvidence {
   readonly id: string;
@@ -451,7 +466,7 @@ export interface AskV2ChangedEvidence {
   readonly publishedAt: string | null;
 }
 export interface AskV2FollowedAssessment {
-  readonly schema: 'followed-assessment/1';
+  readonly schema: 'followed-assessment/1' | 'followed-assessment/2';
   readonly outcome: AskV2FollowedOutcome;
   readonly reasons: readonly string[];
   readonly baselineVersion: number | null;
@@ -467,6 +482,18 @@ export interface AskV2FollowedAssessment {
   readonly carriedOverCount: number;
   readonly notSeenThisCheckCount: number;
   readonly unassessedSources: readonly string[];
+  /** Absent on /1 assessments (recorded before structured comparison existed). */
+  readonly structured?: {
+    readonly applicable: boolean;
+    readonly newEvents: readonly AskV2StructuredRecordChange[];
+    readonly lateAdmitted: readonly AskV2StructuredRecordChange[];
+    readonly revised: readonly AskV2StructuredRecordChange[];
+    readonly carriedOverCount: number;
+    readonly notSeenThisCheckCount: number;
+    readonly notPreviouslyShownCount: number;
+    readonly unassessed: readonly string[];
+    readonly compared: readonly string[];
+  };
   readonly expiredNotices: 'NOT_ASSESSED';
 }
 export interface AskV2FollowedCheck {
