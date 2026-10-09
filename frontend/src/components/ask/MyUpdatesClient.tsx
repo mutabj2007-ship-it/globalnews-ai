@@ -42,22 +42,23 @@ export function MyUpdatesClient({ locale }: { readonly locale: DisplayLocale }):
   }, []);
   useEffect(load, [load]);
 
-  if (list === null) return <main className="mx-auto max-w-3xl px-4 py-6" />;
+  if (list === null) return <main className="min-h-screen bg-void px-4 py-8 md:px-8" />;
 
   const rows = list.ok ? list.value.filter(isFollowedQuestion) : [];
   return (
-    <main data-ask="my-updates" className="mx-auto flex max-w-3xl flex-col gap-4 px-4 py-6">
+    <main data-ask="my-updates" className="min-h-screen bg-void px-4 py-8 md:px-8">
+      <div className="mx-auto flex max-w-3xl flex-col gap-4">
       <header className="flex flex-col gap-1">
-        <h1 className="text-[1.375rem] font-semibold">{s.myUpdates}</h1>
-        <p className="text-[0.9375rem] text-ink-tertiary">{s.myUpdatesIntro}</p>
+        <h1 className="font-display text-[26px] font-semibold text-ink-primary">{s.myUpdates}</h1>
+        <p className="text-[13.5px] text-ink-tertiary">{s.myUpdatesIntro}</p>
       </header>
-      {notice !== null && <p role="status">{notice}</p>}
+      {notice !== null && <p role="status" className="text-[13.5px] text-ink-secondary">{notice}</p>}
       {!list.ok ? (
-        <p role="status" data-ask="my-updates-state">
+        <p role="status" data-ask="my-updates-state" className="text-[13.5px] text-ink-secondary">
           {list.reason === 'SIGNED_OUT' ? s.signedOut : list.reason === 'NETWORK' ? s.network : s.unavailable}
         </p>
       ) : rows.length === 0 ? (
-        <p data-ask="my-updates-state">{s.empty}</p>
+        <p data-ask="my-updates-state" className="text-[13.5px] text-ink-secondary">{s.empty}</p>
       ) : (
         <ul className="flex flex-col gap-3">
           {rows.map((row) => (
@@ -74,6 +75,7 @@ export function MyUpdatesClient({ locale }: { readonly locale: DisplayLocale }):
           ))}
         </ul>
       )}
+      </div>
     </main>
   );
 }
@@ -117,11 +119,17 @@ function FollowedRow({
     <li
       data-ask="followed-question"
       data-ask-followed-status={row.status}
-      className="flex flex-col gap-2 rounded-[12px] border border-[var(--ad-line,#26324a)] p-4"
+      className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-4"
     >
-      <h2 className="text-[1.0625rem] font-semibold">{row.title}</h2>
-      {row.scope.question !== row.title && <p className="text-[0.9375rem]">{row.scope.question}</p>}
-      {paused && <p data-ask="followed-paused">{s.paused}</p>}
+      <h2 className="text-[15px] font-semibold leading-snug text-ink-primary">{row.title}</h2>
+      {row.scope.question !== row.title && (
+        <p className="text-[14px] leading-snug text-ink-secondary">{row.scope.question}</p>
+      )}
+      {paused && (
+        <p data-ask="followed-paused" className="text-[12px] font-semibold uppercase tracking-[0.06em] text-ink-tertiary">
+          {s.paused}
+        </p>
+      )}
       <p className="text-[0.875rem] text-ink-tertiary">
         {row.latestAsOf === null || age === null
           ? s.noBaseline
@@ -130,8 +138,8 @@ function FollowedRow({
       {latestCheck === null ? (
         <p className="text-[0.875rem] text-ink-tertiary">{s.neverChecked}</p>
       ) : (
-        <p data-ask="followed-latest-outcome" data-ask-follow-outcome={latestCheck.outcome}>
-          <strong>{s.outcome[latestCheck.outcome]}</strong>
+        <p data-ask="followed-latest-outcome" data-ask-follow-outcome={latestCheck.outcome} className="text-[13.5px] text-ink-secondary">
+          <strong className="text-ink-primary">{s.outcome[latestCheck.outcome]}</strong>
           {' · '}
           {s.lastChecked(when(latestCheck.checkedAt))}
         </p>
@@ -148,12 +156,12 @@ function FollowedRow({
           <p className="text-[0.875rem] text-ink-tertiary">{s.lastSuccessful(when(row.lastSuccessfulCheckAt))}</p>
         )}
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2">
         {!paused &&
           (wait > 0 ? (
-            <span data-ask="followed-check-wait">{s.checkTooSoon(wait)}</span>
+            <span data-ask="followed-check-wait" className="text-[13px] text-ink-tertiary">{s.checkTooSoon(wait)}</span>
           ) : (
-            <Link href={followCheckHref(row.id)} prefetch={false} data-ask="followed-check">
+            <Link href={followCheckHref(row.id)} prefetch={false} data-ask="followed-check" className="text-[13px] font-medium text-signal underline decoration-signal/50 underline-offset-4">
               {s.checkForChanges}
             </Link>
           ))}
@@ -161,19 +169,21 @@ function FollowedRow({
           type="button"
           disabled={busy}
           data-ask="followed-pause"
+          className="inline-flex min-h-[44px] items-center text-[13px] text-ink-secondary hover:text-ink-primary disabled:opacity-50"
           onClick={() =>
             void run(() => askV2Api.updateBriefing(row.id, { status: paused ? 'ACTIVE' : 'PAUSED' }), null)
           }
         >
           {paused ? s.resume : s.pause}
         </button>
-        <button type="button" disabled={busy} data-ask="followed-edit" onClick={() => setEditing((v) => !v)}>
+        <button type="button" disabled={busy} data-ask="followed-edit" className="inline-flex min-h-[44px] items-center text-[13px] text-ink-secondary hover:text-ink-primary disabled:opacity-50" onClick={() => setEditing((v) => !v)}>
           {s.edit}
         </button>
         {latestCheck !== null && (
           <button
             type="button"
             data-ask="followed-details"
+            className="inline-flex min-h-[44px] items-center text-[13px] text-ink-secondary hover:text-ink-primary disabled:opacity-50"
             aria-expanded={detail !== null}
             onClick={() => {
               if (detail !== null) return setDetail(null);
@@ -186,7 +196,7 @@ function FollowedRow({
           </button>
         )}
         {row.latestVersion !== null && (
-          <Link href={briefingHref(row.id, row.latestVersion)} prefetch={false} data-ask="followed-history">
+          <Link href={briefingHref(row.id, row.latestVersion)} prefetch={false} data-ask="followed-history" className="inline-flex min-h-[44px] items-center text-[13px] text-ink-secondary hover:text-ink-primary disabled:opacity-50">
             {s.history}
           </Link>
         )}
@@ -194,6 +204,7 @@ function FollowedRow({
           type="button"
           disabled={busy}
           data-ask="followed-remove"
+          className="inline-flex min-h-[44px] items-center text-[13px] text-ink-secondary hover:text-ink-primary disabled:opacity-50"
           onClick={() => {
             if (!window.confirm(s.removeConfirm)) return;
             void run(() => askV2Api.deleteBriefing(row.id), s.removed);
@@ -207,7 +218,7 @@ function FollowedRow({
       {editing && (
         <form
           data-ask="followed-edit-form"
-          className="flex flex-col gap-2"
+          className="mt-2 flex flex-col gap-2 text-[13px] text-ink-secondary"
           onSubmit={(event) => {
             event.preventDefault();
             const change: { title?: string; question?: string } = {};
@@ -219,16 +230,16 @@ function FollowedRow({
         >
           <label className="flex flex-col gap-1">
             <span>{s.titleLabel}</span>
-            <input value={title} maxLength={160} onChange={(e) => setTitle(e.target.value)} />
+            <input value={title} maxLength={160} onChange={(e) => setTitle(e.target.value)} className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-[13.5px] text-ink-primary" />
           </label>
           <label className="flex flex-col gap-1">
             <span>{s.questionLabel}</span>
-            <textarea value={question} rows={3} onChange={(e) => setQuestion(e.target.value)} />
+            <textarea value={question} rows={3} onChange={(e) => setQuestion(e.target.value)} className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-[13.5px] text-ink-primary" />
           </label>
           <p className="text-[0.8125rem] text-ink-tertiary">{s.editNote}</p>
           <div className="flex gap-3">
-            <button type="submit">{s.save}</button>
-            <button type="button" onClick={() => setEditing(false)}>
+            <button type="submit" className="text-[13px] font-medium text-signal underline decoration-signal/50 underline-offset-4">{s.save}</button>
+            <button type="button" className="inline-flex min-h-[44px] items-center text-[13px] text-ink-secondary hover:text-ink-primary disabled:opacity-50" onClick={() => setEditing(false)}>
               {s.cancel}
             </button>
           </div>
@@ -236,7 +247,7 @@ function FollowedRow({
       )}
 
       {detail !== null && (detail.checks ?? []).length > 0 && (
-        <div data-ask="followed-checks" className="flex flex-col gap-4">
+        <div data-ask="followed-checks" className="mt-2 flex flex-col gap-4 border-t border-line pt-3 text-[13.5px] text-ink-secondary">
           {(detail.checks ?? []).slice(0, 5).map((check) => (
             <div key={check.id} className="flex flex-col gap-1">
               <p className="text-[0.8125rem] text-ink-tertiary">{when(check.checkedAt)}</p>

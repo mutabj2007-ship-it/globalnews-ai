@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type JSX } from 'react';
-import Link from 'next/link';
+import styles from './askDashboard.module.css';
 import type { DisplayLocale } from '@globalnews-ai/shared';
 import { askR2PayloadOf, askV2Api, type AskV2Operation } from '@/lib/api/askV2Api';
 import { briefingsAvailable } from '@/lib/ask/briefingStrings';
@@ -70,13 +70,19 @@ export function AskTurnFollow({
   if (!eligible || !available) return null;
 
   if (state === 'following') {
+    /* the toolbar's own pressed state (as Save's), and it opens My updates */
     return (
-      <span data-ask="follow" data-ask-follow-state="following" className="inline-flex items-center gap-2">
-        <span>{s.following}</span>
-        <Link href={MY_UPDATES_HREF} prefetch={false} data-ask="follow-open-updates">
-          {s.myUpdates}
-        </Link>
-      </span>
+      <button
+        type="button"
+        data-ask="follow"
+        data-ask-follow-state="following"
+        aria-pressed="true"
+        title={s.openMyUpdates}
+        onClick={() => window.location.assign(MY_UPDATES_HREF)}
+      >
+        {s.following}
+        <span className={styles.visuallyHidden}>{` — ${s.openMyUpdates}`}</span>
+      </button>
     );
   }
 

@@ -36,7 +36,7 @@ export function AskFollowAssessment({
           {href === undefined ? (
             <span>{item.title}</span>
           ) : (
-            <a href={href} target="_blank" rel="noopener noreferrer nofollow">
+            <a href={href} target="_blank" rel="noopener noreferrer nofollow" className="underline underline-offset-4">
               {item.title}
             </a>
           )}
@@ -67,7 +67,7 @@ export function AskFollowAssessment({
             {href === undefined ? (
               <span>{item.source.name}</span>
             ) : (
-              <a href={href} target="_blank" rel="noopener noreferrer nofollow">
+              <a href={href} target="_blank" rel="noopener noreferrer nofollow" className="underline underline-offset-4">
                 {item.source.name}
               </a>
             )}
@@ -79,12 +79,12 @@ export function AskFollowAssessment({
 
   return (
     <div data-ask="follow-assessment" data-ask-follow-outcome={check.outcome} className="flex flex-col gap-2">
-      <h3>{s.outcome[check.outcome]}</h3>
+      <h3 className="text-[1.0625rem] font-semibold">{s.outcome[check.outcome]}</h3>
       <p>{s.outcomeDetail[check.outcome]}</p>
       {a.unassessedSources.length > 0 && <p>{s.partial(a.unassessedSources.join(', '))}</p>}
       {a.supportedChanges.length > 0 && (
         <section data-ask="follow-supported">
-          <h4>{s.supportedChanges}</h4>
+          <h4 className="mt-1 font-semibold">{s.supportedChanges}</h4>
           <ul className="flex flex-col gap-1">
             {a.supportedChanges.map((change, i) => (
               <li key={i}>{change.claim}</li>
@@ -94,20 +94,20 @@ export function AskFollowAssessment({
       )}
       {a.possibleCorrections.length > 0 && (
         <section data-ask="follow-corrections">
-          <h4>{s.possibleCorrections}</h4>
+          <h4 className="mt-1 font-semibold">{s.possibleCorrections}</h4>
           <p>{s.correctionNote}</p>
           {evidence(a.possibleCorrections)}
         </section>
       )}
       {a.newEvidence.length > 0 && (
         <section data-ask="follow-new-evidence">
-          <h4>{s.newEvidence}</h4>
+          <h4 className="mt-1 font-semibold">{s.newEvidence}</h4>
           {evidence(a.newEvidence)}
         </section>
       )}
       {a.earlierReportingFoundNow.length > 0 && (
         <section data-ask="follow-earlier">
-          <h4>{s.earlierFound}</h4>
+          <h4 className="mt-1 font-semibold">{s.earlierFound}</h4>
           <p>{s.earlierFoundNote}</p>
           {evidence(a.earlierReportingFoundNow)}
         </section>
@@ -120,19 +120,19 @@ export function AskFollowAssessment({
       )}
       {st !== undefined && st.revised.length > 0 && (
         <section data-ask="follow-structured-revised">
-          <h4>{s.structuredRevised}</h4>
+          <h4 className="mt-1 font-semibold">{s.structuredRevised}</h4>
           {records(st.revised)}
         </section>
       )}
       {st !== undefined && st.newEvents.length > 0 && (
         <section data-ask="follow-structured-new">
-          <h4>{s.structuredNew}</h4>
+          <h4 className="mt-1 font-semibold">{s.structuredNew}</h4>
           {records(st.newEvents)}
         </section>
       )}
       {st !== undefined && st.lateAdmitted.length > 0 && (
         <section data-ask="follow-structured-late">
-          <h4>{s.structuredLate}</h4>
+          <h4 className="mt-1 font-semibold">{s.structuredLate}</h4>
           <p>{s.structuredLateNote}</p>
           {records(st.lateAdmitted)}
         </section>

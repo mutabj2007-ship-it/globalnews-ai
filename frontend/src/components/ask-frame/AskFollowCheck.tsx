@@ -83,9 +83,9 @@ export function AskFollowCheck({
   if (followed === null || followed === 'missing') return null;
   if (followed.status !== 'ACTIVE') {
     return (
-      <section data-ask="follow-check" data-ask-follow-check="paused" role="status" className="mb-4">
+      <section data-ask="follow-check" data-ask-follow-check="paused" role="status" className="mb-4 flex flex-col gap-2 rounded-[var(--ad-radius-card,12px)] border border-[var(--ad-line,#26324a)] bg-[var(--ad-surface,#0f1420)] p-4 text-[var(--ad-t-sm,0.9375rem)] leading-[1.5] text-[var(--ad-ink,#edeff5)]">
         <p>{s.checkPausedBanner}</p>
-        <Link href={MY_UPDATES_HREF} prefetch={false}>
+        <Link href={MY_UPDATES_HREF} prefetch={false} className="font-medium text-[var(--ad-accent,#7aa2ff)] underline underline-offset-4">
           {s.openMyUpdates}
         </Link>
       </section>
@@ -100,7 +100,7 @@ export function AskFollowCheck({
       data-ask="follow-check"
       data-ask-follow-check={recorded === null ? 'ready' : typeof recorded === 'string' ? recorded : 'recorded'}
       aria-live="polite"
-      className="mb-4 flex flex-col gap-2"
+      className="mb-4 flex flex-col gap-2 rounded-[var(--ad-radius-card,12px)] border border-[var(--ad-line,#26324a)] bg-[var(--ad-surface,#0f1420)] p-4 text-[var(--ad-t-sm,0.9375rem)] leading-[1.5] text-[var(--ad-ink,#edeff5)]"
     >
       {recorded === null && (
         <>
@@ -117,7 +117,7 @@ export function AskFollowCheck({
           <p role="status">{s.checkRecorded}</p>
         </>
       )}
-      <Link href={MY_UPDATES_HREF} prefetch={false} data-ask="follow-open-updates">
+      <Link href={MY_UPDATES_HREF} prefetch={false} data-ask="follow-open-updates" className="font-medium text-[var(--ad-accent,#7aa2ff)] underline underline-offset-4">
         {s.openMyUpdates}
       </Link>
     </section>
