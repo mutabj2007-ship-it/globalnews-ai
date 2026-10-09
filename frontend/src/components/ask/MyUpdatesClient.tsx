@@ -18,6 +18,10 @@ import {
 } from '@/lib/ask/followedQuestions';
 import { askFormatLocalDay, askFormatLocalTime } from '@/lib/ask/askDirection';
 import { briefingHref } from './BriefingViews';
+import {
+  followOutcomePresentation,
+  type FollowOutcomeTone,
+} from '@/lib/ask/followOutcomePresentation';
 import { AskFollowAssessment } from '@/components/ask-frame/AskFollowAssessment';
 
 /**
@@ -80,6 +84,31 @@ export function MyUpdatesClient({ locale }: { readonly locale: DisplayLocale }):
   );
 }
 
+/**
+ * CLAUDE DESIGN R3 · D08 — the four tones, painted with the tokens this page already uses.
+ *
+ * Total over `FollowOutcomeTone`, like the map it consumes: a fifth tone fails to compile rather
+ * than falling back to a neutral chip that would quietly flatten a distinction.
+ *
+ * NO NEW COLOUR IS INTRODUCED. The semantic palette here is `signal`, `ice` and the `ink` ladder;
+ * `tailwind.config.ts` records that the GN-CD-300 §W.4 amber "does not exist and must not appear"
+ * and that red is never decorative, so an incomplete check is NOT painted as a warning. The four
+ * tones separate by WEIGHT and by border style instead:
+ *
+ *   REPORTED    the one accent border — there is something new to read.
+ *   SETTLED     quiet: default border, secondary ink. A completed check that found nothing.
+ *   BASELINE    default border, primary ink. Informational, and deliberately not quiet: an
+ *               absent baseline is not a "no change" result.
+ *   INCOMPLETE  a DASHED border, as the reference-background card uses for "not solid ground".
+ *               It must not read as SETTLED: an incomplete check never means nothing changed.
+ */
+const FOLLOW_TONE_CLASS: Readonly<Record<FollowOutcomeTone, string>> = Object.freeze({
+  REPORTED: 'border-signal/60 text-ink-primary',
+  SETTLED: 'border-line text-ink-secondary',
+  BASELINE: 'border-line text-ink-primary',
+  INCOMPLETE: 'border-dashed border-line text-ink-primary',
+});
+
 function FollowedRow({
   row,
   locale,
@@ -138,11 +167,51 @@ function FollowedRow({
       {latestCheck === null ? (
         <p className="text-[0.875rem] text-ink-tertiary">{s.neverChecked}</p>
       ) : (
-        <p data-ask="followed-latest-outcome" data-ask-follow-outcome={latestCheck.outcome} className="text-[13.5px] text-ink-secondary">
-          <strong className="text-ink-primary">{s.outcome[latestCheck.outcome]}</strong>
-          {' · '}
-          {s.lastChecked(when(latestCheck.checkedAt))}
-        </p>
+        /*
+          CLAUDE DESIGN R3 · D08 — ONE compact status for this row, and ONE detail sentence under
+          it. This replaced a bold run of `s.outcome[...]` inside the "last checked" line, which
+          gave every outcome the same weight and left `s.outcomeDetail` — authored, qualified in
+          EN and PL, and the only place the seven outcomes explain themselves — rendered nowhere.
+
+          The chip IS the details toggle, so the outcome is named once on the row instead of
+          twice (it was also the label of a separate button below). `data-ask="followed-details"`
+          moved here with it, so anything selecting that control still finds it.
+
+          The tone comes from the total map in `followOutcomePresentation`; the WORDS come only
+          from `followStrings`. All seven outcomes keep their own label and their own detail.
+        */
+        <>
+          <p className="text-[0.875rem] text-ink-tertiary">{s.lastChecked(when(latestCheck.checkedAt))}</p>
+          <button
+            type="button"
+            data-ask="followed-details"
+            data-ask-follow-outcome={latestCheck.outcome}
+            data-ask-follow-tone={followOutcomePresentation(latestCheck.outcome).tone}
+            data-ask-follow-attention={
+              followOutcomePresentation(latestCheck.outcome).attention ? 'true' : 'false'
+            }
+            /* R1-B §3 — a partial check keeps its finding outcome and says so; it is never
+               presented as a complete one. The qualifier's own wording and its source list are
+               `s.partial(…)` in the assessment this control opens, and `s.structuredUnassessed`
+               below, both unchanged. */
+            data-ask-follow-partial={latestCheck.partial ? 'true' : 'false'}
+            aria-expanded={detail !== null}
+            className={`inline-flex min-h-[44px] w-fit items-center gap-2 self-start rounded-full border px-3 text-[13px] font-semibold hover:border-signal/60 ${
+              FOLLOW_TONE_CLASS[followOutcomePresentation(latestCheck.outcome).tone]
+            }`}
+            onClick={() => {
+              if (detail !== null) return setDetail(null);
+              void askV2Api.briefing(row.id).then((read) => {
+                if (read.ok) setDetail(read.value);
+              });
+            }}
+          >
+            {s.outcome[latestCheck.outcome]}
+          </button>
+          <p data-ask="followed-latest-outcome" className="text-[13.5px] leading-snug text-ink-secondary">
+            {s.outcomeDetail[latestCheck.outcome]}
+          </p>
+        </>
       )}
       {/* CTO R1-B §3 — the structured evidence this check could not assess, never hidden */}
       {latestCheck !== null && (latestCheck.structuredUnassessed ?? []).length > 0 && (
@@ -179,22 +248,8 @@ function FollowedRow({
         <button type="button" disabled={busy} data-ask="followed-edit" className="inline-flex min-h-[44px] items-center text-[13px] text-ink-secondary hover:text-ink-primary disabled:opacity-50" onClick={() => setEditing((v) => !v)}>
           {s.edit}
         </button>
-        {latestCheck !== null && (
-          <button
-            type="button"
-            data-ask="followed-details"
-            className="inline-flex min-h-[44px] items-center text-[13px] text-ink-secondary hover:text-ink-primary disabled:opacity-50"
-            aria-expanded={detail !== null}
-            onClick={() => {
-              if (detail !== null) return setDetail(null);
-              void askV2Api.briefing(row.id).then((read) => {
-                if (read.ok) setDetail(read.value);
-              });
-            }}
-          >
-            {s.outcome[latestCheck.outcome]}
-          </button>
-        )}
+        {/* D08 — the details control is the compact status chip above: the outcome is named
+            once per row, not twice. Same handler, same `aria-expanded`, same data attribute. */}
         {row.latestVersion !== null && (
           <Link href={briefingHref(row.id, row.latestVersion)} prefetch={false} data-ask="followed-history" className="inline-flex min-h-[44px] items-center text-[13px] text-ink-secondary hover:text-ink-primary disabled:opacity-50">
             {s.history}

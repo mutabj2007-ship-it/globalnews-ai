@@ -2,6 +2,8 @@
 
 import { useRef, useState } from 'react';
 import type { DisplayLocale } from '@globalnews-ai/shared';
+import styles from './askDashboard.module.css';
+import { AskActionGlyph } from './AskActionGlyph';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 
 /**
@@ -51,16 +53,28 @@ export function AskTurnCopy({ locale }: { readonly locale: DisplayLocale }): JSX
     window.setTimeout(() => setState('idle'), 2000);
   }
 
+  /*
+    CLAUDE DESIGN R3 §10 — the approved icon control. The visible text label is gone; its three
+    states are not. `aria-label` and `title` carry the SAME qualified strings the label carried,
+    so no reader loses the word and no new string was invented, and the state still reaches a
+    screen reader through the polite live region below, which is visually hidden rather than
+    removed. Geometry, colour and interaction states are the stylesheet's
+    (`[data-ask='turn-actions'] button`), exactly as the package specifies them.
+  */
+  const label = state === 'copied' ? t.copied : state === 'failed' ? t.failed : t.copy;
   return (
     <button
       ref={button}
       type="button"
       data-ask="copy"
+      data-ask-copy-state={state}
+      aria-label={label}
+      title={label}
       onClick={() => void copy()}
-      className="inline-flex min-h-[44px] items-center rounded-[8px] border border-[var(--ask-read-line,#1d4a73)] px-3 font-cd-body text-[13px] font-semibold text-[var(--ask-read-ink,#cfe2f2)] hover:bg-[var(--ask-read-sunk,#07304f)] md:min-h-[32px]"
     >
-      <span aria-live="polite">
-        {state === 'copied' ? t.copied : state === 'failed' ? t.failed : t.copy}
+      <AskActionGlyph name="copy" />
+      <span aria-live="polite" className={styles.visuallyHidden}>
+        {state === 'copied' ? t.copied : state === 'failed' ? t.failed : ''}
       </span>
     </button>
   );

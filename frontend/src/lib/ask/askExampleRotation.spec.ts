@@ -36,8 +36,29 @@ const moduleSource = () =>
     .replace(/(^|[^:])\/\/.*$/gm, '$1');
 
 const QUEUE_LENGTH = QUESTION_EXAMPLES.length;
-const tick = (state: RotationState, now: number) =>
+const tickOnce = (state: RotationState, now: number) =>
   rotationReducer(state, { type: 'TICK', now }, QUEUE_LENGTH);
+
+/*
+  SUPERSEDED BY PRODUCT OWNER / CLAUDE DESIGN R3 §11 (R1-C), CTO 9 Oct 2026.
+
+  `tick` used to be one TICK, because a swap used to happen in one step. R1-C's sequence is
+  "hold 5,200 ms → opacity 1→0 over 400 ms ease-in → swap text → 0→1 over 400 ms ease-out", so
+  the text now changes HALF WAY through a transition and a swap takes two deadlines: the hold
+  expiring, then the fade completing.
+
+  `tick(state, now)` therefore drives the machine to `now` AND, if that began a fade, on through
+  the fade so the caller sees the state it used to see. Tests that care about the two halves
+  separately use `tickOnce`, and the halves themselves are asserted by name in
+  `askDesignR3Refinements.spec.ts`.
+*/
+/** R1-C · one complete cycle: hold + fade out + fade in ≈ 6.0 s. */
+const CYCLE = EXAMPLE_ROTATION.dwellMs + EXAMPLE_ROTATION.fadeMs * 2;
+
+const tick = (state: RotationState, now: number) => {
+  const first = tickOnce(state, now);
+  return first.fading ? tickOnce(first, now + EXAMPLE_ROTATION.fadeMs) : first;
+};
 
 describe('R-1 · the queue', () => {
   it('is a permutation: every example appears exactly once, so nothing repeats until it cycles', () => {
@@ -117,13 +138,19 @@ describe('R-2 · rotation advances on the dwell clock', () => {
     const queue = buildExampleQueue(QUESTION_EXAMPLES, 9);
     let state = initialRotationState(0);
     const seen = [exampleForCursor(queue, state.cursor)!.id];
+    /*
+      SUPERSEDED BY CLAUDE DESIGN R3 §11 (R1-C) · the step was `i * EXAMPLE_ROTATION.dwellMs`.
+      A cycle is no longer one hold: it is hold + fade out + fade in, because the hold is
+      measured from the moment the new example is fully visible. The property under test — no
+      repeat across a full queue — is unchanged.
+    */
     for (let i = 1; i < QUEUE_LENGTH; i += 1) {
-      state = tick(state, i * EXAMPLE_ROTATION.dwellMs);
+      state = tick(state, i * CYCLE);
       seen.push(exampleForCursor(queue, state.cursor)!.id);
     }
     expect(new Set(seen).size).toBe(QUEUE_LENGTH);
     /* And the cycle closes rather than stalling. */
-    state = tick(state, QUEUE_LENGTH * EXAMPLE_ROTATION.dwellMs);
+    state = tick(state, QUEUE_LENGTH * CYCLE);
     expect(exampleForCursor(queue, state.cursor)!.id).toBe(seen[0]);
   });
 
@@ -135,12 +162,20 @@ describe('R-2 · rotation advances on the dwell clock', () => {
 });
 
 describe('R-3 · focus pauses, typing stops, clearing resumes', () => {
-  it('pauses on focus and leaves the CURRENT example in place as a suggestion', () => {
+  it('clears the example on focus and freezes the queue where it stood', () => {
+    /*
+      SUPERSEDED BY PRODUCT OWNER / CTO DESIGN R3 REVIEW, 9 Oct 2026. This test was "pauses on
+      focus and leaves the CURRENT example in place as a suggestion" and asserted
+      `expect(state.visible).toBe(true)`, under contract §8's "leave the currently shown example
+      as non-entered suggestion content". R1-C moved the example into the placeholder's own slot
+      and the CTO ruled it must disappear on focus. The CURSOR assertion is unchanged and is the
+      half that still holds: focus is a pause, not the end of rotation.
+    */
     let state = tick(initialRotationState(0), EXAMPLE_ROTATION.dwellMs);
     const frozenAt = state.cursor;
     state = rotationReducer(state, { type: 'FOCUS', now: 5_000 }, QUEUE_LENGTH);
     expect(state.phase).toBe('PAUSED_FOCUS');
-    expect(state.visible).toBe(true);
+    expect(state.visible).toBe(false);
     expect(state.cursor).toBe(frozenAt);
     /* No amount of ticking moves it while the reader is in the field. */
     state = tick(state, 5_000 + EXAMPLE_ROTATION.dwellMs * 10);
@@ -229,18 +264,39 @@ describe('R-4 · taking an example', () => {
 
 describe('R-5 · timing', () => {
   it('is tunable from ONE constant and sits inside the contract bands', () => {
-    expect(EXAMPLE_ROTATION.dwellMs).toBeGreaterThanOrEqual(3_000);
-    expect(EXAMPLE_ROTATION.dwellMs).toBeLessThanOrEqual(5_000);
+    /*
+      SUPERSEDED BY PRODUCT OWNER / CLAUDE DESIGN R3 §11 (Welcome R1-C, 9 Oct 2026). This was a
+      band assertion, `>= 3_000` and `<= 5_000`, taken from the original contract's "suggested
+      band 3–5 s". The band is obsolete, not merely exceeded: R1-C specifies the hold EXACTLY,
+      at 5.2 s, because the example now sits inside the composer where it must be readable in
+      full. An exact assertion is also the stronger one — a band would have let a later edit
+      drift the hold without a ruling.
+    */
+    expect(EXAMPLE_ROTATION.dwellMs).toBe(5_200);
+    expect(EXAMPLE_ROTATION.fadeMs).toBe(400);
     expect(EXAMPLE_ROTATION.resumeAfterClearMs).toBeGreaterThanOrEqual(8_000);
     expect(EXAMPLE_ROTATION.resumeAfterClearMs).toBeLessThanOrEqual(15_000);
     expect(Object.isFrozen(EXAMPLE_ROTATION)).toBe(true);
   });
 
   it('obeys an injected timing table, so a later contract can retune without editing logic', () => {
-    const fast = { ...EXAMPLE_ROTATION, dwellMs: 1_000 };
-    const state = rotationReducer(
+    /*
+      SUPERSEDED BY CLAUDE DESIGN R3 §11 (R1-C) · one TICK used to swap. It now begins the fade,
+      and the swap lands on the tick that completes it — both read from the SAME injected table,
+      which is what this test exists to prove.
+    */
+    const fast = { ...EXAMPLE_ROTATION, dwellMs: 1_000, fadeMs: 50 };
+    const fading = rotationReducer(
       initialRotationState(0),
       { type: 'TICK', now: 1_000 },
+      QUEUE_LENGTH,
+      fast,
+    );
+    expect(fading.fading).toBe(true);
+    expect(fading.cursor).toBe(0);
+    const state = rotationReducer(
+      fading,
+      { type: 'TICK', now: 1_000 + fast.fadeMs },
       QUEUE_LENGTH,
       fast,
     );

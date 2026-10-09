@@ -33,10 +33,24 @@ export interface RotationTiming {
 }
 
 export const EXAMPLE_ROTATION: RotationTiming = Object.freeze({
-  /** Dwell per example. The contract's suggested band is 3–5 s; this sits in the middle. */
-  dwellMs: 4_000,
-  /** The soft transition. Restrained fade + a few pixels of rise — never a typewriter. */
-  fadeMs: 420,
+  /**
+   * Dwell per example.
+   *
+   * SUPERSEDED BY PRODUCT OWNER / CLAUDE DESIGN R3 §11 (Welcome R1-C, 9 Oct 2026) · this was
+   * 4_000 with the reason "the contract's suggested band is 3–5 s; this sits in the middle".
+   * The band and the midpoint reasoning are kept on the record; R1-C sets the hold exactly,
+   * at 5.2 s (`WELCOME_PLACEHOLDER_SPEC.md`), which is above the old band's ceiling because
+   * the example now sits INSIDE the composer where it must be readable in full.
+   */
+  dwellMs: 5_200,
+  /**
+   * The soft transition. Restrained fade + a few pixels of rise — never a typewriter.
+   *
+   * SUPERSEDED BY CLAUDE DESIGN R3 §11 · was 420 ms; R1-C specifies 400 ms fades. This number
+   * is the ONE source: the view sets `animation-duration` from it, so the stylesheet and the
+   * machine cannot drift apart.
+   */
+  fadeMs: 400,
   /** Quiet delay before rotation resumes after the reader empties the field (band 8–15 s). */
   resumeAfterClearMs: 10_000,
   /** How often the driver asks the machine whether anything is due. */
@@ -51,7 +65,14 @@ export type RotationPhase =
   /** The reader typed, or took an example into the field: rotation is over for this draft. */
   | 'STOPPED'
   /** The field was emptied again: waiting out the quiet delay before resuming. */
-  | 'RESUMING';
+  | 'RESUMING'
+  /**
+   * CLAUDE DESIGN R3 §11 (R1-C) — the reader cannot see the example: the tab is hidden, or an
+   * overlay owns the screen. The example STAYS as it is and the clock stops; it never advances
+   * where it cannot be read, and it never advances in the instant the reader comes back
+   * (`RESUME` restarts the dwell from `now`).
+   */
+  | 'PAUSED_AWAY';
 
 export interface RotationState {
   readonly phase: RotationPhase;
@@ -65,6 +86,15 @@ export interface RotationState {
   readonly resumeAt: number | null;
   /** Set for one transition so the view can run its fade; never read as state. */
   readonly changed: boolean;
+  /**
+   * R1-C · the approved sequence is "hold 5,200 ms → opacity 1→0 over 400 ms ease-in → swap
+   * text → 0→1 over 400 ms ease-out. Cycle ≈ 6.0 s." The swap therefore happens in the MIDDLE
+   * of a transition, not at its start, so the machine has to own the half-way point: `fading`
+   * is true for the 400 ms before the text changes and false the instant it does.
+   */
+  readonly fading: boolean;
+  /** When the current fade-out began. Null whenever `fading` is false. */
+  readonly fadeAt: number | null;
 }
 
 export type RotationEvent =
@@ -77,7 +107,11 @@ export type RotationEvent =
   /** The composer value changed. `value` is the reader's text — never written back. */
   | { readonly type: 'VALUE'; readonly now: number; readonly value: string }
   /** The reader clicked/tapped the visible example and it went into the field. */
-  | { readonly type: 'USE_EXAMPLE'; readonly now: number };
+  | { readonly type: 'USE_EXAMPLE'; readonly now: number }
+  /** R1-C — the tab went hidden, or an overlay opened over the composer. */
+  | { readonly type: 'SUSPEND'; readonly now: number }
+  /** R1-C — the tab came back, or the overlay closed. */
+  | { readonly type: 'RESUME'; readonly now: number };
 
 export function initialRotationState(now = 0): RotationState {
   return {
@@ -87,6 +121,8 @@ export function initialRotationState(now = 0): RotationState {
     shownAt: now,
     resumeAt: null,
     changed: false,
+    fading: false,
+    fadeAt: null,
   };
 }
 
@@ -95,9 +131,15 @@ export function initialRotationState(now = 0): RotationState {
  *
  * Read the four guarantees off the branches:
  *   · typing hides the example at once and stops rotation (section 8);
- *   · focus freezes the CURRENT example rather than clearing it (section 8);
+ *   · focus clears the example and freezes the queue — superseded from "freezes the CURRENT
+ *     example rather than clearing it (section 8)" by the CTO review of 9 Oct 2026; see the
+ *     FOCUS branch for the full superseded position and its reasoning;
  *   · emptying the field resumes only after the quiet delay (section 8);
- *   · taking an example stops rotation and hands the text to the composer (section 9).
+ *   · taking an example stops rotation and hands the text to the composer (section 9);
+ *   · R1-C: it does not advance while the reader cannot see it, and the dwell restarts rather
+ *     than expiring in the instant they come back;
+ *   · R1-C: the text swaps HALF WAY through the transition — 400 ms out, swap, 400 ms in — and
+ *     any interruption cancels the fade rather than letting the swap land behind it.
  */
 export function rotationReducer(
   state: RotationState,
@@ -105,9 +147,17 @@ export function rotationReducer(
   queueLength: number,
   timing: RotationTiming = EXAMPLE_ROTATION,
 ): RotationState {
+  /*
+    Any event that moves the machine cancels a fade in progress: a reader who focuses, types or
+    leaves the tab half-way through a 400 ms cross-fade must not be left looking at a half-faded
+    example, and must never see the swap land afterwards. Callers that WANT a fade say so
+    explicitly after the spread.
+  */
   const still = (next: Partial<RotationState>): RotationState => ({
     ...state,
     changed: false,
+    fading: false,
+    fadeAt: null,
     ...next,
   });
 
@@ -131,13 +181,48 @@ export function rotationReducer(
       /* The example became ordinary editable text. Nothing was submitted. */
       return still({ phase: 'STOPPED', visible: false, resumeAt: null });
 
+    /*
+      SUPERSEDED BY PRODUCT OWNER / CTO DESIGN R3 REVIEW, 9 Oct 2026 — "suggestions … disappear on
+      focus". This branch kept the example on screen, frozen, and its reason is kept on the record:
+
+        "Leave the currently shown example as non-entered suggestion content." (contract §8)
+
+      That was written while the example was a line of guidance BESIDE the field, where leaving it
+      in place cost the reader nothing. R1-C puts it in the placeholder's own slot, so a frozen
+      example is text sitting in the box at the moment the reader starts to type into it. It now
+      clears, and the composer falls back to its own static placeholder.
+
+      The example is CLEARED, not stopped: the phase is still PAUSED_FOCUS, the cursor does not
+      move, and BLUR on an empty field brings the same queue back with a fresh dwell. Focus is a
+      pause, not the end of rotation — only typing and taking an example STOP it.
+    */
     case 'FOCUS':
       if (state.phase === 'STOPPED') return still({});
-      /* "Leave the currently shown example as non-entered suggestion content." */
-      return still({ phase: 'PAUSED_FOCUS', visible: true, resumeAt: null });
+      return still({ phase: 'PAUSED_FOCUS', visible: false, resumeAt: null });
 
     case 'BLUR':
       if (state.phase === 'STOPPED') return still({});
+      return still({ phase: 'ROTATING', visible: true, shownAt: event.now, resumeAt: null });
+
+    /*
+      R1-C — away and back.
+
+      FOCUS outranks AWAY in both directions: a reader who is in the field has already frozen
+      the example deliberately, and coming back from another tab must not un-freeze it under a
+      caret that never moved. STOPPED outranks everything, as everywhere else.
+
+      RESUME restarts the dwell from `now` rather than honouring the deadline that passed while
+      the tab was hidden — otherwise a reader returning after a minute would watch the example
+      change in the same instant they looked at it, which is the one thing the dwell exists to
+      prevent. A `RESUMING` quiet delay interrupted this way also restarts as a full dwell: the
+      field is empty and the reader was away, so there is nothing left to be quiet about.
+    */
+    case 'SUSPEND':
+      if (state.phase === 'STOPPED' || state.phase === 'PAUSED_FOCUS') return still({});
+      return still({ phase: 'PAUSED_AWAY', visible: true, resumeAt: null });
+
+    case 'RESUME':
+      if (state.phase !== 'PAUSED_AWAY') return still({});
       return still({ phase: 'ROTATING', visible: true, shownAt: event.now, resumeAt: null });
 
     case 'TICK': {
@@ -149,15 +234,31 @@ export function rotationReducer(
       }
       if (state.phase !== 'ROTATING') return still({});
       if (queueLength <= 1) return still({});
+      /*
+        R1-C's two halves. FIRST the hold expires and the current example fades OUT; only when
+        that fade has run its 400 ms does the text swap and fade back IN.
+      */
+      if (state.fading) {
+        if (state.fadeAt === null || event.now - state.fadeAt < timing.fadeMs) return still({ fading: true, fadeAt: state.fadeAt });
+        return {
+          ...state,
+          cursor: (state.cursor + 1) % queueLength,
+          visible: true,
+          /*
+            The hold is measured from the moment the NEW example is fully visible, which is one
+            fade-in after the swap. That is what makes the cycle 5,200 + 400 + 400 ≈ 6.0 s rather
+            than 5,600 ms. `shownAt` is never rendered, so a timestamp slightly in the future is
+            a scheduling value, not a claim about the clock.
+          */
+          shownAt: event.now + timing.fadeMs,
+          resumeAt: null,
+          changed: true,
+          fading: false,
+          fadeAt: null,
+        };
+      }
       if (event.now - state.shownAt < timing.dwellMs) return still({});
-      return {
-        ...state,
-        cursor: (state.cursor + 1) % queueLength,
-        visible: true,
-        shownAt: event.now,
-        resumeAt: null,
-        changed: true,
-      };
+      return still({ fading: true, fadeAt: event.now });
     }
   }
 }

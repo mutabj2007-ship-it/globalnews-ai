@@ -357,23 +357,75 @@
   reduced motion, AND the media query below removes the animation even if some other caller
   applies the class. A motion preference should not depend on one component remembering.
 */
+/*
+  SUPERSEDED BY PRODUCT OWNER / CLAUDE DESIGN R3 §11 (R1-C), CTO 9 Oct 2026.
+
+  This was a keyframe ENTER animation that faded in AND rose six pixels:
+    `animation: exampleEnter 400ms cubic-bezier(.22,.61,.36,1) both` over
+    `from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none }`.
+  Both halves are withdrawn. R1-C specifies "Only opacity animates", and the vertical rise was
+  never approved. It also specifies a CROSS-FADE, not an enter: "hold 5,200 ms → opacity 1→0
+  over 400 ms ease-in → swap text → 0→1 over 400 ms ease-out", which an enter-only animation
+  cannot express because the swap happens half way through.
+
+  The approved mechanism is the package's own: a transition on ONE persistent element's opacity,
+  with the easing switching direction (`opacity:{{ rotorO }}; transition:opacity 400ms
+  {{ rotorEase }}`). `.exampleEnter` is kept as the class the frame passes so the motion decision
+  still belongs to the frame, but it now only grants the transition.
+*/
 .exampleEnter {
-  animation: exampleEnter 420ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  transition: opacity 400ms ease-out;
 }
-@keyframes exampleEnter {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+.exampleEnter[data-ask-example-fading='true'] {
+  opacity: 0;
+  transition: opacity 400ms ease-in;
 }
 @media (prefers-reduced-motion: reduce) {
   .exampleEnter {
-    animation: none;
+    transition: none;
   }
+}
+
+/*
+  R1-C · the overlay, at Claude Design's own values: "inset-inline-start 19 px, inset-inline-end
+  54 px to clear Send", `top: 1px; height: 50px`, centred, inert to pointers. Logical insets, so
+  RTL mirrors with no second rule.
+*/
+.composerExampleLayer {
+  position: absolute;
+  inset-inline-start: 19px;
+  inset-inline-end: 54px;
+  top: 1px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+/*
+  "same font as the input, --ink-3", and a single line that ellipsizes rather than wrapping.
+
+  DECLARED CONFLICT, resolved in favour of the released product and reported, not substituted:
+  R1-C names `--ink-3`, which in Claude Design's dark tokens is #7D89A1 (`--ad-ink-3` here). The
+  Ask reading surface's RELEASED placeholder ink is `--ask-read-ink3` #6F89A8, and the composer's
+  own `placeholder:` colour is exactly that. Using Design's literal token would make the rotating
+  example a DIFFERENT colour from the static placeholder it hands over to the instant the reader
+  focuses the field — a visible flicker, and a break of the accepted Ask Reading Experience R1
+  invariant that the example is drawn in exactly the released placeholder ink so it cannot differ
+  between themes. The released ink is kept; the discrepancy is listed for Claude Design.
+*/
+.composerExampleText {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  user-select: none;
+  text-align: start;
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--ask-read-ink3, #6f89a8);
+  opacity: 1;
 }
 
 /* Phone ONLY: the composer stays near the thumb and the software keyboard, so the group is
@@ -1571,9 +1623,15 @@
 }
 
 /* ── THE TOOLBAR (Copy · Share · Save · Sources (n) · More — text, 44 px, wraps) ─ */
+/*
+  SUPERSEDED BY PRODUCT OWNER / CLAUDE DESIGN R3 §10 (D06 revision 2, 9 Oct 2026) — `flex-wrap`
+  below was `wrap` and is kept here on the record with its reason: every action was a bordered
+  text pill of equal weight, so a second line cost nothing but height. R3 §10 makes the row one
+  line at every width; see the R3 §10 block at the end of this file for what replaced it.
+*/
 .thread :global([data-ask='turn-actions']) {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
   margin-top: 14px;
 }
@@ -2228,6 +2286,14 @@
   line-height: 1.5;
   color: var(--ad-ink-2, #93a0b8);
 }
+/*
+  SUPERSEDED BY PRODUCT OWNER / CTO DESIGN R3 REVIEW, 9 Oct 2026 (H-R3-1) — nothing matches
+  `.welcomeExample` or `.welcomeExampleDesktop` any more: the static welcome-example sentence was
+  removed from the welcome group and from under the centred composer, because R1-C's rotating
+  example now lives inside the empty composer and a second static one beside it was redundant.
+  The rules are kept rather than deleted so the composition they describe is still on the record
+  (including the F2 desktop swap below), and so restoring the sentence stays a one-line change.
+*/
 .frame .welcomeExample,
 .welcomeExampleDesktop {
   max-width: 28em;
@@ -2909,4 +2975,148 @@
 .thread :global([data-ask='about-answer'] [data-ask='answer-meta']) {
   display: flex;
   margin-top: 6px;
+}
+
+/* ── CLAUDE DESIGN R3 §10 (D06 revision 2) — THE APPROVED ICON ACTION ROW ──────────────── */
+/*
+  Every value below is Claude Design's, taken from §10 and from the approved prototype's own
+  inline styles. The token NAMES differ only because this product already consumes Claude
+  Design's palette under the `--ad-*` prefix with byte-identical values: Design `--surface-2`
+  #161D2C is `--ad-surface-2, #161d2c`, `--ink-2` #93A0B8 is `--ad-ink-2, #93a0b8`, `--focus`
+  #6C93FF is `--ad-focus, #6c93ff`, and so on. No colour, dimension or interaction state was
+  chosen by this lane.
+
+  SUPERSEDES this lane's own earlier bordered text pills, which were a substitution the CTO
+  withdrew on 9 Oct 2026. It also supersedes the bordered-pill rules above at
+  `.thread [data-ask='turn-actions'] button`, which are kept there on the record.
+
+  Design §10, verbatim: "44 × 44 targets, no border or fill at rest; 20 px stroke icons (1.6 px,
+  round joins) in --ink-2; hover --surface-2 circle and --ink; focus-visible 2 px --focus ring
+  inset. Row offset −10 px inline so icon glyphs align with the text column."
+*/
+.thread :global([data-ask='turn-actions']) {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-wrap: nowrap;
+  min-width: 0;
+  margin-inline: -10px;
+  margin-top: 14px;
+}
+.thread :global([data-ask='turn-actions'] button) {
+  flex: none;
+  width: var(--ad-target, 44px);
+  height: var(--ad-target, 44px);
+  min-height: var(--ad-target, 44px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 22px;
+  background: transparent;
+  color: var(--ad-ink-2, #93a0b8);
+  cursor: pointer;
+}
+.thread :global([data-ask='turn-actions'] button:hover) {
+  background: var(--ad-surface-2, #161d2c);
+  color: var(--ad-ink, #edeff5);
+}
+.thread :global([data-ask='turn-actions'] button:focus-visible) {
+  outline: 2px solid var(--ad-focus, #6c93ff);
+  outline-offset: -2px;
+}
+.thread :global([data-ask='turn-actions'] button:disabled) {
+  opacity: 0.6;
+}
+/* The saved answer keeps the accent the rest of Ask uses for a pressed control. */
+.thread :global([data-ask='turn-actions'] button[aria-pressed='true']) {
+  color: var(--ad-accent-soft-ink, #a8c5ff);
+}
+/*
+  SOURCES — §10 keeps it a text control: "a text button: count chip (--accent-soft /
+  --accent-soft-ink, 20 px) + 'sources'". It is the one auto-width control in the row.
+*/
+.thread :global([data-ask='turn-actions'] [data-ask='open-sources']) {
+  width: auto;
+  min-height: var(--ad-target, 44px);
+  height: auto;
+  margin-inline-start: 4px;
+  padding: 0 10px;
+  gap: 6px;
+  font: 500 var(--ad-t-xs, 0.8125rem) / 1 inherit;
+  white-space: nowrap;
+}
+.thread :global([data-ask='turn-actions'] [data-ask='open-sources'] > span[data-count]) {
+  display: inline-flex;
+  min-width: 20px;
+  height: 20px;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  padding: 0 5px;
+  background: var(--ad-accent-soft, #16223f);
+  color: var(--ad-accent-soft-ink, #a8c5ff);
+  font-size: var(--ad-t-xs, 0.8125rem);
+  font-weight: 600;
+}
+/* §10's flexible gap, as the package writes it: a spacer flex item, inert to assistive tech. */
+.thread :global([data-ask='turn-actions'] [data-ask='turn-actions-gap']) {
+  flex: 1 1 auto;
+  min-width: 4px;
+}
+/*
+  FOLLOW — "stays outside the row, in its own card below, as the deliberate continuity action"
+  (§10), composed as the package's own `showFollow` card: a help sentence and an accent action.
+  It collapses when `AskTurnFollow` renders nothing, so an empty box is never drawn.
+*/
+.thread :global([data-ask='turn-continuity']) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin-top: 14px;
+  border: 1px solid var(--ad-line, #1e2636);
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: var(--ad-surface, #0f1420);
+}
+.thread :global([data-ask='turn-continuity']:empty) {
+  display: none;
+}
+.thread :global([data-ask='turn-continuity'] [data-ask='follow-note']) {
+  flex: 1 1 14em;
+  margin: 0;
+  font-size: var(--ad-t-sm, 0.9375rem);
+  line-height: 1.45;
+  color: var(--ad-ink-2, #93a0b8);
+  text-wrap: pretty;
+}
+.thread :global([data-ask='turn-continuity'] button) {
+  display: inline-flex;
+  min-height: var(--ad-target, 44px);
+  align-items: center;
+  border: 0;
+  border-radius: 22px;
+  padding: 0 18px;
+  background: var(--ad-accent, #6c93ff);
+  color: var(--ad-accent-ink, #080b12);
+  font-family: inherit;
+  font-size: var(--ad-t-sm, 0.9375rem);
+  font-weight: 600;
+  cursor: pointer;
+}
+.thread :global([data-ask='turn-continuity'] button:disabled) {
+  opacity: 0.6;
+}
+.thread :global([data-ask='turn-continuity'] button[aria-pressed='true']) {
+  background: var(--ad-accent-soft, #16223f);
+  color: var(--ad-accent-soft-ink, #a8c5ff);
+}
+.thread :global([data-ask='turn-continuity'] [data-ask='follow-failed']) {
+  flex: 1 1 100%;
+  font-size: var(--ad-t-sm, 0.9375rem);
+  line-height: 1.5;
+  color: var(--ad-ink-2, #93a0b8);
 }

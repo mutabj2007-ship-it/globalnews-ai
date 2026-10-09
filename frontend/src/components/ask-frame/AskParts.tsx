@@ -1,6 +1,12 @@
 'use client';
 
 import type { IsolatedAutoProps, IsolatedRunProps } from '@/lib/ask/askDirection';
+/*
+  R1-C's overlay geometry is Claude Design's, down to the pixel, and belongs in the stylesheet
+  beside the rest of the composer rather than as literals here. This is the one stylesheet import
+  this module takes; every other value it draws still comes in as a prop.
+*/
+import styles from './askDashboard.module.css';
 import { useRef, type JSX } from 'react';
 import { AdaptiveTextarea } from '@/components/ui/AdaptiveTextarea';
 import {
@@ -148,10 +154,17 @@ export interface ComposerExample {
   readonly text: string;
   /** Canonical catalogue id — proof and future analytics, never display. */
   readonly id: string;
-  /** Accessible name of the control, in the reader's language. */
-  readonly useLabel: string;
-  /** Take the example into the composer. Never submits (section 9). */
-  readonly onUse: () => void;
+  /**
+   * SUPERSEDED BY PRODUCT OWNER / ASK RELIABILITY R1 §8 — these two described the example while
+   * it was a real control ("Accessible name of the control, in the reader's language" and "Take
+   * the example into the composer. Never submits (section 9)"). §8 ruled the example is visible
+   * GUIDANCE ONLY: plain `aria-hidden` text that is not clickable or focusable. CLAUDE DESIGN R3
+   * §11 (R1-C) confirms it — "Not clickable, never submitted, never starts research." Both are
+   * therefore OPTIONAL and are no longer read when rendering; they are kept in the type so a
+   * later owner ruling that restores tap-to-use has somewhere to land instead of a new shape.
+   */
+  readonly useLabel?: string;
+  readonly onUse?: () => void;
   readonly onFocus: () => void;
   readonly onBlur: () => void;
   /**
@@ -162,7 +175,21 @@ export interface ComposerExample {
    * decides whether motion is allowed.
    */
   readonly animationClass?: string;
-  /** Changes on every rotation so the transition replays. */
+  /**
+   * R1-C · true while the current example is fading out, before the text swaps.
+   * The approved mechanism is a CSS TRANSITION on one persistent element's opacity
+   * (prototype: `opacity:{{ rotorO }}; transition:opacity 400ms {{ rotorEase }}`), so this
+   * drives a data attribute rather than replaying a keyframe animation.
+   */
+  readonly fading?: boolean;
+  /**
+   * Changes on every rotation.
+   *
+   * SUPERSEDED BY CLAUDE DESIGN R3 §11 (R1-C) as a React `key`: it used to remount the span so a
+   * keyframe animation replayed. R1-C cross-fades ONE element — out, swap, in — and a remount
+   * at the swap would leave the fade-in with nothing to transition from. Kept on the interface
+   * because it is still the example's change counter for proof and for a later contract.
+   */
   readonly generation: number;
   /** Direction props for the example's own run, from the shared direction module. */
   readonly directionProps?: IsolatedAutoProps | IsolatedRunProps;
@@ -227,8 +254,10 @@ export function Composer({
       }}
       className="flex min-w-0 flex-col gap-2"
     >
+      {/* R1-C · `relative` so the overlay's approved insets (19 px / 54 px) are measured from the
+          FIELD, which is the box Send sits in — that is what the 54 px end inset clears. */}
       <div
-        className={`flex min-h-[56px] items-end gap-2 rounded-[14px] border bg-[var(--ask-read-answer-bg,#061a30)] py-1.5 pe-1.5 ps-4 focus-within:border-[var(--ask-read-rule-current,#5abff5)] ${
+        className={`relative flex min-h-[56px] items-end gap-2 rounded-[14px] border bg-[var(--ask-read-answer-bg,#061a30)] py-1.5 pe-1.5 ps-4 focus-within:border-[var(--ask-read-rule-current,#5abff5)] ${
           value.trim() ? 'border-[var(--ask-read-rule-current,#5abff5)]' : 'border-[var(--ask-read-line,#1d4a73)]'
         }`}
       >
@@ -271,21 +300,42 @@ export function Composer({
             keepVisible
             className="w-full min-w-0 flex-1 bg-transparent py-1.5 text-[16px] leading-[1.45] text-[var(--ad-ink,#edeff5)] placeholder:text-[var(--ask-read-ink3,#6f89a8)] focus:outline-none"
           />
+        </div>
           {showExample && example !== undefined && (
             /*
               THE ROTATING EXAMPLE (sections 5, 9, 15).
-              · The layer itself takes no pointer events, so clicking anywhere else in the
-                field focuses the composer exactly as before; only the WORDS are clickable,
-                which is precisely "the reader taps the visible example".
-              · It is a real <button>, keyboard reachable, named by a visually hidden verb
-                phrase plus the question, so a screen reader hears what activating it does.
+              · SUPERSEDED BY PRODUCT OWNER / ASK RELIABILITY R1 §8 — this bullet ended "only the
+                WORDS are clickable, which is precisely 'the reader taps the visible example'".
+                Nothing here is clickable now. The layer takes no pointer events and neither do
+                the words, so a tap anywhere in the field — including straight through the
+                example — focuses the composer. R1-C: "`pointer-events: none`; tapping it focuses
+                the field underneath as normal."
+              · SUPERSEDED BY PRODUCT OWNER / ASK RELIABILITY R1 §8 — this bullet read "It is a
+                real <button>, keyboard reachable, named by a visually hidden verb phrase plus
+                the question, so a screen reader hears what activating it does." §8 ruled the
+                example is guidance only; it is now the `aria-hidden` span below and there is no
+                control here at all. CLAUDE DESIGN R3 §11 confirms it.
               · There is NO aria-live region. The example changes every few seconds; a live
-                region would announce it every few seconds. Rotation also PAUSES on focus, so
-                the example a reader is reading never changes under them.
+                region would announce it every few seconds — R1-C: "never an unsolicited
+                screenreader announcement". Rotation also PAUSES on focus, STOPS on typing and
+                freezes while the tab is hidden, so the example a reader is reading never
+                changes under them. The field's accessible name comes from its own `sr-only`
+                label (`inputLabel`) and never from the example, so it is stable.
+            */
+            /*
+              R1-C · the approved overlay geometry, verbatim from the package: "an `aria-hidden`
+              overlay span positioned over the first text line (inline-start 19 px, inline-end
+              54 px to clear Send), `white-space: nowrap; text-overflow: ellipsis`, same font as
+              the input, `--ink-3`". The prototype writes it as
+              `position:absolute; inset-inline-start:19px; inset-inline-end:54px; top:1px;
+              height:50px; display:flex; align-items:center; pointer-events:none`.
+
+              The insets are logical, so RTL mirrors without a second rule, and the 54 px end
+              inset is what keeps a long example from running under Send.
             */
             <div
               data-ask="composer-example-layer"
-              className="pointer-events-none absolute inset-0 flex items-center"
+              className={styles.composerExampleLayer}
             >
               {/* ASK RELIABILITY R1 (§8) — Product Owner instruction: a sample question shown inside
                   the input is visible GUIDANCE ONLY. It is plain text: not clickable, not
@@ -294,18 +344,15 @@ export function Composer({
               <span
                 data-ask="composer-example"
                 data-ask-example-id={example.id}
-                key={example.generation}
+                data-ask-example-fading={example.fading === true ? 'true' : 'false'}
                 aria-hidden="true"
-                className={`max-w-full select-none truncate text-start text-[16px] leading-[1.45] text-[var(--ask-read-ink3,#6f89a8)] ${
-                  example.animationClass ?? ''
-                }`}
+                className={`${styles.composerExampleText} ${example.animationClass ?? ''}`}
                 {...(example.directionProps ?? {})}
               >
                 {example.text}
               </span>
             </div>
           )}
-        </div>
         <button
           type="submit"
           data-ask="send"

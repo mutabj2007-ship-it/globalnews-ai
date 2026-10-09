@@ -10,9 +10,16 @@ import { isFollowedQuestion, MY_UPDATES_HREF, sameFollowedQuestion } from '@/lib
 import { ASK_SAVABLE_ANSWER_STATES } from './AskTurnSave';
 
 /**
- * REASON TO RETURN R1 · §8 — "Follow this question", a first-class toolbar action (FJ-6: the
- * briefing control used to be reachable only inside More, and More was hidden whenever it had no
- * other row).
+ * REASON TO RETURN R1 · §8 — "Follow this question", a first-class action (FJ-6: the briefing
+ * control used to be reachable only inside More, and More was hidden whenever it had no other
+ * row).
+ *
+ * SUPERSEDED BY PRODUCT OWNER / CLAUDE DESIGN R3 §10 (D06 revision 2, 9 Oct 2026) · the line above
+ * read "a first-class TOOLBAR action". FJ-6 still holds and is why it must not go back into More;
+ * what changed is where first-class puts it. R3 §10: Follow "stays outside the row, in its own
+ * card below, as the deliberate continuity action". `AskAnswerToolbar` now renders it in
+ * `turn-continuity`, a sibling of the action row, so it is neither inside More nor one pill among
+ * five. This component's markup, strings, eligibility and API calls are unchanged.
  *
  * Following saves THIS answer as the starting point (version 1 of the reader's own briefing,
  * scope ASK_QUESTION — the one shared store; no second following system). Nothing is scheduled
@@ -70,7 +77,7 @@ export function AskTurnFollow({
   if (!eligible || !available) return null;
 
   if (state === 'following') {
-    /* the toolbar's own pressed state (as Save's), and it opens My updates */
+    /* the action row's own pressed state (as Save's), and it opens My updates */
     return (
       <button
         type="button"
@@ -100,13 +107,20 @@ export function AskTurnFollow({
 
   return (
     <>
+      {/*
+        CLAUDE DESIGN R3 §10 / the package's own `showFollow` card: a help sentence beside the
+        action, not a bare button. The sentence is `followNote`, which was already authored and
+        qualified and was previously reachable only as a `title` — a tooltip no touch reader
+        ever sees. It lives in the card so the card still collapses (`:empty`) when this
+        component renders nothing.
+      */}
+      <p data-ask="follow-note">{s.followNote}</p>
       <button
         type="button"
         data-ask="follow"
         data-ask-follow-state={state}
         disabled={state === 'busy'}
         onClick={() => void follow()}
-        title={s.followNote}
       >
         {s.follow}
       </button>

@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { DISPLAY_LOCALES, type DisplayLocale } from '@globalnews-ai/shared';
 import { Composer, composerKeyAction, enterSends, physicalKeyboardEvidence } from './AskParts';
 import { QUESTION_EXAMPLES, exampleText } from '@/lib/ask/askQuestionExamples';
-import { buildExampleQueue } from '@/lib/ask/askExampleRotation';
+import { EXAMPLE_ROTATION, buildExampleQueue } from '@/lib/ask/askExampleRotation';
 import { askSevenStrings } from '@/lib/ask/askSevenStrings';
 import { askDirectionProps, isolatedAuto } from '@/lib/ask/askDirection';
 import { getDictionary } from '@/lib/i18n/dictionaries';
@@ -60,6 +60,11 @@ const example = (locale: DisplayLocale = 'en', compact = false) => ({
   directionProps: isolatedAuto(),
 });
 
+/* House rule: comment-strip before scanning for an ABSENCE. The superseding docblocks in
+   AskFrameScreen name `welcome-example` in order to record that it was removed. */
+const markupOf = (src: string): string =>
+  src.replace(/\{\/\*[\s\S]*?\*\/\}/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+
 const render = (props: Record<string, unknown>) =>
   renderToStaticMarkup(
     createElement(
@@ -92,9 +97,29 @@ describe('C-1 · the entry state, and nothing outside it', () => {
   /* ASK DESIGN AUTHORITY R3 (CTO reset): the Design (A1/F2) shows ONE quiet example line in the
      welcome group and the placeholder "Ask anything…" in the field — no rotating example inside
      the composer, so no rotation timer exists on the Ask screen at all. */
-  it('runs no rotating example: the welcome group carries one quiet example line instead', () => {
-    expect(screen).not.toMatch(/useRotatingExample/);
-    expect(screen).toMatch(/<p data-ask="welcome-example" className=\{styles\.welcomeExample\}>/);
+  it('runs the rotating example inside the composer, and keeps the quiet welcome line', () => {
+    /*
+      SUPERSEDED BY PRODUCT OWNER DIRECTIVE 9 Oct 2026 / CLAUDE DESIGN R3 §11 (Welcome R1-C).
+      This test was "runs no rotating example: the welcome group carries one quiet example line
+      instead" and asserted `expect(screen).not.toMatch(/useRotatingExample/)`, under ASK DESIGN
+      AUTHORITY R3's ruling that the field shows only its static placeholder. R1-C reverses that
+      half: "one example at a time fades inside the empty, unfocused composer". The assertion is
+      inverted rather than removed, so the reinstatement stays pinned.
+
+      The quiet welcome line is still asserted, unchanged. R1-C also says "example list removed
+      from D01/D02", which is a D01/D02 composition change outside the four approved refinements;
+      it is left in place and raised for a CTO ruling (OPEN QUESTION H-R3-1), and this assertion
+      is what will have to change if that ruling removes it.
+    */
+    expect(screen).toMatch(/useRotatingExample\(\{/);
+    expect(screen).toMatch(/enabled: entryState,/);
+    /*
+      H-R3-1 RESOLVED (CTO DESIGN R3 REVIEW, 9 Oct 2026). This asserted the quiet welcome line
+      was still rendered. The ruling removes it in BOTH places so the rotating questions are the
+      only examples on the entry screen, and only inside the empty, unfocused composer.
+    */
+    expect(markupOf(screen)).not.toMatch(/data-ask="welcome-example"/);
+    expect(markupOf(screen)).not.toMatch(/data-ask="welcome-example-desktop"/);
   });
 
   it('keeps ONE composer instance — a second one would be a second submit path', () => {
@@ -120,6 +145,8 @@ describe('C-1 · the entry state, and nothing outside it', () => {
         selector.includes("[data-ask-entry='true']") ||
         selector.startsWith('.entry') ||
         selector.startsWith('.exampleEnter') ||
+        /* R1-C's overlay geometry: scoped to the example itself, not to the workspace. */
+        selector.startsWith('.composerExample') ||
         selector.startsWith('from') ||
         selector.startsWith('to');
       expect({ selector, scoped }).toEqual({ selector, scoped: true });
@@ -192,7 +219,16 @@ describe('C-3 · the example lives inside the composer', () => {
      visible GUIDANCE ONLY — plain text, not clickable, not focusable; it never fills, submits, navigates or
      steals focus. This supersedes the earlier C-3/C-4/C-6/C-10 'tap the example to fill' contract. */
     const html = render({ example: example('en') });
-    expect(html).toMatch(/data-ask="composer-example-layer"[^>]*class="[^"]*pointer-events-none/);
+    /*
+      SUPERSEDED BY PRODUCT OWNER / CLAUDE DESIGN R3 §11 (R1-C), CTO 9 Oct 2026. The assertion
+      read the overlay's Tailwind utility classes. R1-C specifies the overlay's geometry exactly
+      ("inline-start 19 px, inline-end 54 px to clear Send", `top: 1px; height: 50px`,
+      `white-space: nowrap; text-overflow: ellipsis`), so those values moved into the stylesheet
+      as `.composerExampleLayer` / `.composerExampleText`. The GUARANTEE is unchanged and is
+      asserted where it now lives.
+    */
+    expect(html).toMatch(/data-ask="composer-example-layer"[^>]*class="[^"]*composerExampleLayer/);
+    expect(rule('.composerExampleLayer')).toMatch(/pointer-events: none/);
     expect(html).not.toMatch(/data-ask="composer-example"[^>]*class="[^"]*pointer-events-auto/);
   });
 
@@ -201,22 +237,56 @@ describe('C-3 · the example lives inside the composer', () => {
     expect(moving).toContain('gn-example-fade');
     const still = render({ example: { ...example('en'), animationClass: undefined } });
     expect(still).not.toContain('gn-example-fade');
-    expect(rule('.exampleEnter')).toMatch(/animation: exampleEnter 420ms/);
+    /*
+      SUPERSEDED BY CLAUDE DESIGN R3 §11 (R1-C) · this read `420ms`. Asserted against the
+      constant rather than against a second literal, so the stylesheet and `EXAMPLE_ROTATION`
+      cannot drift apart — which is the whole reason the contract put timing in one place.
+    */
+    /*
+      SUPERSEDED BY PRODUCT OWNER / CLAUDE DESIGN R3 §11 (R1-C), CTO 9 Oct 2026. R1-C: "Only
+      opacity animates", and the sequence is a CROSS-FADE ("1→0 over 400 ms ease-in → swap text
+      → 0→1 over 400 ms ease-out"), which a keyframe ENTER animation cannot express because the
+      text changes half way through. The keyframes and the six-pixel rise are withdrawn; the
+      approved mechanism is a transition on one persistent element's opacity.
+    */
+    expect(rule('.exampleEnter')).toContain(`transition: opacity ${EXAMPLE_ROTATION.fadeMs}ms ease-out`);
     expect(css).toMatch(
-      /@media \(prefers-reduced-motion: reduce\) \{\s*\.exampleEnter \{\s*animation: none;/,
+      /@media \(prefers-reduced-motion: reduce\) \{\s*\.exampleEnter \{\s*transition: none;/,
     );
-    /* R3: the Ask screen no longer passes an example; the Composer capability stays guarded. */
-    expect(screen).not.toContain('animationClass:');
+    /*
+      SUPERSEDED BY PRODUCT OWNER DIRECTIVE 9 Oct 2026 / CLAUDE DESIGN R3 §11 · this asserted
+      `expect(screen).not.toContain('animationClass:')` with the reason "R3: the Ask screen no
+      longer passes an example; the Composer capability stays guarded." ASK DESIGN AUTHORITY R3
+      had removed the in-field example; R1-C reinstates it, so the assertion is inverted rather
+      than deleted — the screen MUST pass one, and it must pass the stylesheet's own class.
+    */
+    expect(screen).toContain('animationClass: rotatingExample.animate ? styles.exampleEnter');
+    expect(screen).toContain('useRotatingExample({');
     expect(code(read('../../lib/ask/useRotatingExample.ts'))).toContain(
       "'(prefers-reduced-motion: reduce)'",
     );
+    /*
+      R1-C reverses what reduced motion MEANS here: not "rotate without moving" but "do not
+      rotate". The reversal is asserted on the hook's own output gate, where it is decided.
+    */
+    expect(code(read('../../lib/ask/useRotatingExample.ts'))).toContain(
+      'const visible = enabled && !reducedMotion &&',
+    );
   });
 
-  it('fades and rises only — no typewriter, no bounce, no horizontal travel', () => {
-    const keyframes = css.split('@keyframes exampleEnter')[1].split('\n}')[0];
-    expect(keyframes).toMatch(/opacity: 0;/);
-    expect(keyframes).toMatch(/transform: translateY\(6px\);/);
-    expect(keyframes).not.toMatch(/translateX|scale|width:|steps\(/);
+  it('fades ONLY — no rise, no typewriter, no bounce, no horizontal travel', () => {
+    /*
+      SUPERSEDED BY PRODUCT OWNER / CLAUDE DESIGN R3 §11 (R1-C), CTO 9 Oct 2026. R1-C: "Only
+      opacity animates", and the sequence is a CROSS-FADE ("1→0 over 400 ms ease-in → swap text
+      → 0→1 over 400 ms ease-out"), which a keyframe ENTER animation cannot express because the
+      text changes half way through. The keyframes and the six-pixel rise are withdrawn; the
+      approved mechanism is a transition on one persistent element's opacity.
+    */
+    const block = css.slice(css.indexOf('.exampleEnter'), css.indexOf('.composerExampleLayer'));
+    expect(block).toMatch(/transition: opacity 400ms ease-out/);
+    expect(block).toMatch(/opacity: 0;/);
+    expect(block).not.toMatch(/transform|translateY|translateX|scale|steps\(/);
+    expect(css).not.toMatch(/@keyframes exampleEnter/);
   });
 });
 
@@ -231,13 +301,21 @@ describe('C-4 · selection fills the composer and submits nothing', () => {
     expect(parts).not.toMatch(/onClick=\{example\.onUse\}/);
   });
 
-  /* R3 (Design A1 "Example line is quiet text, not buttons"): the welcome example is a plain
-     paragraph — no selection path exists to fill, focus or submit anything. The shared draft path
-     remains for "Edit question" (D1) and the reopened question. */
-  it('the welcome example is a paragraph with no handler — it cannot fill or submit', () => {
-    const line = screen.split('<p data-ask="welcome-example"')[1].split('</p>')[0];
-    expect(line).not.toMatch(/onClick|onUse|tabIndex|role=/);
+  /*
+    R3 (Design A1 "Example line is quiet text, not buttons"): no example on this screen has a
+    selection path that could fill, focus or submit anything. The shared draft path remains for
+    "Edit question" (D1) and the reopened question.
+
+    SUPERSEDED BY CTO DESIGN R3 REVIEW, 9 Oct 2026 (H-R3-1) — this used to slice the
+    `welcome-example` paragraph out of the screen and assert it carried no handler. That
+    paragraph is gone. The guarantee is unchanged and now belongs to the in-field example, so it
+    is asserted on the screen as a whole and, in full, on the overlay itself in
+    askDesignR3Refinements.spec.ts.
+  */
+  it('no example on the entry screen can fill, focus or submit', () => {
+    expect(markupOf(screen)).not.toMatch(/data-ask="welcome-example"/);
     expect(screen).not.toMatch(/onUse: \(\) =>/);
+    expect(screen).not.toMatch(/onUse: rotatingExample\.onUse/);
   });
 
   it('draftQuestion still fills the composer and focuses it, and never submits', () => {
@@ -455,8 +533,13 @@ describe('C-7 · seven languages and Arabic RTL', () => {
       const html = render({ example: example(locale) });
       expect(html).toContain(QUESTION_EXAMPLES[0].text[locale]);
     }
-    /* R3: the screen's welcome example reads the reader's own catalogue (r2s = askShellStrings). */
-    expect(screen).toMatch(/\{r2s\.read\.welcomeExample\}/);
+    /*
+      SUPERSEDED BY CTO DESIGN R3 REVIEW, 9 Oct 2026 (H-R3-1) — this asserted the screen's static
+      welcome example read the reader's own catalogue. That sentence is removed. The claim the
+      test exists for — the SELECTED LANGUAGE decides the example text — is the loop above, and
+      the in-field example takes the same `interfaceLocale` the rest of the screen uses.
+    */
+    expect(screen).toMatch(/useRotatingExample\(\{\s*locale: interfaceLocale,/);
   });
 
   it('uses the reader s existing language selection — no second Ask-only selector', () => {
@@ -493,13 +576,31 @@ describe('C-7 · seven languages and Arabic RTL', () => {
   });
 
   it('the rotating transition cannot break RTL: it moves only on the vertical axis', () => {
-    const keyframes = css.split('@keyframes exampleEnter')[1].split('\n}')[0];
-    expect(keyframes).not.toMatch(/translateX|left:|right:|margin-left|margin-right/);
+    /*
+      SUPERSEDED BY PRODUCT OWNER / CLAUDE DESIGN R3 §11 (R1-C), CTO 9 Oct 2026. R1-C: "Only
+      opacity animates", and the sequence is a CROSS-FADE ("1→0 over 400 ms ease-in → swap text
+      → 0→1 over 400 ms ease-out"), which a keyframe ENTER animation cannot express because the
+      text changes half way through. The keyframes and the six-pixel rise are withdrawn; the
+      approved mechanism is a transition on one persistent element's opacity.
+    */
+    const block = css.slice(css.indexOf('.exampleEnter'), css.indexOf('.composerExampleText'));
+    expect(block).not.toMatch(/translateX|left:|right:|margin-left|margin-right/);
+    /* And the overlay's own insets are LOGICAL, so RTL mirrors with no second rule. */
+    expect(rule('.composerExampleLayer')).toMatch(/inset-inline-start: 19px/);
+    expect(rule('.composerExampleLayer')).toMatch(/inset-inline-end: 54px/);
   });
 
   it('aligns the example to the reading start, not to the left', () => {
     const html = render({ example: example('ar') });
-    expect(html).toMatch(/data-ask="composer-example"[^>]*class="[^"]*text-start/);
+    /*
+      SUPERSEDED BY PRODUCT OWNER / CLAUDE DESIGN R3 §11 (R1-C), CTO 9 Oct 2026. The assertion
+      read the overlay's Tailwind utility classes. R1-C specifies the overlay's geometry exactly
+      ("inline-start 19 px, inline-end 54 px to clear Send", `top: 1px; height: 50px`,
+      `white-space: nowrap; text-overflow: ellipsis`), so those values moved into the stylesheet
+      as `.composerExampleLayer` / `.composerExampleText`. The GUARANTEE is unchanged and is
+      asserted where it now lives.
+    */
+    expect(rule('.composerExampleText')).toMatch(/text-align: start/);
     expect(html).not.toMatch(/data-ask="composer-example"[^>]*class="[^"]*text-left/);
   });
 
@@ -540,8 +641,17 @@ describe('C-8 · responsive widths', () => {
 
   it('the example cannot overflow its field at any width', () => {
     const html = render({ example: example('en') });
-    expect(html).toMatch(/data-ask="composer-example"[^>]*class="[^"]*max-w-full/);
-    expect(html).toMatch(/data-ask="composer-example"[^>]*class="[^"]*truncate/);
+    /*
+      SUPERSEDED BY PRODUCT OWNER / CLAUDE DESIGN R3 §11 (R1-C), CTO 9 Oct 2026. The assertion
+      read the overlay's Tailwind utility classes. R1-C specifies the overlay's geometry exactly
+      ("inline-start 19 px, inline-end 54 px to clear Send", `top: 1px; height: 50px`,
+      `white-space: nowrap; text-overflow: ellipsis`), so those values moved into the stylesheet
+      as `.composerExampleLayer` / `.composerExampleText`. The GUARANTEE is unchanged and is
+      asserted where it now lives.
+    */
+    expect(rule('.composerExampleText')).toMatch(/max-width: 100%/);
+    expect(rule('.composerExampleText')).toMatch(/text-overflow: ellipsis/);
+    expect(rule('.composerExampleText')).toMatch(/white-space: nowrap/);
   });
 });
 
@@ -552,7 +662,15 @@ describe('C-9 · themes', () => {
        so the identity this test protects holds in light as well as dark. */
     const placeholderInk = /placeholder:text-\[var\(--ask-read-ink3,#6f89a8\)\]/;
     expect(parts).toMatch(placeholderInk);
-    expect(html).toMatch(/data-ask="composer-example"[^>]*class="[^"]*text-\[var\(--ask-read-ink3,#6f89a8\)\]/);
+    /*
+      SUPERSEDED BY PRODUCT OWNER / CLAUDE DESIGN R3 §11 (R1-C), CTO 9 Oct 2026. The assertion
+      read the overlay's Tailwind utility classes. R1-C specifies the overlay's geometry exactly
+      ("inline-start 19 px, inline-end 54 px to clear Send", `top: 1px; height: 50px`,
+      `white-space: nowrap; text-overflow: ellipsis`), so those values moved into the stylesheet
+      as `.composerExampleLayer` / `.composerExampleText`. The GUARANTEE is unchanged and is
+      asserted where it now lives.
+    */
+    expect(rule('.composerExampleText')).toMatch(/color: var\(--ask-read-ink3, #6f89a8\)/);
   });
 
   it('the entry chrome uses the themed tokens that retarget in Light', () => {

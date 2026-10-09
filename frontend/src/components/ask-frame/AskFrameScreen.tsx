@@ -17,6 +17,7 @@ import { askLanguageDisposition } from '@/lib/ask/askLocale';
 import { askSevenStrings } from '@/lib/ask/askSevenStrings';
 import { askDirectionProps, askForeignCopyProps, isolatedAuto } from '@/lib/ask/askDirection';
 import { askR2Strings } from '@/lib/ask/askR2Strings';
+import { useRotatingExample } from '@/lib/ask/useRotatingExample';
 import { askR2View } from '@/lib/ask/askR2View';
 import {
   sanitizeReturnPath,
@@ -267,7 +268,25 @@ export function AskFrameScreen({
     The rotating examples. Client-side, zero compute, zero network, zero personalisation, and
     every rule decided by the pure machine in `askExampleRotation`. `enabled` is the entry
     state, so no timer runs in the answered workspace.
+
+    REINSTATED BY PRODUCT OWNER DIRECTIVE 9 Oct 2026 / CLAUDE DESIGN R3 §11 (Welcome R1-C).
+    The comment block above kept its place while the call below was absent: ASK DESIGN AUTHORITY
+    R3 had removed the in-field example (its superseded reasoning is recorded at the `Composer`
+    call site). R1-C puts it back, inside the composer, on a 5.2 s hold with 400 ms fades.
+
+    `suspended` is R1-C's rule that rotation "Runs only when ALL are true: … no sheet/drawer/
+    dialog open". `nav.open` is the conversations DRAWER, which IS reachable from the entry
+    screen and is the live path here. The other two are guards: `hasQuestion` already includes
+    `r2.signInRequired !== null`, and `deepQuote` requires a submitted turn, so neither can
+    co-occur with `entryState` today — they are wired so that if a later lane makes either
+    reachable on the welcome view, the example stops instead of rotating behind it.
   */
+  const rotatingExample = useRotatingExample({
+    locale: interfaceLocale,
+    enabled: entryState,
+    compact,
+    suspended: nav?.open === true || r2.signInRequired !== null || r2.deepQuote !== null,
+  });
 
   useEffect(() => {
     setQuestion(new URLSearchParams(urlKey).get('q') ?? '');
@@ -731,9 +750,19 @@ export function AskFrameScreen({
                   line and a quiet example sentence (text, not buttons). Typing collapses all three
                   (A2); the emblem above and the composer below remain.
                 */}
-                {/* ASK DESIGN AUTHORITY R3 — the prototype's group: [headline + support] (gap 8),
-                    then the example sentence 20 px below (phone/tablet). On desktop the example
-                    sits under the centred composer instead (Design F2), drawn in the composer bar. */}
+                {/*
+                  ASK DESIGN AUTHORITY R3 — the prototype's group was: [headline + support]
+                  (gap 8), then the example sentence 20 px below on phone/tablet, and on desktop
+                  that example sentence under the centred composer instead (Design F2).
+
+                  SUPERSEDED BY PRODUCT OWNER / CTO DESIGN R3 REVIEW, 9 Oct 2026 (H-R3-1):
+                  "remove the redundant static welcome-example sentence outside the Ask composer,
+                  including the desktop variant … The rotating questions belong only inside the
+                  empty composer." Both `welcome-example` and `welcome-example-desktop` are gone.
+                  What the group keeps is exactly what the ruling preserves: the emblem above it,
+                  the approved headline, and ONE supporting sentence (plus the saved-name greeting,
+                  which is not an example).
+                */}
                 <div data-ask-welcome="" className={styles.welcomeCollapsible}>
                   <div className={styles.welcomeTitleGroup}>
                     {/* REASON TO RETURN R1 · G6 — only a name the reader saved; otherwise nothing */}
@@ -747,9 +776,6 @@ export function AskFrameScreen({
                       {r2s.read.welcomeSupport}
                     </p>
                   </div>
-                  <p data-ask="welcome-example" className={styles.welcomeExample}>
-                    {r2s.read.welcomeExample}
-                  </p>
                 </div>
                 {/*
                   THE ANSWER-LANGUAGE DISCLOSURE IS REMOVED (PO ruling).
@@ -1082,6 +1108,8 @@ export function AskFrameScreen({
             value={question}
             onChange={(next) => {
               setQuestion(next);
+              /* R1-C · typing stops the rotation at once. The value is READ, never written. */
+              rotatingExample.onValue(next);
             }}
             inputLabel={dict.askAi.inputLabel}
             /* R4 · same bounded hint, so the placeholder and the empty-state title cannot
@@ -1101,18 +1129,52 @@ export function AskFrameScreen({
             maxHeight={168}
             limitCopy={r2s}
             /*
-              ASK DESIGN AUTHORITY R3 — NO ROTATING EXAMPLE IN THE FIELD. The Design composer
-              (A1, F2, every frame) shows only its static placeholder "Ask anything…"; the
-              example is the quiet sentence in the welcome group (text, not a control).
+              SUPERSEDED BY PRODUCT OWNER DIRECTIVE 9 Oct 2026 / CLAUDE DESIGN R3 §11 (R1-C).
+
+              The superseded position, kept on the record with its reasoning:
+
+                "ASK DESIGN AUTHORITY R3 — NO ROTATING EXAMPLE IN THE FIELD. The Design composer
+                 (A1, F2, every frame) shows only its static placeholder 'Ask anything…'; the
+                 example is the quiet sentence in the welcome group (text, not a control)."
+
+              R1-C reverses the first half and keeps the second: "one example at a time fades
+              inside the empty, unfocused composer (5.2 s hold, 400 ms fades)", and it is still
+              not a control — the layer takes no pointer events, the words are `aria-hidden`
+              plain text, nothing is typed, tapped, submitted or announced, and the field's own
+              accessible name (`inputLabel`, via the `sr-only` label) never changes. The static
+              placeholder below is still what a reduced-motion reader sees, and the only thing
+              an empty field shows once the reader types or focuses it.
+
+              H-R3-1 IS RESOLVED (CTO DESIGN R3 REVIEW, 9 Oct 2026). H raised that a desktop
+              reader would see a rotating example in the field AND a static one under it. The
+              ruling removes the static sentence in both places, so the rotating questions are
+              now the only examples on the entry screen, and they are only ever inside the empty,
+              unfocused composer.
             */
+            example={
+              rotatingExample.visible && rotatingExample.text !== null
+                ? {
+                    text: rotatingExample.text,
+                    id: rotatingExample.id ?? '',
+                    onFocus: rotatingExample.onFocus,
+                    onBlur: rotatingExample.onBlur,
+                    animationClass: rotatingExample.animate ? styles.exampleEnter : undefined,
+                    /* R1-C · 400 ms out, swap, 400 ms in. The view transitions one element. */
+                    fading: rotatingExample.fading,
+                    generation: rotatingExample.generation,
+                    /* The example's own run direction, independent of the reader's chrome. */
+                    directionProps: isolatedAuto(),
+                  }
+                : undefined
+            }
           />
-          {entryState && (
-            /* Design F2 — on desktop the example sentence sits under the centred composer
-               (the welcome group's copy is hidden there, so it is never read twice). */
-            <p data-ask="welcome-example-desktop" className={styles.welcomeExampleDesktop}>
-              {r2s.read.welcomeExample}
-            </p>
-          )}
+          {/*
+            Design F2 put a copy of the example sentence under the centred composer on desktop.
+            REMOVED BY CTO DESIGN R3 REVIEW, 9 Oct 2026 (H-R3-1), together with the welcome
+            group's own copy: with R1-C's rotation inside the field, a static example beside it
+            was the redundancy H raised. `r2s.read.welcomeExample` is left in the catalogue
+            untouched — removing a qualified key is Claude L's call, not this lane's.
+          */}
         </div>
         {/* TRUST R1 §12 — the Privacy Notice and Cookies notice, reachable before sign-in and
             before the first question, without interrupting the conversation. ASK DESIGN
