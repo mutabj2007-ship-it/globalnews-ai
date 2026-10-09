@@ -964,10 +964,13 @@ export function AskFrameScreen({
             )}
             {latestR2 !== undefined && (
               <div data-ask-latest="">
-                {searchCompletedKey !== null && latestKey === searchCompletedKey && (
-                  <AskSearchActivity locale={interfaceLocale} />
-                )}
                 <AskR2TurnView
+                  /* ASK R3 PROGRESS R1 — the search that just finished, collapsed in the answer position */
+                  afterQuestion={
+                    searchCompletedKey !== null && latestKey === searchCompletedKey ? (
+                      <AskSearchActivity locale={interfaceLocale} />
+                    ) : undefined
+                  }
                   canSave={!guestMode}
                   turn={latestR2}
                   locale={interfaceLocale}

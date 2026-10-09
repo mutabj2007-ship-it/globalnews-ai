@@ -1,5 +1,6 @@
 'use client';
 import { AskSubmittedQuestion } from './AskSubmittedQuestion';
+import type { ReactNode } from 'react';
 import { ASK_INPUT_TOO_LONG, type DisplayLocale } from '@globalnews-ai/shared';
 
 import { askFormatDate, isolatedAuto, isolatedLtr } from '@/lib/ask/askDirection';
@@ -136,6 +137,7 @@ export function AskR2TurnView({
   onRefresh,
   reopenedAt,
   onRetry,
+  afterQuestion,
 }: {
   readonly turn: AskR2Turn;
   readonly locale: DisplayLocale;
@@ -169,6 +171,8 @@ export function AskR2TurnView({
   readonly reopenedAt?: string | null;
   /** ASK DESIGN AUTHORITY R3 — Design D2 "Try again": resend this (latest, failed) question. */
   readonly onRetry?: () => void;
+  /** ASK R3 PROGRESS R1 — the answer position's record (the collapsed "Search activity"), after the question. */
+  readonly afterQuestion?: ReactNode;
 }): JSX.Element {
   const s = askShellStrings(locale).askR2Strings;
   const r = s.read;
@@ -405,6 +409,7 @@ export function AskR2TurnView({
         showFullLabel={s.showFullQuestion}
         showLessLabel={s.showLessQuestion}
       />
+      {afterQuestion}
       {/* CTO checkpoint 5 §5 — "And in Kenya?" answered as the earlier question for Kenya: said, never hidden. */}
       {payload.continuation != null && (
         <p data-ask="continuation" className={`-mt-1 mb-3 ${NOTE}`}>

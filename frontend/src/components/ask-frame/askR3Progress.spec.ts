@@ -110,7 +110,9 @@ describe('priority 5 — completion: checkmark, collapsed "Search activity", no 
   it('the frame shows it only after a REAL pending → settled transition of an answer that searched', () => {
     const frame = read('AskFrameScreen.tsx');
     expect(frame).toMatch(/if \(latest\?\.payload != null && latest\.payload\.analysis != null\)\s*setSearchCompletedKey/);
-    expect(frame).toMatch(/searchCompletedKey !== null && latestKey === searchCompletedKey && \(\s*<AskSearchActivity/);
+    /* browser finding: rendered before the turn it sat ABOVE the question — it lives in the answer position */
+    expect(frame).toMatch(/afterQuestion=\{\s*searchCompletedKey !== null && latestKey === searchCompletedKey \? \(\s*<AskSearchActivity/);
+    expect(read('AskR2TurnView.tsx')).toMatch(/showLessLabel=\{s\.showLessQuestion\}\s*\/>\s*\{afterQuestion\}/);
     expect(frame).toContain('<AskProgressRunning locale={interfaceLocale} label={r2s.working} />');
     expect(frame).not.toContain('<AskWorkingStatus');
   });
