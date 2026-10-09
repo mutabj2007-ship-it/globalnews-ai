@@ -97,3 +97,23 @@ describe('saved briefing version — the stored specialist basis is shown, never
     expect(html).not.toContain('"data-briefing":"intelligence"');
   });
 });
+
+describe('a saved PRIMARILY STRUCTURED answer (no summary) reads as sourced by its records', () => {
+  it('shows the governed records and never "no sourced answer"', () => {
+    const v = version({ considered: ['CONFLICT'], contributions: [contribution('CONFLICT', 'USED', [obs('ucdp:9', 'Structured-only event')])] });
+    (v.blocks as { summary: string | null }).summary = null;
+    const html = render(v);
+    expect(html).toContain('"data-briefing":"intelligence"');
+    expect(html).not.toContain('no sourced answer');
+  });
+});
+
+describe('a saved version with NO summary and NO governed basis still says so', () => {
+  it('a GEOGRAPHY-only or refused basis keeps "no sourced answer"', () => {
+    for (const c of [contribution('GEOGRAPHY', 'USED', [obs('geo:1', 'Place')]), contribution('CONFLICT', 'REFUSED', [obs('x:1', 'R')])]) {
+      const v = version({ considered: [c.contributorId], contributions: [c] });
+      (v.blocks as { summary: string | null }).summary = null;
+      expect(render(v)).toContain('no sourced answer');
+    }
+  });
+});

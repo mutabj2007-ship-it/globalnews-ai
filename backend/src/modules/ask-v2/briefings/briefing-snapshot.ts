@@ -101,7 +101,22 @@ export function briefingSnapshotOf(payload: unknown): BriefingSnapshot | null {
   const linked = (ids: readonly string[] | undefined) => (ids ?? []).filter((id) => known.has(id));
   const backgroundText = typeof p.background?.text === 'string' ? p.background.text : null;
   const summary = analysis?.summary?.trim() ? analysis.summary : null;
-  if (summary === null && backgroundText === null) return null;
+  const intelligence = intelligenceOf(p.intelligence);
+  /*
+    PRIMARILY STRUCTURED ANSWERS (found in the Opportunities intake, affects Alpha today): a
+    governed-record answer (RETAINED_RECORD — Imihigo, a retained Conflict record) has no news
+    summary and no background; its whole basis is payload.intelligence. The frontend offers Save /
+    Follow for it, but the snapshot used to refuse it (BRIEFING_TURN_NOT_SAVEABLE). It is saveable
+    when it rests on at least one USED, non-context governed observation — stored verbatim.
+  */
+  const governedBasis = (intelligence?.contributions ?? []).some(
+    (c) =>
+      c.status === 'USED' &&
+      c.applicability !== 'CONTEXT' &&
+      c.contributorId !== 'GEOGRAPHY' &&
+      (c.observations ?? []).length > 0,
+  );
+  if (summary === null && backgroundText === null && !governedBasis) return null;
 
   const answerState = typeof p.answer?.state === 'string' ? p.answer.state : null;
   const gaps = [...(analysis?.unknowns ?? [])].filter((u) => typeof u === 'string' && u.trim());
@@ -117,7 +132,7 @@ export function briefingSnapshotOf(payload: unknown): BriefingSnapshot | null {
       comparisonTable: comparisonTableOf(p.analysis),
       computation: p.computation ?? null,
       background: backgroundText === null ? null : { text: backgroundText, citable: false },
-      intelligence: intelligenceOf(p.intelligence),
+      intelligence,
     },
     evidenceRefs: sources.map((s) => ({
       id: s.articleId,
@@ -127,6 +142,7 @@ export function briefingSnapshotOf(payload: unknown): BriefingSnapshot | null {
       publisher: s.publisher,
       publishedAt: s.publishedAt ?? null,
     })),
-    coverageGaps: summary === null ? ['NO_SOURCED_ANSWER', ...gaps] : gaps,
+    /* a governed-record answer is sourced (by its records), so it is not "no sourced answer" */
+    coverageGaps: summary === null && !governedBasis ? ['NO_SOURCED_ANSWER', ...gaps] : gaps,
   };
 }

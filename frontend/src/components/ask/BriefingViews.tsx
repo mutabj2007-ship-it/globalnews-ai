@@ -100,6 +100,14 @@ export function BriefingVersionView({
 }): JSX.Element {
   const t = askShellStrings(locale).briefingStrings;
   const when = (iso: string | null) => (iso === null ? null : (formatUtc(iso, locale) ?? iso));
+  /* the saved answer rests on at least one USED, non-context governed record (a structured answer) */
+  const governedBasis = (version.blocks.intelligence?.contributions ?? []).some(
+    (c) =>
+      c.status === 'USED' &&
+      c.applicability !== 'CONTEXT' &&
+      c.contributorId !== 'GEOGRAPHY' &&
+      (c.observations ?? []).length > 0,
+  );
   /* The table's citation numbers point at this version's own stored references. */
   const sources: AnalysisSourceRef[] = version.evidenceRefs.map((r) => ({
     articleId: r.id,
@@ -170,7 +178,8 @@ export function BriefingVersionView({
           <p className="whitespace-pre-line text-[14.5px] leading-relaxed text-ink-primary">
             {version.blocks.summary}
           </p>
-        ) : (
+        ) : governedBasis ? null : (
+          /* a governed-record answer is sourced by its records (shown below), never "no sourced answer" */
           <p className="text-[13px] text-ink-tertiary">{t.noSourcedAnswer}</p>
         )}
         {version.blocks.background !== null && (

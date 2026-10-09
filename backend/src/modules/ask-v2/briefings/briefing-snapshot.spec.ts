@@ -127,3 +127,33 @@ describe('R2 · D1 — briefing snapshot (our output + references only)', () => 
     });
   });
 });
+
+describe('PRIMARILY STRUCTURED answers (Opportunities intake finding) — saveable on their governed basis', () => {
+  const base = { schema: 'ask-r2-result/1', answer: { state: 'RETAINED_RECORD' }, checkedAt: '2026-10-09T08:00:00Z', analysis: null, background: null };
+  const contribution = (contributorId: string, status: string, applicability = 'REQUIRED', observations: unknown[] = [{ reference: 'r1', kind: 'K', label: 'District score', value: '77.2', unit: null, period: '2024/2025', geography: 'RWA', source: { name: 'NISR', url: null, licence: 'CC BY 4.0' }, retainedAt: '2026-09-22T00:00:00Z' }]) => ({
+    contributorId, domain: 'governance', status, applicability, observations, temporalBasis: 'RETAINED_EVALUATION_CYCLE', geographyBasis: 'RWA', disclosures: [], degradationReason: null,
+  });
+
+  it('a governed-record answer with no summary and no background is saved, its records verbatim', () => {
+    const intelligence = { considered: ['IMIHIGO'], contributions: [contribution('IMIHIGO', 'USED')] };
+    const s = briefingSnapshotOf({ ...base, intelligence });
+    expect(s).not.toBeNull();
+    expect(s!.blocks.summary).toBeNull();
+    expect(s!.blocks.answerState).toBe('RETAINED_RECORD');
+    expect(s!.blocks.intelligence).toEqual(intelligence);
+    expect(s!.evidenceRefs).toEqual([]);
+    /* sourced by its records: never labelled "no sourced answer" */
+    expect(s!.coverageGaps).toEqual([]);
+  });
+
+  it('still refused when nothing governed was USED: GEOGRAPHY context only, NO_DATA, or no observations', () => {
+    for (const contributions of [
+      [contribution('GEOGRAPHY', 'USED', 'CONTEXT')],
+      [contribution('ECONOMY_CPI', 'NO_DATA', 'REQUIRED', [])],
+      [contribution('IMIHIGO', 'USED', 'REQUIRED', [])],
+      [contribution('CONFLICT', 'REFUSED')],
+    ]) {
+      expect(briefingSnapshotOf({ ...base, intelligence: { considered: contributions.map((c) => c.contributorId), contributions } })).toBeNull();
+    }
+  });
+});
