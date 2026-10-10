@@ -103,15 +103,15 @@ describe('rights containment at the Ask evidence point', () => {
     expect(r.retrievalContext.rightsPending).toEqual({ count: 1, providers: { gnews: 1 } });
   });
 
-  it('enforce mode (ASK_PROVIDER_RIGHTS_ENFORCEMENT=enforce): an uncleared provider item never reaches the model', async () => {
+  it('the environment cannot change the policy: ASK_PROVIDER_RIGHTS_ENFORCEMENT is ignored, RSS stays excluded, the provider stays pending', async () => {
     const before = process.env.ASK_PROVIDER_RIGHTS_ENFORCEMENT;
     process.env.ASK_PROVIDER_RIGHTS_ENFORCEMENT = 'enforce';
     try {
       const h = harness([PROVIDER, TAARIFA]);
       const r = await h.service.analyzeNews('Give any reports about Eric Prince please.');
-      expect(h.provider.analyzeNews).not.toHaveBeenCalled();
-      expect(r.articles).toEqual([]);
-      expect(r.retrievalContext.rightsExcluded?.reasons).toEqual({ PROVIDER_RIGHTS_NOT_CLEARED: 1, RIGHTS_NOT_CLEARED_FOR_AI: 1 });
+      expect(modelArticles(h).map((a) => a.id)).toEqual(['provider']);
+      expect(r.retrievalContext.rightsExcluded?.reasons).toEqual({ RIGHTS_NOT_CLEARED_FOR_AI: 1 });
+      expect(r.retrievalContext.rightsPending).toEqual({ count: 1, providers: { gnews: 1 } });
     } finally {
       if (before === undefined) delete process.env.ASK_PROVIDER_RIGHTS_ENFORCEMENT;
       else process.env.ASK_PROVIDER_RIGHTS_ENFORCEMENT = before;

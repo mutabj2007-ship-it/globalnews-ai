@@ -25,10 +25,11 @@
 
   Aggregator rights are recorded, not resolved (GNews RIGHTS_UNDER_E1_REVIEW, GDELT UNRESOLVED). The
   CTO ruled that this must not become a blanket shutdown before E1 rules, so the provider decision is
-  computed and RECORDED in every mode, and ENFORCED only when ASK_PROVIDER_RIGHTS_ENFORCEMENT=enforce.
-  In record mode a pending provider item is allowed with basis PROVIDER_PENDING_REVIEW — never
-  "cleared" — and the answer's diagnostics count it. RSS, malformed and unknown provenance are
-  always enforced.
+  decided from the provider's RECORDED state alone — no environment flag can loosen or bypass it
+  (CTO R1 ruling): CLEARED → allowed; RESTRICTED / PROHIBITED → excluded; a state recorded as under
+  review (RIGHTS_UNDER_E1_REVIEW, UNRESOLVED) → allowed with basis PROVIDER_PENDING_REVIEW — never
+  "cleared" — and counted in the answer's diagnostics, until E1 rules. RSS, malformed and unknown
+  provenance are always enforced.
 
   A rights exclusion is never "not relevant" and never evidence that no reporting exists.
 */
@@ -84,14 +85,11 @@ const PUBLISHER_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 /** Stored provider rows carry no providerId (not persisted); their acquisition is unverified. */
 const STORED_PROVIDER_UNVERIFIED = 'stored-provider-unverified';
 
-export function providerEnforcementFromEnv(env: NodeJS.ProcessEnv = process.env): ProviderEnforcement {
-  return (env.ASK_PROVIDER_RIGHTS_ENFORCEMENT ?? '').trim().toLowerCase() === 'enforce' ? 'enforce' : 'record';
-}
-
 export function sourceUseDecision(input: UseInput, use: EvidenceUse, options: PolicyOptions = {}): SourceUseDecision {
   const feeds = options.feeds ?? FEED_SOURCES;
   const providers = options.providers ?? INTERNATIONAL_NEWS_SOURCES;
-  const enforcement = options.enforcement ?? providerEnforcementFromEnv();
+  /* 'enforce' is reachable only through an explicit code-level option, never from the environment */
+  const enforcement = options.enforcement ?? 'record';
   const id = (input.sourceId ?? '').trim();
 
   if (id.startsWith(FEED_PREFIX)) {
@@ -111,6 +109,9 @@ export function sourceUseDecision(input: UseInput, use: EvidenceUse, options: Po
   const record = providerId === '' ? undefined : providers.find((p) => p.sourceId === providerId);
   if (providerId !== '' && record === undefined) return { allowed: false, reason: 'UNKNOWN_PROVENANCE' };
   if (record?.rightsState === 'CLEARED') return { allowed: true, basis: 'PROVIDER_CLEARED', provider: providerId };
+  if (record?.rightsState === 'RESTRICTED' || record?.rightsState === 'PROHIBITED') {
+    return { allowed: false, reason: 'PROVIDER_RIGHTS_NOT_CLEARED' };
+  }
   if (enforcement === 'enforce') {
     return { allowed: false, reason: record === undefined ? 'UNKNOWN_PROVENANCE' : 'PROVIDER_RIGHTS_NOT_CLEARED' };
   }

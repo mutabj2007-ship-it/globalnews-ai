@@ -2,7 +2,6 @@ import { FEED_SOURCES, type FeedSourceEntry } from '../providers/feed-source-reg
 import { INTERNATIONAL_NEWS_SOURCES } from '../../global-reach/source-coverage.authority';
 import {
   partitionByRights,
-  providerEnforcementFromEnv,
   sourceUseDecision,
   summarizeExclusions,
   summarizePending,
@@ -108,11 +107,25 @@ describe('aggregator items — decided by the provider that acquired them', () =
     }
   });
 
-  it('the enforcement mode comes only from ASK_PROVIDER_RIGHTS_ENFORCEMENT=enforce; anything else records', () => {
-    expect(providerEnforcementFromEnv({ ASK_PROVIDER_RIGHTS_ENFORCEMENT: 'enforce' })).toBe('enforce');
-    expect(providerEnforcementFromEnv({ ASK_PROVIDER_RIGHTS_ENFORCEMENT: ' ENFORCE ' })).toBe('enforce');
-    expect(providerEnforcementFromEnv({})).toBe('record');
-    expect(providerEnforcementFromEnv({ ASK_PROVIDER_RIGHTS_ENFORCEMENT: 'off' })).toBe('record');
+  it('no environment variable can loosen or tighten the decision (CTO: no operational bypass flag)', () => {
+    const before = process.env.ASK_PROVIDER_RIGHTS_ENFORCEMENT;
+    try {
+      for (const value of ['enforce', 'off', 'record', '']) {
+        process.env.ASK_PROVIDER_RIGHTS_ENFORCEMENT = value;
+        expect(sourceUseDecision({ sourceId: 'reuters', providerId: 'gnews' }, 'AI_INPUT')).toEqual({ allowed: true, basis: 'PROVIDER_PENDING_REVIEW', provider: 'gnews' });
+        expect(sourceUseDecision({ sourceId: 'feed:taarifa-rw' }, 'AI_INPUT')).toEqual({ allowed: false, reason: 'RIGHTS_NOT_CLEARED_FOR_AI' });
+      }
+    } finally {
+      if (before === undefined) delete process.env.ASK_PROVIDER_RIGHTS_ENFORCEMENT;
+      else process.env.ASK_PROVIDER_RIGHTS_ENFORCEMENT = before;
+    }
+  });
+
+  it.each(['RESTRICTED', 'PROHIBITED'])('a provider RECORDED %s is excluded in every mode (synthetic record)', (rightsState) => {
+    const providers = [{ sourceId: 'gnews', rightsState }];
+    for (const options of [RECORD, ENFORCE]) {
+      expect(sourceUseDecision({ sourceId: 'bbc', providerId: 'gnews' }, 'AI_INPUT', { ...options, providers })).toEqual({ allowed: false, reason: 'PROVIDER_RIGHTS_NOT_CLEARED' });
+    }
   });
 });
 

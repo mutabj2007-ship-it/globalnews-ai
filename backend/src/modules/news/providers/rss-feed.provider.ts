@@ -94,6 +94,19 @@ export function isRssFeedsEnabled(value: string | undefined): boolean {
   return typeof value === 'string' && value.trim().toLowerCase() === 'true';
 }
 
+/**
+ * E1-TAA-1 — the pre-release configuration check (pure; no I/O). Lists every RSS_FEED_SOURCES entry
+ * the registry refuses while the lane is enabled; empty when the configuration is admissible.
+ */
+export function rssConfigViolations(enabledValue: string | undefined, sourcesValue: string | undefined): string[] {
+  if (!isRssFeedsEnabled(enabledValue)) return [];
+  const selection = resolveActiveFeedSources(FEED_SOURCES, sourcesValue);
+  return [
+    ...selection.refused.map((r) => `${r.sourceId} refused (${r.reason})`),
+    ...selection.unknownIds.map((id) => `${id} unknown to the registry`),
+  ];
+}
+
 @Injectable()
 export class RssFeedProvider implements NewsProvider, OnModuleInit {
   readonly id = 'rss-feeds';
@@ -121,19 +134,17 @@ export class RssFeedProvider implements NewsProvider, OnModuleInit {
   constructor(private readonly config: ConfigService) {}
 
   /*
-    E1-TAA-1 — BOOT REFUSAL, not a warning: with the RSS lane enabled, an environment list naming a
-    feed the registry refuses stops the backend from starting. With the lane off nothing is collected,
-    so nothing is refused at boot.
+    E1-TAA-1 + CTO R1 ruling — a misconfigured allowlist never crashes the Ask backend. Feeds the
+    registry refuses are NOT collected (zero acquisition, decided by the registry, not the
+    environment); the lane reports degraded with the refusal in its health; the error is logged at
+    boot; and `npm run check:rss-config` fails the release before it ships.
   */
   onModuleInit(): void {
-    if (!isRssFeedsEnabled(this.config.get<string>('RSS_FEEDS_ENABLED'))) return;
-    const refused = this.selection().refused;
-    if (refused.length > 0) {
-      throw new Error(
-        `RSS boot refused: RSS_FEED_SOURCES names feeds the source registry does not admit: ` +
-          refused.map((r) => `${r.sourceId} (${r.reason})`).join(', '),
-      );
-    }
+    const violations = rssConfigViolations(
+      this.config.get<string>('RSS_FEEDS_ENABLED'),
+      this.config.get<string>('RSS_FEED_SOURCES'),
+    );
+    if (violations.length > 0) this.logger.error(`RSS configuration refused by the source registry: ${violations.join('; ')}`);
   }
 
   /**
@@ -613,7 +624,10 @@ export class RssFeedProvider implements NewsProvider, OnModuleInit {
       providerId: this.id,
       displayName: this.displayName,
       enabled,
-      status: this.observedStatus(enabled, activeCount),
+      /* E1-TAA-1 — a lane running beside refused feeds is never reported as plainly ok */
+      status: ((observed) => (enabled && selection.refused.length > 0 && observed === 'ok' ? 'degraded' : observed))(
+        this.observedStatus(enabled, activeCount),
+      ),
       message:
         message +
         (selection.unknownIds.length > 0

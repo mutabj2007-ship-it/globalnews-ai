@@ -262,7 +262,7 @@ export function feedActivationRefusal(entry: FeedSourceEntry): RefusedFeedSource
   if (entry.rights.state === 'CLEARED') return null;
   return {
     sourceId: entry.sourceId,
-    reason: entry.rights.state === 'PROHIBITED' ? 'RIGHTS_PROHIBITED' : rightsBlockActivation(entry.rights.state) ? 'RIGHTS_RESTRICTED' : 'RIGHTS_NOT_CLEARED',
+    reason: entry.rights.state === 'PROHIBITED' ? 'RIGHTS_PROHIBITED' : entry.rights.state === 'RESTRICTED' ? 'RIGHTS_RESTRICTED' : 'RIGHTS_NOT_CLEARED',
     rightsState: entry.rights.state,
     evidence: entry.rights.evidence,
   };
