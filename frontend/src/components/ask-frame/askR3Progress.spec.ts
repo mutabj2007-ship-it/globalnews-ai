@@ -4,7 +4,7 @@ import { createElement } from 'react';
 import { act, create, type ReactTestInstance } from 'react-test-renderer';
 import { askProgressStrings, askProgressStringsQualified, ASK_PROGRESS_LOCALES } from '@/lib/ask/askProgressStrings';
 import { followStrings } from '@/lib/ask/followStrings';
-import { AskProgressRunning, AskSearchActivity } from './AskProgressPanel';
+import { AskProgressRunning } from './AskProgressPanel';
 
 /*
   ASK R3 PROGRESS R1 — CTO priorities 1, 3, 4, 5 (2026-10-10), from the ORIGINAL Claude Design R3
@@ -84,43 +84,8 @@ describe('priority 4 — the ORIGINAL emblem beside the real running line', () =
   });
 });
 
-describe('priority 5 — completion: checkmark, collapsed "Search activity", no replay', () => {
-  const render = () => {
-    let r!: ReturnType<typeof create>;
-    act(() => {
-      r = create(createElement(AskSearchActivity, { locale: 'en' }));
-    });
-    return r.root;
-  };
-  it('collapsed and closed by default, with the static emblem', () => {
-    const root = render();
-    const button = byAsk(root, 'search-activity')[0]!;
-    expect(button.props['aria-expanded']).toBe(false);
-    expect(textOf(button)).toBe('Search activity · 1 stepShow');
-    expect(byAsk(root, 'static-emblem')).toHaveLength(1);
-    expect(byAsk(root, 'working-emblem')).toHaveLength(0);
-    expect(byAsk(root, 'search-activity-steps')).toHaveLength(0);
-  });
-  it('opened, it lists the one real step with a checkmark', () => {
-    const root = render();
-    act(() => byAsk(root, 'search-activity')[0]!.props.onClick());
-    expect(byAsk(root, 'search-activity')[0]!.props['aria-expanded']).toBe(true);
-    expect(textOf(byAsk(root, 'search-activity-steps')[0]!)).toBe('✓ Completed · Answer ready');
-  });
-  it('the frame shows it only after a REAL pending → settled transition of an answer that searched', () => {
-    const frame = read('AskFrameScreen.tsx');
-    expect(frame).toMatch(/if \(latest\?\.payload != null && latest\.payload\.analysis != null\)\s*setSearchCompletedKey/);
-    /* browser finding: rendered before the turn it sat ABOVE the question — it lives in the answer position */
-    expect(frame).toMatch(/afterQuestion=\{\s*searchCompletedKey !== null && latestKey === searchCompletedKey \? \(\s*<AskSearchActivity/);
-    /* after the reader's words and the continuation note (CTO checkpoint 5 §5 stays directly under the question) */
-    const turnView = read('AskR2TurnView.tsx');
-    const at = turnView.indexOf('{afterQuestion}');
-    expect(at).toBeGreaterThan(turnView.indexOf('data-ask="continuation"'));
-    expect(at).toBeLessThan(turnView.indexOf('data-ask="prior-incomplete"'));
-    expect(frame).toContain('<AskProgressRunning locale={interfaceLocale} label={r2s.working} />');
-    expect(frame).not.toContain('<AskWorkingStatus');
-  });
-});
+/* priority 5 (the Search activity RECORD) — superseded by askR3ResearchActivity.spec.ts (PO acceptance failure R1):
+   the 0717ff7 session-only, analysis-inferred record was the defect. */
 
 describe('priorities 1 and 3 — greeting and the drawer row affordance', () => {
   it('the verified-name greeting is the R3 wording, "Welcome back, {name}" (no added period)', () => {

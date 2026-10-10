@@ -17,6 +17,17 @@ export interface AskProgressStrings {
   readonly inProgress: string;
   readonly completed: string;
   readonly answerReady: string;
+  /* ASK R3 RESEARCH ACTIVITY R1 — recorded search outcomes (R3 wording where the package has it) */
+  readonly partlyCompleted: string;
+  readonly notCompleted: string;
+  readonly sourcesSearched: string;
+  readonly someSourcesSearched: string;
+  readonly couldNotFinish: string;
+  readonly earlierReviewed: string;
+  readonly noNewSearch: string;
+  readonly noMatch: string;
+  readonly filtered: string;
+  readonly unreached: (lanes: string) => string;
 }
 
 const EN: AskProgressStrings = {
@@ -27,6 +38,16 @@ const EN: AskProgressStrings = {
   inProgress: 'In progress',
   completed: 'Completed',
   answerReady: 'Answer ready',
+  partlyCompleted: 'Partly completed',
+  notCompleted: 'Not completed',
+  sourcesSearched: 'Sources searched',
+  someSourcesSearched: 'Some sources searched',
+  couldNotFinish: 'Could not finish searching sources',
+  earlierReviewed: 'Earlier sources reviewed',
+  noNewSearch: 'No new search was made.',
+  noMatch: 'No matching reports were found.',
+  filtered: 'Reports were found, but none matched the question closely enough.',
+  unreached: (l) => `Not reached: ${l}.`,
 };
 const PL: AskProgressStrings = {
   group: 'Przebieg wyszukiwania',
@@ -36,6 +57,16 @@ const PL: AskProgressStrings = {
   inProgress: 'W toku',
   completed: 'Zakończono',
   answerReady: 'Odpowiedź gotowa',
+  partlyCompleted: 'Częściowo zakończono',
+  notCompleted: 'Nie zakończono',
+  sourcesSearched: 'Przeszukano źródła',
+  someSourcesSearched: 'Przeszukano część źródeł',
+  couldNotFinish: 'Nie udało się dokończyć przeszukiwania źródeł',
+  earlierReviewed: 'Przejrzano wcześniejsze źródła',
+  noNewSearch: 'Nie wykonano nowego wyszukiwania.',
+  noMatch: 'Nie znaleziono pasujących doniesień.',
+  filtered: 'Znaleziono doniesienia, ale żadne nie odpowiadało wystarczająco pytaniu.',
+  unreached: (l) => `Niedostępne: ${l}.`,
 };
 const DE: AskProgressStrings = {
   group: 'Suchverlauf',
@@ -45,6 +76,16 @@ const DE: AskProgressStrings = {
   inProgress: 'In Arbeit',
   completed: 'Abgeschlossen',
   answerReady: 'Antwort bereit',
+  partlyCompleted: 'Teilweise abgeschlossen',
+  notCompleted: 'Nicht abgeschlossen',
+  sourcesSearched: 'Quellen durchsucht',
+  someSourcesSearched: 'Einige Quellen durchsucht',
+  couldNotFinish: 'Die Suche in den Quellen konnte nicht abgeschlossen werden',
+  earlierReviewed: 'Frühere Quellen geprüft',
+  noNewSearch: 'Es wurde keine neue Suche durchgeführt.',
+  noMatch: 'Es wurden keine passenden Berichte gefunden.',
+  filtered: 'Es wurden Berichte gefunden, aber keiner passte genau genug zur Frage.',
+  unreached: (l) => `Nicht erreicht: ${l}.`,
 };
 const FR: AskProgressStrings = {
   group: 'Activité de recherche',
@@ -54,6 +95,16 @@ const FR: AskProgressStrings = {
   inProgress: 'En cours',
   completed: 'Terminé',
   answerReady: 'Réponse prête',
+  partlyCompleted: 'Partiellement terminé',
+  notCompleted: 'Non terminé',
+  sourcesSearched: 'Sources consultées',
+  someSourcesSearched: 'Certaines sources consultées',
+  couldNotFinish: 'Impossible de terminer la recherche dans les sources',
+  earlierReviewed: 'Sources précédentes réexaminées',
+  noNewSearch: 'Aucune nouvelle recherche n’a été effectuée.',
+  noMatch: 'Aucun article correspondant n’a été trouvé.',
+  filtered: 'Des articles ont été trouvés, mais aucun ne correspondait assez à la question.',
+  unreached: (l) => `Non joignables : ${l}.`,
 };
 const ES: AskProgressStrings = {
   group: 'Actividad de búsqueda',
@@ -63,6 +114,16 @@ const ES: AskProgressStrings = {
   inProgress: 'En curso',
   completed: 'Completado',
   answerReady: 'Respuesta lista',
+  partlyCompleted: 'Completado en parte',
+  notCompleted: 'No completado',
+  sourcesSearched: 'Fuentes consultadas',
+  someSourcesSearched: 'Algunas fuentes consultadas',
+  couldNotFinish: 'No se pudo terminar la búsqueda en las fuentes',
+  earlierReviewed: 'Fuentes anteriores revisadas',
+  noNewSearch: 'No se hizo una nueva búsqueda.',
+  noMatch: 'No se encontraron informes coincidentes.',
+  filtered: 'Se encontraron informes, pero ninguno coincidía lo suficiente con la pregunta.',
+  unreached: (l) => `Sin respuesta: ${l}.`,
 };
 const PT: AskProgressStrings = {
   group: 'Atividade de pesquisa',
@@ -72,6 +133,16 @@ const PT: AskProgressStrings = {
   inProgress: 'Em andamento',
   completed: 'Concluído',
   answerReady: 'Resposta pronta',
+  partlyCompleted: 'Concluído em parte',
+  notCompleted: 'Não concluído',
+  sourcesSearched: 'Fontes pesquisadas',
+  someSourcesSearched: 'Algumas fontes pesquisadas',
+  couldNotFinish: 'Não foi possível concluir a pesquisa nas fontes',
+  earlierReviewed: 'Fontes anteriores revistas',
+  noNewSearch: 'Nenhuma nova pesquisa foi feita.',
+  noMatch: 'Nenhuma notícia correspondente foi encontrada.',
+  filtered: 'Foram encontradas notícias, mas nenhuma correspondia o suficiente à pergunta.',
+  unreached: (l) => `Sem resposta: ${l}.`,
 };
 const AR: AskProgressStrings = {
   group: 'نشاط البحث',
@@ -81,6 +152,16 @@ const AR: AskProgressStrings = {
   inProgress: 'قيد التنفيذ',
   completed: 'اكتمل',
   answerReady: 'الإجابة جاهزة',
+  partlyCompleted: 'اكتمل جزئيًا',
+  notCompleted: 'لم يكتمل',
+  sourcesSearched: 'تم البحث في المصادر',
+  someSourcesSearched: 'تم البحث في بعض المصادر',
+  couldNotFinish: 'تعذّر إكمال البحث في المصادر',
+  earlierReviewed: 'تمت مراجعة المصادر السابقة',
+  noNewSearch: 'لم يُجرَ بحث جديد.',
+  noMatch: 'لم يُعثر على تقارير مطابقة.',
+  filtered: 'عُثر على تقارير، لكن لم يطابق أيٌّ منها السؤال بما يكفي.',
+  unreached: (l) => `تعذّر الوصول: ${l}.`,
 };
 
 const BY_LOCALE: Readonly<Record<string, AskProgressStrings>> = { en: EN, pl: PL, de: DE, fr: FR, es: ES, pt: PT, ar: AR };

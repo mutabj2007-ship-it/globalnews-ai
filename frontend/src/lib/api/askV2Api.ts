@@ -136,6 +136,33 @@ export interface AskRecentReporting {
   }[];
 }
 
+/**
+ * ASK R3 RESEARCH ACTIVITY R1 — the backend's stored account of the search this answer followed
+ * (research-record.ts, same classifier as AskObservation.retrievalOutcome). Absent on answers
+ * stored before it; the reader's Search activity is derived from it, never from `analysis`.
+ */
+export type AskResearchOutcome =
+  | 'MATCHED'
+  | 'RETAINED_ONLY'
+  | 'COMPLETED_NO_MATCH'
+  | 'ALL_FILTERED'
+  | 'PARTIAL'
+  | 'PARTIAL_NO_MATCH'
+  | 'PROVIDER_FAILED';
+export interface AskResearchRecord {
+  readonly schema: 'ask-research/1';
+  readonly performed: boolean;
+  readonly outcome: AskResearchOutcome | null;
+  readonly reused: boolean;
+  readonly lanes: {
+    readonly attempted: readonly string[];
+    readonly succeeded: readonly string[];
+    readonly unavailable: readonly { readonly lane: string; readonly reason: string }[];
+  };
+  readonly candidatesSeen: number | null;
+  readonly candidatesAdmitted: number | null;
+}
+
 export interface AskR2Payload {
   readonly schema: 'ask-r2-result/1';
   readonly route: {
@@ -171,6 +198,8 @@ export interface AskR2Payload {
    * with `analysis`: exactly one of the two carries body text for a given payload.
    */
   readonly background?: { readonly text: string } | null;
+  /** ASK R3 RESEARCH ACTIVITY R1 — what the search actually did (absent before R1). */
+  readonly research?: AskResearchRecord;
   /** TRUST R1 — retained reporting listed beside a place-background answer (listed, not analysed). */
   readonly recentReporting?: AskRecentReporting;
   /** ASK TECHNICAL / SCIENTIFIC REASONING CONVERGENCE R1 — the deterministic computation. */

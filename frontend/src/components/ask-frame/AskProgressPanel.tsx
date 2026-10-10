@@ -4,6 +4,7 @@ import { useId, useState, type JSX } from 'react';
 import type { DisplayLocale } from '@globalnews-ai/shared';
 import { askProgressStrings } from '@/lib/ask/askProgressStrings';
 import { AskStaticEmblem, AskWorkingEmblem } from './AskEmblem';
+import type { SearchActivity, SearchStep, SearchStepStatus } from '@/lib/ask/askSearchActivity';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -54,15 +55,48 @@ export function AskProgressRunning({
   );
 }
 
-export function AskSearchActivity({ locale }: { readonly locale: DisplayLocale }): JSX.Element {
+/**
+ * ASK R3 RESEARCH ACTIVITY R1 — the collapsed "Search activity" RECORD of a stored answer: derived
+ * from what the backend recorded (`searchActivityOf`), shown live and on reopen alike, static and
+ * closed (no replay, no announcement — a record is not a live event). Glyphs per R3 ProgressPanel:
+ * ✓ completed · ! partly completed · × not completed; a check only where the step completed.
+ */
+export function AskSearchActivity({
+  locale,
+  activity,
+  laneLabel,
+}: {
+  readonly locale: DisplayLocale;
+  readonly activity: SearchActivity;
+  /** The same lane names the "Sources checked" line uses. */
+  readonly laneLabel: (lane: string) => string;
+}): JSX.Element {
   const s = askProgressStrings(locale);
   const [open, setOpen] = useState(false);
   const listId = useId();
+  const text = (step: SearchStep): string =>
+    step.kind === 'ANSWER'
+      ? s.answerReady
+      : step.kind === 'REUSED'
+        ? s.earlierReviewed
+        : step.status === 'failed'
+          ? s.couldNotFinish
+          : step.status === 'partial'
+            ? s.someSourcesSearched
+            : s.sourcesSearched;
+  const notes = (step: SearchStep): string[] => [
+    ...(step.kind === 'REUSED' ? [s.noNewSearch] : []),
+    ...(step.found === 'NO_MATCH' ? [s.noMatch] : step.found === 'FILTERED' ? [s.filtered] : []),
+    ...(step.unreached !== undefined && step.unreached.length > 0 ? [s.unreached(step.unreached.map(laneLabel).join(', '))] : []),
+  ];
+  const tag = (status: SearchStepStatus): { glyph: string; word: string; color: string } =>
+    status === 'completed'
+      ? { glyph: '✓', word: s.completed, color: 'var(--ask-read-rule-current,#5abff5)' }
+      : status === 'partial'
+        ? { glyph: '!', word: s.partlyCompleted, color: 'var(--ask-read-rule-reference,#c9a227)' }
+        : { glyph: '×', word: s.notCompleted, color: 'var(--ask-read-rule-insufficient,#e06c6c)' };
   return (
-    <div data-ask="progress" data-ask-progress="collapsed" className="mb-3 flex flex-col gap-2">
-      <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
-        {`${s.completed}: ${s.answerReady}`}
-      </p>
+    <div data-ask="progress" data-ask-progress="collapsed" data-ask-research-basis={activity.basis} className="mb-3 flex flex-col gap-2">
       <button
         type="button"
         data-ask="search-activity"
@@ -72,17 +106,29 @@ export function AskSearchActivity({ locale }: { readonly locale: DisplayLocale }
         className="inline-flex min-h-[44px] items-center gap-2 self-start rounded-[18px] px-2 text-[0.8125rem] font-medium text-[var(--ask-read-ink2,#9fb4cc)]"
       >
         <AskStaticEmblem size={18} />
-        <span>{s.collapsed(1)}</span>
+        <span>{s.collapsed(activity.steps.length)}</span>
         <span aria-hidden="true" className="text-[var(--ask-read-rule-current,#5abff5)]">
           {open ? s.hide : s.show}
         </span>
       </button>
       {open && (
         <ul id={listId} data-ask="search-activity-steps" className="ms-4 flex flex-col gap-2 border-s-2 border-[var(--ask-read-line,#1e2636)] px-3.5 py-2.5">
-          <li className="text-[0.8125rem] leading-[1.45]">
-            <span className="font-semibold text-[var(--ask-read-rule-current,#5abff5)]">{`✓ ${s.completed}`}</span>
-            {` · ${s.answerReady}`}
-          </li>
+          {activity.steps.map((step, i) => {
+            const t = tag(step.status);
+            return (
+              <li key={i} data-ask="search-step" data-ask-step={step.kind} data-ask-step-status={step.status} className="flex flex-col gap-0.5 text-[0.8125rem] leading-[1.45]">
+                <span>
+                  <span className="font-semibold" style={{ color: t.color }}>{`${t.glyph} ${t.word}`}</span>
+                  {` · ${text(step)}`}
+                </span>
+                {notes(step).map((note) => (
+                  <span key={note} className="text-[var(--ask-read-ink2,#9fb4cc)]">
+                    {note}
+                  </span>
+                ))}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
