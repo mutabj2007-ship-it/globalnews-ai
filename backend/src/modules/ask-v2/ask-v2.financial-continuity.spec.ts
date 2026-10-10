@@ -45,10 +45,14 @@ describe('ASK FINANCIAL CONTINUITY P0 — loan schedule change binds to the read
     expect(loanScheduleChange(Q2)).toEqual({ missing: ['amount received'] });
   });
 
-  it('a schedule change with no amounts at all asks for both', () => {
-    expect(loanScheduleChange('What is the rate if I repay in 12 equal monthly instalments?')).toEqual({
-      missing: ['amount received', 'total repaid'],
-    });
+  it('a schedule with none of the reader\'s own amounts is not a schedule change (routed as before, never bound)', () => {
+    for (const q of [
+      'What is the rate if I repay in 12 equal monthly instalments?',
+      'What interest rate do banks charge for a car loan of $20,000 over 12 monthly payments?',
+    ]) {
+      expect(loanScheduleChange(q)).toBeUndefined();
+      expect(anchorQuestionOf(q, [Q1])).not.toBe(Q1);
+    }
   });
 
   it('Polish schedule change binds the same way', () => {

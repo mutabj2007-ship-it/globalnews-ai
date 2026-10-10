@@ -158,7 +158,9 @@ export function statedLoan(question: string, previousQuestion?: string | null): 
   equal monthly instalments instead, is the rate still the same?" is 18 words: past the generic
   follow-up detectors' 16-word bound, so the service handed the solver no previous question and the
   turn was searched as news. A loan SCHEDULE CHANGE is recognised here instead, narrowly: a rate is
-  asked about, a repayment schedule is stated, and the question alone does not state the whole loan.
+  asked about, a repayment schedule is stated, the reader restates at least one of their OWN amounts
+  ("repay the $1,050"), and the question alone does not state the whole loan. A schedule with no
+  amount of the reader's ("What rate do banks charge for 12 monthly payments?") is not one.
 */
 
 /** The inputs a loan schedule-change question leaves unstated, or `undefined` if it is not one. */
@@ -166,6 +168,7 @@ export function loanScheduleChange(question: string): { readonly missing: readon
   if (!RATE_ASKED.test(question)) return undefined;
   const s = readLoanStatement(question);
   if (s.schedule === undefined) return undefined;
+  if (s.received === undefined && s.repaid === undefined) return undefined;
   const missing = [
     ...(s.received === undefined ? ['amount received'] : []),
     ...(s.repaid === undefined ? ['total repaid'] : []),

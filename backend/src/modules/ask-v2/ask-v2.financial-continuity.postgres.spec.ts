@@ -262,6 +262,15 @@ live('ASK FINANCIAL CONTINUITY P0 — loan schedule follow-up, live PostgreSQL s
     expect(pb.computation!.result.value).not.toBe(20.6173);
   });
 
+  it('a market-rate question with none of the reader\'s own amounts is never bound to the earlier loan', async () => {
+    const thread = await newThread();
+    await submit(thread, Q1);
+    const op = await submit(thread, 'What interest rate do banks charge for a car loan of $20,000 over 12 monthly payments?');
+    const p = (await payloadOf(op.storedResultId))!;
+    expect(p.computation).toBeUndefined();
+    expect(p.answer.basis).not.toBe('COMPUTATION_INPUTS_MISSING');
+  });
+
   it('unrelated routing is unchanged: a news question after the loan still searches news', async () => {
     const thread = await newThread();
     await submit(thread, Q1);
