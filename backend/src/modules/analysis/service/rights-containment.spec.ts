@@ -23,9 +23,9 @@ const BASE = {
   publishedAt: '2026-10-09T12:00:00.000Z',
   publishedAtBasis: 'publisher',
 } as const;
-const art = (id: string, sourceId: string, sourceName: string): NewsArticle =>
-  ({ ...BASE, id, sourceId, sourceName, url: `https://example.invalid/${id}` }) as unknown as NewsArticle;
-const PROVIDER = art('provider', 'bbc:p1', 'BBC');
+const art = (id: string, sourceId: string, sourceName: string, providerId?: string): NewsArticle =>
+  ({ ...BASE, id, sourceId, sourceName, ...(providerId ? { providerId } : {}), url: `https://example.invalid/${id}` }) as unknown as NewsArticle;
+const PROVIDER = art('provider', 'bbc', 'BBC', 'gnews');
 const TAARIFA = art('taarifa', 'feed:taarifa-rw', 'Taarifa Rwanda');
 const STANDARD = art('standard', 'feed:standardmedia-ke', 'The Standard');
 const WP = art('wp', 'feed:wp-pl', 'Wirtualna Polska');
@@ -95,10 +95,26 @@ describe('rights containment at the Ask evidence point', () => {
     expect(r.retrievalContext.rightsExcluded?.count).toBe(3);
   });
 
-  it('provider-path only: untouched, and no exclusion field at all', async () => {
+  it('provider-path only (record mode, the default): used, counted as PENDING review — never cleared', async () => {
     const h = harness([PROVIDER]);
     const r = await h.service.analyzeNews('Give any reports about Eric Prince please.');
     expect(modelArticles(h).map((a) => a.id)).toEqual(['provider']);
     expect(r.retrievalContext.rightsExcluded).toBeUndefined();
+    expect(r.retrievalContext.rightsPending).toEqual({ count: 1, providers: { gnews: 1 } });
+  });
+
+  it('enforce mode (ASK_PROVIDER_RIGHTS_ENFORCEMENT=enforce): an uncleared provider item never reaches the model', async () => {
+    const before = process.env.ASK_PROVIDER_RIGHTS_ENFORCEMENT;
+    process.env.ASK_PROVIDER_RIGHTS_ENFORCEMENT = 'enforce';
+    try {
+      const h = harness([PROVIDER, TAARIFA]);
+      const r = await h.service.analyzeNews('Give any reports about Eric Prince please.');
+      expect(h.provider.analyzeNews).not.toHaveBeenCalled();
+      expect(r.articles).toEqual([]);
+      expect(r.retrievalContext.rightsExcluded?.reasons).toEqual({ PROVIDER_RIGHTS_NOT_CLEARED: 1, RIGHTS_NOT_CLEARED_FOR_AI: 1 });
+    } finally {
+      if (before === undefined) delete process.env.ASK_PROVIDER_RIGHTS_ENFORCEMENT;
+      else process.env.ASK_PROVIDER_RIGHTS_ENFORCEMENT = before;
+    }
   });
 });

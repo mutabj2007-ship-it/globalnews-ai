@@ -919,8 +919,29 @@ export interface AnalysisRetrievalContext {
    */
   rightsExcluded?: {
     readonly count: number;
-    readonly reasons: Readonly<Partial<Record<'RIGHTS_PROHIBITED' | 'RIGHTS_RESTRICTED' | 'RIGHTS_NOT_CLEARED_FOR_AI' | 'UNKNOWN_PROVENANCE', number>>>;
+    readonly reasons: Readonly<
+      Partial<
+        Record<
+          | 'RIGHTS_PROHIBITED'
+          | 'RIGHTS_RESTRICTED'
+          | 'RIGHTS_NOT_CLEARED_FOR_AI'
+          | 'PROVIDER_RIGHTS_NOT_CLEARED'
+          | 'UNKNOWN_PROVENANCE',
+          number
+        >
+      >
+    >;
     readonly sourceIds: readonly string[];
+  };
+
+  /**
+   * MASTER CTO P0 RIGHTS CONTAINMENT R1.1 — internal diagnostic. Aggregator items used in this
+   * answer while their provider's rights are still under E1 review (provider enforcement in
+   * "record" mode), counted per provider. Never a statement that they are cleared.
+   */
+  rightsPending?: {
+    readonly count: number;
+    readonly providers: Readonly<Record<string, number>>;
   };
 
   /**

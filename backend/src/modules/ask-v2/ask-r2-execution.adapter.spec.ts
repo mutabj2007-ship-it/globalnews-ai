@@ -2586,6 +2586,10 @@ describe('TRUST R1 — mixed answer: place background + retained recent reportin
     id: `a${n}`,
     title: `Park road closure ${n}`,
     url: `https://example.test/${n}`,
+    /* MASTER CTO P0 RIGHTS CONTAINMENT R1.1 — real provenance: a publisher slug acquired by GNews
+       (a fixture with no source identity now fails closed, as the CTO required) */
+    sourceId: 'example',
+    providerId: 'gnews',
     sourceName: 'Example',
     publishedAt: RECENT,
     countryCode: 'TZ',
@@ -2739,6 +2743,9 @@ describe('CTO P0 · Defect E — companion reporting must serve the reader’s t
     title,
     summary,
     url: `https://example.test/${encodeURIComponent(title)}`,
+    /* MASTER CTO P0 RIGHTS CONTAINMENT R1.1 — real provenance (no identity now fails closed) */
+    sourceId: 'example',
+    providerId: 'gnews',
     sourceName: 'Example',
     publishedAt: RECENT,
     countryCode: 'RW',

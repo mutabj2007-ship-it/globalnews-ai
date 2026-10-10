@@ -14,6 +14,9 @@
  *   MATCHED             the search completed and admitted reporting
  *   ALL_FILTERED        providers returned candidates and the relevance gate removed all of them
  *   COMPLETED_NO_MATCH  the search completed and returned nothing relevant
+ *   RIGHTS_WITHHELD     the search returned items, and every one was withheld because its source's
+ *                       reuse rights are not cleared (MASTER CTO P0 RIGHTS CONTAINMENT R1.1) — never
+ *                       "nothing relevant", never "no reporting exists"
  *
  * Production FJ-1 (A4): 48 zero-item answers in 14 days could not be told apart. These codes are
  * what separates "the sources failed" from "our query or gate found nothing".
@@ -25,7 +28,8 @@ export type RetrievalOutcomeCode =
   | 'RETAINED_ONLY'
   | 'MATCHED'
   | 'ALL_FILTERED'
-  | 'COMPLETED_NO_MATCH';
+  | 'COMPLETED_NO_MATCH'
+  | 'RIGHTS_WITHHELD';
 
 export interface ObservedRetrieval {
   readonly retrievalOutcome: RetrievalOutcomeCode | null;
@@ -43,6 +47,7 @@ interface RetrievalFacts {
     readonly fallbackReason?: string;
     readonly providers?: readonly string[];
     readonly providerFailures?: readonly unknown[];
+    readonly rightsExcluded?: { readonly count: number };
     readonly retrievalTrace?: {
       readonly candidatesSeen?: number;
       readonly candidatesAdmitted?: number;
@@ -84,6 +89,7 @@ export function observedRetrievalOf(response: RetrievalFacts | null | undefined)
     }
     return { retrievalOutcome: 'MATCHED', ...observedCounts };
   }
+  if ((ctx.rightsExcluded?.count ?? 0) > 0) return { retrievalOutcome: 'RIGHTS_WITHHELD', ...observedCounts };
   if (partial) return { retrievalOutcome: 'PARTIAL_NO_MATCH', ...observedCounts };
   if (seen !== null && seen > 0) return { retrievalOutcome: 'ALL_FILTERED', ...observedCounts };
   return { retrievalOutcome: 'COMPLETED_NO_MATCH', ...observedCounts };

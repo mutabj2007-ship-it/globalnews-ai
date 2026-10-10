@@ -231,7 +231,7 @@ import {
   type RequestedSource,
 } from '../../news/identity/requested-source.util';
 import { classifyRequestedPublisher } from '../../news/identity/requested-publisher-state.util';
-import { partitionByRights, summarizeExclusions } from '../../news/rights/source-use-policy';
+import { partitionByRights, summarizeExclusions, summarizePending } from '../../news/rights/source-use-policy';
 import { polishCountryName } from '../query/polish-country-forms.util';
 import { derivePolishRetrievalQuery } from '../language/derive-polish-retrieval-query.util';
 import {
@@ -3761,8 +3761,13 @@ export class AnalysisService {
           reporting exists. Provider-path articles are untouched.
         */
         {
-          const { allowed, excluded } = partitionByRights(articles, 'AI_INPUT');
+          const { allowed, excluded, pending } = partitionByRights(articles, 'AI_INPUT');
           const rightsExcluded = summarizeExclusions(excluded);
+          /* provider items allowed only pending E1 (record mode): counted, never called cleared */
+          const rightsPending = summarizePending(pending);
+          if (rightsPending !== undefined) {
+            retrievalContext = { ...retrievalContext, rightsPending };
+          }
           if (rightsExcluded !== undefined) {
             this.logger.warn(
               `ask rights exclusion count=${rightsExcluded.count} reasons=${JSON.stringify(rightsExcluded.reasons)} sources=${rightsExcluded.sourceIds.join(',')}`,

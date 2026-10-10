@@ -115,6 +115,9 @@ function searchStep({ outcome, unreached }: Facts): SearchStep {
       return { kind: 'SEARCH', status: 'completed', found: 'EVIDENCE' };
     case 'COMPLETED_NO_MATCH':
       return { kind: 'SEARCH', status: 'completed', found: 'NO_MATCH' };
+    /* MASTER CTO P0 RIGHTS CONTAINMENT R1.1 — found, but every item withheld for rights: no "found" claim */
+    case 'RIGHTS_WITHHELD':
+      return { kind: 'SEARCH', status: 'completed' };
     case 'ALL_FILTERED':
       return { kind: 'SEARCH', status: 'completed', found: 'FILTERED' };
     case 'PARTIAL':

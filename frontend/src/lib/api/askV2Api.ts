@@ -145,6 +145,7 @@ export type AskResearchOutcome =
   | 'MATCHED'
   | 'RETAINED_ONLY'
   | 'COMPLETED_NO_MATCH'
+  | 'RIGHTS_WITHHELD'
   | 'ALL_FILTERED'
   | 'PARTIAL'
   | 'PARTIAL_NO_MATCH'

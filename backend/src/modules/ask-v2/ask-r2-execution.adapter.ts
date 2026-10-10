@@ -199,6 +199,9 @@ const RECENT_REPORTING_LIMIT = 5;
 const COMPANION_CANDIDATE_POOL = 30;
 const RECENT_REPORTING_DAYS = 14;
 const RECENT_REPORTING_DEADLINE_MS = 2500;
+/* MASTER CTO P0 RIGHTS CONTAINMENT R1.1 — the bounded check before an earlier sourced answer is reused */
+const PRIOR_WORK_RIGHTS_MAX_REFS = 20;
+const PRIOR_WORK_RIGHTS_DEADLINE_MS = 1500;
 /** A publication time this far ahead of the server clock is tolerated (provider clock skew). */
 const RECENT_REPORTING_CLOCK_SKEW_MS = 5 * 60 * 1000;
 
@@ -2425,6 +2428,38 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     return text;
   }
 
+  /**
+   * MASTER CTO P0 RIGHTS CONTAINMENT R1.1 — may an earlier answer's points be handed to the model
+   * again? Model-reasoning answers carry no source content (yes). A SOURCED answer only when every
+   * evidence reference still resolves to an article whose source is usable as AI input today; no
+   * references, too many to check, an unresolvable one, a missing store or a timeout → no (fails
+   * closed). The earlier answer itself stays stored and visible, unchanged.
+   */
+  private async priorWorkRightsCleared(artifact: {
+    readonly provenance?: string;
+    readonly evidenceRefs?: readonly string[];
+  }): Promise<boolean> {
+    if (artifact.provenance !== 'SOURCED_REPORTING') return true;
+    const refs = artifact.evidenceRefs ?? [];
+    if (refs.length === 0 || refs.length > PRIOR_WORK_RIGHTS_MAX_REFS || this.news === undefined) return false;
+    try {
+      const found = await withDeadline(
+        Promise.all(refs.map((id) => this.news!.findArticleById(id))),
+        PRIOR_WORK_RIGHTS_DEADLINE_MS,
+        'ask-prior-work-rights',
+      );
+      if (found.some((a) => a === null)) return false;
+      const { excluded } = partitionByRights(found as NonNullable<(typeof found)[number]>[], 'AI_INPUT');
+      if (excluded.length > 0) {
+        this.logger.warn(`ask prior work withheld: rights exclusion count=${excluded.length}`);
+        return false;
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   private async executeBackground(
     request: Readonly<AskRequest>,
     plan: Readonly<AskPlan>,
@@ -2444,8 +2479,13 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     const ceiling = completionCeilingFor(route.job);
     const horizon = route.job.temporal.find((t) => t.role === 'PLAN_HORIZON')?.days;
     /* R4 ALPHA R-3 — the earlier work reaches the model only when the turn refers to it */
+    /* MASTER CTO P0 RIGHTS CONTAINMENT R1.1 — an earlier SOURCED answer's points derive from its
+       sources: they reach the model again only when every one of those sources is usable as AI
+       input today (fails closed when the sources cannot be established). */
     const usesPriorWork =
-      request.priorArtifact !== undefined && route.job.discourseReference === 'PRIOR_WORK';
+      request.priorArtifact !== undefined &&
+      route.job.discourseReference === 'PRIOR_WORK' &&
+      (await this.priorWorkRightsCleared(request.priorArtifact));
     /*
       R4 ALPHA SMOKE R2 (CTO B) — a claim re-check of an earlier answer that was NOT sourced
       reporting ("Is it still true now?" after reasoning) is re-examined by reasoning only (R-5):
