@@ -4,7 +4,7 @@ import { askRequestContext } from './ask-request-context';
 import type { AskRequest } from './ask-compute.contract';
 import { conversationOf } from './ask-v2.service';
 import { readConversationalTurn } from './conversation/conversation-state';
-import { validateStoredArtifact, type PriorArtifact } from './conversation/conversation-artifact';
+import { incompleteTurnArtifact, validateStoredArtifact, type PriorArtifact } from './conversation/conversation-artifact';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -396,6 +396,26 @@ describe('ASK FINANCE INTEGRITY R1 — APR explanation (op b3924ff0)', () => {
   it('C3 asked with no earlier loan is NOT computed (nothing assumed) and routes as before', async () => {
     const t = await conversation().ask(C3, 'RATE_LIMITED');
     expect(t.payload.answer.state).not.toBe('COMPUTED_RESULT');
+  });
+
+  /*
+    ASK FINANCIAL CONTINUITY P0 (doc 24) — a loan schedule change is completed ONLY from the loan the
+    service selected. With no selection (none consistent, or ambiguous), an earlier record's question
+    is never used instead: quote, execute and replay must agree on the one loan.
+  */
+  it('C3 with no service-selected loan is never completed from an earlier record question', async () => {
+    const { adapter, analysis, background } = harness(() => 'RATE_LIMITED');
+    const record = incompleteTurnArtifact({ question: C2, planScope: undefined, askedAt: new Date('2026-10-10T11:06:00Z') });
+    expect(record?.scope?.question).toBe(C2);
+    const request = { question: C3, language: 'en', intent: 'ask', priorArtifact: { ...record!, sourceOperationId: 'op-earlier' } } as AskRequest;
+    const payload = await askRequestContext.run({ accountId: 'user-1', ipScope: 'ip:v4:203.0.113.7' } as never, async () => {
+      const plan = await adapter.prepare(request);
+      return JSON.parse((await adapter.execute(request, plan, 'op-c3')).payloadJson);
+    });
+    expect(payload.answer).toMatchObject({ state: 'CLARIFICATION_REQUIRED', basis: 'COMPUTATION_INPUTS_MISSING' });
+    expect(payload.computation).toBeUndefined();
+    expect(analysis).toHaveLength(0);
+    expect(background).toHaveLength(0);
   });
 
   it('a non-financial explanation sends a byte-identical call (as fc00e98)', async () => {
