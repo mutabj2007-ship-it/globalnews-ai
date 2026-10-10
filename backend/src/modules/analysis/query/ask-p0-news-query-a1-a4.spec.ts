@@ -21,7 +21,11 @@ import {
 import {
   WITHHELD_QUERY,
   buildSentQueryTrace,
+  decideFallback,
+  deriveRetrievalOutcome,
+  primaryCompletedEmpty,
   recordDispatched,
+  recordLane,
   recordSkipped,
   sentQueryVariants,
 } from './news-sent-query-trace.util';
@@ -114,11 +118,19 @@ describe('A1 · the queries that already worked are byte-identical', () => {
     expect(sentFor("Kenya's economy")).toBe('Kenya s economy');
   });
 
-  it('is structurally incapable of touching a short query', () => {
-    const r = reduceNewsQueryForProvider('Erik Prince');
-
-    expect(r.outcome).toBe('SHORT_UNCHANGED');
-    expect(r.dropped).toEqual([]);
+  it('leaves an unframed query alone, whatever its length', () => {
+    /*
+     * R2 CORRECTION. R1 triggered on LENGTH, which is why
+     * "The demand for labour in Quarter 2 2026" — eight terms, no framing —
+     * was cut to "demand labour Quarter 2" and lost the year. The trigger is
+     * now the presence of a request frame to remove.
+     */
+    expect(reduceNewsQueryForProvider('Erik Prince').outcome).toBe('NO_FRAME_UNCHANGED');
+    expect(reduceNewsQueryForProvider('The demand for labour in Quarter 2 2026')).toEqual({
+      query: 'The demand for labour in Quarter 2 2026',
+      outcome: 'NO_FRAME_UNCHANGED',
+      dropped: [],
+    });
   });
 });
 
@@ -253,5 +265,195 @@ describe('A4 · the trace states what was sent, and only that', () => {
     const a = recordDispatched('PRIMARY', 'congo '.repeat(100), 'SENT_RESULTS');
 
     expect((a.query ?? '').length).toBeLessThanOrEqual(200);
+  });
+});
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * R2 — THE NINE PHRASINGS FROM INTAKE DOC 31
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * R1 kept "the first four terms not on its request list", which is POSITIONAL:
+ * an unlisted framing word both survived and consumed a slot, so the subject
+ * fell off the end. The wrong output for each row is recorded beside the right
+ * one so the regression cannot come back quietly.
+ */
+describe('R2 · the nine intake phrasings', () => {
+  const SUPPLY_CHAINS =
+    'What are the most significant recent economic security diplomatic social infrastructure ' +
+    'and technological developments currently reshaping global supply chains, and how are ' +
+    'disruptions influencing international trade relationships and long-term geopolitical ' +
+    'stability, considering shifting alliances, emerging regulatory frameworks, and evolving ' +
+    'multilateral cooperation efforts?';
+
+  it.each([
+    ['careful sourced global semiconductor', 'Please give a careful, sourced overview of the global semiconductor export controls', 'global semiconductor export controls'],
+    ['most important Sudan ceasefire', 'Can you summarize, with links, the most important Sudan ceasefire negotiations?', 'Sudan ceasefire negotiations'],
+    ['like detailed well sourced European', 'I would like a detailed, well sourced briefing on European Central Bank interest rate decisions', 'European Central Bank interest rate decisions'],
+    ['Using only reliable Ethiopia', 'Using only reliable sources, what are the Ethiopia Eritrea border tensions?', 'Ethiopia Eritrea border tensions'],
+    ['short neutral Boeing 737', 'Give me a short, neutral summary of the Boeing 737 MAX production problems', 'Boeing 737 MAX production problems'],
+    ['most cholera outbreaks Malawi', 'Show the most verified reports on cholera outbreaks in Malawi', 'cholera outbreaks Malawi'],
+    ['clearly citing Taiwan Strait', 'Explain clearly, citing sources, the Taiwan Strait military tensions', 'Taiwan Strait military tensions'],
+  ])('was "%s" — now sends the subject', (_wrong, question, expected) => {
+    expect(sentFor(question)).toBe(expected);
+  });
+
+  it('keeps the named entity and the model designator together', () => {
+    const sent = sentFor('Give me a short, neutral summary of the Boeing 737 MAX production problems') ?? '';
+
+    expect(sent).toContain('Boeing');
+    expect(sent).toContain('737');
+    expect(sent).toContain('MAX');
+  });
+
+  it('a 50-word argument has no subject, so it is NOT reduced', () => {
+    /*
+     * R1 sent "most significant economic security" for a question about SUPPLY
+     * CHAINS. Two dozen content nouns and no named entity leave nothing to
+     * select deterministically, and both a parser and a model rewrite are
+     * forbidden — so the reader's own words go out, which is also what the
+     * baseline did and what the existing expectation requires.
+     */
+    const r = reduceNewsQueryForProvider(deriveGenericNewsQuery(SUPPLY_CHAINS));
+
+    expect(r.outcome).toBe('NOT_SAFELY_REDUCIBLE');
+    expect(sentFor(SUPPLY_CHAINS)).toContain('supply chains');
+  });
+
+  it('PRESERVES AN EXPLICIT YEAR — the R1 defect the rights test caught', () => {
+    /* R1 sent "demand labour Quarter 2" and dropped 2026 entirely. */
+    expect(sentFor('The demand for labour in Quarter 2 2026')).toBe(
+      'The demand for labour in Quarter 2 2026',
+    );
+    expect(sentFor('Please give a verified summary of the demand for labour in Quarter 2 2026')).toContain('2026');
+  });
+
+  it('drops a bare number orphaned by a window unit', () => {
+    /* "…in the last 30 days" lost "days" and kept "30"; 30 is not a subject. */
+    expect(sentFor('Give me the latest on Tanzania Rwanda bilateral trade in the last 30 days')).toBe(
+      'Tanzania Rwanda bilateral trade',
+    );
+  });
+
+  it('never treats a sentence-initial capital as a named entity', () => {
+    /* "Using" began the sentence; capitalisation there is orthography, not evidence. */
+    expect(sentFor('Using only reliable sources, what are the Ethiopia Eritrea border tensions?')).not.toContain('Using');
+  });
+});
+
+describe('R2 · the fallback ruling', () => {
+  const base = {
+    primarySent: 'eastern DR Congo',
+    primaryOutcome: 'SENT_ZERO_RESULTS' as const,
+    primaryCandidateCount: 0,
+    fallbackQuery: 'DR Congo Kivu',
+    budgetRemaining: 1,
+  };
+
+  it('permits a second search only after a completed, empty primary', () => {
+    expect(decideFallback(base)).toBe('FALLBACK_PERMITTED');
+  });
+
+  it.each([
+    ['SENT_PROVIDER_FAILED' as const],
+    ['SKIPPED_PROVIDER_INELIGIBLE' as const],
+    ['SKIPPED_NO_QUERY' as const],
+  ])('refuses after %s — a failure is never a reason to search again', (primaryOutcome) => {
+    expect(decideFallback({ ...base, primaryOutcome })).toBe(
+      'FALLBACK_REFUSED_PRIMARY_DID_NOT_COMPLETE',
+    );
+  });
+
+  it('refuses when the primary already found candidates', () => {
+    expect(decideFallback({ ...base, primaryOutcome: 'SENT_RESULTS', primaryCandidateCount: 3 })).toBe(
+      'FALLBACK_REFUSED_PRIMARY_HAD_CANDIDATES',
+    );
+  });
+
+  it('refuses to send the same query twice', () => {
+    expect(decideFallback({ ...base, fallbackQuery: 'eastern DR Congo' })).toBe(
+      'FALLBACK_REFUSED_IDENTICAL_TO_PRIMARY',
+    );
+  });
+
+  it('refuses with no distinct fallback, and when the budget is spent', () => {
+    expect(decideFallback({ ...base, fallbackQuery: undefined })).toBe('FALLBACK_REFUSED_NO_QUERY');
+    expect(decideFallback({ ...base, budgetRemaining: 0 })).toBe('FALLBACK_REFUSED_BUDGET_SPENT');
+  });
+
+  it('the completion check runs FIRST, so no combination smuggles a retry past it', () => {
+    expect(
+      decideFallback({
+        ...base,
+        primaryOutcome: 'SENT_PROVIDER_FAILED',
+        primaryCandidateCount: 0,
+        fallbackQuery: 'something distinct',
+        budgetRemaining: 99,
+      }),
+    ).toBe('FALLBACK_REFUSED_PRIMARY_DID_NOT_COMPLETE');
+  });
+});
+
+describe('R2 · per-lane outcomes (intake §6)', () => {
+  it('GNews zero plus a GDELT timeout is PARTIAL, not a GNews failure', () => {
+    /* Exactly live op 3a3eb693: succeeded ["gnews"], unavailable [gdelt-doc timeout]. */
+    const lanes = [
+      recordLane('gnews', 'LANE_RETURNED_ZERO', 0),
+      recordLane('gdelt-doc', 'LANE_TIMED_OUT', null, 'timeout'),
+    ];
+
+    expect(deriveRetrievalOutcome(lanes)).toBe('RETRIEVAL_PARTIAL_SOME_LANES_UNAVAILABLE');
+    expect(lanes[0].outcome).toBe('LANE_RETURNED_ZERO');
+    expect(lanes[0].candidates).toBe(0);
+    expect(lanes[1].candidates).toBeNull();
+    expect(lanes[1].reason).toBe('timeout');
+  });
+
+  it('a genuine all-lanes zero is distinguishable from that', () => {
+    expect(
+      deriveRetrievalOutcome([
+        recordLane('gnews', 'LANE_RETURNED_ZERO', 0),
+        recordLane('gdelt-doc', 'LANE_RETURNED_ZERO', 0),
+      ]),
+    ).toBe('RETRIEVAL_ZERO_ALL_LANES_ANSWERED');
+  });
+
+  it('no lane answering is not a zero either', () => {
+    expect(
+      deriveRetrievalOutcome([
+        recordLane('gnews', 'LANE_RATE_LIMITED', null, '429'),
+        recordLane('gdelt-doc', 'LANE_TIMED_OUT', null, 'timeout'),
+      ]),
+    ).toBe('RETRIEVAL_NO_LANE_ANSWERED');
+  });
+
+  it('candidates anywhere means candidates', () => {
+    expect(
+      deriveRetrievalOutcome([
+        recordLane('gnews', 'LANE_RETURNED_CANDIDATES', 4),
+        recordLane('gdelt-doc', 'LANE_TIMED_OUT', null, 'timeout'),
+      ]),
+    ).toBe('RETRIEVAL_CANDIDATES');
+  });
+
+  it('a partial primary does NOT satisfy the fallback ruling', () => {
+    /* A second query on the strength of someone else's timeout is the thing forbidden. */
+    expect(
+      primaryCompletedEmpty([
+        recordLane('gnews', 'LANE_RETURNED_ZERO', 0),
+        recordLane('gdelt-doc', 'LANE_TIMED_OUT', null, 'timeout'),
+      ]),
+    ).toBe(false);
+    expect(
+      primaryCompletedEmpty([
+        recordLane('gnews', 'LANE_RETURNED_ZERO', 0),
+        recordLane('gdelt-doc', 'LANE_RETURNED_ZERO', 0),
+      ]),
+    ).toBe(true);
+  });
+
+  it('a lane reason is sanitized like any stored string', () => {
+    expect(recordLane('gnews', 'LANE_FAILED', null, 'apikey=abcdefghijklmnopqrstuvwxyz012345').reason).toBe(
+      WITHHELD_QUERY,
+    );
   });
 });

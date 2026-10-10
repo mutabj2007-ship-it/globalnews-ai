@@ -171,3 +171,201 @@ export function sentQueryVariants(attempts: readonly SentQueryAttempt[]): readon
       .map((a) => a.query as string),
   );
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * THE FALLBACK DECISION — R2 RULING, AS ONE FUNCTION
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * "A second search is permitted only when the primary provider actually
+ *  completed successfully but yielded no relevant candidates; a distinct,
+ *  meaningful, provider-safe fallback exists; and the budget permits it. Never
+ *  issue another search because the provider was rate-limited, timed out, was
+ *  unavailable or refused the request. If primary and fallback are identical,
+ *  do not send the same query twice."
+ *
+ * Expressed as a decision rather than prose so the condition is checked in one
+ * place and the reason is recorded either way. The caller still owns the
+ * dispatch; this owns the ruling.
+ */
+export const FALLBACK_DECISIONS = [
+  'FALLBACK_PERMITTED',
+  /** The primary did not complete — a failure is never a reason to search again. */
+  'FALLBACK_REFUSED_PRIMARY_DID_NOT_COMPLETE',
+  /** The primary found candidates, so there is nothing to fall back from. */
+  'FALLBACK_REFUSED_PRIMARY_HAD_CANDIDATES',
+  /** No distinct provider-safe fallback string exists. */
+  'FALLBACK_REFUSED_NO_QUERY',
+  /** The fallback equals the primary; sending it twice buys nothing. */
+  'FALLBACK_REFUSED_IDENTICAL_TO_PRIMARY',
+  /** The provider-call budget is already spent. */
+  'FALLBACK_REFUSED_BUDGET_SPENT',
+] as const;
+export type FallbackDecision = (typeof FALLBACK_DECISIONS)[number];
+
+export interface FallbackDecisionInput {
+  /** The exact string the primary attempt sent, or undefined if none was sent. */
+  readonly primarySent: string | undefined;
+  readonly primaryOutcome: SentQueryOutcome;
+  readonly primaryCandidateCount: number;
+  /** The candidate fallback string, or undefined when none could be derived. */
+  readonly fallbackQuery: string | undefined;
+  readonly budgetRemaining: number;
+}
+
+/**
+ * Decide whether the bounded second search may go out.
+ *
+ * ORDER IS DELIBERATE: the completion check runs FIRST, so a rate-limited or
+ * timed-out primary can never reach the later conditions. That is the one the
+ * ruling is emphatic about, and putting it first means no combination of the
+ * others can smuggle a retry past it.
+ */
+export function decideFallback(input: FallbackDecisionInput): FallbackDecision {
+  if (!outcomeMeansDispatched(input.primaryOutcome)) {
+    return 'FALLBACK_REFUSED_PRIMARY_DID_NOT_COMPLETE';
+  }
+  if (input.primaryOutcome === 'SENT_PROVIDER_FAILED') {
+    return 'FALLBACK_REFUSED_PRIMARY_DID_NOT_COMPLETE';
+  }
+  if (input.primaryCandidateCount > 0) return 'FALLBACK_REFUSED_PRIMARY_HAD_CANDIDATES';
+  if (input.fallbackQuery === undefined || input.fallbackQuery.trim().length === 0) {
+    return 'FALLBACK_REFUSED_NO_QUERY';
+  }
+  if (input.primarySent !== undefined && input.fallbackQuery === input.primarySent) {
+    return 'FALLBACK_REFUSED_IDENTICAL_TO_PRIMARY';
+  }
+  if (input.budgetRemaining <= 0) return 'FALLBACK_REFUSED_BUDGET_SPENT';
+
+  return 'FALLBACK_PERMITTED';
+}
+
+/** The skip reason to record for a refused fallback. */
+export function skipOutcomeForRefusedFallback(decision: FallbackDecision): SentQueryOutcome {
+  return decision === 'FALLBACK_REFUSED_NO_QUERY' ||
+    decision === 'FALLBACK_REFUSED_IDENTICAL_TO_PRIMARY'
+    ? 'SKIPPED_NO_QUERY'
+    : 'SKIPPED_PROVIDER_INELIGIBLE';
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * PER-LANE OUTCOMES — R2, INTAKE §6
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * THE CONFLATION, MEASURED ON A LIVE OPERATION. `3a3eb693` stored:
+ *
+ *   lanes.attempted  = ["gnews", "gdelt-doc"]
+ *   lanes.succeeded  = ["gnews"]
+ *   lanes.unavailable= [{ "gdelt-doc", "timeout" }]
+ *   outcome          = PROVIDER_FAILED
+ *   candidatesSeen   = 0
+ *
+ * Both of the earlier readings were partly right and both were misleading.
+ * GNews ANSWERED, with nothing. GDELT TIMED OUT. The aggregate was stamped
+ * `PROVIDER_FAILED` because one lane failed — so a GNews zero was reported as
+ * a GNews failure, and A1's query defect was hidden behind someone else's
+ * timeout.
+ *
+ * R1's trace reproduced this exactly: one attempt, the AGGREGATE outcome, and
+ * the lane names joined into a single string (`gnews+gdelt-doc`). That is the
+ * same loss of information in a new field, which is worse than not adding the
+ * field — it looks like a fix.
+ *
+ * ── THE RULE ────────────────────────────────────────────────────────────────
+ *
+ * An attempt records ONE ENTRY PER LANE, each with its own outcome and its own
+ * failure reason. The aggregate is DERIVED and never replaces the per-lane
+ * facts, so "which lane answered with what" is always recoverable.
+ */
+
+export const LANE_OUTCOMES = [
+  'LANE_RETURNED_CANDIDATES',
+  /** The lane answered. Zero is an answer, not a failure. */
+  'LANE_RETURNED_ZERO',
+  'LANE_FAILED',
+  'LANE_RATE_LIMITED',
+  'LANE_TIMED_OUT',
+  'LANE_UNAVAILABLE',
+  'LANE_SKIPPED',
+] as const;
+export type LaneOutcome = (typeof LANE_OUTCOMES)[number];
+
+export interface LaneResult {
+  readonly lane: string;
+  readonly outcome: LaneOutcome;
+  /** Candidates this lane returned. Null when it did not answer. */
+  readonly candidates: number | null;
+  /** The lane's own reason, e.g. 'timeout'. Never a secret, never a payload. */
+  readonly reason: string | null;
+}
+
+const LANE_ANSWERED: readonly LaneOutcome[] = ['LANE_RETURNED_CANDIDATES', 'LANE_RETURNED_ZERO'];
+
+export function laneAnswered(outcome: LaneOutcome): boolean {
+  return LANE_ANSWERED.includes(outcome);
+}
+
+export function recordLane(
+  lane: string,
+  outcome: LaneOutcome,
+  candidates: number | null = null,
+  reason: string | null = null,
+): LaneResult {
+  return Object.freeze({
+    lane,
+    outcome,
+    candidates: laneAnswered(outcome) ? (candidates ?? 0) : null,
+    reason: reason === null ? null : sanitizeSentQuery(reason),
+  });
+}
+
+export const RETRIEVAL_OUTCOMES = [
+  'RETRIEVAL_CANDIDATES',
+  /** EVERY lane that ran answered, and the total was zero. A real answer. */
+  'RETRIEVAL_ZERO_ALL_LANES_ANSWERED',
+  /**
+   * Some lanes answered and some did not. Coverage is PARTIAL — and this is
+   * the state live op `3a3eb693` was actually in.
+   */
+  'RETRIEVAL_PARTIAL_SOME_LANES_UNAVAILABLE',
+  /** No lane answered at all. */
+  'RETRIEVAL_NO_LANE_ANSWERED',
+  'RETRIEVAL_NOT_ATTEMPTED',
+] as const;
+export type RetrievalOutcome = (typeof RETRIEVAL_OUTCOMES)[number];
+
+/**
+ * Derive the aggregate from the per-lane facts.
+ *
+ * `RETRIEVAL_ZERO_ALL_LANES_ANSWERED` REQUIRES THAT EVERY LANE ANSWERED, which
+ * is the distinction the old aggregate could not make: with GNews at zero and
+ * GDELT timed out the answer is PARTIAL, not "no news" and not "provider
+ * failed". A reader owed an honest coverage statement needs that difference,
+ * and so does whoever is deciding whether A1 is still the open defect.
+ */
+export function deriveRetrievalOutcome(lanes: readonly LaneResult[]): RetrievalOutcome {
+  if (lanes.length === 0) return 'RETRIEVAL_NOT_ATTEMPTED';
+
+  const ran = lanes.filter((l) => l.outcome !== 'LANE_SKIPPED');
+
+  if (ran.length === 0) return 'RETRIEVAL_NOT_ATTEMPTED';
+
+  const answered = ran.filter((l) => laneAnswered(l.outcome));
+
+  if (answered.length === 0) return 'RETRIEVAL_NO_LANE_ANSWERED';
+  if (answered.some((l) => (l.candidates ?? 0) > 0)) return 'RETRIEVAL_CANDIDATES';
+  if (answered.length < ran.length) return 'RETRIEVAL_PARTIAL_SOME_LANES_UNAVAILABLE';
+
+  return 'RETRIEVAL_ZERO_ALL_LANES_ANSWERED';
+}
+
+/**
+ * Was the PRIMARY genuinely complete for the purpose of the fallback ruling?
+ *
+ * A fallback is permitted only after a primary that COMPLETED and found
+ * nothing. With a lane still unavailable the retrieval is partial, not a
+ * completed empty search, so a second query would be issued on the strength of
+ * someone else's timeout — which the ruling forbids.
+ */
+export function primaryCompletedEmpty(lanes: readonly LaneResult[]): boolean {
+  return deriveRetrievalOutcome(lanes) === 'RETRIEVAL_ZERO_ALL_LANES_ANSWERED';
+}

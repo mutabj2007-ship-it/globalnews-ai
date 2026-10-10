@@ -86,18 +86,27 @@
  * exactly where they were decided before.
  */
 
-/** Above this many terms a query is treated as a long question. */
-export const LONG_QUERY_TERM_THRESHOLD = 6;
-
 /**
  * The most content terms a provider query may carry.
  *
- * FOUR, BECAUSE THE PROVIDER ANDs THEM. Three is the measured shape of the
- * answerable queries in the record ("eastern DR Congo"); four leaves room for
- * a place plus a topic, or two named parties plus a relation, without letting
- * a conjunction grow back to the length that failed.
+ * SIX. The failing baseline query was 27 terms; six terms of pure subject is
+ * far more discriminating and still leaves room for a multi-word institution
+ * plus its topic ("European Central Bank interest rate decisions"). R1 used
+ * four, which truncated exactly that case.
  */
-export const MAX_PROVIDER_QUERY_TERMS = 4;
+export const MAX_PROVIDER_QUERY_TERMS = 6;
+
+/**
+ * Above this many surviving content terms, NO SUBJECT DOMINATES and reduction
+ * refuses rather than choosing.
+ *
+ * Twice the cap. Measured against the real corpus: the frozen DRC question
+ * leaves 3 survivors, Kibirizi 2, the European Central Bank phrasing 6 — and
+ * the 50-word supply-chain question leaves 24, which is an essay rather than a
+ * subject. The line is drawn where "select the top N" stops being selection
+ * and becomes an arbitrary slice.
+ */
+export const NO_DOMINANT_SUBJECT_CEILING = MAX_PROVIDER_QUERY_TERMS * 2;
 
 /**
  * Request, format, verification and temporal words — a CLOSED list, and every
@@ -112,6 +121,29 @@ export const REQUEST_FRAME_TERMS: ReadonlySet<string> = new Set([
   /* asking */
   'give', 'show', 'tell', 'provide', 'list', 'explain', 'please', 'want', 'need',
   'any', 'some', 'all', 'more', 'also', 'including', 'include',
+  'summarize', 'summarise', 'describe', 'outline', 'compare', 'discuss',
+  'using', 'use', 'only', 'just', 'kindly', 'me', 'us',
+  /*
+   * QUALITY AND MANNER WORDS — every one measured in a failing phrasing at
+   * R1, where it survived and pushed the subject out of the term cap:
+   * "careful sourced global semiconductor", "like detailed well sourced
+   * European", "Using only reliable Ethiopia", "short neutral Boeing 737",
+   * "clearly citing Taiwan Strait", "most important Sudan ceasefire".
+   */
+  'careful', 'carefully', 'reliable', 'reliably', 'trustworthy', 'credible',
+  'detailed', 'detailed-sourced', 'sourced', 'well', 'thorough', 'thoroughly',
+  'neutral', 'neutrally', 'objective', 'unbiased', 'balanced', 'fair',
+  'short', 'shorter', 'concise', 'clearly', 'clear', 'simple', 'simply',
+  'plain', 'citing', 'comprehensive', 'accurate', 'accurately',
+  'important', 'significant', 'significantly', 'main', 'key', 'major',
+  /*
+   * QUANTIFIERS AND PREFERENCE VERBS, measured surviving the first correction:
+   * "most Sudan ceasefire negotiations", "most cholera outbreaks Malawi" and
+   * "like European Central Bank interest rate" (from "I would like").
+   */
+  'most', 'least', 'many', 'much', 'few', 'several', 'various', 'other',
+  'like', 'prefer', 'rather', 'possible', 'available',
+  'relevant', 'useful', 'good', 'best', 'top',
   /* recency as a request, not as a subject */
   'latest', 'recent', 'recently', 'new', 'newest', 'current', 'currently',
   'update', 'updates', 'updated', 'happening', 'happened', 'happens',
@@ -168,13 +200,31 @@ const REPORTING_NOUNS: ReadonlySet<string> = new Set([
 ]);
 
 export const QUERY_REDUCTION_OUTCOMES = [
-  /** Below the threshold: returned byte-identical, nothing inspected. */
-  'SHORT_UNCHANGED',
-  /** Reduced to a bounded set of content terms. */
+  /**
+   * NO REQUEST FRAME WAS FOUND, so there was nothing to remove and the query
+   * is returned VERBATIM — stopwords, articles and all.
+   *
+   * THIS REPLACES R1's LENGTH THRESHOLD, and the difference is the whole
+   * correction. R1 reduced anything over six terms, so
+   * "The demand for labour in Quarter 2 2026" — a question with no request
+   * framing at all — was cut to "demand labour Quarter 2" and LOST THE YEAR.
+   * Length was never the signal. The presence of framing to remove is.
+   */
+  'NO_FRAME_UNCHANGED',
+  /** Framing was removed and a bounded subject was selected. */
   'REDUCED',
   /**
-   * Long, but no content term survived. The input is returned UNCHANGED and
-   * the caller keeps its previous behaviour — §2G's conservative failure.
+   * Long, framed, but NO SAFE SUBJECT could be identified — either nothing
+   * survived, or so much survived that no subject dominates. The input is
+   * returned UNCHANGED.
+   *
+   * The second case is the one R1 got wrong by force. A 50-word multi-clause
+   * analytical question leaves two dozen content nouns and no named entity;
+   * picking six of them in reading order produced
+   * "most significant economic security" for a question about SUPPLY CHAINS.
+   * There is no deterministic way to choose among them without a parser or a
+   * model rewrite, and both are forbidden — so the honest answer is to send
+   * what the reader wrote rather than a confident-looking substitute.
    */
   'NOT_SAFELY_REDUCIBLE',
 ] as const;
@@ -188,84 +238,184 @@ export interface QueryReduction {
 }
 
 const fold = (term: string): string => term.toLowerCase().replace(/[^\p{L}\p{N}'-]+/gu, '');
-const startsCapitalised = (term: string): boolean => /^\p{Lu}/u.test(term);
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * EVIDENCE CLASSES — WHY SELECTION REPLACED POSITION
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * R1 kept "the first four terms not on the request list". That is POSITIONAL,
+ * and it failed in the one way a positional rule always fails: a framing word
+ * the list did not happen to contain BOTH survived AND occupied a slot, so the
+ * subject fell off the end. Measured:
+ *
+ *   "Using only reliable sources … Ethiopia Eritrea border tensions"
+ *        -> "Using only reliable Ethiopia"
+ *   "Give me a short, neutral summary … Boeing 737 MAX production problems"
+ *        -> "short neutral Boeing 737"
+ *
+ * Extending the list would have fixed those seven phrasings and failed on the
+ * eighth. The structural answer is to stop ranking by position and rank by
+ * EVIDENCE OF BEING THE SUBJECT, so that an unlisted framing word loses to a
+ * named entity or a year instead of displacing it.
+ */
+const enum SubjectEvidence {
+  /** A year, a period designator, or a token carrying a digit. Never dropped. */
+  Anchor = 0,
+  /** Proper-noun shaped: capitalised mid-sentence, or an all-caps acronym. */
+  Named = 1,
+  /** An ordinary content word. Fills the remaining room, in reader order. */
+  Content = 2,
+}
+
+const YEAR = /^(?:19|20)\d{2}$/;
+const PERIOD = /^(?:q[1-4]|h[12])$/i;
+const HAS_DIGIT = /\d/;
 
 /**
- * Reduce a long derived query to a bounded provider query.
+ * Units that make a preceding bare number a WINDOW rather than a subject.
+ *
+ * MEASURED: "Tanzania Rwanda bilateral trade in the last 30 days" dropped
+ * "days" as a window word and kept "30" as a numeric anchor, sending
+ * "Tanzania Rwanda bilateral trade 30". A bare 30 is not an anchor; it is the
+ * orphan of a window. The test is STRUCTURAL — the number is immediately
+ * followed by a unit — so no list of numbers is needed and "737 MAX" and
+ * "Quarter 2 2026" are untouched.
+ */
+const TEMPORAL_UNITS: ReadonlySet<string> = new Set([
+  'day', 'days', 'week', 'weeks', 'month', 'months', 'year', 'years',
+  'hour', 'hours', 'minute', 'minutes',
+]);
+
+function isWindowOrphan(terms: readonly string[], index: number): boolean {
+  const self = fold(terms[index] ?? '');
+
+  if (!/^\d{1,3}$/.test(self) || YEAR.test(self)) return false;
+
+  return TEMPORAL_UNITS.has(fold(terms[index + 1] ?? ''));
+}
+
+/**
+ * Classify one term.
+ *
+ * `isFirst` MATTERS AND IS NOT A DETAIL. The first word of a question is
+ * capitalised by orthography, not because it names anything — "Using only
+ * reliable…" began with a capital U, and treating that as proper-noun evidence
+ * is precisely how "Using" outranked "Ethiopia". So sentence-initial
+ * capitalisation is never evidence; an all-caps acronym still is.
+ */
+function classify(term: string, isFirst: boolean): SubjectEvidence {
+  const folded = fold(term);
+
+  if (YEAR.test(folded) || PERIOD.test(folded) || HAS_DIGIT.test(folded)) {
+    return SubjectEvidence.Anchor;
+  }
+
+  const isAcronym = term.length >= 2 && term === term.toUpperCase() && /\p{L}/u.test(term);
+
+  if (isAcronym) return SubjectEvidence.Named;
+  if (!isFirst && /^\p{Lu}/u.test(term)) return SubjectEvidence.Named;
+
+  return SubjectEvidence.Content;
+}
+
+/**
+ * Is there a request frame here at all?
+ *
+ * THE TRIGGER, AND THE CORRECTION TO R1. Reduction now happens only when
+ * framing is actually present to remove. "The demand for labour in Quarter 2
+ * 2026" contains none, so it is returned verbatim and keeps its year — R1 cut
+ * it to "demand labour Quarter 2" purely because it was over a length
+ * threshold.
+ */
+function hasRequestFrame(terms: readonly string[]): boolean {
+  return terms.some((t) => REQUEST_FRAME_TERMS.has(fold(t)));
+}
+
+/**
+ * Reduce a framed question to a bounded provider query.
  *
  * PURE AND DETERMINISTIC: same input, same output, no clock, no locale, no
- * network, no model. The same question always produces the same provider
- * string, which is what makes a live failure attributable.
+ * network, NO MODEL REWRITING. The same question always produces the same
+ * provider string, which is what makes a live failure attributable.
  */
 export function reduceNewsQueryForProvider(
   derivedQuery: string,
-  options: { readonly ignoreLengthThreshold?: boolean } = {},
+  options: { readonly treatAsFramed?: boolean } = {},
 ): QueryReduction {
   const terms = derivedQuery.split(/\s+/).filter((t) => t.length > 0);
 
+  if (terms.length === 0) {
+    return { query: derivedQuery, outcome: 'NO_FRAME_UNCHANGED', dropped: [] };
+  }
+
   /*
-   * THE THRESHOLD PROTECTS A READER'S SHORT QUERY, NOT A DERIVED ONE.
-   *
-   * `ignoreLengthThreshold` is set only by the FALLBACK composite, and the
-   * distinction is measured rather than stylistic. The fallback for the
-   * Kibirizi question is "verified reports flooding Kibirizi villages" — five
-   * terms, under the threshold, so without this it was returned untouched and
-   * the SECOND attempt went out still carrying "verified", "reports" and
-   * "villages" while the primary had been reduced to "flooding Kibirizi". A
-   * fallback weaker than the primary it backs up is not a fallback.
-   *
-   * It is safe here and nowhere else: `deriveFallbackNewsQuery()` has already
-   * stripped grammar, so its output is a content set rather than a sentence,
-   * and no reader string reaches this branch.
+   * NO FRAME, NO CHANGE. `treatAsFramed` is set only by the FALLBACK
+   * composite, whose input is already a stripped content set rather than a
+   * sentence, so the framing signal is no longer visible in it.
    */
-  if (!options.ignoreLengthThreshold && terms.length <= LONG_QUERY_TERM_THRESHOLD) {
-    return { query: derivedQuery, outcome: 'SHORT_UNCHANGED', dropped: [] };
+  if (!options.treatAsFramed && !hasRequestFrame(terms)) {
+    return { query: derivedQuery, outcome: 'NO_FRAME_UNCHANGED', dropped: [] };
   }
 
   const dropped: string[] = [];
-  const kept: string[] = [];
+  const survivors: { term: string; evidence: SubjectEvidence; index: number }[] = [];
 
-  for (const term of terms) {
+  terms.forEach((term, index) => {
     const folded = fold(term);
 
-    if (folded.length === 0 || GRAMMATICAL_TERMS.has(folded) || REQUEST_FRAME_TERMS.has(folded)) {
+    if (
+      folded.length === 0 ||
+      GRAMMATICAL_TERMS.has(folded) ||
+      REQUEST_FRAME_TERMS.has(folded) ||
+      isWindowOrphan(terms, index)
+    ) {
       dropped.push(term);
-      continue;
+      return;
     }
 
-    kept.push(term);
-  }
+    survivors.push({ term, evidence: classify(term, index === 0), index });
+  });
 
   /* A reporting noun goes only if something else is left to search on. */
-  const withoutReportingNoun = kept.filter((t) => !REPORTING_NOUNS.has(fold(t)));
-  const afterReporting = withoutReportingNoun.length > 0 ? withoutReportingNoun : kept;
+  const withoutReporting = survivors.filter((s) => !REPORTING_NOUNS.has(fold(s.term)));
+  const afterReporting = withoutReporting.length > 0 ? withoutReporting : survivors;
 
-  for (const t of kept) if (!afterReporting.includes(t)) dropped.push(t);
+  for (const s of survivors) if (!afterReporting.includes(s)) dropped.push(s.term);
 
   /* A generic locality noun goes only beside a surviving NAMED place. */
-  const hasNamedPlace = afterReporting.some(
-    (t) => startsCapitalised(t) && !GENERIC_LOCALITY_TERMS.has(fold(t)),
-  );
-  const afterLocality = hasNamedPlace
-    ? afterReporting.filter((t) => !GENERIC_LOCALITY_TERMS.has(fold(t)))
+  const hasNamed = afterReporting.some((s) => s.evidence === SubjectEvidence.Named);
+  const afterLocality = hasNamed
+    ? afterReporting.filter((s) => !GENERIC_LOCALITY_TERMS.has(fold(s.term)))
     : afterReporting;
 
-  for (const t of afterReporting) if (!afterLocality.includes(t)) dropped.push(t);
+  for (const s of afterReporting) if (!afterLocality.includes(s)) dropped.push(s.term);
 
   if (afterLocality.length === 0) {
-    /*
-     * NOTHING SURVIVED. Returning the original is the conservative outcome:
-     * the caller behaves exactly as it did before this file existed, and the
-     * named outcome tells the diagnostic why.
-     */
     return { query: derivedQuery, outcome: 'NOT_SAFELY_REDUCIBLE', dropped: [] };
   }
 
-  const capped = afterLocality.slice(0, MAX_PROVIDER_QUERY_TERMS);
+  /*
+   * TOO MUCH SURVIVED: there is no subject to find, only a long argument.
+   * Returning the reader's own words is the conservative outcome the ruling
+   * requires, and it is strictly better than a confident-looking slice.
+   */
+  if (afterLocality.length > NO_DOMINANT_SUBJECT_CEILING) {
+    return { query: derivedQuery, outcome: 'NOT_SAFELY_REDUCIBLE', dropped: [] };
+  }
 
-  for (const t of afterLocality.slice(MAX_PROVIDER_QUERY_TERMS)) dropped.push(t);
+  /*
+   * SELECT by evidence, then EMIT in the reader's own order. Ranking decides
+   * WHICH terms survive the cap; it never reorders the query, because a
+   * provider matches phrases and the reader's order is the one that reads.
+   */
+  const selected = [...afterLocality]
+    .sort((a, b) => a.evidence - b.evidence || a.index - b.index)
+    .slice(0, MAX_PROVIDER_QUERY_TERMS)
+    .sort((a, b) => a.index - b.index);
 
-  return { query: capped.join(' '), outcome: 'REDUCED', dropped };
+  for (const s of afterLocality) if (!selected.includes(s)) dropped.push(s.term);
+
+  return { query: selected.map((s) => s.term).join(' '), outcome: 'REDUCED', dropped };
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -329,7 +479,7 @@ export function makeGenericProviderFallbackQuery(
     return { sent: undefined, outcome: 'NOT_SAFELY_REDUCIBLE', unreduced: undefined };
   }
 
-  const reduction = reduceNewsQueryForProvider(fallback, { ignoreLengthThreshold: true });
+  const reduction = reduceNewsQueryForProvider(fallback, { treatAsFramed: true });
 
   /*
    * A FALLBACK THAT REDUCES TO NOTHING IS NO SECOND ATTEMPT AT ALL, and saying
