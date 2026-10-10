@@ -214,9 +214,14 @@ import {
 } from '../query/news-query-reduction.util';
 import {
   buildSentQueryTrace,
+  decideFallback,
+  deriveRetrievalOutcome,
   recordDispatched,
+  recordLane,
   recordSkipped,
   sentQueryVariants,
+  skipOutcomeForRefusedFallback,
+  type LaneOutcome,
   type SentQueryAttempt,
 } from '../query/news-sent-query-trace.util';
 import { requestsDates, retrievalSubjectOf } from '../query/response-directives.util';
@@ -1643,14 +1648,42 @@ export class AnalysisService {
             : readProviderFailures(response).length > 0
               ? ('SENT_PROVIDER_FAILED' as const)
               : ('SENT_ZERO_RESULTS' as const);
-        const sentLanesOf = (response: NewsResponse): string | null => {
-          const lanes = [
-            ...new Set([
-              ...this.toRetrievalContext(response).providers,
-              ...readProviderFailures(response).map((failure) => failure.providerId),
-            ]),
+        /*
+          A4 R2 — PER-LANE status of each dispatched attempt (GNews answering with zero is never
+          reported as a GNews failure because GDELT timed out). Status is taken at search time;
+          candidate counts are filled at trace time from the FINAL admitted evidence, so the
+          derived outcome can never claim reporting that the relevance, rights or anchor gates
+          removed.
+        */
+        const genericAttemptLanes = new Map<
+          'PRIMARY' | 'FALLBACK',
+          Array<{ lane: string; outcome: LaneOutcome; reason: string | null }>
+        >();
+        const laneStatusOf = (response: NewsResponse) => {
+          const failures = readProviderFailures(response);
+          const failed = new Set(failures.map((failure) => failure.providerId));
+          return [
+            ...this.toRetrievalContext(response)
+              .providers.filter((lane) => !failed.has(lane))
+              .map((lane) => ({
+                lane,
+                outcome: (response.articles.some((a) => a.providerId === lane)
+                  ? 'LANE_RETURNED_CANDIDATES'
+                  : 'LANE_RETURNED_ZERO') as LaneOutcome,
+                reason: null,
+              })),
+            ...failures.map((failure) => ({
+              lane: failure.providerId,
+              outcome: (failure.kind === 'rate-limited'
+                ? 'LANE_RATE_LIMITED'
+                : failure.kind === 'timeout'
+                  ? 'LANE_TIMED_OUT'
+                  : failure.kind === 'unavailable'
+                    ? 'LANE_UNAVAILABLE'
+                    : 'LANE_FAILED') as LaneOutcome,
+              reason: String(failure.kind),
+            })),
           ];
-          return lanes.length === 0 ? null : lanes.join('+');
         };
         let activeCompoundPlan: CompoundRetrievalPlan | undefined;
         /* PUBLIC BETA HARDENING R1B — set only by the broad-headlines branch. */
@@ -3286,9 +3319,8 @@ export class AnalysisService {
               }
               /* A4 — the ordinary generic search records exactly what it sent and how it ended */
               if (!compoundPlan) {
-                genericAttempts.push(
-                  recordDispatched('PRIMARY', primarySent, sentOutcomeOf(searchResponse), sentLanesOf(searchResponse)),
-                );
+                genericAttempts.push(recordDispatched('PRIMARY', primarySent, sentOutcomeOf(searchResponse)));
+                genericAttemptLanes.set('PRIMARY', laneStatusOf(searchResponse));
               }
 
               // Milestone #46 — exactly ONE bounded fallback attempt, and
@@ -3445,17 +3477,35 @@ export class AnalysisService {
                   "no second attempt", so the skip contract below is unchanged.
                 */
                 const fallbackSent = makeGenericProviderFallbackQuery(genericSearchQuery).sent;
+                /*
+                  CTO FALLBACK RULING (A1 R2) — one decision, recorded either way: the primary
+                  COMPLETED with zero relevant candidates (a refusal never reaches here: see the
+                  branch above), a distinct non-empty provider-safe fallback exists, and the one
+                  bounded second call is still within budget. PROVIDER-SAFETY EDGE CLOSURE: an
+                  undefined or identical fallback is never sent.
+                */
+                const fallbackDecision = decideFallback({
+                  primarySent,
+                  primaryOutcome: sentOutcomeOf(searchResponse),
+                  primaryCandidateCount: searchResponse.articles.length,
+                  fallbackQuery: fallbackSent,
+                  budgetRemaining: 1,
+                });
                 {
-                  /*
-                   * PROVIDER-SAFETY EDGE CLOSURE — an undefined fallback means
-                   * the reduced query has no lexical content, so the bounded
-                   * second attempt is skipped rather than sent. A fallback identical to the
-                   * primary is never sent twice (A4 records it as not sent).
-                   */
-                  if (fallbackSent === undefined || fallbackSent === primarySent) {
-                    genericAttempts.push(recordSkipped('FALLBACK', 'SKIPPED_NO_QUERY'));
+                  if (fallbackDecision !== 'FALLBACK_PERMITTED') {
+                    genericAttempts.push(
+                      recordSkipped(
+                        'FALLBACK',
+                        /* G's helper returns only skip outcomes for a refused decision */
+                        skipOutcomeForRefusedFallback(fallbackDecision) as Parameters<typeof recordSkipped>[1],
+                      ),
+                    );
                   }
-                  if (fallbackSent !== undefined && fallbackSent !== primarySent) {
+                  if (
+                    fallbackDecision === 'FALLBACK_PERMITTED' &&
+                    fallbackSent !== undefined &&
+                    fallbackSent !== primarySent
+                  ) {
                     this.logger.debug(
                       'Primary generic retrieval returned zero relevant articles — ' +
                         'attempting one bounded fallback search.',
@@ -3465,9 +3515,8 @@ export class AnalysisService {
                       SEARCH_POOL_SIZE,
                       genericMode,
                     );
-                    genericAttempts.push(
-                      recordDispatched('FALLBACK', fallbackSent, sentOutcomeOf(searchResponse), sentLanesOf(searchResponse)),
-                    );
+                    genericAttempts.push(recordDispatched('FALLBACK', fallbackSent, sentOutcomeOf(searchResponse)));
+                    genericAttemptLanes.set('FALLBACK', laneStatusOf(searchResponse));
                     /* R3 — a refused fallback is a limited search, never "no reporting". */
                     const fallbackFailures = readProviderFailures(searchResponse);
                     if (searchResponse.articles.length === 0 && fallbackFailures.length > 0) {
@@ -3860,7 +3909,33 @@ export class AnalysisService {
           const trace: AnalysisRetrievalTrace = {
             queryVariants: plannedTrace?.queryVariants ?? [...sentQueryVariants(genericAttempts)],
             ...(plannedTrace === undefined && genericAttempts.length > 0
-              ? { sentQueries: buildSentQueryTrace(genericAttempts).map((attempt) => ({ ...attempt })) }
+              ? (() => {
+                  /* the attempt whose response became the evidence: the fallback when it went out */
+                  const finalRole = genericAttemptLanes.has('FALLBACK') ? 'FALLBACK' : 'PRIMARY';
+                  const lanesFor = (role: 'PRIMARY' | 'FALLBACK') =>
+                    (genericAttemptLanes.get(role) ?? []).map((status) => {
+                      const answered =
+                        status.outcome === 'LANE_RETURNED_CANDIDATES' || status.outcome === 'LANE_RETURNED_ZERO';
+                      /* final attempt: count what SURVIVED every gate; earlier attempts answered zero */
+                      const admitted =
+                        role === finalRole ? articles.filter((a) => a.providerId === status.lane).length : 0;
+                      return recordLane(
+                        status.lane,
+                        answered ? (admitted > 0 ? 'LANE_RETURNED_CANDIDATES' : 'LANE_RETURNED_ZERO') : status.outcome,
+                        answered ? admitted : null,
+                        status.reason,
+                      );
+                    });
+                  return {
+                    sentQueries: buildSentQueryTrace(genericAttempts).map((attempt) => ({
+                      role: attempt.role,
+                      outcome: attempt.outcome,
+                      query: attempt.query,
+                      lanes: lanesFor(attempt.role).map((lane) => ({ ...lane })),
+                    })),
+                    aggregateOutcome: deriveRetrievalOutcome(lanesFor(finalRole)),
+                  };
+                })()
               : {}),
             timeWindow:
               reportingWindow === undefined

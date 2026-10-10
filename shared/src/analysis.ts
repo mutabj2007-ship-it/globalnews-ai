@@ -1730,8 +1730,31 @@ export interface AnalysisRetrievalTrace {
       | 'SKIPPED_PROVIDER_INELIGIBLE'
       | 'SKIPPED_RETAINED_SUBSTITUTED';
     query: string | null;
-    lane: string | null;
+    /** A4 R2 — each provider lane of this attempt with its OWN outcome (a lane that answered
+        with zero is never reported as failed because another lane timed out). For the attempt
+        whose response became the evidence, `candidates` counts what survived every gate. */
+    lanes: Array<{
+      lane: string;
+      outcome:
+        | 'LANE_RETURNED_CANDIDATES'
+        | 'LANE_RETURNED_ZERO'
+        | 'LANE_FAILED'
+        | 'LANE_RATE_LIMITED'
+        | 'LANE_TIMED_OUT'
+        | 'LANE_UNAVAILABLE'
+        | 'LANE_SKIPPED';
+      candidates: number | null;
+      reason: string | null;
+    }>;
   }>;
+  /** A4 R2 — derived from the final attempt's lanes; never stamped, never "candidates" when
+      nothing was admitted. Absent on planned paths. */
+  aggregateOutcome?:
+    | 'RETRIEVAL_CANDIDATES'
+    | 'RETRIEVAL_ZERO_ALL_LANES_ANSWERED'
+    | 'RETRIEVAL_PARTIAL_SOME_LANES_UNAVAILABLE'
+    | 'RETRIEVAL_NO_LANE_ANSWERED'
+    | 'RETRIEVAL_NOT_ATTEMPTED';
   timeWindow: { from: string; to: string; basis: 'REQUEST_INSTANT' } | null;
   languages: string[];
   lanesAttempted: string[];
