@@ -163,6 +163,8 @@ export interface AskResearchRecord {
   };
   /** P0 NEWS R1 (P3) — a reviewed spelling variant was searched under its canonical name. */
   readonly entitySpellings?: readonly { readonly asked: string; readonly searched: string }[];
+  /** MASTER CTO P0 RIGHTS CONTAINMENT R1 — items found but withheld: source reuse rights not cleared */
+  readonly rightsWithheld?: number;
   readonly performed: boolean;
   readonly outcome: AskResearchOutcome | null;
   readonly reused: boolean;

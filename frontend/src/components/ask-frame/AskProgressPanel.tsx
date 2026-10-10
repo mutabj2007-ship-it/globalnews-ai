@@ -92,6 +92,7 @@ export function AskSearchActivity({
     ...(step.kind === 'REUSED' ? [s.noNewSearch] : []),
     ...(step.answer === 'COMPLETED_UNVERIFIED' ? [s.noVerifiedAnswer] : step.answer === 'PARTLY_SOURCED' ? [s.someEvidenceMissing] : []),
     ...(step.found === 'NO_MATCH' ? [s.noMatch] : step.found === 'FILTERED' ? [s.filtered] : []),
+    ...(step.rightsWithheld !== undefined && step.rightsWithheld > 0 ? [s.rightsWithheld(step.rightsWithheld)] : []),
     ...(step.unreached !== undefined && step.unreached.length > 0 ? [s.unreached(step.unreached.map(laneLabel).join(', '))] : []),
   ];
   const tag = (status: SearchStepStatus): { glyph: string; word: string; color: string } =>

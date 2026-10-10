@@ -231,6 +231,7 @@ import {
   type RequestedSource,
 } from '../../news/identity/requested-source.util';
 import { classifyRequestedPublisher } from '../../news/identity/requested-publisher-state.util';
+import { partitionByRights, summarizeExclusions } from '../../news/rights/source-use-policy';
 import { polishCountryName } from '../query/polish-country-forms.util';
 import { derivePolishRetrievalQuery } from '../language/derive-polish-retrieval-query.util';
 import {
@@ -3748,6 +3749,33 @@ export class AnalysisService {
             `ask anchor gate key=${anchorsKey(anchors)} candidates=${candidates} admitted=${admitted.length} supplements=${queries.length}`,
           );
           articles = admitted;
+        }
+
+        /*
+          MASTER CTO P0 RIGHTS CONTAINMENT R1 — THE ONE POINT EVERY RETRIEVAL PATH PASSES (live
+          lanes, RSS, retained rungs, supplements, the anchor gate) BEFORE ANY CLAIM, TRACE, MODEL
+          CALL OR READER-FACING EVIDENCE. An article whose source is not cleared for AI processing
+          (RSS rows below CLEARED, restricted / prohibited feeds, unknown provenance) is withheld
+          here — stored, once-enabled or freshly fetched alike. The withholding is recorded as a
+          rights exclusion with its reason, never as "not relevant" and never as proof that no
+          reporting exists. Provider-path articles are untouched.
+        */
+        {
+          const { allowed, excluded } = partitionByRights(articles, 'AI_INPUT');
+          const rightsExcluded = summarizeExclusions(excluded);
+          if (rightsExcluded !== undefined) {
+            this.logger.warn(
+              `ask rights exclusion count=${rightsExcluded.count} reasons=${JSON.stringify(rightsExcluded.reasons)} sources=${rightsExcluded.sourceIds.join(',')}`,
+            );
+            articles = allowed;
+            retrievalContext = {
+              ...retrievalContext,
+              articlesRetrieved: allowed.length,
+              rightsExcluded,
+              /* nothing retained remains to be served: never labelled as a retained answer */
+              ...(allowed.length === 0 && retrievalContext.outcome === 'RETAINED_ONLY' ? { outcome: undefined } : {}),
+            };
+          }
         }
 
         /*

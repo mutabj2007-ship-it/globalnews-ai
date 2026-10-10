@@ -190,3 +190,26 @@ describe('wiring — every stored answer, live or reopened; read-only; no sessio
     expect(read('..', '..', 'lib', 'ask', 'askSearchActivity.ts')).not.toMatch(/fetch\(|askV2Api\./);
   });
 });
+
+/* MASTER CTO P0 RIGHTS CONTAINMENT R1 — withheld for rights is never told as "no matching reports" */
+describe('rights-withheld research record', () => {
+  const WITHHELD = payload({ research: record({ outcome: 'COMPLETED_NO_MATCH', rightsWithheld: 3 } as never) });
+  it('the search step drops "no match" and carries the withheld count', () => {
+    const step = searchActivityOf(WITHHELD)!.steps[0];
+    expect(step.found).toBeUndefined();
+    expect(step.rightsWithheld).toBe(3);
+  });
+  it('renders the rights line and never "No matching reports were found."', () => {
+    let r!: ReturnType<typeof create>;
+    act(() => {
+      r = create(createElement(AskSearchActivity, { locale: 'en', activity: searchActivityOf(WITHHELD)!, laneLabel: (l: string) => l }));
+    });
+    act(() => byAsk(r.root, 'search-activity')[0]!.props.onClick());
+    const text = byAsk(r.root, 'search-step').map(textOf).join(' ');
+    expect(text).toContain('3 items found were not used because the source’s reuse rights are not cleared.');
+    expect(text).not.toContain('No matching reports were found.');
+  });
+  it.each(ASK_PROGRESS_LOCALES)('%s carries a rights-withheld line naming the count', (locale) => {
+    expect(askProgressStrings(locale).rightsWithheld(2)).toContain('2');
+  });
+});

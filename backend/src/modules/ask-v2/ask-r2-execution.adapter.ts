@@ -129,6 +129,7 @@ import { observedRetrievalOf } from './retrieval-outcome';
 import { researchRecordOf, type ResearchFacts } from './research-record';
 import { productMetaAnswer, readProductMeta } from './product-meta';
 import { checkWrittenArithmetic } from '../analysis/providers/arithmetic-check.util';
+import { partitionByRights } from '../news/rights/source-use-policy';
 import {
   newAskObservationDraft,
   type AskObservationDraft,
@@ -2707,7 +2708,9 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
          unparseable time is never presented as recent). */
       const now = Date.now();
       const oldest = now - RECENT_REPORTING_DAYS * 24 * 60 * 60 * 1000;
-      const recent = articles.filter((a) => {
+      /* MASTER CTO P0 RIGHTS CONTAINMENT R1 — a listed item is METADATA use (publisher, title,
+         date, link; no model): restricted / prohibited / unknown-provenance sources are not listed. */
+      const recent = partitionByRights(articles, 'METADATA').allowed.filter((a) => {
         const t = Date.parse(a.publishedAt);
         return (
           a.countryCode === country.iso2 &&

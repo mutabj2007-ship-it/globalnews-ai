@@ -912,6 +912,18 @@ export interface AnalysisRetrievalContext {
   retrievalAttempted?: false;
 
   /**
+   * MASTER CTO P0 RIGHTS CONTAINMENT R1 — internal diagnostic. Articles a search or retained read
+   * DID return but that were withheld from this answer because their source's reuse rights are not
+   * cleared for AI processing (or are restricted / prohibited / of unknown provenance). Never a
+   * relevance judgement and never evidence that no reporting exists.
+   */
+  rightsExcluded?: {
+    readonly count: number;
+    readonly reasons: Readonly<Partial<Record<'RIGHTS_PROHIBITED' | 'RIGHTS_RESTRICTED' | 'RIGHTS_NOT_CLEARED_FOR_AI' | 'UNKNOWN_PROVENANCE', number>>>;
+    readonly sourceIds: readonly string[];
+  };
+
+  /**
    * P0 NEWS R1 (Claude G, G-ASK-4) — the reader named a publisher. The verdict of
    * classifyRequestedPublisher(): CARRIED (searched), RECOGNISED_NOT_CARRIED (a known masthead
    * with no ingest right: not searched), UNRECOGNISED (no publisher identity established). The

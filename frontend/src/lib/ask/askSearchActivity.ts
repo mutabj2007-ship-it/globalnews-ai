@@ -41,6 +41,8 @@ export interface SearchStep {
   readonly found?: 'EVIDENCE' | 'NO_MATCH' | 'FILTERED';
   /** SEARCH: lanes that could not be reached, as recorded. */
   readonly unreached?: readonly string[];
+  /** MASTER CTO P0 RIGHTS CONTAINMENT R1 — found but withheld for rights (never "no match") */
+  readonly rightsWithheld?: number;
   /** ANSWER: what the request produced. */
   readonly answer?: AnswerOutcome;
 }
@@ -96,6 +98,14 @@ function classifyLegacyTrace(articles: readonly unknown[] | undefined, ctx: NonN
             ? 'ALL_FILTERED'
             : 'COMPLETED_NO_MATCH';
   return { outcome, unreached };
+}
+
+/* MASTER CTO P0 RIGHTS CONTAINMENT R1 — reporting withheld for rights is never told as "no matching
+   reports" or "not relevant": that claim is dropped and the withholding is stated instead. */
+function withRights(step: SearchStep, withheld: number | undefined): SearchStep {
+  if (withheld === undefined || withheld <= 0) return step;
+  const { found, ...rest } = step;
+  return { ...rest, ...(found === 'NO_MATCH' || found === 'FILTERED' ? {} : found === undefined ? {} : { found }), rightsWithheld: withheld };
 }
 
 function searchStep({ outcome, unreached }: Facts): SearchStep {
@@ -154,7 +164,7 @@ export function searchActivityOf(payload: AskR2Payload | null | undefined): Sear
     if (!record.performed || record.outcome === null) return null;
     return {
       basis: 'RECORD',
-      steps: [searchStep({ outcome: record.outcome, unreached: record.lanes.unavailable.map((u) => u.lane) }), answerStep(payload)],
+      steps: [withRights(searchStep({ outcome: record.outcome, unreached: record.lanes.unavailable.map((u) => u.lane) }), record.rightsWithheld), answerStep(payload)],
     };
   }
   if (payload.priorAnswer?.evidence === 'REUSED')

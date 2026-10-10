@@ -60,6 +60,9 @@ export interface AskResearchRecord {
   readonly requestedPublisher?: AskRequestedPublisher;
   /** P0 NEWS R1 (P3) — a reviewed spelling variant was searched under its canonical name */
   readonly entitySpellings?: readonly AskEntitySpelling[];
+  /** MASTER CTO P0 RIGHTS CONTAINMENT R1 — items found but withheld because their source's reuse
+      rights are not cleared (count only; never "not relevant", never "no reporting exists") */
+  readonly rightsWithheld?: number;
   readonly performed: boolean;
   readonly outcome: AskResearchOutcome | null;
   readonly reused: boolean;
@@ -75,6 +78,7 @@ export interface ResearchFacts {
     readonly retrievalAttempted?: false;
     readonly requestedPublisher?: AskRequestedPublisher;
     readonly entitySpellings?: readonly AskEntitySpelling[];
+    readonly rightsExcluded?: { readonly count: number };
     readonly dataMode?: string;
     readonly outcome?: string;
     readonly retrievalOutcome?: string;
@@ -142,6 +146,7 @@ export function researchRecordOf(
     ...(ctx.entitySpellings === undefined || ctx.entitySpellings.length === 0
       ? {}
       : { entitySpellings: ctx.entitySpellings.map(({ asked, searched }) => ({ asked, searched })) }),
+    ...((ctx.rightsExcluded?.count ?? 0) > 0 ? { rightsWithheld: ctx.rightsExcluded!.count } : {}),
     performed: true,
     outcome: observed.retrievalOutcome ?? 'OUTCOME_UNAVAILABLE',
     reused,

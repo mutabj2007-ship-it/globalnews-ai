@@ -94,3 +94,18 @@ describe('researchRecordOf — P0 publisher verdict and entity spelling', () => 
     expect(r.entitySpellings).toBeUndefined();
   });
 });
+
+/* MASTER CTO P0 RIGHTS CONTAINMENT R1 — items withheld for rights travel as a count, never as "no match" */
+describe('researchRecordOf — rights-withheld items', () => {
+  it('carries the withheld count from the retrieval context', () => {
+    const rec = researchRecordOf({
+      articles: [],
+      retrievalContext: { dataMode: 'live', providers: ['gnews'], rightsExcluded: { count: 3 } },
+    });
+    expect(rec.performed).toBe(true);
+    expect(rec.rightsWithheld).toBe(3);
+  });
+  it('no exclusion → no field', () => {
+    expect(researchRecordOf({ articles: [], retrievalContext: { dataMode: 'live', providers: ['gnews'] } }).rightsWithheld).toBeUndefined();
+  });
+});
