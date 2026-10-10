@@ -148,7 +148,9 @@ export type AskResearchOutcome =
   | 'ALL_FILTERED'
   | 'PARTIAL'
   | 'PARTIAL_NO_MATCH'
-  | 'PROVIDER_FAILED';
+  | 'PROVIDER_FAILED'
+  /* R1.1 — a retrieval call was made but returned no typed outcome */
+  | 'OUTCOME_UNAVAILABLE';
 export interface AskResearchRecord {
   readonly schema: 'ask-research/1';
   readonly performed: boolean;

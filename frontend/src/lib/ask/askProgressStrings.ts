@@ -28,6 +28,13 @@ export interface AskProgressStrings {
   readonly noMatch: string;
   readonly filtered: string;
   readonly unreached: (lanes: string) => string;
+  /* R1.1 (CTO review) — an attempted search with no typed outcome; a completed request ≠ a verified answer */
+  readonly searchAttemptedUnknown: string;
+  readonly outcomeUnavailable: string;
+  readonly requestCompleted: string;
+  readonly noVerifiedAnswer: string;
+  readonly noAnswerProduced: string;
+  readonly someEvidenceMissing: string;
 }
 
 const EN: AskProgressStrings = {
@@ -48,6 +55,12 @@ const EN: AskProgressStrings = {
   noMatch: 'No matching reports were found.',
   filtered: 'Reports were found, but none matched the question closely enough.',
   unreached: (l) => `Not reached: ${l}.`,
+  searchAttemptedUnknown: 'Search attempted; detailed retrieval outcome unavailable.',
+  outcomeUnavailable: 'Outcome unavailable',
+  requestCompleted: 'Request completed',
+  noVerifiedAnswer: 'No verified answer from current reporting.',
+  noAnswerProduced: 'No answer was produced',
+  someEvidenceMissing: 'Some required evidence is missing.',
 };
 const PL: AskProgressStrings = {
   group: 'Przebieg wyszukiwania',
@@ -67,6 +80,12 @@ const PL: AskProgressStrings = {
   noMatch: 'Nie znaleziono pasujących doniesień.',
   filtered: 'Znaleziono doniesienia, ale żadne nie odpowiadało wystarczająco pytaniu.',
   unreached: (l) => `Niedostępne: ${l}.`,
+  searchAttemptedUnknown: 'Podjęto wyszukiwanie; szczegółowy wynik wyszukiwania jest niedostępny.',
+  outcomeUnavailable: 'Wynik niedostępny',
+  requestCompleted: 'Zapytanie zakończone',
+  noVerifiedAnswer: 'Brak zweryfikowanej odpowiedzi na podstawie bieżących doniesień.',
+  noAnswerProduced: 'Nie powstała odpowiedź',
+  someEvidenceMissing: 'Brakuje części wymaganych dowodów.',
 };
 const DE: AskProgressStrings = {
   group: 'Suchverlauf',
@@ -86,6 +105,12 @@ const DE: AskProgressStrings = {
   noMatch: 'Es wurden keine passenden Berichte gefunden.',
   filtered: 'Es wurden Berichte gefunden, aber keiner passte genau genug zur Frage.',
   unreached: (l) => `Nicht erreicht: ${l}.`,
+  searchAttemptedUnknown: 'Suche versucht; das genaue Suchergebnis ist nicht verfügbar.',
+  outcomeUnavailable: 'Ergebnis nicht verfügbar',
+  requestCompleted: 'Anfrage abgeschlossen',
+  noVerifiedAnswer: 'Keine verifizierte Antwort aus aktueller Berichterstattung.',
+  noAnswerProduced: 'Es wurde keine Antwort erstellt',
+  someEvidenceMissing: 'Einige erforderliche Belege fehlen.',
 };
 const FR: AskProgressStrings = {
   group: 'Activité de recherche',
@@ -105,6 +130,12 @@ const FR: AskProgressStrings = {
   noMatch: 'Aucun article correspondant n’a été trouvé.',
   filtered: 'Des articles ont été trouvés, mais aucun ne correspondait assez à la question.',
   unreached: (l) => `Non joignables : ${l}.`,
+  searchAttemptedUnknown: 'Recherche tentée ; le résultat détaillé de la recherche n’est pas disponible.',
+  outcomeUnavailable: 'Résultat indisponible',
+  requestCompleted: 'Demande traitée',
+  noVerifiedAnswer: 'Aucune réponse vérifiée à partir d’articles récents.',
+  noAnswerProduced: 'Aucune réponse n’a été produite',
+  someEvidenceMissing: 'Certaines preuves requises manquent.',
 };
 const ES: AskProgressStrings = {
   group: 'Actividad de búsqueda',
@@ -124,6 +155,12 @@ const ES: AskProgressStrings = {
   noMatch: 'No se encontraron informes coincidentes.',
   filtered: 'Se encontraron informes, pero ninguno coincidía lo suficiente con la pregunta.',
   unreached: (l) => `Sin respuesta: ${l}.`,
+  searchAttemptedUnknown: 'Se intentó la búsqueda; el resultado detallado de la búsqueda no está disponible.',
+  outcomeUnavailable: 'Resultado no disponible',
+  requestCompleted: 'Solicitud completada',
+  noVerifiedAnswer: 'No hay una respuesta verificada a partir de informes actuales.',
+  noAnswerProduced: 'No se produjo ninguna respuesta',
+  someEvidenceMissing: 'Falta parte de la evidencia necesaria.',
 };
 const PT: AskProgressStrings = {
   group: 'Atividade de pesquisa',
@@ -143,6 +180,12 @@ const PT: AskProgressStrings = {
   noMatch: 'Nenhuma notícia correspondente foi encontrada.',
   filtered: 'Foram encontradas notícias, mas nenhuma correspondia o suficiente à pergunta.',
   unreached: (l) => `Sem resposta: ${l}.`,
+  searchAttemptedUnknown: 'Pesquisa tentada; o resultado detalhado da pesquisa não está disponível.',
+  outcomeUnavailable: 'Resultado indisponível',
+  requestCompleted: 'Pedido concluído',
+  noVerifiedAnswer: 'Não há resposta verificada a partir de notícias atuais.',
+  noAnswerProduced: 'Nenhuma resposta foi produzida',
+  someEvidenceMissing: 'Falta parte das evidências necessárias.',
 };
 const AR: AskProgressStrings = {
   group: 'نشاط البحث',
@@ -162,6 +205,12 @@ const AR: AskProgressStrings = {
   noMatch: 'لم يُعثر على تقارير مطابقة.',
   filtered: 'عُثر على تقارير، لكن لم يطابق أيٌّ منها السؤال بما يكفي.',
   unreached: (l) => `تعذّر الوصول: ${l}.`,
+  searchAttemptedUnknown: 'جرت محاولة البحث؛ النتيجة التفصيلية للبحث غير متاحة.',
+  outcomeUnavailable: 'النتيجة غير متاحة',
+  requestCompleted: 'اكتمل الطلب',
+  noVerifiedAnswer: 'لا توجد إجابة موثَّقة من التقارير الحالية.',
+  noAnswerProduced: 'لم تُنتَج أي إجابة',
+  someEvidenceMissing: 'بعض الأدلة المطلوبة مفقودة.',
 };
 
 const BY_LOCALE: Readonly<Record<string, AskProgressStrings>> = { en: EN, pl: PL, de: DE, fr: FR, es: ES, pt: PT, ar: AR };

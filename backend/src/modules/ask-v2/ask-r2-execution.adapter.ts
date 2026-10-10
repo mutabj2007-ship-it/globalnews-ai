@@ -1565,6 +1565,9 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
          ("oil prices today") are declined by the background capability itself. */
       (anchors.gated && noEvidence && route.knowledgeRequirement === 'CURRENT_REPORTING')
     ) {
+      /* RESEARCH ACTIVITY R1.1 (CTO review) — the operator record keeps what the search did on
+         this path too (it was recorded only on the main path: retrievalOutcome stayed NULL) */
+      Object.assign(draft, observedRetrievalOf(response));
       return this.executeBackground(
         request,
         plan,
@@ -1576,8 +1579,9 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         noEvidence && !retrievalFailed(response) ? 'NO_EVIDENCE' : 'UNAVAILABLE',
         undefined,
         contract.stableQuestion ?? undefined,
-        /* ASK R3 RESEARCH ACTIVITY R1 — the search that ran is recorded, not dropped */
-        response,
+        /* ASK R3 RESEARCH ACTIVITY R1 — the search that ran is recorded, not dropped; a call that
+           returned nothing is still a call: recorded as attempted, outcome unavailable */
+        response ?? {},
       );
     }
     if ((outcome !== 'SUCCESS' && !noEvidence) || response === null) {

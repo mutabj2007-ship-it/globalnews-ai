@@ -1,47 +1,53 @@
 /*
-  ASK R3 RESEARCH ACTIVITY R1 — THE READER'S "SEARCH ACTIVITY", DERIVED FROM STORED FACTS ONLY.
+  ASK R3 RESEARCH ACTIVITY R1.1 — THE READER'S "SEARCH ACTIVITY", DERIVED FROM PERSISTED FACTS ONLY.
 
-  PO acceptance failure (Alpha 0717ff7): an answer that could not verify relevant reporting showed
-  no Search activity, and a reopened answer lost it. The record was inferred from
-  `payload.analysis !== null` and only for the answer that settled in the current session. Now it
-  is derived from what the backend RECORDED about the search, on every render — live, reopened or
-  restored — static, collapsed, never animated (R3: no replay).
+  PO acceptance failure (Alpha 0717ff7, operation 7c7b9ecb…) and CTO diagnosis review: the record must
+  never claim more than the stored evidence establishes. Two steps:
 
-  Four states, never inferred from whether an analysis exists:
-    research succeeded   MATCHED / RETAINED_ONLY              ✓ Sources searched
-                         COMPLETED_NO_MATCH / ALL_FILTERED    ✓ Sources searched (+ what it found)
-    research incomplete  PARTIAL / PARTIAL_NO_MATCH           ! Some sources searched (+ which not)
-                         PROVIDER_FAILED                      × Could not finish searching sources
-    reused               a follow-up re-read earlier evidence ✓ Earlier sources reviewed
-    no research          nothing searched                     → no record at all
-  A green check is drawn only for a stage that completed: a search that completed and found
-  nothing DID complete (its note says so); one that could not reach every source is partial (!),
-  one that reached none is failed (×). "Answer ready" is the answer the reader is looking at.
+    SEARCH  from `payload.research` (backend research-record.ts, captured where the retrieval call is
+            made; same classifier as AskObservation.retrievalOutcome):
+              MATCHED / RETAINED_ONLY                ✓ Sources searched
+              COMPLETED_NO_MATCH / ALL_FILTERED      ✓ Sources searched (+ what it found)
+              PARTIAL / PARTIAL_NO_MATCH             ! Some sources searched (+ which not reached)
+              PROVIDER_FAILED                        × Could not finish searching sources
+              OUTCOME_UNAVAILABLE                    – Search attempted; detailed retrieval outcome unavailable.
+              reused                                 ✓ Earlier sources reviewed (no new search)
+              not performed                          → no record at all
+    ANSWER  from the stored answer state — a completed REQUEST is not a verified ANSWER:
+              CURRENTLY_VERIFIED / CURRENT_REPORTING / RETAINED_REPORTING   ✓ Answer ready
+              PARTIAL                                                       ! Answer ready (some evidence missing)
+              NO_ANSWER_PRODUCED / CAPABILITY_UNAVAILABLE                   × No answer was produced
+              anything else (background, insufficient evidence)            ✓ Request completed — no verified answer
 
-  Source of truth: `payload.research` (backend research-record.ts — the same classifier as
-  AskObservation.retrievalOutcome). Answers stored before it fall back to the facts those payloads
-  DO carry: `analysis.retrievalContext` (classified by the same rules, below), else the guidance
-  outcome the backend set only after a search ran (NO_EVIDENCE: completed, nothing found;
-  UNAVAILABLE: sources failed). Nothing else is ever read as research.
+  ANSWERS STORED BEFORE R1 (no `research` field) — only what the payload proves:
+    · a stored retrieval TRACE (analysis.retrievalContext.retrievalTrace): classified by the same rules;
+    · otherwise, a fact that implies a retrieval call was made — guidance NO_EVIDENCE (set only after a
+      retrieval), or (EXECUTABLE plan) guidance UNAVAILABLE / NO_ANSWER_PRODUCED with REPORTING missing,
+      or a retrieval context without a trace → "Search attempted; detailed retrieval outcome unavailable."
+      Never "no matching reports", never a successful-search check.
+    · guidance UNAVAILABLE on a NON-executable plan (an untransportable current part: no retrieval ran)
+      and everything else → no record.
 */
 import type { AskR2Payload, AskResearchOutcome } from '@/lib/api/askV2Api';
 
-export type SearchStepStatus = 'completed' | 'partial' | 'failed';
+export type SearchStepStatus = 'completed' | 'partial' | 'failed' | 'unknown';
 export type SearchStepKind = 'SEARCH' | 'REUSED' | 'ANSWER';
+export type AnswerOutcome = 'SOURCED' | 'PARTLY_SOURCED' | 'COMPLETED_UNVERIFIED' | 'NOT_PRODUCED';
 
 export interface SearchStep {
   readonly kind: SearchStepKind;
   readonly status: SearchStepStatus;
-  /** Present on the SEARCH step: what the completed / partial search found. */
+  /** SEARCH: what a completed / partial search found. */
   readonly found?: 'EVIDENCE' | 'NO_MATCH' | 'FILTERED';
-  /** Present when some sources could not be reached: the lanes, as recorded. */
+  /** SEARCH: lanes that could not be reached, as recorded. */
   readonly unreached?: readonly string[];
+  /** ANSWER: what the request produced. */
+  readonly answer?: AnswerOutcome;
 }
 
 export interface SearchActivity {
   readonly steps: readonly SearchStep[];
-  /** Where it came from — the stored record, or a pre-R1 payload's own facts. */
-  readonly basis: 'RECORD' | 'LEGACY_TRACE' | 'LEGACY_GUIDANCE';
+  readonly basis: 'RECORD' | 'LEGACY_TRACE' | 'LEGACY_ATTEMPTED';
 }
 
 interface Facts {
@@ -49,23 +55,19 @@ interface Facts {
   readonly unreached: readonly string[];
 }
 
-/* the backend classifier (retrieval-outcome.ts observedRetrievalOf), for pre-R1 payloads only */
-function classifyLegacyTrace(payload: AskR2Payload): Facts | null {
-  const analysis = payload.analysis as unknown as {
-    articles?: readonly unknown[];
-    retrievalContext?: {
-      dataMode?: string;
-      outcome?: string;
-      retrievalOutcome?: string;
-      fallbackReason?: string;
-      providers?: readonly string[];
-      providerFailures?: readonly { providerId?: string }[];
-      retrievalTrace?: { candidatesSeen?: number; lanesUnavailable?: readonly { lane?: string }[] };
-    } | null;
-  } | null;
-  const ctx = analysis?.retrievalContext;
-  if (analysis == null || ctx == null || ctx.retrievalOutcome === 'CLARIFICATION_REQUIRED') return null;
-  const admitted = analysis.articles?.length ?? 0;
+type LegacyContext = {
+  dataMode?: string;
+  outcome?: string;
+  retrievalOutcome?: string;
+  fallbackReason?: string;
+  providers?: readonly string[];
+  providerFailures?: readonly { providerId?: string }[];
+  retrievalTrace?: { candidatesSeen?: number; lanesUnavailable?: readonly { lane?: string }[] } | null;
+} | null;
+
+/* the backend classifier (retrieval-outcome.ts observedRetrievalOf) — for a STORED pre-R1 trace only */
+function classifyLegacyTrace(articles: readonly unknown[] | undefined, ctx: NonNullable<LegacyContext>): Facts {
+  const admitted = articles?.length ?? 0;
   const answered = (ctx.providers ?? []).length;
   const unreached = Array.from(
     new Set(
@@ -111,30 +113,52 @@ function searchStep({ outcome, unreached }: Facts): SearchStep {
       return { kind: 'SEARCH', status: 'partial', found: 'NO_MATCH', unreached };
     case 'PROVIDER_FAILED':
       return { kind: 'SEARCH', status: 'failed', unreached };
+    case 'OUTCOME_UNAVAILABLE':
+      return { kind: 'SEARCH', status: 'unknown' };
   }
 }
 
-const ANSWER: SearchStep = { kind: 'ANSWER', status: 'completed' };
+const ATTEMPTED_UNKNOWN: SearchStep = { kind: 'SEARCH', status: 'unknown' };
+
+/** A completed request is not a verified answer: the stored answer state decides which. */
+export function answerStep(payload: AskR2Payload): SearchStep {
+  const { state, basis } = payload.answer;
+  if (basis === 'NO_ANSWER_PRODUCED' || state === 'CAPABILITY_UNAVAILABLE')
+    return { kind: 'ANSWER', status: 'failed', answer: 'NOT_PRODUCED' };
+  if (state === 'CURRENTLY_VERIFIED' || state === 'CURRENT_REPORTING' || state === 'RETAINED_REPORTING')
+    return { kind: 'ANSWER', status: 'completed', answer: 'SOURCED' };
+  if (state === 'PARTIAL') return { kind: 'ANSWER', status: 'partial', answer: 'PARTLY_SOURCED' };
+  return { kind: 'ANSWER', status: 'completed', answer: 'COMPLETED_UNVERIFIED' };
+}
+
+function legacySearch(payload: AskR2Payload): { step: SearchStep; basis: SearchActivity['basis'] } | null {
+  const analysis = payload.analysis as unknown as { articles?: readonly unknown[]; retrievalContext?: LegacyContext } | null;
+  const ctx = analysis?.retrievalContext ?? null;
+  if (ctx?.retrievalOutcome === 'CLARIFICATION_REQUIRED') return null;
+  if (ctx != null && ctx.retrievalTrace != null) return { step: searchStep(classifyLegacyTrace(analysis?.articles, ctx)), basis: 'LEGACY_TRACE' };
+  const executable = payload.route?.terminalState === 'EXECUTABLE';
+  const part = payload.guidance?.currentPart;
+  const attempted =
+    ctx != null ||
+    part === 'NO_EVIDENCE' ||
+    (executable && part === 'UNAVAILABLE') ||
+    (executable && payload.answer.basis === 'NO_ANSWER_PRODUCED' && payload.answer.missingRoles.includes('REPORTING'));
+  return attempted ? { step: ATTEMPTED_UNKNOWN, basis: 'LEGACY_ATTEMPTED' } : null;
+}
 
 export function searchActivityOf(payload: AskR2Payload | null | undefined): SearchActivity | null {
   if (payload == null) return null;
   const record = payload.research;
   if (record !== undefined && record !== null) {
-    if (record.reused) return { basis: 'RECORD', steps: [{ kind: 'REUSED', status: 'completed' }, ANSWER] };
+    if (record.reused) return { basis: 'RECORD', steps: [{ kind: 'REUSED', status: 'completed' }, answerStep(payload)] };
     if (!record.performed || record.outcome === null) return null;
     return {
       basis: 'RECORD',
-      steps: [searchStep({ outcome: record.outcome, unreached: record.lanes.unavailable.map((u) => u.lane) }), ANSWER],
+      steps: [searchStep({ outcome: record.outcome, unreached: record.lanes.unavailable.map((u) => u.lane) }), answerStep(payload)],
     };
   }
-  /* answers stored before R1 */
-  if (payload.priorAnswer?.evidence === 'REUSED') return { basis: 'LEGACY_TRACE', steps: [{ kind: 'REUSED', status: 'completed' }, ANSWER] };
-  const legacy = classifyLegacyTrace(payload);
-  if (legacy !== null) return { basis: 'LEGACY_TRACE', steps: [searchStep(legacy), ANSWER] };
-  const part = payload.guidance?.currentPart;
-  if (part === 'NO_EVIDENCE')
-    return { basis: 'LEGACY_GUIDANCE', steps: [searchStep({ outcome: 'COMPLETED_NO_MATCH', unreached: [] }), ANSWER] };
-  if (part === 'UNAVAILABLE')
-    return { basis: 'LEGACY_GUIDANCE', steps: [searchStep({ outcome: 'PROVIDER_FAILED', unreached: [] }), ANSWER] };
-  return null;
+  if (payload.priorAnswer?.evidence === 'REUSED')
+    return { basis: 'LEGACY_TRACE', steps: [{ kind: 'REUSED', status: 'completed' }, answerStep(payload)] };
+  const legacy = legacySearch(payload);
+  return legacy === null ? null : { basis: legacy.basis, steps: [legacy.step, answerStep(payload)] };
 }

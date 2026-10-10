@@ -11,9 +11,14 @@ const trace = (attempted: string[], succeeded: string[], unavailable: Array<[str
 });
 
 describe('researchRecordOf — performed / outcome / lanes, from the stored retrieval facts', () => {
-  it('no retrieval response: no research performed', () => {
+  it('no retrieval call: no research performed', () => {
     expect(researchRecordOf(null)).toMatchObject({ schema: 'ask-research/1', performed: false, outcome: null, reused: false });
-    expect(researchRecordOf({ articles: [], retrievalContext: null }).performed).toBe(false);
+    expect(researchRecordOf(undefined).performed).toBe(false);
+  });
+
+  it('R1.1 — a call WAS made but returned no typed outcome: attempted, OUTCOME_UNAVAILABLE (never "no match")', () => {
+    expect(researchRecordOf({})).toMatchObject({ performed: true, outcome: 'OUTCOME_UNAVAILABLE' });
+    expect(researchRecordOf({ articles: [], retrievalContext: null })).toMatchObject({ performed: true, outcome: 'OUTCOME_UNAVAILABLE' });
   });
 
   it('evidence found: MATCHED, lanes answered', () => {

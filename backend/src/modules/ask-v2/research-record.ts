@@ -13,11 +13,14 @@
   writes `AskObservation.retrievalOutcome` (`observedRetrievalOf`), so the reader's record and the
   operator's record cannot disagree:
 
-      performed  a retrieval call was made for THIS answer
+      performed  a retrieval call was made for THIS answer (captured where the call is made, not
+                 inferred from the final answer)
       outcome    MATCHED | RETAINED_ONLY            evidence found
                  COMPLETED_NO_MATCH | ALL_FILTERED  the search completed; nothing usable
                  PARTIAL | PARTIAL_NO_MATCH         some sources could not be reached
                  PROVIDER_FAILED                    the search could not be completed
+                 OUTCOME_UNAVAILABLE                the call was made but returned no typed outcome
+                                                    (never guessed as "no match" or "success")
       reused     a follow-up re-read the earlier answer's evidence; no new search was made
       lanes      which source lanes were tried, answered, and were unavailable (and why)
 
@@ -34,10 +37,13 @@ export interface AskResearchLanes {
   readonly unavailable: readonly { readonly lane: string; readonly reason: string }[];
 }
 
+/** RESEARCH ACTIVITY R1.1 (CTO review) — a call was made but carried no typed outcome. */
+export type AskResearchOutcome = RetrievalOutcomeCode | 'OUTCOME_UNAVAILABLE';
+
 export interface AskResearchRecord {
   readonly schema: typeof ASK_RESEARCH_SCHEMA;
   readonly performed: boolean;
-  readonly outcome: RetrievalOutcomeCode | null;
+  readonly outcome: AskResearchOutcome | null;
   readonly reused: boolean;
   readonly lanes: AskResearchLanes;
   readonly candidatesSeen: number | null;
@@ -95,15 +101,19 @@ export function researchRecordOf(
 ): AskResearchRecord {
   const ctx = facts?.retrievalContext ?? null;
   const reused = options.reused === true;
-  /* no retrieval response, or the landed path asked the reader before searching */
-  if (facts == null || ctx === null || ctx.retrievalOutcome === 'CLARIFICATION_REQUIRED') {
-    return { schema: ASK_RESEARCH_SCHEMA, performed: false, outcome: null, reused, lanes: NO_LANES, candidatesSeen: null, candidatesAdmitted: null };
+  const notPerformed: AskResearchRecord = { schema: ASK_RESEARCH_SCHEMA, performed: false, outcome: null, reused, lanes: NO_LANES, candidatesSeen: null, candidatesAdmitted: null };
+  /* no retrieval call for this answer, or the landed path asked the reader before searching */
+  if (facts == null || ctx?.retrievalOutcome === 'CLARIFICATION_REQUIRED') return notPerformed;
+  if (reused) return notPerformed;
+  /* RESEARCH ACTIVITY R1.1 — a call WAS made (facts exist) but carried no typed outcome: say so */
+  if (ctx === null) {
+    return { ...notPerformed, performed: true, outcome: 'OUTCOME_UNAVAILABLE' };
   }
   const observed = observedRetrievalOf({ articles: facts.articles, retrievalContext: ctx });
   return {
     schema: ASK_RESEARCH_SCHEMA,
-    performed: !reused && observed.retrievalOutcome !== null,
-    outcome: reused ? null : observed.retrievalOutcome,
+    performed: true,
+    outcome: observed.retrievalOutcome ?? 'OUTCOME_UNAVAILABLE',
     reused,
     lanes: reused ? NO_LANES : lanesOf(ctx),
     candidatesSeen: observed.candidatesSeen,

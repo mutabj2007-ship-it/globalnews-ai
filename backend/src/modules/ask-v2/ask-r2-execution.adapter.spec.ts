@@ -3209,6 +3209,41 @@ describe('ASK R3 RESEARCH ACTIVITY R1 — the stored research record on every ex
     expect(payload.research.lanes.unavailable).toEqual([{ lane: 'gnews', reason: 'unavailable' }]);
   });
 
+  /*
+    R1.1 (CTO review) — the OBSERVED combination of operation 7c7b9ecb…: providerCalls=2, modelCalls=1,
+    retrievalOutcome NULL, seen/admitted NULL, reportingItems 0, analysis null, trace NULL,
+    answer INSUFFICIENT / NO_ANSWER_PRODUCED: a search ran, then the background model declined.
+  */
+  it('the observed 7c7b9ecb… shape: search ran without a typed outcome, model declined → attempted / OUTCOME_UNAVAILABLE, no answer produced', async () => {
+    const { adapter, calls, observed } = harness({
+      analysis: async () => ({ analysis: null, articles: [] }) as never,
+      background: async () => ({ text: null }),
+    });
+    const plan = await adapter.prepare(req(MIXED));
+    const payload = JSON.parse((await inRequest(() => adapter.execute(req(MIXED), plan, 'op-1'))).payloadJson);
+    expect(calls.analysis).toHaveLength(1);
+    expect(calls.background).toHaveLength(1);
+    expect(payload.answer).toMatchObject({ state: 'INSUFFICIENT', basis: 'NO_ANSWER_PRODUCED' });
+    expect(payload.analysis).toBeNull();
+    expect(payload.research).toMatchObject({ performed: true, outcome: 'OUTCOME_UNAVAILABLE', reused: false });
+    const o = observed[observed.length - 1] as Record<string, unknown>;
+    expect(o.retrievalOutcome ?? null).toBeNull();
+    expect(o.aiExecuted).toBe(false);
+  });
+
+  it('the same path WITH a typed outcome: recorded in the payload AND in the operator record (was NULL)', async () => {
+    const { adapter, observed } = harness({
+      analysis: async () => noMatch as never,
+      background: async () => ({ text: null }),
+    });
+    const plan = await adapter.prepare(req(MIXED));
+    const payload = JSON.parse((await inRequest(() => adapter.execute(req(MIXED), plan, 'op-1'))).payloadJson);
+    expect(payload.answer).toMatchObject({ state: 'INSUFFICIENT', basis: 'NO_ANSWER_PRODUCED' });
+    expect(payload.research).toMatchObject({ performed: true, outcome: 'COMPLETED_NO_MATCH' });
+    const o = observed[observed.length - 1] as Record<string, unknown>;
+    expect(o.retrievalOutcome).toBe('COMPLETED_NO_MATCH');
+  });
+
   it('a background-only answer records that no research was performed', async () => {
     const { payload, calls } = await run('What is inflation?', noMatch);
     expect(calls.analysis).toHaveLength(0);
