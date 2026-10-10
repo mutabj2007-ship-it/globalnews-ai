@@ -177,6 +177,84 @@ const SOURCE_ATTRIBUTED_FRAMES: readonly RegExp[] = [
 const ACCORDING_TO_FRAME = /^according\s+to\s+([^,]+),\s*(.+)$/i;
 
 /**
+ * ════════════════════════════════════════════════════════════════════════════
+ * THE TRAILING ATTRIBUTION — "<request><boundary> according [to] <source>"
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * MEASURED DEFECT, ASK-RETRIEVAL-REUTERS-DRC-R1. The Product Owner typed:
+ *
+ *   N1  "Report abt Eric Prince in congo. According reuters please."
+ *
+ * `detectSourceAttributedIntent()` returned **undefined** — not a rejection, an
+ * absence. Every frame above is anchored with `^`, and ACCORDING_TO_FRAME
+ * requires the sentence to BEGIN with "according to". This reader put the
+ * attribution LAST, as its own fragment, with no "to" and a politeness tail.
+ * So:
+ *
+ *   namedPublisher stayed null
+ *     -> hasUnparsedSourceFrame() was false
+ *     -> the publisher was never a constraint
+ *     -> the question routed as an ordinary person/place question
+ *     -> and was answered as Blackwater biography.
+ *
+ * THE READER NAMED A SOURCE AND THE SYSTEM DID NOT KNOW IT. That is the whole
+ * defect. Rev C's ruling — an unresolvable publisher fails closed rather than
+ * being answered from somewhere else — could not fire, because the fact it
+ * needs never reached the envelope. The constraint was not overridden; it was
+ * INVISIBLE, which is worse, because nothing downstream could report it.
+ *
+ * ── RUNS LAST, SO NOTHING MOVES ─────────────────────────────────────────────
+ *
+ * First-match-wins is preserved exactly: every sentence that matched a frame
+ * before still matches the same frame, because this is tried only after all of
+ * them and after ACCORDING_TO_FRAME. N2 — "According to Reuters, what happened
+ * to Erik Prince's forces in eastern Congo?" — already worked at the baseline
+ * and still takes the prefix frame.
+ *
+ * ── THREE STRUCTURAL BOUNDS, AND WHAT EACH ONE EXCLUDES ─────────────────────
+ *
+ * 1. A CLAUSE BOUNDARY BEFORE "according" IS MANDATORY — a period, comma or
+ *    semicolon. This is what separates an ATTRIBUTION from the ordinary
+ *    prepositional idiom:
+ *
+ *      "the rollout went according to plan"   <- no boundary, NOT an attribution
+ *      "Report abt X. According reuters"      <- boundary, IS an attribution
+ *
+ *    Without it, "plan", "schedule" and "expectations" would all be offered as
+ *    publisher names. A closed list of such words was the alternative and was
+ *    rejected: it would be a vocabulary to maintain, and the structural fact is
+ *    the real signal.
+ *
+ * 2. THE SOURCE SPAN CANNOT CROSS A COMMA OR A TERMINATOR, like
+ *    ACCORDING_TO_FRAME's. This excludes the parenthetical use, where
+ *    "according to" attributes one clause inside a larger assertion:
+ *
+ *      "the attack, according to witnesses, killed three"
+ *
+ *    The span would have to run past a comma to reach the end, so this frame
+ *    does not match and such a sentence keeps the routing it had.
+ *
+ * 3. "to" IS OPTIONAL and a politeness tail is permitted, because N1 carries
+ *    neither the preposition nor a clean ending. Nothing else is accommodated:
+ *    the bound in `classifySourcePhrase()` still decides whether the span is
+ *    USABLE as a name, and an over-long span still returns a rejection with the
+ *    constraint intact.
+ *
+ * WHAT FOLLOWS A TERMINATOR AFTER THE SOURCE IS DISCARDED, DELIBERATELY. In the
+ * longer phrasing "…, according to Reuters. What happened, when was it
+ * reported, and what remains unconfirmed?" the second sentence states the SHAPE
+ * of the answer, not the subject to retrieve on. Folding it into the topic would
+ * put "what remains unconfirmed" into a relevance query, which is how a search
+ * stops being about Erik Prince.
+ *
+ * THIS FRAME RESOLVES IDENTITY ONLY. It does not authorize ingesting, storing or
+ * quoting the named publisher's material, and resolving "reuters" here is not a
+ * claim that the product carries Reuters — see requested-source.util.ts.
+ */
+const TRAILING_ATTRIBUTION_FRAME =
+  /^(.+?)[.,;]\s*according\s+(?:to\s+)?([^,.?!]+?)(?:\s+(?:please|thanks|thank\s+you))?\s*(?:[.?!].*)?$/i;
+
+/**
  * The bounded interrogative leads stripped from the "According to <source>,
  * ..." remainder before the existing derivation sees it. Closed and tiny: it
  * exists so "what is the demand for labour" becomes "the demand for labour",
@@ -288,6 +366,32 @@ export function detectSourceAttributedIntent(
      * on directly.
      */
     const topic = stripLeadingThe(deriveGenericNewsQuery(remainder));
+
+    if (source.accepted && topic.length > 0) {
+      return {
+        query: { sourcePhrase: source.accepted, topic },
+        rawSourcePhrase: source.raw,
+      };
+    }
+
+    return {
+      rejection: source.rejection ?? 'topic-empty',
+      rawSourcePhrase: source.raw,
+    };
+  }
+
+  const trailing = base.match(TRAILING_ATTRIBUTION_FRAME);
+
+  if (trailing) {
+    const source = classifySourcePhrase(trailing[2] ?? '');
+    /*
+     * The topic half is the clause the attribution attaches to, run through the
+     * EXISTING derivation exactly as the "According to <source>," branch does —
+     * one derivation, one set of leads, one place either can drift.
+     */
+    const topic = stripLeadingThe(
+      deriveGenericNewsQuery(stripTrailingPunctuation(trailing[1] ?? '')),
+    );
 
     if (source.accepted && topic.length > 0) {
       return {
