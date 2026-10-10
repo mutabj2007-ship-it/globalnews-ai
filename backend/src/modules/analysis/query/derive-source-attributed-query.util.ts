@@ -263,6 +263,30 @@ const TRAILING_ATTRIBUTION_FRAME =
 const LEADING_QUESTION_LEAD =
   /^(?:what|which|how\s+much|how\s+many)\s+(?:is|are|was|were|does|do|did|has|have)\s+/i;
 
+/**
+ * A SECOND INTERROGATIVE LEAD, FOR THE ONE SHAPE THE AUXILIARY LIST CANNOT SEE.
+ *
+ * MEASURED: regional case EA-T N2 fails at Alpha `9aab213`. For
+ *
+ *   "According to Reuters, what happened to Erik Prince's forces in eastern
+ *    Congo?"
+ *
+ * the prefix frame yields the remainder "what happened to erik prince's forces
+ * in eastern congo", and `LEADING_QUESTION_LEAD` does not strip it — "happened"
+ * is a PAST-TENSE MAIN VERB, and that pattern requires an auxiliary
+ * (is/are/was/were/does/do/did/has/have). So "happened" survives into the
+ * retrieval subject and the case asserts, correctly, that a retrieval subject
+ * must carry no request words.
+ *
+ * Kept as a SEPARATE, equally closed pattern rather than loosened into the
+ * one above: adding main verbs to that auxiliary list would let it strip the
+ * verb out of subjects it currently leaves alone. This matches only the
+ * interrogative opening "what happened/happens/is happening" followed by a
+ * preposition that hands over to the subject.
+ */
+const LEADING_EVENT_QUESTION_LEAD =
+  /^what\s+(?:happened|happens|has\s+happened|is\s+happening)\s+(?:to|in|with|at|for)\s+/i;
+
 function stripTrailingPunctuation(value: string): string {
   return value
     .trim()
@@ -353,10 +377,9 @@ export function detectSourceAttributedIntent(
 
   if (according) {
     const source = classifySourcePhrase(according[1] ?? '');
-    const remainder = stripTrailingPunctuation(according[2] ?? '').replace(
-      LEADING_QUESTION_LEAD,
-      '',
-    );
+    const remainder = stripTrailingPunctuation(according[2] ?? '')
+      .replace(LEADING_QUESTION_LEAD, '')
+      .replace(LEADING_EVENT_QUESTION_LEAD, '');
 
     /*
      * The remainder is a question, so the EXISTING derivation is applied to it
