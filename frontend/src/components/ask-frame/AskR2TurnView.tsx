@@ -858,6 +858,10 @@ export function AskR2TurnView({
 
       {/* ASK READING EXPERIENCE R1 — the answer's status footer: what it was scoped to and
           what state it is in, after the answer rather than before it. */}
+      {/* P0 NEWS R1 (P3) — a reviewed spelling variant was searched under its canonical name: say so. */}
+      {(payload.research?.entitySpellings ?? []).map((s) => (
+        <p key={s.asked} data-ask="entity-spelling">{askPublisherStrings(locale).searchedAs(s.searched, s.asked)}</p>
+      ))}
       {footerLine !== null && (
         <p data-ask="answer-footer">{footerLine}</p>
       )}

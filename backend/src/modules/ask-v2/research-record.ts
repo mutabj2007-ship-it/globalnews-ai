@@ -49,10 +49,17 @@ export interface AskRequestedPublisher {
   readonly topic: string | null;
 }
 
+export interface AskEntitySpelling {
+  readonly asked: string;
+  readonly searched: string;
+}
+
 export interface AskResearchRecord {
   readonly schema: typeof ASK_RESEARCH_SCHEMA;
   /** P0 NEWS R1 — present when the reader named a publisher (searched or not) */
   readonly requestedPublisher?: AskRequestedPublisher;
+  /** P0 NEWS R1 (P3) — a reviewed spelling variant was searched under its canonical name */
+  readonly entitySpellings?: readonly AskEntitySpelling[];
   readonly performed: boolean;
   readonly outcome: AskResearchOutcome | null;
   readonly reused: boolean;
@@ -67,6 +74,7 @@ export interface ResearchFacts {
   readonly retrievalContext?: {
     readonly retrievalAttempted?: false;
     readonly requestedPublisher?: AskRequestedPublisher;
+    readonly entitySpellings?: readonly AskEntitySpelling[];
     readonly dataMode?: string;
     readonly outcome?: string;
     readonly retrievalOutcome?: string;
@@ -131,6 +139,9 @@ export function researchRecordOf(
   return {
     schema: ASK_RESEARCH_SCHEMA,
     ...(ctx.requestedPublisher === undefined ? {} : { requestedPublisher: ctx.requestedPublisher }),
+    ...(ctx.entitySpellings === undefined || ctx.entitySpellings.length === 0
+      ? {}
+      : { entitySpellings: ctx.entitySpellings.map(({ asked, searched }) => ({ asked, searched })) }),
     performed: true,
     outcome: observed.retrievalOutcome ?? 'OUTCOME_UNAVAILABLE',
     reused,

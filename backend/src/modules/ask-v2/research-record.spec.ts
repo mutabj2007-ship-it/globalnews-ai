@@ -68,3 +68,29 @@ describe('researchRecordOf — performed / outcome / lanes, from the stored retr
     expect(JSON.stringify(r)).not.toMatch(/secret|query|question/);
   });
 });
+
+/* P0 NEWS R1 — not searched is not a failure; the publisher verdict and the spelling travel with the record */
+describe('researchRecordOf — P0 publisher verdict and entity spelling', () => {
+  const notCarried = {
+    phrase: 'reuters', state: 'RECOGNISED_NOT_CARRIED' as const, reason: 'REQUESTED_SOURCE_NOT_CARRIED_NO_INGEST_RIGHTS',
+    displayName: 'Reuters', topic: 'Erik Prince in congo',
+  };
+  it('retrievalAttempted:false → not performed (never PROVIDER_FAILED), verdict kept', () => {
+    const r = researchRecordOf({ articles: [], retrievalContext: { dataMode: 'unavailable', providers: [], retrievalAttempted: false, requestedPublisher: notCarried } });
+    expect(r.performed).toBe(false);
+    expect(r.outcome).toBeNull();
+    expect(r.requestedPublisher).toEqual(notCarried);
+  });
+  it('a performed search carries the reviewed spelling (asked/searched only)', () => {
+    const r = researchRecordOf({
+      articles: [{ title: 'x' }],
+      retrievalContext: ctx({ retrievalTrace: trace(['gnews'], ['gnews'], [], 1), entitySpellings: [{ asked: 'Eric Prince', searched: 'Erik Prince', entityId: 'erik-prince' }] }) as never,
+    });
+    expect(r.performed).toBe(true);
+    expect(r.entitySpellings).toEqual([{ asked: 'Eric Prince', searched: 'Erik Prince' }]);
+  });
+  it('no spelling rewrite → no field', () => {
+    const r = researchRecordOf({ articles: [], retrievalContext: ctx({ retrievalTrace: trace(['gnews'], ['gnews']) }) });
+    expect(r.entitySpellings).toBeUndefined();
+  });
+});

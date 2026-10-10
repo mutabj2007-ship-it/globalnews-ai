@@ -161,6 +161,8 @@ export interface AskResearchRecord {
     readonly displayName: string | null;
     readonly topic: string | null;
   };
+  /** P0 NEWS R1 (P3) — a reviewed spelling variant was searched under its canonical name. */
+  readonly entitySpellings?: readonly { readonly asked: string; readonly searched: string }[];
   readonly performed: boolean;
   readonly outcome: AskResearchOutcome | null;
   readonly reused: boolean;
