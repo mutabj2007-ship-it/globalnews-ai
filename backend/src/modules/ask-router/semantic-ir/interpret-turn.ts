@@ -199,6 +199,23 @@ const REPORT_REQUEST: Readonly<Record<'en' | 'pl', RegExp>> = {
     /(?:relacj\p{L}*\s+medi\p{L}*|doniesie\p{L}*|doniesi\p{L}*|artykuł\p{L}*|pras\p{L}*|nagłówk\p{L}*|wiadomoś\p{L}*|dziennikar\p{L}*|media\s+(?:pisały|podawały))/iu,
   ),
 };
+/*
+  P0 NEWS R1 — the reader ASKS for reporting (a request, not a subject): a request word before a
+  reporting noun ("give any reports about …", "show me news on …", "any coverage of …") or a reporting
+  noun that opens the turn ("Report abt Eric Prince …", "News about …"). "News" as a subject ("is this
+  news outlet trustworthy?", "news framing", "news cycles") is NOT a request — REPORT_REQUEST is too
+  broad for this purpose and stays as it was for its own uses.
+*/
+const READER_ASKS_FOR_REPORTING: Readonly<Record<'en' | 'pl', readonly RegExp[]>> = {
+  en: [
+    /\b(?:give|show|find|get|share|send|list|fetch|pull|any|latest|recent)\b(?:\s+(?:me|us|any|some|the|latest|recent|new|current|more))*\s+(?:news|reports?|reporting|coverage|articles?|headlines|stories)\b/i,
+    /^\s*(?:(?:the\s+)?latest\s+)?(?:news|reports?|reporting|coverage|headlines|articles?)\s+(?:abt|about|on|regarding|re|from)\b/i,
+  ],
+  pl: [
+    plTolerant(/(?:podaj|pokaż|znajdź|daj|jakie[śs]?|najnowsze|ostatnie)\p{L}*\s+(?:\p{L}+\s+){0,2}(?:wiadomoś\p{L}*|doniesie\p{L}*|artykuł\p{L}*|relacj\p{L}*|nagłówk\p{L}*)/iu),
+    plTolerant(/^\s*(?:wiadomoś\p{L}*|doniesie\p{L}*|artykuł\p{L}*)\s+(?:o|na\s+temat|w\s+sprawie)\b/iu),
+  ],
+};
 /* an earlier turn ABOUT reported items: the conversation's subject is current reporting */
 const PRIOR_REPORTED_SUBJECT: Readonly<Record<'en' | 'pl', RegExp>> = {
   en: /\b(?:stor(?:y|ies)|articles?|reports?|reporting|coverage|headlines?|news)\b/i,
@@ -987,7 +1004,9 @@ export function interpretTurn(input: TurnInterpretationInput): {
        reader asks for the REPORTING itself. That is a request for current evidence, never a
        question the interpreter (or its fallback) may answer as unsourced background — on Alpha it
        returned a historical biography. A turn whose stated years are historical keeps its reading. */
-    ...(reportRequest && !historicalOverride && !temporalHistoryDefault ? ['READER_REQUESTS_REPORTING'] : []),
+    ...(READER_ASKS_FOR_REPORTING[lang].some((re) => re.test(readerText)) && !historicalOverride && !temporalHistoryDefault
+      ? ['READER_REQUESTS_REPORTING']
+      : []),
   ];
   const unresolvedEligible =
     !answerRequestBound &&

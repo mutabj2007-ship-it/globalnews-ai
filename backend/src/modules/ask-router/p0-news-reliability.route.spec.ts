@@ -50,6 +50,19 @@ describe('controls — unchanged', () => {
       expect(requiresReporting(route(q, verdict(false)))).toBe(false);
     }
   });
+  it.each([
+    ['en', 'How should I judge whether a news outlet is trustworthy?'],
+    ['en', 'How can news framing affect public understanding?'],
+    ['en', 'Why do news cycles reward outrage?'],
+    ['pl', 'Jak ocenić wiarygodność serwisu z wiadomościami?'],
+  ] as const)('"news" as a SUBJECT is not a request for reports (%s: %s)', (lang, q) => {
+    const r = routeAskR2(
+      { originalQuestion: q, sourceLanguage: lang, normalizationLanguage: lang, displayLanguage: lang, origin: 'ASK' },
+      { requestInstant: '2026-10-10T12:00:00Z', semanticResolution: verdict(false) },
+      { specialistRegistry: specialistRegistryFixture },
+    );
+    expect(requiresReporting(r)).toBe(false);
+  });
   it('a person question without a request for reports keeps the interpreter decision', () => {
     expect(requiresReporting(route('Who is Erik Prince?', verdict(false)))).toBe(false);
   });
