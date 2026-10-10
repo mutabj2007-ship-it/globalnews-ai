@@ -24,7 +24,10 @@ const REUTERS_FIXTURE: NewsArticle = {
   title: "Erik Prince's forces suffer battlefield loss in Congo, former UFC fighter among wounded, sources say",
   summary: 'FIXTURE — synthetic summary for a retrieval-boundary test; not the article text.',
   url: 'https://www.reuters.com/world/africa/erik-princes-forces-suffer-battlefield-loss-congo-former-ufc-fighter-among-2026-10-09/',
-  sourceId: 'gnews:reuters',
+  /* RIGHTS CONTAINMENT R1 — real provenance: GNews emits the publisher slug, and the live article
+     carries its acquiring provider ('gnews:reuters' is an id no producer emits → UNKNOWN_PROVENANCE) */
+  sourceId: 'reuters',
+  providerId: 'gnews',
   sourceName: 'Reuters',
   countryCode: 'COD',
   category: 'world',
@@ -233,7 +236,7 @@ describe('N1 → "Ask again without Reuters" draft (two steps, exact wording)', 
     title: 'Erik Prince contractors wounded in eastern Congo clash',
     summary: 'FIXTURE — fighting near Uvira in eastern Democratic Republic of Congo.',
     url: 'https://example.invalid/other-publisher-drc',
-    sourceId: 'gnews:example-wire',
+    sourceId: 'example-wire' /* real provenance: publisher slug (providerId 'gnews' inherited) */,
     sourceName: 'Example Wire',
   };
 

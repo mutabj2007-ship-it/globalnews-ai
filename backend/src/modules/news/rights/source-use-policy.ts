@@ -44,6 +44,7 @@ export type RightsExclusionReason =
   | 'RIGHTS_RESTRICTED'
   | 'RIGHTS_NOT_CLEARED_FOR_AI'
   | 'PROVIDER_RIGHTS_NOT_CLEARED'
+  | 'SOCIAL_RIGHTS_NOT_REVIEWED'
   | 'UNKNOWN_PROVENANCE';
 
 export type ProviderEnforcement = 'record' | 'enforce';
@@ -82,6 +83,8 @@ export interface PolicyOptions {
 
 const FEED_PREFIX = 'feed:';
 const PUBLISHER_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+/* social discovery lanes (social-search.providers.ts): `social:x:<author>`, `social:youtube:<channel>` */
+const SOCIAL_ID = /^social:(?:x|youtube):\S{1,200}$/;
 /** Stored provider rows carry no providerId (not persisted); their acquisition is unverified. */
 const STORED_PROVIDER_UNVERIFIED = 'stored-provider-unverified';
 
@@ -103,6 +106,11 @@ export function sourceUseDecision(input: UseInput, use: EvidenceUse, options: Po
     return { allowed: false, reason: 'RIGHTS_NOT_CLEARED_FOR_AI' };
   }
 
+  /*
+    Social discovery items are a real provenance class whose platform terms (X API, YouTube API) have
+    no recorded rights review: default deny, under their own reason — never mislabelled "malformed".
+  */
+  if (SOCIAL_ID.test(id)) return { allowed: false, reason: 'SOCIAL_RIGHTS_NOT_REVIEWED' };
   if (!PUBLISHER_SLUG.test(id)) return { allowed: false, reason: 'UNKNOWN_PROVENANCE' };
 
   const providerId = (input.providerId ?? '').trim();

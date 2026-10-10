@@ -13,6 +13,33 @@ import {
   type RequestedSource,
 } from '../../news/identity/requested-source.util';
 
+/*
+  MASTER CTO P0 RIGHTS CONTAINMENT R1 / E1-TAA-1 — the feed registry is REAL by default here: no live
+  row is CLEARED today (Statistics Poland UNREVIEWED, KT Press UNRESOLVED, Wirtualna Polska PROHIBITED),
+  so no RSS item may reach evidence or the model; the real-state rulings are pinned in the "RULED"
+  block of this file. Tests about ROUTING / ATTRIBUTION MECHANICS switch on a SYNTHETIC registry for
+  that test only: the real rows, every state below CLEARED marked CLEARED, RESTRICTED / PROHIBITED
+  kept real (the rss-feed.provider.spec.ts pattern, made switchable per test).
+*/
+let mockSyntheticClearedRegistry = false;
+jest.mock('../../news/providers/feed-source-registry', () => {
+  const actual = jest.requireActual('../../news/providers/feed-source-registry');
+  const synthetic = actual.FEED_SOURCES.map((row: { rights: { state: string } }) =>
+    row.rights.state === 'RESTRICTED' || row.rights.state === 'PROHIBITED'
+      ? row
+      : { ...row, rights: { ...row.rights, state: 'CLEARED' } },
+  );
+  return {
+    ...actual,
+    get FEED_SOURCES() {
+      return mockSyntheticClearedRegistry ? synthetic : actual.FEED_SOURCES;
+    },
+  };
+});
+afterEach(() => {
+  mockSyntheticClearedRegistry = false;
+});
+
 /**
  * NATURAL SOURCE-ATTRIBUTED QUESTION R1 — ACCEPTANCE.
  *
@@ -262,6 +289,8 @@ const THE_CONTROL = 'The demand for labour in Quarter 2 2026';
 
 describe('NATURAL SOURCE-ATTRIBUTED QUESTION R1 · the confirmed Alpha failure', () => {
   it('1 — the Statistics Poland natural question now retrieves the known labour article', async () => {
+    /* MECHANICS under the synthetic CLEARED registry; the real-state ruling is pinned in the RULED block */
+    mockSyntheticClearedRegistry = true;
     const h = harness(FULL_CORPUS);
 
     const response = await h.service.analyzeNews(THE_QUESTION);
@@ -287,6 +316,8 @@ describe('NATURAL SOURCE-ATTRIBUTED QUESTION R1 · the confirmed Alpha failure',
   });
 
   it('2 — the direct topic control still passes, unchanged', async () => {
+    /* MECHANICS under the synthetic CLEARED registry; the real-state ruling is pinned in the RULED block */
+    mockSyntheticClearedRegistry = true;
     const h = harness(FULL_CORPUS);
 
     const response = await h.service.analyzeNews(THE_CONTROL);
@@ -379,6 +410,8 @@ describe('NATURAL SOURCE-ATTRIBUTED QUESTION R1 · the confirmed Alpha failure',
   });
 
   it('8 — the admitted record keeps the original publisher URL and sourceName', async () => {
+    /* MECHANICS under the synthetic CLEARED registry; the real-state ruling is pinned in the RULED block */
+    mockSyntheticClearedRegistry = true;
     const h = harness(FULL_CORPUS);
 
     const response = await h.service.analyzeNews(THE_QUESTION);
@@ -478,5 +511,52 @@ describe('NATURAL SOURCE-ATTRIBUTED QUESTION R1 · resolution is curated, not fu
       ),
     ).toBe(true);
     expect(isAttributableToRequestedSource(OTHER_PUBLISHER_SAME_TOPIC, requested)).toBe(false);
+  });
+});
+
+/* ---------------------------------------------------------------- */
+/* RULED — MASTER CTO P0 RIGHTS CONTAINMENT R1, on the REAL registry */
+/* ---------------------------------------------------------------- */
+
+/**
+ * Cases 1, 2 and 8 above used to admit Statistics Poland's own RSS item as evidence. On the REAL,
+ * governed feed registry Statistics Poland is recorded UNREVIEWED (and Wirtualna Polska PROHIBITED):
+ * the routing and the source constraint are unchanged, but the RSS items are withheld at the rights
+ * chokepoint with their reasons — never "not relevant", never proof that no reporting exists.
+ */
+describe('RULED · RIGHTS CONTAINMENT R1 — the publisher\'s RSS items are withheld on the real registry', () => {
+  it('cases 1 / 8 — the natural question keeps its constrained search; the GUS item is withheld, with its reason', async () => {
+    const h = harness(FULL_CORPUS);
+
+    const response = await h.service.analyzeNews(THE_QUESTION);
+
+    expect(h.searchCalls).toHaveLength(1);
+    expect(h.searchCalls[0].query).toBe('demand for labour in Quarter 2 2026');
+    expect(h.searchCalls[0].requestedSourceId).toBe('feed:gus-pl');
+    expect(h.countryCalls).toEqual([]);
+    expect(response.articles).toEqual([]);
+    expect(response.retrievalContext?.rightsExcluded).toEqual({
+      count: 1,
+      reasons: { RIGHTS_NOT_CLEARED_FOR_AI: 1 },
+      sourceIds: ['feed:gus-pl'],
+    });
+    expect(response.retrievalContext?.outcome).not.toBe('NO_RELEVANT_EVIDENCE');
+  });
+
+  it('case 2 — the bare-topic control: no RSS item is admitted; each is withheld with its own reason', async () => {
+    const h = harness(FULL_CORPUS);
+
+    const response = await h.service.analyzeNews(THE_CONTROL);
+
+    expect(h.searchCalls[0].query).toBe('The demand for labour in Quarter 2 2026');
+    const ids = response.articles.map((a) => a.id);
+    expect(ids).not.toContain('gus-1');
+    expect(ids).not.toContain('wp-1');
+    expect(response.articles.every((a) => !a.sourceId.startsWith('feed:'))).toBe(true);
+    const excluded = response.retrievalContext?.rightsExcluded;
+    expect(excluded?.sourceIds).toEqual(expect.arrayContaining(['feed:gus-pl', 'feed:wp-pl']));
+    expect(excluded?.reasons).toEqual(
+      expect.objectContaining({ RIGHTS_NOT_CLEARED_FOR_AI: 1, RIGHTS_PROHIBITED: 1 }),
+    );
   });
 });

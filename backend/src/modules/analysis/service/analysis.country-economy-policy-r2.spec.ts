@@ -1,4 +1,29 @@
 import { Test } from '@nestjs/testing';
+/*
+  MASTER CTO P0 RIGHTS CONTAINMENT R1 / E1-TAA-1 — the feed registry is REAL by default (Statistics
+  Poland is recorded UNREVIEWED, Wirtualna Polska PROHIBITED: neither may reach AI input). A test about
+  relevance / fallback MECHANICS switches on a SYNTHETIC registry for that test only: the real rows,
+  every state below CLEARED marked CLEARED, RESTRICTED / PROHIBITED kept real (pattern of
+  rss-feed.provider.spec.ts, made switchable per test).
+*/
+let mockSyntheticClearedRegistry = false;
+jest.mock('../../news/providers/feed-source-registry', () => {
+  const actual = jest.requireActual('../../news/providers/feed-source-registry');
+  const synthetic = actual.FEED_SOURCES.map((row: { rights: { state: string } }) =>
+    row.rights.state === 'RESTRICTED' || row.rights.state === 'PROHIBITED'
+      ? row
+      : { ...row, rights: { ...row.rights, state: 'CLEARED' } },
+  );
+  return {
+    ...actual,
+    get FEED_SOURCES() {
+      return mockSyntheticClearedRegistry ? synthetic : actual.FEED_SOURCES;
+    },
+  };
+});
+afterEach(() => {
+  mockSyntheticClearedRegistry = false;
+});
 import { ANALYSIS_TOTAL_BUDGET_MS } from '@globalnews-ai/shared';
 import type { NewsArticle } from '@globalnews-ai/shared';
 import { AnalysisService } from './analysis.service';
@@ -385,7 +410,34 @@ describe('R2 · the Alpha question on the real services (6a379561 shape)', () =>
     expect(result.retrievalContext?.datesRequested).toBe(true);
   });
 
+  it('RULED (RIGHTS CONTAINMENT R1): on the REAL registry no uncleared feed item reaches evidence or the model — withheld with its reason, never "no relevant reporting"', async () => {
+    const gnews = provider('gnews', POLAND_OTHER);
+    const feeds = provider('rss-feeds', [...GUS_ECONOMIC, ...GUS_OTHER, ...WP_ECONOMIC, ...WP_UNRELATED]);
+    const gdelt = provider('gdelt-doc', [], gdeltTimeout());
+    const { service, inputs } = analysisOver(await buildNews([gnews], [feeds, gdelt]));
+
+    const result = await service.analyzeNews(QUESTION, 'en');
+
+    expect(result.articles).toEqual([]);
+    expect(inputs).toHaveLength(0);
+    /*
+      the relevance gate (and the unchanged cap / clustering stage) still ran first: exactly the economy
+      items the synthetic-registry mechanics test below admits (4 Statistics Poland) plus the 2 Wirtualna
+      Polska economy items reached the rights chokepoint — no non-economic item did.
+    */
+    expect(result.retrievalContext?.rightsExcluded).toEqual({
+      count: 6,
+      reasons: { RIGHTS_NOT_CLEARED_FOR_AI: 4, RIGHTS_PROHIBITED: WP_ECONOMIC.length },
+      sourceIds: ['feed:gus-pl', 'feed:wp-pl'],
+    });
+    expect(result.retrievalContext?.fallbackReason).toBe('provider-error');
+    expect(result.retrievalContext?.evidenceState).toBe('degraded-fallback');
+    expect(result.retrievalContext?.outcome).not.toBe('NO_RELEVANT_EVIDENCE');
+  });
+
   it('when GNews has nothing relevant: feed economy reporting is admitted, non-economic feed items rejected, and the timeout stays DISCLOSED as degraded', async () => {
+    /* MECHANICS under the synthetic CLEARED registry; Wirtualna Polska keeps its real PROHIBITED state */
+    mockSyntheticClearedRegistry = true;
     const gnews = provider('gnews', POLAND_OTHER);
     const feeds = provider('rss-feeds', [
       ...GUS_ECONOMIC,
@@ -403,7 +455,16 @@ describe('R2 · the Alpha question on the real services (6a379561 shape)', () =>
     const admissible = new Set(ids([...GUS_ECONOMIC, ...WP_ECONOMIC]));
     for (const id of ids(result.articles)) expect(admissible.has(id)).toBe(true);
     expect(result.articles.some((a) => a.sourceId === 'feed:gus-pl')).toBe(true);
-    expect(result.articles.some((a) => a.sourceId === 'feed:wp-pl')).toBe(true);
+    /*
+      RULED (before: a 'feed:wp-pl' item was admitted): Wirtualna Polska is recorded PROHIBITED, so its
+      economy items are withheld at the chokepoint with that reason, never shown as evidence.
+    */
+    expect(result.articles.some((a) => a.sourceId === 'feed:wp-pl')).toBe(false);
+    expect(result.retrievalContext?.rightsExcluded).toEqual({
+      count: WP_ECONOMIC.length,
+      reasons: { RIGHTS_PROHIBITED: WP_ECONOMIC.length },
+      sourceIds: ['feed:wp-pl'],
+    });
     for (const a of [...GUS_OTHER, ...WP_UNRELATED, ...POLAND_OTHER]) {
       expect(result.articles.map((x) => x.id)).not.toContain(a.id);
     }

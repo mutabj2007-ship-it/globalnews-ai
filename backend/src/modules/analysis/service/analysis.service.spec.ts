@@ -1503,7 +1503,8 @@ describe('AnalysisService', () => {
 
   describe('retrievalContext', () => {
     it('preserves dataMode=live and provider info for generic live retrieval', async () => {
-      const articles = [makeArticle({ id: 'live-1' })];
+      /* real provenance: a live provider article carries its providerId (RIGHTS CONTAINMENT R1) */
+      const articles = [makeArticle({ id: 'live-1', providerId: 'gnews' })];
 
       const newsService = {
         search: jest.fn().mockResolvedValue(
@@ -1543,6 +1544,8 @@ describe('AnalysisService', () => {
         countryName: undefined,
         providerDisplayName: undefined,
         articlesRetrieved: 1,
+        /* RIGHTS CONTAINMENT R1 — a live GNews article is pending E1 (record mode): counted, never "cleared" */
+        rightsPending: { count: 1, providers: { gnews: 1 } },
       });
     });
 
@@ -1665,6 +1668,7 @@ describe('AnalysisService', () => {
         makeArticle({
           id: 'spain-live-1',
           title: 'Spain headline',
+          providerId: 'gnews',
         }),
       ];
 
@@ -1710,6 +1714,8 @@ describe('AnalysisService', () => {
         countryName: 'Spain',
         providerDisplayName: 'GNews Free',
         articlesRetrieved: 1,
+        /* RIGHTS CONTAINMENT R1 — a live GNews article is pending E1 (record mode): counted, never "cleared" */
+        rightsPending: { count: 1, providers: { gnews: 1 } },
         /* T1 — UPDATED DELIBERATELY: the additive canonical coverage fact for the
            established country (no rights-cleared local source is active anywhere today). */
         sourceCoverage: expect.objectContaining({ iso3: 'ESP', notice: 'LOCAL_COVERAGE_ABSENT' }),
@@ -1770,6 +1776,8 @@ describe('AnalysisService', () => {
         countryName: 'Rwanda',
         providerDisplayName: 'Stored reporting',
         articlesRetrieved: 1,
+        /* RIGHTS CONTAINMENT R1 — stored rows carry no providerId: acquisition unverified, counted as pending */
+        rightsPending: { count: 1, providers: { 'stored-provider-unverified': 1 } },
         /* T1 — UPDATED DELIBERATELY: the additive canonical coverage fact for the
            established country (no rights-cleared local source is active anywhere today). */
         sourceCoverage: expect.objectContaining({ iso3: 'RWA', notice: 'LOCAL_COVERAGE_ABSENT' }),
@@ -1852,6 +1860,7 @@ describe('AnalysisService', () => {
         makeArticle({
           id: 'kigali-retrieval-1',
           title: 'Kigali headline',
+          providerId: 'gnews',
         }),
       ];
 
@@ -1899,6 +1908,8 @@ describe('AnalysisService', () => {
         providerDisplayName: 'GNews Free',
         articlesRetrieved: 1,
         city: 'kigali',
+        /* RIGHTS CONTAINMENT R1 — a live GNews article is pending E1 (record mode): counted, never "cleared" */
+        rightsPending: { count: 1, providers: { gnews: 1 } },
         /* T1 — UPDATED DELIBERATELY: the additive canonical coverage fact for the
            established country (no rights-cleared local source is active anywhere today). */
         sourceCoverage: expect.objectContaining({ iso3: 'RWA', notice: 'LOCAL_COVERAGE_ABSENT' }),

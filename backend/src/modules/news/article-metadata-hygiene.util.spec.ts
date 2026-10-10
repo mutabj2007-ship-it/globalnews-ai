@@ -204,7 +204,7 @@ describe('Article Metadata Hygiene R1 — the shared boundaries apply it', () =>
       const prisma = {
         article: {
           findMany: jest.fn().mockResolvedValue(rows.article ?? []),
-          findUnique: jest.fn().mockResolvedValue(rows.article?.[0] ?? null),
+          findFirst: jest.fn().mockResolvedValue(rows.article?.[0] ?? null),
         },
         articleCountry: { findMany: jest.fn().mockResolvedValue(rows.country ?? []) },
       };

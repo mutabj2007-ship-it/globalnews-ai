@@ -12,6 +12,33 @@ import {
 } from '../../news/identity/requested-source.util';
 import { EAST_AFRICA } from '../region/declared-regions';
 
+/*
+  MASTER CTO P0 RIGHTS CONTAINMENT R1 / E1-TAA-1 — the feed registry is REAL by default here: no live
+  row is CLEARED today (Statistics Poland UNREVIEWED, KT Press UNRESOLVED, Wirtualna Polska PROHIBITED),
+  so no RSS item may reach evidence or the model; the real-state rulings are pinned in the "RULED"
+  block of this file. Tests about ROUTING / ATTRIBUTION MECHANICS switch on a SYNTHETIC registry for
+  that test only: the real rows, every state below CLEARED marked CLEARED, RESTRICTED / PROHIBITED
+  kept real (the rss-feed.provider.spec.ts pattern, made switchable per test).
+*/
+let mockSyntheticClearedRegistry = false;
+jest.mock('../../news/providers/feed-source-registry', () => {
+  const actual = jest.requireActual('../../news/providers/feed-source-registry');
+  const synthetic = actual.FEED_SOURCES.map((row: { rights: { state: string } }) =>
+    row.rights.state === 'RESTRICTED' || row.rights.state === 'PROHIBITED'
+      ? row
+      : { ...row, rights: { ...row.rights, state: 'CLEARED' } },
+  );
+  return {
+    ...actual,
+    get FEED_SOURCES() {
+      return mockSyntheticClearedRegistry ? synthetic : actual.FEED_SOURCES;
+    },
+  };
+});
+afterEach(() => {
+  mockSyntheticClearedRegistry = false;
+});
+
 /**
  * REV B · B — EXPLICIT SOURCE INTENT MUST NOT BE LOST TO REGION ROUTING.
  *
@@ -210,6 +237,8 @@ describe('REV B · B1 — an ordinary region question is untouched', () => {
 
 describe('REV B · B2 — the same region, with a publisher named', () => {
   it('routes to source-attributed retrieval constrained to feed:ktpress-rw', async () => {
+    /* MECHANICS under the synthetic CLEARED registry; the real-state ruling is pinned in the RULED block */
+    mockSyntheticClearedRegistry = true;
     const h = harness(CORPUS);
 
     const response = await h.service.analyzeNews(
@@ -273,5 +302,35 @@ describe('REV B · B3 — the article anchor still outranks this intent', () => 
      */
     expect(h.searchCalls.every((call) => call.requestedSourceId === undefined)).toBe(true);
     expect(h.countryCalls).toEqual([]);
+  });
+});
+
+/* ---------------------------------------------------------------- */
+/* RULED — MASTER CTO P0 RIGHTS CONTAINMENT R1, on the REAL registry */
+/* ---------------------------------------------------------------- */
+
+/**
+ * B2 above used to admit KT Press's RSS item as evidence. On the REAL, governed feed registry KT Press
+ * is recorded UNRESOLVED: the precedence (source-attributed retrieval, no region fan-out) is unchanged,
+ * but the item is withheld at the rights chokepoint with its reason — never "not relevant", never proof
+ * that no reporting exists.
+ */
+describe('RULED · RIGHTS CONTAINMENT R1 — B2 on the real registry', () => {
+  it('same route and constraint; the KT Press item is withheld, with its reason', async () => {
+    const h = harness(CORPUS);
+
+    const response = await h.service.analyzeNews('What does KT Press report about East Africa?');
+
+    expect(h.countryCalls).toEqual([]);
+    expect(h.searchCalls).toHaveLength(1);
+    expect(h.searchCalls[0].query).toBe(REGION_TOPIC);
+    expect(h.searchCalls[0].requestedSourceId).toBe('feed:ktpress-rw');
+    expect(response.articles).toEqual([]);
+    expect(response.retrievalContext?.rightsExcluded).toEqual({
+      count: 1,
+      reasons: { RIGHTS_NOT_CLEARED_FOR_AI: 1 },
+      sourceIds: ['feed:ktpress-rw'],
+    });
+    expect(response.retrievalContext?.outcome).not.toBe('NO_RELEVANT_EVIDENCE');
   });
 });

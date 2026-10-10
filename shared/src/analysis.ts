@@ -926,6 +926,7 @@ export interface AnalysisRetrievalContext {
           | 'RIGHTS_RESTRICTED'
           | 'RIGHTS_NOT_CLEARED_FOR_AI'
           | 'PROVIDER_RIGHTS_NOT_CLEARED'
+          | 'SOCIAL_RIGHTS_NOT_REVIEWED'
           | 'UNKNOWN_PROVENANCE',
           number
         >

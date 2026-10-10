@@ -26,6 +26,33 @@ import { ArticlePersistenceService } from '../../news/persistence/article-persis
 import { COMPOUND_PLAN_PACING } from '../query/compound-retrieval-plan.util';
 import { deriveEventFrame } from '../query/event-frame.util';
 import { assessClaims } from '../validation/claim-graph.util';
+import { FEED_SOURCES, resolveActiveFeedSources } from '../../news/providers/feed-source-registry';
+
+/*
+  MASTER CTO P0 RIGHTS CONTAINMENT R1 / E1-TAA-1 — the feed registry is REAL by default here (no live
+  row is CLEARED today, so a real registry activates nothing and every RSS row is withheld from AI
+  input). Where a test is about fan-out MECHANICS, it switches on a SYNTHETIC registry for that test
+  only: the real rows, with every state below CLEARED marked CLEARED (RESTRICTED / PROHIBITED keep their
+  real states) — the pattern of rss-feed.provider.spec.ts, made switchable per test.
+*/
+let mockSyntheticClearedRegistry = false;
+jest.mock('../../news/providers/feed-source-registry', () => {
+  const actual = jest.requireActual('../../news/providers/feed-source-registry');
+  const synthetic = actual.FEED_SOURCES.map((row: { rights: { state: string } }) =>
+    row.rights.state === 'RESTRICTED' || row.rights.state === 'PROHIBITED'
+      ? row
+      : { ...row, rights: { ...row.rights, state: 'CLEARED' } },
+  );
+  return {
+    ...actual,
+    get FEED_SOURCES() {
+      return mockSyntheticClearedRegistry ? synthetic : actual.FEED_SOURCES;
+    },
+  };
+});
+afterEach(() => {
+  mockSyntheticClearedRegistry = false;
+});
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -498,11 +525,26 @@ describe('R2B · discovery lanes in the Ask (Flydubai, social configured)', () =
 
     expect(xSeen).toHaveLength(1);
     const ids = result.articles.map((x0) => x0.id);
-    expect(ids).toEqual(expect.arrayContaining(['flight-local', 'x:1840000000000000001']));
+    /*
+      RULED (MASTER CTO P0 RIGHTS CONTAINMENT R1, SOCIAL_RIGHTS_NOT_REVIEWED): social discovery items
+      have no recorded platform-rights review, so they are withheld at the chokepoint — never evidence,
+      never model input. Before: the official X post ('x:1840000000000000001') was admitted as evidence.
+    */
+    expect(ids).toEqual(['flight-local']);
     expect(ids).not.toContain('gaza-collapse');
-    /* the repost/quote is a lead, never evidence */
-    expect(ids).not.toContain('x:1840000000000000003');
+    expect(ids.some((id) => id.startsWith('x:'))).toBe(false);
     expect(inputs).toHaveLength(1);
+    expect(inputs[0].articles.map((x0) => x0.id)).toEqual(['flight-local']);
+    /*
+      The SAME event gate still ran first: the two on-event posts (official @flydubai, author 100, and
+      the anonymous eyewitness, author 200) reached the rights chokepoint and were withheld there, with
+      their reason; the repost/quote (author 300) is a lead, dropped before rights — never evidence.
+    */
+    expect(result.retrievalContext?.rightsExcluded).toEqual({
+      count: 2,
+      reasons: { SOCIAL_RIGHTS_NOT_REVIEWED: 2 },
+      sourceIds: ['social:x:100', 'social:x:200'],
+    });
     const trace = result.retrievalContext!.retrievalTrace!;
     expect(trace.lanesSucceeded).toEqual(expect.arrayContaining(['gnews', 'x']));
     expect(trace.lanesUnavailable).toEqual(
@@ -510,9 +552,15 @@ describe('R2B · discovery lanes in the Ask (Flydubai, social configured)', () =
     );
     /* An unconfigured lane is shown, but does not by itself make coverage "incomplete". */
     expect(result.retrievalContext?.verificationNotice).toBeUndefined();
+    /*
+      RULED: with the airline's own post withheld, the occurrence rests on one independent news family
+      — REPORTED, with no official family (before: CONFIRMED, officialFamily true). The claim-graph
+      mechanic "official statement + independent reporting reaches CONFIRMED" is still pinned directly
+      by 'F · official statement + independent reporting reaches CONFIRMED' above.
+    */
     const occ = result.retrievalContext!.claimAssessments!.find((c) => c.id === 'occurrence')!;
-    expect(occ.state).toBe('CONFIRMED');
-    expect(occ.officialFamily).toBe(true);
+    expect(occ.state).toBe('REPORTED');
+    expect(occ.officialFamily).toBe(false);
   });
 
   it('social lanes OFF (default): the Ask behaves exactly as R2A, the lanes are listed not-configured', async () => {
@@ -549,7 +597,42 @@ describe('R2B · governed local fan-out (active publisher feeds)', () => {
     },
   );
 
+  it('RULED (E1-TAA-1): an UNCLEARED feed named in RSS_FEED_SOURCES is refused — never asked, never evidence', async () => {
+    /* real registry: KT Press is recorded UNRESOLVED, so naming it activates nothing */
+    const selection = resolveActiveFeedSources(FEED_SOURCES, 'feed:ktpress-rw');
+    expect(selection.sources).toEqual([]);
+    expect(selection.refused).toEqual([
+      expect.objectContaining({ sourceId: 'feed:ktpress-rw', reason: 'RIGHTS_NOT_CLEARED', rightsState: 'UNRESOLVED' }),
+    ]);
+    const calls: string[] = [];
+    const gnews = {
+      ...stub('gnews', () => [], []),
+      async search() {
+        calls.push('gnews');
+        return [WIRE_RW];
+      },
+    } as unknown as NewsProvider;
+    const feeds = {
+      ...stub('rss-feeds', () => [], []),
+      async search() {
+        calls.push('rss-feeds');
+        return [LOCAL_RW];
+      },
+    } as unknown as NewsProvider;
+    const discovery = new EvidenceDiscoveryService(
+      [],
+      configOf({ RSS_FEED_SOURCES: 'feed:ktpress-rw' }),
+    );
+    expect(discovery.hasGovernedLocalFeeds(['RW'])).toBe(false);
+    const { service } = await services([gnews], [feeds], undefined, discovery);
+    const result = await service.analyzeNews(RW_Q, 'en');
+    expect(calls).not.toContain('rss-feeds');
+    expect(result.articles.map((x) => x.id)).toEqual(['wire-rw']);
+  });
+
   it('an ACTIVE feed for the asked country is asked alongside the primary on the first search', async () => {
+    /* MECHANICS under the synthetic CLEARED registry (the real-state ruling is pinned by the test above) */
+    mockSyntheticClearedRegistry = true;
     const calls: string[] = [];
     const gnews = {
       ...stub('gnews', () => [], []),

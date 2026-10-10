@@ -100,6 +100,30 @@ function harness() {
       boundSpecialistDomains: () => ['CONFLICT'],
       read: jest.fn(async () => ({ considered: [], contributions: [] })),
     } as never,
+    undefined /* guests */,
+    /*
+      MASTER CTO P0 RIGHTS CONTAINMENT R1.1 — prior-answer reuse re-resolves an earlier SOURCED
+      answer's evidence refs in the store and fails closed without one. The harness now wires that
+      read: every evidence ref resolves to a stored row of real provenance (a publisher slug; stored
+      rows carry no providerId). The retained-by-country read is not part of this replay: it fails,
+      which is exactly the "UNAVAILABLE" the adapter reports with no store at all.
+    */
+    {
+      findArticleById: jest.fn(async (id: string) => ({
+        id,
+        title: `Stored report ${id}`,
+        summary: 'Stored summary.',
+        url: `https://example.test/${id}`,
+        sourceId: 'example',
+        sourceName: 'Example',
+        category: 'world',
+        sourcesCount: 1,
+        publishedAt: new Date().toISOString(),
+      })),
+      findRetainedByCountry: jest.fn(async () => {
+        throw new Error('retained-by-country read is not part of this replay');
+      }),
+    } as never,
   );
   return { adapter, calls };
 }

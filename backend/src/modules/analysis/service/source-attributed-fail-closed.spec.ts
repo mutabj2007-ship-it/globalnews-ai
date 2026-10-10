@@ -17,6 +17,33 @@ import {
 } from '../query/derive-source-attributed-query.util';
 import { EAST_AFRICA } from '../region/declared-regions';
 
+/*
+  MASTER CTO P0 RIGHTS CONTAINMENT R1 / E1-TAA-1 — the feed registry is REAL by default here: no live
+  row is CLEARED today (Statistics Poland UNREVIEWED, KT Press UNRESOLVED, Wirtualna Polska PROHIBITED),
+  so no RSS item may reach evidence or the model; the real-state rulings are pinned in the "RULED"
+  block of this file. Tests about ROUTING / ATTRIBUTION MECHANICS switch on a SYNTHETIC registry for
+  that test only: the real rows, every state below CLEARED marked CLEARED, RESTRICTED / PROHIBITED
+  kept real (the rss-feed.provider.spec.ts pattern, made switchable per test).
+*/
+let mockSyntheticClearedRegistry = false;
+jest.mock('../../news/providers/feed-source-registry', () => {
+  const actual = jest.requireActual('../../news/providers/feed-source-registry');
+  const synthetic = actual.FEED_SOURCES.map((row: { rights: { state: string } }) =>
+    row.rights.state === 'RESTRICTED' || row.rights.state === 'PROHIBITED'
+      ? row
+      : { ...row, rights: { ...row.rights, state: 'CLEARED' } },
+  );
+  return {
+    ...actual,
+    get FEED_SOURCES() {
+      return mockSyntheticClearedRegistry ? synthetic : actual.FEED_SOURCES;
+    },
+  };
+});
+afterEach(() => {
+  mockSyntheticClearedRegistry = false;
+});
+
 /**
  * REV C — AN UNRESOLVED PUBLISHER IS STILL A CONSTRAINT.
  *
@@ -266,6 +293,8 @@ describe('REV C · C2 — nor by a DECLARED-REGION route', () => {
 
 describe('REV C · C3 — the curated publishers are unaffected', () => {
   it('Statistics Poland still resolves and still retrieves its own reporting', async () => {
+    /* MECHANICS under the synthetic CLEARED registry; the real-state ruling is pinned in the RULED block */
+    mockSyntheticClearedRegistry = true;
     const h = harness(CORPUS);
 
     const response = await h.service.analyzeNews(
@@ -279,6 +308,8 @@ describe('REV C · C3 — the curated publishers are unaffected', () => {
   });
 
   it('KT Press + East Africa is still constrained to feed:ktpress-rw', async () => {
+    /* MECHANICS under the synthetic CLEARED registry; the real-state ruling is pinned in the RULED block */
+    mockSyntheticClearedRegistry = true;
     const h = harness(CORPUS);
 
     const response = await h.service.analyzeNews('What does KT Press report about East Africa?');
@@ -319,6 +350,8 @@ describe('REV C · C4 — ordinary place questions are untouched', () => {
 
 describe('REV C · C5 — the article anchor still outranks all of it', () => {
   it('an unresolved publisher does NOT override a resolved story anchor', async () => {
+    /* MECHANICS under the synthetic CLEARED registry; the real-state ruling is pinned in the RULED block */
+    mockSyntheticClearedRegistry = true;
     const h = harness(CORPUS, EAST_AFRICA_STORY);
 
     const response = await h.service.analyzeNews(
@@ -454,6 +487,8 @@ describe('REV C REV A · D3 — nothing else moved', () => {
   });
 
   it('a curated publisher is still retrieved normally', async () => {
+    /* MECHANICS under the synthetic CLEARED registry; the real-state ruling is pinned in the RULED block */
+    mockSyntheticClearedRegistry = true;
     const h = harness(CORPUS);
 
     const response = await h.service.analyzeNews('What does KT Press report about East Africa?');
@@ -464,6 +499,8 @@ describe('REV C REV A · D3 — nothing else moved', () => {
   });
 
   it('and a resolved article anchor still outranks an over-limit source intent', async () => {
+    /* MECHANICS under the synthetic CLEARED registry; the real-state ruling is pinned in the RULED block */
+    mockSyntheticClearedRegistry = true;
     const h = harness(CORPUS, EAST_AFRICA_STORY);
 
     const response = await h.service.analyzeNews(
@@ -480,5 +517,61 @@ describe('REV C REV A · D3 — nothing else moved', () => {
     expect(resolveRequestedSource(OVER_LIMIT_SOURCE)).toBeUndefined();
     expect(resolveRequestedSource('Reuters')).toBeUndefined();
     expect(resolveRequestedSource('Statistics Poland')?.sourceId).toBe('feed:gus-pl');
+  });
+});
+
+/* ---------------------------------------------------------------- */
+/* RULED — MASTER CTO P0 RIGHTS CONTAINMENT R1, on the REAL registry */
+/* ---------------------------------------------------------------- */
+
+/**
+ * The cases above that used to put an RSS item into the answer (C3, C5, D3) — re-run on the REAL,
+ * governed feed registry. Routing and attribution are unchanged (the same constrained search, the
+ * same anchored routing), but the curated publisher's item is withheld at the rights chokepoint with
+ * its reason: an RSS row below CLEARED never reaches evidence or the model, and the withholding is a
+ * rights exclusion — never "not relevant", never proof that no reporting exists.
+ */
+describe('RULED · RIGHTS CONTAINMENT R1 — the curated RSS publishers are withheld on the real registry', () => {
+  it.each([
+    [
+      'C3 · Statistics Poland',
+      'What does Statistics Poland report about the demand for labour in Quarter 2 2026?',
+      false,
+      'feed:gus-pl',
+    ],
+    ['C3 / D3 · KT Press + East Africa', 'What does KT Press report about East Africa?', false, 'feed:ktpress-rw'],
+    ['C5 · Reuters with a resolved KT Press anchor', 'What does Reuters report about East Africa?', true, undefined],
+    [
+      'D3 · over-limit source with a resolved KT Press anchor',
+      `What does ${OVER_LIMIT_SOURCE} report about East Africa?`,
+      true,
+      undefined,
+    ],
+  ])('%s', async (_label, question, anchored, requestedSourceId) => {
+    const h = harness(CORPUS, anchored ? EAST_AFRICA_STORY : undefined);
+
+    const response = await h.service.analyzeNews(
+      question,
+      'en',
+      anchored ? { articleId: 'kt-1', title: EAST_AFRICA_STORY.title } : undefined,
+    );
+
+    /* routing mechanics unchanged */
+    expect(h.countryCalls).toEqual([]);
+    if (requestedSourceId === undefined) {
+      expect(h.searchCalls.every((call) => call.requestedSourceId === undefined)).toBe(true);
+    } else {
+      expect(h.searchCalls).toHaveLength(1);
+      expect(h.searchCalls[0].requestedSourceId).toBe(requestedSourceId);
+    }
+    /* the ruling: withheld, with its reason */
+    expect(response.articles).toEqual([]);
+    expect(response.retrievalContext?.rightsExcluded).toEqual({
+      count: 1,
+      reasons: { RIGHTS_NOT_CLEARED_FOR_AI: 1 },
+      sourceIds: [anchored ? 'feed:ktpress-rw' : requestedSourceId],
+    });
+    expect(response.retrievalContext?.outcome).not.toBe('NO_RELEVANT_EVIDENCE');
+    expect(h.provider.analyzeNews).not.toHaveBeenCalled();
   });
 });

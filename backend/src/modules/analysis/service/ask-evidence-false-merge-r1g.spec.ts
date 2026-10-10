@@ -47,7 +47,9 @@ function report(
     title,
     summary,
     url: `https://${host}/story-${seq}`,
-    sourceId: host,
+    /* RIGHTS CONTAINMENT R1 — real provenance: GNews emits a publisher SLUG (lowercase letters, digits,
+       hyphens), never a hostname; the host still decides url / sourceName exactly as before */
+    sourceId: host.split('.').join('-'),
     sourceName: host,
     category: 'world',
     sourcesCount: 1,

@@ -1,19 +1,20 @@
 import type { NewsArticle } from '@globalnews-ai/shared';
 import { ArticlePersistenceService } from './article-persistence.service';
+import { admittedStoredSourceWhere } from '../rights/source-use-policy';
 
 describe('ArticlePersistenceService', () => {
   const articleUpsert = jest.fn();
   const articleCountryUpsert = jest.fn();
   const articleCountryFindMany = jest.fn();
   const articleFindMany = jest.fn();
-  const articleFindUnique = jest.fn();
+  const articleFindFirst = jest.fn();
   const transaction = jest.fn();
 
   const prisma = {
     article: {
       upsert: articleUpsert,
       findMany: articleFindMany,
-      findUnique: articleFindUnique,
+      findFirst: articleFindFirst,
     },
     articleCountry: {
       upsert: articleCountryUpsert,
@@ -29,14 +30,14 @@ describe('ArticlePersistenceService', () => {
     articleCountryUpsert.mockReset();
     articleCountryFindMany.mockReset();
     articleFindMany.mockReset();
-    articleFindUnique.mockReset();
+    articleFindFirst.mockReset();
     transaction.mockReset();
 
     articleUpsert.mockImplementation((args) => args);
     articleCountryUpsert.mockImplementation((args) => args);
     articleCountryFindMany.mockResolvedValue([]);
     articleFindMany.mockResolvedValue([]);
-    articleFindUnique.mockResolvedValue(null);
+    articleFindFirst.mockResolvedValue(null);
     transaction.mockResolvedValue([]);
 
     service = new ArticlePersistenceService(prisma as never);
@@ -133,7 +134,7 @@ describe('ArticlePersistenceService', () => {
     });
 
     it('AD — a persisted GDELT article resolves by id WITH its observed provenance', async () => {
-      articleFindUnique.mockResolvedValue(
+      articleFindFirst.mockResolvedValue(
         makeDatabaseRow({ id: 'gdelt-doc-1', publishedAtBasis: 'observed' }),
       );
 
@@ -144,7 +145,7 @@ describe('ArticlePersistenceService', () => {
     });
 
     it('AD — findById validates the basis on the same one-way rule as findRecent', async () => {
-      articleFindUnique.mockResolvedValue(
+      articleFindFirst.mockResolvedValue(
         makeDatabaseRow({ id: 'gdelt-doc-1', publishedAtBasis: 'observed-ish' }),
       );
 
@@ -442,6 +443,7 @@ describe('ArticlePersistenceService', () => {
               '2026-08-06T12:00:00.000Z',
             ),
           },
+          ...admittedStoredSourceWhere(),
         },
       },
       include: {
@@ -613,6 +615,7 @@ describe('ArticlePersistenceService', () => {
             '2026-08-06T12:00:00.000Z',
           ),
         },
+        ...admittedStoredSourceWhere(),
       },
       orderBy: {
         publishedAt: 'desc',
@@ -678,6 +681,7 @@ describe('ArticlePersistenceService', () => {
           ),
         },
         category: 'technology',
+        ...admittedStoredSourceWhere(),
       },
       orderBy: {
         publishedAt: 'desc',
@@ -737,12 +741,12 @@ describe('ArticlePersistenceService', () => {
    */
   describe('findById', () => {
     it('resolves a real article by its stored id', async () => {
-      articleFindUnique.mockResolvedValueOnce(makeDatabaseRow());
+      articleFindFirst.mockResolvedValueOnce(makeDatabaseRow());
 
       const result = await service.findById('article-1');
 
-      expect(articleFindUnique).toHaveBeenCalledWith({
-        where: { id: 'article-1' },
+      expect(articleFindFirst).toHaveBeenCalledWith({
+        where: { id: 'article-1', ...admittedStoredSourceWhere() },
       });
       expect(result).toEqual({
         id: 'article-1',
@@ -761,7 +765,7 @@ describe('ArticlePersistenceService', () => {
     });
 
     it('returns null when the id does not exist \u2014 never fabricates an article', async () => {
-      articleFindUnique.mockResolvedValueOnce(null);
+      articleFindFirst.mockResolvedValueOnce(null);
 
       const result = await service.findById('does-not-exist');
 
@@ -769,7 +773,7 @@ describe('ArticlePersistenceService', () => {
     });
 
     it('returns null (never throws) when the database read fails', async () => {
-      articleFindUnique.mockRejectedValueOnce(new Error('Simulated database failure'));
+      articleFindFirst.mockRejectedValueOnce(new Error('Simulated database failure'));
 
       await expect(service.findById('article-1')).resolves.toBeNull();
     });
@@ -778,11 +782,11 @@ describe('ArticlePersistenceService', () => {
       const result = await service.findById('   ');
 
       expect(result).toBeNull();
-      expect(articleFindUnique).not.toHaveBeenCalled();
+      expect(articleFindFirst).not.toHaveBeenCalled();
     });
 
     it('maps nullable values safely, matching findRecent/findRecentByCountry\u2019s own convention', async () => {
-      articleFindUnique.mockResolvedValueOnce(
+      articleFindFirst.mockResolvedValueOnce(
         makeDatabaseRow({ imageUrl: null, confidenceScore: null }),
       );
 
@@ -847,7 +851,7 @@ describe('ArticlePersistenceService', () => {
     });
 
     it('exposes firstSeenAt from the persisted row on findById', async () => {
-      articleFindUnique.mockResolvedValueOnce(makeDatabaseRow());
+      articleFindFirst.mockResolvedValueOnce(makeDatabaseRow());
 
       const article = await service.findById('article-1');
 
