@@ -26,6 +26,13 @@ const REQUEST_FRAMES: readonly RegExp[] = [
   ),
   new RegExp(String.raw`^(?:are\s+there\s+|is\s+there\s+)?(?:any|some)\s+${RECENCY}${NOUN}\s+${ABOUT}\s+(.+)$`, 'i'),
   new RegExp(String.raw`^report\s+${ABOUT}\s+(.+)$`, 'i'),
+  /*
+    MASTER CTO RECOVERY R1 — the product's own "Ask again without <publisher>" draft
+    (askPublisherStrings withoutDraft, EN + PL). A recency word is required, so "What did the report
+    say about inflation?" and "What is the news about…" keep their path.
+  */
+  new RegExp(String.raw`^(?:what|which)\s+(?:are|is)\s+(?:the\s+)?(?:latest|recent|newest)\s+${NOUN}\s+${ABOUT}\s+(.+)$`, 'i'),
+  /^jakie\s+s[ąa]\s+(?:najnowsze|ostatnie)\s+(?:doniesienia|wiadomo[śs]ci|informacje|artyku[łl]y|raporty)\s+(?:o|na\s+temat|w\s+sprawie)\s+(.+)$/iu,
   /^(?:podaj|poka[żz]|daj|znajd[źz])\s+(?:mi\s+)?(?:jakie[śs]\s+|najnowsze\s+|ostatnie\s+)*(?:doniesienia|wiadomo[śs]ci|informacje|artyku[łl]y|raporty)\s+(?:o|na\s+temat|w\s+sprawie)\s+(.+)$/iu,
 ];
 

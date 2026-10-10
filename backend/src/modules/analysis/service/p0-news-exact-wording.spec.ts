@@ -7,6 +7,7 @@ import { AnalysisService } from './analysis.service';
 import { scoreGenericRelevance } from '../../news/relevance/generic-relevance.util';
 import { scoreCountryRelevance } from '../../news/country/country-relevance.util';
 import { isAttributableToRequestedSource, type RequestedSource } from '../../news/identity/requested-source.util';
+import { withoutReaderRequestFrame } from '../query/reader-request-frame.util';
 
 /*
   P0 SOURCE-BACKED NEWS ANSWERS R1 — the Product Owner's EXACT wording, through the real
@@ -217,5 +218,53 @@ describe('EA review of c12e372 — evidence that NAMES the DRC settles "Congo"; 
     const h = harness([REUTERS_FIXTURE]);
     const response = await h.service.analyzeNews('What did Rwanda say about Erik Prince in Congo?');
     expect(response.retrievalContext.requestedPublisher).toBeUndefined();
+  });
+});
+
+/*
+  MASTER CTO RECOVERY R1 §2 P0A — N1's optional alternative is the reader's choice, not a silent
+  substitution: the verdict offers the topic back as a draft (frontend askPublisherStrings EN
+  withoutDraft), and THAT question performs a real search whose evidence keeps its own publisher.
+*/
+describe('N1 → "Ask again without Reuters" draft (two steps, exact wording)', () => {
+  const OTHER_PUBLISHER_DRC: NewsArticle = {
+    ...REUTERS_FIXTURE,
+    id: 'other-publisher-drc',
+    title: 'Erik Prince contractors wounded in eastern Congo clash',
+    summary: 'FIXTURE — fighting near Uvira in eastern Democratic Republic of Congo.',
+    url: 'https://example.invalid/other-publisher-drc',
+    sourceId: 'gnews:example-wire',
+    sourceName: 'Example Wire',
+  };
+
+  it('step 1 searches nothing; step 2 searches once and admits labelled non-Reuters DRC reporting', async () => {
+    const h = harness([OTHER_PUBLISHER_DRC]);
+    const first = await h.service.analyzeNews('Report abt Eric Prince in congo. According reuters please.');
+    expect(h.searchCalls).toEqual([]);
+    const topic = first.retrievalContext.requestedPublisher?.topic ?? '';
+    expect(topic).toMatch(/prince in congo/i);
+
+    const second = await h.service.analyzeNews(`What are the latest reports about ${topic.trim()}?`);
+    expect(h.searchCalls).toHaveLength(1);
+    expect(second.retrievalContext.requestedPublisher).toBeUndefined();
+    expect(second.retrievalContext.countryCode).toBe('COD');
+    const admitted = traced(h).modelArticles();
+    expect(admitted.map((a) => a.id)).toEqual(['other-publisher-drc']);
+    expect(admitted.every((a) => a.sourceName !== 'Reuters')).toBe(true);
+  });
+
+  it('step 2 with reporting from BOTH Congos asks which Congo; nothing is admitted on a guess', async () => {
+    const h = harness([OTHER_PUBLISHER_DRC, BRAZZAVILLE_CONTROL]);
+    const response = await h.service.analyzeNews('What are the latest reports about Erik Prince in congo?');
+    expect(h.searchCalls).toHaveLength(1);
+    expect(response.retrievalContext.retrievalOutcome).toBe('CLARIFICATION_REQUIRED');
+    expect(h.provider.analyzeNews).not.toHaveBeenCalled();
+  });
+
+  it('the draft frame is closed: a reporting noun inside the subject keeps its words', () => {
+    expect(withoutReaderRequestFrame('What did the report say about inflation?')).toBe('What did the report say about inflation?');
+    expect(withoutReaderRequestFrame('What is the news about Kenya?')).toBe('What is the news about Kenya?');
+    expect(withoutReaderRequestFrame('What are the latest reports about Erik Prince in congo?')).toBe('Erik Prince in congo?');
+    expect(withoutReaderRequestFrame('Jakie są najnowsze doniesienia o Kongu?')).toBe('Kongu?');
   });
 });
