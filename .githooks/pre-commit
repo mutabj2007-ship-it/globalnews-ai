@@ -1,0 +1,3 @@
+#!/bin/sh
+# E1-TAA-6 — refuse commits that stage environment files or credential-like text.
+exec node "$(git rev-parse --show-toplevel)/scripts/check-staged-secrets.mjs"
