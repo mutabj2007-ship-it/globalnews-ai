@@ -225,7 +225,7 @@ export function getEnabledFeedSources(): readonly FeedSourceEntry[] {
 /** A feed that was named (or shipped enabled) but refused because its recorded rights forbid it. */
 export interface RefusedFeedSource {
   readonly sourceId: string;
-  readonly reason: 'RIGHTS_RESTRICTED' | 'RIGHTS_PROHIBITED';
+  readonly reason: 'RIGHTS_RESTRICTED' | 'RIGHTS_PROHIBITED' | 'RIGHTS_NOT_CLEARED';
   readonly rightsState: SourceRightsState;
   readonly evidence: string;
 }
@@ -253,10 +253,16 @@ export interface ActiveFeedSelection {
 
 /** The rights gate for one candidate: a refusal, or null when activation may proceed. */
 export function feedActivationRefusal(entry: FeedSourceEntry): RefusedFeedSource | null {
-  if (!rightsBlockActivation(entry.rights.state)) return null;
+  /*
+    E1-TAA-1 (P1) — the registry BINDS the collector. Only a CLEARED row may be collected; every other
+    state (LIMITED_SCOPE_REVIEW, UNRESOLVED, UNREVIEWED, RIGHTS_UNDER_E1_REVIEW) is refused exactly as
+    RESTRICTED / PROHIBITED always were. An environment list can no longer admit a source the
+    registry holds. (Before: only RESTRICTED / PROHIBITED were refused — Taarifa ran 14 days on HOLD.)
+  */
+  if (entry.rights.state === 'CLEARED') return null;
   return {
     sourceId: entry.sourceId,
-    reason: entry.rights.state === 'PROHIBITED' ? 'RIGHTS_PROHIBITED' : 'RIGHTS_RESTRICTED',
+    reason: entry.rights.state === 'PROHIBITED' ? 'RIGHTS_PROHIBITED' : rightsBlockActivation(entry.rights.state) ? 'RIGHTS_RESTRICTED' : 'RIGHTS_NOT_CLEARED',
     rightsState: entry.rights.state,
     evidence: entry.rights.evidence,
   };

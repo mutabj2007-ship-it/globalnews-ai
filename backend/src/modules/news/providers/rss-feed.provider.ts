@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { NewsArticle, NewsCategory, ProviderHealthStatus } from '@globalnews-ai/shared';
 import { findCountryByIso2 } from '@globalnews-ai/shared';
@@ -95,7 +95,7 @@ export function isRssFeedsEnabled(value: string | undefined): boolean {
 }
 
 @Injectable()
-export class RssFeedProvider implements NewsProvider {
+export class RssFeedProvider implements NewsProvider, OnModuleInit {
   readonly id = 'rss-feeds';
   readonly displayName = 'Publisher Feeds';
   readonly isMock = false;
@@ -119,6 +119,22 @@ export class RssFeedProvider implements NewsProvider {
   private warnedUnknownIds = false;
 
   constructor(private readonly config: ConfigService) {}
+
+  /*
+    E1-TAA-1 — BOOT REFUSAL, not a warning: with the RSS lane enabled, an environment list naming a
+    feed the registry refuses stops the backend from starting. With the lane off nothing is collected,
+    so nothing is refused at boot.
+  */
+  onModuleInit(): void {
+    if (!isRssFeedsEnabled(this.config.get<string>('RSS_FEEDS_ENABLED'))) return;
+    const refused = this.selection().refused;
+    if (refused.length > 0) {
+      throw new Error(
+        `RSS boot refused: RSS_FEED_SOURCES names feeds the source registry does not admit: ` +
+          refused.map((r) => `${r.sourceId} (${r.reason})`).join(', '),
+      );
+    }
+  }
 
   /**
    * TWO GATES, BOTH REQUIRED. The global flag decides whether this lane runs at
