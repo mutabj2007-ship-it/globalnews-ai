@@ -136,6 +136,30 @@ export const SOURCES_UNAVAILABLE_RULE =
   'happened, and never fill a requested table of developments. Then answer ONLY the general or ' +
   'advisory part of the question, clearly as general guidance; if none exists, stop.';
 
+/**
+ * ASK EVIDENCE CONTINUITY R1 (Production op 9713f8ee) — the reader's turn rests on the earlier
+ * turn's reports ("Based on those reports…"), but that turn obtained NO verified reports. The model
+ * says so first, attributes nothing to "reports", and keeps any general background labelled as
+ * background. No search runs for it (the existing partial-current contract names the gap).
+ */
+export function earlierReportsUnverifiedRule(gap: 'UNAVAILABLE' | 'NO_EVIDENCE'): string {
+  const why =
+    gap === 'UNAVAILABLE'
+      ? 'the earlier search did not complete (a news source was unavailable or rate-limited), so it is not known what current reporting says'
+      : 'the earlier search completed and found no qualifying reporting (which is not evidence that nothing happened)';
+  return (
+    'NO VERIFIED EARLIER REPORTS: the reader refers to earlier reports, sources or findings, but ' +
+    `NO verified reports were obtained in this conversation: ${why}. Say this plainly in your ` +
+    'first sentence: there are no verified reports to base a conclusion on. Do not attribute any ' +
+    'conclusion, figure, event, allegation or claim to "the reports", "those sources", "reporting" ' +
+    'or "many reports", and do not name, date or describe any recent development as if it ' +
+    'happened. You may then give general background (for example what is generally known about ' +
+    'such situations and which questions verified reporting would need to answer), clearly ' +
+    'labelled as general background, not as findings, and say what remains unknown until ' +
+    'verified reporting is available.'
+  );
+}
+
 const ARTIFACT_RULE =
   'MEMORY: if your answer establishes a reusable structure — a conceptual framework, a diagnosis, ' +
   'a comparison, decision criteria, recommendations, a plan or a summary — end your reply with ' +

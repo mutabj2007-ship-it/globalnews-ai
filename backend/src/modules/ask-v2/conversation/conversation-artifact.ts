@@ -104,7 +104,16 @@ export interface ConversationArtifact {
    * no findings and is never evidence.
    */
   readonly incomplete?: true;
+  /**
+   * ASK EVIDENCE CONTINUITY R1 (Production op ce732c69) — WHY a record carries no verified evidence:
+   * the search did not complete (a source was unavailable / rate-limited) or it completed and found
+   * no qualifying reporting. Server-derived from the retrieval facts, only beside
+   * `currentFindings: 'NONE'`; a later turn states it instead of reading "summarised reporting".
+   */
+  readonly noEvidenceReason?: NoEvidenceReason;
 }
+
+export type NoEvidenceReason = 'SEARCH_INCOMPLETE' | 'NO_QUALIFYING_REPORTING';
 
 /** The artifact as it is handed to a later turn: with the turn that produced it. */
 export interface PriorArtifact extends ConversationArtifact {
@@ -193,6 +202,11 @@ export function validateStoredArtifact(candidate: unknown): ConversationArtifact
     ...(provenance === 'SOURCED_REPORTING' && refs.length > 0 ? { evidenceRefs: refs } : {}),
     ...(provenance === 'SOURCED_REPORTING' && urls.length > 0 ? { evidenceUrls: urls } : {}),
     ...(server && c.currentFindings === 'NONE' ? { currentFindings: 'NONE' as const } : {}),
+    ...(server &&
+    c.currentFindings === 'NONE' &&
+    (c.noEvidenceReason === 'SEARCH_INCOMPLETE' || c.noEvidenceReason === 'NO_QUALIFYING_REPORTING')
+      ? { noEvidenceReason: c.noEvidenceReason as NoEvidenceReason }
+      : {}),
     ...(server && c.incomplete === true ? { incomplete: true as const } : {}),
   };
 }
@@ -255,6 +269,7 @@ export function serverArtifact(input: {
   readonly evidenceRefs?: readonly string[];
   readonly evidenceUrls?: readonly string[];
   readonly currentFindings?: 'NONE';
+  readonly noEvidenceReason?: NoEvidenceReason;
 }): ConversationArtifact | null {
   return validateStoredArtifact({ ...input, scope: input.scope ?? undefined });
 }
@@ -296,17 +311,51 @@ export function splitArtifact(output: string): {
   return { text, artifact: validateArtifact(parsed) };
 }
 
+/**
+ * ASK EVIDENCE CONTINUITY R1 — does this earlier record carry NO verified evidence, and why?
+ *   null           not a record of a search (pure reasoning), or it stood on verified evidence (a
+ *                  sourced answer with evidence references) — behaviour unchanged
+ *   'UNAVAILABLE'  its search did not complete (a source was unavailable / rate-limited), or the
+ *                  turn itself did not complete
+ *   'NO_EVIDENCE'  its search completed and found no qualifying reporting (also a legacy sourced
+ *                  record without evidence references, whose reason was never stored)
+ */
+export function priorEvidenceGap(
+  artifact: ConversationArtifact | undefined,
+): 'UNAVAILABLE' | 'NO_EVIDENCE' | null {
+  if (artifact === undefined) return null;
+  const sourced = artifact.provenance === 'SOURCED_REPORTING';
+  if (sourced && (artifact.evidenceRefs ?? []).length > 0) return null;
+  if (!sourced && artifact.currentFindings !== 'NONE') return null;
+  return artifact.incomplete === true || artifact.noEvidenceReason === 'SEARCH_INCOMPLETE'
+    ? 'UNAVAILABLE'
+    : 'NO_EVIDENCE';
+}
+
+/** ASK EVIDENCE CONTINUITY R1 — the truthful reason a record holds no verified reports. */
+export function noEvidenceReasonText(gap: 'UNAVAILABLE' | 'NO_EVIDENCE'): string {
+  return gap === 'UNAVAILABLE'
+    ? 'the search did not complete (a news source was unavailable or rate-limited), so what current reporting says is not known'
+    : 'the search completed and found no qualifying reporting, which is not evidence that nothing happened';
+}
+
 /** The artifact as delimited DATA for a later prompt (never rules, never evidence). */
 export function artifactPromptBlock(artifact: ConversationArtifact): string {
   const sourced = artifact.provenance === 'SOURCED_REPORTING';
-  const header = sourced
-    ? 'your own earlier answer, which summarised sourced reporting retrieved at that time; this summary is NOT evidence and NOT a current fact'
-    : 'your own earlier model reasoning; NOT evidence, NOT a source, NOT a current fact';
+  /* ASK EVIDENCE CONTINUITY R1 — a sourced record with no evidence summarised NOTHING: it is never
+     described as "summarised sourced reporting" (Production op 9713f8ee read it that way) */
+  const gap = sourced ? priorEvidenceGap(artifact) : null;
+  const header =
+    gap !== null
+      ? `your own earlier answer; its search returned NO verified reports because ${noEvidenceReasonText(gap)}; it holds no findings, is NOT evidence and NOT a current fact`
+      : sourced
+        ? 'your own earlier answer, which summarised sourced reporting retrieved at that time; this summary is NOT evidence and NOT a current fact'
+        : 'your own earlier model reasoning; NOT evidence, NOT a source, NOT a current fact';
   return (
     `<<<EARLIER WORK IN THIS CONVERSATION (${header})\n` +
     (artifact.scope === undefined ? '' : `question it answered: ${artifact.scope.question}\n`) +
     `kind: ${artifact.kind}\nlabel: ${artifact.label}\n` +
-    `${sourced ? 'points the answer made' : 'components'}: ${artifact.components.join('; ')}\n` +
+    `${gap !== null ? 'what the record says' : sourced ? 'points the answer made' : 'components'}: ${artifact.components.join('; ')}\n` +
     `EARLIER WORK>>>`
   );
 }

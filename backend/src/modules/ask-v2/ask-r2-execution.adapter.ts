@@ -1,4 +1,6 @@
 import { solveComputation, type ComputationResult } from './computation/deterministic-computation';
+import { financialRateRuleFor } from './computation/financial-rate';
+import { readsEarlierEvidence } from './conversation/earlier-evidence-reference';
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import type {
   AnalysisApiResponse,
@@ -43,6 +45,7 @@ import {
 import { DECISION_OBJECTIVE_CANDIDATES } from '../ask-router/decision-support';
 import {
   completionCeilingFor,
+  earlierReportsUnverifiedRule,
   jobRulesFor,
   NO_CURRENT_FINDINGS_RULE,
   RECHECK_UNVERIFIED_RULE,
@@ -67,6 +70,8 @@ import { semanticReaderText } from '../ask-router/semantic-ir/interpret-turn';
 import {
   artifactIdentity,
   artifactPromptBlock,
+  priorEvidenceGap,
+  type NoEvidenceReason,
   serverArtifact,
   splitArtifact,
   withScope,
@@ -306,6 +311,38 @@ function leadingSentences(text: string, n: number): string[] {
  */
 const NO_QUALIFYING_REPORTING =
   'No qualifying reporting was found for this question at the time it was asked.';
+/** ASK EVIDENCE CONTINUITY R1 (Production op ce732c69) — the search itself did not complete (two
+    record points: a record point is bounded to 80 characters). */
+const SEARCH_INCOMPLETE = [
+  'The search did not complete (a news source was unavailable or rate-limited).',
+  'No verified reports were obtained for this question.',
+] as const;
+
+/**
+ * ASK EVIDENCE CONTINUITY R1 — did a search that admitted nothing fail to COMPLETE? Every provider
+ * failed (retrievalFailed), or a retrieval lane was unavailable for a reason other than not being
+ * configured (rate-limited, timed out, errored). Read from the facts the analysis already returns.
+ */
+function searchIncomplete(analysis: AnalysisApiResponse): boolean {
+  if (retrievalFailed(analysis)) return true;
+  const lanes = (
+    analysis.retrievalContext as
+      | { retrievalTrace?: { lanesUnavailable?: readonly { reason?: unknown }[] } }
+      | undefined
+  )?.retrievalTrace?.lanesUnavailable;
+  return Array.isArray(lanes) && lanes.some((l) => l?.reason !== 'not-configured');
+}
+
+/** ASK EVIDENCE CONTINUITY R1 — the explicit no-evidence marker of a record, with its reason. */
+function noEvidenceMarker(incomplete: boolean): {
+  currentFindings: 'NONE';
+  noEvidenceReason: NoEvidenceReason;
+} {
+  return {
+    currentFindings: 'NONE',
+    noEvidenceReason: incomplete ? 'SEARCH_INCOMPLETE' : 'NO_QUALIFYING_REPORTING',
+  };
+}
 
 function answerMemory(
   route: AskR2Route,
@@ -333,6 +370,7 @@ function answerMemory(
           label: route.source.rawQuestion,
           components: [NO_QUALIFYING_REPORTING],
           scope: scopeOfRoute(route, null),
+          ...noEvidenceMarker(false),
         });
   /* An answer that EXPLAINS earlier sourced work ("Why did you say that?") makes no new claim and
      retrieves nothing: the conversation's claim stays the one the sourced answer made, so a later
@@ -364,6 +402,28 @@ function answerMemory(
   const label = route.source.rawQuestion;
   if (analysis !== null) {
     const result = analysis.analysis;
+    const articles = Array.isArray(analysis.articles) ? analysis.articles : [];
+    /*
+      ASK EVIDENCE CONTINUITY R1 (Production op ce732c69) — a retrieval that admitted NO evidence is
+      recorded as exactly that: no evidence references, the explicit no-evidence marker, and WHY —
+      the search did not complete (a source was unavailable / rate-limited) or it completed and
+      found no qualifying reporting. It used to be recorded as "No qualifying reporting was found"
+      whatever happened, and read back by the next turn as "summarised sourced reporting".
+    */
+    if (articles.length === 0 && result === null) {
+      const incomplete = searchIncomplete(analysis);
+      return serverArtifact({
+        kind: 'SOURCED_REPORT',
+        provenance: 'SOURCED_REPORTING',
+        label,
+        components: [
+          ...(incomplete ? SEARCH_INCOMPLETE : [NO_QUALIFYING_REPORTING]),
+          ...(backgroundText === null ? [] : leadingSentences(backgroundText, 2)),
+        ],
+        scope,
+        ...noEvidenceMarker(incomplete),
+      });
+    }
     const points =
       result === null
         ? [NO_QUALIFYING_REPORTING]
@@ -393,7 +453,7 @@ function answerMemory(
       components: leadingSentences(backgroundText, 4),
       scope,
       /* R2 §7 — reasoning beside a current part that found no verified reporting */
-      ...(partialCurrent === null ? {} : { currentFindings: 'NONE' as const }),
+      ...(partialCurrent === null ? {} : noEvidenceMarker(partialCurrent === 'UNAVAILABLE')),
     });
   if (partialCurrent === 'NO_EVIDENCE')
     return serverArtifact({
@@ -402,6 +462,7 @@ function answerMemory(
       label,
       components: [NO_QUALIFYING_REPORTING],
       scope,
+      ...noEvidenceMarker(false),
     });
   return null;
 }
@@ -1120,6 +1181,22 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
        follow-up's own words are not a news topic. */
     if (contract.kind === 'PRIOR_ANSWER_REWORK' && contract.rework !== undefined) {
       return this.executeRework(request, plan, route, operationId, draft, contract, semanticRun);
+    }
+    /*
+      ASK EVIDENCE CONTINUITY R1 — "Based on those reports…" / "Na podstawie tych doniesień…" read as
+      a CURRENT-REPORTING question would search the follow-up's own words as a news topic, after an
+      earlier turn that obtained NO verified reports. It stands on THOSE reports, so it is answered
+      by the partial-current contract instead (executeBackground names the earlier record's gap):
+      no search is added. A follow-up on an answer with verified evidence is untouched.
+    */
+    if (
+      (route.knowledgeRequirement === 'CURRENT_REPORTING' || route.knowledgeRequirement === null) &&
+      requiredRolesOf(route.plan).includes('REPORTING') &&
+      route.plan.terminalState === 'EXECUTABLE' &&
+      readsEarlierEvidence(request.question) &&
+      priorEvidenceGap(request.priorArtifact) !== null
+    ) {
+      return this.executeBackground(request, plan, route, operationId, draft, undefined, semanticRun);
     }
 
     if (route.knowledgeRequirement === 'DECISION_SUPPORT' && route.decisionObjective === null) {
@@ -2491,9 +2568,26 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       route.semantic.references.target === 'ARTIFACT_PROPOSITION' &&
       route.semantic.turn.freshness === 'NONE' &&
       request.priorArtifact?.provenance !== 'SOURCED_REPORTING';
+    /*
+      ASK EVIDENCE CONTINUITY R1 (Production ops ce732c69 → 9713f8ee) — a follow-up that rests on
+      the earlier turn's REPORTS ("Based on those reports…", closed phrase list) when that turn
+      obtained NO verified reports (its search did not complete, or found nothing) is never answered
+      as though reports existed. The existing partial-current contract carries it: the reader's
+      question is named as the unverified current part, with the earlier record's reason; the model
+      is told no verified reports exist and receives the record that says why. No search is added.
+      A follow-up on an answer that stood on verified evidence (evidence references) is unchanged.
+    */
+    const earlierGap =
+      partialCurrent === undefined && !recheckUnverified && readsEarlierEvidence(request.question)
+        ? priorEvidenceGap(request.priorArtifact)
+        : null;
     const jobRules = [
       jobRulesFor(route.job, usesPriorWork, horizon),
       recheckUnverified ? RECHECK_UNVERIFIED_RULE : '',
+      earlierGap === null ? '' : earlierReportsUnverifiedRule(earlierGap),
+      /* ASK FINANCE INTEGRITY R1 (Production op b3924ff0) — APR / effective-rate explanations
+         state their cash-flow assumptions; '' for every other question (byte-identical prompt) */
+      financialRateRuleFor(request.question),
       /* ASK R2 (contract §7/§10 G) — this turn's search found no usable current reporting (or a
          source failed): the reasoning model is told so, explicitly, and may not supply
          "developments" from memory (replayed: TEST C with no evidence reached this call). */
@@ -2581,7 +2675,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         ...(who.priorQuestion ? { priorQuestion: who.priorQuestion } : {}),
         /* CTO R4 — trusted job rules; the earlier work as delimited data; the job's ceiling */
         ...(jobRules === '' ? {} : { jobRules }),
-        ...(!usesPriorWork || request.priorArtifact === undefined
+        ...((!usesPriorWork && earlierGap === null) || request.priorArtifact === undefined
           ? {}
           : { priorWork: artifactPromptBlock(request.priorArtifact) }),
         ...(ceiling === GENERAL_BACKGROUND_MAX_COMPLETION_TOKENS
@@ -2642,7 +2736,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     /* R3 §6 — a partial answer is the supported STABLE part (non-citable background) with the
        reporting role it still lacks named; a decline is the same truthful unavailability. */
     /* R4 ALPHA SMOKE R2 (B) — an unverified re-check is the same partial answer, its gap named */
-    const gap = partialCurrent ?? (recheckUnverified ? 'UNAVAILABLE' : undefined);
+    const gap =
+      partialCurrent ?? (recheckUnverified ? 'UNAVAILABLE' : (earlierGap ?? undefined));
     const answer: AnswerDecision =
       gap !== undefined && !declined
         ? {
@@ -2664,8 +2759,11 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     }
     return this.result(
       plan,
-      /* the unverified part of a re-check is the reader's own question about "now" */
-      recheckUnverified ? { ...route, currentEvidenceNeeded: [route.source.rawQuestion] } : route,
+      /* the unverified part of a re-check is the reader's own question about "now"; of a
+         follow-up on reports that were never obtained, the reader's own question too */
+      recheckUnverified || earlierGap !== null
+        ? { ...route, currentEvidenceNeeded: [route.source.rawQuestion] }
+        : route,
       operationId,
       this.observeAnswer(answer, draft),
       null,
