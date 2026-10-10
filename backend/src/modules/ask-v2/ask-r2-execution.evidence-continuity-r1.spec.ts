@@ -19,7 +19,10 @@ import { validateStoredArtifact, type PriorArtifact } from './conversation/conve
  */
 type Mode = 'RATE_LIMITED' | 'NO_MATCH' | 'SOURCED';
 
-function harness(mode: () => Mode) {
+/* the store's read of an earlier answer's evidence ref (null: not obtainable — a held source is absent) */
+type StoredRow = { id: string; sourceId: string } | null;
+
+function harness(mode: () => Mode, store?: (id: string) => StoredRow) {
   const analysis: unknown[][] = [];
   const background: Array<{ question: string; priorWork?: string; jobRules?: string }> = [];
   const adapter = new AskR2ExecutionAdapter(
@@ -87,13 +90,15 @@ function harness(mode: () => Mode) {
       boundSpecialistDomains: () => ['CONFLICT'],
       read: jest.fn(async () => ({ considered: [], contributions: [] })),
     } as never,
+    undefined /* guests */,
+    store === undefined ? undefined : ({ findArticleById: jest.fn(async (id: string) => store(id)) } as never),
   );
   return { adapter, analysis, background };
 }
 
-function conversation(language: 'en' | 'pl' = 'en') {
+function conversation(language: 'en' | 'pl' = 'en', store?: (id: string) => StoredRow) {
   let mode: Mode = 'SOURCED';
-  const h = harness(() => mode);
+  const h = harness(() => mode, store);
   const earlier: string[] = [];
   let prior: PriorArtifact | undefined;
   let op = 0;
@@ -351,3 +356,67 @@ describe('ASK FINANCE INTEGRITY R1 — APR explanation (op b3924ff0)', () => {
   });
 });
 
+
+/*
+  RIGHTS × CONTINUITY (MASTER CTO rights/reasoning order, Ruling 2) — the combined source: an earlier
+  answer's points reach the model again only when its evidence is still obtainable from the store
+  (a held source is absent there, so its ref resolves to null); the no-evidence marker carries no
+  source content, so it still reaches the model whatever the store says.
+*/
+describe('ASK EVIDENCE CONTINUITY R1 × RIGHTS CONTAINMENT R1.1 — the combined source', () => {
+  const Q3 = 'Given those findings, what should aid agencies prioritise?';
+  const REUSE_Q = 'Summarise your previous answer in three bullet points.';
+  const providerRow = (id: string): StoredRow => ({ id, sourceId: 'example' });
+  const heldRow = (): StoredRow => null;
+
+  it.each([
+    ['still obtainable (provider path)', providerRow],
+    ['now held (absent from the store)', heldRow],
+  ])('earlier SOURCED answer whose evidence is %s: no search, no held content to the model', async (_l, store) => {
+    const c = conversation('en', store);
+    await c.ask(T1, 'SOURCED');
+    const t2 = await c.ask(T2, 'SOURCED');
+    expect(t2.analysisCalls).toHaveLength(0);
+    for (const call of t2.backgroundCalls) expect(JSON.stringify(call)).not.toContain('NO VERIFIED EARLIER REPORTS');
+    if (store === heldRow) for (const call of t2.backgroundCalls) expect(call.priorWork).toBeUndefined();
+  });
+
+  it('a held earlier answer is never handed to the model, even when the turn reuses earlier work', async () => {
+    const followUp = async (store: (id: string) => StoredRow) => {
+      const c = conversation('en', store);
+      await c.ask(T1, 'SOURCED');
+      return c.ask(REUSE_Q, 'SOURCED');
+    };
+    /* positive control: with its evidence obtainable, this follow-up does reuse the earlier points */
+    const reused = await followUp(providerRow);
+    expect(reused.analysisCalls).toHaveLength(0);
+    expect(reused.backgroundCalls[0].priorWork).toContain('Aid agencies report restricted access');
+    const held = await followUp(heldRow);
+    expect(held.analysisCalls).toHaveLength(0);
+    expect(held.backgroundCalls).toHaveLength(1);
+    expect(held.backgroundCalls[0].priorWork).toBeUndefined();
+    expect(JSON.stringify(held.backgroundCalls)).not.toContain('Aid agencies report restricted access');
+  });
+
+  it('a follow-up that does not rest on the earlier answer is searched as its own question either way', async () => {
+    const c = conversation('en', heldRow);
+    await c.ask(T1, 'SOURCED');
+    const t = await c.ask(Q3, 'SOURCED');
+    expect(t.analysisCalls).toHaveLength(1);
+    expect(t.backgroundCalls).toHaveLength(0);
+  });
+
+  it('rate-limited earlier turn: the marker (no source content) still reaches the model with the store wired', async () => {
+    const c = conversation('en', heldRow);
+    await c.ask(T1, 'RATE_LIMITED');
+    const t2 = await c.ask(T2, 'SOURCED');
+    expectUnverifiedFollowUpShape(t2);
+  });
+
+  function expectUnverifiedFollowUpShape(t: Turn) {
+    expect(t.analysisCalls).toHaveLength(0);
+    expect(t.payload.guidance).toMatchObject({ currentPart: 'UNAVAILABLE', currentEvidenceNeeded: [T2] });
+    expect(t.backgroundCalls[0].priorWork).toContain('returned NO verified reports');
+    expect(t.backgroundCalls[0].jobRules).toContain('NO VERIFIED EARLIER REPORTS');
+  }
+});
