@@ -30,6 +30,8 @@ export interface AskProgressStrings {
   readonly unreached: (lanes: string) => string;
   /** MASTER CTO P0 RIGHTS CONTAINMENT R1 */
   readonly rightsWithheld: (n: number) => string;
+  /** E1 §8.2 step 3 — an earlier answer withheld pending a source-rights review */
+  readonly withheldAnswer: string;
   /* R1.1 (CTO review) — an attempted search with no typed outcome; a completed request ≠ a verified answer */
   readonly searchAttemptedUnknown: string;
   readonly outcomeUnavailable: string;
@@ -58,6 +60,7 @@ const EN: AskProgressStrings = {
   filtered: 'Reports were found, but none matched the question closely enough.',
   unreached: (l) => `Not reached: ${l}.`,
   rightsWithheld: (n) => `${n} item${n === 1 ? '' : 's'} found ${n === 1 ? 'was' : 'were'} not used because the source’s reuse rights are not cleared.`,
+  withheldAnswer: 'This earlier answer is withheld while the rights to reuse its sources are reviewed.',
   searchAttemptedUnknown: 'Search attempted; detailed retrieval outcome unavailable.',
   outcomeUnavailable: 'Outcome unavailable',
   requestCompleted: 'Request completed',
@@ -84,6 +87,7 @@ const PL: AskProgressStrings = {
   filtered: 'Znaleziono doniesienia, ale żadne nie odpowiadało wystarczająco pytaniu.',
   unreached: (l) => `Niedostępne: ${l}.`,
   rightsWithheld: (n) => `Nie wykorzystano ${n} znalezionych pozycji, ponieważ prawa do ich ponownego użycia nie zostały potwierdzone.`,
+  withheldAnswer: 'Ta wcześniejsza odpowiedź jest wstrzymana do czasu weryfikacji praw do ponownego użycia jej źródeł.',
   searchAttemptedUnknown: 'Podjęto wyszukiwanie; szczegółowy wynik wyszukiwania jest niedostępny.',
   outcomeUnavailable: 'Wynik niedostępny',
   requestCompleted: 'Zapytanie zakończone',
@@ -110,6 +114,7 @@ const DE: AskProgressStrings = {
   filtered: 'Es wurden Berichte gefunden, aber keiner passte genau genug zur Frage.',
   unreached: (l) => `Nicht erreicht: ${l}.`,
   rightsWithheld: (n) => `${n} gefundene Einträge wurden nicht verwendet, weil die Weiterverwendungsrechte der Quelle nicht geklärt sind.`,
+  withheldAnswer: 'Diese frühere Antwort ist zurückgehalten, solange die Rechte zur Weiterverwendung ihrer Quellen geprüft werden.',
   searchAttemptedUnknown: 'Suche versucht; das genaue Suchergebnis ist nicht verfügbar.',
   outcomeUnavailable: 'Ergebnis nicht verfügbar',
   requestCompleted: 'Anfrage abgeschlossen',
@@ -136,6 +141,7 @@ const FR: AskProgressStrings = {
   filtered: 'Des articles ont été trouvés, mais aucun ne correspondait assez à la question.',
   unreached: (l) => `Non joignables : ${l}.`,
   rightsWithheld: (n) => `${n} élément(s) trouvé(s) n’ont pas été utilisés, car les droits de réutilisation de la source ne sont pas confirmés.`,
+  withheldAnswer: 'Cette réponse antérieure est suspendue pendant l’examen des droits de réutilisation de ses sources.',
   searchAttemptedUnknown: 'Recherche tentée ; le résultat détaillé de la recherche n’est pas disponible.',
   outcomeUnavailable: 'Résultat indisponible',
   requestCompleted: 'Demande traitée',
@@ -162,6 +168,7 @@ const ES: AskProgressStrings = {
   filtered: 'Se encontraron informes, pero ninguno coincidía lo suficiente con la pregunta.',
   unreached: (l) => `Sin respuesta: ${l}.`,
   rightsWithheld: (n) => `${n} elemento(s) encontrado(s) no se usaron porque los derechos de reutilización de la fuente no están confirmados.`,
+  withheldAnswer: 'Esta respuesta anterior está retenida mientras se revisan los derechos de reutilización de sus fuentes.',
   searchAttemptedUnknown: 'Se intentó la búsqueda; el resultado detallado de la búsqueda no está disponible.',
   outcomeUnavailable: 'Resultado no disponible',
   requestCompleted: 'Solicitud completada',
@@ -188,6 +195,7 @@ const PT: AskProgressStrings = {
   filtered: 'Foram encontradas notícias, mas nenhuma correspondia o suficiente à pergunta.',
   unreached: (l) => `Sem resposta: ${l}.`,
   rightsWithheld: (n) => `${n} item(ns) encontrado(s) não foram usados porque os direitos de reutilização da fonte não estão confirmados.`,
+  withheldAnswer: 'Esta resposta anterior está retida enquanto os direitos de reutilização das suas fontes são revistos.',
   searchAttemptedUnknown: 'Pesquisa tentada; o resultado detalhado da pesquisa não está disponível.',
   outcomeUnavailable: 'Resultado indisponível',
   requestCompleted: 'Pedido concluído',
@@ -214,6 +222,7 @@ const AR: AskProgressStrings = {
   filtered: 'عُثر على تقارير، لكن لم يطابق أيٌّ منها السؤال بما يكفي.',
   unreached: (l) => `تعذّر الوصول: ${l}.`,
   rightsWithheld: (n) => `لم تُستخدم ${n} من النتائج لأن حقوق إعادة استخدام المصدر غير مؤكدة.`,
+  withheldAnswer: 'هذه الإجابة السابقة محجوبة ريثما تُراجَع حقوق إعادة استخدام مصادرها.',
   searchAttemptedUnknown: 'جرت محاولة البحث؛ النتيجة التفصيلية للبحث غير متاحة.',
   outcomeUnavailable: 'النتيجة غير متاحة',
   requestCompleted: 'اكتمل الطلب',

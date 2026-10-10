@@ -3,6 +3,7 @@ import { AskSubmittedQuestion } from './AskSubmittedQuestion';
 import { AskSearchActivity } from './AskProgressPanel';
 import { searchActivityOf } from '@/lib/ask/askSearchActivity';
 import { askPublisherStrings } from '@/lib/ask/askPublisherStrings';
+import { askProgressStrings } from '@/lib/ask/askProgressStrings';
 import { ASK_INPUT_TOO_LONG, type DisplayLocale } from '@globalnews-ai/shared';
 
 import { askFormatDate, isolatedAuto, isolatedLtr } from '@/lib/ask/askDirection';
@@ -701,10 +702,17 @@ export function AskR2TurnView({
                 {s.r4.mixedStableUnavailable}
               </p>
             )}
-          {view.badge === 'insuf' && (
-            <p data-ask="insufficient-title" className="text-[19px] font-bold leading-[1.2] md:text-[22px]">
-              {r.noReportingTitle}
+          {/* E1 §8.2 step 3 — a withheld earlier answer says so, never "no relevant reporting" */}
+          {payload.withheld != null ? (
+            <p data-ask="withheld-source-rights" className="text-[19px] font-bold leading-[1.2] md:text-[22px]">
+              {askProgressStrings(locale).withheldAnswer}
             </p>
+          ) : (
+            view.badge === 'insuf' && (
+              <p data-ask="insufficient-title" className="text-[19px] font-bold leading-[1.2] md:text-[22px]">
+                {r.noReportingTitle}
+              </p>
+            )
           )}
           {/* CTO R3 ruling 8 — nothing verified vs search incomplete: the difference is kept. */}
           {view.badge === 'insuf' && view.searchLimited && (

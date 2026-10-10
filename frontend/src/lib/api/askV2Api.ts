@@ -180,6 +180,8 @@ export interface AskResearchRecord {
 
 export interface AskR2Payload {
   readonly schema: 'ask-r2-result/1';
+  /** E1 §8.2 step 3 — an earlier answer withheld at read time pending a source-rights review */
+  readonly withheld?: { readonly reason: 'SOURCE_RIGHTS'; readonly count: number };
   readonly route: {
     readonly questionClass: string;
     readonly terminalState: string;

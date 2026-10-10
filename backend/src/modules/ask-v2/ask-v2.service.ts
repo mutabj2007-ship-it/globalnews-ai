@@ -68,6 +68,7 @@ import { isAnaphoricFollowUp } from '../analysis/anchor/event-anchor.util';
 import { ComputeMeterService } from '../compute-controls/compute-meter.service';
 import { OperationalSwitchService } from '../compute-controls/operational-switch.service';
 import { withComparisonTable } from './comparison-table';
+import { withheldForSourceRights } from './source-rights-withholding';
 import { isSemanticFirstLanguage } from '../ask-router/semantic-ir/semantic-first';
 import {
   dayBucket,
@@ -873,7 +874,8 @@ export class AskV2Service {
             ? {
                 id: result.id,
                 /* R2-S1 — the evidence-linked comparison table, projected on read (no AI). */
-                payload: withComparisonTable(result.payload),
+                /* E1 §8.2 step 3 — withheld at read time, stored record unchanged */
+                payload: withheldForSourceRights(withComparisonTable(result.payload)),
                 evidenceRevision: result.evidenceRevision,
                 expiresAt: result.expiresAt,
                 expired: result.expiresAt.getTime() <= Date.now(),
