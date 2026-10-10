@@ -3241,7 +3241,14 @@ export class AnalysisService {
               "distinguish confirmed facts…") are no longer mandatory GNews terms. Short subjects pass
               through byte-identical. genericSearchQuery itself is unchanged for every other use.
             */
-            const primarySent = makeGenericProviderQuery(genericSearchQuery).sent;
+            const primary = makeGenericProviderQuery(genericSearchQuery);
+            /*
+              A1 R3 (G doc 05) — NOT_SAFELY_REDUCIBLE: no safe-reduction pattern matched and GNews
+              would clamp the query mid-word (200 code points). The ordinary generic search does not
+              send a fragment nobody wrote; it takes the existing no-query outcome below. This verdict
+              is about the ONE generic string only — a compound plan never sends it (see `route`).
+            */
+            const primarySent = primary.outcome === 'NOT_SAFELY_REDUCIBLE' ? undefined : primary.sent;
             /*
               ASK R3 RETRIEVAL POLICY CLOSEOUT R2 — a subject that is exactly a resolved country + a
               broad economy term ("Poland's economy") opts into ONE bounded second admission path
@@ -3279,10 +3286,31 @@ export class AnalysisService {
              * guard that has always refused to call OpenAI without evidence.
              * Nothing is invented and nothing is substituted.
              */
-            if (primarySent === undefined) {
+            /*
+              A1 R3 COMPOUND ORDERING — decide the route BEFORE judging the generic string. A valid
+              compound plan runs its own bounded per-lane queries and never sends `primarySent`, so
+              a verdict about that unused string must not cancel the plan (pre-existing at 9aab213
+              for a question with no letter or numeral). Three outcomes, nothing else:
+                plan present                → the plan's bounded searches;
+                no plan, sendable generic   → the ordinary generic search;
+                neither                     → no provider call, the honest non-retrievable state.
+            */
+            const route:
+              | { readonly kind: 'compound'; readonly plan: NonNullable<typeof compoundPlan> }
+              | { readonly kind: 'generic'; readonly sent: string }
+              | undefined =
+              compoundPlan !== undefined
+                ? { kind: 'compound', plan: compoundPlan }
+                : primarySent !== undefined
+                  ? { kind: 'generic', sent: primarySent }
+                  : undefined;
+            if (route === undefined) {
               this.logger.warn(
-                'Generic retrieval has no lexical query after provider-safe normalization — ' +
-                  'no provider request was made.',
+                primary.outcome === 'NOT_SAFELY_REDUCIBLE'
+                  ? 'Generic retrieval query is not safely reducible and would be clamped by the provider — ' +
+                      'no provider request was made.'
+                  : 'Generic retrieval has no lexical query after provider-safe normalization — ' +
+                      'no provider request was made.',
               );
               articles = [];
               retrievalContext = NON_RETRIEVABLE_QUERY_CONTEXT;
@@ -3293,13 +3321,13 @@ export class AnalysisService {
                  otherwise the ONE generic search, with the window only when there is one. */
               let searchResponse: NewsResponse;
               const window = executionPolicy?.reportingWindow;
-              if (compoundPlan) {
-                const run = await this.retrieveCompoundPlan(compoundPlan, window);
+              if (route.kind === 'compound') {
+                const run = await this.retrieveCompoundPlan(route.plan, window);
                 searchResponse = run.response;
                 plannedTrace = run.trace;
               } else if (window === undefined) {
                 searchResponse = await this.newsService.search(
-                  primarySent,
+                  route.sent,
                   SEARCH_POOL_SIZE,
                   // Milestone #36: opt-in relevance gate — only this call site
                   // (AnalysisService's ordinary generic-search branch) enables
@@ -3310,7 +3338,7 @@ export class AnalysisService {
                 );
               } else {
                 searchResponse = await this.newsService.search(
-                  primarySent,
+                  route.sent,
                   SEARCH_POOL_SIZE,
                   genericMode,
                   { from: window.from, to: window.to },
@@ -3318,8 +3346,8 @@ export class AnalysisService {
                 for (const id of readWindowExcluded(searchResponse)) upstreamWindowExcluded.add(id);
               }
               /* A4 — the ordinary generic search records exactly what it sent and how it ended */
-              if (!compoundPlan) {
-                genericAttempts.push(recordDispatched('PRIMARY', primarySent, sentOutcomeOf(searchResponse)));
+              if (route.kind === 'generic') {
+                genericAttempts.push(recordDispatched('PRIMARY', route.sent, sentOutcomeOf(searchResponse)));
                 genericAttemptLanes.set('PRIMARY', laneStatusOf(searchResponse));
               }
 
@@ -3933,7 +3961,14 @@ export class AnalysisService {
                       query: attempt.query,
                       lanes: lanesFor(attempt.role).map((lane) => ({ ...lane })),
                     })),
-                    aggregateOutcome: deriveRetrievalOutcome(lanesFor(finalRole)),
+                    /*
+                      Per-lane counts credit only evidence whose providerId names that lane; admitted
+                      evidence from elsewhere (retained rows, supplements) is never attributed to a lane.
+                      The aggregate follows what was ADMITTED (candidatesAdmitted below), so it can never
+                      say "zero" while admitted evidence exists.
+                    */
+                    aggregateOutcome:
+                      articles.length > 0 ? 'RETRIEVAL_CANDIDATES' : deriveRetrievalOutcome(lanesFor(finalRole)),
                   };
                 })()
               : {}),

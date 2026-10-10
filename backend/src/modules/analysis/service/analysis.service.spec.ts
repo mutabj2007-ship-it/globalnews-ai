@@ -1546,6 +1546,31 @@ describe('AnalysisService', () => {
         articlesRetrieved: 1,
         /* RIGHTS CONTAINMENT R1 — a live GNews article is pending E1 (record mode): counted, never "cleared" */
         rightsPending: { count: 1, providers: { gnews: 1 } },
+        /*
+          P0 NEWS QUERY A4 — the ordinary generic search is now traced (additive). The one admitted
+          article names provider `gnews`, not the `newsapi` lane, so the lane is not credited with it;
+          the aggregate still follows the admitted evidence and never reads "zero".
+        */
+        retrievalTrace: {
+          queryVariants: ['live query'],
+          sentQueries: [
+            {
+              role: 'PRIMARY',
+              outcome: 'SENT_RESULTS',
+              query: 'live query',
+              lanes: [{ lane: 'newsapi', outcome: 'LANE_RETURNED_ZERO', candidates: 0, reason: null }],
+            },
+          ],
+          aggregateOutcome: 'RETRIEVAL_CANDIDATES',
+          timeWindow: null,
+          languages: ['en'],
+          lanesAttempted: ['newsapi'],
+          lanesSucceeded: ['newsapi'],
+          lanesUnavailable: [],
+          candidatesSeen: 1,
+          candidatesAdmitted: 1,
+          independentClusters: 1,
+        },
       });
     });
 
