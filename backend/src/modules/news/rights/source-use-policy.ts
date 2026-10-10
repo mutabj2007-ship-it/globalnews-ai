@@ -34,6 +34,7 @@
 */
 import { FEED_SOURCES, type FeedSourceEntry } from '../providers/feed-source-registry';
 import { INTERNATIONAL_NEWS_SOURCES } from '../../global-reach/source-coverage.authority';
+import type { Prisma } from '../../../generated/prisma/client';
 
 export type EvidenceUse = 'AI_INPUT' | 'METADATA';
 
@@ -155,4 +156,27 @@ export function summarizePending(pending: readonly string[]): RightsPendingSumma
   const providers: Record<string, number> = {};
   for (const p of pending) providers[p] = (providers[p] ?? 0) + 1;
   return { count: pending.length, providers };
+}
+
+/*
+  E1-TAA-5 (1) — ENFORCE BY ABSENCE. The store's read methods add this condition to their own query,
+  so no reader — current or future — can OBTAIN a stored row from an RSS feed below CLEARED or with an
+  empty source id. Malformed ids (not expressible in this query) are dropped by
+  `storedRowAdmissible` inside the same repository methods before anything is returned.
+*/
+export function admittedStoredSourceWhere(feeds: readonly FeedSourceEntry[] = FEED_SOURCES): Prisma.ArticleWhereInput {
+  const clearedFeedIds = feeds.filter((row) => row.rights.state === 'CLEARED').map((row) => row.sourceId);
+  return {
+    AND: [
+      { NOT: { sourceId: '' } },
+      { OR: [{ NOT: { sourceId: { startsWith: FEED_PREFIX } } }, { sourceId: { in: clearedFeedIds } }] },
+    ],
+  };
+}
+
+/** Repository-side check for what the query cannot express (malformed / unknown ids). */
+export function storedRowAdmissible(sourceId: string | null | undefined, feeds: readonly FeedSourceEntry[] = FEED_SOURCES): boolean {
+  const id = (sourceId ?? '').trim();
+  if (id.startsWith(FEED_PREFIX)) return sourceUseDecision({ sourceId: id }, 'AI_INPUT', { enforcement: 'record', feeds }).allowed;
+  return PUBLISHER_SLUG.test(id);
 }

@@ -4,6 +4,7 @@ import { readPublishedAtBasis, writePublishedAtBasis } from './published-at-basi
 import { normalizeArticleUrl, type NewsArticle, type NewsCategory } from '@globalnews-ai/shared';
 import { PrismaService } from '../../../database/prisma.service';
 import { stripUnresolvedTemplatePlaceholders } from '../article-metadata-hygiene.util';
+import { admittedStoredSourceWhere, storedRowAdmissible } from '../rights/source-use-policy';
 import { RETAINED_ARTICLE_OBSERVER, type RetainedArticleObserver } from './retained-article-observer.port';
 
 interface FindRecentArticlesOptions {
@@ -340,6 +341,8 @@ export class ArticlePersistenceService {
               gte: cutoff,
             },
             ...(category ? { category } : {}),
+            /* E1-TAA-5 — enforce by absence */
+            ...admittedStoredSourceWhere(),
           },
         },
         include: {
@@ -358,7 +361,7 @@ export class ArticlePersistenceService {
         take: safeLimit,
       });
 
-      const articles = rows.map((row) => ({
+      const articles = rows.filter((row) => storedRowAdmissible(row.article.sourceId)).map((row) => ({
         securityCountryAttribution: {
           countryCode: row.countryCode,
           relevanceScore: row.relevanceScore,
@@ -457,6 +460,8 @@ export class ArticlePersistenceService {
             gte: cutoff,
           },
           ...(category ? { category } : {}),
+          /* E1-TAA-5 — enforce by absence */
+          ...admittedStoredSourceWhere(),
           ...(usingTermNet
             ? { OR: termNetClauses }
             : normalizedQuery
@@ -490,7 +495,7 @@ export class ArticlePersistenceService {
         take: fetchLimit,
       });
 
-      return rows.map((row) => ({
+      return rows.filter((row) => storedRowAdmissible(row.sourceId)).map((row) => ({
         id: row.id,
         title: row.title,
         summary: stripUnresolvedTemplatePlaceholders(row.summary),
@@ -544,11 +549,12 @@ export class ArticlePersistenceService {
     }
 
     try {
-      const row = await this.prisma.article.findUnique({
-        where: { id: normalizedId },
+      /* E1-TAA-5 — enforce by absence: a held source is not obtainable even by id */
+      const row = await this.prisma.article.findFirst({
+        where: { id: normalizedId, ...admittedStoredSourceWhere() },
       });
 
-      if (!row) {
+      if (!row || !storedRowAdmissible(row.sourceId)) {
         return null;
       }
 
@@ -602,10 +608,10 @@ export class ArticlePersistenceService {
 
     try {
       const row = await this.prisma.article.findFirst({
-        where: { url: { in: candidates } },
+        where: { url: { in: candidates }, ...admittedStoredSourceWhere() },
         include: { countries: { where: { isRelevant: true }, select: { countryCode: true } } },
       });
-      if (!row) return null;
+      if (!row || !storedRowAdmissible(row.sourceId)) return null;
 
       return {
         article: {
