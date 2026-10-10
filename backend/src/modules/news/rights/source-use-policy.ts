@@ -185,7 +185,19 @@ export function admittedStoredSourceWhere(feeds: readonly FeedSourceEntry[] = FE
 
 /** Repository-side check for what the query cannot express (malformed / unknown ids). */
 export function storedRowAdmissible(sourceId: string | null | undefined, feeds: readonly FeedSourceEntry[] = FEED_SOURCES): boolean {
-  const id = (sourceId ?? '').trim();
-  if (id.startsWith(FEED_PREFIX)) return sourceUseDecision({ sourceId: id }, 'AI_INPUT', { enforcement: 'record', feeds }).allowed;
-  return PUBLISHER_SLUG.test(id);
+  return storedRowExclusionReason(sourceId, feeds) === null;
+}
+
+/**
+ * Why a stored row is not obtainable, or null when it is. The SAME decision every answer uses, so a
+ * stored social post is reported as SOCIAL_RIGHTS_NOT_REVIEWED, a held feed by its rights reason,
+ * and only a genuinely malformed / unknown id as UNKNOWN_PROVENANCE. (Stored rows carry no
+ * providerId, so a publisher slug is the provider path, recorded as pending review.)
+ */
+export function storedRowExclusionReason(
+  sourceId: string | null | undefined,
+  feeds: readonly FeedSourceEntry[] = FEED_SOURCES,
+): RightsExclusionReason | null {
+  const decision = sourceUseDecision({ sourceId }, 'AI_INPUT', { enforcement: 'record', feeds });
+  return decision.allowed ? null : decision.reason;
 }

@@ -130,6 +130,7 @@ import { researchRecordOf, type ResearchFacts } from './research-record';
 import { productMetaAnswer, readProductMeta } from './product-meta';
 import { checkWrittenArithmetic } from '../analysis/providers/arithmetic-check.util';
 import { partitionByRights } from '../news/rights/source-use-policy';
+import { priorWorkRightsClearedWith } from './source-rights-withholding';
 import {
   newAskObservationDraft,
   type AskObservationDraft,
@@ -2439,25 +2440,17 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     readonly provenance?: string;
     readonly evidenceRefs?: readonly string[];
   }): Promise<boolean> {
-    if (artifact.provenance !== 'SOURCED_REPORTING') return true;
-    const refs = artifact.evidenceRefs ?? [];
-    if (refs.length === 0 || refs.length > PRIOR_WORK_RIGHTS_MAX_REFS || this.news === undefined) return false;
-    try {
-      const found = await withDeadline(
-        Promise.all(refs.map((id) => this.news!.findArticleById(id))),
-        PRIOR_WORK_RIGHTS_DEADLINE_MS,
-        'ask-prior-work-rights',
-      );
-      if (found.some((a) => a === null)) return false;
-      const { excluded } = partitionByRights(found as NonNullable<(typeof found)[number]>[], 'AI_INPUT');
-      if (excluded.length > 0) {
-        this.logger.warn(`ask prior work withheld: rights exclusion count=${excluded.length}`);
-        return false;
-      }
-      return true;
-    } catch {
-      return false;
-    }
+    const cleared = await withDeadline(
+      priorWorkRightsClearedWith(
+        artifact,
+        this.news === undefined ? undefined : (id) => this.news!.findArticleById(id),
+        PRIOR_WORK_RIGHTS_MAX_REFS,
+      ),
+      PRIOR_WORK_RIGHTS_DEADLINE_MS,
+      'ask-prior-work-rights',
+    ).catch(() => false);
+    if (!cleared && artifact.provenance === 'SOURCED_REPORTING') this.logger.warn('ask prior work withheld: source rights or unresolvable evidence');
+    return cleared;
   }
 
   private async executeBackground(

@@ -1,4 +1,4 @@
-import { WITHHELD_BASIS, withheldForSourceRights } from './source-rights-withholding';
+import { WITHHELD_BASIS, priorWorkRightsClearedWith, withheldForSourceRights } from './source-rights-withholding';
 
 /*
   E1 §8.2 step 3 — stored answers citing held sources are withheld from readers at read time (the 34
@@ -54,5 +54,31 @@ describe('withheldForSourceRights', () => {
 
   it.each([null, undefined, 'x', 3, []])('non-object payload %p passes through', (v) => {
     expect(withheldForSourceRights(v)).toBe(v);
+  });
+});
+
+/* Bypass check — an earlier SOURCED answer is reused as model input only when its sources still pass */
+describe('priorWorkRightsClearedWith', () => {
+  const store = (rows: Record<string, { sourceId: string; providerId?: string } | null>) => async (id: string) => rows[id] ?? null;
+  const sourced = (refs: string[]) => ({ provenance: 'SOURCED_REPORTING', evidenceRefs: refs });
+
+  it('a model-reasoning answer carries no source content → reusable', async () => {
+    expect(await priorWorkRightsClearedWith({ provenance: 'MODEL_REASONING' }, undefined, 20)).toBe(true);
+  });
+  it('every ref resolves to a provider-path article → reusable', async () => {
+    expect(await priorWorkRightsClearedWith(sourced(['a', 'b']), store({ a: { sourceId: 'bbc', providerId: 'gnews' }, b: { sourceId: 'reuters' } }), 20)).toBe(true);
+  });
+  it.each([
+    ['a held RSS source', { a: { sourceId: 'feed:taarifa-rw' } }],
+    ['a social post', { a: { sourceId: 'social:x:1' } }],
+    ['an unresolvable ref (what the store returns for a held row)', { a: null }],
+  ])('%s → withheld', async (_l, rows) => {
+    expect(await priorWorkRightsClearedWith(sourced(['a']), store(rows as never), 20)).toBe(false);
+  });
+  it('no refs, too many refs, no store, or a failed read → withheld (fails closed)', async () => {
+    expect(await priorWorkRightsClearedWith(sourced([]), store({}), 20)).toBe(false);
+    expect(await priorWorkRightsClearedWith(sourced(['a', 'b', 'c']), store({}), 2)).toBe(false);
+    expect(await priorWorkRightsClearedWith(sourced(['a']), undefined, 20)).toBe(false);
+    expect(await priorWorkRightsClearedWith(sourced(['a']), async () => { throw new Error('db'); }, 20)).toBe(false);
   });
 });

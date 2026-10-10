@@ -46,3 +46,26 @@ export function withheldForSourceRights(payload: unknown): unknown {
     withheld: { reason: 'SOURCE_RIGHTS', count: excluded.length },
   };
 }
+
+/**
+ * MASTER CTO P0 RIGHTS CONTAINMENT R1.1 — may an earlier answer's points reach the model again?
+ * Model-reasoning answers carry no source content (yes). A SOURCED answer only when every evidence
+ * reference still resolves (through the store, which cannot return a held source) to an article
+ * usable as AI input; no references, too many to check, an unresolvable one or a failed read → no.
+ */
+export async function priorWorkRightsClearedWith(
+  artifact: { readonly provenance?: string; readonly evidenceRefs?: readonly string[] },
+  findArticleById: ((id: string) => Promise<{ sourceId?: string | null; providerId?: string | null } | null>) | undefined,
+  maxRefs: number,
+): Promise<boolean> {
+  if (artifact.provenance !== 'SOURCED_REPORTING') return true;
+  const refs = artifact.evidenceRefs ?? [];
+  if (refs.length === 0 || refs.length > maxRefs || findArticleById === undefined) return false;
+  try {
+    const found = await Promise.all(refs.map((id) => findArticleById(id)));
+    if (found.some((a) => a === null)) return false;
+    return partitionByRights(found as Array<{ sourceId?: string | null; providerId?: string | null }>, 'AI_INPUT').excluded.length === 0;
+  } catch {
+    return false;
+  }
+}

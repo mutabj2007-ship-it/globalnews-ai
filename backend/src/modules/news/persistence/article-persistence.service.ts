@@ -4,7 +4,7 @@ import { readPublishedAtBasis, writePublishedAtBasis } from './published-at-basi
 import { normalizeArticleUrl, type NewsArticle, type NewsCategory } from '@globalnews-ai/shared';
 import { PrismaService } from '../../../database/prisma.service';
 import { stripUnresolvedTemplatePlaceholders } from '../article-metadata-hygiene.util';
-import { admittedStoredSourceWhere, storedRowAdmissible } from '../rights/source-use-policy';
+import { admittedStoredSourceWhere, storedRowAdmissible, storedRowExclusionReason } from '../rights/source-use-policy';
 import { RETAINED_ARTICLE_OBSERVER, type RetainedArticleObserver } from './retained-article-observer.port';
 
 interface FindRecentArticlesOptions {
@@ -75,6 +75,23 @@ const NO_OBSERVATIONS: FirstSeenByUrl = new Map<string, string>();
 @Injectable()
 export class ArticlePersistenceService {
   private readonly logger = new Logger(ArticlePersistenceService.name);
+
+  /*
+    E1-TAA-5 — the repository-side half of enforce-by-absence: rows the query could not exclude
+    (social posts, malformed / unknown ids) are dropped here, and the diagnostic records WHY by
+    reason (counts only, never content): SOCIAL_RIGHTS_NOT_REVIEWED is never reported as malformed.
+  */
+  private admissibleRows<T>(rows: readonly T[], sourceIdOf: (row: T) => string | null | undefined): T[] {
+    const kept: T[] = [];
+    const dropped: Record<string, number> = {};
+    for (const row of rows) {
+      const reason = storedRowExclusionReason(sourceIdOf(row));
+      if (reason === null) kept.push(row);
+      else dropped[reason] = (dropped[reason] ?? 0) + 1;
+    }
+    if (kept.length !== rows.length) this.logger.debug(`stored rows withheld by rights: ${JSON.stringify(dropped)}`);
+    return kept;
+  }
 
   constructor(
     private readonly prisma: PrismaService,
@@ -361,7 +378,7 @@ export class ArticlePersistenceService {
         take: safeLimit,
       });
 
-      const articles = rows.filter((row) => storedRowAdmissible(row.article.sourceId)).map((row) => ({
+      const articles = this.admissibleRows(rows, (row) => row.article.sourceId).map((row) => ({
         securityCountryAttribution: {
           countryCode: row.countryCode,
           relevanceScore: row.relevanceScore,
@@ -495,7 +512,7 @@ export class ArticlePersistenceService {
         take: fetchLimit,
       });
 
-      return rows.filter((row) => storedRowAdmissible(row.sourceId)).map((row) => ({
+      return this.admissibleRows(rows, (row) => row.sourceId).map((row) => ({
         id: row.id,
         title: row.title,
         summary: stripUnresolvedTemplatePlaceholders(row.summary),

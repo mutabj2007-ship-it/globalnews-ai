@@ -5,6 +5,8 @@ import {
   sourceUseDecision,
   summarizeExclusions,
   summarizePending,
+  storedRowAdmissible,
+  storedRowExclusionReason,
 } from './source-use-policy';
 
 /*
@@ -153,5 +155,28 @@ describe('partitionByRights / summaries', () => {
     const r = partitionByRights([{ sourceId: 'bbc', providerId: 'gnews' }], 'AI_INPUT', { ...RECORD, providers: cleared });
     expect(summarizeExclusions(r.excluded)).toBeUndefined();
     expect(summarizePending(r.pending)).toBeUndefined();
+  });
+});
+
+/* CTO rights ruling — the stored-row diagnostic distinguishes social from malformed provenance */
+describe('storedRowExclusionReason', () => {
+  it.each([
+    ['social:x:12345', 'SOCIAL_RIGHTS_NOT_REVIEWED'],
+    ['social:youtube:UCabc', 'SOCIAL_RIGHTS_NOT_REVIEWED'],
+    ['feed:taarifa-rw', 'RIGHTS_NOT_CLEARED_FOR_AI'],
+    ['feed:standardmedia-ke', 'RIGHTS_RESTRICTED'],
+    ['feed:wp-pl', 'RIGHTS_PROHIBITED'],
+    ['feed:not-in-registry', 'UNKNOWN_PROVENANCE'],
+    ['Bad Id', 'UNKNOWN_PROVENANCE'],
+    ['', 'UNKNOWN_PROVENANCE'],
+    ['social:tiktok:1', 'UNKNOWN_PROVENANCE'],
+  ])('%p → %s', (sourceId, reason) => {
+    expect(storedRowExclusionReason(sourceId)).toBe(reason);
+    expect(storedRowAdmissible(sourceId)).toBe(false);
+  });
+
+  it('a stored provider slug is obtainable (provider path, pending review)', () => {
+    expect(storedRowExclusionReason('bbc')).toBeNull();
+    expect(storedRowAdmissible('bbc')).toBe(true);
   });
 });
