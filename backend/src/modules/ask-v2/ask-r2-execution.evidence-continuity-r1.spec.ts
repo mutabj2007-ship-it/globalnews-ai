@@ -486,6 +486,20 @@ describe('ASK EVIDENCE CONTINUITY R1 × RIGHTS CONTAINMENT R1.1 — the combined
     expect(plans[0]).not.toBe(plans[1]);
   });
 
+  it('…and they differ even when the earlier record is the ONLY thing that differs (reopened, as live A4 f34b3dec)', async () => {
+    /* The test above is separated by the previous QUESTION already. Live, A4 / A6 shared A2's key, so
+       the previous question did not separate them there: with the record as the only difference
+       (a reopened thread carries the record, not the previous question), the record must decide. */
+    const plans: string[] = [];
+    for (const first of [T1, 'What are the latest verified reports about flooding in Kibirizi village, South Kivu, over the last seven days? Give the original sources.']) {
+      const c = conversation();
+      await c.ask(first, 'NO_MATCH');
+      const t = await c.ask(T2, 'SOURCED', { reopened: true });
+      plans.push(String(t.plan.executionKey));
+    }
+    expect(plans[0]).not.toBe(plans[1]);
+  });
+
   it('a follow-up that does not rest on the earlier answer is searched as its own question either way', async () => {
     const c = conversation('en', heldRow);
     await c.ask(T1, 'SOURCED');
