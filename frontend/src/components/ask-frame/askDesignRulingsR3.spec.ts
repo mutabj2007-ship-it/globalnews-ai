@@ -29,7 +29,12 @@ describe('ruling 1 — standalone Ask has the Design header only', () => {
 describe('ruling 2 — the drawer is the conversations', () => {
   it('no navigation menu under the list on the reading surface', () => {
     const drawer = shell.slice(shell.indexOf('data-ask-nav="drawer"'));
-    expect(drawer).toMatch(/\{reading \? \(\s*<AskReadingFooter/);
+    /* ASK R3 NAVIGATION / USABILITY R1 — the drawer on EVERY Ask page now ends in the one
+       conversations footer (no route menu under the list anywhere), not only on the reading
+       surface. */
+    expect(drawer).toMatch(/data-ask-nav="conversations">[\s\S]*?<\/div>\s*(\{(\/\*[\s\S]*?\*\/)?\}\s*)?<AskReadingFooter/);
+    expect(drawer).not.toMatch(/renderRoutes\(/);
+    expect(drawer).not.toMatch(/\{reading \? \(/);
   });
 });
 

@@ -19,9 +19,12 @@ import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
  * returned it: no fetch, no effect, no AI, nothing composed. The client wrappers
  * (SavedBriefings, BriefingDetailClient) do the reads.
  */
-export function briefingHref(id: string, version?: number): string {
+export function briefingHref(id: string, version?: number, origin?: 'updates' | 'saved'): string {
   const base = `/saved/briefing?id=${encodeURIComponent(id)}`;
-  return version === undefined ? base : `${base}&v=${encodeURIComponent(String(version))}`;
+  const withVersion = version === undefined ? base : `${base}&v=${encodeURIComponent(String(version))}`;
+  /* ASK R3 NAVIGATION / USABILITY R1 — a detail opened from My updates says so, so its header,
+     back link and post-delete destination return there (audit D09). Saved is the default. */
+  return origin === 'updates' ? `${withVersion}&from=updates` : withVersion;
 }
 
 function UpdateLine({
@@ -93,10 +96,13 @@ export function BriefingVersionView({
   detail,
   version,
   locale,
+  origin = 'saved',
 }: {
   readonly detail: AskV2BriefingDetail;
   readonly version: AskV2BriefingVersion;
   readonly locale: DisplayLocale;
+  /** Where the detail was opened from; version links keep it. */
+  readonly origin?: 'updates' | 'saved';
 }): JSX.Element {
   const t = askShellStrings(locale).briefingStrings;
   const when = (iso: string | null) => (iso === null ? null : (formatUtc(iso, locale) ?? iso));
@@ -142,7 +148,7 @@ export function BriefingVersionView({
           {detail.versions.map((v) => (
             <li key={v.version}>
               <Link
-                href={briefingHref(detail.id, v.version)}
+                href={briefingHref(detail.id, v.version, origin)}
                 aria-current={v.version === version.version ? 'page' : undefined}
                 className={`inline-block rounded-[8px] border px-2.5 py-1 text-[12px] ${
                   v.version === version.version

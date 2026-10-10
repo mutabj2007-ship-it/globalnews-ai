@@ -46,7 +46,8 @@ export default function MyUpdatesPage(): JSX.Element {
     <AskThemedSurface theme={parseAskThemePreference(cookies().get(THEME_COOKIE_NAME)?.value)}>
       <AskNavProvider>
         <AskNavShell language={chrome} selected={locale} />
-        <AskContinuityHeader locale={chrome} surface="saved" />
+        {/* ASK R3 NAVIGATION / USABILITY R1 — titled My updates, never "Saved" (audit D08) */}
+        <AskContinuityHeader locale={chrome} surface="updates" />
         <AskClearedBoundary>
           <MyUpdatesClient locale={chrome} />
         </AskClearedBoundary>

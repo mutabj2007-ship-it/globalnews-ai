@@ -43,7 +43,8 @@ import { useAskNavOptional } from '@/components/ask-nav/AskNavShell';
 import { AskReadingFooter } from '@/components/ask-nav/AskReadingFooter';
 import { AskDeepConfirm } from './AskDeepConfirm';
 import { AskJobSetupSheet } from './AskJobSetupSheet';
-import { AskWelcomeEntries, useResumeConversation } from './AskWelcomeEntries';
+import { AskWelcomeEntries, useFollowSummary, useResumeConversation } from './AskWelcomeEntries';
+import { AskPrimaryNav } from '@/components/ask-nav/AskPrimaryNav';
 import { askR3FullStrings } from '@/lib/ask/askR3FullStrings';
 import { Composer } from './AskParts';
 import styles from './askDashboard.module.css';
@@ -308,6 +309,9 @@ export function AskFrameScreen({
   */
   const signedInReader = !guestMode && nav?.account === 'signed-in';
   const resumeConversation = useResumeConversation(signedInReader && entryState);
+  /* ASK R3 NAVIGATION / USABILITY R1 — the reader's real follow facts (GET /ask-v2/briefings, a
+     database read: 0 AI · 0 provider); null until read, and whenever there is nothing followed. */
+  const followSummary = useFollowSummary(signedInReader && entryState);
   const r3 = askR3FullStrings(interfaceLocale);
   const closeJobSheet = (): void => {
     setJobSheetOpen(false);
@@ -710,6 +714,9 @@ export function AskFrameScreen({
           <AskWordmark name={r2s.askTitle} />
         </h1>
         {/* The source-count readout stays for assistive technology; the Design header shows New. */}
+        {/* ASK R3 NAVIGATION / USABILITY R1 — the R3 primary navigation (HANDOFF §3 L74), on
+            phone and desktop; standalone Ask only (the shell context exists). */}
+        {nav !== null && <AskPrimaryNav locale={interfaceLocale} current="ask" />}
         <span data-ask="header-state" className={styles.visuallyHidden}>
           {lastR2View !== null ? r2s.sourcesLabel(lastR2View.sourceCount) : ''}
         </span>
@@ -721,9 +728,12 @@ export function AskFrameScreen({
           onClick={newQuestion}
           disabled={entryState || isPending}
           className={styles.newButton}
+          /* ASK R3 NAVIGATION / USABILITY R1 — icon-only "+" below 700 px (R3 header); the
+             accessible name is always the localized "New question". */
+          aria-label={shell.askNavStrings.newQuestion}
         >
           <span aria-hidden="true">+</span>
-          {shell.askNavStrings.newQuestion}
+          <span data-ask="new-question-label">{shell.askNavStrings.newQuestion}</span>
         </button>
       </header>
       {/*
@@ -817,6 +827,7 @@ export function AskFrameScreen({
                     locale={interfaceLocale}
                     signedIn={signedInReader}
                     latest={resumeConversation}
+                    follows={followSummary}
                     onOpenJobs={() => setJobSheetOpen(true)}
                     placement="welcome"
                   />
@@ -1224,6 +1235,7 @@ export function AskFrameScreen({
               locale={interfaceLocale}
               signedIn={signedInReader}
               latest={resumeConversation}
+              follows={followSummary}
               onOpenJobs={() => setJobSheetOpen(true)}
               placement="desktop"
             />

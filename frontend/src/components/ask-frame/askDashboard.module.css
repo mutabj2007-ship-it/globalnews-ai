@@ -3437,3 +3437,44 @@
   font-weight: 600;
   cursor: pointer;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   ASK R3 NAVIGATION / USABILITY R1 (CTO R3 conformity rulings, 2026-10-10)
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* The conversation list scrolls in its own region (drawer and column alike): New question and
+   search stay on top, the drawer footer stays in view with up to 50 conversations. */
+.conversationsList {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/*
+  The R3 header: ☰ · [Ask | My updates | Saved] · + (HANDOFF.md §3 L74). Phones and narrow
+  tablets draw it literally — the primary navigation takes the wordmark's place and New question
+  is the icon-only "+" with its accessible name (aria-label) — so no locale can push a control off
+  screen (audit: FR "+ Nouvelle question" overflowed 18 px at 320). From 700 px there is room for
+  the canonical wordmark and the labelled "+ New question" beside the navigation, unchanged.
+*/
+.page[data-ask-standalone] .frame .phoneHeader {
+  min-width: 0;
+}
+.page[data-ask-standalone] .frame .newButton {
+  margin-inline-start: 0;
+}
+@media (max-width: 699px) {
+  .page[data-ask-standalone] .frame .brand {
+    display: none;
+  }
+  .page[data-ask-standalone] .frame .newButton {
+    padding-inline: 0;
+  }
+  .page[data-ask-standalone] .frame .newButton > :global([data-ask='new-question-label']) {
+    display: none;
+  }
+}

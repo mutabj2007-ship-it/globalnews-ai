@@ -38,6 +38,8 @@ import { askDirectionProps } from '@/lib/ask/askDirection';
 import { AskConversations } from '@/components/ask-frame/AskConversations';
 import { AskEmblemMark } from '@/components/ask-frame/AskEmblem';
 import { AskReadingFooter } from './AskReadingFooter';
+import { AskPrimaryNav } from './AskPrimaryNav';
+import type { AskPrimarySectionId } from '@/lib/askNavModel';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -275,6 +277,7 @@ export function AskNavShell({
   selected,
   theme,
   surface,
+  section,
 }: {
   readonly language: DisplayLocale;
   /**
@@ -305,6 +308,12 @@ export function AskNavShell({
    * those are the product locations Account, Settings and Help are reached from.
    */
   readonly surface?: 'reading';
+  /**
+   * ASK R3 NAVIGATION / USABILITY R1 — the R3 section this page belongs to, for the primary
+   * navigation in the desktop bar. Absent → derived from the path (/saved/updates → My updates,
+   * /saved… → Saved, /ask → Ask). The change detail passes it, because only its opener knows.
+   */
+  readonly section?: AskPrimarySectionId | null;
 }): JSX.Element {
   const reading = surface === 'reading';
   const { open, setOpen, clearAndGo, clear, setAccount, setDisplayName, threadId, runNewQuestion } =
@@ -329,6 +338,16 @@ export function AskNavShell({
   const wasOpen = useRef(false);
 
   const s = askShellStrings(language).askNavStrings;
+  const currentSection: AskPrimarySectionId | null =
+    section !== undefined
+      ? section
+      : pathname === '/saved/updates'
+        ? 'updates'
+        : pathname?.startsWith('/saved') === true
+          ? 'saved'
+          : pathname === '/ask'
+            ? 'ask'
+            : null;
   /* R4 · PHASE B — the shell's own direction scope. See the note at the header below. */
   const shellDirection = askDirectionProps(language);
   const audience: AskMenuAudience = user === null ? 'signed-out' : 'signed-in';
@@ -425,6 +444,11 @@ export function AskNavShell({
     if (!wasOpen.current) return;
     wasOpen.current = false;
     document.querySelector<HTMLElement>('[data-ask="shell-menu"]')?.focus();
+    /* ASK R3 NAVIGATION / USABILITY R1 — above the phone threshold the visible trigger is the
+       desktop bar's own (the continuity header's is display:none there, so focus did not move). */
+    if (document.activeElement === document.body || document.activeElement === null) {
+      document.querySelector<HTMLElement>('[data-ask-nav="bar-menu"]')?.focus();
+    }
   }, [open]);
 
   /*
@@ -477,10 +501,9 @@ export function AskNavShell({
 
   const itemClass =
     'flex min-h-11 items-center rounded-[22px] px-3 font-cd-body text-[0.9375rem] text-[var(--ad-ink-2,#cfe2f2)] transition-colors hover:bg-[var(--ad-surface-2,rgba(56,189,248,0.10))] hover:text-[var(--ad-ink,#ffffff)]';
-  const drawerRowClass = 'flex min-h-[52px] items-center font-cd-body text-[1.0625rem] text-[var(--ad-ink,#e6eef6)]';
 
-  function renderRoutes(className: string, onNavigate?: () => void): JSX.Element[] {
-    return items.map((entry) => (
+  function renderRoutes(className: string, onNavigate?: () => void, omit: readonly string[] = []): JSX.Element[] {
+    return items.filter((entry) => !omit.includes(entry.id)).map((entry) => (
       <Link
         key={entry.id}
         href={entry.href ?? '/ask'}
@@ -538,7 +561,24 @@ export function AskNavShell({
         data-ask-nav-audience={isLoading ? 'pending' : audience}
         className={`${styles.shell} sticky top-0 z-50 h-[62px] items-center border-b border-[var(--ad-line,#0a2744)] bg-[var(--ad-bg,rgba(2,15,32,0.96))]`}
       >
-        <div className="mx-auto flex h-[62px] w-full max-w-cd-page items-center gap-6 px-[26px]">
+        <div className={`${styles.barRow} mx-auto flex h-[62px] w-full max-w-cd-page items-center gap-6 px-[26px]`}>
+          {/*
+            ASK R3 NAVIGATION / USABILITY R1 — the Conversations drawer is reachable from the
+            desktop bar too (it opened only from the phone header): the same shared state, the
+            same drawer, opened only when the reader asks (PO rail ruling, every width).
+          */}
+          <button
+            type="button"
+            data-ask-nav="bar-menu"
+            aria-label={open ? s.closeMenuAriaLabel : s.openMenuAriaLabel}
+            aria-expanded={open}
+            onClick={() => setOpen(!open)}
+            className="-ms-3 inline-flex min-h-11 min-w-11 shrink-0 flex-col items-center justify-center gap-[4px] text-[var(--ad-ink,#cfe2f2)]"
+          >
+            <span aria-hidden="true" className="block h-[2px] w-[18px] rounded-sm bg-current" />
+            <span aria-hidden="true" className="block h-[2px] w-[18px] rounded-sm bg-current" />
+            <span aria-hidden="true" className="me-[6px] block h-[2px] w-[12px] rounded-sm bg-current" />
+          </button>
           {/*
             IDENTITY, NOT NAVIGATION. The wordmark is plain text with no href on
             purpose: a link here would point at `/ask`, duplicating New question
@@ -552,8 +592,14 @@ export function AskNavShell({
             {askProductName(language)}
           </span>
 
-          <nav aria-label={s.navAriaLabel} className="flex items-center gap-1">
-            {renderRoutes(itemClass)}
+          {/* ASK R3 NAVIGATION / USABILITY R1 — the R3 primary navigation, on desktop too. */}
+          <AskPrimaryNav locale={selectedLocale} current={currentSection} />
+
+          <nav aria-label={s.navAriaLabel} className={`${styles.barRoutes} flex items-center gap-1`}>
+            {/* ASK R3 NAVIGATION / USABILITY R1 — the bar keeps New question beside the R3
+                navigation; Saved is in the navigation, and Recent (the Conversations list), Help &
+                feedback and Settings are in the drawer the bar's menu control opens. */}
+            {renderRoutes(`${itemClass} whitespace-nowrap`, undefined, ['saved', 'recent', 'help', 'settings'])}
           </nav>
 
           <div className="ml-auto flex shrink-0 items-center gap-2">
@@ -685,73 +731,23 @@ export function AskNavShell({
             />
           </div>
 
-          {reading ? (
-            <AskReadingFooter
-              language={language}
-              selected={selectedLocale}
-              account={isLoading ? 'pending' : audience}
-              onSignOut={() => {
-                void signOutClean();
-              }}
-            />
-          ) : (
-          <>
-          <nav aria-label={s.navAriaLabel} className={styles.drawerGroup}>
-            {renderRoutes(drawerRowClass, () => setOpen(false))}
-          </nav>
-
-          <div className={styles.drawerGroup}>
-            {languageEntry !== undefined && (
-              <div className="flex min-h-[52px] items-center">
-                <LanguageSelector
-                  value={selectedLocale}
-                  onChange={changeLanguage}
-                  label={s.language}
-                  actionLabel={s.languageSelectorAction}
-                  variant="mobile"
-                  anchor="self"
-                />
-              </div>
-            )}
-            {controlTheme !== undefined && (
-              <div className="flex min-h-[52px] items-center" data-ask-nav="theme">
-                <ThemeControl
-                  language={language as LanguageCode}
-                  locale={language}
-                  initial={controlTheme}
-                  tone="surface"
-                />
-              </div>
-            )}
-            {!isLoading && signInEntry !== undefined && (
-              <a
-                href={accountSignInUrl(pathname ?? undefined)}
-                data-ask-nav="utility"
-                data-ask-nav-id={signInEntry.id}
-                className={drawerRowClass}
-              >
-                {labelOf(signInEntry, s)}
-              </a>
-            )}
-            {!isLoading && user !== null && signOutEntry !== undefined && (
-              <>
-                <button
-                  type="button"
-                  data-ask-nav="utility"
-                  data-ask-nav-id={signOutEntry.id}
-                  onClick={() => {
-                    setOpen(false);
-                    void signOutClean();
-                  }}
-                  className={`${drawerRowClass} text-start`}
-                >
-                  {labelOf(signOutEntry, s)}
-                </button>
-              </>
-            )}
-          </div>
-          </>
-          )}
+          {/*
+            ASK R3 NAVIGATION / USABILITY R1 — ONE drawer footer on every Ask page (it was the
+            reading surface's only): My updates, Saved, Help & feedback, Settings, the session
+            action, language, appearance and the legal row, in the compact Design footer. It is
+            PINNED (askNav.module.css): only the conversation list above it scrolls, so these stay
+            reachable with up to 50 conversations at every width (audit gap #1). New question and
+            the conversation list (the Recent destination's content) lead the drawer above it.
+          */}
+          <AskReadingFooter
+            language={language}
+            selected={selectedLocale}
+            account={isLoading ? 'pending' : audience}
+            onSignOut={() => {
+              setOpen(false);
+              void signOutClean();
+            }}
+          />
         </div>
       )}
     </>

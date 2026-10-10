@@ -287,6 +287,27 @@ export const ASK_NAV_LIVE_ROUTES: readonly string[] = [
  * route lands, add it to ASK_NAV_LIVE_ROUTES and remove it from here; the row
  * then appears in the signed-in menu with no other change anywhere.
  */
+/**
+ * ASK R3 NAVIGATION / USABILITY R1 — THE R3 PRIMARY NAVIGATION: Ask · My updates · Saved.
+ *
+ * R3 HANDOFF.md §3 L74 (phone header ☰ · [Ask | My updates | Saved] · +), restored on phone AND
+ * desktop by the CTO R3 conformity rulings of 2026-10-10. Existing destinations only: `/ask`, My
+ * updates (`MY_UPDATES_HREF`, followedQuestions.ts) and `/saved`. No badge: there is no reviewed /
+ * unreviewed state in the backend (B2), and the design forbids inventing a count.
+ */
+export type AskPrimarySectionId = 'ask' | 'updates' | 'saved';
+
+export interface AskPrimarySection {
+  readonly id: AskPrimarySectionId;
+  readonly href: string;
+}
+
+export const ASK_PRIMARY_SECTIONS: readonly AskPrimarySection[] = Object.freeze([
+  { id: 'ask', href: '/ask' },
+  { id: 'updates', href: '/saved/updates' },
+  { id: 'saved', href: '/saved' },
+] as const);
+
 export const ASK_NAV_PENDING_ROUTES: readonly string[] = [];
 
 /**

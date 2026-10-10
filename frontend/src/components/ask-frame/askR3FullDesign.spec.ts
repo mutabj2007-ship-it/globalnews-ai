@@ -94,7 +94,11 @@ describe('§3 welcome entries (§Composition 6–8)', () => {
       latestOperationId: 'op-1',
       ...over,
     }) as AskV2RecentThread;
-  const render = (props: { signedIn: boolean; latest: AskV2RecentThread | null }) => {
+  const render = (props: {
+    signedIn: boolean;
+    latest: AskV2RecentThread | null;
+    follows?: { followed: number; withChanges: number; lastSuccessfulAt: string | null } | null;
+  }) => {
     let r!: ReturnType<typeof create>;
     act(() => {
       r = create(
@@ -112,19 +116,37 @@ describe('§3 welcome entries (§Composition 6–8)', () => {
     const line = byAsk(root, 'coverage-focus')[0]!;
     expect(textOf(line)).toBe('Coverage focus: Europe · East Africa · Middle East');
   });
-  it('signed in: Resume opens the reader’s own latest stored answer; My updates carries no count', () => {
-    const root = render({ signedIn: true, latest: thread({}) });
+  /*
+    ASK R3 NAVIGATION / USABILITY R1 (CTO R3 conformity rulings, 2026-10-10) — My updates appears
+    only when real followed questions exist, and carries only the facts the briefings read
+    returned. It still carries NO invented "to review" count (no reviewed state: B2).
+  */
+  it('signed in: Resume opens the reader’s own latest stored answer; My updates carries only real follow facts', () => {
+    const root = render({
+      signedIn: true,
+      latest: thread({}),
+      follows: { followed: 2, withChanges: 1, lastSuccessfulAt: null },
+    });
     const resume = byAsk(root, 'welcome-resume')[0]!;
     expect(resume.props.href).toBe('/ask?operation=op-1');
     expect(textOf(resume)).toContain('What changed in living costs in Poland?');
     const updates = byAsk(root, 'welcome-updates')[0]!;
     expect(updates.props.href).toBe('/saved/updates');
-    expect(textOf(updates)).not.toMatch(/\d/);
+    expect(textOf(updates)).toBe('My updates2 followed · 1 with changes at last check›');
+    expect(textOf(updates)).not.toMatch(/review|unread|new for you/i);
   });
   it('signed in with no conversation: no Resume row is invented', () => {
-    const root = render({ signedIn: true, latest: null });
+    const root = render({ signedIn: true, latest: null, follows: { followed: 1, withChanges: 0, lastSuccessfulAt: null } });
     expect(byAsk(root, 'welcome-resume')).toHaveLength(0);
     expect(byAsk(root, 'welcome-updates')).toHaveLength(1);
+  });
+  it('signed in with nothing followed: no My updates entry is manufactured (and no empty group)', () => {
+    const root = render({ signedIn: true, latest: null, follows: null });
+    expect(byAsk(root, 'welcome-updates')).toHaveLength(0);
+    expect(byAsk(root, 'welcome-resume-group')).toHaveLength(0);
+    const withResume = render({ signedIn: true, latest: thread({}), follows: null });
+    expect(byAsk(withResume, 'welcome-resume')).toHaveLength(1);
+    expect(byAsk(withResume, 'welcome-updates')).toHaveLength(0);
   });
   it('a desktop entry under the centred composer is not typing (real-browser finding: it unmounted mid-click)', () => {
     const frame = read('AskFrameScreen.tsx');

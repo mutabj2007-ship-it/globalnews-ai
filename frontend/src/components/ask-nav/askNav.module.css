@@ -209,3 +209,283 @@
 .readingFooter[data-ask-nav='reading-footer'] .readingFooterRow :global(.text-cd-ink-meta) {
   color: var(--ad-ink-2, #93a0b8);
 }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   ASK R3 NAVIGATION / USABILITY R1 (CTO R3 conformity rulings, 2026-10-10)
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/*
+  The R3 primary navigation: a segmented control Ask | My updates | Saved (HANDOFF.md §3 L74),
+  44 px tall, the current section raised. It may shrink but never widens the page: it clips, and
+  AskPrimaryNav switches to the short My updates label ("Updates", R3 §7) when the full labels
+  would not fit. Tokens only; no new colour.
+*/
+.primaryNav {
+  display: flex;
+  min-width: 0;
+  flex: 0 1 auto;
+  align-items: stretch;
+  gap: 2px;
+  margin-inline: auto;
+  padding: 3px;
+  overflow: hidden;
+  border-radius: 22px;
+  /* --ad-* inside /ask; the --ask-* theme set on the other (scrolling) Ask pages */
+  background: var(--ad-surface-2, var(--ask-earlier-bg, rgba(56, 189, 248, 0.1)));
+  font-family: var(--font-body), Inter, system-ui, sans-serif;
+}
+.primaryItem {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 38px;
+  /* full labels never shrink, so their natural width can be measured (AskPrimaryNav) */
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  border-radius: 19px;
+  color: var(--ad-ink-2, var(--ask-ink2, #c1d0dc));
+  font-size: var(--ad-t-sm, 0.9375rem);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.primaryItem:hover {
+  color: var(--ad-ink, var(--ask-ink, #f3f7fb));
+}
+.primaryItem[aria-current='page'] {
+  background: var(--ad-surface, var(--ask-bar, #163a5f));
+  color: var(--ad-ink, var(--ask-ink, #f3f7fb));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
+}
+.primaryItem:focus-visible {
+  outline: 2px solid var(--ad-accent, #6c93ff);
+  outline-offset: -2px;
+}
+.primaryShort {
+  display: none;
+}
+.primaryNav[data-compact='true'] .primaryItem {
+  flex: 0 1 auto;
+  padding: 0 10px;
+}
+.primaryNav[data-compact='true'] .primaryShort {
+  display: inline;
+}
+/* still the link's accessible name; visually replaced by the short label */
+.primaryNav[data-compact='true'] .primaryFull {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@media (max-width: 380px) {
+  .primaryItem {
+    padding: 0 11px;
+  }
+  .primaryNav[data-compact='true'] .primaryItem {
+    padding: 0 8px;
+    font-size: 0.875rem;
+  }
+}
+
+/* The continuity phone header (Saved, My updates, change detail, Recent, Help, Settings):
+   ☰ · [Ask | My updates | Saved] · +, the same R3 header as /ask. The page's own <h1> names it. */
+.continuityTitle {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.continuityHeader {
+  min-width: 0;
+}
+.continuityNew {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 22px;
+  color: var(--ad-accent, #6c93ff);
+  font-size: 1.375rem;
+  line-height: 1;
+  text-decoration: none;
+}
+
+/* The desktop bar of the other Ask pages carries the same primary navigation. */
+.shell .primaryNav {
+  margin-inline: 0;
+}
+
+/*
+  THE DRAWER FOOTER IS PINNED (audit gap #1: My updates / Saved left the view after 4
+  conversations at 320). The drawer no longer scrolls as a whole: its head and footer keep their
+  height, and only the conversation list scrolls (AskConversations' `conversations-list`).
+*/
+.drawer {
+  overflow: hidden;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
+.drawer .drawerGroup[data-ask-nav='conversations'] {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  padding-bottom: 0;
+}
+.drawer .readingFooter {
+  flex-shrink: 0;
+}
+
+/*
+  The desktop bar of the other Ask pages: menu · wordmark · [Ask | My updates | Saved] · New
+  question · language · appearance · account. Recent (the Conversations list), Help & feedback and
+  Settings are in the drawer the bar's menu opens. Narrower desktops tighten the row.
+*/
+.barRoutes {
+  flex-shrink: 0;
+}
+@media (max-width: 1279px) {
+  .barRow {
+    gap: 12px;
+  }
+}
+/* The narrowest phones: the short labels at 13 px with tighter padding, so DE / ES fit at 320. */
+@media (max-width: 340px) {
+  .primaryNav[data-compact='true'] .primaryItem {
+    padding: 0 6px;
+    font-size: 0.8125rem;
+  }
+}
+/* The continuity phone header compresses like the /ask header (askDashboard ≤440 rule). */
+@media (max-width: 440px) {
+  .continuityHeader {
+    gap: 2px;
+    padding: 0 4px;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   ASK R3 NAVIGATION / USABILITY R1.1 (CTO, 2026-10-10)
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/*
+  THE COMPACT R3 FOOTER (ORIGINAL D12-drawer): "Account · {name}" (15 px), then small 13 px rows
+  of destinations. Every control keeps a 44 px target; rows wrap rather than clip.
+*/
+.readingFooter {
+  gap: 0;
+  padding-top: 4px;
+}
+.footerAccount {
+  font-size: var(--ad-t-sm, 0.9375rem);
+  font-weight: 600;
+}
+.footerSmallRow {
+  gap: 0 2px;
+}
+.footerSmall {
+  padding: 0 8px;
+  color: var(--ad-ink-2, #93a0b8);
+  font-size: var(--ad-t-xs, 0.8125rem);
+  font-weight: 500;
+}
+.footerSmallRow .legalRow {
+  display: inline-flex;
+  gap: 2px;
+  padding: 0;
+  line-height: 1;
+}
+.footerSmallRow .legalRow a {
+  min-height: 44px;
+  padding: 0 8px;
+}
+
+/*
+  THE R3 DARK DRAWER. The approved R3 dark drawer is near-black (R3 tokens.css, navy theme:
+  surface #0F1420, surface-2 #161D2C, line #1E2636, ink #EDEFF5 / #93A0B8 / #7D89A1, accent
+  #6C93FF, accent-soft #16223F), not the page's blue. Scoped to the drawer only: the page, its
+  header and every other surface keep their theme. The light set is R3's light set, so the drawer
+  of the scrolling Ask pages (which carry no --ad-* tokens) is light in light theme as well.
+*/
+:global([data-gna-theme='dark']) .drawer,
+:global(html[data-gna-schedule='dark'] [data-gna-theme='scheduled']) .drawer {
+  --ad-bg: #080b12;
+  --ad-bg-2: #0b0f18;
+  --ad-surface: #0f1420;
+  --ad-surface-2: #161d2c;
+  --ad-ink: #edeff5;
+  --ad-ink-2: #93a0b8;
+  --ad-ink-3: #7d89a1;
+  --ad-line: #1e2636;
+  --ad-line-strong: #2a3548;
+  --ad-line-input: #5a6682;
+  --ad-accent: #6c93ff;
+  --ad-accent-text: #6c93ff;
+  --ad-accent-soft: #16223f;
+  --ad-scrim: rgba(0, 0, 0, 0.55);
+}
+:global([data-gna-theme='light']) .drawer,
+:global(html[data-gna-schedule='light'] [data-gna-theme='scheduled']) .drawer {
+  --ad-bg: #faf9f7;
+  --ad-bg-2: #f4f2ee;
+  --ad-surface: #ffffff;
+  --ad-surface-2: #f3f1ed;
+  --ad-ink: #292923;
+  --ad-ink-2: #55554d;
+  --ad-ink-3: #6b6a62;
+  --ad-line: #e4e0d8;
+  --ad-line-strong: #cfcac0;
+  --ad-line-input: #8f897e;
+  --ad-accent: #2d7077;
+  --ad-accent-text: #2d7077;
+  --ad-accent-soft: #deecee;
+  --ad-scrim: rgba(41, 41, 35, 0.32);
+}
+@media (prefers-color-scheme: dark) {
+  :global([data-gna-theme='system']) .drawer,
+  :global(html:not([data-gna-schedule]) [data-gna-theme='scheduled']) .drawer {
+    --ad-bg: #080b12;
+    --ad-bg-2: #0b0f18;
+    --ad-surface: #0f1420;
+    --ad-surface-2: #161d2c;
+    --ad-ink: #edeff5;
+    --ad-ink-2: #93a0b8;
+    --ad-ink-3: #7d89a1;
+    --ad-line: #1e2636;
+    --ad-line-strong: #2a3548;
+    --ad-line-input: #5a6682;
+    --ad-accent: #6c93ff;
+    --ad-accent-text: #6c93ff;
+    --ad-accent-soft: #16223f;
+    --ad-scrim: rgba(0, 0, 0, 0.55);
+  }
+}
+@media (prefers-color-scheme: light) {
+  :global([data-gna-theme='system']) .drawer,
+  :global(html:not([data-gna-schedule]) [data-gna-theme='scheduled']) .drawer {
+    --ad-bg: #faf9f7;
+    --ad-bg-2: #f4f2ee;
+    --ad-surface: #ffffff;
+    --ad-surface-2: #f3f1ed;
+    --ad-ink: #292923;
+    --ad-ink-2: #55554d;
+    --ad-ink-3: #6b6a62;
+    --ad-line: #e4e0d8;
+    --ad-line-strong: #cfcac0;
+    --ad-line-input: #8f897e;
+    --ad-accent: #2d7077;
+    --ad-accent-text: #2d7077;
+    --ad-accent-soft: #deecee;
+    --ad-scrim: rgba(41, 41, 35, 0.32);
+  }
+}

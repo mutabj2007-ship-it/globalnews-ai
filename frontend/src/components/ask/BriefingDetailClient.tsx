@@ -14,6 +14,10 @@ import type { DisplayLocale } from '@globalnews-ai/shared';
 import { BriefingVersionView } from './BriefingViews';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 import { askBackGlyph } from '@/lib/ask/askDirection';
+import { MY_UPDATES_HREF, type BriefingOrigin } from '@/lib/ask/followedQuestions';
+import { askPrimaryNavStrings } from '@/lib/ask/askPrimaryNavStrings';
+import { selectCheck } from '@/lib/ask/followComparison';
+import { AskCheckComparison } from './AskCheckComparison';
 
 /** A briefing id is a UUID (the server validates it too). */
 const BRIEFING_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -27,12 +31,23 @@ export function BriefingDetailClient({
   id,
   requestedVersion,
   locale,
+  origin = 'saved',
+  checkId = null,
 }: {
   readonly id: string;
   readonly requestedVersion: number | null;
   readonly locale: DisplayLocale;
+  /** ASK R3 NAVIGATION / USABILITY R1 — My updates or Saved: the back link returns to the opener. */
+  readonly origin?: BriefingOrigin;
+  /**
+   * ASK R3 · D09 — the change detail of ONE recorded check (an id, or 'latest'): Before / Latest of
+   * that check's own baseline and resulting versions. Absent → the stored-version view, unchanged.
+   */
+  readonly checkId?: string | null;
 }): JSX.Element {
   const t = askShellStrings(locale).briefingStrings;
+  const backHref = origin === 'updates' ? MY_UPDATES_HREF : '/saved';
+  const backLabel = origin === 'updates' ? askPrimaryNavStrings(locale).backToMyUpdates : t.back;
   const router = useRouter();
   const [detail, setDetail] = useState<AskV2Outcome<AskV2BriefingDetail> | null>(null);
   const [version, setVersion] = useState<AskV2Outcome<AskV2BriefingVersion> | null>(null);
@@ -50,6 +65,8 @@ export function BriefingDetailClient({
       if (cancelled) return;
       setDetail(d);
       if (!d.ok) return;
+      /* D09 — the comparison reads only the check's own two versions (AskCheckComparison) */
+      if (checkId !== null) return;
       const latest = d.value.versions[d.value.versions.length - 1]?.version;
       const wanted =
         requestedVersion !== null && d.value.versions.some((v) => v.version === requestedVersion)
@@ -62,15 +79,15 @@ export function BriefingDetailClient({
     return () => {
       cancelled = true;
     };
-  }, [id, requestedVersion]);
+  }, [id, requestedVersion, checkId]);
 
   const remove = useCallback(async () => {
     if (deleting || !window.confirm(t.deleteConfirm)) return;
     setDeleting(true);
     const result = await askV2Api.deleteBriefing(id);
     setDeleting(false);
-    if (result.ok) router.push('/saved');
-  }, [deleting, id, router, t.deleteConfirm]);
+    if (result.ok) router.push(backHref);
+  }, [deleting, id, router, t.deleteConfirm, backHref]);
 
   const failure =
     detail !== null && !detail.ok
@@ -84,21 +101,28 @@ export function BriefingDetailClient({
   return (
     <main data-briefing="surface" className="min-h-screen px-4 py-8 md:px-8">
       <div className="mx-auto flex max-w-3xl flex-col gap-6">
-        <Link href="/saved" className="text-[12.5px] text-signal hover:underline">
+        <Link href={backHref} data-briefing="back" className="text-[12.5px] text-signal hover:underline">
           {/* R4 · direction-aware glyph (decorative); the link's name is the localized label */}
-          <span aria-hidden="true">{askBackGlyph(locale)}</span> {t.back}
+          <span aria-hidden="true">{askBackGlyph(locale)}</span> {backLabel}
         </Link>
         {failure !== null && (
           <p data-briefing="failure" className="text-[13.5px] text-ink-secondary">
             {failure}
           </p>
         )}
-        {detail?.ok === true && version?.ok === true && (
+        {checkId !== null && detail?.ok === true && (
+          <article data-briefing="change-detail" className="flex flex-col gap-4">
+            <h1 className="font-display text-[22px] font-semibold leading-snug text-ink-primary">{detail.value.title}</h1>
+            <AskCheckComparison briefingId={detail.value.id} check={selectCheck(detail.value, checkId)} locale={locale} />
+          </article>
+        )}
+        {checkId === null && detail?.ok === true && version?.ok === true && (
           <>
             <BriefingVersionView
               detail={detail.value}
               version={version.value}
               locale={locale}
+              origin={origin}
             />
             <div>
               <button

@@ -15,7 +15,11 @@ import {
   followCheckHref,
   isFollowedQuestion,
   recheckWaitMinutes,
+  summarizeFollows,
 } from '@/lib/ask/followedQuestions';
+import { askPrimaryNavStrings } from '@/lib/ask/askPrimaryNavStrings';
+import { LATEST_CHECK, checkComparisonHref } from '@/lib/ask/followComparison';
+import { followComparisonStrings } from '@/lib/ask/followComparisonStrings';
 import { askFormatLocalDay, askFormatLocalTime } from '@/lib/ask/askDirection';
 import { briefingHref } from './BriefingViews';
 import {
@@ -50,12 +54,23 @@ export function MyUpdatesClient({ locale }: { readonly locale: DisplayLocale }):
   if (list === null) return <main className="min-h-screen bg-void px-4 py-8 md:px-8" />;
 
   const rows = list.ok ? list.value.filter(isFollowedQuestion) : [];
+  /* ASK R3 NAVIGATION / USABILITY R1 — the page summary "{N} followed" (D08), from this same read;
+     "with changes you haven't reviewed" stays off until a reviewed state exists (B2). */
+  const summary = list.ok ? summarizeFollows(list.value) : null;
+  const n = askPrimaryNavStrings(locale);
   return (
     <main data-ask="my-updates" className="min-h-screen bg-void px-4 py-8 md:px-8">
       <div className="mx-auto flex max-w-3xl flex-col gap-4">
       <header className="flex flex-col gap-1">
         <h1 className="font-display text-[26px] font-semibold text-ink-primary">{s.myUpdates}</h1>
         <p className="text-[13.5px] text-ink-tertiary">{s.myUpdatesIntro}</p>
+        {summary !== null && (
+          <p data-ask="my-updates-summary" className="text-[13.5px] font-medium text-ink-secondary">
+            {[n.followedCount(summary.followed), summary.withChanges > 0 ? n.withChangesAtLastCheck(summary.withChanges) : null]
+              .filter((part): part is string => part !== null)
+              .join(' · ')}
+          </p>
+        )}
       </header>
       {notice !== null && <p role="status" className="text-[13.5px] text-ink-secondary">{notice}</p>}
       {/* R3 FULL DESIGN · D14 — manual checking only; later options labelled, never active */}
@@ -214,6 +229,16 @@ function FollowedRow({
           <p data-ask="followed-latest-outcome" className="text-[13.5px] leading-snug text-ink-secondary">
             {s.outcomeDetail[latestCheck.outcome]}
           </p>
+          {/* ASK R3 · D09 — the change detail of this check: its own Before / Latest, or the truthful
+              status when the check recorded no pair. A link only; nothing runs. */}
+          <Link
+            href={checkComparisonHref(row.id, LATEST_CHECK)}
+            prefetch={false}
+            data-ask="followed-compare"
+            className="inline-flex min-h-[44px] w-fit items-center text-[13px] font-medium text-signal underline decoration-signal/50 underline-offset-4"
+          >
+            {followComparisonStrings(locale).compareLink}
+          </Link>
         </>
       )}
       {/* CTO R1-B §3 — the structured evidence this check could not assess, never hidden */}
@@ -254,7 +279,7 @@ function FollowedRow({
         {/* D08 — the details control is the compact status chip above: the outcome is named
             once per row, not twice. Same handler, same `aria-expanded`, same data attribute. */}
         {row.latestVersion !== null && (
-          <Link href={briefingHref(row.id, row.latestVersion)} prefetch={false} data-ask="followed-history" className="inline-flex min-h-[44px] items-center text-[13px] text-ink-secondary hover:text-ink-primary disabled:opacity-50">
+          <Link href={briefingHref(row.id, row.latestVersion, 'updates')} prefetch={false} data-ask="followed-history" className="inline-flex min-h-[44px] items-center text-[13px] text-ink-secondary hover:text-ink-primary disabled:opacity-50">
             {s.history}
           </Link>
         )}
@@ -310,6 +335,14 @@ function FollowedRow({
             <div key={check.id} className="flex flex-col gap-1">
               <p className="text-[0.8125rem] text-ink-tertiary">{when(check.checkedAt)}</p>
               <AskFollowAssessment check={check} locale={locale} />
+              <Link
+                href={checkComparisonHref(row.id, check.id)}
+                prefetch={false}
+                data-ask="followed-check-compare"
+                className="inline-flex min-h-[44px] w-fit items-center text-[13px] font-medium text-signal underline decoration-signal/50 underline-offset-4"
+              >
+                {followComparisonStrings(locale).compareLink}
+              </Link>
             </div>
           ))}
         </div>

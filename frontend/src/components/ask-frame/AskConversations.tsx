@@ -209,6 +209,10 @@ export function AskConversations({
           {deleteNote}
         </p>
       )}
+      {/* ASK R3 NAVIGATION / USABILITY R1 — the list scrolls in its own region, so New question
+          and search stay on top and the drawer footer (My updates, Saved, Help, Settings…) stays
+          in view with up to 50 conversations (audit gap #1). */}
+      <div data-ask="conversations-list" className={styles.conversationsList}>
       {account === 'signed-out' ? (
         <p data-ask="conversations-note">{t.states.signedOut}</p>
       ) : loaded === null ? null : loaded.outcome.ok === false ? (
@@ -290,6 +294,7 @@ export function AskConversations({
           ),
         )
       )}
+      </div>
     </nav>
   );
 }

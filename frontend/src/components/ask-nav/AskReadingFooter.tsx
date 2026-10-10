@@ -13,6 +13,7 @@ import { askDirectionProps } from '@/lib/ask/askDirection';
 import { followStrings } from '@/lib/ask/followStrings';
 import { MY_UPDATES_HREF } from '@/lib/ask/followedQuestions';
 import styles from './askNav.module.css';
+import { useAskNavOptional } from './AskNavShell';
 
 /**
  * ASK DESIGN AUTHORITY R3 — CTO RULINGS 1–3: THE CONVERSATIONS FOOTER.
@@ -48,6 +49,8 @@ export function AskReadingFooter({
   const pathname = usePathname();
   const s = askShellStrings(language).askNavStrings;
   const r = askShellStrings(selected).askR2Strings;
+  /* the verified name only (the shell's one session read); never an email or a guess */
+  const displayName = useAskNavOptional()?.displayName ?? null;
 
   const changeLanguage = useCallback(
     (next: DisplayLocale): void => {
@@ -58,9 +61,59 @@ export function AskReadingFooter({
     [selected, router],
   );
 
+  /*
+    ASK R3 NAVIGATION / USABILITY R1.1 (CTO, 2026-10-10) — THE COMPACT R3 FOOTER (D12-drawer):
+    "Account · {name}" on one row, then small rows of the remaining destinations. It is pinned
+    under the scrolling conversation list, so every row it saves is a conversation the reader
+    sees. Nothing left: My updates, Saved, Help & feedback, Settings (the Account row opens it, as
+    R3's Account row opens Preferences), Sign in / Sign out, language, appearance, Privacy and
+    Cookies are all here, each with a 44 px target, in reading order.
+  */
+  const accountLine = displayName !== null ? `${s.account} · ${displayName}` : s.account;
   return (
     <div data-ask-nav="reading-footer" className={styles.readingFooter} {...askDirectionProps(language)}>
-      <div className={styles.readingFooterRow}>
+      <div data-ask-nav="footer-account-row" className={styles.readingFooterRow}>
+        {account === 'signed-in' && (
+          <Link
+            href="/account/settings"
+            prefetch={false}
+            data-ask-nav="footer-settings"
+            /* the visible words first (label in name), then the destination they open */
+            aria-label={`${accountLine}, ${s.settings}`}
+            className={`${styles.readingFooterLink} ${styles.footerAccount}`}
+          >
+            {accountLine}
+          </Link>
+        )}
+        {account === 'signed-in' && onSignOut !== undefined && (
+          <button type="button" data-ask-nav="footer-sign-out" className={`${styles.readingFooterLink} ${styles.footerSmall}`} onClick={onSignOut}>
+            {s.signOut}
+          </button>
+        )}
+        {account === 'signed-out' && (
+          <a href={accountSignInUrl(pathname ?? undefined)} data-ask-nav="footer-sign-in" className={`${styles.readingFooterLink} ${styles.footerAccount}`}>
+            {s.signIn}
+          </a>
+        )}
+      </div>
+      <div data-ask-nav="footer-destinations" className={`${styles.readingFooterRow} ${styles.footerSmallRow}`}>
+        {/* R3 FULL DESIGN — My updates is a primary destination (R1 contract §3); it was reachable
+            only from a Follow control. Same governed page, no count (no reviewed state yet). */}
+        {account === 'signed-in' && (
+          <Link href={MY_UPDATES_HREF} prefetch={false} data-ask-nav="footer-updates" className={`${styles.readingFooterLink} ${styles.footerSmall}`}>
+            {followStrings(selected).myUpdates}
+          </Link>
+        )}
+        {account === 'signed-in' && (
+          <Link href="/saved" prefetch={false} data-ask-nav="footer-saved" className={`${styles.readingFooterLink} ${styles.footerSmall}`}>
+            {s.saved}
+          </Link>
+        )}
+        <Link href="/support" prefetch={false} data-ask-nav="footer-help" className={`${styles.readingFooterLink} ${styles.footerSmall}`}>
+          {s.help}
+        </Link>
+      </div>
+      <div data-ask-nav="footer-preferences" className={`${styles.readingFooterRow} ${styles.footerSmallRow}`}>
         <LanguageSelector
           value={selected}
           onChange={changeLanguage}
@@ -72,43 +125,11 @@ export function AskReadingFooter({
         {theme !== null && (
           <ThemeControl language={language as LanguageCode} locale={language} initial={theme} tone="surface" />
         )}
+        <p data-ask="privacy-links" className={styles.legalRow}>
+          <a href="/privacy">{r.privacyLink}</a>
+          <a href="/cookies">{r.cookiesLink}</a>
+        </p>
       </div>
-      <div className={styles.readingFooterRow}>
-        {/* R3 FULL DESIGN — My updates is a primary destination (R1 contract §3); it was reachable
-            only from a Follow control. Same governed page, no count (no reviewed state yet). */}
-        {account === 'signed-in' && (
-          <Link href={MY_UPDATES_HREF} prefetch={false} data-ask-nav="footer-updates" className={styles.readingFooterLink}>
-            {followStrings(selected).myUpdates}
-          </Link>
-        )}
-        {account === 'signed-in' && (
-          <Link href="/saved" prefetch={false} data-ask-nav="footer-saved" className={styles.readingFooterLink}>
-            {s.saved}
-          </Link>
-        )}
-        <Link href="/support" prefetch={false} data-ask-nav="footer-help" className={styles.readingFooterLink}>
-          {s.help}
-        </Link>
-        {account === 'signed-in' && (
-          <Link href="/account/settings" prefetch={false} data-ask-nav="footer-settings" className={styles.readingFooterLink}>
-            {s.settings}
-          </Link>
-        )}
-        {account === 'signed-in' && onSignOut !== undefined && (
-          <button type="button" data-ask-nav="footer-sign-out" className={styles.readingFooterLink} onClick={onSignOut}>
-            {s.signOut}
-          </button>
-        )}
-        {account === 'signed-out' && (
-          <a href={accountSignInUrl(pathname ?? undefined)} data-ask-nav="footer-sign-in" className={styles.readingFooterLink}>
-            {s.signIn}
-          </a>
-        )}
-      </div>
-      <p data-ask="privacy-links" className={styles.legalRow}>
-        <a href="/privacy">{r.privacyLink}</a>
-        <a href="/cookies">{r.cookiesLink}</a>
-      </p>
     </div>
   );
 }
