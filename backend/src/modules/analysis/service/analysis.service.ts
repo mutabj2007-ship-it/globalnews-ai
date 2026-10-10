@@ -58,6 +58,7 @@ import {
   classifyEventEvidence,
   deriveEventDisclosures,
   deriveEventTopic,
+  congoReadingOf,
   detectAmbiguousCountryMention,
   detectEventAspects,
   isAnaphoricFollowUp,
@@ -208,6 +209,13 @@ import {
   toProviderSafePunctuation,
 } from '../query/derive-generic-news-query.util';
 import { requestsDates, retrievalSubjectOf } from '../query/response-directives.util';
+import { withoutReaderRequestFrame } from '../query/reader-request-frame.util';
+import {
+  type ControlledEntity,
+  isAttributableToControlledEntity,
+  namedControlledEntity,
+  withCanonicalEntityNames,
+} from '../query/controlled-entity-identity';
 import {
   hasEconomicTopicEvidence,
   resolveCountryEconomyQuery,
@@ -1146,8 +1154,15 @@ export class AnalysisService {
           model receives, the cache key and response.query — is untouched, so the model still
           honours them. Only recognised trailing instructions are removed (response-directives.util).
         */
-        const retrievalQuery = retrievalSubjectOf(
-          anaphoricPriorQuestion ?? subjectPriorQuestion ?? normalizedQuery,
+        /*
+          P0 SOURCE-BACKED NEWS ANSWERS R1 — P1 + P3: the reader's request frame ("Give any reports
+          about … please") is not the subject, and a reviewed spelling variant ("Eric Prince") is
+          searched under its canonical name. Retrieval only; the rewrite is disclosed below.
+        */
+        const { query: retrievalQuery, spellings: entitySpellings } = withCanonicalEntityNames(
+          withoutReaderRequestFrame(
+            retrievalSubjectOf(anaphoricPriorQuestion ?? subjectPriorQuestion ?? normalizedQuery),
+          ),
         );
         /* A bare "Congo" is COD or COG — never silently one of them. */
         const ambiguousCountry = detectAmbiguousCountryMention(retrievalQuery);
@@ -2022,7 +2037,9 @@ export class AnalysisService {
               countryInterpretation = 'COUNTRY_INTERPRETED_FROM_EVIDENCE';
             } else {
               articles = [];
-              retrievalContext = clarification;
+              /* A provider WAS asked here (to disambiguate): never marked "not attempted". */
+              const { retrievalAttempted: _notThisPath, ...searchedClarification } = clarification;
+              retrievalContext = searchedClarification;
             }
           }
         } else if (eventFrame !== undefined) {
@@ -2107,6 +2124,51 @@ export class AnalysisService {
           retrievalContext = contextOf(relationalResponse);
           if (relationalOutcome !== undefined) {
             retrievalContext = { ...retrievalContext, outcome: relationalOutcome };
+          }
+        } else if (
+          location &&
+          sourceIntent === undefined &&
+          namedControlledEntity(retrievalQuery) !== undefined
+        ) {
+          /*
+            P0 NEWS R1 (P3) — a reviewed PERSON in a named country ("reports about Eric Prince in
+            DRC"). The country feed carries no topic, so it would answer with the country's general
+            headlines. Instead: ONE search for the canonical name, admitted only when the article is
+            attributable to the person AND about that country. For DRC / Congo-Brazzaville the
+            reader already chose the country, so a bare "Congo" is consistent with it, while the
+            other Congo's qualifiers exclude the article. No country-feed top-up.
+          */
+          const entity = namedControlledEntity(retrievalQuery) as ControlledEntity;
+          const { country } = location;
+          const window = executionPolicy?.reportingWindow;
+          const sent = makeProviderSafeNewsQuery(entity.canonical) as string;
+          const entityResponse = await this.newsService.search(
+            sent,
+            SEARCH_POOL_SIZE,
+            { type: 'generic' },
+            window === undefined ? undefined : { from: window.from, to: window.to },
+          );
+          const aboutCountry = (article: NewsArticle): boolean => {
+            if (country.iso3 === 'COD' || country.iso3 === 'COG') {
+              const reading = congoReadingOf(`${article.title ?? ''} ${article.summary ?? ''}`);
+              if (reading !== undefined) return reading === country.iso3 || reading === 'AMBIGUOUS';
+            }
+            return scoreCountryRelevance(article, country).isRelevant;
+          };
+          articles = entityResponse.articles.filter(
+            (article) => isAttributableToControlledEntity(article, entity.id) && aboutCountry(article),
+          );
+          retrievalContext = {
+            ...contextOf(entityResponse),
+            countryCode: country.iso3,
+            countryName: country.name,
+          };
+          const failures = readProviderFailures(entityResponse);
+          if (articles.length === 0 && failures.length > 0) {
+            retrievalContext = {
+              ...retrievalContext,
+              outcome: retrievalOutcome(0, new Set(failures.map((f) => f.kind))),
+            };
           }
         } else if (location && sourceIntent === undefined) {
           const { country, city, geoMatch } = location;
@@ -3062,10 +3124,18 @@ export class AnalysisService {
             const derivationLeftSentenceIntact =
               derivedSearchQuery.trim() === retrievalQuery.trim().replace(/[?!.,;:]+$/g, '');
 
+            /*
+              P0 NEWS R1 (P3) — a reviewed entity named in the question is the provider phrase:
+              "What is Erik Prince doing in eastern Congo?" otherwise sends (and gates on) the
+              whole clause, which no headline contains. Only CONTROLLED_ENTITIES qualify.
+            */
+            const entityAnchor = namedControlledEntity(retrievalQuery);
             const genericSearchQuery =
-              derivationLeftSentenceIntact && classification.subject
-                ? classification.subject
-                : derivedSearchQuery;
+              entityAnchor !== undefined
+                ? entityAnchor.canonical
+                : derivationLeftSentenceIntact && classification.subject
+                  ? classification.subject
+                  : derivedSearchQuery;
 
             // Query-limit correction (wiring revision) — a long or complex
             // analytical question can produce a genericSearchQuery that
@@ -3500,6 +3570,10 @@ export class AnalysisService {
           span of the prior user question; the disclosures are codes derived
           from the follow-up's own words.
         */
+        if (entitySpellings.length > 0 && retrievalContext.retrievalAttempted !== false) {
+          retrievalContext = { ...retrievalContext, entitySpellings };
+        }
+
         if (continuedSubject !== undefined && retrievalContext.eventAnchor === undefined) {
           /*
             D.1 — INHERITED SUBJECT + CURRENT-TURN FOCUS. The subject decided

@@ -459,10 +459,28 @@ export function detectAmbiguousCountryMention(
 */
 const EASTERN_DRC_QUALIFIER =
   /(?:^|[^\p{L}])(?:eastern\s+congo|(?:north|south)\s+kivu|kivu|uvira|bukavu|goma|beni|butembo|bunia|ituri|kisangani|kolwezi|lubumbashi|katanga|kinshasa|m23|afc\/m23|fardc|monusco)(?=$|[^\p{L}])/iu;
-const CONGO_BRAZZAVILLE_QUALIFIER = /(?:^|[^\p{L}])(?:brazzaville|republic\s+of\s+(?:the\s+)?congo|pointe-noire)(?=$|[^\p{L}])/iu;
+/* "Republic of (the) Congo" — but never inside "Democratic Republic of (the) Congo". */
+const CONGO_BRAZZAVILLE_QUALIFIER =
+  /(?:^|[^\p{L}])(?:brazzaville|(?<!democratic\s+)republic\s+of\s+(?:the\s+)?congo|pointe-noire)(?=$|[^\p{L}])/iu;
+const DRC_NAMED = /(?:^|[^\p{L}])(?:dr|d\.r\.|democratic\s+republic\s+of(?:\s+the)?)\s*congo|congo\s*[-–(]?\s*kinshasa/iu;
 
 function settledAsDrcByEasternContext(text: string): boolean {
   return EASTERN_DRC_QUALIFIER.test(text) && !CONGO_BRAZZAVILLE_QUALIFIER.test(text);
+}
+
+/**
+ * P0 NEWS R1 — which Congo a TEXT (an article) is about, for a reader who already named one:
+ * COD on a DRC name or an eastern-DRC place/actor, COG on Brazzaville / Republic of the Congo /
+ * Pointe-Noire, AMBIGUOUS on a bare "Congo" (or both kinds of signal), undefined with no Congo at all.
+ */
+export function congoReadingOf(text: string): 'COD' | 'COG' | 'AMBIGUOUS' | undefined {
+  const t = text ?? '';
+  if (!/(?:^|[^\p{L}])congo/iu.test(t)) return undefined;
+  const cod = EASTERN_DRC_QUALIFIER.test(t) || DRC_NAMED.test(t);
+  const cog = CONGO_BRAZZAVILLE_QUALIFIER.test(t);
+  if (cod && !cog) return 'COD';
+  if (cog && !cod) return 'COG';
+  return 'AMBIGUOUS';
 }
 
 /** "DR Congo", "Republic of the Congo", "Congo-Kinshasa" … name ONE country. */

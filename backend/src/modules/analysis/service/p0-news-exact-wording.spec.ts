@@ -87,7 +87,7 @@ describe('N1 — "Report abt Eric Prince in congo. According reuters please." (e
       displayName: 'Reuters',
     });
     /* the topic is offered back so the reader can ask without the publisher (draft only) */
-    expect(response.retrievalContext.requestedPublisher?.topic ?? '').toMatch(/eric prince/i);
+    expect(response.retrievalContext.requestedPublisher?.topic ?? '').toMatch(/eri[ck] prince/i);
   });
 });
 
@@ -109,5 +109,85 @@ describe('idioms are never publisher requests', () => {
     const h = harness([]);
     const response = await h.service.analyzeNews(q);
     expect(response.retrievalContext.requestedPublisher).toBeUndefined();
+  });
+});
+
+/* ── P1 + P3: the forms WITHOUT a publisher reach the reporting (fixture title/URL/date only) ── */
+
+function traced(h: ReturnType<typeof harness>) {
+  return {
+    queries: () => h.searchCalls.map((c) => c.query),
+    modelArticles: (): NewsArticle[] => {
+      const calls = (h.provider.analyzeNews as jest.Mock).mock.calls;
+      return calls.length === 0 ? [] : ((calls[0][0] as { articles?: NewsArticle[] }).articles ?? []);
+    },
+  };
+}
+
+const BRAZZAVILLE_CONTROL: NewsArticle = {
+  ...REUTERS_FIXTURE,
+  id: 'brazzaville-control',
+  title: 'Erik Prince meets officials in Brazzaville, Republic of the Congo',
+  url: 'https://example.invalid/control-brazzaville',
+};
+
+describe('Alpha form — "Give any reports about Eric Prince please." (exact)', () => {
+  it('searches the canonical name only, admits the Reuters headline, discloses the spelling', async () => {
+    const h = harness([REUTERS_FIXTURE]);
+    const response = await h.service.analyzeNews('Give any reports about Eric Prince please.');
+    expect(traced(h).queries()).toEqual(['Erik Prince']);
+    expect(h.provider.analyzeNews).toHaveBeenCalledTimes(1);
+    expect(response.retrievalContext.entitySpellings).toEqual([
+      { asked: 'Eric Prince', searched: 'Erik Prince', entityId: 'erik-prince' },
+    ]);
+    expect(response.retrievalContext.requestedPublisher).toBeUndefined();
+  });
+
+  it('canonical spelling: same search, no spelling disclosure', async () => {
+    const h = harness([REUTERS_FIXTURE]);
+    const response = await h.service.analyzeNews('Give any reports about Erik Prince please.');
+    expect(traced(h).queries()).toEqual(['Erik Prince']);
+    expect(h.provider.analyzeNews).toHaveBeenCalledTimes(1);
+    expect(response.retrievalContext.entitySpellings).toBeUndefined();
+  });
+});
+
+describe('N3 — "Give any recent reports about Eric Prince in Congo." (exact)', () => {
+  it('bare Congo + a headline that says only "Congo" → the reader is asked which Congo; no model call', async () => {
+    const h = harness([REUTERS_FIXTURE]);
+    const response = await h.service.analyzeNews('Give any recent reports about Eric Prince in Congo.');
+    expect(traced(h).queries()).toEqual(['erik prince Congo']);
+    expect(h.provider.analyzeNews).not.toHaveBeenCalled();
+    expect(response.retrievalContext.retrievalOutcome).toBe('CLARIFICATION_REQUIRED');
+    expect([...(response.retrievalContext.clarificationCandidates ?? [])].sort()).toEqual(['COD', 'COG']);
+    /* a provider WAS asked to disambiguate — never recorded as "not attempted" */
+    expect(response.retrievalContext.retrievalAttempted).toBeUndefined();
+    expect(response.retrievalContext.entitySpellings?.[0]?.searched).toBe('Erik Prince');
+  });
+});
+
+describe('the reader named the country — person search scoped to it, never the country feed', () => {
+  it('"…Eric Prince in DRC." → one "Erik Prince" search; the bare-Congo Reuters headline is consistent with DRC', async () => {
+    const h = harness([REUTERS_FIXTURE, BRAZZAVILLE_CONTROL]);
+    const response = await h.service.analyzeNews('Give any recent reports about Eric Prince in DRC.');
+    expect(traced(h).queries()).toEqual(['Erik Prince']);
+    expect(h.countryCalls).toEqual([]);
+    expect(response.retrievalContext.countryCode).toBe('COD');
+    expect(traced(h).modelArticles().map((a) => a.id)).toEqual(['reuters-fixture-1']);
+  });
+
+  it('"What is Erik Prince doing in eastern Congo?" → "Erik Prince" is the provider phrase', async () => {
+    const h = harness([REUTERS_FIXTURE]);
+    await h.service.analyzeNews('What is Erik Prince doing in eastern Congo?');
+    expect(traced(h).queries()[0]).toBe('Erik Prince');
+    expect(h.provider.analyzeNews).toHaveBeenCalledTimes(1);
+  });
+
+  it('a person with no matching reporting → zero evidence, no model call, no substitution', async () => {
+    const h = harness([BRAZZAVILLE_CONTROL]);
+    const response = await h.service.analyzeNews('Give any recent reports about Eric Prince in DRC.');
+    expect(h.provider.analyzeNews).not.toHaveBeenCalled();
+    expect(response.articles).toEqual([]);
+    expect(h.countryCalls).toEqual([]);
   });
 });

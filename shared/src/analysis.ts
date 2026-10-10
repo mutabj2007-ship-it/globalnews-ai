@@ -927,6 +927,12 @@ export interface AnalysisRetrievalContext {
   };
 
   /**
+   * P0 NEWS R1 (P3) — a reviewed spelling variant was searched under its canonical name
+   * ("Eric Prince" → "Erik Prince"). Disclosed to the reader; never inferred or fuzzy.
+   */
+  entitySpellings?: ReadonlyArray<{ readonly asked: string; readonly searched: string; readonly entityId: string }>;
+
+  /**
    * ISO-8601 publication timestamp of the newest retrieved article.
    * Only reliably available on the country-aware retrieval path today.
    * Describes evidence freshness — never a substitute for
