@@ -983,6 +983,11 @@ export function interpretTurn(input: TurnInterpretationInput): {
     ...(priorCurrent ? ['PRIOR_CURRENT_SUBJECT'] : []),
     ...(input.hasResolvedArticleAnchor ? ['ARTICLE_ANCHOR'] : []),
     ...(broadHeadlines ? ['HEADLINES_REQUEST'] : []),
+    /* P0 NEWS R1 — "Give any reports about Eric Prince", "Report abt Eric Prince in congo": the
+       reader asks for the REPORTING itself. That is a request for current evidence, never a
+       question the interpreter (or its fallback) may answer as unsourced background — on Alpha it
+       returned a historical biography. A turn whose stated years are historical keeps its reading. */
+    ...(reportRequest && !historicalOverride && !temporalHistoryDefault ? ['READER_REQUESTS_REPORTING'] : []),
   ];
   const unresolvedEligible =
     !answerRequestBound &&

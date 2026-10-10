@@ -441,10 +441,26 @@ export function detectAmbiguousCountryMention(
     const match = re.exec(text);
     if (!match) continue;
     const at = match.index + match[1].length;
+    if (name.toLowerCase() === 'congo' && settledAsDrcByEasternContext(text)) continue;
     if (!isQualifiedMention(text, at, name.length))
       return { mention: text.slice(at, at + name.length), candidates };
   }
   return undefined;
+}
+
+/*
+  P0 NEWS R1 (East Africa lead P4) — in a QUESTION, an eastern-DRC place or actor ("South Kivu,
+  eastern Congo", "Uvira", "M23", "MONUSCO") settles a bare "Congo" as the DRC, so the reader is not
+  asked "which Congo?". Brazzaville / Republic of the Congo / Pointe-Noire win for COG. Deliberately
+  NOT applied to the article blanking below: an article's bare "Congo" stays blanked so it can never
+  score for Congo-Brazzaville; its eastern place names remain as DRC signals.
+*/
+const EASTERN_DRC_QUALIFIER =
+  /(?:^|[^\p{L}])(?:eastern\s+congo|(?:north|south)\s+kivu|kivu|uvira|bukavu|goma|beni|butembo|bunia|ituri|kisangani|kolwezi|lubumbashi|katanga|kinshasa|m23|afc\/m23|fardc|monusco)(?=$|[^\p{L}])/iu;
+const CONGO_BRAZZAVILLE_QUALIFIER = /(?:^|[^\p{L}])(?:brazzaville|republic\s+of\s+(?:the\s+)?congo|pointe-noire)(?=$|[^\p{L}])/iu;
+
+function settledAsDrcByEasternContext(text: string): boolean {
+  return EASTERN_DRC_QUALIFIER.test(text) && !CONGO_BRAZZAVILLE_QUALIFIER.test(text);
 }
 
 /** "DR Congo", "Republic of the Congo", "Congo-Kinshasa" … name ONE country. */

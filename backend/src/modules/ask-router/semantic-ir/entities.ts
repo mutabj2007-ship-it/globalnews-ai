@@ -492,6 +492,13 @@ export function readEntityCandidates(text: string, language: string): EntityCand
     const before = text.slice(Math.max(0, p.start - 30), p.start);
     const after = text.slice(p.end, p.end + 40);
     if (p.surface.toLowerCase() === 'us' && /\bthe\s+$/i.test(before)) return true;
+    /* P0 NEWS R1 (EA P5) — a lower-case "congo" after a place word ("in congo", "eastern congo") is
+       the place, read exactly as the capitalised name is; the other homographs keep their rules */
+    if (
+      p.surface.toLowerCase() === 'congo' &&
+      /\b(?:in|from|across|throughout|inside|into|eastern|western|northern|southern|central|about)\s+(?:the\s+)?$/i.test(before)
+    )
+      return true;
     if (STATE_NOUN_AFTER.test(after)) return true;
     /* two names coordinated WITH EACH OTHER confirm each other ("polski i szwecji", "china and
        japan"): the pair itself is the evidence — never the pronoun-like "us" on its own side */
@@ -516,8 +523,10 @@ export function readEntityCandidates(text: string, language: string): EntityCand
      Rwanda–Congo-Brazzaville relationship with zero matching reports. Brazzaville stays COG
      whenever it is named. */
   const easternCongo =
-    /\b(?:rwanda\w*|uganda\w*|burundi\w*|m23|kivu|goma|kinshasa|conflict|war|fighting|rebels?|militias?|minerals?|cobalt|coltan)\b/i.test(text) &&
-    !/\b(?:brazzaville|republic\s+of\s+(?:the\s+)?congo|congo-brazzaville)\b/i.test(text);
+    /\b(?:rwanda\w*|uganda\w*|burundi\w*|m23|kivu|goma|kinshasa|conflict|war|fighting|rebels?|militias?|minerals?|cobalt|coltan|eastern|uvira|bukavu|beni|butembo|bunia|ituri|kisangani|kolwezi|lubumbashi|katanga|fardc|monusco)\b/i.test(text) &&
+    /* P0 NEWS R1 (EA P5) — eastern-DRC places and actors settle a bare "Congo"; Brazzaville /
+       Republic of the Congo / Pointe-Noire keep COG and win */
+    !/\b(?:brazzaville|republic\s+of\s+(?:the\s+)?congo|congo-brazzaville|pointe-noire)\b/i.test(text);
   return sorted.filter(confirmed).map(({ needsContext: _n, ...c }) => {
     void _n;
     if (c.iso3 === 'COG' && easternCongo && /^congo$/i.test(c.surface.trim())) {

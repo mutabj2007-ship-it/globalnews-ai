@@ -675,6 +675,12 @@ const CITY_TO_ISO3: Record<string, string> = {
 
   mombasa: 'KEN',
   goma: 'COD',
+  /* P0 NEWS R1 (East Africa lead P7) — eastern / southern DRC cities, all CD in gazetteer.v1.json */
+  uvira: 'COD',
+  bukavu: 'COD',
+  bunia: 'COD',
+  kolwezi: 'COD',
+  lubumbashi: 'COD',
 };
 
 /**
