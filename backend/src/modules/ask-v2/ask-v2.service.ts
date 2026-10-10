@@ -65,6 +65,7 @@ import {
 } from './conversation/conversation-artifact';
 import { isSubjectFollowUp } from '../analysis/anchor/conversation-subject.util';
 import { isAnaphoricFollowUp } from '../analysis/anchor/event-anchor.util';
+import { loanContinuationAnchor } from './computation/cash-flow-rate';
 import { ComputeMeterService } from '../compute-controls/compute-meter.service';
 import { OperationalSwitchService } from '../compute-controls/operational-switch.service';
 import { withComparisonTable } from './comparison-table';
@@ -108,7 +109,12 @@ const IN_FLIGHT_OPERATION_STATES: ReadonlySet<string> = new Set(['ACCEPTED', 'RE
   answered exactly as before, so asking the same question again still reuses its stored result.
 */
 const ANCHOR_LOOKBACK = 10;
-function anchorQuestionOf(question: string, newestFirst: readonly string[]): string | null {
+export function anchorQuestionOf(question: string, newestFirst: readonly string[]): string | null {
+  /* ASK FINANCIAL CONTINUITY P0 (Alpha op 0ec1717c) — a loan schedule change continues the reader's
+     own earlier complete loan in this thread, whatever its length; with none, no prior is passed and
+     the executor asks for the missing input. Every other question is decided below, unchanged. */
+  const loanAnchor = loanContinuationAnchor(question, newestFirst);
+  if (loanAnchor !== undefined) return loanAnchor;
   if (!isSubjectFollowUp(question) && !isAnaphoricFollowUp(question)) return null;
   if (newestFirst.length === 0) return null;
   const anchor = newestFirst.find((q) => !isSubjectFollowUp(q) && !isAnaphoricFollowUp(q));

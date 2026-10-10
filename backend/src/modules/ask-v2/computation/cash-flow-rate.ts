@@ -36,6 +36,8 @@ export interface StatedLoan {
   readonly repaid: number;
   readonly repaidQuoted: string;
   readonly schedule: LoanSchedule;
+  /** inputs taken from the reader's previous question (disclosed with the answer) */
+  readonly carried?: readonly ('amount received' | 'total repaid' | 'schedule')[];
 }
 
 type Partial3 = {
@@ -136,13 +138,53 @@ export function statedLoan(question: string, previousQuestion?: string | null): 
   }
   if (!complete(merged)) return undefined;
   if (merged.repaid.value < merged.received.value) return undefined;
+  const carried = [
+    ...(now.received === undefined ? (['amount received'] as const) : []),
+    ...(now.repaid === undefined ? (['total repaid'] as const) : []),
+    ...(now.schedule === undefined ? (['schedule'] as const) : []),
+  ];
   return {
     received: merged.received.value,
     receivedQuoted: merged.received.quoted,
     repaid: merged.repaid.value,
     repaidQuoted: merged.repaid.quoted,
     schedule: merged.schedule,
+    ...(carried.length === 0 ? {} : { carried }),
   };
+}
+
+/*
+  ASK FINANCIAL CONTINUITY P0 (Alpha op 0ec1717c, after 8e7e0876) — "And if I repay the $1,050 in 12
+  equal monthly instalments instead, is the rate still the same?" is 18 words: past the generic
+  follow-up detectors' 16-word bound, so the service handed the solver no previous question and the
+  turn was searched as news. A loan SCHEDULE CHANGE is recognised here instead, narrowly: a rate is
+  asked about, a repayment schedule is stated, and the question alone does not state the whole loan.
+*/
+
+/** The inputs a loan schedule-change question leaves unstated, or `undefined` if it is not one. */
+export function loanScheduleChange(question: string): { readonly missing: readonly string[] } | undefined {
+  if (!RATE_ASKED.test(question)) return undefined;
+  const s = readLoanStatement(question);
+  if (s.schedule === undefined) return undefined;
+  const missing = [
+    ...(s.received === undefined ? ['amount received'] : []),
+    ...(s.repaid === undefined ? ['total repaid'] : []),
+  ];
+  return missing.length === 0 ? undefined : { missing };
+}
+
+/**
+ * The earlier question a loan schedule change continues: the nearest of the reader's own earlier
+ * questions (newest first, this thread only) that ITSELF stated a complete loan. `null` when the
+ * question is a schedule change but no such question exists (the caller asks for the missing input);
+ * `undefined` when the question is not a schedule change (the caller decides as before).
+ */
+export function loanContinuationAnchor(
+  question: string,
+  newestFirst: readonly string[],
+): string | null | undefined {
+  if (loanScheduleChange(question) === undefined) return undefined;
+  return newestFirst.find((q) => statedLoan(q) !== undefined) ?? null;
 }
 
 /** The periodic rate r with  received = payment × (1 − (1 + r)^−n) / r  (bisection; r ≥ 0). */
@@ -164,6 +206,17 @@ export function levelPaymentRate(received: number, payment: number, n: number): 
 const r4 = (v: number) => Math.round(v * 10000) / 10000;
 const money = (v: number) => v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const pct = (v: number) => `${r4(v * 100).toFixed(4)} %`;
+
+/** Which stated inputs came from the reader's earlier question — said with the answer, never hidden. */
+function carriedConventions(loan: StatedLoan): string[] {
+  return (loan.carried ?? []).map((input) =>
+    input === 'amount received'
+      ? `The amount received (${loan.receivedQuoted}) is taken from your earlier question in this conversation.`
+      : input === 'total repaid'
+        ? `The total repaid (${loan.repaidQuoted}) is taken from your earlier question in this conversation.`
+        : `The repayment schedule (${loan.schedule.quoted}) is taken from your earlier question in this conversation.`,
+  );
+}
 
 /** The deterministic answer for a stated loan, in the computation seam's shape. */
 export function loanRateComputation(loan: StatedLoan): ComputationResult | undefined {
@@ -190,6 +243,7 @@ export function loanRateComputation(loan: StatedLoan): ComputationResult | undef
       steps,
       result: { name: 'effective annual rate', value: r4(ear * 100), unit: '%' },
       conventions: [
+        ...carriedConventions(loan),
         'The rate is computed on the amount actually received, with one repayment at the end of the term.',
         'No fees or payments other than those stated.',
         ...(years === 1 ? ['For a one-year single repayment, the APR and the effective annual rate are the same.'] : []),
@@ -214,6 +268,7 @@ export function loanRateComputation(loan: StatedLoan): ComputationResult | undef
     steps,
     result: { name: 'effective annual rate', value: r4(ear * 100), unit: '%' },
     conventions: [
+      ...carriedConventions(loan),
       `Payments are equal and made at the end of each ${period}; the first one ${period} after the money is received.`,
       'No fees or payments other than those stated.',
       `APR here is the ${period}ly rate × ${perYear} (nominal); the effective annual rate compounds it. Which one a lender must quote depends on the jurisdiction.`,

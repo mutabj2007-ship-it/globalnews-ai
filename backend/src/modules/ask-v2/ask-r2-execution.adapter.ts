@@ -1,5 +1,5 @@
 import { solveComputation, type ComputationResult } from './computation/deterministic-computation';
-import { loanRateComputation, statedLoan } from './computation/cash-flow-rate';
+import { loanRateComputation, loanScheduleChange, statedLoan } from './computation/cash-flow-rate';
 import { financialRateRuleFor } from './computation/financial-rate';
 import { readsEarlierEvidence } from './conversation/earlier-evidence-reference';
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
@@ -1162,6 +1162,28 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         null,
         NO_CONTRIBUTIONS,
         loanComputation,
+      );
+    }
+    /* ASK FINANCIAL CONTINUITY P0 (Alpha op 0ec1717c) — a loan schedule change whose missing amounts
+       no earlier question of this conversation states is asked for, not searched as news: zero
+       model, zero provider, nothing assumed. */
+    const loanGap = loan === undefined ? loanScheduleChange(request.question) : undefined;
+    if (loanGap !== undefined) {
+      return this.result(
+        plan,
+        route,
+        operationId,
+        this.observeAnswer(
+          {
+            state: 'CLARIFICATION_REQUIRED',
+            basis: 'COMPUTATION_INPUTS_MISSING',
+            missingRoles: [],
+            candidates: [...loanGap.missing],
+          },
+          draft,
+        ),
+        null,
+        false,
       );
     }
 
