@@ -208,6 +208,17 @@ import {
   makeProviderSafeNewsQuery,
   toProviderSafePunctuation,
 } from '../query/derive-generic-news-query.util';
+import {
+  makeGenericProviderFallbackQuery,
+  makeGenericProviderQuery,
+} from '../query/news-query-reduction.util';
+import {
+  buildSentQueryTrace,
+  recordDispatched,
+  recordSkipped,
+  sentQueryVariants,
+  type SentQueryAttempt,
+} from '../query/news-sent-query-trace.util';
 import { requestsDates, retrievalSubjectOf } from '../query/response-directives.util';
 import { withoutReaderRequestFrame } from '../query/reader-request-frame.util';
 import {
@@ -1620,6 +1631,27 @@ export class AnalysisService {
         };
         /* ASK TRUTHFUL RETRIEVAL R2A — set by a branch that ran planned searches. */
         let plannedTrace: PlannedSearchTrace | undefined;
+        /*
+          P0 NEWS QUERY A4 — what the ORDINARY generic search actually sent (primary and the one
+          bounded fallback), or why it sent nothing. Recorded only by the generic branch; the
+          planned paths keep their own trace.
+        */
+        const genericAttempts: SentQueryAttempt[] = [];
+        const sentOutcomeOf = (response: NewsResponse) =>
+          response.articles.length > 0
+            ? ('SENT_RESULTS' as const)
+            : readProviderFailures(response).length > 0
+              ? ('SENT_PROVIDER_FAILED' as const)
+              : ('SENT_ZERO_RESULTS' as const);
+        const sentLanesOf = (response: NewsResponse): string | null => {
+          const lanes = [
+            ...new Set([
+              ...this.toRetrievalContext(response).providers,
+              ...readProviderFailures(response).map((failure) => failure.providerId),
+            ]),
+          ];
+          return lanes.length === 0 ? null : lanes.join('+');
+        };
         let activeCompoundPlan: CompoundRetrievalPlan | undefined;
         /* PUBLIC BETA HARDENING R1B — set only by the broad-headlines branch. */
         let broadCoverage: BroadHeadlinesCoverage | undefined;
@@ -3170,7 +3202,13 @@ export class AnalysisService {
             // duplicate system. genericSearchQuery itself (used below for
             // the M46 fallback derivation) is left completely untouched —
             // only what's actually SENT to the provider changes.
-            const primarySent = makeProviderSafeNewsQuery(genericSearchQuery);
+            /*
+              P0 NEWS QUERY A1 (Claude G, 775fb4c) — a long question is reduced to its searchable
+              subject before provider-safety: request and format words ("give the original sources",
+              "distinguish confirmed facts…") are no longer mandatory GNews terms. Short subjects pass
+              through byte-identical. genericSearchQuery itself is unchanged for every other use.
+            */
+            const primarySent = makeGenericProviderQuery(genericSearchQuery).sent;
             /*
               ASK R3 RETRIEVAL POLICY CLOSEOUT R2 — a subject that is exactly a resolved country + a
               broad economy term ("Poland's economy") opts into ONE bounded second admission path
@@ -3215,6 +3253,8 @@ export class AnalysisService {
               );
               articles = [];
               retrievalContext = NON_RETRIEVABLE_QUERY_CONTEXT;
+              /* A4 — nothing was sent, and the trace says so (never a reconstructed query) */
+              genericAttempts.push(recordSkipped('PRIMARY', 'SKIPPED_NO_QUERY'));
             } else {
               /* R1 / BETA-ASK-005 / R2A — a compound plan runs through the planned-search runner;
                  otherwise the ONE generic search, with the window only when there is one. */
@@ -3243,6 +3283,12 @@ export class AnalysisService {
                   { from: window.from, to: window.to },
                 );
                 for (const id of readWindowExcluded(searchResponse)) upstreamWindowExcluded.add(id);
+              }
+              /* A4 — the ordinary generic search records exactly what it sent and how it ended */
+              if (!compoundPlan) {
+                genericAttempts.push(
+                  recordDispatched('PRIMARY', primarySent, sentOutcomeOf(searchResponse), sentLanesOf(searchResponse)),
+                );
               }
 
               // Milestone #46 — exactly ONE bounded fallback attempt, and
@@ -3388,17 +3434,27 @@ export class AnalysisService {
               };
 
               if (searchResponse.articles.length === 0 && primaryFailures.length > 0) {
+                /* A4 — the refusal suppressed the fallback: recorded as not sent, never as a zero */
+                if (!compoundPlan) genericAttempts.push(recordSkipped('FALLBACK', 'SKIPPED_PROVIDER_INELIGIBLE'));
                 await rescueAfterRefusal(primaryFailures);
               } else if (searchResponse.articles.length === 0 && compoundPlan === undefined) {
                 /* A compound plan already spent its bounded searches; no M46 retry is added. */
-                const fallbackQuery = deriveFallbackNewsQuery(genericSearchQuery);
-                if (fallbackQuery) {
-                  const fallbackSent = makeProviderSafeNewsQuery(fallbackQuery);
+                /*
+                  P0 NEWS QUERY A1 (775fb4c) — the bounded fallback is the existing
+                  deriveFallbackNewsQuery() result, reduced the same way; undefined still means
+                  "no second attempt", so the skip contract below is unchanged.
+                */
+                const fallbackSent = makeGenericProviderFallbackQuery(genericSearchQuery).sent;
+                {
                   /*
                    * PROVIDER-SAFETY EDGE CLOSURE — an undefined fallback means
                    * the reduced query has no lexical content, so the bounded
-                   * second attempt is skipped rather than sent.
+                   * second attempt is skipped rather than sent. A fallback identical to the
+                   * primary is never sent twice (A4 records it as not sent).
                    */
+                  if (fallbackSent === undefined || fallbackSent === primarySent) {
+                    genericAttempts.push(recordSkipped('FALLBACK', 'SKIPPED_NO_QUERY'));
+                  }
                   if (fallbackSent !== undefined && fallbackSent !== primarySent) {
                     this.logger.debug(
                       'Primary generic retrieval returned zero relevant articles — ' +
@@ -3408,6 +3464,9 @@ export class AnalysisService {
                       fallbackSent,
                       SEARCH_POOL_SIZE,
                       genericMode,
+                    );
+                    genericAttempts.push(
+                      recordDispatched('FALLBACK', fallbackSent, sentOutcomeOf(searchResponse), sentLanesOf(searchResponse)),
                     );
                     /* R3 — a refused fallback is a limited search, never "no reporting". */
                     const fallbackFailures = readProviderFailures(searchResponse);
@@ -3791,9 +3850,18 @@ export class AnalysisService {
           Only for the planned paths (event frame, compound plan) and windowed questions, so every
           other response is byte-identical. Decided before any prose.
         */
-        if (plannedTrace !== undefined || reportingWindow !== undefined) {
+        /*
+          P0 NEWS QUERY A4 — the ORDINARY generic search is traced too: what it sent (primary and
+          fallback, sanitized and bounded) or why it sent nothing. Before this, a plain generic
+          search with no window left no trace at all, so "searched and found nothing" and "never
+          searched" read the same. Every other path is unchanged.
+        */
+        if (plannedTrace !== undefined || reportingWindow !== undefined || genericAttempts.length > 0) {
           const trace: AnalysisRetrievalTrace = {
-            queryVariants: plannedTrace?.queryVariants ?? [],
+            queryVariants: plannedTrace?.queryVariants ?? [...sentQueryVariants(genericAttempts)],
+            ...(plannedTrace === undefined && genericAttempts.length > 0
+              ? { sentQueries: buildSentQueryTrace(genericAttempts).map((attempt) => ({ ...attempt })) }
+              : {}),
             timeWindow:
               reportingWindow === undefined
                 ? null

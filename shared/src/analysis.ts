@@ -1715,6 +1715,23 @@ export function resolveGovernedCountryCode(countryCode: unknown): CountryMeta | 
 /** ASK TRUTHFUL RETRIEVAL R2A — see AnalysisRetrievalContext.retrievalTrace. */
 export interface AnalysisRetrievalTrace {
   queryVariants: string[];
+  /**
+   * P0 NEWS QUERY A4 — the ordinary generic search's attempts, in order (PRIMARY, then the one
+   * bounded FALLBACK): the sanitized query actually sent, or `null` with the reason nothing was
+   * sent. Absent on planned paths (their `queryVariants` already record what they sent).
+   */
+  sentQueries?: Array<{
+    role: 'PRIMARY' | 'FALLBACK';
+    outcome:
+      | 'SENT_RESULTS'
+      | 'SENT_ZERO_RESULTS'
+      | 'SENT_PROVIDER_FAILED'
+      | 'SKIPPED_NO_QUERY'
+      | 'SKIPPED_PROVIDER_INELIGIBLE'
+      | 'SKIPPED_RETAINED_SUBSTITUTED';
+    query: string | null;
+    lane: string | null;
+  }>;
   timeWindow: { from: string; to: string; basis: 'REQUEST_INSTANT' } | null;
   languages: string[];
   lanesAttempted: string[];
