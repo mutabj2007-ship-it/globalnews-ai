@@ -122,6 +122,7 @@ function conversation(language: 'en' | 'pl' = 'en', store?: (id: string) => Stor
     const before = { a: h.analysis.length, b: h.background.length };
     const priorQuestion = opts.reopened ? undefined : earlier[earlier.length - 1];
     const id = `op-${++op}`;
+    let plan: Awaited<ReturnType<typeof h.adapter.prepare>> | undefined;
     const payload = await askRequestContext.run(
       {
         accountId: 'user-1',
@@ -129,7 +130,7 @@ function conversation(language: 'en' | 'pl' = 'en', store?: (id: string) => Stor
         ...(priorQuestion === undefined ? {} : { priorQuestion }),
       } as never,
       async () => {
-        const plan = await h.adapter.prepare(request);
+        plan = await h.adapter.prepare(request);
         return JSON.parse((await h.adapter.execute(request, plan, id)).payloadJson);
       },
     );
@@ -139,6 +140,7 @@ function conversation(language: 'en' | 'pl' = 'en', store?: (id: string) => Stor
     return {
       payload,
       stored,
+      plan: plan!,
       analysisCalls: h.analysis.slice(before.a),
       backgroundCalls: h.background.slice(before.b),
     };
@@ -299,12 +301,20 @@ describe('ASK EVIDENCE CONTINUITY R1 — the Production sequence (thread 9079dd0
     expect(t2.backgroundCalls[0].question).toBe(q);
   });
 
-  it('after a GENUINELY SOURCED answer the follow-up is unchanged (same call shape as fc00e98)', async () => {
-    const c = conversation();
+  it('after a GENUINELY SOURCED answer the follow-up is answered FROM those reports (live op 744166f3)', async () => {
+    /* ASK REASONING LIVE DEFECTS R1 — at fc00e98 / 537a062 this call carried no earlier work at all
+       (BASELINE_SOURCED_T2_CALL) and the Nairobi follow-up ignored the two reports it rested on */
+    const c = conversation('en', (id) => ({ id, sourceId: 'example' }));
     await c.ask(T1, 'SOURCED');
     const t2 = await c.ask(T2, 'SOURCED');
     expect(t2.analysisCalls).toHaveLength(0);
-    expect(JSON.parse(JSON.stringify(t2.backgroundCalls))).toEqual([BASELINE_SOURCED_T2_CALL]);
+    expect(t2.backgroundCalls).toHaveLength(1);
+    const { priorWork, ...rest } = JSON.parse(JSON.stringify(t2.backgroundCalls[0]));
+    expect(priorWork).toContain('summarised sourced reporting');
+    expect(priorWork).toContain('Aid agencies report restricted access');
+    expect(priorWork).not.toContain('NO verified reports');
+    expect(rest.jobRules).not.toContain('NO VERIFIED EARLIER REPORTS');
+    expect(rest.question).toBe(BASELINE_SOURCED_T2_CALL.question);
     expect(t2.payload.answer).toEqual({
       state: 'REFERENCE_BACKGROUND',
       basis: 'PLAN_NO_REQUIRED_EVIDENCE',
@@ -350,6 +360,44 @@ describe('ASK FINANCE INTEGRITY R1 — APR explanation (op b3924ff0)', () => {
     expect(rules.startsWith(`R4 JOB RULES (trusted)\n${MEMORY_RULE}`)).toBe(true);
   });
 
+
+  /* ASK REASONING LIVE DEFECTS R1 — the live Alpha sequence (thread e6803a77) through the executor */
+  const C2 =
+    'I receive $950 today and repay $1,050 in a single payment after exactly one year, with no other fees. What is the effective annual rate?';
+  const C3 = 'And if I repay the $1,050 in 12 equal monthly instalments instead, is the rate still the same?';
+
+  it('op 1f437e26 (C2): solved deterministically to 10.5263 % — no news search, no model call', async () => {
+    const c = conversation();
+    await c.ask(APR_Q, 'SOURCED');
+    const t = await c.ask(C2, 'RATE_LIMITED');
+    expect(t.analysisCalls).toHaveLength(0);
+    expect(t.backgroundCalls).toHaveLength(0);
+    expect(t.payload.answer).toEqual({ state: 'COMPUTED_RESULT', basis: 'DETERMINISTIC_COMPUTATION', missingRoles: [] });
+    expect(t.payload.computation.result).toEqual({ name: 'effective annual rate', value: 10.5263, unit: '%' });
+    /* the live answer: an unrelated 5 %-compounded-quarterly example (5.09 %) in raw LaTeX */
+    expect(JSON.stringify(t.payload)).not.toMatch(/5\.09|\\\\frac|\\\\\[/);
+  });
+
+  it('op 63644aa1 (C3): the instalment follow-up is completed from C2 and solved — not news', async () => {
+    const c = conversation();
+    await c.ask(APR_Q, 'SOURCED');
+    await c.ask(C2, 'RATE_LIMITED');
+    const t = await c.ask(C3, 'RATE_LIMITED');
+    expect(t.analysisCalls).toHaveLength(0);
+    expect(t.backgroundCalls).toHaveLength(0);
+    expect(t.payload.answer.state).toBe('COMPUTED_RESULT');
+    const steps = Object.fromEntries(t.payload.computation.steps.map((s: { label: string; value: number }) => [s.label, s.value]));
+    expect(steps['Each monthly payment']).toBe(87.5);
+    expect(steps['Rate per month (r)']).toBeCloseTo(1.5744, 4);
+    expect(steps['Nominal annual rate (APR)']).toBeCloseTo(18.8925, 4);
+    expect(t.payload.computation.result.value).toBeCloseTo(20.6173, 4);
+  });
+
+  it('C3 asked with no earlier loan is NOT computed (nothing assumed) and routes as before', async () => {
+    const t = await conversation().ask(C3, 'RATE_LIMITED');
+    expect(t.payload.answer.state).not.toBe('COMPUTED_RESULT');
+  });
+
   it('a non-financial explanation sends a byte-identical call (as fc00e98)', async () => {
     const t = await conversation().ask(NON_FINANCIAL, 'SOURCED');
     expect(JSON.parse(JSON.stringify(t.backgroundCalls))).toEqual([BASELINE_NON_FINANCIAL_CALL]);
@@ -391,11 +439,51 @@ describe('ASK EVIDENCE CONTINUITY R1 × RIGHTS CONTAINMENT R1.1 — the combined
     const reused = await followUp(providerRow);
     expect(reused.analysisCalls).toHaveLength(0);
     expect(reused.backgroundCalls[0].priorWork).toContain('Aid agencies report restricted access');
+    /* ASK REASONING LIVE DEFECTS R1 (live op fb8a9b27) — with its sources withheld, the earlier answer
+       cannot be summarised: answered with ZERO model calls as withheld, never an invented summary */
     const held = await followUp(heldRow);
     expect(held.analysisCalls).toHaveLength(0);
-    expect(held.backgroundCalls).toHaveLength(1);
-    expect(held.backgroundCalls[0].priorWork).toBeUndefined();
-    expect(JSON.stringify(held.backgroundCalls)).not.toContain('Aid agencies report restricted access');
+    expect(held.backgroundCalls).toHaveLength(0);
+    expect(held.payload.answer).toEqual({ state: 'INSUFFICIENT', basis: 'WITHHELD_SOURCE_RIGHTS', missingRoles: [] });
+    expect(held.payload.withheld).toEqual({ reason: 'SOURCE_RIGHTS', count: 0 });
+    expect(held.payload.background ?? null).toBeNull();
+    expect(JSON.stringify(held.payload)).not.toContain('Aid agencies report restricted access');
+    /* nothing of the held answer is copied into this turn's own record */
+    expect(held.stored?.evidenceRefs ?? []).toEqual([]);
+  });
+
+  it('"Based on those reports…" after a now-held SOURCED answer: withheld, zero model calls', async () => {
+    const c = conversation('en', heldRow);
+    await c.ask(T1, 'SOURCED');
+    const t2 = await c.ask(T2, 'SOURCED');
+    expect(t2.analysisCalls).toHaveLength(0);
+    expect(t2.backgroundCalls).toHaveLength(0);
+    expect(t2.payload.answer.basis).toBe('WITHHELD_SOURCE_RIGHTS');
+    expect(JSON.stringify(t2.payload)).not.toContain('Aid agencies report restricted access');
+  });
+
+  it('"Summarise your previous answer" after a turn that produced NO answer says so (live op fb8a9b27)', async () => {
+    /* the live thread's latest turn (seq 3) produced nothing; its record holds no findings */
+    const c = conversation('en', heldRow);
+    await c.ask(T1, 'NO_MATCH');
+    const t = await c.ask(REUSE_Q, 'SOURCED');
+    expect(t.analysisCalls).toHaveLength(0);
+    expect(t.backgroundCalls).toHaveLength(1);
+    expect(t.backgroundCalls[0].priorWork).toContain('returned NO verified reports');
+    expect(t.backgroundCalls[0].jobRules).toContain('NO VERIFIED EARLIER REPORTS');
+  });
+
+  it('the same follow-up words after DIFFERENT earlier no-evidence turns are different plans (live ops f34b3dec, 54cd45ec)', async () => {
+    /* A6 "Based on those reports…" after the Kibirizi flood search replayed A2's DR Congo answer
+       through the same execution key. The earlier record is now part of the plan identity. */
+    const plans: string[] = [];
+    for (const first of [T1, 'What are the latest verified reports about flooding in Kibirizi village, South Kivu, over the last seven days? Give the original sources.']) {
+      const c = conversation();
+      await c.ask(first, 'NO_MATCH');
+      const t = await c.ask(T2, 'SOURCED');
+      plans.push(String(t.plan.executionKey));
+    }
+    expect(plans[0]).not.toBe(plans[1]);
   });
 
   it('a follow-up that does not rest on the earlier answer is searched as its own question either way', async () => {

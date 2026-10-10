@@ -45,7 +45,9 @@ export interface ComputationResult {
     | 'DC_POWER'
     | 'BATTERY_ENERGY'
     | 'PERCENTAGE'
-    | 'ARITHMETIC';
+    | 'ARITHMETIC'
+    /* ASK REASONING LIVE DEFECTS R1 — a loan's rate from stated cash flows (cash-flow-rate.ts) */
+    | 'LOAN_RATE';
   readonly inputs: readonly ComputationQuantity[];
   readonly steps: readonly ComputationStep[];
   readonly result: { readonly name: string; readonly value: number; readonly unit: string };

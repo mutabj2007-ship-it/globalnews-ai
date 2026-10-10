@@ -1,4 +1,5 @@
 import { solveComputation, type ComputationResult } from './computation/deterministic-computation';
+import { loanRateComputation, statedLoan } from './computation/cash-flow-rate';
 import { financialRateRuleFor } from './computation/financial-rate';
 import { readsEarlierEvidence } from './conversation/earlier-evidence-reference';
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
@@ -135,7 +136,7 @@ import { researchRecordOf, type ResearchFacts } from './research-record';
 import { productMetaAnswer, readProductMeta } from './product-meta';
 import { checkWrittenArithmetic } from '../analysis/providers/arithmetic-check.util';
 import { partitionByRights } from '../news/rights/source-use-policy';
-import { priorWorkRightsClearedWith } from './source-rights-withholding';
+import { priorWorkRightsClearedWith, WITHHELD_BASIS } from './source-rights-withholding';
 import {
   newAskObservationDraft,
   type AskObservationDraft,
@@ -776,10 +777,25 @@ export function planRevision(
     /* R4 ALPHA R-3 — every answered turn now leaves a record: it is part of THIS plan's identity only
        when the route actually refers to it (otherwise the same question in the same thread is the
        same plan, and its stored answer is reused) */
-    ...(request.priorArtifact === undefined || route.job.discourseReference !== 'PRIOR_WORK'
-      ? []
-      : [`artifact:${artifactIdentity(request.priorArtifact)}`]),
+    /* ASK REASONING LIVE DEFECTS R1 (Alpha ops f34b3dec, 54cd45ec) — and when the reader's words
+       rest on it ("Based on those reports…"): the same words after a DIFFERENT earlier answer are
+       a different request. Without this, the Kibirizi follow-up replayed the DR Congo answer. */
+    ...(refersToEarlierWork(request, route)
+      ? [`artifact:${artifactIdentity(request.priorArtifact!)}`]
+      : []),
   ]);
+}
+
+/**
+ * ASK REASONING LIVE DEFECTS R1 — does this turn rest on the conversation's earlier answer: the
+ * route says so (PRIOR_WORK), or the reader's own words do (the closed "Based on those reports…"
+ * list)? One definition for the plan's identity and for what the answer is given.
+ */
+export function refersToEarlierWork(request: Readonly<AskRequest>, route: AskR2Route): boolean {
+  return (
+    request.priorArtifact !== undefined &&
+    (route.job.discourseReference === 'PRIOR_WORK' || readsEarlierEvidence(request.question))
+  );
 }
 
 /** Estimated units for one analysis call (F 01 L-12: input + outputWeight × output). */
@@ -1117,6 +1133,38 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       frozen terminal (clarification, identity, capability) is honoured first and spends nothing.
       The plan revision was checked on the deterministic route above.
     */
+    /*
+      ASK REASONING LIVE DEFECTS R1 (Alpha ops 1f437e26, 63644aa1) — the rate of a loan whose cash
+      flows the reader stated ("I receive $950… repay $1,050 in a single payment after one year",
+      "…in 12 equal monthly instalments instead") is a calculation, not news: it was searched as
+      news and answered with an unrelated example or "couldn't verify reporting". Solved here by
+      the deterministic engine (zero model, zero provider, no meter) before any interpretation or
+      routing; a follow-up that restates only part of the loan is completed from the reader's
+      previous question. Anything not fully stated is left to the routing below, unchanged.
+    */
+    const loan = statedLoan(
+      request.question,
+      askRequestContext.getStore()?.priorQuestion ?? request.priorArtifact?.scope?.question,
+    );
+    const loanComputation = loan === undefined ? undefined : loanRateComputation(loan);
+    if (loanComputation !== undefined) {
+      return this.result(
+        plan,
+        route,
+        operationId,
+        this.observeAnswer(
+          { state: 'COMPUTED_RESULT', basis: 'DETERMINISTIC_COMPUTATION', missingRoles: [] },
+          draft,
+        ),
+        null,
+        false,
+        null,
+        null,
+        NO_CONTRIBUTIONS,
+        loanComputation,
+      );
+    }
+
     let semanticRun: ClassifierRun | undefined;
     if (route.semantic.resolution.needsSemanticResolution) {
       const early0 = answerStateBeforeExecution(route.plan);
@@ -2552,10 +2600,12 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     /* MASTER CTO P0 RIGHTS CONTAINMENT R1.1 — an earlier SOURCED answer's points derive from its
        sources: they reach the model again only when every one of those sources is usable as AI
        input today (fails closed when the sources cannot be established). */
+    /* ASK REASONING LIVE DEFECTS R1 (Alpha op 744166f3) — "Based on those reports…" refers to the
+       earlier answer as surely as a route marked PRIOR_WORK does: after an answer that stood on
+       admissible sources it now receives that answer's points (it answered from nothing before). */
+    const refersToEarlier = refersToEarlierWork(request, route);
     const usesPriorWork =
-      request.priorArtifact !== undefined &&
-      route.job.discourseReference === 'PRIOR_WORK' &&
-      (await this.priorWorkRightsCleared(request.priorArtifact));
+      refersToEarlier && (await this.priorWorkRightsCleared(request.priorArtifact!));
     /*
       R4 ALPHA SMOKE R2 (CTO B) — a claim re-check of an earlier answer that was NOT sourced
       reporting ("Is it still true now?" after reasoning) is re-examined by reasoning only (R-5):
@@ -2578,9 +2628,45 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       A follow-up on an answer that stood on verified evidence (evidence references) is unchanged.
     */
     const earlierGap =
-      partialCurrent === undefined && !recheckUnverified && readsEarlierEvidence(request.question)
+      partialCurrent === undefined && !recheckUnverified && refersToEarlier
         ? priorEvidenceGap(request.priorArtifact)
         : null;
+    /*
+      ASK REASONING LIVE DEFECTS R1 (Alpha op fb8a9b27) — "Summarise your previous answer…" after a
+      SOURCED answer whose sources are withheld (or cannot be established) reached the model with
+      NO earlier work at all, and the model invented a summary of an answer it never saw. A turn
+      that refers to such an answer is answered here, with ZERO model calls: the earlier answer is
+      withheld while its sources' rights are reviewed — the same statement its own reopened view
+      makes. Its points are not handed on, and not copied into this turn's record.
+    */
+    if (
+      refersToEarlier &&
+      !usesPriorWork &&
+      earlierGap === null &&
+      partialCurrent === undefined &&
+      request.priorArtifact?.provenance === 'SOURCED_REPORTING'
+    ) {
+      draft.aiExecuted = false;
+      draft.evidenceRolesObtained = [];
+      return this.result(
+        plan,
+        route,
+        operationId,
+        this.observeAnswer(
+          { state: 'INSUFFICIENT', basis: WITHHELD_BASIS, missingRoles: [] },
+          draft,
+        ),
+        null,
+        false,
+        null,
+        null,
+        NO_CONTRIBUTIONS,
+        null,
+        null,
+        null,
+        { artifact: null, artifactUsed: null, classifier: semantic ?? null },
+      );
+    }
     const jobRules = [
       jobRulesFor(route.job, usesPriorWork, horizon),
       recheckUnverified ? RECHECK_UNVERIFIED_RULE : '',
@@ -3061,6 +3147,9 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       succeeded: true,
       payloadJson: JSON.stringify({
         schema: ASK_R2_PAYLOAD_SCHEMA,
+        /* ASK REASONING LIVE DEFECTS R1 — a turn on a withheld earlier answer says so to the reader
+           (the existing withheld line); this turn itself cites nothing (count 0) */
+        ...(answer.basis === WITHHELD_BASIS ? { withheld: { reason: 'SOURCE_RIGHTS', count: 0 } } : {}),
         route: {
           questionClass: route.plan.questionClass,
           terminalState: route.plan.terminalState,
