@@ -59,3 +59,11 @@ describe('which Congo an article is about', () => {
     expect(detectAmbiguousCountryMention('Erik Prince in eastern Democratic Republic of Congo')).toBeUndefined();
   });
 });
+
+describe('French Congo forms (EA review C4/C5)', () => {
+  it.each([
+    ['Combats en République démocratique du Congo', 'COD'],
+    ['Les rebelles dans l’est de la RDC', 'COD'],
+    ['Élections en République du Congo', 'COG'],
+  ])('%s → %s', (text, reading) => expect(congoReadingOf(text)).toBe(reading));
+});

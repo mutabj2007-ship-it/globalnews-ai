@@ -461,8 +461,10 @@ const EASTERN_DRC_QUALIFIER =
   /(?:^|[^\p{L}])(?:eastern\s+congo|(?:north|south)\s+kivu|kivu|uvira|bukavu|goma|beni|butembo|bunia|ituri|kisangani|kolwezi|lubumbashi|katanga|kinshasa|m23|afc\/m23|fardc|monusco)(?=$|[^\p{L}])/iu;
 /* "Republic of (the) Congo" — but never inside "Democratic Republic of (the) Congo". */
 const CONGO_BRAZZAVILLE_QUALIFIER =
-  /(?:^|[^\p{L}])(?:brazzaville|(?<!democratic\s+)republic\s+of\s+(?:the\s+)?congo|pointe-noire)(?=$|[^\p{L}])/iu;
-const DRC_NAMED = /(?:^|[^\p{L}])(?:dr|d\.r\.|democratic\s+republic\s+of(?:\s+the)?)\s*congo|congo\s*[-–(]?\s*kinshasa/iu;
+  /(?:^|[^\p{L}])(?:brazzaville|(?<!democratic\s+)republic\s+of\s+(?:the\s+)?congo|r[ée]publique\s+du\s+congo|pointe-noire)(?=$|[^\p{L}])/iu;
+/* EN + FR (EA review C4/C5): "RDC", "République démocratique du Congo" */
+const DRC_NAMED =
+  /(?:^|[^\p{L}])(?:(?:dr|d\.r\.|democratic\s+republic\s+of(?:\s+the)?)\s*congo|r[ée]publique\s+d[ée]mocratique\s+du\s+congo|(?:drc|rdc)(?=$|[^\p{L}]))|congo\s*[-–(]?\s*kinshasa/iu;
 
 function settledAsDrcByEasternContext(text: string): boolean {
   return EASTERN_DRC_QUALIFIER.test(text) && !CONGO_BRAZZAVILLE_QUALIFIER.test(text);
@@ -475,7 +477,7 @@ function settledAsDrcByEasternContext(text: string): boolean {
  */
 export function congoReadingOf(text: string): 'COD' | 'COG' | 'AMBIGUOUS' | undefined {
   const t = text ?? '';
-  if (!/(?:^|[^\p{L}])congo/iu.test(t)) return undefined;
+  if (!/(?:^|[^\p{L}])(?:congo|(?:drc|rdc)(?=$|[^\p{L}]))/iu.test(t)) return undefined;
   const cod = EASTERN_DRC_QUALIFIER.test(t) || DRC_NAMED.test(t);
   const cog = CONGO_BRAZZAVILLE_QUALIFIER.test(t);
   if (cod && !cog) return 'COD';

@@ -1238,7 +1238,22 @@ export class AnalysisService {
          * because none of them place a closed reporting verb between a
          * bounded name and a topic preposition.
          */
-        const sourceAttributedIntent = detectSourceAttributedIntent(retrievalQuery);
+        /*
+          P0 NEWS R1 (EA review of c12e372, EA-P3) — a PLACE is never a publisher: "What did Rwanda
+          say about Erik Prince in Congo?" names a country as the speaker, not a masthead. A phrase
+          that resolves as a country or city drops the publisher frame entirely.
+        */
+        const detectedSourceIntent = detectSourceAttributedIntent(retrievalQuery);
+        const sourcePlacePhrase = (detectedSourceIntent?.rawSourcePhrase ?? '')
+          .trim()
+          .replace(/^the\s+/i, '');
+        const sourceAttributedIntent =
+          detectedSourceIntent !== undefined &&
+          sourcePlacePhrase !== '' &&
+          (resolveCountryByAnyIdentifier(sourcePlacePhrase) !== undefined ||
+            resolveLocationContext(sourcePlacePhrase) !== undefined)
+            ? undefined
+            : detectedSourceIntent;
         const sourceAttributedFrame = sourceAttributedIntent?.query;
         const requestedSource: RequestedSource | undefined = sourceAttributedFrame
           ? resolveRequestedSource(sourceAttributedFrame.sourcePhrase)
@@ -2017,15 +2032,21 @@ export class AnalysisService {
               title: withoutAmbiguousCountryMentions(article.title ?? ''),
               summary: withoutAmbiguousCountryMentions(article.summary ?? ''),
             }));
-            const supported = candidateMetas.filter((meta) =>
-              neutral.some(
-                (article) =>
-                  scoreCountryRelevance(article, meta).isRelevant &&
-                  candidateMetas
-                    .filter((other) => other.iso3 !== meta.iso3)
-                    .every((other) => !scoreCountryRelevance(article, other).isRelevant),
-              ),
-            );
+            /*
+              P0 NEWS R1 (EA review, G6/G7) — an article that NAMES one Congo ("eastern Democratic
+              Republic of Congo", Uvira, "Brazzaville") votes for it before blanking; only a bare
+              "Congo" falls back to the blanked scorer, where it votes for neither.
+            */
+            const voteOf = (article: NewsArticle, blanked: NewsArticle): string | undefined => {
+              const reading = congoReadingOf(`${article.title ?? ''} ${article.summary ?? ''}`);
+              if ((reading === 'COD' || reading === 'COG') && candidateMetas.some((m) => m.iso3 === reading)) {
+                return reading;
+              }
+              const hits = candidateMetas.filter((meta) => scoreCountryRelevance(blanked, meta).isRelevant);
+              return hits.length === 1 ? hits[0].iso3 : undefined;
+            };
+            const votes = new Set(eventArticles.map((article, i) => voteOf(article, neutral[i])));
+            const supported = candidateMetas.filter((meta) => votes.has(meta.iso3));
             if (supported.length === 1) {
               const [country] = supported;
               articles = searchResponse.articles;

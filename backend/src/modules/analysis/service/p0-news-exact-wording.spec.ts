@@ -191,3 +191,31 @@ describe('the reader named the country — person search scoped to it, never the
     expect(h.countryCalls).toEqual([]);
   });
 });
+
+describe('EA review of c12e372 — evidence that NAMES the DRC settles "Congo"; a place is never a publisher', () => {
+  const NAMED_DRC: NewsArticle = {
+    ...REUTERS_FIXTURE,
+    id: 'named-drc',
+    summary: 'FIXTURE — fighters linked to Erik Prince in eastern Democratic Republic of Congo.',
+  };
+
+  it('N3 with a lead that says "eastern Democratic Republic of Congo" → interpreted as COD from evidence', async () => {
+    const h = harness([NAMED_DRC]);
+    const response = await h.service.analyzeNews('Give any recent reports about Eric Prince in Congo.');
+    expect(response.retrievalContext.retrievalOutcome).not.toBe('CLARIFICATION_REQUIRED');
+    expect(response.retrievalContext.countryCode).toBe('COD');
+    expect(h.provider.analyzeNews).toHaveBeenCalledTimes(1);
+  });
+
+  it('a Brazzaville-named article still never settles "Congo" as the DRC', async () => {
+    const h = harness([BRAZZAVILLE_CONTROL]);
+    const response = await h.service.analyzeNews('Give any recent reports about Eric Prince in Congo.');
+    expect(response.retrievalContext.countryCode).not.toBe('COD');
+  });
+
+  it('"What did Rwanda say about Erik Prince in Congo?" — Rwanda is not a publisher', async () => {
+    const h = harness([REUTERS_FIXTURE]);
+    const response = await h.service.analyzeNews('What did Rwanda say about Erik Prince in Congo?');
+    expect(response.retrievalContext.requestedPublisher).toBeUndefined();
+  });
+});
