@@ -55,6 +55,7 @@ live('ASK FINANCIAL CONTINUITY P0 — loan schedule follow-up, live PostgreSQL s
   let values: Record<string, string>;
   let userId: string;
   let service: AskV2Service;
+  let adapter: AskR2ExecutionAdapter;
   let switches: OperationalSwitchService;
   const analyzeNews = jest.fn();
   const answerBackground = jest.fn();
@@ -110,7 +111,7 @@ live('ASK FINANCIAL CONTINUITY P0 — loan schedule follow-up, live PostgreSQL s
     const meter = new ComputeMeterService(db as unknown as PrismaService, config);
     const breaker = new CircuitBreakerService(db as unknown as PrismaService, meter);
     switches = new OperationalSwitchService(db as unknown as PrismaService, config, meter);
-    const adapter = new AskR2ExecutionAdapter(
+    adapter = new AskR2ExecutionAdapter(
       { analyzeNews } as never,
       { id: 'openai', displayName: 'OpenAI', isMock: false } as never,
       { id: 'mock', displayName: 'Mock General Background', isMock: true, answerBackground } as never,
@@ -260,6 +261,85 @@ live('ASK FINANCIAL CONTINUITY P0 — loan schedule follow-up, live PostgreSQL s
     expect(a.storedResultId).not.toBe(b.storedResultId);
     expect(pa.computation!.result.value).toBe(20.6173);
     expect(pb.computation!.result.value).not.toBe(20.6173);
+  });
+
+  /*
+    Independent Gate 4 preflight of eccbab0 (doc 24): L1, then L2, then the follow-up bound the
+    nearest complete loan (L2) and solved received 900 (L2) with repaid 1,050 — 33.7835 %, a loan the
+    reader never stated. The follow-up restates "$1,050": only L1 agrees with it.
+  */
+  const L1 = Q1;
+  const L2 =
+    'I receive $900 today and repay $1,000 in a single payment after exactly one year, with no other fees. What is the effective annual rate?';
+  const L3 =
+    'I receive $900 today and repay $1,050 in a single payment after exactly one year, with no other fees. What is the effective annual rate?';
+
+  it('doc 24: L1 → L2 → follow-up restating L1\'s $1,050 continues L1 — 20.6173 %, never 33.7835 %', async () => {
+    const thread = await newThread();
+    await submit(thread, L1);
+    await submit(thread, L2);
+    const op = await submit(thread, Q2);
+    const p = (await payloadOf(op.storedResultId))!;
+    expect(p.answer.state).toBe('COMPUTED_RESULT');
+    expect(stepsOf(p)['Each monthly payment']).toBe(87.5);
+    expect(p.computation!.result).toEqual({ name: 'effective annual rate', value: 20.6173, unit: '%' });
+    expect(JSON.stringify(p)).not.toMatch(/33\.7835/);
+    expect(p.computation!.conventions.join(' ')).toMatch(/amount received \(receive \$950\)/);
+    expect(analyzeNews).not.toHaveBeenCalled();
+    expect(answerBackground).not.toHaveBeenCalled();
+  });
+
+  it('no earlier loan agrees with the restated amount → the missing-input clarification, 0 news, 0 model', async () => {
+    const thread = await newThread();
+    await submit(thread, L2);
+    const op = await submit(thread, Q2);
+    const p = (await payloadOf(op.storedResultId))!;
+    expect(p.answer).toMatchObject({ state: 'CLARIFICATION_REQUIRED', basis: 'COMPUTATION_INPUTS_MISSING' });
+    expect(p.computation).toBeUndefined();
+    expect(analyzeNews).not.toHaveBeenCalled();
+    expect(answerBackground).not.toHaveBeenCalled();
+    expect(await observationOf(op.operationId)).toMatchObject({ aiExecuted: false, modelInvocationCount: 0 });
+  });
+
+  it('two earlier loans both agree with "$1,050" but received differs → ambiguous: no calculation, a clarification', async () => {
+    const thread = await newThread();
+    await submit(thread, L1);
+    await submit(thread, L3);
+    const op = await submit(thread, Q2);
+    const p = (await payloadOf(op.storedResultId))!;
+    expect(p.answer).toMatchObject({ state: 'CLARIFICATION_REQUIRED', basis: 'COMPUTATION_INPUTS_MISSING' });
+    expect(p.computation).toBeUndefined();
+    expect(analyzeNews).not.toHaveBeenCalled();
+    expect(answerBackground).not.toHaveBeenCalled();
+  });
+
+  it('the same loan asked twice is not ambiguous', async () => {
+    const thread = await newThread();
+    await submit(thread, L1);
+    await submit(thread, L1);
+    const p = (await payloadOf((await submit(thread, Q2)).storedResultId))!;
+    expect(p.computation!.result.value).toBe(20.6173);
+  });
+
+  it('a reopened conversation (a fresh service instance, later) selects the same loan from stored turns', async () => {
+    const thread = await newThread();
+    await submit(thread, L1);
+    await submit(thread, L2);
+    service = new AskV2Service(db as unknown as PrismaService, config, adapter);
+    const p = (await payloadOf((await submit(thread, Q2)).storedResultId))!;
+    expect(p.computation!.result.value).toBe(20.6173);
+  });
+
+  it('replay: asking the follow-up again in the thread gives the same loan and result, still 0 news / 0 model', async () => {
+    const thread = await newThread();
+    await submit(thread, L1);
+    await submit(thread, L2);
+    const a = (await payloadOf((await submit(thread, Q2)).storedResultId))!;
+    const b = (await payloadOf((await submit(thread, Q2)).storedResultId))!;
+    expect(a.computation!.result.value).toBe(20.6173);
+    expect(b.computation!.result.value).toBe(20.6173);
+    expect(analyzeNews).not.toHaveBeenCalled();
+    expect(answerBackground).not.toHaveBeenCalled();
   });
 
   it('a market-rate question with none of the reader\'s own amounts is never bound to the earlier loan', async () => {

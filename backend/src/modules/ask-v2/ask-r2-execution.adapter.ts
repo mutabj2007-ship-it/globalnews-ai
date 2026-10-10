@@ -1142,9 +1142,15 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       routing; a follow-up that restates only part of the loan is completed from the reader's
       previous question. Anything not fully stated is left to the routing below, unchanged.
     */
+    /* ASK FINANCIAL CONTINUITY P0 — a loan schedule change is completed ONLY from the loan the service
+       selected (consistent, unambiguous, this thread), never from a fallback record, so quote,
+       execute and replay agree on the one loan. */
+    const contextPrior = askRequestContext.getStore()?.priorQuestion;
     const loan = statedLoan(
       request.question,
-      askRequestContext.getStore()?.priorQuestion ?? request.priorArtifact?.scope?.question,
+      loanScheduleChange(request.question) !== undefined
+        ? contextPrior
+        : (contextPrior ?? request.priorArtifact?.scope?.question),
     );
     const loanComputation = loan === undefined ? undefined : loanRateComputation(loan);
     if (loanComputation !== undefined) {

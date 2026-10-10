@@ -39,6 +39,41 @@ describe('ASK FINANCIAL CONTINUITY P0 — loan schedule change binds to the read
     expect(anchorQuestionOf(third, [Q2, 'What is happening in Kenya?', Q1])).toBe(Q1);
   });
 
+  describe('doc 24 — one loan, never two: the earlier loan must agree with every restated amount, by role', () => {
+    const L2 =
+      'I receive $900 today and repay $1,000 in a single payment after exactly one year, with no other fees. What is the effective annual rate?';
+    const L3 =
+      'I receive $900 today and repay $1,050 in a single payment after exactly one year, with no other fees. What is the effective annual rate?';
+
+    it('L1 → L2 → follow-up restating $1,050 binds L1 (20.6173 %), never L2 (33.7835 %)', () => {
+      const anchor = anchorQuestionOf(Q2, [L2, Q1]);
+      expect(anchor).toBe(Q1);
+      expect(loanRateComputation(statedLoan(Q2, anchor)!)!.result.value).toBe(20.6173);
+    });
+
+    it('the solver itself refuses to combine one loan\'s received with another loan\'s repaid', () => {
+      expect(statedLoan(Q2, L2)).toBeUndefined();
+    });
+
+    it('by role: a restated amount that matches the earlier RECEIVED amount does not match its repaid', () => {
+      const f = 'And if I repay the $950 in 12 equal monthly instalments instead, what is the rate?';
+      expect(anchorQuestionOf(f, [Q1])).toBeNull();
+    });
+
+    it('only a non-matching loan → null (the executor asks for the missing input)', () => {
+      expect(anchorQuestionOf(Q2, [L2])).toBeNull();
+    });
+
+    it('two matching loans that would supply different amounts → ambiguous → null, no guess', () => {
+      expect(anchorQuestionOf(Q2, [L3, Q1])).toBeNull();
+      expect(anchorQuestionOf(Q2, [Q1, L3])).toBeNull();
+    });
+
+    it('the same loan stated twice is not ambiguous', () => {
+      expect(anchorQuestionOf(Q2, [Q1, L2, Q1])).toBe(Q1);
+    });
+  });
+
   it('with no earlier complete loan in the thread, no prior is passed (the executor asks instead)', () => {
     expect(anchorQuestionOf(Q2, [])).toBeNull();
     expect(anchorQuestionOf(Q2, ['What is happening in Kenya?', 'Explain the difference between APR and EAR.'])).toBeNull();

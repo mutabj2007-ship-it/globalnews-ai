@@ -130,6 +130,8 @@ export function statedLoan(question: string, previousQuestion?: string | null): 
   if (!complete(now) && previousQuestion) {
     const before = readLoanStatement(previousQuestion);
     if (!complete(before) || !RATE_ASKED.test(previousQuestion)) return undefined;
+    /* one loan, never two: the earlier loan must agree with every amount the reader restates */
+    if (!restatesSameLoan(now, before)) return undefined;
     merged = {
       received: now.received ?? before.received,
       repaid: now.repaid ?? before.repaid,
@@ -176,18 +178,43 @@ export function loanScheduleChange(question: string): { readonly missing: readon
   return missing.length === 0 ? undefined : { missing };
 }
 
+/*
+  Independent Gate 4 preflight of eccbab0 (doc 24): after L1 "receive $950 … repay $1,050" and L2
+  "receive $900 … repay $1,000", the follow-up "…repay the $1,050 in 12 equal monthly instalments…"
+  bound the NEAREST complete loan, L2, and solved received 900 with repaid 1,050 — 33.7835 % for a
+  loan the reader never stated. A follow-up continues only an earlier loan whose amounts agree, BY
+  ROLE (received with received, repaid with repaid), with every amount the follow-up restates.
+*/
+const SAME_AMOUNT = 0.005;
+function restatesSameLoan(now: Partial3, before: Partial3): boolean {
+  const agrees = (restated?: { value: number }, earlier?: { value: number }) =>
+    restated === undefined || (earlier !== undefined && Math.abs(restated.value - earlier.value) < SAME_AMOUNT);
+  return agrees(now.received, before.received) && agrees(now.repaid, before.repaid);
+}
+
 /**
- * The earlier question a loan schedule change continues: the nearest of the reader's own earlier
- * questions (newest first, this thread only) that ITSELF stated a complete loan. `null` when the
- * question is a schedule change but no such question exists (the caller asks for the missing input);
- * `undefined` when the question is not a schedule change (the caller decides as before).
+ * The earlier question a loan schedule change continues: of the reader's own earlier questions
+ * (newest first, this thread only) that each stated a complete loan by themselves, those that agree
+ * with every amount the follow-up restates. The nearest of them — unless they disagree on what the
+ * follow-up would take from them, which is a genuinely ambiguous reference: no guess.
+ * `null` when the question is a schedule change but no single consistent loan exists (the caller asks
+ * for the missing input); `undefined` when it is not a schedule change (the caller decides as before).
  */
 export function loanContinuationAnchor(
   question: string,
   newestFirst: readonly string[],
 ): string | null | undefined {
   if (loanScheduleChange(question) === undefined) return undefined;
-  return newestFirst.find((q) => statedLoan(q) !== undefined) ?? null;
+  const consistent = newestFirst.filter(
+    (q) => statedLoan(q) !== undefined && statedLoan(question, q) !== undefined,
+  );
+  if (consistent.length === 0) return null;
+  const solved = (q: string) => {
+    const loan = statedLoan(question, q)!;
+    return `${loan.received}|${loan.repaid}`;
+  };
+  const nearest = solved(consistent[0]);
+  return consistent.every((q) => solved(q) === nearest) ? consistent[0] : null;
 }
 
 /** The periodic rate r with  received = payment × (1 − (1 + r)^−n) / r  (bisection; r ≥ 0). */
