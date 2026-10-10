@@ -523,7 +523,7 @@ export function readEntityCandidates(text: string, language: string): EntityCand
      Rwanda–Congo-Brazzaville relationship with zero matching reports. Brazzaville stays COG
      whenever it is named. */
   const easternCongo =
-    /\b(?:rwanda\w*|uganda\w*|burundi\w*|m23|kivu|goma|kinshasa|conflict|war|fighting|rebels?|militias?|minerals?|cobalt|coltan|eastern|uvira|bukavu|beni|butembo|bunia|ituri|kisangani|kolwezi|lubumbashi|katanga|fardc|monusco)\b/i.test(text) &&
+    /\b(?:rwanda\w*|uganda\w*|burundi\w*|m23|kivu|goma|kinshasa|conflict|war|fighting|rebels?|militias?|minerals?|cobalt|coltan|eastern\s+congo|uvira|bukavu|beni|butembo|bunia|ituri|kisangani|kolwezi|lubumbashi|katanga|fardc|monusco)\b/i.test(text) &&
     /* P0 NEWS R1 (EA P5) — eastern-DRC places and actors settle a bare "Congo"; Brazzaville /
        Republic of the Congo / Pointe-Noire keep COG and win */
     !/\b(?:brazzaville|republic\s+of\s+(?:the\s+)?congo|congo-brazzaville|pointe-noire)\b/i.test(text);

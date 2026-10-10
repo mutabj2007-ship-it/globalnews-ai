@@ -38,6 +38,12 @@ describe('router (semantic-ir/entities.ts)', () => {
     expect(routerIso('What is happening in Brazzaville, Republic of the Congo?')).toEqual(['COG']);
     expect(routerIso('Republic of the Congo and Kivu refugees')).not.toContain('COD');
   });
+  it('EA-G9 GUARD a bare "eastern" elsewhere never moves "Congo" (EA review of 36503f6)', () => {
+    expect(routerIso('News from Congo and eastern Europe today')).toEqual(['COG']);
+  });
+  it('EA-G10 GUARD Congo-Brazzaville actors stay COG', () => {
+    expect(routerIso('What did Sassou Nguesso say in Brazzaville, Congo?')).not.toContain('COD');
+  });
   it('an ordinary lower-case word that only looks like a country is still not a place', () => {
     expect(routerIso('turkey recipes for the holidays')).toEqual([]);
   });
@@ -46,6 +52,9 @@ describe('router (semantic-ir/entities.ts)', () => {
 describe('question ambiguity (analysis/anchor/event-anchor.util.ts)', () => {
   it('EA-G3 "South Kivu, eastern Congo" is not ambiguous', () => {
     expect(detectAmbiguousCountryMention('What happened in South Kivu, eastern Congo?')).toBeUndefined();
+  });
+  it('Pointe-Noire / Brazzaville settle the question as Congo-Brazzaville (no "which Congo?")', () => {
+    expect(detectAmbiguousCountryMention('What is happening in Pointe-Noire, Congo?')).toBeUndefined();
   });
   it('a bare "Congo" with no qualifier is still ambiguous', () => {
     expect(detectAmbiguousCountryMention('What happened in Congo?')).toMatchObject({ mention: 'Congo' });

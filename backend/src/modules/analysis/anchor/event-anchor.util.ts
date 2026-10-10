@@ -441,7 +441,9 @@ export function detectAmbiguousCountryMention(
     const match = re.exec(text);
     if (!match) continue;
     const at = match.index + match[1].length;
-    if (name.toLowerCase() === 'congo' && settledAsDrcByEasternContext(text)) continue;
+    /* an explicit place settles the question: eastern-DRC context → COD; Brazzaville / Republic of
+       the Congo / Pointe-Noire → COG (EA review of 36503f6) */
+    if (name.toLowerCase() === 'congo' && (settledAsDrcByEasternContext(text) || CONGO_BRAZZAVILLE_QUALIFIER.test(text))) continue;
     if (!isQualifiedMention(text, at, name.length))
       return { mention: text.slice(at, at + name.length), candidates };
   }
