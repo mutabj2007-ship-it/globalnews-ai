@@ -36,6 +36,8 @@ export interface ObservedRetrieval {
 interface RetrievalFacts {
   readonly articles?: readonly unknown[];
   readonly retrievalContext?: {
+    /** P0 NEWS R1 — false only when no provider was asked */
+    readonly retrievalAttempted?: false;
     readonly dataMode?: string;
     readonly outcome?: string;
     readonly fallbackReason?: string;
@@ -55,6 +57,8 @@ const count = (v: unknown): number | null =>
 export function observedRetrievalOf(response: RetrievalFacts | null | undefined): ObservedRetrieval {
   const ctx = response?.retrievalContext;
   if (!response || !ctx) return { retrievalOutcome: null, candidatesSeen: null, candidatesAdmitted: null };
+  /* P0 NEWS R1 — no provider was asked: not a provider failure, not a search outcome at all */
+  if (ctx.retrievalAttempted === false) return { retrievalOutcome: null, candidatesSeen: null, candidatesAdmitted: null };
   const admitted = response.articles?.length ?? 0;
   const seen = count(ctx.retrievalTrace?.candidatesSeen);
   const observedCounts = {

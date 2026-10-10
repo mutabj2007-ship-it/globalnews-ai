@@ -222,6 +222,7 @@ import {
   resolveRequestedSource,
   type RequestedSource,
 } from '../../news/identity/requested-source.util';
+import { classifyRequestedPublisher } from '../../news/identity/requested-publisher-state.util';
 import { polishCountryName } from '../query/polish-country-forms.util';
 import { derivePolishRetrievalQuery } from '../language/derive-polish-retrieval-query.util';
 import {
@@ -387,6 +388,9 @@ const NON_RETRIEVABLE_QUERY_CONTEXT: AnalysisRetrievalContext = {
     provider state we did not observe.
   */
   outcome: 'NO_RELEVANT_EVIDENCE',
+  /* P0 NEWS R1 — the explicit marker: no provider was asked, so no reader of this context may
+     classify it as a provider failure (dataMode 'unavailable' alone was read that way) */
+  retrievalAttempted: false,
 };
 
 /**
@@ -2520,7 +2524,18 @@ export class AnalysisService {
               }
 
               articles = sourceResponse.articles;
-              retrievalContext = contextOf(sourceResponse);
+              /* P0 NEWS R1 — the search was limited to the named, carried publisher: recorded so the
+                 reader is told the answer is from that publisher only (or that it had nothing) */
+              retrievalContext = {
+                ...contextOf(sourceResponse),
+                requestedPublisher: {
+                  phrase: sourceIntent?.rawSourcePhrase ?? sourceAttributed.requestedSource.displayName,
+                  state: 'CARRIED',
+                  reason: 'REQUESTED_SOURCE_CARRIED',
+                  displayName: sourceAttributed.requestedSource.displayName,
+                  topic: sourceAttributed.topic,
+                },
+              };
             }
           } else if (sourceIntent) {
             /*
@@ -2561,7 +2576,19 @@ export class AnalysisService {
             );
 
             articles = [];
-            retrievalContext = NON_RETRIEVABLE_QUERY_CONTEXT;
+            /* P0 NEWS R1 (Claude G, G-ASK-4) — say WHICH unavailability this is: a recognised masthead
+               this product does not carry, or no publisher identity at all — never "nothing found" */
+            const verdict = classifyRequestedPublisher(sourceIntent.rawSourcePhrase);
+            retrievalContext = {
+              ...NON_RETRIEVABLE_QUERY_CONTEXT,
+              requestedPublisher: {
+                phrase: sourceIntent.rawSourcePhrase,
+                state: verdict.state,
+                reason: verdict.reason,
+                displayName: verdict.displayName,
+                topic: sourceIntent.query?.topic ?? null,
+              },
+            };
           } else if (relationalQuery) {
             this.logger.debug('Detected relational query.');
 

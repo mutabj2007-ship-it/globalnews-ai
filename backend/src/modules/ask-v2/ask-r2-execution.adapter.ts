@@ -1553,8 +1553,18 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       could only invent "developments". It is the honest no-evidence answer instead (below), and a
       provider failure is a failure — never a background answer standing in for current reporting.
     */
+    /*
+      P0 NEWS R1 — the reader named a publisher that was NOT searched (recognised but not carried,
+      or unrecognised). Answering the rest of the question from general knowledge would put a
+      background answer (on Alpha: a Blackwater biography) where the reader asked for that
+      publisher's reporting. The honest outcome is the precise "not searched" statement only.
+    */
+    const publisherNotSearched =
+      response?.retrievalContext?.requestedPublisher !== undefined &&
+      response.retrievalContext.requestedPublisher.state !== 'CARRIED';
     if (
-      (route.knowledgeRequirement === 'MIXED_REFERENCE_CURRENT' &&
+      !publisherNotSearched &&
+      ((route.knowledgeRequirement === 'MIXED_REFERENCE_CURRENT' &&
         contract.stableDependsOnFindings !== true &&
         (noEvidence || outcome !== 'SUCCESS' || response === null)) ||
       /* ASK RELIABILITY R1 (G) — a CURRENT question whose named actors / topic left NO relevant
@@ -1563,7 +1573,7 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
          (rule 14: an unverified premise is discussed only conditionally; a table if asked), with
          the current part named as still needing sourced evidence. Entirely-current questions
          ("oil prices today") are declined by the background capability itself. */
-      (anchors.gated && noEvidence && route.knowledgeRequirement === 'CURRENT_REPORTING')
+      (anchors.gated && noEvidence && route.knowledgeRequirement === 'CURRENT_REPORTING'))
     ) {
       /* RESEARCH ACTIVITY R1.1 (CTO review) — the operator record keeps what the search did on
          this path too (it was recorded only on the main path: retrievalOutcome stayed NULL) */

@@ -40,8 +40,19 @@ export interface AskResearchLanes {
 /** RESEARCH ACTIVITY R1.1 (CTO review) — a call was made but carried no typed outcome. */
 export type AskResearchOutcome = RetrievalOutcomeCode | 'OUTCOME_UNAVAILABLE';
 
+/** P0 NEWS R1 (Claude G, G-ASK-4) — the reader named a publisher; its verdict (identity only). */
+export interface AskRequestedPublisher {
+  readonly phrase: string;
+  readonly state: 'CARRIED' | 'RECOGNISED_NOT_CARRIED' | 'UNRECOGNISED';
+  readonly reason: string;
+  readonly displayName: string | null;
+  readonly topic: string | null;
+}
+
 export interface AskResearchRecord {
   readonly schema: typeof ASK_RESEARCH_SCHEMA;
+  /** P0 NEWS R1 — present when the reader named a publisher (searched or not) */
+  readonly requestedPublisher?: AskRequestedPublisher;
   readonly performed: boolean;
   readonly outcome: AskResearchOutcome | null;
   readonly reused: boolean;
@@ -54,6 +65,8 @@ export interface AskResearchRecord {
 export interface ResearchFacts {
   readonly articles?: readonly unknown[];
   readonly retrievalContext?: {
+    readonly retrievalAttempted?: false;
+    readonly requestedPublisher?: AskRequestedPublisher;
     readonly dataMode?: string;
     readonly outcome?: string;
     readonly retrievalOutcome?: string;
@@ -104,6 +117,11 @@ export function researchRecordOf(
   const notPerformed: AskResearchRecord = { schema: ASK_RESEARCH_SCHEMA, performed: false, outcome: null, reused, lanes: NO_LANES, candidatesSeen: null, candidatesAdmitted: null };
   /* no retrieval call for this answer, or the landed path asked the reader before searching */
   if (facts == null || ctx?.retrievalOutcome === 'CLARIFICATION_REQUIRED') return notPerformed;
+  /* P0 NEWS R1 — no provider was asked (e.g. a requested publisher this product does not carry):
+     not performed, and the publisher verdict travels with the record so the reader is told why */
+  if (ctx?.retrievalAttempted === false) {
+    return ctx.requestedPublisher === undefined ? notPerformed : { ...notPerformed, requestedPublisher: ctx.requestedPublisher };
+  }
   if (reused) return notPerformed;
   /* RESEARCH ACTIVITY R1.1 — a call WAS made (facts exist) but carried no typed outcome: say so */
   if (ctx === null) {
@@ -112,6 +130,7 @@ export function researchRecordOf(
   const observed = observedRetrievalOf({ articles: facts.articles, retrievalContext: ctx });
   return {
     schema: ASK_RESEARCH_SCHEMA,
+    ...(ctx.requestedPublisher === undefined ? {} : { requestedPublisher: ctx.requestedPublisher }),
     performed: true,
     outcome: observed.retrievalOutcome ?? 'OUTCOME_UNAVAILABLE',
     reused,

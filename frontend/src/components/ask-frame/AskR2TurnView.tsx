@@ -2,6 +2,7 @@
 import { AskSubmittedQuestion } from './AskSubmittedQuestion';
 import { AskSearchActivity } from './AskProgressPanel';
 import { searchActivityOf } from '@/lib/ask/askSearchActivity';
+import { askPublisherStrings } from '@/lib/ask/askPublisherStrings';
 import { ASK_INPUT_TOO_LONG, type DisplayLocale } from '@globalnews-ai/shared';
 
 import { askFormatDate, isolatedAuto, isolatedLtr } from '@/lib/ask/askDirection';
@@ -818,6 +819,33 @@ export function AskR2TurnView({
               {r.generalExplanationLine}
             </p>
           )}
+          {/*
+            P0 NEWS R1 — the reader named a publisher (Claude G G-ASK-4): say exactly which case this
+            is. A recognised masthead this product does not carry was NOT searched and nothing else
+            was put in its place; the same question without the publisher is offered as a DRAFT only.
+          */}
+          {(() => {
+            const pub = payload.research?.requestedPublisher;
+            if (pub === undefined) return null;
+            const ps = askPublisherStrings(locale);
+            const name = pub.displayName ?? pub.phrase;
+            const line =
+              pub.state === 'RECOGNISED_NOT_CARRIED'
+                ? ps.notCarried(name)
+                : pub.state === 'UNRECOGNISED'
+                  ? ps.unrecognised(pub.phrase)
+                  : ps.carriedOnly(name);
+            return (
+              <div data-ask="requested-publisher" data-ask-publisher-state={pub.state}>
+                <p>{line}</p>
+                {pub.state !== 'CARRIED' && pub.topic !== null && pub.topic.trim() !== '' && onUseQuestion !== undefined && (
+                  <button type="button" data-ask="ask-without-publisher" onClick={() => onUseQuestion(ps.withoutDraft(pub.topic!.trim()))}>
+                    {ps.askWithout(name)}
+                  </button>
+                )}
+              </div>
+            );
+          })()}
           {/* Design D1 — "Edit question" comes last, after what can be tried, and puts the reader's
               own words back in the composer. */}
           {view.badge === 'insuf' && onUseQuestion !== undefined && (

@@ -905,6 +905,28 @@ export interface AnalysisRetrievalContext {
   fallbackReason?: NewsFallbackReason;
 
   /**
+   * P0 NEWS R1 — present (false) only when NO PROVIDER WAS ASKED (no lexical query, a comparison
+   * with no members, or a requested publisher this product does not carry). Readers of this
+   * context must not classify it as a provider failure: nothing about a provider was observed.
+   */
+  retrievalAttempted?: false;
+
+  /**
+   * P0 NEWS R1 (Claude G, G-ASK-4) — the reader named a publisher. The verdict of
+   * classifyRequestedPublisher(): CARRIED (searched), RECOGNISED_NOT_CARRIED (a known masthead
+   * with no ingest right: not searched), UNRECOGNISED (no publisher identity established). The
+   * topic is the rest of the question, so the reader can be offered the same question without the
+   * publisher constraint. Identity only — never an ingest or fetch authorization.
+   */
+  requestedPublisher?: {
+    readonly phrase: string;
+    readonly state: 'CARRIED' | 'RECOGNISED_NOT_CARRIED' | 'UNRECOGNISED';
+    readonly reason: string;
+    readonly displayName: string | null;
+    readonly topic: string | null;
+  };
+
+  /**
    * ISO-8601 publication timestamp of the newest retrieved article.
    * Only reliably available on the country-aware retrieval path today.
    * Describes evidence freshness — never a substitute for

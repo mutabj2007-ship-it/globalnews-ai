@@ -1,0 +1,113 @@
+import type { CountryNewsResponse, NewsArticle, NewsResponse } from '@globalnews-ai/shared';
+import { ANALYSIS_TOTAL_BUDGET_MS, resolveCountryByAnyIdentifier } from '@globalnews-ai/shared';
+
+import type { AnalysisProvider } from '../interfaces';
+import type { AnalysisConfigService } from '../config/analysis-config.service';
+import { AnalysisService } from './analysis.service';
+import { scoreGenericRelevance } from '../../news/relevance/generic-relevance.util';
+import { scoreCountryRelevance } from '../../news/country/country-relevance.util';
+import { isAttributableToRequestedSource, type RequestedSource } from '../../news/identity/requested-source.util';
+
+/*
+  P0 SOURCE-BACKED NEWS ANSWERS R1 — the Product Owner's EXACT wording, through the real
+  AnalysisService (providers stubbed; no network, no model). Proves what each form does at the
+  retrieval boundary after Claude G's correction + the integrator wiring:
+    · N1 "…According reuters please." → Reuters RECOGNISED, NOT CARRIED: no provider, no country
+      route, no model call, and the reader-facing verdict travels in the retrieval context.
+    · idioms are never publisher requests.
+  The Reuters article is a FIXTURE whose title / URL / date are the CTO-verified facts; its summary is
+  synthetic. A fixture passing is NOT proof of live retrieval (CTO P0 order §TASK CODE 5).
+*/
+const REUTERS_FIXTURE: NewsArticle = {
+  id: 'reuters-fixture-1',
+  title: "Erik Prince's forces suffer battlefield loss in Congo, former UFC fighter among wounded, sources say",
+  summary: 'FIXTURE — synthetic summary for a retrieval-boundary test; not the article text.',
+  url: 'https://www.reuters.com/world/africa/erik-princes-forces-suffer-battlefield-loss-congo-former-ufc-fighter-among-2026-10-09/',
+  sourceId: 'gnews:reuters',
+  sourceName: 'Reuters',
+  countryCode: 'COD',
+  category: 'world',
+  sourcesCount: 1,
+  publishedAt: '2026-10-09T12:00:00.000Z',
+  publishedAtBasis: 'publisher',
+} as NewsArticle;
+
+function harness(corpus: NewsArticle[]) {
+  const searchCalls: Array<{ query: string; requestedSourceId?: string }> = [];
+  const countryCalls: string[] = [];
+  const newsService = {
+    search: jest.fn(async (query: string, _l?: number, mode?: { type?: string }, options?: { requestedSource?: RequestedSource }): Promise<NewsResponse> => {
+      searchCalls.push({ query, ...(options?.requestedSource ? { requestedSourceId: options.requestedSource.sourceId } : {}) });
+      const gated = mode?.type === 'generic' ? corpus.filter((c) => scoreGenericRelevance(c, query).isRelevant) : corpus;
+      const articles = options?.requestedSource ? gated.filter((c) => isAttributableToRequestedSource(c, options.requestedSource!)) : gated;
+      return { articles, totalResults: articles.length, providers: ['gnews'], dataMode: 'live', generatedAt: new Date().toISOString() } as NewsResponse;
+    }),
+    topHeadlines: jest.fn(async (): Promise<NewsResponse> => ({ articles: [], totalResults: 0, providers: ['gnews'], dataMode: 'live', generatedAt: new Date().toISOString() }) as NewsResponse),
+    findArticleById: jest.fn(async () => null),
+    findRetainedByCountry: jest.fn(async () => []),
+  };
+  const countryNewsService = {
+    getCountryNews: jest.fn(async (identifier: string): Promise<CountryNewsResponse> => {
+      countryCalls.push(identifier);
+      const country = resolveCountryByAnyIdentifier(identifier);
+      const articles = country ? corpus.filter((c) => scoreCountryRelevance(c, country).isRelevant) : [];
+      return { countryCode: country?.iso3 ?? identifier, countryName: country?.name ?? identifier, articles, totalResults: articles.length, providers: ['gnews'], dataMode: 'live', generatedAt: new Date().toISOString() } as unknown as CountryNewsResponse;
+    }),
+  };
+  const provider: AnalysisProvider = {
+    id: 'mock-analysis',
+    displayName: 'Mock',
+    isMock: true,
+    analyzeNews: jest.fn(async () => {
+      throw new Error('analysis provider reached');
+    }),
+  };
+  const config = {
+    get: () => ({
+      maxArticles: 8, maxArticleChars: 1200, timeoutMs: 20000, totalBudgetMs: ANALYSIS_TOTAL_BUDGET_MS, cacheTtlSeconds: 0,
+      openAiApiKey: undefined, openAiModel: 'gpt-4o-mini', executionMode: 'development' as const, retryAttempts: 2, retryBaseDelayMs: 300, maxCompletionTokens: 2000,
+    }),
+  } as unknown as AnalysisConfigService;
+  return { service: new AnalysisService(newsService as never, countryNewsService as never, provider, config), searchCalls, countryCalls, provider };
+}
+
+describe('N1 — "Report abt Eric Prince in congo. According reuters please." (exact)', () => {
+  it('Reuters is recognised but not carried: no provider, no country route, no model call; the verdict is recorded', async () => {
+    const h = harness([REUTERS_FIXTURE]);
+    const response = await h.service.analyzeNews('Report abt Eric Prince in congo. According reuters please.');
+    expect(h.searchCalls).toEqual([]);
+    expect(h.countryCalls).toEqual([]);
+    expect(h.provider.analyzeNews).not.toHaveBeenCalled();
+    expect(response.articles).toEqual([]);
+    expect(response.retrievalContext.retrievalAttempted).toBe(false);
+    expect(response.retrievalContext.requestedPublisher).toMatchObject({
+      phrase: 'reuters',
+      state: 'RECOGNISED_NOT_CARRIED',
+      reason: 'REQUESTED_SOURCE_NOT_CARRIED_NO_INGEST_RIGHTS',
+      displayName: 'Reuters',
+    });
+    /* the topic is offered back so the reader can ask without the publisher (draft only) */
+    expect(response.retrievalContext.requestedPublisher?.topic ?? '').toMatch(/eric prince/i);
+  });
+});
+
+describe('N2 — "According to Reuters, what happened to Erik Prince\'s forces in eastern Congo?"', () => {
+  it('same verdict for the grammatical form; never answered from another publisher', async () => {
+    const h = harness([REUTERS_FIXTURE]);
+    const response = await h.service.analyzeNews("According to Reuters, what happened to Erik Prince's forces in eastern Congo?");
+    expect(h.searchCalls).toEqual([]);
+    expect(response.retrievalContext.requestedPublisher?.state).toBe('RECOGNISED_NOT_CARRIED');
+  });
+});
+
+describe('idioms are never publisher requests', () => {
+  it.each([
+    'The rollout went according to plan in Kigali this week.',
+    'Did the election in Kenya go according to plan?',
+    'The attack, according to witnesses, killed three people in Goma.',
+  ])('%s', async (q) => {
+    const h = harness([]);
+    const response = await h.service.analyzeNews(q);
+    expect(response.retrievalContext.requestedPublisher).toBeUndefined();
+  });
+});

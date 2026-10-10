@@ -153,6 +153,14 @@ export type AskResearchOutcome =
   | 'OUTCOME_UNAVAILABLE';
 export interface AskResearchRecord {
   readonly schema: 'ask-research/1';
+  /** P0 NEWS R1 (Claude G G-ASK-4) — the reader named a publisher: its verdict (identity only). */
+  readonly requestedPublisher?: {
+    readonly phrase: string;
+    readonly state: 'CARRIED' | 'RECOGNISED_NOT_CARRIED' | 'UNRECOGNISED';
+    readonly reason: string;
+    readonly displayName: string | null;
+    readonly topic: string | null;
+  };
   readonly performed: boolean;
   readonly outcome: AskResearchOutcome | null;
   readonly reused: boolean;
