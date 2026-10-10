@@ -48,10 +48,10 @@ describe('T1 · coverage check (whole-product matrix input)', () => {
     const maximal = buildCoverageCheck(maximalActivation());
     expect(maximal.totals.coverageStates.COVERED_LOCAL).toBe(0);
     expect(maximal.totals.coverageStates.UNVERIFIED).toBe(0);
-    expect(maximal.feedRightsGate.refused.map((r) => r.sourceId).sort()).toEqual([
-      'feed:standardmedia-ke',
-      'feed:wp-pl',
-    ]);
+    /* E1-TAA-1 — every live feed is below CLEARED, so maximal activation is refused in full */
+    expect(maximal.feedRightsGate.refused.map((r) => r.sourceId).sort()).toEqual(
+      ['feed:cbk-ke', 'feed:gus-pl', 'feed:ktpress-rw', 'feed:standardmedia-ke', 'feed:taarifa-rw', 'feed:wp-pl'],
+    );
   });
 
   it('building the check performs no HTTP request', () => {

@@ -222,8 +222,13 @@ describe('PUBLISHER FEEDS LANE — ships disabled, and nothing can switch it on 
     expect(selection.unknownIds).toEqual(['feed:ktpres-rw']);
   });
 
+  /* E1-TAA-1 — the MECHANICS on a synthetic CLEARED copy (no live row is CLEARED today) */
   it('naming an id activates exactly that id, and only through `enabled`', () => {
-    const selection = resolveActiveFeedSources(FEED_SOURCES, 'feed:ktpress-rw');
+    const cleared = FEED_SOURCES.map((f) =>
+      f.sourceId === 'feed:ktpress-rw' ? { ...f, rights: { ...f.rights, state: 'CLEARED' as const } } : f,
+    );
+    expect(resolveActiveFeedSources(FEED_SOURCES, 'feed:ktpress-rw').sources).toEqual([]); /* real state: refused */
+    const selection = resolveActiveFeedSources(cleared, 'feed:ktpress-rw');
 
     expect(selection.sources).toHaveLength(1);
     expect(selection.sources[0].sourceId).toBe('feed:ktpress-rw');

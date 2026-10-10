@@ -53,14 +53,15 @@ describe('T1 · canonical coverage over the 54 governed countries', () => {
     expect(news.rightsBlockedLocalSourceCount).toBeGreaterThanOrEqual(1);
   });
 
-  it('an activated feed with unresolved rights is ACTIVE but never makes coverage', () => {
+  /* E1-TAA-1 (supersedes "ACTIVE but never coverage"): a feed with unresolved rights is refused */
+  it('a feed with unresolved rights is refused by the registry and never makes coverage', () => {
     const activation = sourceActivationFromConfig(
       config({ RSS_FEEDS_ENABLED: 'true', RSS_FEED_SOURCES: 'feed:ktpress-rw,feed:standardmedia-ke' }),
     );
-    expect([...activation.activeFeedIds]).toEqual(['feed:ktpress-rw']);
+    expect([...activation.activeFeedIds]).toEqual([]);
     const rwa = governedSourceCoverage(activation).find((r) => r.iso3 === 'RWA')!;
     const news = rwa.coverageDomains.find((d) => d.domain === 'NEWS_REPORTING')!;
-    expect(news.activeLocalSourceCount).toBe(1);
+    expect(news.activeLocalSourceCount).toBe(0);
     expect(news.rightsClearedLocalSourceCount).toBe(0);
     expect(news.state).toBe('COVERAGE_GAP');
     expect(news.state).not.toBe('COVERED_LOCAL');

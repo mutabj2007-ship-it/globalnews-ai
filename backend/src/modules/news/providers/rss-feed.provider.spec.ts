@@ -1,6 +1,24 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import type { ConfigService } from '@nestjs/config';
+/*
+  E1-TAA-1 / CTO R1 ruling — the activation, gate, health and failure-counting MECHANICS below are
+  exercised against a SYNTHETIC registry: the real rows, with every state below CLEARED marked
+  CLEARED (no live row is CLEARED today, so a real registry activates nothing). RESTRICTED and
+  PROHIBITED rows keep their real states, so the refusal assertions here stay real. The real governed
+  states (every live feed refused) are asserted in feed-rights-gate.spec.ts.
+*/
+jest.mock('./feed-source-registry', () => {
+  const actual = jest.requireActual('./feed-source-registry');
+  return {
+    ...actual,
+    FEED_SOURCES: actual.FEED_SOURCES.map((row: { rights: { state: string } }) =>
+      row.rights.state === 'RESTRICTED' || row.rights.state === 'PROHIBITED'
+        ? row
+        : { ...row, rights: { ...row.rights, state: 'CLEARED' } },
+    ),
+  };
+});
 import { parseFeed } from './parse-feed.util';
 import { RssFeedProvider, isRssFeedsEnabled } from './rss-feed.provider';
 import {
@@ -849,12 +867,24 @@ describe('REGRESSIONS THE CONTRIBUTION HARNESS CAUGHT ON ITS FIRST ACTIVATED RUN
     expect(health.message).toContain('succeeded');
   });
 
+  /* only admissible feeds here: a lane beside refused feeds is degraded by rule (next test) */
+  const ADMISSIBLE = 'feed:ktpress-rw,feed:taarifa-rw,feed:cbk-ke,feed:gus-pl';
+
   it('does not claim an outcome before any fetch has been attempted', async () => {
-    const health = await providerWith(SIX).health();
+    const health = await providerWith(ADMISSIBLE).health();
 
     expect(health.status).toBe('ok');
     expect(health.message).toContain('No fetch has been attempted yet');
     expect(health.requestCount).toBeUndefined();
+  });
+
+  /* E1-TAA-1 / CTO R1 — refused feeds are never collected, and the lane says so as DEGRADED */
+  it('a lane whose allowlist names registry-refused feeds reports DEGRADED and names the refusal', async () => {
+    const health = await providerWith(SIX).health();
+
+    expect(health.status).toBe('degraded');
+    expect(health.message).toContain('Refused by rights gate');
+    expect(health.message).toContain('feed:wp-pl');
   });
 
   /**

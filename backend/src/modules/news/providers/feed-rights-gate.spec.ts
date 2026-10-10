@@ -27,9 +27,10 @@ describe('T1 · feed rights are recorded per entry, from the governed packs', ()
 });
 
 describe('T1 · the gate', () => {
-  it('refuses RESTRICTED/PROHIBITED feeds named in the allowlist, with reason and evidence', () => {
+  /* E1-TAA-1 — the registry binds: every feed below CLEARED is refused, each with its own reason */
+  it('refuses every feed below CLEARED named in the allowlist (real governed states), with reason and evidence', () => {
     const selection = resolveActiveFeedSources(FEED_SOURCES, 'feed:standardmedia-ke,feed:ktpress-rw');
-    expect(selection.sources.map((s) => s.sourceId)).toEqual(['feed:ktpress-rw']);
+    expect(selection.sources).toEqual([]);
     expect(selection.refused).toEqual([
       {
         sourceId: 'feed:standardmedia-ke',
@@ -37,8 +38,14 @@ describe('T1 · the gate', () => {
         rightsState: 'RESTRICTED',
         evidence: expect.stringContaining('KEN.json'),
       },
+      {
+        sourceId: 'feed:ktpress-rw',
+        reason: 'RIGHTS_NOT_CLEARED',
+        rightsState: 'UNRESOLVED',
+        evidence: expect.any(String),
+      },
     ]);
-    expect(selection.rightsUnresolved).toEqual([{ sourceId: 'feed:ktpress-rw', rightsState: 'UNRESOLVED' }]);
+    expect(selection.rightsUnresolved).toEqual([]);
   });
 
   it('also refuses a restricted feed that ships enabled:true (no override path)', () => {
@@ -50,9 +57,15 @@ describe('T1 · the gate', () => {
     expect(selection.refused.map((r) => r.sourceId)).toEqual(['feed:standardmedia-ke']);
   });
 
-  it('feedActivationRefusal is null for unresolved-but-not-restricted feeds', () => {
+  /* E1-TAA-1 (supersedes "null for unresolved-but-not-restricted"): Taarifa ran 14 days on HOLD */
+  it('feedActivationRefusal refuses a LIMITED_SCOPE_REVIEW feed (Taarifa) and admits only a CLEARED row', () => {
     const taarifa = FEED_SOURCES.find((f) => f.sourceId === 'feed:taarifa-rw')!;
-    expect(feedActivationRefusal(taarifa)).toBeNull();
+    expect(feedActivationRefusal(taarifa)).toMatchObject({ sourceId: 'feed:taarifa-rw', reason: 'RIGHTS_NOT_CLEARED', rightsState: 'LIMITED_SCOPE_REVIEW' });
+    expect(feedActivationRefusal({ ...taarifa, rights: { ...taarifa.rights, state: 'CLEARED' } })).toBeNull();
+  });
+
+  it('no live registry row is admitted today (every state below CLEARED)', () => {
+    for (const row of FEED_SOURCES) expect(feedActivationRefusal(row)).not.toBeNull();
   });
 
   it('governed local fan-out never sees a refused feed', () => {
@@ -73,14 +86,17 @@ describe('T1 · health records the refusal and the unresolved rights', () => {
 
   it('lists refused and rights-unresolved feeds in message and structured field', async () => {
     const health = await provider('feed:standardmedia-ke,feed:wp-pl,feed:taarifa-rw').health();
-    expect(health.message).toContain('Refused by rights gate: feed:standardmedia-ke (RIGHTS_RESTRICTED), feed:wp-pl (RIGHTS_PROHIBITED)');
-    expect(health.message).toContain('Active without cleared rights: feed:taarifa-rw (LIMITED_SCOPE_REVIEW)');
+    expect(health.message).toContain(
+      'Refused by rights gate: feed:standardmedia-ke (RIGHTS_RESTRICTED), feed:wp-pl (RIGHTS_PROHIBITED), feed:taarifa-rw (RIGHTS_NOT_CLEARED)',
+    );
+    expect(health.message).not.toContain('Active without cleared rights');
     expect(health.sourceRights).toEqual({
       refused: [
         { sourceId: 'feed:standardmedia-ke', reason: 'RIGHTS_RESTRICTED', rightsState: 'RESTRICTED' },
         { sourceId: 'feed:wp-pl', reason: 'RIGHTS_PROHIBITED', rightsState: 'PROHIBITED' },
+        { sourceId: 'feed:taarifa-rw', reason: 'RIGHTS_NOT_CLEARED', rightsState: 'LIMITED_SCOPE_REVIEW' },
       ],
-      rightsUnresolved: [{ sourceId: 'feed:taarifa-rw', rightsState: 'LIMITED_SCOPE_REVIEW' }],
+      rightsUnresolved: [],
     });
   });
 
