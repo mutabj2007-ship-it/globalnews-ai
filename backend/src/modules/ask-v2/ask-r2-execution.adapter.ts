@@ -126,6 +126,7 @@ import { isSameHeadline } from '../news/identity/headline-identity.util';
 import { AskObservationService } from '../ask-observability/ask-observation.service';
 import { questionAnchorsOf, sameMessageSubject, stableClauseNeedsMessage } from '../analysis/query/question-anchors.util';
 import { observedRetrievalOf } from './retrieval-outcome';
+import { researchRecordOf, type ResearchFacts } from './research-record';
 import { productMetaAnswer, readProductMeta } from './product-meta';
 import { checkWrittenArithmetic } from '../analysis/providers/arithmetic-check.util';
 import {
@@ -1575,6 +1576,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         noEvidence && !retrievalFailed(response) ? 'NO_EVIDENCE' : 'UNAVAILABLE',
         undefined,
         contract.stableQuestion ?? undefined,
+        /* ASK R3 RESEARCH ACTIVITY R1 — the search that ran is recorded, not dropped */
+        response,
       );
     }
     if ((outcome !== 'SUCCESS' && !noEvidence) || response === null) {
@@ -2419,6 +2422,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
     semantic?: ClassifierRun,
     /** R4 ALPHA R-2 — a MIXED turn's explanatory part: what this reasoning call answers */
     stableQuestion?: string,
+    /** ASK R3 RESEARCH ACTIVITY R1 — the retrieval this answer followed (absent: none ran) */
+    retrieval?: ResearchFacts | null,
   ): Promise<ExecutionResult> {
     /* CTO R4 — the job's rules, the conversation's earlier work and the answer's ceiling */
     const ceiling = completionCeilingFor(route.job);
@@ -2628,6 +2633,9 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         artifactUsed: request.priorArtifact ?? null,
         classifier: semantic ?? null,
       },
+      null,
+      null,
+      retrieval ?? null,
     );
   }
 
@@ -2868,6 +2876,11 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       readonly evidence: 'REUSED' | 'SEARCHED_AGAIN';
       readonly excluded: readonly string[];
     } | null = null,
+    /**
+     * ASK R3 RESEARCH ACTIVITY R1 — the retrieval response this answer followed when it is not
+     * `analysis` (a background answer after a search that found nothing). Omitted: `analysis`.
+     */
+    researchSource?: ResearchFacts | null,
   ): ExecutionResult {
     this.logger.log(
       `ask-r2 operation=${operationId} class=${route.plan.questionClass} terminal=${route.plan.terminalState} ` +
@@ -2952,6 +2965,11 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         /* ASK GENERAL BACKGROUND EXECUTION R1 — additive. Non-citable, non-sourced model
            background text (never present alongside a non-null `analysis`). */
         background: backgroundText === null ? null : { text: backgroundText },
+        /* ASK R3 RESEARCH ACTIVITY R1 — what the search actually did (performed / outcome / lanes /
+           reused), by the same classifier as AskObservation.retrievalOutcome; read on reopen */
+        research: researchRecordOf(researchSource === undefined ? analysis : researchSource, {
+          reused: rework?.evidence === 'REUSED',
+        }),
         /* CTO P0 — advice is GENERAL GUIDANCE from model reasoning, never current sourced research;
            a mixed question names the part that needs current sourced evidence. */
         ...(route.knowledgeRequirement === 'ADVISORY' ||

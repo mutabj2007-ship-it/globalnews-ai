@@ -3154,3 +3154,64 @@ describe('CONVERSATIONAL INTELLIGENCE JOURNEY R3 — decision support, constrain
     expect(policy?.relationship).toBeUndefined();
   });
 });
+
+/*
+  ASK R3 RESEARCH ACTIVITY R1 — PO acceptance failure (Alpha 0717ff7, op 7c7b9ecb…): an answer that
+  could not verify relevant reporting showed no Search activity. The stored payload now carries the
+  research record on every path, including the background answer that follows a search which
+  found nothing (it used to drop the search entirely).
+*/
+describe('ASK R3 RESEARCH ACTIVITY R1 — the stored research record on every execution path', () => {
+  const PO =
+    'What has changed in trade and transportation between Tanzania and Rwanda during the past 30 days? Cite dated original sources, and distinguish verified developments from unconfirmed claims.';
+  /* the MIXED question the existing partial-answer tests prove takes the background path */
+  const MIXED = 'Why do volcanoes erupt, and what is the latest news about the eruption in Iceland?';
+  const noMatch = {
+    analysis: null,
+    analysisError: 'No matching reporting.',
+    articles: [],
+    retrievalContext: {
+      dataMode: 'live',
+      providers: ['gnews', 'rss-feeds'],
+      retrievalTrace: { lanesAttempted: ['gnews', 'rss-feeds'], lanesSucceeded: ['gnews', 'rss-feeds'], lanesUnavailable: [], candidatesSeen: 0, candidatesAdmitted: 0 },
+    },
+  };
+  const outage = {
+    analysis: null,
+    analysisError: 'Providers unavailable.',
+    articles: [],
+    retrievalContext: { dataMode: 'unavailable', providers: [], fallbackReason: 'provider-error', providerFailures: [{ providerId: 'gnews', kind: 'unavailable' }] },
+  };
+  const run = async (question: string, analysis: unknown, background = 'General background.') => {
+    const { adapter, calls } = harness({ analysis: async () => analysis as never, background: async () => ({ text: background }) });
+    const plan = await adapter.prepare(req(question));
+    const payload = JSON.parse((await inRequest(() => adapter.execute(req(question), plan, 'op-1'))).payloadJson);
+    return { payload, calls };
+  };
+
+  it('the PO question: research ran and found nothing — recorded as performed, COMPLETED_NO_MATCH', async () => {
+    const { payload, calls } = await run(PO, noMatch);
+    expect(calls.analysis).toHaveLength(1);
+    expect(payload.research).toMatchObject({ schema: 'ask-research/1', performed: true, outcome: 'COMPLETED_NO_MATCH', reused: false });
+    expect(payload.research.lanes.succeeded).toEqual(['gnews', 'rss-feeds']);
+  });
+
+  it('a MIXED turn answered as background after an empty search keeps the search record (was dropped)', async () => {
+    const { payload, calls } = await run(MIXED, noMatch);
+    expect(calls.analysis).toHaveLength(1);
+    expect(payload.analysis).toBeNull();
+    expect(payload.research).toMatchObject({ performed: true, outcome: 'COMPLETED_NO_MATCH' });
+  });
+
+  it('a provider outage is recorded as PROVIDER_FAILED with the unavailable lane', async () => {
+    const { payload } = await run(MIXED, outage);
+    expect(payload.research).toMatchObject({ performed: true, outcome: 'PROVIDER_FAILED' });
+    expect(payload.research.lanes.unavailable).toEqual([{ lane: 'gnews', reason: 'unavailable' }]);
+  });
+
+  it('a background-only answer records that no research was performed', async () => {
+    const { payload, calls } = await run('What is inflation?', noMatch);
+    expect(calls.analysis).toHaveLength(0);
+    expect(payload.research).toMatchObject({ performed: false, outcome: null, reused: false });
+  });
+});
