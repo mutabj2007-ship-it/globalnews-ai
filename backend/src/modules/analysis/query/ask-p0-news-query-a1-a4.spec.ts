@@ -1,10 +1,24 @@
 /**
- * P0 ASK-P0-NEWS-QUERY-A1-A4-R1 — offline acceptance for A1 and A4.
+ * P0 ASK-P0-NEWS-QUERY-A1-A4 — offline acceptance for A1 (R3) and A4 (R2, qualified).
  *
  * The DRC question below is VERBATIM from live operation
  * `3a3eb693-a669-4609-b912-e17483fd6124` (2026-10-10T08:09:42Z). No network,
  * no provider, no model, no database: every assertion is a pure function of
  * the query authority.
+ *
+ * WHAT R3 HAD TO PROVE, AND HOW THIS FILE PROVES IT.
+ *
+ * R2's intake found seven tests that pass on the accepted Alpha baseline
+ * `9aab213` and failed under R2, because a general rewriter also rewrote queries
+ * that were never broken. R3's claim is therefore a NEGATIVE one — "nothing
+ * outside a recognized pattern changed" — and a negative claim is not provable
+ * by listing examples that happen to work.
+ *
+ * So the first describe below does not compare against a literal. It compares
+ * against `makeProviderSafeNewsQuery()`, the baseline's own provider-query
+ * function, and asserts byte equality. Every input on which the pattern does not
+ * match is checked against what `9aab213` itself would have sent, which is the
+ * only form of the claim that cannot drift.
  */
 import {
   deriveFallbackNewsQuery,
@@ -13,7 +27,9 @@ import {
 } from './derive-generic-news-query.util';
 import { detectSourceAttributedIntent } from './derive-source-attributed-query.util';
 import {
-  MAX_PROVIDER_QUERY_TERMS,
+  GNEWS_QUERY_CODE_POINT_MAX,
+  MAX_SUBJECT_SPAN_TERMS,
+  MIN_TERMS_FOR_PATTERN,
   makeGenericProviderFallbackQuery,
   makeGenericProviderQuery,
   reduceNewsQueryForProvider,
@@ -33,155 +49,353 @@ import {
 const DRC =
   'What are the latest verified developments in eastern DR Congo over the last seven days? ' +
   'Give the original sources, publication dates, and distinguish confirmed facts from allegations.';
-const KIBIRIZI = 'What are the latest verified reports about flooding in Kibirizi villages';
+const KIBIRIZI =
+  'What are the latest verified reports about flooding in Kibirizi village, South Kivu, ' +
+  'over the last seven days? Give the original sources.';
+const SEMICONDUCTORS =
+  'Please give me a careful, sourced overview with publication dates of the latest developments ' +
+  'in global semiconductor export controls and explain what remains uncertain.';
+const ECB =
+  'I would like a detailed, well-sourced briefing on what has happened recently with the ' +
+  'European Central Bank interest rate decisions.';
+const BOEING =
+  'Give me a short, neutral summary with dates of the latest news about Boeing 737 MAX production problems.';
+const SUPPLY_CHAINS =
+  'What are the most significant recent economic security diplomatic social infrastructure ' +
+  'and technological developments currently reshaping global supply chains, and how are ' +
+  'disruptions influencing international trade relationships and long-term geopolitical ' +
+  'stability, considering shifting alliances, emerging regulatory frameworks, and evolving ' +
+  'multilateral cooperation efforts?';
 
+const derived = (question: string): string => deriveGenericNewsQuery(question);
 const sentFor = (question: string): string | undefined =>
-  makeGenericProviderQuery(deriveGenericNewsQuery(question)).sent;
+  makeGenericProviderQuery(derived(question)).sent;
 const fallbackFor = (question: string): string | undefined =>
-  makeGenericProviderFallbackQuery(deriveGenericNewsQuery(question)).sent;
+  makeGenericProviderFallbackQuery(derived(question)).sent;
+const outcomeFor = (question: string): string => makeGenericProviderQuery(derived(question)).outcome;
+const codePoints = (value: string): number => Array.from(value).length;
 
-describe('A1 · the measured failure, and that it is gone', () => {
-  it('BEFORE: the baseline sent the whole 27-word sentence', () => {
-    /* Pins the defect so the mutation check below has something to restore. */
-    const before = makeProviderSafeNewsQuery(deriveGenericNewsQuery(DRC)) ?? '';
+/* ════════════════════════════════════════════════════════════════════════════
+ * A1 R3 — BASELINE PARITY IS THE DEFAULT
+ * ════════════════════════════════════════════════════════════════════════════ */
 
-    expect(before.split(/\s+/).length).toBe(27);
-    expect(before).toContain('distinguish confirmed facts from allegations');
+describe('A1 R3 · outside a recognized pattern, the baseline string is what goes out', () => {
+  /**
+   * The seven R2 regressions, as reader inputs rather than as test names. Each
+   * is checked against the BASELINE FUNCTION, not against a literal, so the
+   * assertion states the actual requirement: `9aab213` behaviour, preserved.
+   */
+  const PREVIOUSLY_WORKING = [
+    'the us released a report today',
+    'Tell me about markets today',
+    'Tell me about technology and markets today',
+    'Tell me everything about the situation',
+    "What has changed in Poland's economy this week? Give the dates and cite the sources.",
+    "What are Poland's energy sources?",
+    'What is the impact of new tariffs on global trade?',
+    'The demand for labour in Quarter 2 2026',
+    "What are the latest reports about Kenya's economy?",
+    "What's happening with NATO?",
+    'What are the latest developments in Eastern Europe?',
+    'What is happening in Congo-Brazzaville this week?',
+    'Erik Prince',
+    'Give any reports about Eric Prince please.',
+  ];
+
+  it.each(PREVIOUSLY_WORKING)('is byte-identical to the baseline provider query: %s', (question) => {
+    const q = derived(question);
+    expect(makeGenericProviderQuery(q).sent).toBe(makeProviderSafeNewsQuery(q));
+    expect(makeGenericProviderQuery(q).outcome).toBe('NO_PATTERN_UNCHANGED');
   });
 
-  it('BEFORE: the baseline fallback was 17 request and format words', () => {
-    const before = deriveFallbackNewsQuery(deriveGenericNewsQuery(DRC)) ?? '';
-
-    expect(makeProviderSafeNewsQuery(before)).toBe(
-      'verified eastern DR Congo over last seven days original sources publication dates ' +
-        'distinguish confirmed facts from allegations',
+  it.each(PREVIOUSLY_WORKING)('the bounded fallback is the baseline fallback too: %s', (question) => {
+    const q = derived(question);
+    const baselineFallback = deriveFallbackNewsQuery(q);
+    expect(makeGenericProviderFallbackQuery(q).sent).toBe(
+      baselineFallback === undefined ? undefined : makeProviderSafeNewsQuery(baselineFallback),
     );
   });
 
-  it('AFTER: the DRC question sends exactly "eastern DR Congo"', () => {
-    expect(sentFor(DRC)).toBe('eastern DR Congo');
-  });
-
-  it('AFTER: the DRC fallback is not weaker than the primary', () => {
-    expect(fallbackFor(DRC)).toBe('eastern DR Congo');
-  });
-
-  it('AFTER: the Kibirizi question sends exactly "flooding Kibirizi"', () => {
-    expect(sentFor(KIBIRIZI)).toBe('flooding Kibirizi');
-    expect(fallbackFor(KIBIRIZI)).toBe('flooding Kibirizi');
-  });
-
-  it('keeps the geography terms and drops the window words', () => {
-    const sent = sentFor(DRC) ?? '';
-
-    /* COD is decided by the router; these terms are what lets the provider agree. */
-    expect(sent).toContain('Congo');
-    expect(sent).toContain('eastern');
-    /* The 168-hour interval is reporting-window.ts's job, never a keyword. */
-    expect(sent).not.toMatch(/\b(last|seven|days)\b/i);
-  });
-
-  it('drops only request, format and verification words', () => {
-    const sent = sentFor(DRC) ?? '';
-
-    for (const word of [
-      'latest', 'verified', 'developments', 'Give', 'original', 'sources',
-      'publication', 'dates', 'distinguish', 'confirmed', 'facts', 'allegations',
-    ]) {
-      expect(sent).not.toContain(word);
-    }
-  });
-
-  it('never exceeds the term cap', () => {
-    for (const q of [DRC, KIBIRIZI, 'Tanzania Rwanda bilateral trade in the last 30 days']) {
-      expect((sentFor(q) ?? '').split(/\s+/).length).toBeLessThanOrEqual(MAX_PROVIDER_QUERY_TERMS);
-    }
-  });
-});
-
-describe('A1 · the queries that already worked are byte-identical', () => {
-  it.each(["Kenya's economy", 'Erik Prince', 'NATO', 'UN report on Gaza aid'])(
-    '%s is unchanged',
-    (q) => {
-      const derived = deriveGenericNewsQuery(q);
-
-      expect(sentFor(q)).toBe(makeProviderSafeNewsQuery(derived));
-    },
-  );
-
-  it("the Kenya query keeps its exact recorded form, apostrophe artefact and all", () => {
-    /*
-     * "Kenya s economy" is the one short query the live record shows DID
-     * retrieve. It is NOT tidied here: changing a working query to look nicer
-     * is outside A1 and would be an unmeasured risk.
-     */
-    expect(sentFor("Kenya's economy")).toBe('Kenya s economy');
-  });
-
-  it('leaves an unframed query alone, whatever its length', () => {
-    /*
-     * R2 CORRECTION. R1 triggered on LENGTH, which is why
-     * "The demand for labour in Quarter 2 2026" — eight terms, no framing —
-     * was cut to "demand labour Quarter 2" and lost the year. The trigger is
-     * now the presence of a request frame to remove.
-     */
-    expect(reduceNewsQueryForProvider('Erik Prince').outcome).toBe('NO_FRAME_UNCHANGED');
-    expect(reduceNewsQueryForProvider('The demand for labour in Quarter 2 2026')).toEqual({
-      query: 'The demand for labour in Quarter 2 2026',
-      outcome: 'NO_FRAME_UNCHANGED',
-      dropped: [],
-    });
-  });
-});
-
-describe('A1 · conservative failure', () => {
-  it('returns the input unchanged when no subject survives', () => {
-    const r = reduceNewsQueryForProvider('give me the latest verified updates please');
-
-    expect(r.outcome).toBe('NOT_SAFELY_REDUCIBLE');
-    expect(r.query).toBe('give me the latest verified updates please');
-  });
-
-  it('offers no second attempt rather than a fallback of request words', () => {
-    const f = makeGenericProviderFallbackQuery(
-      deriveGenericNewsQuery('give me the latest verified updates please'),
+  /* The four M35/M36 strings, pinned literally as well — the exact expectations
+     the baseline suite asserts, so a reader of this file can see them. */
+  it('the four M35/M36 provider queries are unchanged, literally', () => {
+    expect(sentFor('the us released a report today')).toBe('the us released a report today');
+    expect(sentFor('Tell me about markets today')).toBe('markets today');
+    expect(sentFor('Tell me about technology and markets today')).toBe('technology and markets today');
+    expect(sentFor('Tell me everything about the situation')).toBe(
+      'Tell me everything about the situation',
     );
-
-    expect(f.sent).toBeUndefined();
-    expect(f.outcome).toBe('NOT_SAFELY_REDUCIBLE');
   });
 
-  it('keeps a generic locality noun when no named place survives', () => {
-    const r = reduceNewsQueryForProvider('what are the latest reports about flooding in villages');
-
-    expect(r.query).toContain('villages');
+  it('an explicit year and quarter survive, because nothing unmatched is touched', () => {
+    expect(sentFor('The demand for labour in Quarter 2 2026')).toBe(
+      'The demand for labour in Quarter 2 2026',
+    );
   });
-});
 
-describe('A1 · Congo readings are never interchanged by reduction', () => {
+  it('"this week" is left exactly where the reader put it', () => {
+    expect(sentFor('What is happening in Congo-Brazzaville this week?')).toBe(
+      'Congo Brazzaville this week',
+    );
+  });
+
+  /**
+   * `report`, `sources`, `released` and `today` are not on any drop list, so a
+   * topic that happens to use one keeps it. This is the "energy sources" family:
+   * the word is identical to a format directive and is kept because of where it
+   * sits, not because of an exception for this phrase.
+   */
   it.each([
-    ['DR Congo', 'DR Congo'],
-    ['eastern DR Congo', 'eastern DR Congo'],
-    ['Republic of the Congo', 'Republic Congo'],
-    ['South Kivu', 'South Kivu'],
-  ])('reduction of a long question containing %s keeps its terms', (fragment, expected) => {
-    const sent =
-      makeGenericProviderQuery(
-        deriveGenericNewsQuery(
-          `What are the latest verified developments in ${fragment} over the last seven days?`,
-        ),
-      ).sent ?? '';
-
-    for (const term of expected.split(' ')) expect(sent).toContain(term);
-  });
-
-  it('never introduces a Congo term the reader did not write', () => {
-    const sent = sentFor('What are the latest verified developments in Brazzaville this week?') ?? '';
-
-    expect(sent).not.toMatch(/\bDR\b/);
-    expect(sent).toContain('Brazzaville');
+    ["What are Poland's energy sources?", /sources/i],
+    ['What are the water sources in the Sahel?', /sources/i],
+    ['the us released a report today', /released/],
+    ['What are the latest reports about markets today?', /today/],
+  ])('a topic word that doubles as a directive survives: %s', (question, expected) => {
+    expect(sentFor(question)).toMatch(expected as RegExp);
   });
 });
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * A1 R3 — THE ONE RECOGNIZED PATTERN
+ * ════════════════════════════════════════════════════════════════════════════ */
+
+describe('A1 R3 · the recognized safe-reduction pattern', () => {
+  it('BEFORE: the baseline sent the whole 27-word sentence', () => {
+    /* Pins the defect so the mutation check has something to restore. */
+    expect(makeProviderSafeNewsQuery(derived(DRC))).toContain('distinguish confirmed facts');
+    expect(codePoints(makeProviderSafeNewsQuery(derived(DRC)) ?? '')).toBeGreaterThan(170);
+  });
+
+  it.each([
+    [DRC, 'eastern DR Congo'],
+    [KIBIRIZI, 'flooding Kibirizi South Kivu'],
+    [SEMICONDUCTORS, 'global semiconductor export controls'],
+    [ECB, 'European Central Bank interest rate decisions'],
+    [BOEING, 'Boeing 737 MAX production problems'],
+    [SUPPLY_CHAINS, 'global supply chains'],
+  ])('sends the subject span and nothing else: %s', (question, expected) => {
+    expect(sentFor(question as string)).toBe(expected);
+    expect(outcomeFor(question as string)).toBe('REDUCED');
+  });
+
+  it('the ECB briefing keeps "decisions" and drops "well sourced"', () => {
+    const sent = sentFor(ECB) ?? '';
+    expect(sent).toContain('decisions');
+    expect(sent).not.toMatch(/well|sourced|detailed|briefing/i);
+  });
+
+  it('the semiconductor overview does not keep "remains uncertain"', () => {
+    expect(sentFor(SEMICONDUCTORS)).not.toMatch(/remains|uncertain|publication|dates/i);
+  });
+
+  /**
+   * THE DRC AND KIBIRIZI RESULTS ARE NOT HARDCODED, and this is the evidence:
+   * two questions of the same shape that appear nowhere in the corpus, with
+   * different places, different hazards and different window wording, reduce the
+   * same way. If either case were a phrase patch these would fail.
+   */
+  it.each([
+    [
+      'What are the latest verified reports about landslides in Bukavu town, North Kivu, over the past ten days? Give the original sources.',
+      'landslides Bukavu North Kivu',
+    ],
+    [
+      'What are the latest verified developments in northern Mozambique over the last fortnight? Give the original sources and publication dates.',
+      'northern Mozambique',
+    ],
+    [
+      'Please give me a sourced overview with publication dates of the latest developments in Brazilian pension reform and explain what remains contested.',
+      'Brazilian pension reform',
+    ],
+  ])('the same shape reduces the same way for unseen inputs: %s', (question, expected) => {
+    expect(sentFor(question as string)).toBe(expected);
+  });
+
+  it('BOTH pieces of lead evidence are required — removing either stops the match', () => {
+    /* A request opener with no reporting head: no match. */
+    expect(outcomeFor('Tell me everything you can about the situation in the wider area please')).toBe(
+      'NO_PATTERN_UNCHANGED',
+    );
+    /* A reporting head with no request opener: no match. */
+    expect(
+      outcomeFor('Recent reports about flooding in Kibirizi village South Kivu were published today'),
+    ).toBe('NO_PATTERN_UNCHANGED');
+  });
+
+  it('"sources" is not a reporting head, so it cannot move the subject boundary', () => {
+    const r = reduceNewsQueryForProvider(
+      'What are the latest verified reports about the energy sources of Poland and Hungary today',
+    );
+    expect(r.query).toContain('energy sources');
+  });
+
+  it('a reporting head after the terminator says nothing about the subject', () => {
+    /* "reports" occurs twice: once as the lead head, once in the trailing
+       directive. Taking the LAST head in the whole string would start the span
+       after the directive and find nothing; the match is bounded by the
+       terminator, so the trailing occurrence is invisible to it. */
+    expect(
+      sentFor(
+        'What are the latest verified reports about Ethiopian coffee exports over the last month? Give the underlying reports.',
+      ),
+    ).toBe('Ethiopian coffee exports');
+  });
+
+  /**
+   * A MEASURED RESIDUAL, recorded here rather than patched.
+   *
+   * `deriveGenericNewsQuery()` sometimes strips the request lead itself, and when
+   * it does the pattern has no lead left to match — so the trailing window and
+   * directives it did NOT strip survive into the provider query. That is baseline
+   * behaviour, preserved exactly, and correcting it means changing the derivation,
+   * which is a different owner and a different contract.
+   */
+  it('when the derivation strips the lead itself, baseline behaviour is preserved verbatim', () => {
+    const q = derived(
+      'What are the latest developments in Ethiopian coffee exports over the last month? Give the underlying reports.',
+    );
+    expect(q.startsWith('Ethiopian')).toBe(true);
+    expect(makeGenericProviderQuery(q).outcome).toBe('NO_PATTERN_UNCHANGED');
+    expect(makeGenericProviderQuery(q).sent).toBe(makeProviderSafeNewsQuery(q));
+  });
+
+  it('a conjoined subject is not cut, but a new clause is', () => {
+    expect(
+      sentFor('What are the latest reports about Ethiopia and Eritrea border tensions this month?'),
+    ).toContain('Eritrea');
+    expect(sentFor(SEMICONDUCTORS)).not.toContain('explain');
+  });
+
+  it('capitalisation decides whether a locality noun is structural', () => {
+    /* lowercase "village" is scaffolding; capitalised "City" is part of a name. */
+    expect(sentFor(KIBIRIZI)).not.toContain('village');
+    expect(
+      sentFor(
+        'What are the latest verified reports about air quality in Mexico City over the last seven days? Give the original sources.',
+      ),
+    ).toBe('air quality Mexico City');
+  });
+
+  it('a span made of scaffolding is refused, not sent', () => {
+    const r = reduceNewsQueryForProvider(
+      'What are the latest reports about it from them in there now and so on',
+    );
+    expect(r.outcome).toBe('NO_PATTERN_UNCHANGED');
+    expect(r.pattern).toBeNull();
+  });
+
+  /**
+   * THE STATED LIMIT. The pattern bounds the span; it does not rank how specific
+   * the reader's own subject is, and it must not — "global supply chains" is
+   * correct and carries no proper noun, so any rule strong enough to reject
+   * "the situation" would also reject it. A vague question therefore yields a
+   * vague subject, the search returns nothing, and the existing no-evidence
+   * surface answers truthfully. This is asserted so the limit is visible rather
+   * than discovered later.
+   */
+  it('does not judge how specific a subject is (recorded limit)', () => {
+    const r = reduceNewsQueryForProvider(
+      'What are the latest reports about the situation there right now for us all',
+    );
+    expect(r.outcome).toBe('REDUCED');
+    expect(r.query).toBe('situation right us all');
+  });
+
+  it('refuses a span wider than a bounded subject', () => {
+    const wide = Array.from({ length: MAX_SUBJECT_SPAN_TERMS + 2 }, (_, i) => `topic${i}`).join(' ');
+    expect(reduceNewsQueryForProvider(`What are the latest reports about ${wide}`).outcome).toBe(
+      'NO_PATTERN_UNCHANGED',
+    );
+  });
+
+  it('never matches a short query, whatever its words', () => {
+    const short = 'What are the latest reports about Congo';
+    expect(short.split(/\s+/).length).toBeLessThan(MIN_TERMS_FOR_PATTERN);
+    expect(reduceNewsQueryForProvider(short).outcome).toBe('NO_PATTERN_UNCHANGED');
+  });
+
+  it('never introduces a term the reader did not write', () => {
+    for (const question of [DRC, KIBIRIZI, SEMICONDUCTORS, ECB, BOEING, SUPPLY_CHAINS]) {
+      const source = derived(question).toLowerCase();
+      for (const term of (sentFor(question) ?? '').split(' ')) {
+        expect(source).toContain(term.toLowerCase());
+      }
+    }
+  });
+});
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * A1 R3 — NO OUTBOUND QUERY IS EVER SILENTLY CLAMPED
+ * ════════════════════════════════════════════════════════════════════════════ */
+
+describe('A1 R3 · the GNews clamp is never reached', () => {
+  const CORPUS = [DRC, KIBIRIZI, SEMICONDUCTORS, ECB, BOEING, SUPPLY_CHAINS];
+
+  it.each(CORPUS)('the primary fits inside the provider maximum: %s', (question) => {
+    expect(codePoints(sentFor(question) ?? '')).toBeLessThanOrEqual(GNEWS_QUERY_CODE_POINT_MAX);
+  });
+
+  it.each(CORPUS)('the bounded fallback fits too, or is not sent: %s', (question) => {
+    const f = fallbackFor(question);
+    if (f !== undefined) expect(codePoints(f)).toBeLessThanOrEqual(GNEWS_QUERY_CODE_POINT_MAX);
+  });
+
+  /**
+   * THE 50-WORD CASE. R2 sent 302 code points and GNews cut it mid-word at
+   * "…geopolitical stability c". The pattern now finds a bounded subject, so the
+   * clamp is never reached and the sent query is something a reader would
+   * recognize as their own question.
+   */
+  it('the 50-word supply-chain question is searched on its subject, not clamped', () => {
+    const sent = sentFor(SUPPLY_CHAINS) ?? '';
+    expect(sent).toBe('global supply chains');
+    expect(codePoints(sent)).toBeLessThan(GNEWS_QUERY_CODE_POINT_MAX);
+    expect(sent.length).toBeLessThan(SUPPLY_CHAINS.length);
+  });
+
+  /**
+   * AN UNMATCHED OVER-LONG REQUEST IS REPORTED, NOT REFUSED HERE — and the test
+   * says why, because the "obvious" version of this is what broke eleven tests.
+   *
+   * Returning `undefined` for this case makes the caller's "no lexical query"
+   * branch fire, and that branch sits BEFORE the compound-plan decision, so a
+   * compound DRC question sent ZERO provider requests instead of four. The
+   * condition is therefore stated as an outcome, and the caller correction ships
+   * as a reviewable patch. `sent` stays byte-identical to the baseline so that
+   * nothing regresses in the meantime.
+   */
+  it('an unmatched over-long request is reported, and still sent as the baseline sent it', () => {
+    const unmatched = `The ${'interlocking consequence '.repeat(12)}matters a great deal`;
+    const baseline = makeProviderSafeNewsQuery(unmatched);
+    expect(codePoints(baseline ?? '')).toBeGreaterThan(GNEWS_QUERY_CODE_POINT_MAX);
+    const r = makeGenericProviderQuery(unmatched);
+    expect(r.outcome).toBe('NOT_SAFELY_REDUCIBLE');
+    expect(r.sent).toBe(baseline);
+    expect(r.unreduced).toBe(baseline);
+  });
+
+  it('the boundary is the documented maximum, not an approximation', () => {
+    const at = `${'ab '.repeat(66)}cd`;
+    expect(codePoints(at)).toBe(GNEWS_QUERY_CODE_POINT_MAX);
+    expect(makeGenericProviderQuery(at).outcome).toBe('NO_PATTERN_UNCHANGED');
+    expect(makeGenericProviderQuery(`${at}X`).outcome).toBe('NOT_SAFELY_REDUCIBLE');
+  });
+
+  /**
+   * The fallback lane IS refused, because `undefined` is already its contract for
+   * "no second attempt" and it is read only after the compound branch is past.
+   */
+  it('an over-long bounded fallback is not sent at all', () => {
+    const r = makeGenericProviderFallbackQuery(derived(SUPPLY_CHAINS));
+    expect(r.sent).toBeUndefined();
+    expect(r.outcome).toBe('NOT_SAFELY_REDUCIBLE');
+    expect(codePoints(r.unreduced ?? '')).toBeGreaterThan(GNEWS_QUERY_CODE_POINT_MAX);
+  });
+});
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * A1 R3 — THE PUBLISHER-CONSTRAINED REQUEST IS NOT WIDENED
+ * ════════════════════════════════════════════════════════════════════════════ */
 
 describe('A1 · the publisher-constrained request is not widened', () => {
   it('the Reuters constraint still carries, and reduction does not remove it', () => {
@@ -265,78 +479,6 @@ describe('A4 · the trace states what was sent, and only that', () => {
     const a = recordDispatched('PRIMARY', 'congo '.repeat(100), 'SENT_RESULTS');
 
     expect((a.query ?? '').length).toBeLessThanOrEqual(200);
-  });
-});
-
-/* ════════════════════════════════════════════════════════════════════════════
- * R2 — THE NINE PHRASINGS FROM INTAKE DOC 31
- * ════════════════════════════════════════════════════════════════════════════
- *
- * R1 kept "the first four terms not on its request list", which is POSITIONAL:
- * an unlisted framing word both survived and consumed a slot, so the subject
- * fell off the end. The wrong output for each row is recorded beside the right
- * one so the regression cannot come back quietly.
- */
-describe('R2 · the nine intake phrasings', () => {
-  const SUPPLY_CHAINS =
-    'What are the most significant recent economic security diplomatic social infrastructure ' +
-    'and technological developments currently reshaping global supply chains, and how are ' +
-    'disruptions influencing international trade relationships and long-term geopolitical ' +
-    'stability, considering shifting alliances, emerging regulatory frameworks, and evolving ' +
-    'multilateral cooperation efforts?';
-
-  it.each([
-    ['careful sourced global semiconductor', 'Please give a careful, sourced overview of the global semiconductor export controls', 'global semiconductor export controls'],
-    ['most important Sudan ceasefire', 'Can you summarize, with links, the most important Sudan ceasefire negotiations?', 'Sudan ceasefire negotiations'],
-    ['like detailed well sourced European', 'I would like a detailed, well sourced briefing on European Central Bank interest rate decisions', 'European Central Bank interest rate decisions'],
-    ['Using only reliable Ethiopia', 'Using only reliable sources, what are the Ethiopia Eritrea border tensions?', 'Ethiopia Eritrea border tensions'],
-    ['short neutral Boeing 737', 'Give me a short, neutral summary of the Boeing 737 MAX production problems', 'Boeing 737 MAX production problems'],
-    ['most cholera outbreaks Malawi', 'Show the most verified reports on cholera outbreaks in Malawi', 'cholera outbreaks Malawi'],
-    ['clearly citing Taiwan Strait', 'Explain clearly, citing sources, the Taiwan Strait military tensions', 'Taiwan Strait military tensions'],
-  ])('was "%s" — now sends the subject', (_wrong, question, expected) => {
-    expect(sentFor(question)).toBe(expected);
-  });
-
-  it('keeps the named entity and the model designator together', () => {
-    const sent = sentFor('Give me a short, neutral summary of the Boeing 737 MAX production problems') ?? '';
-
-    expect(sent).toContain('Boeing');
-    expect(sent).toContain('737');
-    expect(sent).toContain('MAX');
-  });
-
-  it('a 50-word argument has no subject, so it is NOT reduced', () => {
-    /*
-     * R1 sent "most significant economic security" for a question about SUPPLY
-     * CHAINS. Two dozen content nouns and no named entity leave nothing to
-     * select deterministically, and both a parser and a model rewrite are
-     * forbidden — so the reader's own words go out, which is also what the
-     * baseline did and what the existing expectation requires.
-     */
-    const r = reduceNewsQueryForProvider(deriveGenericNewsQuery(SUPPLY_CHAINS));
-
-    expect(r.outcome).toBe('NOT_SAFELY_REDUCIBLE');
-    expect(sentFor(SUPPLY_CHAINS)).toContain('supply chains');
-  });
-
-  it('PRESERVES AN EXPLICIT YEAR — the R1 defect the rights test caught', () => {
-    /* R1 sent "demand labour Quarter 2" and dropped 2026 entirely. */
-    expect(sentFor('The demand for labour in Quarter 2 2026')).toBe(
-      'The demand for labour in Quarter 2 2026',
-    );
-    expect(sentFor('Please give a verified summary of the demand for labour in Quarter 2 2026')).toContain('2026');
-  });
-
-  it('drops a bare number orphaned by a window unit', () => {
-    /* "…in the last 30 days" lost "days" and kept "30"; 30 is not a subject. */
-    expect(sentFor('Give me the latest on Tanzania Rwanda bilateral trade in the last 30 days')).toBe(
-      'Tanzania Rwanda bilateral trade',
-    );
-  });
-
-  it('never treats a sentence-initial capital as a named entity', () => {
-    /* "Using" began the sentence; capitalisation there is orthography, not evidence. */
-    expect(sentFor('Using only reliable sources, what are the Ethiopia Eritrea border tensions?')).not.toContain('Using');
   });
 });
 
