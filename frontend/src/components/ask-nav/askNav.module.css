@@ -246,7 +246,9 @@
   background: var(--ad-bg-2, #0b0f18);
   color: var(--ad-ink, #edeff5);
 }
-@media (min-width: 700px) {
+/* ≥ 700 px wide AND tall enough for a dialog: a phone in landscape (844 × 390) keeps the
+   full-height sheet, where a 56 px-inset dialog would leave 278 px (declared deviation). */
+@media (min-width: 700px) and (min-height: 600px) {
   .settingsSheet {
     inset: 56px auto auto 50%;
     width: 560px;
