@@ -66,19 +66,25 @@ export class SavedStoriesService {
       take: MAX_SAVED_STORIES,
     });
 
-    /* firstSeenAt comes from the retained Article when it still exists — read, never stored. */
+    /* firstSeenAt comes from the retained Article when it still exists — read, never stored.
+       U-1 B-3: so does the canonical sourceId (never derived from the display name). */
     const retained = rows.length
       ? await this.prisma.article.findMany({
           where: { url: { in: rows.map((row) => row.sourceUrl) } },
-          select: { url: true, fetchedAt: true },
+          select: { url: true, fetchedAt: true, sourceId: true },
         })
       : [];
     const firstSeenByUrl = new Map(
       retained.map((article: { url: string; fetchedAt: Date }) => [article.url, article.fetchedAt.toISOString()]),
     );
+    const sourceIdByUrl = new Map(
+      retained.map((article: { url: string; sourceId: string }) => [article.url, article.sourceId]),
+    );
 
     return {
-      stories: rows.map((row) => toView(row, firstSeenByUrl.get(row.sourceUrl))),
+      stories: rows.map((row) =>
+        toView(row, firstSeenByUrl.get(row.sourceUrl), sourceIdByUrl.get(row.sourceUrl)),
+      ),
       limit: MAX_SAVED_STORIES,
     };
   }
@@ -92,7 +98,7 @@ export class SavedStoriesService {
     /* Idempotent: a repeat save returns the story already saved, unchanged. */
     if (existing) {
       const retained = await this.articles.findRetainedByUrl(existing.sourceUrl);
-      return toView(existing, retained?.article.firstSeenAt);
+      return toView(existing, retained?.article.firstSeenAt, retained?.article.sourceId);
     }
 
     const record = await this.resolveRetained(url, providerArticleId, articleRef);
@@ -121,7 +127,7 @@ export class SavedStoriesService {
     };
 
     const row = await this.createWithinCap(userId, articleRef, data);
-    return toView(row, article.firstSeenAt);
+    return toView(row, article.firstSeenAt, article.sourceId);
   }
 
   /**
@@ -194,13 +200,15 @@ export class SavedStoriesService {
   }
 }
 
-function toView(row: SavedStoryRow, firstSeenAt?: string): SavedStoryView {
+function toView(row: SavedStoryRow, firstSeenAt?: string, sourceId?: string): SavedStoryView {
   return {
     articleRef: row.articleRef,
     canonicalUrl: row.canonicalUrl,
     sourceUrl: row.sourceUrl,
     title: row.title,
     sourceName: row.sourceName,
+    /* U-1 B-3 — the canonical rights key, present only when the retained Article still exists */
+    ...(sourceId ? { sourceId } : {}),
     sourceDomain: row.sourceDomain,
     publishedAt: row.publishedAt.toISOString(),
     publishedAtBasis: row.publishedAtBasis === 'observed' ? 'observed' : 'publisher',

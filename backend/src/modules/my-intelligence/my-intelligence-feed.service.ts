@@ -86,6 +86,8 @@ export class MyIntelligenceFeedService {
           url: article.url,
           title: article.title,
           sourceName: article.sourceName,
+          /* U-1 B-3 — the canonical rights key (our sourceId), never the display name */
+          ...(article.sourceId ? { sourceId: article.sourceId } : {}),
           publishedAt: article.publishedAt,
           ...(article.publishedAtBasis ? { publishedAtBasis: article.publishedAtBasis } : {}),
           ...(article.imageUrl ? { imageUrl: article.imageUrl } : {}),

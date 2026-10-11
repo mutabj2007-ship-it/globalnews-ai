@@ -58,6 +58,8 @@ export interface SavedStoryView {
   readonly sourceUrl: string;
   readonly title: string;
   readonly sourceName: string;
+  /** U-1 B-3 — canonical source id (rights key) from the retained Article; absent when it no longer exists. Never a display name. */
+  readonly sourceId?: string;
   readonly sourceDomain: string;
   readonly publishedAt: string;
   readonly publishedAtBasis: PublishedAtBasis;
@@ -96,6 +98,8 @@ export interface MyIntelligenceStory {
   readonly url: string;
   readonly title: string;
   readonly sourceName: string;
+  /** U-1 B-3 — canonical source id (rights key). Never a display name. */
+  readonly sourceId?: string;
   readonly publishedAt: string;
   readonly publishedAtBasis?: PublishedAtBasis;
   readonly imageUrl?: string;

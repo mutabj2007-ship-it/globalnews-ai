@@ -29,6 +29,7 @@ import { PublicOAuthCallbackBaseStartupValidator } from './security/public-oauth
 import { AuthSecretsStartupValidator } from './security/auth-secrets.config';
 import { EgressDeclarationReporter } from './security/egress-declaration';
 import { LoggingInterceptor } from './observability/logging.interceptor';
+import { PublisherImageWithholdingInterceptor } from './security/publisher-image-withholding.interceptor';
 import { GlobalExceptionFilter } from './observability/global-exception.filter';
 import { RequestIdMiddleware } from './observability/request-id.middleware';
 import { AuthModule } from './modules/auth/auth.module';
@@ -297,6 +298,14 @@ import {
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    // U-1 B-1 — no publisher image URL leaves the server, on any route,
+    // live or stored (security/publisher-image-withholding.interceptor.ts).
+    // Registered first, so it is the outermost interceptor and sees the
+    // final response body of every other interceptor.
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: PublisherImageWithholdingInterceptor,
     },
     // Milestone #55 — global request correlation + HTTP access
     // logging. Runs on every request (registered before the exception
