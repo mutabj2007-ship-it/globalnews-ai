@@ -82,7 +82,15 @@ export function AskReadingFooter({
             aria-label={`${accountLine}, ${s.settings}`}
             className={`${styles.readingFooterLink} ${styles.footerAccount}`}
           >
-            {accountLine}
+            {/* ASK R3 IA R2 COMPLETION — the reader's name is its own direction run (Arabic
+                rendered "Amina K." as ".Amina K"); the accessible name above is unchanged */}
+            {displayName !== null ? (
+              <>
+                {s.account} · <span dir="auto" style={{ unicodeBidi: 'isolate' }}>{displayName}</span>
+              </>
+            ) : (
+              accountLine
+            )}
           </Link>
         )}
         {account === 'signed-in' && onSignOut !== undefined && (
