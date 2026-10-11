@@ -262,7 +262,17 @@ describe('4 · the welcome My updates entry: only real follows, only real facts'
     const entries = read('components', 'ask-frame', 'AskWelcomeEntries.tsx');
     expect(entries).toMatch(/if \(!signedIn\) \{\s*setSummary\(null\);\s*return;/);
     expect(entries).toContain('setSummary(outcome.ok ? summarizeFollows(outcome.value) : null);');
-    expect(entries).toContain('{follows !== null && followLine !== null && (');
+    /*
+      SUPERSEDED, NOT DELETED — the original assertion read:
+          expect(entries).toContain('{follows !== null && followLine !== null && (');
+      IA + GUIDED DISCOVER R2, 02 decision 4 (PO-approved 11 Oct 2026) adds ONE more condition in
+      front of it: the compact welcome drops this row because My updates is already in the primary
+      nav. The two real-data conditions this test exists to protect — a real follow summary and
+      real facts — are unchanged and are both asserted below, so the row still cannot appear on
+      absent or empty data.
+    */
+    expect(entries).toContain('follows !== null && followLine !== null && (');
+    expect(entries).toContain('{!compact && follows !== null && followLine !== null && (');
   });
 
   it('My updates (the page) shows "{N} followed" from the same read', () => {
