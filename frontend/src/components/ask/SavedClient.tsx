@@ -4,10 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { askV2Api, type AskV2Bookmark, type AskV2Outcome } from '@/lib/api/askV2Api';
 import { askBookmarkReopenHref, filterBookmarks } from '@/lib/ask/askRecentGrouping';
-import { formattingProfileFor, type DisplayLocale } from '@globalnews-ai/shared';
+import type { DisplayLocale } from '@globalnews-ai/shared';
 import { SavedBriefings } from './SavedBriefings';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
-import { askDirectionProps } from '@/lib/ask/askDirection';
+import { askDirectionProps, askFormatLocalDayCompact } from '@/lib/ask/askDirection';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -77,12 +77,15 @@ export function SavedClient({ locale }: { readonly locale: DisplayLocale }): JSX
       dir={direction.dir}
       className="min-h-screen bg-void px-4 py-8 md:px-8"
     >
+      {/* R3.2 MOBILE COMPACT — the read-only explanation is said ONCE, here: the intro already reads
+          "opening one shows what was already produced — nothing runs" in every locale, so the
+          per-row "Already produced. Nothing runs." line is no longer repeated under each question. */}
       <header className="mx-auto max-w-3xl">
-        <h1 className="font-display text-[26px] font-semibold text-ink-primary">{t.savedTitle}</h1>
-        <p className="mt-1 text-[13.5px] text-ink-tertiary">{t.savedIntro}</p>
+        <h1 className="font-display text-[24px] font-semibold text-ink-primary">{t.savedTitle}</h1>
+        <p data-saved="intro" className="mt-0.5 text-[13px] leading-snug text-ink-tertiary">{t.savedIntro}</p>
       </header>
 
-      <section data-saved-panel="questions" className="mx-auto mt-6 max-w-3xl">
+      <section data-saved-panel="questions" className="mx-auto mt-4 max-w-3xl">
         <h2 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-tertiary">
           {t.tabs.questions}
         </h2>
@@ -128,20 +131,31 @@ export function SavedClient({ locale }: { readonly locale: DisplayLocale }): JSX
                 {t.empty.filtered}
               </p>
             ) : (
-              <ul className="mt-4 flex flex-col gap-2">
+              <ul className="mt-3 flex flex-col gap-1.5">
                 {filtered.map((row) => (
+                  /*
+                    R3.2 MOBILE COMPACT — one compact row per saved question: the question (two
+                    lines at most; the full text stays the element's text and tooltip, and opens in
+                    full), ONE meta line, and Open / Remove on the same line. SUPERSEDED: the padded
+                    card with a full date-time and the per-row read-only note.
+                  */
                   <li
                     key={row.id}
                     data-saved-row={row.turnId}
-                    className="rounded-xl border border-line bg-surface p-3"
+                    className="rounded-lg border border-line bg-surface px-3 pt-2"
                   >
-                    <p className="text-[14.5px] leading-snug text-ink-primary">
+                    <p
+                      dir="auto"
+                      title={`${row.question}${row.questionTruncated ? '…' : ''}`}
+                      className="line-clamp-2 text-[14.5px] leading-snug text-ink-primary"
+                    >
                       {`${row.question}${row.questionTruncated ? '…' : ''}`}
                     </p>
-                    <p className="mt-1 flex flex-wrap items-center gap-x-2 text-[11.5px] text-ink-tertiary">
+                    <div className="flex flex-wrap items-center gap-x-2">
+                    <p className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 text-[12px] text-ink-tertiary">
                       <span data-saved="saved-at">
-                        {/* R4 · PHASE B — Intl handles all seven, including Arabic numerals. */}
-                        {new Date(row.savedAt).toLocaleString(formattingProfileFor(locale))}
+                        {/* R4 · PHASE B — the locale's own formatter, including Arabic numerals. */}
+                        {askFormatLocalDayCompact(new Date(row.savedAt), locale, new Date())}
                       </span>
                       <span aria-hidden="true">{'·'}</span>
                       <span data-saved="language">{row.language.toUpperCase()}</span>
@@ -154,12 +168,12 @@ export function SavedClient({ locale }: { readonly locale: DisplayLocale }): JSX
                         </>
                       )}
                     </p>
-                    <div className="mt-2 flex items-center gap-3">
+                    <div className="flex items-center gap-3">
                       {askBookmarkReopenHref(row) !== null ? (
                         <Link
                           data-saved="reopen"
                           href={askBookmarkReopenHref(row) as string}
-                          className="text-[13px] font-medium text-signal underline decoration-signal/50 underline-offset-4"
+                          className="inline-flex min-h-[44px] items-center text-[13px] font-semibold text-signal underline decoration-signal/50 underline-offset-4"
                         >
                           {t.reopen}
                         </Link>
@@ -167,7 +181,7 @@ export function SavedClient({ locale }: { readonly locale: DisplayLocale }): JSX
                         /* No stored operation: no Reopen, and no rerun — say so. */
                         <span
                           data-saved="no-stored-result"
-                          className="text-[12px] text-ink-tertiary"
+                          className="inline-flex min-h-[44px] items-center text-[12px] text-ink-tertiary"
                         >
                           {t.noStoredResult}
                         </span>
@@ -177,14 +191,14 @@ export function SavedClient({ locale }: { readonly locale: DisplayLocale }): JSX
                         data-saved="unsave"
                         disabled={removing === row.turnId}
                         onClick={() => void unsave(row.turnId)}
-                        className="text-[13px] text-ink-tertiary hover:text-ink-secondary disabled:opacity-50"
+                        /* the visible word, then which question it removes */
+                        aria-label={`${t.unsave}: ${row.question}`}
+                        className="inline-flex min-h-[44px] items-center text-[13px] text-ink-tertiary hover:text-ink-secondary disabled:opacity-50"
                       >
                         {t.unsave}
                       </button>
                     </div>
-                    <p data-saved="reopen-note" className="mt-1 text-[11.5px] text-ink-tertiary">
-                      {t.reopenNote}
-                    </p>
+                    </div>
                   </li>
                 ))}
               </ul>

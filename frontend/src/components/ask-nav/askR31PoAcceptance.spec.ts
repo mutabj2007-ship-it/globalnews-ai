@@ -351,3 +351,37 @@ describe('FIX 5 — the Language row and view', () => {
     expect(SELECTABLE_LOCALES as readonly string[]).not.toContain('rw');
   });
 });
+
+describe('R3.2 MOBILE COMPACT — My updates and Saved', () => {
+  const updates = read('components', 'ask', 'MyUpdatesClient.tsx');
+  const saved = read('components', 'ask', 'SavedClient.tsx');
+  it('a followed question collapses to title, status, chip, Check and ONE More control', () => {
+    expect(updates).toContain('data-ask="followed-more"');
+    expect(updates).toContain('aria-controls={moreId}');
+    expect(updates).toContain('aria-label={`${more}: ${row.title}`}');
+    expect(updates).toContain('className="line-clamp-2 text-[15px] font-semibold leading-snug text-ink-primary"');
+    /* Pause / Edit / Saved answers / Stop following live inside the More panel */
+    const panel = updates.slice(updates.indexOf('data-ask="followed-more-panel"'), updates.indexOf('{editing && ('));
+    for (const id of ['followed-pause', 'followed-edit', 'followed-history', 'followed-remove']) {
+      expect(panel).toContain(`data-ask="${id}"`);
+    }
+  });
+  it('critical states are never folded away; the cost is said once for the page', () => {
+    expect(updates).toContain("presentation?.attention === true || latestCheck.outcome === 'INCOMPLETE_CHECK' || latestCheck.partial === true");
+    expect(updates).toContain('data-ask="followed-structured-unassessed"');
+    expect(updates.match(/\{s\.checkCost\}/g)).toHaveLength(1);
+    expect(updates).toContain('data-ask="my-updates-check-cost"');
+  });
+  it('Saved rows: two-line question, compact date, Open and an accessible Remove; no per-row note', () => {
+    expect(saved).toContain('line-clamp-2');
+    expect(saved).toContain('askFormatLocalDayCompact(new Date(row.savedAt), locale, new Date())');
+    expect(saved).toContain('aria-label={`${t.unsave}: ${row.question}`}');
+    expect(saved).not.toContain('data-saved="reopen-note"');
+    expect(saved).toContain('data-saved="intro"');
+  });
+  it('every action meets the 44 px target', () => {
+    expect(updates.match(/data-ask="followed-check"[\s\S]{0,300}min-h-\[44px\]/)).not.toBeNull();
+    expect(saved.match(/data-saved="reopen"[\s\S]{0,300}min-h-\[44px\]/)).not.toBeNull();
+    expect(saved.match(/data-saved="unsave"[\s\S]{0,500}min-h-\[44px\]/)).not.toBeNull();
+  });
+});

@@ -63,20 +63,24 @@ export function BriefingListView({
       </p>
     );
   return (
-    <ul className="mt-3 flex flex-col gap-2">
+    <ul className="mt-2 flex flex-col gap-1.5">
       {rows.map((row) => (
+        /* R3.2 MOBILE COMPACT — the title (two lines at most, full text kept) is the Open target at
+           44 px; one meta line under it */
         <li
           key={row.id}
           data-briefing="row"
-          className="rounded-[10px] border border-white/10 px-3 py-2.5"
+          className="rounded-lg border border-line px-3 py-1"
         >
           <Link
             href={briefingHref(row.id)}
-            className="text-[14px] font-semibold text-ink-primary hover:underline"
+            dir="auto"
+            title={row.title}
+            className="flex min-h-[44px] items-center text-[14px] font-semibold text-ink-primary hover:underline"
           >
-            {row.title}
+            <span className="line-clamp-2">{row.title}</span>
           </Link>
-          <p className="mt-0.5 text-[12px] text-ink-tertiary">
+          <p className="-mt-1 pb-1 text-[12px] text-ink-tertiary">
             {row.scope.storyId
               ? t.scopeStory
               : row.scope.countryCode

@@ -28,11 +28,13 @@ export function SavedBriefings({ locale }: { readonly locale: DisplayLocale }): 
 
   if (rows === null) return null;
   return (
-    <section data-saved-panel="briefings" className="mx-auto mt-8 max-w-3xl">
+    /* R3.2 MOBILE COMPACT — still its own titled section (Saved questions and Briefings stay
+       visibly distinct), with less space above it and a single-line explanation */
+    <section data-saved-panel="briefings" className="mx-auto mt-6 max-w-3xl border-t border-line pt-4">
       <h2 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-tertiary">
         {t.sectionTitle}
       </h2>
-      <p className="mt-1 text-[12.5px] text-ink-tertiary">{t.sectionIntro}</p>
+      <p className="mt-0.5 text-[12.5px] leading-snug text-ink-tertiary">{t.sectionIntro}</p>
       <BriefingListView rows={rows} locale={locale} />
     </section>
   );
