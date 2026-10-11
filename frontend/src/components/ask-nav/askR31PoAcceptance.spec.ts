@@ -276,6 +276,11 @@ describe('FIX 5 — the Language row and view', () => {
     expect(sheet).not.toContain('}, [onClose]);');
   });
 
+  it('leaving a sub-view returns focus to the row that opened it', () => {
+    const body = read('components', 'account', 'AccountSettingsBody.tsx');
+    expect(body).toContain('bodyRef.current?.querySelector<HTMLElement>(`[data-settings="${from}-row"]`)?.focus();');
+  });
+
   it('Kiswahili and Kinyarwanda are not offered as a localized interface', () => {
     expect(SELECTABLE_LOCALES as readonly string[]).not.toContain('sw');
     expect(SELECTABLE_LOCALES as readonly string[]).not.toContain('rw');

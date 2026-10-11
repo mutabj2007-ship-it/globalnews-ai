@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { NavBar } from '@/components/navigation/NavBar';
 import { Footer } from '@/components/layout/Footer';
@@ -79,6 +79,23 @@ export function AccountSettingsBody({
   const [retrying, setRetrying] = useState(false);
   /* R3.1 FIX 5 — the Language view joins Appearance as a Settings sub-view */
   const [view, setView] = useState<'groups' | 'appearance' | 'language'>('groups');
+  /*
+    R3.1 — leaving a sub-view (Back or Escape) returns focus to the row that opened it. Without
+    this, focus fell to the page body when the sub-view unmounted: a keyboard reader lost their
+    place, and the sheet's Tab containment had no focused element to wrap from.
+  */
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+  const cameFrom = useRef<'appearance' | 'language' | null>(null);
+  useEffect(() => {
+    if (view !== 'groups') {
+      cameFrom.current = view;
+      return;
+    }
+    const from = cameFrom.current;
+    cameFrom.current = null;
+    if (from === null) return;
+    bodyRef.current?.querySelector<HTMLElement>(`[data-settings="${from}-row"]`)?.focus();
+  }, [view]);
   const [dangerOpen, setDangerOpen] = useState(false);
   /*
     ALPHA VISUAL ACCEPTANCE REPAIR R1 — the language is provided by the server wrapper instead
@@ -303,7 +320,11 @@ export function AccountSettingsBody({
   );
 
   if (chrome === 'sheet') {
-    return <div className={styles.body}>{content}</div>;
+    return (
+      <div ref={bodyRef} className={styles.body}>
+        {content}
+      </div>
+    );
   }
 
   return (
@@ -316,7 +337,9 @@ export function AccountSettingsBody({
         {...(locale === undefined ? {} : askDirectionProps(locale))}
       >
         <h1 className="text-2xl font-semibold text-ink-primary">{t.heading}</h1>
-        <div className={styles.body}>{content}</div>
+        <div ref={bodyRef} className={styles.body}>
+          {content}
+        </div>
       </main>
       {chrome === 'platform' && <Footer />}
     </div>
