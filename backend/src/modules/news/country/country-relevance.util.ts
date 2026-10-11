@@ -1,5 +1,6 @@
 import type { CountryMeta, LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 import {
+  AMBIGUOUS_COUNTRY_NAMES,
   COUNTRIES,
   COUNTRY_ALIASES_BY_ISO3,
   getCuratedCityNames,
@@ -450,8 +451,114 @@ const ALIAS_PHRASES_BY_ISO3: Record<string, string[]> = (() => {
  * its multi-word aliases. One list, so the positive and negative halves below
  * cannot disagree about what counts as naming a country.
  */
+/* ═══════════════════════════════════════════════════════════════════════════
+ * D-07 — AN AMBIGUOUS COUNTRY NAME IS NOT EVIDENCE ON ITS OWN
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * AUTHORITY. CTO supersession **R3-GEO-01** (2026-10-11): "Replace the single
+ * reviewed free-text assertion that unqualified 'Congo' resolves to CG. For
+ * unconstrained prose, bare 'Congo' is ambiguous. Preserve explicit COG
+ * identifiers and country-selection semantics." Independent regional review:
+ * `RETRIEVAL-R1/EAST_AFRICA-G-REVIEW-R1/EA-G-01` §4 and `EA-G-05` §3, which
+ * recommend this exact scope (EA-A3). The one superseded expectation is named
+ * and replaced in `sharedCountryAliasAuthority.spec.ts`; it is not deleted.
+ *
+ * THE MEASURED DEFECT. `COUNTRIES` gives COG the registry name "Congo" — a
+ * single token that the shared authority ITSELF declares ambiguous
+ * (`AMBIGUOUS_COUNTRY_NAMES: congo -> [COD, COG]`, plus the Polish `kongo`,
+ * `konga`, `kongu`). The alias table has always refused single tokens — see
+ * "THE WHOLE PROTECTION, IN ONE CONDITION" above, which keeps `us`, `england`
+ * and ISO codes out — but that protection was never applied to a NAME. So
+ * "Fighting in eastern Congo displaces thousands" was persisted as **CG**
+ * while the Ask-side Congo authority read the same string as COD, and a
+ * Republic-of-the-Congo reader was served DR Congo articles.
+ *
+ * THE RULE, IN THREE PARTS, AND WHY EACH IS NEEDED.
+ *
+ *   1. FAIL CLOSED. An ambiguous single-token name is not evidence by itself.
+ *      Derived from the shared table at module load, so a future ambiguous
+ *      name is covered without being listed here twice.
+ *
+ *   2. THE SAME TEXT MAY SETTLE IT — WITH A PLACE, AND ONLY A PLACE. "Congo
+ *      announces budget in Brazzaville" is Republic of the Congo and must keep
+ *      resolving. The disambiguators are that country's own unambiguous
+ *      PLACES. Deliberately NOT included: an actor ("Sassou Nguesso"), a
+ *      demonym ("Congolese"), a lake, or an acronym. The CTO's policy is that
+ *      none of those decides a country, and the cost is recorded: `C-COG-SAS`
+ *      (actor-only COG) is the one true positive this change loses, and losing
+ *      it is the policy working rather than failing.
+ *
+ *   3. A PLACE SOMEONE IS BASED IN IS NOT WHERE THE EVENT IS. "Gabon vote:
+ *      Congo observers based in Brazzaville report calm in Libreville" is a
+ *      Gabon story. An occurrence of the place inside "X based" or "based in
+ *      X" is discounted, so only a non-office mention can settle the name. The
+ *      count is per place, so one office mention plus one real mention still
+ *      settles it.
+ *
+ * WHAT THIS DOES NOT DO, ON PURPOSE. It does not touch the multi-word aliases,
+ * the demonym table, the curated cities, the subnational parents, the
+ * longest-specific-phrase rule, `congoReadingOf` (East Africa withdrew it for
+ * the persistence path), the router, or any other country. D-21, P0-4 and P0-5
+ * are out of scope by instruction and are untouched here.
+ */
+const AMBIGUOUS_SINGLE_TOKEN_NAMES: ReadonlySet<string> = new Set(
+  Object.keys(AMBIGUOUS_COUNTRY_NAMES)
+    .map((name) => normalize(name))
+    .filter((name) => name.length > 0 && !name.includes(' ')),
+);
+
+/**
+ * A country's own unambiguous PLACE names, which may settle its ambiguous
+ * single-token name when they appear in the same text. Places only — see part 2
+ * above for what is excluded and why.
+ */
+const AMBIGUOUS_NAME_PLACE_DISAMBIGUATORS: Readonly<Record<string, readonly string[]>> = {
+  COG: ['brazzaville', 'pointe noire'],
+};
+
+function countOccurrences(haystack: string, needle: string): number {
+  let count = 0;
+  for (let at = haystack.indexOf(needle); at !== -1; at = haystack.indexOf(needle, at + 1)) {
+    count += 1;
+  }
+  return count;
+}
+
+/**
+ * True when the text names one of `iso3`'s own places OTHERWISE than as the
+ * place someone is based in. Office constructions are subtracted rather than
+ * excluded wholesale, so a text that carries both an office mention and a real
+ * one still settles.
+ */
+function ambiguousNameSettledFor(preparedText: string, iso3: string): boolean {
+  return (AMBIGUOUS_NAME_PLACE_DISAMBIGUATORS[iso3] ?? []).some((rawPlace) => {
+    const place = normalize(rawPlace);
+    const mentions = countOccurrences(preparedText, ` ${place} `);
+    const officeMentions =
+      countOccurrences(preparedText, ` ${place} based `) +
+      countOccurrences(preparedText, ` based in ${place} `);
+
+    return mentions - officeMentions > 0;
+  });
+}
+
+/** True when `name` may stand for `iso3` in this text: unambiguous, or settled. */
+function ambiguousNameIsEvidence(preparedText: string, iso3: string, name: string): boolean {
+  return (
+    !AMBIGUOUS_SINGLE_TOKEN_NAMES.has(normalize(name)) ||
+    ambiguousNameSettledFor(preparedText, iso3)
+  );
+}
+
 function countryPhrases(iso3: string, name: string): string[] {
-  return [normalize(name), ...(ALIAS_PHRASES_BY_ISO3[iso3] ?? [])];
+  const own = normalize(name);
+
+  /* D-07 part 1: an ambiguous single-token name does not enter the phrase
+     tables, so it can neither vote for its country nor suppress another's. */
+  return [
+    ...(AMBIGUOUS_SINGLE_TOKEN_NAMES.has(own) ? [] : [own]),
+    ...(ALIAS_PHRASES_BY_ISO3[iso3] ?? []),
+  ];
 }
 
 /**
@@ -694,7 +801,12 @@ function containsCountryReference(
     return false;
   }
 
-  if (preparedContainsPhrase(preparedText, country.name)) {
+  /* D-07 parts 1-3: the registry name counts unless it is an ambiguous single
+     token that this text does not settle with one of the country's own places. */
+  if (
+    ambiguousNameIsEvidence(preparedText, country.iso3, country.name) &&
+    preparedContainsPhrase(preparedText, country.name)
+  ) {
     return true;
   }
 
@@ -718,7 +830,14 @@ function containsCountryReference(
     return true;
   }
 
-  return Boolean(localizedName) && preparedContainsPhrase(preparedText, localizedName as string);
+  /* D-07: the same rule for a localized name. Polish "Kongo", "Konga" and
+     "Kongu" are in the shared ambiguity table, so an unqualified Polish
+     mention no longer resolves COG either, while "Kongo … Brazzaville" does. */
+  return (
+    Boolean(localizedName) &&
+    ambiguousNameIsEvidence(preparedText, country.iso3, localizedName as string) &&
+    preparedContainsPhrase(preparedText, localizedName as string)
+  );
 }
 
 function escapeRegExp(value: string): string {
