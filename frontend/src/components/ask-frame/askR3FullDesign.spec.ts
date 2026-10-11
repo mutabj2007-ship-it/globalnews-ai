@@ -107,12 +107,23 @@ describe('§3 welcome entries (§Composition 6–8)', () => {
     });
     return r.root;
   };
-  it('a guest sees the job entry and the coverage line, and no private group', () => {
+  /*
+    SUPERSEDED, NOT DELETED — the original assertion read:
+        const job = byAsk(root, 'job-entry')[0]!;
+        expect(textOf(job)).toBe('Job opportunities›');
+    IA + GUIDED DISCOVER R2, decision 2, approved by the Product Owner through the Master CTO on
+    11 Oct 2026 ("APPROVE ALL AS DRAWN"): the "Job opportunities ›" TEXT LINK is replaced by the
+    G3 cue, which opens the SAME J01 sheet. The old text no longer exists, so the old assertion is
+    obsolete rather than failing. What it protected — a guest sees the job affordance and the
+    coverage line and no private group — is asserted below against the approved arrangement.
+  */
+  it('a guest sees the job affordance (G3) and the coverage line, and no private group', () => {
     const root = render({ signedIn: false, latest: null });
     expect(byAsk(root, 'welcome-resume-group')).toHaveLength(0);
-    const job = byAsk(root, 'job-entry')[0]!;
-    expect(textOf(job)).toBe('Job opportunities›');
-    expect(job.props.type).toBe('button');
+    const g3 = byAsk(root, 'cue-g3')[0]!;
+    expect(textOf(g3)).toBe('Find job opportunities');
+    expect(g3.props.type).toBe('button');
+    expect(byAsk(root, 'job-entry')).toHaveLength(0);
     const line = byAsk(root, 'coverage-focus')[0]!;
     expect(textOf(line)).toBe('Coverage focus: Europe · East Africa · Middle East');
   });

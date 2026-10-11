@@ -43,7 +43,7 @@ import { useAskNavOptional } from '@/components/ask-nav/AskNavShell';
 import { AskReadingFooter } from '@/components/ask-nav/AskReadingFooter';
 import { AskDeepConfirm } from './AskDeepConfirm';
 import { AskJobSetupSheet } from './AskJobSetupSheet';
-import { AskWelcomeEntries, useFollowSummary, useResumeConversation } from './AskWelcomeEntries';
+import { AskWelcomeEntries, useFollowSummary, useRecentConversations } from './AskWelcomeEntries';
 import { AskPrimaryNav } from '@/components/ask-nav/AskPrimaryNav';
 import { askR3FullStrings } from '@/lib/ask/askR3FullStrings';
 import { Composer } from './AskParts';
@@ -270,6 +270,23 @@ export function AskFrameScreen({
     never drawn beside an answer, a reopened conversation or a sign-in interruption.
   */
   const [composerFocused, setComposerFocused] = useState(false);
+  /* IA R2 — the staged cue's hint, announced through the composer's aria-describedby. */
+  const [cueHint, setCueHint] = useState<string | null>(null);
+  /* IA R2 02 decision 4 — compact is width < 360 OR height < 640; wide is >= 1024. */
+  const [frameSize, setFrameSize] = useState<{ compact: boolean; wide: boolean }>({ compact: false, wide: false });
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const compactQuery = window.matchMedia('(max-width: 359px), (max-height: 639px)');
+    const wideQuery = window.matchMedia('(min-width: 1024px)');
+    const read = () => setFrameSize({ compact: compactQuery.matches, wide: wideQuery.matches });
+    read();
+    compactQuery.addEventListener?.('change', read);
+    wideQuery.addEventListener?.('change', read);
+    return () => {
+      compactQuery.removeEventListener?.('change', read);
+      wideQuery.removeEventListener?.('change', read);
+    };
+  }, []);
   /* Design A2 — typing collapses the welcome group; only the emblem and the composer remain. */
   const typing = entryState && (composerFocused || question.trim() !== '');
   const emblemState = isPending
@@ -308,7 +325,8 @@ export function AskFrameScreen({
     conversation (a read of their threads; 0 AI). A guest reads nothing here.
   */
   const signedInReader = !guestMode && nav?.account === 'signed-in';
-  const resumeConversation = useResumeConversation(signedInReader && entryState);
+  const recentConversations = useRecentConversations(signedInReader && entryState);
+  const resumeConversation = recentConversations[0] ?? null;
   /* ASK R3 NAVIGATION / USABILITY R1 — the reader's real follow facts (GET /ask-v2/briefings, a
      database read: 0 AI · 0 provider); null until read, and whenever there is nothing followed. */
   const followSummary = useFollowSummary(signedInReader && entryState);
@@ -577,6 +595,24 @@ export function AskFrameScreen({
       document.querySelector<HTMLTextAreaElement>('[data-ask="composer-input"]')?.focus(),
     );
   }
+  /*
+    ASK R3 IA + GUIDED DISCOVER R2 (approved 11 Oct 2026) — a guided cue STAGES a draft:
+    handoff §4, "set the composer value only if it is empty, focus it, caret at end, show the
+    hint via aria-describedby; NEVER submit". A reader's own unsent words are never overwritten,
+    and no request of any kind is issued here.
+  */
+  function stageGuidedDraft(draft: string, hint: string) {
+    setCueHint(hint);
+    const area = document.querySelector<HTMLTextAreaElement>('[data-ask="composer-input"]');
+    if (question.trim().length === 0) setQuestion(draft);
+    requestAnimationFrame(() => {
+      const node = area ?? document.querySelector<HTMLTextAreaElement>('[data-ask="composer-input"]');
+      if (node === null) return;
+      node.focus();
+      const end = node.value.length;
+      node.setSelectionRange(end, end);
+    });
+  }
   function leave() {
     if (returnPath !== null) {
       window.location.assign(returnPath);
@@ -827,7 +863,11 @@ export function AskFrameScreen({
                     locale={interfaceLocale}
                     signedIn={signedInReader}
                     latest={resumeConversation}
+                    recent={recentConversations}
                     follows={followSummary}
+                    onStageDraft={stageGuidedDraft}
+                    compact={frameSize.compact}
+                    wide={frameSize.wide}
                     onOpenJobs={() => setJobSheetOpen(true)}
                     placement="welcome"
                   />
@@ -1188,6 +1228,7 @@ export function AskFrameScreen({
                The Alpha line's R2 input-limit contract (limitCopy) is kept as it was. */
             maxHeight={168}
             limitCopy={r2s}
+            cueHint={cueHint}
             /*
               SUPERSEDED BY PRODUCT OWNER DIRECTIVE 9 Oct 2026 / CLAUDE DESIGN R3 §11 (R1-C).
 
@@ -1235,7 +1276,11 @@ export function AskFrameScreen({
               locale={interfaceLocale}
               signedIn={signedInReader}
               latest={resumeConversation}
+              recent={recentConversations}
               follows={followSummary}
+              onStageDraft={stageGuidedDraft}
+              compact={frameSize.compact}
+              wide={frameSize.wide}
               onOpenJobs={() => setJobSheetOpen(true)}
               placement="desktop"
             />

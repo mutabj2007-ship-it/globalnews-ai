@@ -3478,3 +3478,89 @@
     display: none;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   ASK R3 IA + GUIDED DISCOVER R2 (Claude H) — appended; no rule above is edited.
+   Claude Design GLOBALNEWSAI-R3-IA-DISCOVER-FINAL-R2.zip (SHA-256 574fc35b…55e32be8),
+   approved by the Product Owner 11 Oct 2026. Frames F01b / F02 / F03a–d / F05a.
+   Every selector here is ia…-prefixed. Colours are existing tokens only; no animation,
+   so nothing to reduce under reduced motion.
+   ══════════════════════════════════════════════════════════════════════════════ */
+.iaCuesPills {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin: 2px 0 2px;
+}
+.iaCuesList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 2px 0 2px;
+}
+.iaCue {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--ad-line, #d9d9d2);
+  border-radius: 22px;
+  background: transparent;
+  color: var(--ad-ink, inherit);
+  padding: 0 16px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: start;
+}
+.iaCuesList .iaCue {
+  width: 100%;
+  justify-content: flex-start;
+}
+.iaCue:hover {
+  background: var(--ad-surface-2, transparent);
+}
+.iaCue:focus-visible {
+  outline: 2px solid var(--ad-focus, #6c93ff);
+  outline-offset: -2px;
+}
+.iaCueGlyph {
+  flex: none;
+  color: var(--ad-accent-text, currentColor);
+}
+.iaGlobe {
+  display: inline-block;
+  margin-inline-end: 6px;
+  vertical-align: -3px;
+}
+.iaContinueHead {
+  margin: 0;
+  padding: 10px 14px 2px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ad-ink-2, #6b6a62);
+}
+.iaTwoLine {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  min-width: 0;
+}
+.iaAllConversations {
+  min-height: 44px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--ad-accent-text, #1f6f78);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-align: start;
+  padding: 0 14px;
+  cursor: pointer;
+}
+.iaAllConversations:focus-visible {
+  outline: 2px solid var(--ad-focus, #6c93ff);
+  outline-offset: -2px;
+}

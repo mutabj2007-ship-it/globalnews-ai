@@ -364,6 +364,13 @@ describe('6 · preserved', () => {
     for (const file of [frame, shell, continuity, entries]) {
       expect(file).not.toMatch(/\bbell\b|🔔/i);
     }
-    expect(entries).toContain('<span dir="auto" className={styles.r3OneLine}>');
+    /*
+      SUPERSEDED, NOT DELETED — the original assertion read:
+          expect(entries).toContain('<span dir="auto" className={styles.r3OneLine}>');
+      IA + GUIDED DISCOVER R2, decision 5 (PO-approved 11 Oct 2026): Continue titles are now TWO
+      lines, so the one-line clamp is obsolete. The point it protected — the reader's own words
+      keep their own direction — still holds and is asserted here.
+    */
+    expect(entries).toContain('<span dir="auto" className={styles.iaTwoLine}>');
   });
 });
