@@ -36,7 +36,7 @@ export function HomeR1World60({
       <p className="text-[12.5px] text-[var(--gt-ink2)]">{t.note}</p>
       <div className="relative mt-3 overflow-hidden rounded-[10px]">
         <a href={safeExternalHref(lead.url)} target="_blank" rel="noopener noreferrer" tabIndex={-1} aria-hidden="true" className="block">
-          <StoryVisual article={lead} className="aspect-[16/9]" missingLabel={t.noImage} sizes="(min-width: 1140px) 360px, 92vw" />
+          <StoryVisual article={lead} publisherKey={lead.sourceId} className="aspect-[16/9]" missingLabel={t.noImage} sizes="(min-width: 1140px) 360px, 92vw" />
         </a>
         <span className="absolute right-2 top-2">
           <StoryBookmark url={lead.url} language={language} className="!border-[var(--gt-pgLine2)] !bg-[var(--gt-card)] !text-[var(--gt-link)]" />
@@ -58,7 +58,7 @@ export function HomeR1World60({
               {index + 2}
             </span>
             <a href={safeExternalHref(article.url)} target="_blank" rel="noopener noreferrer" tabIndex={-1} aria-hidden="true" className="block w-[64px] shrink-0 overflow-hidden rounded-[6px]">
-              <StoryVisual article={article} className="aspect-[4/3]" missingLabel={t.noImage} sizes="64px" />
+              <StoryVisual article={article} publisherKey={article.sourceId} className="aspect-[4/3]" missingLabel={t.noImage} sizes="64px" />
             </a>
             <span className="min-w-0 flex-1">
               <a href={safeExternalHref(article.url)} target="_blank" rel="noopener noreferrer" className="line-clamp-2 text-[13.5px] font-semibold leading-snug text-[var(--gt-ink)] hover:underline">

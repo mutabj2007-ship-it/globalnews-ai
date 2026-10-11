@@ -3,6 +3,7 @@ import { formatUtcClock } from '@/lib/formatRelativeTime';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { pluralWithForms } from '@/lib/i18n/pluralize';
 import { SafeImage } from '@/components/ui/SafeImage';
+import { publisherImageSrcOrFallback } from '@/lib/rights/publisherImageDisplay';
 import { CARD_INTERACTION_CLASSES } from '@/components/home/interactionStyles';
 import { safeExternalHref } from '@globalnews-ai/shared';
 
@@ -78,7 +79,7 @@ export function LatestUpdatesFeed({
               >
                 <div className="relative aspect-[16/9] w-full shrink-0 overflow-hidden border-b border-border md:aspect-auto md:w-2/5 md:border-b-0 md:border-r">
                   <SafeImage
-                    src={lead.imageUrl || '/images/article-placeholder.jpg'}
+                    src={publisherImageSrcOrFallback(lead.imageUrl, lead.sourceId, '/images/article-placeholder.jpg')}
                     alt={lead.title}
                     fill
                     sizes="(min-width: 768px) 40vw, 100vw"
@@ -114,7 +115,7 @@ export function LatestUpdatesFeed({
                   >
                     <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-border">
                       <SafeImage
-                        src={item.imageUrl || '/images/article-placeholder.jpg'}
+                        src={publisherImageSrcOrFallback(item.imageUrl, item.sourceId, '/images/article-placeholder.jpg')}
                         alt={item.title}
                         fill
                         sizes="80px"

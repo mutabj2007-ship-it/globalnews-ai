@@ -3,6 +3,7 @@ import type { NewsArticle } from '@globalnews-ai/shared';
 
 import { StoryPhoto } from '@/components/home/StoryPhoto';
 import { CATEGORY_ARTWORK, CATEGORY_ARTWORK_FALLBACK } from '@/components/home/homePresentation';
+import { publisherImageIsDisplayable } from '@/lib/rights/publisherImageDisplay';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -39,6 +40,19 @@ import { CATEGORY_ARTWORK, CATEGORY_ARTWORK_FALLBACK } from '@/components/home/h
  */
 interface StoryVisualProps {
   article: Pick<NewsArticle, 'category' | 'imageUrl'>;
+  /**
+   * E1 U-1 — WHOSE photograph `article.imageUrl` is, as the record names it:
+   * `sourceId` where the surface holds an article, the publisher identity
+   * where it holds an editorial card.
+   *
+   * REQUIRED, and nullable. Required so that a surface cannot be added
+   * without deciding; nullable so that "this surface does not know whose
+   * photograph this is" is representable, and can therefore be REFUSED. An
+   * optional prop would let the absence be an oversight; a required nullable
+   * one makes it a statement — the same shape `OfficialSourceEntry.rights`
+   * uses, for the same reason.
+   */
+  publisherKey: string | null;
   /** Aspect and radius utilities from the calling surface. */
   className: string;
   /** Accessible description used only when there is no photograph. */
@@ -46,9 +60,32 @@ interface StoryVisualProps {
   sizes: string;
 }
 
-export function StoryVisual({ article, className, missingLabel, sizes }: StoryVisualProps): JSX.Element {
+export function StoryVisual({
+  article,
+  publisherKey,
+  className,
+  missingLabel,
+  sizes,
+}: StoryVisualProps): JSX.Element {
   const artwork = CATEGORY_ARTWORK[article.category] ?? CATEGORY_ARTWORK_FALLBACK;
-  const hasPhoto = typeof article.imageUrl === 'string' && article.imageUrl !== '';
+  /*
+    E1 U-1 — PUBLISHER IMAGE RIGHTS CONTAINMENT.
+
+    The condition was "is the string non-empty". It is now "may this product
+    display this publisher's photograph", and no clearance exists, so the
+    answer is no on every card today.
+
+    NOTHING ELSE CHANGES, and that is the whole reason this component was the
+    right place: the category artwork was already painted underneath, already
+    carries `role="img"` and the surface's own `missingLabel` when no
+    photograph shows, and is a gradient that depicts nothing. A refusal is not
+    a new empty state — it is the state this component already had.
+
+    The element is NOT WRITTEN rather than hidden: a hidden <img> is still
+    fetched, and the point of the containment is that the request is never
+    made.
+  */
+  const hasPhoto = publisherImageIsDisplayable(article.imageUrl, publisherKey);
 
   return (
     <span

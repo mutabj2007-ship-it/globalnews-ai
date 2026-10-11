@@ -347,7 +347,26 @@ describe('7 — the Sources Dock is a pinned footer and keeps its imagery', () =
     const html = render(width, height);
     const frames = html.match(/data-paf="source-image-frame"/g) ?? [];
     expect({ width, frames: frames.length }).toEqual({ width, frames: 5 });
-    expect(html).toContain('https://cdn.test/thumb-0.jpg');
+  /* ── SUPERSEDED BY E1 U-1 · PUBLISHER IMAGE RIGHTS CONTAINMENT ──────────
+     The assertion below USED TO REQUIRE the publisher's photograph to render.
+     E1 identified publisher images rendered with no recorded image-display
+     clearance, and the CTO independently confirmed this render path, so the
+     requirement is withdrawn — not because it became inconvenient, but
+     because the behaviour it pinned is the defect.
+
+     THE ORIGINAL IS KEPT ABOVE EACH REPLACEMENT, commented, with its
+     authority, so a reader can see exactly what was traded and for what. The
+     replacement is the INVERSE where an inverse exists: it is stronger than
+     deleting, because deleting would leave nothing stopping the photograph
+     from coming back. Every neighbouring assertion in this file is untouched.
+     ──────────────────────────────────────────────────────────────────────── */
+    /* WAS: expect(html).toContain('https://cdn.test/thumb-0.jpg');
+       INVERTED. One image slot per source — the geometric invariant this test
+       is named for — is asserted unchanged above. What is withdrawn is the
+       requirement that the publisher URL reach the reader; the replacement
+       requires that it does NOT, which is what U-1 actually asks of this
+       surface. The striped fallback assertion below is untouched. */
+    expect(html).not.toContain('https://cdn.test/thumb-0.jpg');
     expect(html).toMatch(/repeating-linear-gradient/);
     /* Comments stripped: the source names the stock photograph in prose
        precisely to record that it is NOT used, and matching that prose

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Search } from 'lucide-react';
 import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 import { SafeImage } from '@/components/ui/SafeImage';
+import { publisherImageSrcOrFallback } from '@/lib/rights/publisherImageDisplay';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { StoryBookmark } from '@/components/bookmark/StoryBookmark';
@@ -55,7 +56,7 @@ export function CountryArticleCard({ article, language = 'en', countryCode }: Co
         >
           <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-border">
             <SafeImage
-              src={article.imageUrl || '/images/article-placeholder.jpg'}
+              src={publisherImageSrcOrFallback(article.imageUrl, article.sourceId, '/images/article-placeholder.jpg')}
               alt={article.title}
               fill
               sizes="56px"

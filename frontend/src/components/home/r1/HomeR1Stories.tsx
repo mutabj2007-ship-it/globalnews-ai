@@ -193,6 +193,7 @@ function RailCard({
       <a href={href} target="_blank" rel="noopener noreferrer" data-publisher-link="image" tabIndex={-1} aria-hidden="true" className="relative block">
         <StoryVisual
           article={article}
+          publisherKey={article.sourceId}
           className="aspect-[16/9]"
           missingLabel={dict.betaHome.imageUnavailable}
           sizes="(min-width: 1280px) 22vw, (min-width: 1024px) 30vw, (min-width: 640px) 48vw, 84vw"

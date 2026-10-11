@@ -139,7 +139,22 @@ describe('GlobalDevelopments (M60 Phase 2 — controlled carousel)', () => {
     // the real photograph and adopts that composition as its FALLBACK, so a
     // missing or failed image degrades to the released tile rather than to a
     // stock picture that would misrepresent the story.
-    expect(cardSource).toMatch(/article\.imageUrl \? \(/);
+  /* ── SUPERSEDED BY E1 U-1 · PUBLISHER IMAGE RIGHTS CONTAINMENT ──────────
+     The assertion below USED TO REQUIRE the publisher's photograph to render.
+     E1 identified publisher images rendered with no recorded image-display
+     clearance, and the CTO independently confirmed this render path, so the
+     requirement is withdrawn — not because it became inconvenient, but
+     because the behaviour it pinned is the defect.
+
+     THE ORIGINAL IS KEPT ABOVE EACH REPLACEMENT, commented, with its
+     authority, so a reader can see exactly what was traded and for what. The
+     replacement is the INVERSE where an inverse exists: it is stronger than
+     deleting, because deleting would leave nothing stopping the photograph
+     from coming back. Every neighbouring assertion in this file is untouched.
+     ──────────────────────────────────────────────────────────────────────── */
+    /* WAS: expect(cardSource).toMatch(/article\.imageUrl \? \(/);
+       The condition is no longer "is there a URL" but "may we display it". */
+    expect(cardSource).toMatch(/publisherImageIsDisplayable\(article\.imageUrl, article\.sourceId\) \? \(/);
     expect(cardSource).toMatch(/fallbackSrc=\{TRANSPARENT_PIXEL\}/);
     expect(cardSource).toMatch(/export const TRANSPARENT_PIXEL/);
     expect(stripComments(cardSource)).not.toMatch(/article-placeholder\.jpg/);

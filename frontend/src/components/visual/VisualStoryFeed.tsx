@@ -172,6 +172,7 @@ export function VisualStoryCard({
       <div aria-hidden="true" data-visual-card-image="" className="pointer-events-none select-none">
         <StoryVisual
           article={article}
+          publisherKey={article.sourceId}
           className="aspect-[16/9]"
           missingLabel={dict.betaHome.imageUnavailable}
           sizes="(min-width: 1200px) 30vw, (min-width: 600px) 48vw, 100vw"

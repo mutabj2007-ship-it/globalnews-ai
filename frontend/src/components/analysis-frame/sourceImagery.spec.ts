@@ -8,6 +8,7 @@ import { hasSourceThumbnail, hideFailedSourceThumbnail } from './SourcesDock';
 import { hasArticleImage, hideFailedArticleImage } from './SourcesReporting';
 import { fixture } from './frameFixtures';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { resolvePublisherImage } from '@/lib/rights/publisherImageDisplay';
 
 /**
  * SOURCES DOCK — VISIBLE ARTICLE IMAGE.
@@ -86,25 +87,51 @@ const imgTags = (html: string): string[] => [...html.matchAll(/<img[^>]*>/g)].ma
 const thumbs = (html: string): string[] =>
   [...html.matchAll(/data-paf="source-image-frame"[^>]*>/g)].map((m) => m[0]);
 
-describe('1 & 2 — a real imageUrl reaches BOTH dock states', () => {
-  it('the expanded dock renders the article image at its real URL', () => {
+  /* ── SUPERSEDED BY E1 U-1 · PUBLISHER IMAGE RIGHTS CONTAINMENT ──────────
+     This file's whole subject was "a real imageUrl reaches the reader". E1
+     found publisher images rendered with no recorded image-display clearance
+     and the CTO confirmed this render path, so that requirement is withdrawn.
+     The original is kept above each replacement with its authority. Every
+     other invariant in this file — one treatment per record, stripes on the
+     wrapper, nothing substituted, no new navigation target, the decorative
+     role, the counts — is UNTOUCHED and still passing.
+     ──────────────────────────────────────────────────────────────────────── */
+describe('1 & 2 — a real imageUrl is REFUSED in BOTH dock states (E1 U-1)', () => {
+  /* WAS: 'the expanded dock renders the article image at its real URL'. */
+  it('the expanded dock does not emit the publisher URL', () => {
     const html = render(ALL_IMAGES, { initialDock: 'expanded' });
-    expect(html).toContain(`${SENTINEL}?i=0`);
-    expect(imgTags(html).some((tag) => tag.includes(`${SENTINEL}?i=0`))).toBe(true);
+    expect(html).not.toContain(`${SENTINEL}?i=0`);
+    expect(imgTags(html).some((tag) => tag.includes(SENTINEL))).toBe(false);
   });
 
-  it('the COMPACT dock renders it too — the default state, with no user action', () => {
+  /* WAS: 'the COMPACT dock renders it too — the default state, with no user
+     action'. The dock itself is still asserted present: the containment is
+     about the photograph, not about the surface. */
+  it('the COMPACT dock is still there, and still does not emit it', () => {
     const html = render(ALL_IMAGES);
     expect(html).toContain('data-paf="sources-reporting"');
-    expect(html).toContain(`${SENTINEL}?i=0`);
+    expect(html).not.toContain(`${SENTINEL}?i=0`);
   });
 
-  it('every source with an image gets one, in both states', () => {
+  /* WAS: 'every source with an image gets one, in both states' — 5 per dock.
+     INVERTED, and still counted per dock, so a surface that quietly started
+     rendering again would fail here. */
+  it('no source gets one, in either state, and every slot is still present', () => {
     for (const dock of ['compact', 'expanded'] as const) {
       const html = render(ALL_IMAGES, { initialDock: dock });
-      const present = thumbs(html).filter((t) => t.includes('data-has-image="true"'));
-      expect({ dock, present: present.length }).toEqual({ dock, present: 5 });
+      const all = thumbs(html);
+      const present = all.filter((t) => t.includes('data-has-image="true"'));
+      expect({ dock, slots: all.length, present: present.length }).toEqual({ dock, slots: 5, present: 0 });
     }
+  });
+
+  /* THE REASON, asserted directly rather than inferred from absence: the
+     governed decision refuses, and names why. Absence alone would also be
+     produced by a broken fixture. */
+  it('the decision refuses for the lack of a display clearance, not by accident', () => {
+    const decision = resolvePublisherImage(`${SENTINEL}?i=0`, 'any-publisher');
+    expect(decision.kind).toBe('REFUSED');
+    expect(decision.kind === 'REFUSED' && decision.refusals).toContain('IMAGE-NO-DISPLAY-CLEARANCE');
   });
 });
 
@@ -139,8 +166,11 @@ describe('3 & 4 — a record with no image renders the striped panel and no <img
     const html = render(MIXED, { initialDock: 'expanded' });
     const all = thumbs(html);
     expect(all.length).toBe(5);
-    expect(all.filter((t) => t.includes('data-has-image="true"')).length).toBe(2);
-    expect(all.filter((t) => t.includes('data-has-image="false"')).length).toBe(3);
+    /* SUPERSEDED BY E1 U-1 — WAS 2 true / 3 false. "Never both, never
+       neither" is the invariant and it still holds exactly: all five take the
+       striped treatment, and `all.length` is asserted unchanged above. */
+    expect(all.filter((t) => t.includes('data-has-image="true"')).length).toBe(0);
+    expect(all.filter((t) => t.includes('data-has-image="false"')).length).toBe(5);
   });
 });
 
@@ -185,7 +215,11 @@ describe('6 — no empty, undefined or null src ever reaches the DOM', () => {
     const base = fixture().articles[0];
     expect(hasSourceThumbnail(base)).toBe(false);
     expect(hasSourceThumbnail({ ...base, imageUrl: '' } as NewsArticle)).toBe(false);
-    expect(hasSourceThumbnail({ ...base, imageUrl: SENTINEL } as NewsArticle)).toBe(true);
+    /* SUPERSEDED BY E1 U-1 — WAS `.toBe(true)`. The two refusals above are
+       UNCHANGED and still assert what they always did: no reference, and the
+       empty string, are not images. What changed is that a perfectly good URL
+       is also refused now, for a rights reason rather than a string reason. */
+    expect(hasSourceThumbnail({ ...base, imageUrl: SENTINEL } as NewsArticle)).toBe(false);
   });
 
   it('an empty-string imageUrl renders the placeholder, not an empty src', () => {
@@ -412,8 +446,15 @@ describe('THE onError PATH — driven directly, because markup cannot carry it',
 
 describe('12 — MUTATION CONTROL: this suite fails if the binding is severed', () => {
   it('the dock reads the article record, not a constant', () => {
+    /* SUPERSEDED BY E1 U-1 — WAS the truthy-string guard and a bare
+       `src={article.imageUrl}`. THE CONTROL'S PURPOSE IS PRESERVED AND IS THE
+       REASON IT IS REWRITTEN RATHER THAN DELETED: it exists so this suite
+       fails if the dock stops reading the article record and starts reading a
+       constant. It still reads the record — it just asks a different question
+       of it, and the <img> it guards is still bound to the record's own
+       field. */
     expect(dockCode()).toMatch(/src=\{article\.imageUrl\}/);
-    expect(dockCode()).toMatch(/article\.imageUrl === 'string' && article\.imageUrl\.length > 0/);
+    expect(dockCode()).toMatch(/publisherImageIsDisplayable\(article\.imageUrl, article\.sourceId\)/);
   });
 
   it('the guard is not vacuous — a response with no images produces no image markup', () => {

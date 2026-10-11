@@ -8,6 +8,7 @@ import type { RetainedItem } from '@/lib/map/selection/selectionIntelligence';
 import type { DisplayPrecision } from '@/lib/map/spatial/precisionModel';
 import { StoryBookmarkSlot } from '@/components/bookmark/bookmarkSlot';
 import { safeExternalHref } from '@globalnews-ai/shared';
+import { publisherImageIsDisplayable } from '@/lib/rights/publisherImageDisplay';
 
 /**
  * SPATIAL M2 · DESIGN REVISION 1.2 — `SourceCard`, Part II §2 (S · M2).
@@ -112,6 +113,18 @@ export function SourceCard({
 }: SourceCardProps): JSX.Element {
   const categoryLabel = labels.categories[item.category] ?? item.category;
   const glyph = CATEGORY_GLYPH[item.category] ?? item.category.slice(0, 3).toUpperCase();
+  /*
+    E1 U-1 — PUBLISHER IMAGE RIGHTS CONTAINMENT. The slot used to ask whether
+    a thumbnail URL was present; it now asks whether this product may display
+    that publisher's photograph, and no clearance exists for any publisher.
+
+    The designed empty state is unchanged and is the reason this was a clean
+    place to gate: the slot "COLLAPSES TO A GLYPH" with its own striped
+    ground, which this file's header already states is the honest treatment
+    and explicitly not a substituted photograph. Geometry is identical - the
+    52px cell is fixed either way.
+  */
+  const thumbnailDisplayable = publisherImageIsDisplayable(item.thumbnailUrl, item.publisher);
   const age = formatRelativeTime(item.publishedAt, language);
   const Bookmark = useContext(StoryBookmarkSlot);
   const timePrefix = item.timeIsObservedOnly ? labels.seenPrefix : labels.publishedPrefix;
@@ -120,7 +133,7 @@ export function SourceCard({
     <div
       data-gn="source-card"
       data-gn-selected={selected ? 'true' : 'false'}
-      data-gn-thumbnail={item.thumbnailUrl === undefined ? 'collapsed' : 'image'}
+      data-gn-thumbnail={thumbnailDisplayable ? 'image' : 'collapsed'}
       /*
         ── DESIGN REVISION 1.4 · THE STORY SURFACE, TOKEN FOR TOKEN ──────────
 
@@ -172,21 +185,16 @@ export function SourceCard({
         */
         className="relative flex h-[52px] w-[52px] shrink-0 items-center justify-center overflow-hidden border border-sp-story-line saturate-[.85] transition-[filter,border-color] duration-[160ms] ease-in-out group-hover:border-sp-story-line-hover group-hover:saturate-100 group-focus-within:border-sp-story-line-hover group-focus-within:saturate-100"
         style={
-          item.thumbnailUrl === undefined
-            ? { background: 'repeating-linear-gradient(135deg,#16222c 0 4px,#1b2831 4px 8px)' }
-            : undefined
+          thumbnailDisplayable
+            ? undefined
+            : { background: 'repeating-linear-gradient(135deg,#16222c 0 4px,#1b2831 4px 8px)' }
         }
       >
-        {item.thumbnailUrl === undefined ? (
-          <span
-            aria-hidden="true"
-            className="font-gn-mono text-[8px] tracking-[0.06em] text-sp-muted"
-          >
-            {glyph}
-          </span>
-        ) : (
+        {thumbnailDisplayable ? (
           <SafeImage
-            src={item.thumbnailUrl}
+            src={item.thumbnailUrl as string}
+            /* already CLEARED above; the backstop re-decides, it does not trust this */
+            clearedPublisherKey={item.publisher}
             /*
               EMPTY ALT, DELIBERATELY. The image "never carries meaning of its
               own", and the headline it sits beside is the same text an alt
@@ -197,6 +205,13 @@ export function SourceCard({
             sizes="52px"
             className="object-cover"
           />
+        ) : (
+          <span
+            aria-hidden="true"
+            className="font-gn-mono text-[8px] tracking-[0.06em] text-sp-muted"
+          >
+            {glyph}
+          </span>
         )}
       </div>
 
