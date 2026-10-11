@@ -84,6 +84,23 @@ describe('FIX 1 — the Ask home shows no history and reads none', () => {
   });
 });
 
+describe('R3.1 guided-actions layout — two side by side, jobs centred below', () => {
+  const css = read('components', 'ask-frame', 'askDashboard.module.css');
+  const block = css.slice(css.indexOf('R3.1 · PRODUCT OWNER GUIDED-ACTIONS LAYOUT'));
+  it('the pills become a centred two-column grid that shrinks equally and never below 44 px', () => {
+    expect(block).toMatch(/grid-template-columns: repeat\(2, minmax\(0, max-content\)\);/);
+    expect(block).toMatch(/\.iaCuesPills > \.iaCue:nth-child\(3\) \{\s*grid-column: 1 \/ -1;\s*justify-self: center;/);
+    expect(block).toMatch(/min-height: 44px/);
+    expect(block).not.toMatch(/animation|transition|@media/);
+  });
+  it('the cue order (G1, G2, then G3) and the compact list are unchanged', () => {
+    const entries = read('components', 'ask-frame', 'AskWelcomeEntries.tsx');
+    expect(entries.indexOf("id: 'g1'")).toBeLessThan(entries.indexOf("id: 'g2'"));
+    expect(entries.indexOf("id: 'g2'")).toBeLessThan(entries.indexOf("id: 'g3'"));
+    expect(entries).toContain('className={compact ? styles.iaCuesList : styles.iaCuesPills}');
+  });
+});
+
 describe('FIX 2 — compact conversation rows', () => {
   const now = new Date();
   const today = new Date(now.getTime() - 60_000).toISOString();
