@@ -686,3 +686,31 @@ describe('T1.1 · no access / no consent — distinct causes, no profile value',
     expect(text(persisted)).not.toMatch(/marta|kowalska|interests/);
   });
 });
+
+describe('T1.1 · the Ask write path itself enforces the allowlist and the byte bound', () => {
+  it('a tampered in-memory envelope is rebuilt from the allowlist by retrievalDiagnosticsFor()', () => {
+    const clean = buildRetrievalDiagnostics(new RetrievalTraceCollector().seal(), {
+      windowExcludedOutsideWindow: null,
+      anchorGate: null,
+      rightsAiInputExcluded: null,
+      rightsAiInputReasons: null,
+      rightsAiInputPendingReview: null,
+      finalEvidence: 0,
+    });
+    const tampered = {
+      ...clean,
+      question: 'Marta Kowalska secret question',
+      causes: [{ cause: 'PROVIDER_EMPTY', detail: 'marta\nkowalska' }],
+    } as unknown as RetrievalDiagnostics;
+    const analysis = attachRetrievalDiagnostics(
+      { articles: [] } as unknown as AnalysisApiResponse,
+      tampered,
+    );
+    const persisted = retrievalDiagnosticsFor(analysis, routeFor([]));
+    expect(keysOutsideAllowlist(persisted)).toEqual([]);
+    expect(text(persisted)).not.toContain('marta');
+    expect(persisted?.persisted.rejectedValues).toBeGreaterThan(0);
+    expect(persisted?.persisted.bytes).toBe(bytes(persisted));
+    expect(persisted?.persisted.bytes).toBeLessThanOrEqual(RETRIEVAL_DIAGNOSTICS_MAX_BYTES);
+  });
+});
