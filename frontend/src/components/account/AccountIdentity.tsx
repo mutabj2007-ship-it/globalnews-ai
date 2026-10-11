@@ -55,7 +55,10 @@ export function AccountIdentity({
   }
   return (
     <div data-account="identity" className={styles.row}>
-      <span className={styles.rowLabel}>{t.nameLabel}</span>
+      {/* the label keeps its own width; the name and its source take the rest of the row */}
+      <span className={styles.rowLabel} style={{ flex: '0 0 auto' }}>
+        {t.nameLabel}
+      </span>
       <span className="flex min-w-0 flex-1 flex-col items-end text-end">
         <span data-account="identity-name" dir="auto" style={{ unicodeBidi: 'isolate' }} className={styles.rowValue}>
           {name ?? t.notSet}
