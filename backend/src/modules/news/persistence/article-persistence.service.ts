@@ -6,6 +6,7 @@ import { PrismaService } from '../../../database/prisma.service';
 import { stripUnresolvedTemplatePlaceholders } from '../article-metadata-hygiene.util';
 import { admittedStoredSourceWhere, storedRowAdmissible, storedRowExclusionReason } from '../rights/source-use-policy';
 import { RETAINED_ARTICLE_OBSERVER, type RetainedArticleObserver } from './retained-article-observer.port';
+import { currentRetrievalTrace, traceSafely } from '../retrieval-trace/retrieval-trace';
 
 interface FindRecentArticlesOptions {
   limit?: number;
@@ -89,7 +90,12 @@ export class ArticlePersistenceService {
       if (reason === null) kept.push(row);
       else dropped[reason] = (dropped[reason] ?? 0) + 1;
     }
-    if (kept.length !== rows.length) this.logger.debug(`stored rows withheld by rights: ${JSON.stringify(dropped)}`);
+    if (kept.length !== rows.length) {
+      this.logger.debug(`stored rows withheld by rights: ${JSON.stringify(dropped)}`);
+      /* RETRIEVAL R1 · T1 — the same reason counts, into the operation's passive trace. */
+      const trace = currentRetrievalTrace();
+      if (trace !== undefined) traceSafely(() => trace.noteStoredRightsDrops(dropped));
+    }
     return kept;
   }
 

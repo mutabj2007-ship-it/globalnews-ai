@@ -1,3 +1,10 @@
+import {
+  localCoverageFor,
+  notAskedDiagnostics,
+  readRetrievalDiagnostics,
+  withCoverage,
+  type RetrievalDiagnostics,
+} from '../news/retrieval-trace/retrieval-diagnostics';
 import { solveComputation, type ComputationResult } from './computation/deterministic-computation';
 import { loanRateComputation, loanScheduleChange, statedLoan } from './computation/cash-flow-rate';
 import { financialRateRuleFor } from './computation/financial-rate';
@@ -3235,6 +3242,9 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         research: researchRecordOf(researchSource === undefined ? analysis : researchSource, {
           reused: rework?.evidence === 'REUSED',
         }),
+        /* RETRIEVAL R1 · T1 — the operation's passive retrieval diagnostics (counts, codes and
+           fingerprints only; never the question, a sent query, an article or an account). */
+        retrievalDiagnostics: retrievalDiagnosticsFor(analysis, route),
         /* CTO P0 — advice is GENERAL GUIDANCE from model reasoning, never current sourced research;
            a mixed question names the part that needs current sourced evidence. */
         ...(route.knowledgeRequirement === 'ADVISORY' ||
@@ -3394,4 +3404,46 @@ export function retrievalFailed(response: { retrievalContext?: unknown } | null 
   const answered = (ctx.providers ?? []).length;
   const failed = (ctx.providerFailures ?? []).length;
   return answered === 0 && (failed > 0 || ctx.fallbackReason === 'provider-error' || ctx.dataMode === 'unavailable');
+}
+
+/* RETRIEVAL R1 · T1 — the persisted envelope for one Ask operation. Pure over its inputs and
+   self-contained: any failure yields no envelope rather than a different answer. */
+const RETRIEVAL_DIAGNOSTICS_MAX_CHARS = 16_000;
+
+export function retrievalDiagnosticsFor(
+  analysis: AnalysisApiResponse | null,
+  route: AskR2Route,
+): RetrievalDiagnostics | null {
+  try {
+    const base =
+      (analysis === null ? undefined : readRetrievalDiagnostics(analysis)) ??
+      notAskedDiagnostics(analysis === null ? route.plan.terminalState : 'ANALYSIS_WITHOUT_TRACE');
+    const countries = [
+      ...new Set(
+        route.envelope.geography.candidates
+          .map((candidate) => candidate.value)
+          .filter(
+            (value): value is string => typeof value === 'string' && /^[A-Z]{3}$/.test(value),
+          ),
+      ),
+    ];
+    const diagnostics = withCoverage(
+      base,
+      countries.length === 1 ? localCoverageFor(countries[0] as string) : null,
+    );
+    if (JSON.stringify(diagnostics).length <= RETRIEVAL_DIAGNOSTICS_MAX_CHARS) return diagnostics;
+    const keep = 10;
+    return {
+      ...diagnostics,
+      attempts: diagnostics.attempts.slice(0, keep),
+      attemptsTruncated:
+        diagnostics.attemptsTruncated + Math.max(0, diagnostics.attempts.length - keep),
+      searches: diagnostics.searches.slice(0, keep),
+      searchesTruncated:
+        diagnostics.searchesTruncated + Math.max(0, diagnostics.searches.length - keep),
+      unobserved: [...diagnostics.unobserved, 'entries beyond the persisted size bound'],
+    };
+  } catch {
+    return null;
+  }
 }

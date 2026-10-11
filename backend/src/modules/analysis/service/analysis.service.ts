@@ -1,3 +1,16 @@
+import {
+  RetrievalTraceCollector,
+  currentRetrievalTrace,
+  traceSafely,
+  withRetrievalTrace,
+} from '../../news/retrieval-trace/retrieval-trace';
+import {
+  attachRetrievalDiagnostics,
+  finalizeAnalysisDiagnostics,
+  readRetrievalDiagnostics,
+  withReuse,
+  type RetrievalDiagnostics,
+} from '../../news/retrieval-trace/retrieval-diagnostics';
 import { readOutputContract } from '../prompt/output-contract.util';
 import type { DisplayLocale } from '@globalnews-ai/shared';
 import {
@@ -961,12 +974,12 @@ export class AnalysisService {
        * tokenUsage) describes the original generation and is preserved
        * as-is.
        */
-      return {
+      return carryRetrievalDiagnostics(cached, {
         ...cached,
         query: originalQuery,
         normalizedQuery,
         provenance: { ...cached.provenance, cached: true },
-      };
+      }, 'ANALYSIS_CACHE');
     }
 
     // Milestone #45 — in-flight collapse: a second concurrent caller
@@ -1037,11 +1050,11 @@ export class AnalysisService {
         cacheKey,
       );
 
-      return {
+      return carryRetrievalDiagnostics(sharedResult, {
         ...sharedResult,
         query: originalQuery,
         normalizedQuery,
-      };
+      }, 'IN_FLIGHT_JOIN');
     }
 
     /*
@@ -1069,7 +1082,8 @@ export class AnalysisService {
       withGatedRetrievalDeadline(
         retrievalDeadlineAt,
         gatedAnchors === undefined ? undefined : (article) => admitsReport(gatedAnchors, article).admitted,
-        async (): Promise<AnalysisApiResponse> => {
+        /* RETRIEVAL R1 · T1 — one passive retrieval trace per run; attached after the run ends. */
+        () => this.tracedAnalysisRun(async (): Promise<AnalysisApiResponse> => {
         /**
          * Milestone #51 Phase B — root-cause fix. Previously, retrieval
          * for a story-originated query relied ENTIRELY on
@@ -4131,6 +4145,8 @@ export class AnalysisService {
           survive as two reports; a distinct or contradictory report is never deleted.
         */
         const deduped = collapseDuplicateStories(articles).slice(0, config.maxArticles);
+        /* RETRIEVAL R1 · T1 — the evidence count made available to the model (passive count). */
+        noteModelInputForTrace(deduped.length);
         if (retrievalContext.eventAnchor !== undefined) {
           const sentIds = new Set(deduped.map((article) => article.id));
           const anchor = retrievalContext.eventAnchor;
@@ -4653,7 +4669,7 @@ export class AnalysisService {
         this.setCached(cacheKey, response, this.cacheTtlFor(response, config));
 
         return response;
-      });
+      }));
 
     // Milestone #45 — registered only once the operation object exists,
     // and removed unconditionally on settlement (try/finally-equivalent
@@ -4722,6 +4738,24 @@ export class AnalysisService {
    * rejected nobody is awaiting it any more and an unhandled rejection would be
    * a second, unrelated failure mode.
    */
+  /**
+   * RETRIEVAL R1 · T1 — runs one analysis inside its own passive retrieval trace and attaches the
+   * sealed envelope to the response on a non-enumerable channel. The run's result, its timing,
+   * its cache entry and its errors are exactly what `work` produced: a failure to build the
+   * envelope leaves the response without one and changes nothing else.
+   */
+  private async tracedAnalysisRun(work: () => Promise<AnalysisApiResponse>): Promise<AnalysisApiResponse> {
+    const collector = new RetrievalTraceCollector();
+    const response = await withRetrievalTrace(collector, work);
+    const snapshot = collector.seal();
+    try {
+      attachRetrievalDiagnostics(response, finalizeAnalysisDiagnostics(snapshot, response));
+    } catch {
+      /* telemetry only */
+    }
+    return response;
+  }
+
   private withResponseDeadline<T>(
     operation: Promise<T>,
     budgetMs: number | undefined,
@@ -6548,4 +6582,19 @@ export function laneFailureReason(kind: string): string {
     default:
       return 'unavailable';
   }
+}
+
+/* RETRIEVAL R1 · T1 — carries a run's diagnostics onto a cached / joined copy, relabelled; no attempt re-runs. */
+function carryRetrievalDiagnostics<T extends object>(
+  source: object,
+  copy: T,
+  reuse: RetrievalDiagnostics['reuse'],
+): T {
+  const diagnostics = readRetrievalDiagnostics(source);
+  return diagnostics === undefined ? copy : attachRetrievalDiagnostics(copy, withReuse(diagnostics, reuse));
+}
+
+function noteModelInputForTrace(count: number): void {
+  const trace = currentRetrievalTrace();
+  if (trace !== undefined) traceSafely(() => trace.noteModelInput(count));
 }

@@ -82,6 +82,57 @@ import {
   resolveRetainedQueryCountry,
   retainedCountryVerdict,
 } from './relevance/retained-country-gate.util';
+import {
+  currentRetrievalTrace,
+  outcomeForFailureKind,
+  queryFingerprint,
+  reasonCode,
+  traceSafely,
+  TRACE_LIMITS,
+  type AttemptOutcome,
+  type AttemptRecord,
+  type AttemptTier,
+  type SearchRecord,
+} from './retrieval-trace/retrieval-trace';
+
+/* RETRIEVAL R1 · T1 — out-parameters for the passive search trace (counts only). */
+interface BuildResponseStats {
+  input: number;
+  afterPerProvider: number;
+  afterCrossProvider: number;
+  afterCap: number;
+}
+
+interface RelevanceStats {
+  rejected: number;
+  reasons: Record<string, number>;
+  reasonsTruncated: number;
+}
+
+function countRelevanceRejection(
+  stats: RelevanceStats,
+  mode: string,
+  verdict: { isRelevant: boolean },
+): void {
+  stats.rejected += 1;
+  const reasons = (verdict as { reasons?: unknown }).reasons;
+  const codes =
+    Array.isArray(reasons) && reasons.length > 0
+      ? reasons
+          .filter((reason): reason is string => typeof reason === 'string')
+          .map((reason) => reasonCode(mode, reason))
+      : [`${mode}.rejected_without_reason`];
+  for (const code of new Set(codes)) {
+    if (
+      code in stats.reasons ||
+      Object.keys(stats.reasons).length < TRACE_LIMITS.reasonCodesPerSearch
+    ) {
+      stats.reasons[code] = (stats.reasons[code] ?? 0) + 1;
+    } else {
+      stats.reasonsTruncated += 1;
+    }
+  }
+}
 
 const DATABASE_FALLBACK_MAX_AGE_MINUTES = 1440;
 
@@ -637,7 +688,14 @@ export class NewsService {
       limit,
       maxAgeMinutes,
     });
+    this.noteRetainedRead('findRetainedByQuery', retained.length);
     return retained.map((article) => withDerivedEvidenceFields(article));
+  }
+
+  /* RETRIEVAL R1 · T1 — a retained read is recorded as a count; the rows themselves are not. */
+  private noteRetainedRead(method: string, returned: number): void {
+    const trace = currentRetrievalTrace();
+    if (trace !== undefined) traceSafely(() => trace.noteRetainedRead(method, returned));
   }
 
   /**
@@ -659,7 +717,7 @@ export class NewsService {
       limit: Math.min(limit * 2, 100),
       maxAgeMinutes,
     });
-    return candidates
+    const admitted = candidates
       .filter(
         (article) =>
           article.publishedAtBasis === 'publisher' &&
@@ -669,6 +727,8 @@ export class NewsService {
       )
       .slice(0, limit)
       .map((article) => withDerivedEvidenceFields(article));
+    this.noteRetainedRead('findRetainedHeadlines', admitted.length);
+    return admitted;
   }
 
   /** PUBLIC BETA HARDENING R1B — whether a provider id belongs to the configured FALLBACK tier. */
@@ -700,6 +760,7 @@ export class NewsService {
       and not by substitution: the value credited to the article is the one the
       article itself established, exactly as it would be on any other path.
     */
+    this.noteRetainedRead('findRetainedByCountry', retained.length);
     return retained.map((article) => withDerivedEvidenceFields(article));
   }
 
@@ -792,6 +853,14 @@ export class NewsService {
      * E's fallback architecture must not inherit a GNews-only restriction.
      */
     const gnewsSearchLang = resolveSearchEndpointLanguage(options?.lang);
+    /* RETRIEVAL R1 · T1 — passive ledger for this search (no-op outside an analysis run). */
+    const searchTrace = this.beginSearchTrace(
+      query,
+      limit,
+      relevanceMode,
+      options,
+      gnewsSearchLang,
+    );
 
     if (
       options?.lang !== undefined &&
@@ -890,6 +959,7 @@ export class NewsService {
       allowFallback,
       excluded,
       new Set(options?.alsoProviderIds ?? []),
+      searchTrace,
     );
 
     /*
@@ -969,6 +1039,14 @@ export class NewsService {
           }))
         : attributed;
 
+      /* RETRIEVAL R1 · T1 — out-parameters only; neither changes what is built or admitted. */
+      const buildStats: BuildResponseStats = {
+        input: 0,
+        afterPerProvider: 0,
+        afterCrossProvider: 0,
+        afterCap: 0,
+      };
+      const relevanceStats: RelevanceStats = { rejected: 0, reasons: {}, reasonsTruncated: 0 };
       const raw = this.buildResponse(
         candidates,
         failedProviderIds,
@@ -977,6 +1055,8 @@ export class NewsService {
         {
           sortByRecency: true,
         },
+        undefined,
+        buildStats,
       );
 
       /* ASK TRUTHFUL RETRIEVAL R2A — candidates seen before admission, for the retrieval trace. */
@@ -985,7 +1065,21 @@ export class NewsService {
       const gated =
         relevanceMode.type === 'none'
           ? raw
-          : this.applyRelevanceMode(raw, query, relevanceMode);
+          : this.applyRelevanceMode(raw, query, relevanceMode, relevanceStats);
+      const recordStages = (admitted: NewsResponse): NewsResponse => {
+        this.recordSearchStages(searchTrace, {
+          results,
+          attributed,
+          candidates,
+          buildStats,
+          raw,
+          relevanceMode: relevanceMode.type,
+          relevanceStats,
+          gated,
+          admitted,
+        });
+        return admitted;
+      };
 
       /*
        * THE ADMISSION AUTHORITY, APPLIED AFTER THE GATE, AND ONLY NARROWING.
@@ -1004,9 +1098,9 @@ export class NewsService {
        * line is what still guarantees no other publisher reaches the reader.
        * One rule, still one predicate, still one authority.
        */
-      return requestedSource
-        ? this.applyRequestedSourceConstraint(gated, requestedSource)
-        : gated;
+      return recordStages(
+        requestedSource ? this.applyRequestedSourceConstraint(gated, requestedSource) : gated,
+      );
     };
 
     let response = buildFilteredResponse();
@@ -1066,7 +1160,9 @@ export class NewsService {
            * admission predicate, same constant.
            */
           this.peerTailFor('search', fallbacks, peerTailPolicy),
+          { tier: 'RESCUE', search: searchTrace },
         );
+        if (searchTrace !== undefined) traceSafely(() => (searchTrace.postRelevanceRescue = true));
 
         // Provenance and failure reasons both accumulate. A rescue must not
         // erase who already answered, and must not hide its own failure.
@@ -1083,26 +1179,42 @@ export class NewsService {
         // R0.5 — same call, same position, same await as before; only its
         // return value stopped being discarded. See attachFirstSeen().
         const firstSeenByUrl = await this.articlePersistence.persistMany(response.articles);
+        if (searchTrace?.stages) {
+          const stages = searchTrace.stages;
+          traceSafely(() => (stages.persistRequested = response.articles.length));
+        }
 
-        return withCandidatesSeen(
-          candidatesSeen,
-          attachProviderFailures(this.attachFirstSeen(response, firstSeenByUrl), failures),
-          windowExcluded,
+        return this.closeSearchTrace(
+          searchTrace,
+          'LIVE',
+          withCandidatesSeen(
+            candidatesSeen,
+            attachProviderFailures(this.attachFirstSeen(response, firstSeenByUrl), failures),
+            windowExcluded,
+          ),
         );
       }
 
-      return withCandidatesSeen(
-        candidatesSeen,
-        attachProviderFailures(response, failures),
-        windowExcluded,
+      return this.closeSearchTrace(
+        searchTrace,
+        'LIVE',
+        withCandidatesSeen(
+          candidatesSeen,
+          attachProviderFailures(response, failures),
+          windowExcluded,
+        ),
       );
     }
 
     if (!this.hasRealProviderConfigured()) {
-      return withCandidatesSeen(
-        candidatesSeen,
-        attachProviderFailures(response, failures),
-        windowExcluded,
+      return this.closeSearchTrace(
+        searchTrace,
+        'NO_REAL_PROVIDER',
+        withCandidatesSeen(
+          candidatesSeen,
+          attachProviderFailures(response, failures),
+          windowExcluded,
+        ),
       );
     }
 
@@ -1156,6 +1268,7 @@ export class NewsService {
       maxAgeMinutes: DATABASE_FALLBACK_MAX_AGE_MINUTES,
       ...(useTermParity ? { queryTerms: retainedCandidateTerms(retainedTerms) } : {}),
     });
+    const retainedConsidered = cachedArticles.length;
 
     // Milestone #36/#37: the SAME gate (whichever mode is active)
     // applies to stored/persisted fallback results — live and stored
@@ -1231,30 +1344,53 @@ export class NewsService {
       ? filterToRequestedSource(relevantCachedArticles, requestedSource)
       : relevantCachedArticles;
 
+    this.recordRetainedStages(searchTrace, {
+      mode: relevanceMode.type === 'none' ? 'NONE' : useTermParity ? 'TERM_PARITY' : 'SCORE',
+      considered: retainedConsidered,
+      inWindow: cachedArticles,
+      relevant: relevantCachedArticles,
+      attributed: attributedCachedArticles,
+      observeTermParity:
+        useTermParity && retainedTerms !== undefined
+          ? (article) => ({
+              lexical: matchesRetainedQuery(article, retainedTerms).isMatch,
+              geo: retainedCountryVerdict(article, retainedQueryCountry),
+            })
+          : undefined,
+    });
+
     if (attributedCachedArticles.length === 0) {
-      return withCandidatesSeen(
-        candidatesSeen,
-        attachProviderFailures(response, failures),
-        windowExcluded,
+      return this.closeSearchTrace(
+        searchTrace,
+        'EMPTY',
+        withCandidatesSeen(
+          candidatesSeen,
+          attachProviderFailures(response, failures),
+          windowExcluded,
+        ),
       );
     }
 
-    return withCandidatesSeen(
-      candidatesSeen,
-      attachProviderFailures(
-        this.buildCachedResponse(
-          attributedCachedArticles,
-          limit,
-          {
-            query,
-          },
-          // G-ALPHA-1 — the ACCUMULATED ids, so a rescue attempt that also
-          // failed is reflected in the public fallback reason.
-          this.resolveFallbackReason(failedProviderIds),
+    return this.closeSearchTrace(
+      searchTrace,
+      'RETAINED',
+      withCandidatesSeen(
+        candidatesSeen,
+        attachProviderFailures(
+          this.buildCachedResponse(
+            attributedCachedArticles,
+            limit,
+            {
+              query,
+            },
+            // G-ALPHA-1 — the ACCUMULATED ids, so a rescue attempt that also
+            // failed is reflected in the public fallback reason.
+            this.resolveFallbackReason(failedProviderIds),
+          ),
+          failures,
         ),
-        failures,
+        windowExcluded,
       ),
-      windowExcluded,
     );
   }
 
@@ -1821,6 +1957,8 @@ export class NewsService {
     excluded: ReadonlySet<string> = new Set(),
     /** ASK MULTI-SOURCE DISCOVERY R2B — fallback providers promoted for this request. */
     also: ReadonlySet<string> = new Set(),
+    /* RETRIEVAL R1 · T1 — the search() this fan-out serves, for the passive attempt ledger. */
+    traceSearch?: SearchRecord,
   ): Promise<ProviderCallResult> {
     const tierFallbacks = this.eligibleProvidersForTier(capability, 'fallback').filter(
       (provider) => !excluded.has(provider.id),
@@ -1837,7 +1975,10 @@ export class NewsService {
      * would change the behaviour of every ordinary request in the product to
      * fix a problem none of them has.
      */
-    const primaryCall = await this.callProviderSet(primaries, operation, capability);
+    const primaryCall = await this.callProviderSet(primaries, operation, capability, undefined, {
+      tier: 'PRIMARY',
+      search: traceSearch,
+    });
 
     const primaryArticleCount = primaryCall.results.reduce(
       (total, result) => total + result.articles.length,
@@ -1859,6 +2000,7 @@ export class NewsService {
       operation,
       capability,
       this.peerTailFor(capability, fallbacks, peerTail),
+      { tier: 'FALLBACK', search: traceSearch },
     );
 
     return {
@@ -1957,8 +2099,63 @@ export class NewsService {
      * tier with more than one eligible peer ever supplies a policy.
      */
     peerTail?: PeerTailPolicy,
+    /* RETRIEVAL R1 · T1 — passive attempt ledger context. Absent → tier inferred, no search link. */
+    traceContext?: { tier?: AttemptTier; search?: SearchRecord },
   ): Promise<ProviderCallResult> {
     const startedAt = Date.now();
+    const trace = currentRetrievalTrace();
+    const attemptRecords = new Map<string, AttemptRecord>();
+    const beginTraceAttempt = (
+      provider: NewsProvider,
+      initiatedAt: number | null,
+    ): AttemptRecord | undefined => {
+      if (trace === undefined) return undefined;
+      let record: AttemptRecord | undefined;
+      traceSafely(() => {
+        const search = traceContext?.search;
+        record = trace.beginAttempt({
+          searchOrdinal: search?.ordinal ?? null,
+          providerId: provider.id,
+          capability,
+          tier:
+            traceContext?.tier ??
+            (this.fallbackProviders.some((fallback) => fallback.id === provider.id)
+              ? 'FALLBACK'
+              : 'PRIMARY'),
+          initiatedAt: initiatedAt === null ? null : new Date(initiatedAt).toISOString(),
+          requestedLang: search?.requestedLang ?? null,
+          sentLang:
+            search === undefined
+              ? null
+              : provider.id === 'gnews'
+                ? search.sentLangGnews
+                : search.requestedLang,
+        });
+        if (record !== undefined) attemptRecords.set(provider.id, record);
+      });
+      return record;
+    };
+    const settleTraceAttempt = (
+      record: AttemptRecord | undefined,
+      late: boolean,
+      outcome: AttemptOutcome,
+      raw: number | null,
+      durationMs: number,
+    ): void => {
+      if (record === undefined) return;
+      traceSafely(() => {
+        if (late) {
+          /* A straggler's real outcome is kept for diagnosis but never replaces what the
+             pipeline used (CTO T1: late fallback cannot replace original failure evidence). */
+          record.lateOutcome = outcome;
+          record.lateRawFetchedCount = raw;
+          return;
+        }
+        record.outcome = outcome;
+        record.rawFetchedCount = raw;
+        record.durationMs = durationMs;
+      });
+    };
 
     /*
      * ── R1 · THE SEALED SNAPSHOT ──────────────────────────────────────────
@@ -2041,6 +2238,8 @@ export class NewsService {
           `provider-attempt provider=${provider.id} capability=${capability} result=budget-skip remainingMs=${Math.max(0, Math.round(remaining))}`,
         );
         budgetSkipped.add(provider.id);
+        const skipped = beginTraceAttempt(provider, null);
+        if (skipped !== undefined) traceSafely(() => (skipped.outcome = 'BUDGET_SKIPPED'));
         return;
       }
       try {
@@ -2053,12 +2252,20 @@ export class NewsService {
          result count or failure kind. Never the query, key, URL or payload. Logged even when the
          tier stopped awaiting this peer (late=true), so a straggler's real outcome is on record. */
       const startedAt = Date.now();
+      const attempt = beginTraceAttempt(provider, startedAt);
       try {
         const articles = await operation(provider);
         logWithRequestId(
           this.logger,
           'log',
           `provider-attempt provider=${provider.id} capability=${capability} ms=${Date.now() - startedAt} result=ok count=${articles.length}${sealed ? ' late=true' : ''}`,
+        );
+        settleTraceAttempt(
+          attempt,
+          sealed,
+          articles.length === 0 ? 'ZERO_RAW' : 'SUCCESS',
+          articles.length,
+          Date.now() - startedAt,
         );
 
         if (sealed) return;
@@ -2070,6 +2277,13 @@ export class NewsService {
           this.logger,
           'log',
           `provider-attempt provider=${provider.id} capability=${capability} ms=${Date.now() - startedAt} result=failed kind=${resolveProviderFailureKind(error)}${sealed ? ' late=true' : ''}`,
+        );
+        settleTraceAttempt(
+          attempt,
+          sealed,
+          outcomeForFailureKind(resolveProviderFailureKind(error)),
+          null,
+          Date.now() - startedAt,
         );
         if (sealed) return;
 
@@ -2253,6 +2467,8 @@ export class NewsService {
       sortByRecency: true,
     },
     language?: string,
+    /* RETRIEVAL R1 · T1 — optional out-parameter; counts only, never read back. */
+    stats?: BuildResponseStats,
   ): NewsResponse {
     const seen = new Set<string>();
 
@@ -2330,6 +2546,15 @@ export class NewsService {
     }
 
     const capped = limit ? deduplicated.slice(0, limit) : deduplicated;
+
+    if (stats !== undefined) {
+      traceSafely(() => {
+        stats.input = results.reduce((total, result) => total + result.articles.length, 0);
+        stats.afterPerProvider = merged.length;
+        stats.afterCrossProvider = deduplicated.length;
+        stats.afterCap = capped.length;
+      });
+    }
 
     const successfulProviderIds = results.map((result) => result.providerId);
 
@@ -2417,16 +2642,201 @@ export class NewsService {
     response: NewsResponse,
     query: string,
     relevanceMode: ActiveRelevanceMode,
+    /* RETRIEVAL R1 · T1 — optional out-parameter. The SAME single scoreByMode() call per article
+       decides; the reasons it already returned are merely counted instead of discarded. */
+    stats?: RelevanceStats,
   ): NewsResponse {
-    const filtered = response.articles.filter(
-      (article) => this.scoreByMode(article, query, relevanceMode).isRelevant,
-    );
+    const filtered = response.articles.filter((article) => {
+      const verdict = this.scoreByMode(article, query, relevanceMode);
+      if (!verdict.isRelevant && stats !== undefined) {
+        traceSafely(() => countRelevanceRejection(stats, relevanceMode.type, verdict));
+      }
+      return verdict.isRelevant;
+    });
 
     return {
       ...response,
       articles: filtered,
       totalResults: filtered.length,
     };
+  }
+
+  /* ══ RETRIEVAL R1 · T1 — PASSIVE TRACE HELPERS (record only; never read by a decision) ══ */
+
+  private beginSearchTrace(
+    query: string,
+    limit: number | undefined,
+    relevanceMode: RelevanceMode,
+    options:
+      | {
+          lang?: string;
+          requestedSource?: RequestedSource;
+          allowFallback?: boolean;
+          from?: string;
+          to?: string;
+        }
+      | undefined,
+    gnewsSearchLang: string | undefined,
+  ): SearchRecord | undefined {
+    const trace = currentRetrievalTrace();
+    if (trace === undefined) return undefined;
+    let record: SearchRecord | undefined;
+    traceSafely(() => {
+      record = trace.beginSearch({
+        capability: 'search',
+        queryFingerprint: queryFingerprint(query),
+        queryLength: query.length,
+        requestedLang: options?.lang ?? null,
+        sentLangGnews: options?.lang === undefined ? null : (gnewsSearchLang ?? null),
+        window:
+          options?.from !== undefined && options?.to !== undefined
+            ? { from: options.from, to: options.to }
+            : null,
+        limit: limit ?? null,
+        relevanceMode: relevanceMode.type,
+        requestedSource: options?.requestedSource !== undefined,
+        allowFallback: options?.allowFallback !== false,
+      });
+    });
+    return record;
+  }
+
+  private recordSearchStages(
+    search: SearchRecord | undefined,
+    input: {
+      results: ReadonlyArray<{ providerId: string; articles: readonly NewsArticle[] }>;
+      attributed: ReadonlyArray<{ providerId: string; articles: readonly NewsArticle[] }>;
+      candidates: ReadonlyArray<{ providerId: string; articles: readonly NewsArticle[] }>;
+      buildStats: BuildResponseStats;
+      raw: NewsResponse;
+      relevanceMode: string;
+      relevanceStats: RelevanceStats;
+      gated: NewsResponse;
+      admitted: NewsResponse;
+    },
+  ): void {
+    if (search === undefined) return;
+    traceSafely(() => {
+      const count = (sets: ReadonlyArray<{ articles: readonly NewsArticle[] }>) =>
+        sets.reduce((total, set) => total + set.articles.length, 0);
+      const rawFetched = count(input.results);
+      const attributed = count(input.attributed);
+      const windowed = count(input.candidates);
+      const countryTags: Record<string, number> = {};
+      let countryUnresolved = 0;
+      for (const article of input.raw.articles) {
+        const code = article.countryCode;
+        if (code === undefined || code === null || code === '') countryUnresolved += 1;
+        else if (code in countryTags || Object.keys(countryTags).length < TRACE_LIMITS.countryTags)
+          countryTags[code] = (countryTags[code] ?? 0) + 1;
+      }
+      const answered = new Set(
+        input.results
+          .filter((result) => result.articles.length > 0)
+          .map((result) => result.providerId),
+      );
+      const survivorsWithoutSuccessfulAttempt = input.admitted.articles.filter(
+        (article) => article.providerId !== undefined && !answered.has(article.providerId),
+      ).length;
+      search.stages = {
+        builds: (search.stages?.builds ?? 0) + 1,
+        rawFetched,
+        requestedSourceExcluded: rawFetched - attributed,
+        windowExcluded: attributed - windowed,
+        perProviderDuplicatesCollapsed: input.buildStats.input - input.buildStats.afterPerProvider,
+        crossProviderDuplicatesCollapsed:
+          input.buildStats.afterPerProvider - input.buildStats.afterCrossProvider,
+        cappedOut: input.buildStats.afterCrossProvider - input.buildStats.afterCap,
+        countryTags,
+        countryUnresolved,
+        relevanceMode: input.relevanceMode,
+        relevanceRejected: input.relevanceStats.rejected,
+        relevanceReasons: input.relevanceStats.reasons,
+        relevanceReasonsTruncated: input.relevanceStats.reasonsTruncated,
+        requestedSourceConstraintExcluded:
+          input.gated.articles.length - input.admitted.articles.length,
+        admittedLive: input.admitted.articles.length,
+        persistRequested: null,
+        survivorsWithoutSuccessfulAttempt,
+      };
+    });
+  }
+
+  private recordRetainedStages(
+    search: SearchRecord | undefined,
+    input: {
+      mode: 'TERM_PARITY' | 'SCORE' | 'NONE';
+      considered: number;
+      inWindow: readonly NewsArticle[];
+      relevant: readonly NewsArticle[];
+      attributed: readonly NewsArticle[];
+      observeTermParity?: (article: NewsArticle) => {
+        lexical: boolean;
+        geo: { decision: string; articleCountry?: string };
+      };
+    },
+  ): void {
+    if (search === undefined) return;
+    traceSafely(() => {
+      const relevantIds = new Set(input.relevant.map((article) => article.id));
+      let lexicalRejected = 0;
+      let geoRejected = 0;
+      let relevanceRejected = 0;
+      const geoVerdicts: Record<string, number> = {};
+      for (const article of input.inWindow) {
+        if (relevantIds.has(article.id)) continue;
+        if (input.observeTermParity === undefined) {
+          relevanceRejected += 1;
+          continue;
+        }
+        /* Observation only: the same pure functions the filter above already called. */
+        const seen = input.observeTermParity(article);
+        const geoKey =
+          seen.geo.decision === 'admit'
+            ? undefined
+            : seen.geo.articleCountry === undefined
+              ? 'ARTICLE_COUNTRY_UNKNOWN'
+              : 'CONTRADICTS_QUERY_COUNTRY';
+        if (!seen.lexical) {
+          /* Stage order: the lexical gate rejected it first. A geography contradiction it ALSO
+             carries is kept as evidence (ALSO_*) but is not counted as the rejecting stage. */
+          lexicalRejected += 1;
+          if (geoKey !== undefined)
+            geoVerdicts[`ALSO_${geoKey}`] = (geoVerdicts[`ALSO_${geoKey}`] ?? 0) + 1;
+        } else if (geoKey !== undefined) {
+          geoRejected += 1;
+          geoVerdicts[geoKey] = (geoVerdicts[geoKey] ?? 0) + 1;
+        } else {
+          relevanceRejected += 1;
+        }
+      }
+      search.retained = {
+        mode: input.mode,
+        considered: input.considered,
+        windowExcluded: input.considered - input.inWindow.length,
+        lexicalRejected,
+        geoRejected,
+        geoVerdicts,
+        relevanceRejected,
+        requestedSourceExcluded: input.relevant.length - input.attributed.length,
+        admitted: input.attributed.length,
+      };
+    });
+  }
+
+  private closeSearchTrace(
+    search: SearchRecord | undefined,
+    from: NonNullable<SearchRecord['returnedFrom']>,
+    response: NewsResponse,
+  ): NewsResponse {
+    if (search !== undefined) {
+      traceSafely(() => {
+        search.returnedFrom =
+          response.articles.length === 0 && from !== 'NO_REAL_PROVIDER' ? 'EMPTY' : from;
+        search.returned = response.articles.length;
+      });
+    }
+    return response;
   }
 
   /**
