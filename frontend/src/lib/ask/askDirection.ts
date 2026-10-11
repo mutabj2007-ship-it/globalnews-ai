@@ -287,6 +287,19 @@ export function askFormatLocalDay(at: Date, locale: DisplayLocale): string {
   return `${part('day')} ${part('month')} ${part('year')}`;
 }
 
+/**
+ * R3.1 FIX 2 — the compact day for a dense list: "9 Oct" when the day falls in the reference
+ * year, the full askFormatLocalDay ("9 Oct 2025") otherwise. Same formatter and locale profile,
+ * so Arabic keeps its own numerals; only the year is left out, never guessed.
+ */
+export function askFormatLocalDayCompact(at: Date, locale: DisplayLocale, reference: Date): string {
+  if (at.getFullYear() !== reference.getFullYear()) return askFormatLocalDay(at, locale);
+  const parts = dateTimeFormatter(locale, { day: 'numeric', month: 'short', year: 'numeric' }).formatToParts(at);
+  const part = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((p) => p.type === type)?.value ?? '';
+  return `${part('day')} ${part('month')}`;
+}
+
 export function askFormatLocalTime(at: Date, locale: DisplayLocale): string {
   const parts = dateTimeFormatter(locale, { hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(at);
   const part = (type: Intl.DateTimeFormatPartTypes): string =>

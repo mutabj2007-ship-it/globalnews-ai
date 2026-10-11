@@ -14,7 +14,7 @@ import {
 } from '@/lib/ask/askRecentGrouping';
 import { cleanAskDestination, isAskConversationSurface, isPlainClick } from '@/lib/ask/askCleanNavigation';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
-import { askFormatLocalDay, askFormatLocalTime } from '@/lib/ask/askDirection';
+import { askFormatLocalDayCompact, askFormatLocalTime } from '@/lib/ask/askDirection';
 import { useAskNavOptional } from '@/components/ask-nav/AskNavShell';
 import { followStrings } from '@/lib/ask/followStrings';
 import styles from './askDashboard.module.css';
@@ -181,10 +181,9 @@ export function AskConversations({
     () => groupRecentThreads(filtered, loaded?.loadedAt ?? new Date()),
     [filtered, loaded],
   );
-  /* Design D4: "Today, 14:20" and "2 Oct 2026" — the product's day-month-year order and a
-     24-hour clock, as the turn footer and the Sources sheet read. */
+  /* Design D4: the product's day-month-year order and a 24-hour clock, as the turn footer and
+     the Sources sheet read. R3.1 FIX 2 makes both compact ("14:20", "2 Oct"); see the rows. */
   const time = { format: (at: Date) => askFormatLocalTime(at, locale) };
-  const day = { format: (at: Date) => askFormatLocalDay(at, locale) };
 
   return (
     <nav
@@ -342,12 +341,13 @@ export function AskConversations({
                   /*
                     R3.1 PRODUCT OWNER ACCEPTANCE · FIX 2 — COMPACT METADATA. The group heading
                     already says Today / Yesterday, so those rows carry the time alone ("14:20");
-                    Earlier rows carry the date. Same real lastActiveAt, same formatters.
+                    Earlier rows carry the date, without the year when it is this year ("9 Oct").
+                    Same real lastActiveAt, same formatters.
                   */
                   const when = Number.isNaN(at.getTime())
                     ? ''
                     : group === 'earlier'
-                      ? day.format(at)
+                      ? askFormatLocalDayCompact(at, locale, loaded?.loadedAt ?? new Date())
                       : time.format(at);
                   /*
                     ASK DESIGN COMPLETENESS R2 — ONE ROW = ONE CONVERSATION, with a STABLE title:

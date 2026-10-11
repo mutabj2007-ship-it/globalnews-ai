@@ -52,6 +52,8 @@ import { shownAccountName } from '@/lib/account/accountName';
 import { SELECTABLE_LOCALES } from '@/lib/i18n/languages';
 // eslint-disable-next-line import/first
 import { askSettingsR2Strings } from '@/lib/ask/askSettingsR2Strings';
+// eslint-disable-next-line import/first
+import { askFormatLocalDayCompact } from '@/lib/ask/askDirection';
 
 const SRC = join(__dirname, '..', '..');
 const read = (...p: string[]) => readFileSync(join(SRC, ...p), 'utf8');
@@ -118,6 +120,14 @@ describe('FIX 2 — compact conversation rows', () => {
     expect(del).toHaveLength(2);
     for (const d of del) expect(String(d.props.className)).toMatch(/min-h-\[44px\] min-w-\[44px\]/);
     act(() => r.unmount());
+  });
+
+  it('Earlier rows carry a compact date: no year when it is this year, the full date otherwise', () => {
+    const ref = new Date('2026-10-11T12:00:00Z');
+    expect(askFormatLocalDayCompact(new Date('2026-01-05T09:00:00Z'), 'en', ref)).toBe('5 Jan');
+    expect(askFormatLocalDayCompact(new Date('2025-12-30T09:00:00Z'), 'en', ref)).toBe('30 Dec 2025');
+    /* Arabic keeps its own numerals: nothing is reformatted by hand */
+    expect(askFormatLocalDayCompact(new Date('2026-01-05T09:00:00Z'), 'ar', ref)).not.toMatch(/[0-9]/);
   });
 
   it('the compact stylesheet keeps the 44 px row and truncates with an ellipsis', () => {
