@@ -3912,6 +3912,8 @@ export class AnalysisService {
         */
         {
           const { allowed, excluded, pending } = partitionByRights(articles, 'AI_INPUT');
+          /* RETRIEVAL R1 · T1.1 — this gate executed: its counts into the passive trace */
+          noteRightsDecisionForTrace(articles.length, allowed.length, pending.length, excluded.length);
           const rightsExcluded = summarizeExclusions(excluded);
           /* provider items allowed only pending E1 (record mode): counted, never called cleared */
           const rightsPending = summarizePending(pending);
@@ -6592,6 +6594,19 @@ function carryRetrievalDiagnostics<T extends object>(
 ): T {
   const diagnostics = readRetrievalDiagnostics(source);
   return diagnostics === undefined ? copy : attachRetrievalDiagnostics(copy, withReuse(diagnostics, reuse));
+}
+
+function noteRightsDecisionForTrace(evaluated: number, allowed: number, pending: number, excluded: number): void {
+  const trace = currentRetrievalTrace();
+  if (trace === undefined) return;
+  traceSafely(() =>
+    trace.noteRightsDecision('AI_INPUT@ANALYSIS_EVIDENCE', {
+      evaluated,
+      allowedCleared: allowed - pending,
+      allowedPendingReview: pending,
+      excluded,
+    }),
+  );
 }
 
 function noteModelInputForTrace(count: number): void {

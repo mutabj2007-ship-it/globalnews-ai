@@ -90,10 +90,21 @@ export class ArticlePersistenceService {
       if (reason === null) kept.push(row);
       else dropped[reason] = (dropped[reason] ?? 0) + 1;
     }
+    /* RETRIEVAL R1 · T1 / T1.1 — the gate EXECUTED on these rows: counts and reasons only, into
+       the operation's passive trace (a no-op outside an analysis run). */
+    const trace = currentRetrievalTrace();
+    if (trace !== undefined) {
+      traceSafely(() =>
+        trace.noteRightsDecision('AI_INPUT@STORED_READ', {
+          evaluated: rows.length,
+          allowedCleared: null,
+          allowedPendingReview: null,
+          excluded: rows.length - kept.length,
+        }),
+      );
+    }
     if (kept.length !== rows.length) {
       this.logger.debug(`stored rows withheld by rights: ${JSON.stringify(dropped)}`);
-      /* RETRIEVAL R1 · T1 — the same reason counts, into the operation's passive trace. */
-      const trace = currentRetrievalTrace();
       if (trace !== undefined) traceSafely(() => trace.noteStoredRightsDrops(dropped));
     }
     return kept;

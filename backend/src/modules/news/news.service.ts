@@ -87,6 +87,7 @@ import {
   outcomeForFailureKind,
   queryFingerprint,
   reasonCode,
+  rejectedWithoutReasonCode,
   traceSafely,
   TRACE_LIMITS,
   type AttemptOutcome,
@@ -121,7 +122,7 @@ function countRelevanceRejection(
       ? reasons
           .filter((reason): reason is string => typeof reason === 'string')
           .map((reason) => reasonCode(mode, reason))
-      : [`${mode}.rejected_without_reason`];
+      : [rejectedWithoutReasonCode(mode)];
   for (const code of new Set(codes)) {
     if (
       code in stats.reasons ||
@@ -2682,9 +2683,11 @@ export class NewsService {
     if (trace === undefined) return undefined;
     let record: SearchRecord | undefined;
     traceSafely(() => {
+      const fingerprint = queryFingerprint(query);
       record = trace.beginSearch({
         capability: 'search',
-        queryFingerprint: queryFingerprint(query),
+        /* T1.1 — keyed fingerprint, or none at all (never an unkeyed hash). */
+        ...(fingerprint === undefined ? {} : { queryFingerprint: fingerprint }),
         queryLength: query.length,
         requestedLang: options?.lang ?? null,
         sentLangGnews: options?.lang === undefined ? null : (gnewsSearchLang ?? null),

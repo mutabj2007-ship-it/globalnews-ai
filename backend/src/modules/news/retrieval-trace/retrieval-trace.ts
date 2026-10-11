@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { createHash } from 'node:crypto';
+import { createHmac } from 'node:crypto';
 
 /*
   RETRIEVAL R1 · T1 — ONE LOSSLESS, PASSIVE TRACE PER ANALYSIS RUN.
@@ -15,7 +15,8 @@ import { createHash } from 'node:crypto';
     unable to change what it is counting (the R5 lesson in news.service.ts).
   - record content. No question text, no sent query text (E1 has not approved storing it here;
     A4's sentQueries already carries the one approved representation), no title, URL, summary,
-    user id or credential. A query is recorded as a short one-way fingerprint plus its length.
+    user id or credential. A query is recorded only by its length and, when a governed server key
+    is configured, a purpose-separated keyed HMAC fingerprint (T1.1: never an unkeyed hash).
   - grow without bound. Attempts, searches, reason codes and reads are capped; the cap is
     recorded rather than silently applied.
 
@@ -23,7 +24,7 @@ import { createHash } from 'node:crypto';
   collector and every hook is a no-op, so those paths are byte-for-byte unchanged.
 */
 
-export const RETRIEVAL_DIAGNOSTICS_SCHEMA = 'retrieval-diagnostics/1' as const;
+export const RETRIEVAL_DIAGNOSTICS_SCHEMA = 'retrieval-diagnostics/2' as const;
 
 export const TRACE_LIMITS = Object.freeze({
   attempts: 40,
@@ -108,7 +109,8 @@ export interface SearchStages {
 export interface SearchRecord {
   ordinal: number;
   capability: 'search';
-  queryFingerprint: string;
+  /** Keyed HMAC (see queryFingerprint). ABSENT when no governed key is configured. */
+  queryFingerprint?: string;
   queryLength: number;
   requestedLang: string | null;
   sentLangGnews: string | null;
@@ -124,6 +126,25 @@ export interface SearchRecord {
   returned: number | null;
 }
 
+/*
+  RETRIEVAL R1 · T1.1 — RIGHTS DECISIONS, PER USE, ONLY WHERE ONE ACTUALLY EXECUTED.
+  A point is present only when its gate ran on this operation; nothing here is ever "cleared"
+  (allowedPendingReview is the 'record' path: used while under review, not cleared).
+*/
+export const RIGHTS_DECISION_POINTS = Object.freeze([
+  'AI_INPUT@ANALYSIS_EVIDENCE',
+  'AI_INPUT@STORED_READ',
+] as const);
+export type RightsDecisionPoint = (typeof RIGHTS_DECISION_POINTS)[number];
+
+export interface RightsDecisionCounts {
+  evaluated: number;
+  /** null where the gate cannot separate it (a stored read only knows admitted / excluded). */
+  allowedCleared: number | null;
+  allowedPendingReview: number | null;
+  excluded: number;
+}
+
 export interface RetainedReadRecord {
   method: string;
   returned: number;
@@ -137,27 +158,121 @@ export interface TraceSnapshot {
   retainedReads: RetainedReadRecord[];
   retainedReadsTruncated: number;
   storedRightsDrops: Record<string, number>;
+  rightsDecisions: Partial<Record<RightsDecisionPoint, RightsDecisionCounts>>;
   modelInput: number | null;
   cited: number | null;
 }
 
-export function queryFingerprint(query: string): string {
-  return createHash('sha256').update(query, 'utf8').digest('hex').slice(0, 16);
+/*
+  RETRIEVAL R1 · T1.1 (E1-08 C-1, CTO R2 Decision 2) — THE QUERY FINGERPRINT IS KEYED OR ABSENT.
+  An unkeyed hash of a news query is confirmable by guessing, so it is never stored. The key is a
+  dedicated, governed server secret (RETRIEVAL_TRACE_FINGERPRINT_KEY, at least 32 bytes); it is
+  never derived from an unrelated secret, never hard-coded and never generated per process. Without
+  it the fingerprint is OMITTED: there is no fallback hash. The key is purpose-separated before use,
+  so the same secret can never yield a value comparable with another feature's HMAC.
+*/
+export const QUERY_FINGERPRINT_KEY_ENV = 'RETRIEVAL_TRACE_FINGERPRINT_KEY';
+const QUERY_FINGERPRINT_PURPOSE = 'globalnews/retrieval-trace/query-fingerprint/v1';
+const QUERY_FINGERPRINT_MIN_KEY_BYTES = 32;
+
+export function queryFingerprint(
+  query: string,
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): string | undefined {
+  const secret = env[QUERY_FINGERPRINT_KEY_ENV];
+  if (typeof secret !== 'string') return undefined;
+  const key = Buffer.from(secret, 'utf8');
+  if (key.length < QUERY_FINGERPRINT_MIN_KEY_BYTES) return undefined;
+  const purposeKey = createHmac('sha256', key).update(QUERY_FINGERPRINT_PURPOSE).digest();
+  return createHmac('sha256', purposeKey).update(query, 'utf8').digest('hex').slice(0, 16);
 }
 
-/**
- * Turns a deterministic scorer reason string into a bounded code. Only the text BEFORE the first
- * ':' or '(' is kept — scorer reasons append the matched terms after those marks, and matched
- * terms are fragments of the reader's question.
- */
-export function reasonCode(mode: string, reason: string): string {
+/*
+  RETRIEVAL R1 · T1.1 (E1-08 C-2) — A CLOSED REASON VOCABULARY. The rejection reasons the current
+  scorers emit (generic, relational, relationalEvent, institutional; the others return none), as
+  written in their source. Anything else is counted as `<mode>.unrecognised`, so a scorer change
+  can never carry a question fragment into the trace: it fails closed and the count is kept.
+*/
+export const RELEVANCE_MODES = Object.freeze([
+  'none',
+  'generic',
+  'relational',
+  'institutional',
+  'compoundPlan',
+  'eventFrame',
+  'relationalEvent',
+] as const);
+
+export const KNOWN_REJECTION_REASONS = Object.freeze([
+  'empty or invalid search phrase',
+  'title match',
+  'summary match',
+  'summary repeated',
+  'category alignment',
+  'insufficient corroboration for a single-word query (requires >= 2 independent signals)',
+  'no whole-phrase match for a multiword query',
+  'no governed term-parity match',
+  'empty or invalid X/Y concept',
+  'X absent',
+  'Y absent',
+  'X present in title or summary',
+  'Y present in title or summary',
+  'both concepts present in the article, but never co-located in the title or a single summary sentence (scattered/disconnected mentions)',
+  'headline names neither entity nor the event',
+  'the entities and the event never meet in one sentence',
+  'headline names neither the institution nor the subject',
+  'institution and subject never meet in one sentence',
+]);
+
+const REJECTED_WITHOUT_REASON = 'rejected_without_reason';
+const UNRECOGNISED = 'unrecognised';
+
+function reasonSlug(reason: string): string {
   const head = reason.split(/[:(]/, 1)[0] ?? '';
-  const slug = head
+  return head
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '')
     .slice(0, 48);
-  return `${mode}.${slug || 'unspecified'}`;
+}
+
+const KNOWN_REASON_SLUGS: ReadonlySet<string> = new Set([
+  ...KNOWN_REJECTION_REASONS.map(reasonSlug),
+  REJECTED_WITHOUT_REASON,
+]);
+
+/**
+ * Turns a deterministic scorer reason string into a code from the CLOSED vocabulary above. Only the
+ * text BEFORE the first ':' or '(' is considered — scorer reasons append the matched terms after
+ * those marks, and matched terms are fragments of the reader's question — and it must then be a
+ * known reason, or the code is `<mode>.unrecognised` (T1.1: fail closed).
+ */
+export function reasonCode(mode: string, reason: string): string {
+  const safeMode = (RELEVANCE_MODES as readonly string[]).includes(mode) ? mode : 'other';
+  const slug = typeof reason === 'string' ? reasonSlug(reason) : '';
+  return `${safeMode}.${KNOWN_REASON_SLUGS.has(slug) ? slug : UNRECOGNISED}`;
+}
+
+/** Every code reasonCode() can return: the closed key set of a relevanceReasons map. */
+export const KNOWN_REASON_CODES: ReadonlySet<string> = new Set(
+  [...RELEVANCE_MODES, 'other'].flatMap((mode) => [
+    ...[...KNOWN_REASON_SLUGS].map((slug) => `${mode}.${slug}`),
+    `${mode}.${UNRECOGNISED}`,
+  ]),
+);
+
+export function rejectedWithoutReasonCode(mode: string): string {
+  return reasonCode(mode, REJECTED_WITHOUT_REASON);
+}
+
+/*
+  RETRIEVAL R1 · T1.1 — bounded identifiers. A provider id comes from code, but the trace does not
+  rely on that: anything outside the shape of a real id is recorded as 'unrecognised'.
+*/
+const PROVIDER_ID_PATTERN = /^[a-z0-9][a-z0-9._-]{0,31}$/;
+
+export function boundedProviderId(id: unknown): string {
+  return typeof id === 'string' && PROVIDER_ID_PATTERN.test(id) ? id : UNRECOGNISED;
 }
 
 const FAILURE_KIND_TO_OUTCOME: Record<string, AttemptOutcome> = {
@@ -186,6 +301,7 @@ export class RetrievalTraceCollector {
   private readonly retainedReads: RetainedReadRecord[] = [];
   private retainedReadsTruncated = 0;
   private readonly storedRightsDrops: Record<string, number> = {};
+  private readonly rightsDecisions: Partial<Record<RightsDecisionPoint, RightsDecisionCounts>> = {};
   private modelInput: number | null = null;
   private cited: number | null = null;
   private sealed = false;
@@ -229,6 +345,7 @@ export class RetrievalTraceCollector {
     if (this.sealed) return undefined;
     const record: AttemptRecord = {
       ...init,
+      providerId: boundedProviderId(init.providerId),
       ordinal: this.nextAttempt++,
       durationMs: null,
       outcome: 'NOT_AWAITED',
@@ -260,6 +377,20 @@ export class RetrievalTraceCollector {
     }
   }
 
+  /** One executed rights gate (T1.1): accumulated per decision point, counts only. */
+  noteRightsDecision(point: RightsDecisionPoint, counts: RightsDecisionCounts): void {
+    if (this.sealed) return;
+    const prior = this.rightsDecisions[point];
+    const add = (a: number | null | undefined, b: number | null): number | null =>
+      prior === undefined ? b : a === null || a === undefined || b === null ? null : a + b;
+    this.rightsDecisions[point] = {
+      evaluated: (prior?.evaluated ?? 0) + counts.evaluated,
+      allowedCleared: add(prior?.allowedCleared, counts.allowedCleared),
+      allowedPendingReview: add(prior?.allowedPendingReview, counts.allowedPendingReview),
+      excluded: (prior?.excluded ?? 0) + counts.excluded,
+    };
+  }
+
   noteModelInput(count: number): void {
     if (this.sealed) return;
     this.modelInput = (this.modelInput ?? 0) + count;
@@ -285,6 +416,9 @@ export class RetrievalTraceCollector {
       retainedReads: this.retainedReads.map((r) => ({ ...r })),
       retainedReadsTruncated: this.retainedReadsTruncated,
       storedRightsDrops: { ...this.storedRightsDrops },
+      rightsDecisions: Object.fromEntries(
+        Object.entries(this.rightsDecisions).map(([point, counts]) => [point, { ...counts }]),
+      ),
       modelInput: this.modelInput,
       cited: this.cited,
     };

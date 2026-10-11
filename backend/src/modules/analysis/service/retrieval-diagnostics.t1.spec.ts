@@ -244,6 +244,17 @@ describe('T1 · analysis run — rights exclusions per use are carried, not re-d
     expect(diagnostics?.analysisStages.rightsAiInput.excluded).toBe(1);
     expect(diagnostics?.causes.map((c) => c.cause)).toContain('RIGHTS_WITHHELD');
     expect(diagnostics?.analysisStages.rightsAiInput.pendingReview).toBeGreaterThan(0);
+    /* T1.1 — the executed AI-input gate is recorded once, with its own counts (E1 use E) */
+    const gate = diagnostics?.rightsDecisions['AI_INPUT@ANALYSIS_EVIDENCE'];
+    expect(gate).toMatchObject({ excluded: 1 });
+    expect(gate?.allowedPendingReview).toBe(
+      diagnostics?.analysisStages.rightsAiInput.pendingReview,
+    );
+    expect(
+      (gate?.allowedCleared ?? 0) + (gate?.allowedPendingReview ?? 0) + (gate?.excluded ?? 0),
+    ).toBe(gate?.evaluated);
+    expect(diagnostics?.rightsUses.E).toEqual({ decidedAt: ['AI_INPUT@ANALYSIS_EVIDENCE'] });
+    expect(diagnostics?.rightsUses.A).toBe('NOT_ASSESSED');
   });
 });
 

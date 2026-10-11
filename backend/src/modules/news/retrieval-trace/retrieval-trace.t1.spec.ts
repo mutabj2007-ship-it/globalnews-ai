@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { Test } from '@nestjs/testing';
 import type { NewsArticle } from '@globalnews-ai/shared';
 import {
@@ -649,7 +650,13 @@ describe('T1 · privacy — the envelope carries no question, query, title or UR
     ]) {
       expect(text).not.toContain(token);
     }
-    expect(diagnostics.searches[0]?.queryFingerprint).toMatch(/^[0-9a-f]{16}$/);
+    /* T1.1 — keyed when a governed key is configured, omitted otherwise; never the bare hash */
+    expect(diagnostics.searches[0]?.queryFingerprint).not.toBe(
+      createHash('sha256')
+        .update('Xylophonist zebrafinch quarry dispute', 'utf8')
+        .digest('hex')
+        .slice(0, 16),
+    );
   });
 });
 

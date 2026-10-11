@@ -3,8 +3,11 @@ import {
   notAskedDiagnostics,
   readRetrievalDiagnostics,
   withCoverage,
-  type RetrievalDiagnostics,
 } from '../news/retrieval-trace/retrieval-diagnostics';
+import {
+  serializeRetrievalDiagnostics,
+  type PersistedRetrievalDiagnostics,
+} from '../news/retrieval-trace/retrieval-diagnostics-envelope';
 import { solveComputation, type ComputationResult } from './computation/deterministic-computation';
 import { loanRateComputation, loanScheduleChange, statedLoan } from './computation/cash-flow-rate';
 import { financialRateRuleFor } from './computation/financial-rate';
@@ -3407,13 +3410,13 @@ export function retrievalFailed(response: { retrievalContext?: unknown } | null 
 }
 
 /* RETRIEVAL R1 · T1 — the persisted envelope for one Ask operation. Pure over its inputs and
-   self-contained: any failure yields no envelope rather than a different answer. */
-const RETRIEVAL_DIAGNOSTICS_MAX_CHARS = 16_000;
-
+   self-contained: any failure yields no envelope rather than a different answer.
+   T1.1 — written ONLY through the closed field allowlist, bounded to 8 KiB of UTF-8
+   (retrieval-diagnostics-envelope.ts). */
 export function retrievalDiagnosticsFor(
   analysis: AnalysisApiResponse | null,
   route: AskR2Route,
-): RetrievalDiagnostics | null {
+): PersistedRetrievalDiagnostics | null {
   try {
     const base =
       (analysis === null ? undefined : readRetrievalDiagnostics(analysis)) ??
@@ -3431,18 +3434,7 @@ export function retrievalDiagnosticsFor(
       base,
       countries.length === 1 ? localCoverageFor(countries[0] as string) : null,
     );
-    if (JSON.stringify(diagnostics).length <= RETRIEVAL_DIAGNOSTICS_MAX_CHARS) return diagnostics;
-    const keep = 10;
-    return {
-      ...diagnostics,
-      attempts: diagnostics.attempts.slice(0, keep),
-      attemptsTruncated:
-        diagnostics.attemptsTruncated + Math.max(0, diagnostics.attempts.length - keep),
-      searches: diagnostics.searches.slice(0, keep),
-      searchesTruncated:
-        diagnostics.searchesTruncated + Math.max(0, diagnostics.searches.length - keep),
-      unobserved: [...diagnostics.unobserved, 'entries beyond the persisted size bound'],
-    };
+    return serializeRetrievalDiagnostics(diagnostics);
   } catch {
     return null;
   }

@@ -4,6 +4,8 @@ import {
   RETRIEVAL_DIAGNOSTICS_SCHEMA,
   type AttemptOutcome,
   type AttemptRecord,
+  type RightsDecisionCounts,
+  type RightsDecisionPoint,
   type SearchRecord,
   type TraceSnapshot,
 } from './retrieval-trace';
@@ -53,6 +55,38 @@ export interface CauseEntry {
   detail: string | null;
 }
 
+/*
+  RETRIEVAL R1 · T1.1 — E1's per-use view (E1-01 columns use_A … use_I). A use is shown as decided
+  ONLY by a gate that actually executed on this operation. The code's AI_INPUT class is E1 use E
+  (pass content to a generative model); no other use is decided anywhere in an analysis run, so the
+  rest are NOT_ASSESSED — never inferred, and never "cleared". The METADATA class (used by the
+  recent-reporting listing, outside the analysis run) spans several E1 uses and is not mapped here.
+*/
+export const E1_USES = Object.freeze(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'] as const);
+export type E1Use = (typeof E1_USES)[number];
+export type RightsUseState = 'NOT_ASSESSED' | { decidedAt: RightsDecisionPoint[] };
+
+const E1_USE_OF_POINT: Readonly<Record<RightsDecisionPoint, E1Use>> = Object.freeze({
+  'AI_INPUT@ANALYSIS_EVIDENCE': 'E',
+  'AI_INPUT@STORED_READ': 'E',
+});
+
+function rightsUsesOf(
+  decisions: Partial<Record<RightsDecisionPoint, RightsDecisionCounts>>,
+): Record<E1Use, RightsUseState> {
+  const uses = Object.fromEntries(E1_USES.map((use) => [use, 'NOT_ASSESSED'])) as Record<
+    E1Use,
+    RightsUseState
+  >;
+  for (const point of Object.keys(decisions) as RightsDecisionPoint[]) {
+    const use = E1_USE_OF_POINT[point];
+    if (use === undefined) continue;
+    const state = uses[use];
+    uses[use] = { decidedAt: state === 'NOT_ASSESSED' ? [point] : [...state.decidedAt, point] };
+  }
+  return uses;
+}
+
 export interface LocalCoverage {
   countryIso3: string;
   enabledLocalSources: number;
@@ -80,6 +114,10 @@ export interface RetrievalDiagnostics {
   retainedReads: Array<{ method: string; returned: number }>;
   retainedReadsTruncated: number;
   storedRightsDrops: Record<string, number>;
+  /** T1.1 — the rights gates that EXECUTED on this operation, with their counts. */
+  rightsDecisions: Partial<Record<RightsDecisionPoint, RightsDecisionCounts>>;
+  /** T1.1 — E1's nine uses (E1-01 A–I): the points that decided a use, or NOT_ASSESSED. */
+  rightsUses: Record<E1Use, RightsUseState>;
   analysisStages: {
     windowExcludedOutsideWindow: number | null;
     anchorGate: { candidates: number; admitted: number } | null;
@@ -216,6 +254,7 @@ export function buildRetrievalDiagnostics(
   const unobserved: string[] = [
     'displayed (client-side rendering)',
     'stored rows excluded by the rights WHERE clause (enforce-by-absence; never returned to the service)',
+    'rights decisions made outside the analysis run (e.g. the recent-reporting METADATA listing)',
   ];
   if (snapshot.modelInput === null) unobserved.push('modelInput (no model call on this operation)');
   if (snapshot.cited === null) unobserved.push('cited (no validated answer on this operation)');
@@ -284,6 +323,8 @@ export function buildRetrievalDiagnostics(
     retainedReads: snapshot.retainedReads,
     retainedReadsTruncated: snapshot.retainedReadsTruncated,
     storedRightsDrops: snapshot.storedRightsDrops,
+    rightsDecisions: snapshot.rightsDecisions,
+    rightsUses: rightsUsesOf(snapshot.rightsDecisions),
     analysisStages: {
       windowExcludedOutsideWindow: stages.windowExcludedOutsideWindow,
       anchorGate: stages.anchorGate,
@@ -376,6 +417,7 @@ const EMPTY_SNAPSHOT: TraceSnapshot = {
   retainedReads: [],
   retainedReadsTruncated: 0,
   storedRightsDrops: {},
+  rightsDecisions: {},
   modelInput: null,
   cited: null,
 };
