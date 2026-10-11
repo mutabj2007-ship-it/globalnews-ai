@@ -1,0 +1,103 @@
+/*
+  ASK R3 SETTINGS-NAV ENGINEERING §2 — the token scope of the Settings sheet / dialog and the
+  /account/settings body: the drawer's own R3 sets (askNav.module.css), the same values, so the
+  Settings surfaces follow Light / Navy / System / Scheduled exactly as the drawer does.
+*/
+:global([data-gna-theme='dark']) .settingsScope,
+:global(html[data-gna-schedule='dark'] [data-gna-theme='scheduled']) .settingsScope {
+  --ad-bg: #080b12;
+  --ad-bg-2: #0b0f18;
+  --ad-surface: #0f1420;
+  --ad-surface-2: #161d2c;
+  --ad-ink: #edeff5;
+  --ad-ink-2: #93a0b8;
+  --ad-ink-3: #7d89a1;
+  --ad-line: #1e2636;
+  --ad-line-strong: #2a3548;
+  --ad-line-input: #5a6682;
+  --ad-accent: #6c93ff;
+  --ad-accent-text: #6c93ff;
+  --ad-accent-soft: #16223f;
+  --ad-scrim: rgba(0, 0, 0, 0.55);
+  /* ASK R3 SETTINGS-NAV ENGINEERING — hover-on-bg-2 (the one new value), and the tokens the
+     drawer's top row and the Settings sheet use */
+  --ad-hover-bg2: #161d2c;
+  --ad-accent-ink: #080b12;
+  --ad-accent-soft-ink: #a9dce0;
+  --ad-focus: #6c93ff; /* the drawer's existing dark accent, not the spec's teal: declared */
+  --ad-err: #ff8a7a;
+}
+:global([data-gna-theme='light']) .settingsScope,
+:global(html[data-gna-schedule='light'] [data-gna-theme='scheduled']) .settingsScope {
+  --ad-bg: #faf9f7;
+  --ad-bg-2: #f4f2ee;
+  --ad-surface: #ffffff;
+  --ad-surface-2: #f3f1ed;
+  --ad-ink: #292923;
+  --ad-ink-2: #55554d;
+  --ad-ink-3: #6b6a62;
+  --ad-line: #e4e0d8;
+  --ad-line-strong: #cfcac0;
+  --ad-line-input: #8f897e;
+  --ad-accent: #2d7077;
+  --ad-accent-text: #2d7077;
+  --ad-accent-soft: #deecee;
+  --ad-scrim: rgba(41, 41, 35, 0.32);
+  /* ASK R3 SETTINGS-NAV ENGINEERING — see the dark set */
+  --ad-hover-bg2: #e9e6e0;
+  --ad-accent-ink: #ffffff;
+  --ad-accent-soft-ink: #1f5358;
+  --ad-focus: #2d7077;
+  --ad-err: #a13a2e;
+}
+@media (prefers-color-scheme: dark) {
+  :global([data-gna-theme='system']) .settingsScope,
+  :global(html:not([data-gna-schedule]) [data-gna-theme='scheduled']) .settingsScope {
+    --ad-bg: #080b12;
+    --ad-bg-2: #0b0f18;
+    --ad-surface: #0f1420;
+    --ad-surface-2: #161d2c;
+    --ad-ink: #edeff5;
+    --ad-ink-2: #93a0b8;
+    --ad-ink-3: #7d89a1;
+    --ad-line: #1e2636;
+    --ad-line-strong: #2a3548;
+    --ad-line-input: #5a6682;
+    --ad-accent: #6c93ff;
+    --ad-accent-text: #6c93ff;
+    --ad-accent-soft: #16223f;
+    --ad-scrim: rgba(0, 0, 0, 0.55);
+    /* ASK R3 SETTINGS-NAV ENGINEERING — hover-on-bg-2 (the one new value), and the tokens the
+       drawer's top row and the Settings sheet use */
+    --ad-hover-bg2: #161d2c;
+    --ad-accent-ink: #080b12;
+    --ad-accent-soft-ink: #a9dce0;
+    --ad-focus: #6c93ff; /* the drawer's existing dark accent, not the spec's teal: declared */
+    --ad-err: #ff8a7a;
+  }
+}
+@media (prefers-color-scheme: light) {
+  :global([data-gna-theme='system']) .settingsScope,
+  :global(html:not([data-gna-schedule]) [data-gna-theme='scheduled']) .settingsScope {
+    --ad-bg: #faf9f7;
+    --ad-bg-2: #f4f2ee;
+    --ad-surface: #ffffff;
+    --ad-surface-2: #f3f1ed;
+    --ad-ink: #292923;
+    --ad-ink-2: #55554d;
+    --ad-ink-3: #6b6a62;
+    --ad-line: #e4e0d8;
+    --ad-line-strong: #cfcac0;
+    --ad-line-input: #8f897e;
+    --ad-accent: #2d7077;
+    --ad-accent-text: #2d7077;
+    --ad-accent-soft: #deecee;
+    --ad-scrim: rgba(41, 41, 35, 0.32);
+    /* ASK R3 SETTINGS-NAV ENGINEERING — see the dark set */
+    --ad-hover-bg2: #e9e6e0;
+    --ad-accent-ink: #ffffff;
+    --ad-accent-soft-ink: #1f5358;
+    --ad-focus: #2d7077;
+    --ad-err: #a13a2e;
+  }
+}

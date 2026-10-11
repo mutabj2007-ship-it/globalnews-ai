@@ -135,6 +135,149 @@
   padding: 8px 8px 8px 16px;
   border-bottom: 0;
 }
+/*
+  ASK R3 SETTINGS-NAV ENGINEERING §1 (Claude Design, GLOBALNEWSAI-R3-SETTINGS-NAV-ENGINEERING.zip
+  SHA-256 57f5102e…7e5da5e22d) — the drawer top row: Close · identity · gear, DOM = tab order.
+*/
+.drawer .drawerHead {
+  min-height: 64px;
+  gap: 6px;
+  padding-block: 0;
+  padding-inline: 4px 6px;
+}
+.drawerIconButton {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 22px;
+  background: transparent;
+  color: var(--ad-ink, #edeff5);
+}
+@media (hover: hover) {
+  .drawerIconButton:hover {
+    background: var(--ad-hover-bg2, #161d2c);
+  }
+}
+.drawerIconButton:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--ad-focus, #6c93ff);
+}
+.drawerIconButton:active {
+  background: var(--ad-hover-bg2, #161d2c);
+  box-shadow: inset 0 0 0 1px var(--ad-accent, #6c93ff);
+}
+.drawerIdentity {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 10px;
+}
+.drawerAvatar {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 17px;
+  background: var(--ad-accent-soft, #16223f);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ad-accent-soft-ink, #a9dce0);
+}
+.drawerIdentityName {
+  display: block;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ad-ink, #edeff5);
+}
+.drawerIdentityState {
+  display: block;
+  font-size: 12px;
+  color: var(--ad-ink-3, #7d89a1);
+}
+/* no saved name: "Signed in" alone, at the name's weight */
+.drawerIdentityState:only-child {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ad-ink, #edeff5);
+}
+.drawerSignIn {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  border-radius: 20px;
+  padding: 0 14px;
+  background: var(--ad-accent, #6c93ff);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ad-accent-ink, #080b12);
+  text-decoration: none;
+}
+.drawerSignIn:focus-visible {
+  outline: 2px solid var(--ad-focus, #6c93ff);
+  outline-offset: 2px;
+}
+
+/*
+  ASK R3 SETTINGS-NAV ENGINEERING §2 — Settings over the current Ask view: a full-height sheet
+  below 700 px, a centred 560 px dialog from 700 px. The direct route renders the same body
+  full-page; only this presentation is new.
+*/
+.settingsScrim {
+  position: fixed;
+  inset: 0;
+  z-index: 89;
+  background: var(--ad-scrim, rgba(0, 0, 0, 0.55));
+}
+.settingsSheet {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  background: var(--ad-bg-2, #0b0f18);
+  color: var(--ad-ink, #edeff5);
+}
+@media (min-width: 700px) {
+  .settingsSheet {
+    inset: 56px auto auto 50%;
+    width: 560px;
+    height: calc(100dvh - 112px);
+    transform: translateX(-50%);
+    border-radius: 16px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+  }
+}
+.settingsHead {
+  display: flex;
+  min-height: 56px;
+  flex-shrink: 0;
+  align-items: center;
+  border-bottom: 1px solid var(--ad-line, #1e2636);
+  padding-inline: 6px;
+}
+.settingsTitle {
+  flex: 1 1 auto;
+  margin: 0;
+  padding-inline-end: 48px;
+  font-size: 17px;
+  font-weight: 600;
+  text-align: center;
+}
+.settingsBody {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
 .drawer .drawerGroup {
   border-bottom: 1px solid var(--ad-line, rgba(10, 39, 68, 0.7));
 }
@@ -433,6 +576,13 @@
   --ad-accent-text: #6c93ff;
   --ad-accent-soft: #16223f;
   --ad-scrim: rgba(0, 0, 0, 0.55);
+  /* ASK R3 SETTINGS-NAV ENGINEERING — hover-on-bg-2 (the one new value), and the tokens the
+     drawer's top row and the Settings sheet use */
+  --ad-hover-bg2: #161d2c;
+  --ad-accent-ink: #080b12;
+  --ad-accent-soft-ink: #a9dce0;
+  --ad-focus: #6c93ff; /* the drawer's existing dark accent, not the spec's teal: declared */
+  --ad-err: #ff8a7a;
 }
 :global([data-gna-theme='light']) .drawer,
 :global(html[data-gna-schedule='light'] [data-gna-theme='scheduled']) .drawer {
@@ -450,6 +600,12 @@
   --ad-accent-text: #2d7077;
   --ad-accent-soft: #deecee;
   --ad-scrim: rgba(41, 41, 35, 0.32);
+  /* ASK R3 SETTINGS-NAV ENGINEERING — see the dark set */
+  --ad-hover-bg2: #e9e6e0;
+  --ad-accent-ink: #ffffff;
+  --ad-accent-soft-ink: #1f5358;
+  --ad-focus: #2d7077;
+  --ad-err: #a13a2e;
 }
 @media (prefers-color-scheme: dark) {
   :global([data-gna-theme='system']) .drawer,
@@ -468,6 +624,13 @@
     --ad-accent-text: #6c93ff;
     --ad-accent-soft: #16223f;
     --ad-scrim: rgba(0, 0, 0, 0.55);
+    /* ASK R3 SETTINGS-NAV ENGINEERING — hover-on-bg-2 (the one new value), and the tokens the
+       drawer's top row and the Settings sheet use */
+    --ad-hover-bg2: #161d2c;
+    --ad-accent-ink: #080b12;
+    --ad-accent-soft-ink: #a9dce0;
+    --ad-focus: #6c93ff; /* the drawer's existing dark accent, not the spec's teal: declared */
+    --ad-err: #ff8a7a;
   }
 }
 @media (prefers-color-scheme: light) {
@@ -487,5 +650,12 @@
     --ad-accent-text: #2d7077;
     --ad-accent-soft: #deecee;
     --ad-scrim: rgba(41, 41, 35, 0.32);
+    /* ASK R3 SETTINGS-NAV ENGINEERING — see the dark set */
+    --ad-hover-bg2: #e9e6e0;
+    --ad-accent-ink: #ffffff;
+    --ad-accent-soft-ink: #1f5358;
+    --ad-focus: #2d7077;
+    --ad-err: #a13a2e;
   }
 }
+

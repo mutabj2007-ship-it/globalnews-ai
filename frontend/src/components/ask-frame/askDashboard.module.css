@@ -2020,6 +2020,122 @@
 .conversations input[type='search']::placeholder {
   color: var(--ad-ink-3, #7d89a1);
 }
+/*
+  ASK R3 SETTINGS-NAV ENGINEERING §3 (Claude Design GLOBALNEWSAI-R3-SETTINGS-NAV-ENGINEERING.zip,
+  frames 02, 05–07 and the control-state sheet) — the search field, Clear, count and list states.
+*/
+.conversationsSearch {
+  position: relative;
+}
+.conversationsSearchGlyph {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 12px;
+  margin-block: auto;
+  pointer-events: none;
+  color: var(--ad-ink-2, #93a0b8);
+}
+[dir='rtl'] .conversationsSearchGlyph {
+  transform: scaleX(-1);
+}
+.conversationsSearch input[type='search'] {
+  height: 44px;
+  padding-inline: 38px 46px;
+  font-size: 16px;
+}
+.conversationsSearch input[type='search']::placeholder {
+  font-size: 15px;
+}
+/* 2 px accent when it has text or focus; padding reduced by 1 px so the text does not shift */
+.conversationsSearch input[type='search']:focus,
+.conversationsSearch input[type='search']:not(:placeholder-shown) {
+  outline: none;
+  border-width: 2px;
+  border-color: var(--ad-accent, #6c93ff);
+  padding-inline: 37px 45px;
+}
+.conversationsSearch input[type='search']::-webkit-search-cancel-button {
+  display: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.conversationsSearch > button {
+  position: absolute;
+  inset-block: 2px;
+  inset-inline-end: 2px;
+  display: inline-flex;
+  width: 44px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ad-ink-2, #93a0b8);
+}
+.conversationsClearDot {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+}
+@media (hover: hover) {
+  .conversationsSearch > button:hover .conversationsClearDot {
+    background: var(--ad-hover-bg2, #161d2c);
+  }
+}
+.conversationsSearch > button:focus-visible {
+  outline: none;
+}
+.conversationsSearch > button:focus-visible .conversationsClearDot {
+  box-shadow: inset 0 0 0 2px var(--ad-accent, #6c93ff);
+}
+.conversationsCount {
+  margin: 0 4px;
+  font-size: 13px;
+  color: var(--ad-ink-3, #7d89a1);
+}
+.conversationsLoading {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 20px;
+}
+.conversationsLoading > span {
+  display: block;
+  height: 14px;
+  border-radius: 4px;
+  background: var(--ad-line, #1e2636);
+}
+.conversationsLoading > span:nth-child(1) {
+  width: 40%;
+  height: 12px;
+}
+.conversationsLoading > span:nth-child(2) {
+  width: 90%;
+}
+.conversationsLoading > span:nth-child(3) {
+  width: 75%;
+}
+.conversationsLoading > span:nth-child(4) {
+  width: 84%;
+}
+.conversationsRetry {
+  align-self: flex-start;
+  min-height: 44px;
+  margin-inline-start: 8px;
+  border: 1px solid var(--ad-line-strong, #2a3548);
+  border-radius: 22px;
+  padding: 0 14px;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ad-ink, #edeff5);
+}
+.conversationsRetry[aria-disabled='true'] {
+  opacity: 0.6;
+}
 .conversations h3 {
   margin: 12px 8px 4px;
   font-size: var(--ad-t-xs, 0.8125rem);

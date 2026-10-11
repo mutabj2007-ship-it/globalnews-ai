@@ -25,6 +25,12 @@ export interface AccountUser {
 export function useAccount(): {
   user: AccountUser | null;
   isLoading: boolean;
+  /**
+   * ASK R3 IA R2 COMPLETION (F08g) — the read itself failed (network, or a server error other
+   * than "not signed in"). `user` is still null exactly as before, so every existing caller is
+   * unchanged; only Settings reads this, to scope its error to the Account group.
+   */
+  readFailed: boolean;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -32,18 +38,22 @@ export function useAccount(): {
 } {
   const [user, setUser] = useState<AccountUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [readFailed, setReadFailed] = useState(false);
 
   async function refresh(): Promise<void> {
     try {
       const response = await accountFetch('/users/me');
       if (!response.ok) {
         setUser(null);
+        setReadFailed(response.status !== 401 && response.status !== 403);
         return;
       }
       const data = (await response.json()) as AccountUser;
       setUser(data);
+      setReadFailed(false);
     } catch {
       setUser(null);
+      setReadFailed(true);
     } finally {
       setIsLoading(false);
     }
@@ -99,5 +109,5 @@ export function useAccount(): {
     }
   }
 
-  return { user, isLoading, signOut, deleteAccount, refresh, updateDisplayName };
+  return { user, isLoading, readFailed, signOut, deleteAccount, refresh, updateDisplayName };
 }

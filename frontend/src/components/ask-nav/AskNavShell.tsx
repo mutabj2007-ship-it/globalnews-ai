@@ -38,6 +38,9 @@ import { askDirectionProps } from '@/lib/ask/askDirection';
 import { AskConversations } from '@/components/ask-frame/AskConversations';
 import { AskEmblemMark } from '@/components/ask-frame/AskEmblem';
 import { AskReadingFooter } from './AskReadingFooter';
+import { AskSettingsGlyph } from '@/components/ask-frame/AskSettingsGlyph';
+import { AskSettingsSheet } from '@/components/account/AskSettingsSheet';
+import { askSettingsR2Strings } from '@/lib/ask/askSettingsR2Strings';
 import { AskPrimaryNav } from './AskPrimaryNav';
 import type { AskPrimarySectionId } from '@/lib/askNavModel';
 
@@ -336,6 +339,8 @@ export function AskNavShell({
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const wasOpen = useRef(false);
+  /* ASK R3 SETTINGS-NAV ENGINEERING §2 — Settings opened from the gear, over this view */
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const s = askShellStrings(language).askNavStrings;
   const currentSection: AskPrimarySectionId | null =
@@ -443,13 +448,20 @@ export function AskNavShell({
     }
     if (!wasOpen.current) return;
     wasOpen.current = false;
+    /* the gear opened Settings: its sheet takes focus now, and gives it back to ☰ on close */
+    if (settingsOpen) return;
+    focusMenuTrigger();
+  }, [open, settingsOpen]);
+
+  /* ☰ — the control that opened the drawer, wherever it is rendered at this width */
+  function focusMenuTrigger(): void {
     document.querySelector<HTMLElement>('[data-ask="shell-menu"]')?.focus();
     /* ASK R3 NAVIGATION / USABILITY R1 — above the phone threshold the visible trigger is the
        desktop bar's own (the continuity header's is display:none there, so focus did not move). */
     if (document.activeElement === document.body || document.activeElement === null) {
       document.querySelector<HTMLElement>('[data-ask-nav="bar-menu"]')?.focus();
     }
-  }, [open]);
+  }
 
   /*
    * Drawer keyboard contract. Escape closes, and Tab is CONTAINED.
@@ -471,6 +483,11 @@ export function AskNavShell({
         /* ALPHA VISUAL ACCEPTANCE REPAIR R1 — an open language list closes first; the next
            Escape closes the drawer. */
         const active = document.activeElement;
+        /* ASK R3 SETTINGS-NAV ENGINEERING §3 — Escape in a search field with text clears it
+           (AskConversations); only Escape in an empty field closes the drawer. */
+        if (active instanceof HTMLInputElement && active.dataset.ask === 'conversations-search' && active.value !== '') {
+          return;
+        }
         if (
           active !== null &&
           drawerRef.current?.contains(active) === true &&
@@ -701,20 +718,77 @@ export function AskNavShell({
           dir={shellDirection.dir}
           className={styles.drawer}
         >
-          {/* Design D4 — "Conversations" and a text Close, 56 px. */}
+          {/*
+            ASK R3 SETTINGS-NAV ENGINEERING §1 (Design F06a/F07a/F07b) — Close · identity · gear,
+            DOM = tab order. Close stays first, so it still takes focus when the drawer opens. The
+            identity is the shell's one session read: the reader's own saved name and "Signed in",
+            or "Signed in" alone — never an email. A guest gets the Sign in pill instead. The gear
+            (22 px, Design's asset) is always shown and always operable, for guests too; a plain
+            click opens Settings as a sheet / dialog over this view, so the draft underneath is
+            untouched; any other click follows the route.
+            SUPERSEDED: the visible "Conversations" heading and the text Close (Design D4). The
+            heading stays for assistive technology, so the list keeps its name.
+          */}
           <div className={styles.drawerHead}>
-            <h2 className="m-0 text-[0.9375rem] font-semibold text-[var(--ad-ink,#ffffff)]">
+            <h2 className="sr-only">
               {askShellStrings(selected ?? displayLocaleOf(language)).askR2Strings.read.conversations}
             </h2>
             <button
               ref={closeRef}
               type="button"
+              data-ask-nav="drawer-close"
               aria-label={s.closeMenuAriaLabel}
               onClick={() => setOpen(false)}
-              className="inline-flex min-h-11 items-center justify-center rounded-[22px] px-3 text-[0.9375rem] font-medium text-[var(--ad-ink-2,#cfe2f2)] hover:bg-[var(--ad-surface-2,transparent)]"
+              className={styles.drawerIconButton}
             >
-              {askShellStrings(selected ?? displayLocaleOf(language)).askR2Strings.close}
+              <AskSettingsGlyph name="close" />
             </button>
+            <div data-ask-nav="drawer-identity" className={styles.drawerIdentity}>
+              {!isLoading && user !== null && (
+                <>
+                  {addressableName(user.displayName) !== null && (
+                    <span aria-hidden="true" className={styles.drawerAvatar}>
+                      {Array.from(addressableName(user.displayName) ?? "")[0]?.toLocaleUpperCase()}
+                    </span>
+                  )}
+                  <span className="min-w-0">
+                    {addressableName(user.displayName) !== null && (
+                      <span dir="auto" style={{ unicodeBidi: "isolate" }} className={styles.drawerIdentityName}>
+                        {addressableName(user.displayName)}
+                      </span>
+                    )}
+                    <span className={styles.drawerIdentityState}>
+                      {askSettingsR2Strings(selectedLocale).signedInState}
+                    </span>
+                  </span>
+                </>
+              )}
+              {!isLoading && user === null && (
+                <a
+                  href={accountSignInUrl(pathname ?? undefined)}
+                  data-ask-nav="drawer-sign-in"
+                  className={styles.drawerSignIn}
+                >
+                  {s.signIn}
+                </a>
+              )}
+            </div>
+            <Link
+              href="/account/settings"
+              prefetch={false}
+              data-ask-nav="drawer-settings"
+              aria-label={s.settings}
+              title={s.settings}
+              onClick={(event) => {
+                setOpen(false);
+                if (pathname === "/account/settings" || !isPlainClick(event)) return;
+                event.preventDefault();
+                setSettingsOpen(true);
+              }}
+              className={styles.drawerIconButton}
+            >
+              <AskSettingsGlyph name="gear" />
+            </Link>
           </div>
 
           {/*
@@ -749,6 +823,21 @@ export function AskNavShell({
             }}
           />
         </div>
+      )}
+      {settingsOpen && (
+        <AskSettingsSheet
+          locale={language}
+          title={s.settings}
+          closeLabel={askShellStrings(selectedLocale).askR2Strings.close}
+          onSignOut={() => {
+            setSettingsOpen(false);
+            void signOutClean();
+          }}
+          onClose={() => {
+            setSettingsOpen(false);
+            focusMenuTrigger();
+          }}
+        />
       )}
     </>
   );

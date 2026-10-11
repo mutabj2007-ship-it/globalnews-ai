@@ -1,0 +1,229 @@
+/*
+  ASK R3 SETTINGS-NAV ENGINEERING §2 — Settings in the seven approved groups (Claude Design
+  GLOBALNEWSAI-R3-SETTINGS-NAV-ENGINEERING.zip, frames 08–15). Every colour is an Ask token
+  (askNav.module.css `.settingsScope`), so Light / Navy / System / Scheduled follow the reader.
+*/
+.body {
+  padding: 12px 16px 32px;
+}
+.groupHeading {
+  margin: 14px 4px 2px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ad-ink-3, #7d89a1);
+}
+.body > :first-child .groupHeading,
+.body > .groupHeading:first-child {
+  margin-top: 8px;
+}
+.card {
+  margin-top: 6px;
+  overflow: hidden;
+  border: 1px solid var(--ad-line, #1e2636);
+  border-radius: 12px;
+  background: var(--ad-surface, #0f1420);
+}
+.card > * + * {
+  border-top: 1px solid var(--ad-line, #1e2636);
+}
+.row {
+  display: flex;
+  min-height: 52px;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 12px;
+  padding: 6px 14px;
+  font-size: 16px;
+  color: var(--ad-ink, #edeff5);
+  text-decoration: none;
+}
+.rowLabel {
+  display: inline-flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 10px;
+}
+.rowValue {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+  color: var(--ad-ink-2, #93a0b8);
+  text-align: end;
+}
+.chevron {
+  flex-shrink: 0;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--ad-ink-3, #7d89a1);
+}
+.chevron::before {
+  content: '›';
+}
+[dir='rtl'] .chevron::before {
+  content: '‹';
+}
+.rowButton {
+  composes: row;
+  width: 100%;
+  background: transparent;
+  text-align: start;
+}
+.row:focus-visible,
+.rowButton:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--ad-focus, #6c93ff);
+}
+@media (hover: hover) {
+  a.row:hover,
+  .rowButton:hover {
+    background: var(--ad-hover-bg2, #161d2c);
+  }
+}
+.glyph {
+  flex-shrink: 0;
+  color: var(--ad-ink-2, #93a0b8);
+}
+.note {
+  padding: 10px 14px 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ad-ink-2, #93a0b8);
+}
+.block {
+  padding: 2px 14px 14px;
+}
+.error {
+  padding: 12px 14px 14px;
+  font-size: 15px;
+  color: var(--ad-err, #ff8a7a);
+}
+.pill {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  margin-top: 10px;
+  border: 1px solid var(--ad-line-strong, #2a3548);
+  border-radius: 22px;
+  padding: 0 14px;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ad-ink, #edeff5);
+  text-decoration: none;
+}
+.pillAccent {
+  composes: pill;
+  border-color: transparent;
+  background: var(--ad-accent, #6c93ff);
+  color: var(--ad-accent-ink, #080b12);
+}
+.guest {
+  padding: 12px 14px 14px;
+  font-size: 15px;
+  color: var(--ad-ink-2, #93a0b8);
+}
+.signOutCard {
+  composes: card;
+  margin-top: 18px;
+}
+.signOut {
+  composes: rowButton;
+  font-weight: 600;
+  color: var(--ad-err, #ff8a7a);
+}
+.signOutNote {
+  margin: 8px 4px 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ad-ink-2, #93a0b8);
+}
+.deleteLink {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  padding: 0 4px;
+  background: transparent;
+  font-size: 14px;
+  color: var(--ad-ink-2, #93a0b8);
+}
+/* Appearance sub-view */
+.subHead {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  gap: 4px;
+}
+.back {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  background: transparent;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ad-accent-text, var(--ad-ink, #edeff5));
+}
+.back::before {
+  content: '‹';
+  font-size: 18px;
+}
+[dir='rtl'] .back::before {
+  content: '›';
+}
+.subTitle {
+  margin: 4px 4px 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ad-ink, #edeff5);
+}
+.option {
+  display: flex;
+  min-height: 56px;
+  cursor: pointer;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 14px;
+  font-size: 16px;
+  color: var(--ad-ink, #edeff5);
+}
+.optionNote {
+  display: block;
+  font-size: 13px;
+  color: var(--ad-ink-2, #93a0b8);
+}
+.option input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--ad-accent, #6c93ff);
+}
+.schedule {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 6px 14px 12px;
+}
+.schedule label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--ad-ink-2, #93a0b8);
+}
+.schedule input {
+  min-height: 44px;
+  border: 1px solid var(--ad-line-input, #5a6682);
+  border-radius: 8px;
+  padding: 0 8px;
+  background: var(--ad-surface, #0f1420);
+  font-size: 15px;
+  color: var(--ad-ink, #edeff5);
+}
+.footnote {
+  margin: 10px 4px 0;
+  font-size: 13px;
+  color: var(--ad-ink-2, #93a0b8);
+}
