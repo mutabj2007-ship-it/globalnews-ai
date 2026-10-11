@@ -666,3 +666,11 @@
 .drawer {
   padding-bottom: max(16px, env(safe-area-inset-bottom));
 }
+
+/* R3.1 — Claude H 77ece32 (one focus ring, around the field), carried over: the search field's
+   2 px accent border also marks "has text", so a filled field that has lost focus looked focused.
+   Keyboard focus now adds the surface's 2 px ring outside the field as well. */
+.drawer input[data-ask='conversations-search'][type='search']:focus-visible {
+  outline: 2px solid var(--ad-accent, #6c93ff);
+  outline-offset: 2px;
+}
