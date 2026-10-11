@@ -295,8 +295,13 @@ export function AskFrameScreen({
       ? 'typing'
       : 'ready';
   const showEmblem =
-    entryState ||
-    (isPending && r2.turns.length === 0 && opened === null && r2.signInRequired === null);
+    (entryState ||
+      (isPending && r2.turns.length === 0 && opened === null && r2.signInRequired === null)) &&
+    /* IA + GUIDED DISCOVER R2, 02 decision 4 (F03a–d): when compact, "the radar appears only in
+       the header" — the hero radar is dropped so the cues, the orientation line and one Continue
+       row fit above the composer. The header's own emblem is untouched, and nothing is dropped at
+       any other size. */
+    !(frameSize.compact && entryState);
   /*
     The rotating examples. Client-side, zero compute, zero network, zero personalisation, and
     every rule decided by the pure machine in `askExampleRotation`. `enabled` is the entry
@@ -854,10 +859,15 @@ export function AskFrameScreen({
                       </p>
                     )}
                     <h1 className={styles.emptyTitle}>{sevenStrings.composerHint}</h1>
-                    {/* R3 FULL DESIGN · WELCOME_PLACEHOLDER_SPEC §Composition 4 (R1-C sentence). */}
-                    <p data-ask="welcome-support" className={styles.emptyLead}>
-                      {r3.welcomeSupport}
-                    </p>
+                    {/* R3 FULL DESIGN · WELCOME_PLACEHOLDER_SPEC §Composition 4 (R1-C sentence).
+                        IA R2 02 decision 4 — the compact welcome (F03a–d) omits it so the cues and
+                        one Continue row clear the composer. The sentence itself is unchanged and is
+                        shown at every other size. */}
+                    {!frameSize.compact && (
+                      <p data-ask="welcome-support" className={styles.emptyLead}>
+                        {r3.welcomeSupport}
+                      </p>
+                    )}
                   </div>
                   <AskWelcomeEntries
                     locale={interfaceLocale}

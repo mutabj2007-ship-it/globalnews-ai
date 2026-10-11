@@ -167,6 +167,40 @@ describe('Continue — real conversations, no counts', () => {
   });
 });
 
+describe('the compact rule (02 decision 4)', () => {
+  it('compact drops the My updates row — it is already in the primary nav', () => {
+    const follows = { followed: 2, withChanges: 1, lastSuccessfulAt: '2026-10-10T08:00:00Z' };
+    const render2 = (compact: boolean) => {
+      let r!: ReturnType<typeof create>;
+      act(() => {
+        r = create(
+          createElement(AskWelcomeEntries, {
+            locale: 'en' as DisplayLocale,
+            signedIn: true,
+            latest: thread(1),
+            recent: [thread(1)],
+            follows,
+            compact,
+            wide: false,
+            onStageDraft: () => undefined,
+            onOpenJobs: () => undefined,
+            placement: 'welcome',
+          }),
+        );
+      });
+      return r.root;
+    };
+    expect(byAsk(render2(false), 'welcome-updates')).toHaveLength(1);
+    expect(byAsk(render2(true), 'welcome-updates')).toHaveLength(0);
+  });
+  it('the cue cluster becomes a list when compact and pills otherwise', () => {
+    expect(byAsk(render({ signedIn: true, recent: [thread(1)], compact: true }), 'discover-cues')[0]!
+      .props['data-ask-compact']).toBe('true');
+    expect(byAsk(render({ signedIn: true, recent: [thread(1)], compact: false }), 'discover-cues')[0]!
+      .props['data-ask-compact']).toBe('false');
+  });
+});
+
 describe('the approved copy deck', () => {
   it('carries all seven Ask locales, and only EN is qualified', () => {
     for (const locale of ASK_R3_FULL_LOCALES as readonly DisplayLocale[]) {

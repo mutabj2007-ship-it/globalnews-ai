@@ -260,7 +260,8 @@ export function AskWelcomeEntries({
           )}
           {/* ASK R3 NAVIGATION / USABILITY R1 — only when real followed questions exist, with only
               the facts the briefings read returned (R3 spec L12: omit the row with no data). */}
-          {follows !== null && followLine !== null && (
+          {/* IA R2 02 decision 4 — compact drops this row: My updates is already in the nav. */}
+          {!compact && follows !== null && followLine !== null && (
             <Link href={MY_UPDATES_HREF} prefetch={false} data-ask="welcome-updates" data-ask-followed={follows.followed}>
               <span>
                 <span className={styles.r3Small}>{f.myUpdates}</span>
