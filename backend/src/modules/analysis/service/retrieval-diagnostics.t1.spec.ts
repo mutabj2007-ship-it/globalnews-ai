@@ -150,6 +150,12 @@ describe('T1 · analysis run — envelope attached, invisible to the public JSON
     const diagnostics = readRetrievalDiagnostics(result);
     expect(diagnostics).toBeDefined();
     expect(Object.keys(result)).not.toContain('retrievalDiagnostics');
+    /* Non-enumerable: an enumerable symbol would ride into spreads and structural equality. */
+    expect(
+      Object.getOwnPropertySymbols(result).filter(
+        (symbol) => Object.getOwnPropertyDescriptor(result, symbol)?.enumerable === true,
+      ),
+    ).toEqual([]);
     expect(JSON.stringify(result)).not.toContain('retrieval-diagnostics/1');
 
     expect(diagnostics?.reuse).toBe('NONE');
