@@ -46,8 +46,17 @@ export function AskSettingsSheet({
   const sheetRef = useRef<HTMLDivElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
 
+  /*
+    R3.1 — the caller's onClose is a new function on every shell render, and this effect depended on
+    it: any re-render (the router refresh after a language change) re-ran the effect and pulled focus
+    back to Close. The latest onClose is read through a ref instead, so focus moves to Close ONCE,
+    when the sheet opens, and the key listener is registered once.
+  */
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   useEffect(() => {
     closeRef.current?.focus();
+    const onClose = (): void => onCloseRef.current();
     function onKeyDown(event: KeyboardEvent): void {
       const sheet = sheetRef.current;
       if (sheet === null) return;
@@ -55,7 +64,8 @@ export function AskSettingsSheet({
       if (active?.closest('[role="alertdialog"]') != null) return;
       if (event.key === 'Escape') {
         if (active !== null && sheet.contains(active) && active.getAttribute('aria-expanded') === 'true') return;
-        if (sheet.querySelector('[data-settings="appearance-view"]') !== null) return;
+        /* a sub-view (Appearance, R3.1 Language) owns Escape: it returns to the Settings list */
+        if (sheet.querySelector('[data-settings="appearance-view"], [data-settings="language-view"]') !== null) return;
         event.preventDefault();
         onClose();
         return;
@@ -75,7 +85,7 @@ export function AskSettingsSheet({
     }
     document.addEventListener('keydown', onKeyDown, true);
     return () => document.removeEventListener('keydown', onKeyDown, true);
-  }, [onClose]);
+  }, []);
 
   return (
     <>

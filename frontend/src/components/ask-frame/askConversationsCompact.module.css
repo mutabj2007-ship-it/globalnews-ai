@@ -8,7 +8,8 @@
 
   Its own module, so the pinned sections of askDashboard.module.css stay byte-identical. The
   selectors are written to outrank `.conversations li a` / `.conversations ul` / `.conversations
-  h3` there regardless of stylesheet order.
+  h3` there regardless of stylesheet order. The link sits inside the row's flex wrapper (li > div >
+  a), so the row selectors are descendant, not child, selectors.
 */
 ul.rows.rows {
   gap: 0;
@@ -16,7 +17,7 @@ ul.rows.rows {
 h3.group.group {
   margin: 8px 10px 2px;
 }
-.rows li > a.row {
+.rows li a.row {
   flex-direction: row;
   align-items: center;
   justify-content: flex-start;
@@ -24,7 +25,7 @@ h3.group.group {
   min-height: 44px;
   padding: 0 4px 0 10px;
 }
-.rows li > a.row > .title {
+.rows li a.row > .title {
   display: block;
   min-width: 0;
   flex: 1 1 auto;
@@ -34,7 +35,7 @@ h3.group.group {
   -webkit-line-clamp: unset;
   line-height: 1.3;
 }
-.rows li > a.row > .when {
+.rows li a.row > .when {
   flex: 0 0 auto;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;

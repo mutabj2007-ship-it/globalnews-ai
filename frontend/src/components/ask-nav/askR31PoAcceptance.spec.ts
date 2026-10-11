@@ -269,6 +269,13 @@ describe('FIX 5 — the Language row and view', () => {
     act(() => r.unmount());
   });
 
+  it('the Settings sheet lets the Language view own Escape, and a re-render never steals focus', () => {
+    const sheet = read('components', 'account', 'AskSettingsSheet.tsx');
+    expect(sheet).toContain('[data-settings="appearance-view"], [data-settings="language-view"]');
+    expect(sheet).toContain('const onClose = (): void => onCloseRef.current();');
+    expect(sheet).not.toContain('}, [onClose]);');
+  });
+
   it('Kiswahili and Kinyarwanda are not offered as a localized interface', () => {
     expect(SELECTABLE_LOCALES as readonly string[]).not.toContain('sw');
     expect(SELECTABLE_LOCALES as readonly string[]).not.toContain('rw');
