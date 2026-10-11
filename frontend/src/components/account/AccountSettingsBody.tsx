@@ -6,7 +6,7 @@ import { NavBar } from '@/components/navigation/NavBar';
 import { Footer } from '@/components/layout/Footer';
 import { DeleteAccountDangerZone } from '@/components/account/DeleteAccountDangerZone';
 import { DisplayNameEditor } from '@/components/account/DisplayNameEditor';
-import { AskAppearanceView, AskPreferencesSection } from '@/components/account/AskPreferencesSection';
+import { AskAppearanceView, AskLanguageView, AskPreferencesSection } from '@/components/account/AskPreferencesSection';
 import { useAccount } from '@/lib/hooks/useAccount';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import type { DisplayLocale, LanguageCode } from '@globalnews-ai/shared';
@@ -20,6 +20,7 @@ import { MY_UPDATES_HREF } from '@/lib/ask/followedQuestions';
 import { accountSignInUrl } from '@/lib/api/accountBase';
 import { askLocation, cleanAskDestination } from '@/lib/ask/askCleanNavigation';
 import { useAskNavOptional } from '@/components/ask-nav/AskNavShell';
+import { addressableName } from '@globalnews-ai/shared';
 import tokens from './settingsTokens.module.css';
 import styles from './accountSettings.module.css';
 
@@ -76,7 +77,8 @@ export function AccountSettingsBody({
   */
   const [deleted, setDeleted] = useState(false);
   const [retrying, setRetrying] = useState(false);
-  const [view, setView] = useState<'groups' | 'appearance'>('groups');
+  /* R3.1 FIX 5 — the Language view joins Appearance as a Settings sub-view */
+  const [view, setView] = useState<'groups' | 'appearance' | 'language'>('groups');
   const [dangerOpen, setDangerOpen] = useState(false);
   /*
     ALPHA VISUAL ACCEPTANCE REPAIR R1 — the language is provided by the server wrapper instead
@@ -122,9 +124,12 @@ export function AccountSettingsBody({
               <>
                 {/* REASON TO RETURN R1 · G6 — the name Ask may use: the reader's own, or none */}
                 <div className={styles.block}>
+                  {/* R3.1 FIX 4 — never a blank field: the saved name, else the account alias */}
                   <DisplayNameEditor
                     key={user.id}
-                    current={user.displayName}
+                    current={addressableName(user.displayName)}
+                    alias={addressableName(user.accountAlias ?? null)}
+                    aliasHint={g.aliasHint}
                     locale={ui}
                     onSave={updateDisplayName}
                   />
@@ -170,7 +175,11 @@ export function AccountSettingsBody({
           (R3 FULL DESIGN · D13), as rows; standalone Ask only (platform mode is unchanged). */}
       {askSurface && (
         <div data-settings-group="language-appearance">
-          <AskPreferencesSection locale={locale} onOpenAppearance={() => setView('appearance')} />
+          <AskPreferencesSection
+            locale={locale}
+            onOpenAppearance={() => setView('appearance')}
+            onOpenLanguage={() => setView('language')}
+          />
         </div>
       )}
 
@@ -285,6 +294,8 @@ export function AccountSettingsBody({
       )}
       {view === 'appearance' && askSurface ? (
         <AskAppearanceView locale={locale} backLabel={s.settings} onBack={() => setView('groups')} />
+      ) : view === 'language' && askSurface ? (
+        <AskLanguageView locale={locale} backLabel={s.settings} onBack={() => setView('groups')} />
       ) : (
         groups
       )}

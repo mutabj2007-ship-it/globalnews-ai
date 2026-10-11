@@ -2,9 +2,8 @@
 
 import { useCallback, useContext, useEffect, useId, useRef, type JSX } from 'react';
 import { useRouter } from 'next/navigation';
-import type { DisplayLocale } from '@globalnews-ai/shared';
-import { persistLanguageSelection } from '@/lib/i18n/languages';
-import { LanguageSelector } from '@/components/search/LanguageSelector';
+import { DISPLAY_LOCALE_META, type DisplayLocale } from '@globalnews-ai/shared';
+import { SELECTABLE_LOCALES, persistLanguageSelection } from '@/lib/i18n/languages';
 import { ThemeScopeContext } from '@/components/platform/ThemeControl';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 import { askDictionary } from '@/lib/ask/shell/askDictionary';
@@ -29,24 +28,18 @@ import styles from './accountSettings.module.css';
 export function AskPreferencesSection({
   locale,
   onOpenAppearance,
+  onOpenLanguage,
 }: {
   readonly locale: DisplayLocale;
   readonly onOpenAppearance: () => void;
+  /** R3.1 FIX 5 — opens the Language sub-view (AskLanguageView). */
+  readonly onOpenLanguage: () => void;
 }): JSX.Element {
   const scope = useContext(ThemeScopeContext);
   const preference = useThemePreference(scope ?? 'system');
-  const router = useRouter();
   const nav = askShellStrings(locale).askNavStrings;
   const g = askSettingsR2Strings(locale);
   const theme = askDictionary(locale).homeR1.theme;
-  const changeLanguage = useCallback(
-    (next: DisplayLocale): void => {
-      if (next === locale) return;
-      persistLanguageSelection(next);
-      router.refresh();
-    },
-    [locale, router],
-  );
   return (
     <section data-ask="settings-preferences" aria-labelledby="ask-settings-preferences">
       {/* SUPERSEDED heading: askR3FullStrings(locale).preferencesHeading */}
@@ -54,17 +47,23 @@ export function AskPreferencesSection({
         {g.langApp}
       </h3>
       <div className={styles.card}>
-        <div className={styles.row} data-settings="language-row">
+        {/*
+          R3.1 PRODUCT OWNER ACCEPTANCE · FIX 5 — SUPERSEDED: the small legacy "EN" dropdown
+          (LanguageSelector) in this row. The row now reads "Language · {the language's own name} ›"
+          like Appearance, and opens the Language view below. Same cookie, same refresh.
+        */}
+        <button
+          type="button"
+          data-settings="language-row"
+          className={styles.rowButton}
+          onClick={onOpenLanguage}
+        >
           <span className={styles.rowLabel}>{nav.language}</span>
-          <LanguageSelector
-            value={locale}
-            onChange={changeLanguage}
-            label={nav.language}
-            actionLabel={nav.languageSelectorAction}
-            variant="mobile"
-            anchor="self"
-          />
-        </div>
+          <span className={styles.rowValue} lang={locale} dir={DISPLAY_LOCALE_META[locale].direction}>
+            {DISPLAY_LOCALE_META[locale].endonym}
+          </span>
+          <span aria-hidden="true" className={styles.chevron} />
+        </button>
         {scope !== null && (
           <button
             type="button"
@@ -81,6 +80,95 @@ export function AskPreferencesSection({
           </button>
         )}
       </div>
+    </section>
+  );
+}
+
+/**
+ * R3.1 PRODUCT OWNER ACCEPTANCE · FIX 5 — THE LANGUAGE VIEW, the same pattern as Appearance:
+ * "‹ Settings", the title, then a native radiogroup of every SELECTABLE locale (the contracted
+ * seven: EN / PL / FR / DE / ES / PT / AR), each in its own name, in its own language and
+ * direction. The selected one is checked and marked; arrows move and select, as native radios do.
+ *
+ * Choosing writes the SAME first-party language cookie (persistLanguageSelection) and re-renders
+ * the server components (router.refresh), exactly what the old dropdown did. No request to Ask, no
+ * reload: client state — the view, the sheet, an unsent Ask draft underneath — stays. Re-choosing
+ * the current language is a no-op. Escape returns to the Settings list.
+ *
+ * NOT OFFERED: Kiswahili and Kinyarwanda. They are source languages (LanguageCode) but not display
+ * locales: no qualified interface catalogue exists, and listing them would present an English
+ * interface as localized. See the R3.1 language-support matrix.
+ */
+export function AskLanguageView({
+  locale,
+  backLabel,
+  onBack,
+}: {
+  readonly locale: DisplayLocale;
+  readonly backLabel: string;
+  readonly onBack: () => void;
+}): JSX.Element {
+  const router = useRouter();
+  const nav = askShellStrings(locale).askNavStrings;
+  const g = askSettingsR2Strings(locale);
+  const id = useId();
+  const backRef = useRef<HTMLButtonElement | null>(null);
+  const choose = useCallback(
+    (next: DisplayLocale): void => {
+      if (next === locale) return;
+      persistLanguageSelection(next);
+      router.refresh();
+    },
+    [locale, router],
+  );
+
+  /* focus moves to Back once, when the view opens — not again when the language changes */
+  useEffect(() => {
+    backRef.current?.focus();
+  }, []);
+  useEffect(() => {
+    function onKey(event: KeyboardEvent): void {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      onBack();
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onBack]);
+
+  return (
+    <section data-settings="language-view" aria-labelledby={`${id}-title`}>
+      <div className={styles.subHead}>
+        <button ref={backRef} type="button" data-settings="language-back" className={styles.back} onClick={onBack}>
+          {backLabel}
+        </button>
+      </div>
+      <h3 id={`${id}-title`} className={styles.subTitle}>
+        {nav.language}
+      </h3>
+      <div role="radiogroup" aria-labelledby={`${id}-title`} className={styles.card}>
+        {SELECTABLE_LOCALES.map((option) => (
+          <label key={option} className={styles.option} data-language-option={option}>
+            <input
+              type="radio"
+              name={`${id}-language`}
+              value={option}
+              checked={locale === option}
+              onChange={() => choose(option)}
+            />
+            <span lang={option} dir={DISPLAY_LOCALE_META[option].direction} className={styles.optionName}>
+              {DISPLAY_LOCALE_META[option].endonym}
+            </span>
+            {/* the visible mark of the selected language (the radio carries it for assistive technology) */}
+            {locale === option && (
+              <span aria-hidden="true" data-language-selected="" className={styles.optionCheck}>
+                ✓
+              </span>
+            )}
+          </label>
+        ))}
+      </div>
+      <p className={styles.footnote}>{g.themeSaved}</p>
     </section>
   );
 }

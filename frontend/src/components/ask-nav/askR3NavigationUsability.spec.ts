@@ -165,15 +165,28 @@ describe('2 · Conversations drawer: hidden by default, list scrolls, footer pin
     expect(conversations.indexOf('data-ask="conversations-search"')).toBeLessThan(conversations.indexOf('data-ask="conversations-list"'));
   });
 
-  it('every Ask page ends its drawer in the one footer holding My updates, Saved, Help and Settings', () => {
-    const drawer = shell.slice(shell.indexOf('data-ask-nav="drawer"'));
-    expect(drawer).toContain('<AskReadingFooter');
+  /*
+    SUPERSEDED, NOT DELETED — "every Ask page ends its drawer in the one footer holding My updates,
+    Saved, Help and Settings" (expected `<AskReadingFooter` in the drawer and the drawer's own
+    sign-out). R3.1 PRODUCT OWNER ACCEPTANCE · FIX 3 (MASTER CTO, 2026-10-11): the PO rejected that
+    footer. The drawer holds Close · identity / Sign in · gear, New question, search and the history
+    only; the footer's destinations are in Settings (the gear), and Ask / My updates / Saved stay in
+    the primary navigation. Asserted: no footer and no route menu in the drawer; every destination
+    reachable from Settings; sign-out from Settings still runs the shell's governed sign-out.
+  */
+  it('R3.1 FIX 3 — the drawer has no footer; its destinations are in Settings and the primary nav', () => {
+    const drawer = shell.slice(shell.indexOf('data-ask-nav="drawer"'), shell.indexOf('{settingsOpen && ('));
+    expect(drawer).not.toContain('<AskReadingFooter');
     expect(drawer).not.toMatch(/renderRoutes\(/);
-    for (const id of ['footer-updates', 'footer-saved', 'footer-help', 'footer-settings', 'footer-sign-out', 'footer-sign-in']) {
-      expect(footer).toContain(`data-ask-nav="${id}"`);
+    expect(drawer).not.toMatch(/LanguageSelector|ThemeControl|signOutClean/);
+    const body = read('components', 'account', 'AccountSettingsBody.tsx');
+    for (const needle of ['MY_UPDATES_HREF', 'href="/support"', 'href="/privacy"', 'href="/cookies"', 'data-settings="sign-out"', '<AskPreferencesSection']) {
+      expect(body).toContain(needle);
     }
-    /* the drawer's own sign-out still closes the drawer first */
-    expect(drawer).toMatch(/onSignOut=\{\(\) => \{\s*setOpen\(false\);\s*void signOutClean\(\);/);
+    const nav = read('components', 'ask-nav', 'AskPrimaryNav.tsx');
+    expect(nav).toMatch(/saved/);
+    /* sign-out from the gear's Settings still closes the sheet first, then the governed path */
+    expect(shell).toMatch(/onSignOut=\{\(\) => \{\s*setSettingsOpen\(false\);\s*void signOutClean\(\);/);
   });
 
   it('the desktop bar of the other Ask pages opens the same drawer, and focus returns to the visible trigger', () => {
@@ -256,23 +269,17 @@ describe('4 · the welcome My updates entry: only real follows, only real facts'
     ).toBe('2026-10-08T07:00:00Z');
   });
 
-  it('the frame reads the briefings once, only for a signed-in reader on the empty welcome', () => {
-    expect(frame).toContain('const followSummary = useFollowSummary(signedInReader && entryState);');
-    expect(frame.match(/follows=\{followSummary\}/g)).toHaveLength(2);
+  /*
+    SUPERSEDED, NOT DELETED — "the frame reads the briefings once, only for a signed-in reader on
+    the empty welcome" (useFollowSummary in the frame, follows={followSummary} twice, the guarded
+    read in AskWelcomeEntries and the row's real-data conditions). R3.1 PRODUCT OWNER ACCEPTANCE ·
+    FIX 1 (MASTER CTO, 2026-10-11): the welcome has no My updates row, so the frame reads neither
+    the briefings nor the threads for the home at all. My updates keeps its own page and nav entry.
+  */
+  it('R3.1 FIX 1 — the home reads no briefings and no threads', () => {
+    expect(frame).not.toMatch(/useFollowSummary|useRecentConversations|follows={|recent={/);
     const entries = read('components', 'ask-frame', 'AskWelcomeEntries.tsx');
-    expect(entries).toMatch(/if \(!signedIn\) \{\s*setSummary\(null\);\s*return;/);
-    expect(entries).toContain('setSummary(outcome.ok ? summarizeFollows(outcome.value) : null);');
-    /*
-      SUPERSEDED, NOT DELETED — the original assertion read:
-          expect(entries).toContain('{follows !== null && followLine !== null && (');
-      IA + GUIDED DISCOVER R2, 02 decision 4 (PO-approved 11 Oct 2026) adds ONE more condition in
-      front of it: the compact welcome drops this row because My updates is already in the primary
-      nav. The two real-data conditions this test exists to protect — a real follow summary and
-      real facts — are unchanged and are both asserted below, so the row still cannot appear on
-      absent or empty data.
-    */
-    expect(entries).toContain('follows !== null && followLine !== null && (');
-    expect(entries).toContain('{!compact && follows !== null && followLine !== null && (');
+    expect(entries).not.toMatch(/askV2Api|useEffect|data-ask="welcome-updates"|data-ask="welcome-resume/);
   });
 
   it('My updates (the page) shows "{N} followed" from the same read', () => {
@@ -381,6 +388,14 @@ describe('6 · preserved', () => {
       lines, so the one-line clamp is obsolete. The point it protected — the reader's own words
       keep their own direction — still holds and is asserted here.
     */
-    expect(entries).toContain('<span dir="auto" className={styles.iaTwoLine}>');
+    /*
+      SUPERSEDED, NOT DELETED (R3.1 FIX 1) — the line above read:
+          expect(entries).toContain('<span dir="auto" className={styles.iaTwoLine}>');
+      The home renders no conversation titles any more. Where titles are shown — the drawer's
+      compact rows — they still keep their own direction:
+    */
+    expect(entries).not.toContain('iaTwoLine');
+    const rows = read('components', 'ask-frame', 'AskConversations.tsx');
+    expect(rows).toContain("<span dir=\"auto\" style={{ unicodeBidi: 'isolate' }} className={compact.title}>");
   });
 });

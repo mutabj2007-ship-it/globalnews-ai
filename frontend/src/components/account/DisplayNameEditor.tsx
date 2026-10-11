@@ -9,18 +9,30 @@ import { followStrings } from '@/lib/ask/followStrings';
  * Ask may use. Previewed with the same shared rule the server applies, so what is accepted here
  * is exactly what is stored. Empty = no name (the neutral greeting). Never prefilled from the
  * email address.
+ *
+ * R3.1 PRODUCT OWNER ACCEPTANCE · FIX 4 — SUPERSEDED for the alias only: an account with no saved
+ * name shows its automatic account alias (`alias`, assigned by the server: the email's local part
+ * plus a unique number, never the address) in the field instead of a blank, with `aliasHint`
+ * explaining it. Saving still writes ONLY the preferred name; an empty field falls back to the
+ * alias, never to the address. The alias itself is never edited or overwritten here.
  */
 export function DisplayNameEditor({
   current,
+  alias = null,
+  aliasHint,
   locale,
   onSave,
 }: {
   readonly current: string | null;
+  /** R3.1 FIX 4 — the account's automatic alias, when the server assigned one. */
+  readonly alias?: string | null;
+  /** R3.1 FIX 4 — the hint naming the alias (askSettingsR2Strings.aliasHint). */
+  readonly aliasHint?: (alias: string) => string;
   readonly locale: string;
   readonly onSave: (name: string | null) => Promise<{ ok: true } | { ok: false; code: string | null }>;
 }): JSX.Element {
   const s = followStrings(locale);
-  const [value, setValue] = useState(current ?? '');
+  const [value, setValue] = useState(current ?? alias ?? '');
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const preview = normalizeDisplayName(value);
@@ -70,7 +82,7 @@ export function DisplayNameEditor({
         />
       </label>
       <p id="display-name-hint" className="text-xs text-ink-tertiary">
-        {problem ?? s.nameHint}
+        {problem ?? (alias !== null && aliasHint !== undefined ? aliasHint(alias) : s.nameHint)}
       </p>
       <div className="flex items-center gap-3">
         <button

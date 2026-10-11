@@ -132,32 +132,26 @@ describe('§3 welcome entries (§Composition 6–8)', () => {
     only when real followed questions exist, and carries only the facts the briefings read
     returned. It still carries NO invented "to review" count (no reviewed state: B2).
   */
-  it('signed in: Resume opens the reader’s own latest stored answer; My updates carries only real follow facts', () => {
+  /*
+    SUPERSEDED, NOT DELETED — three cases of §Composition 6: "signed in: Resume opens the reader's
+    own latest stored answer; My updates carries only real follow facts", "signed in with no
+    conversation: no Resume row is invented" and "signed in with nothing followed: no My updates
+    entry is manufactured". R3.1 PRODUCT OWNER ACCEPTANCE · FIX 1 (MASTER CTO, 2026-10-11): the
+    Ask home shows none of the reader's history — no Resume, no Continue, no My updates activity —
+    whatever the reader has. My updates stays in the primary navigation. Asserted below with a
+    real conversation AND real follows supplied: nothing of either renders.
+  */
+  it('R3.1 FIX 1 — signed in with a conversation and follows: the home shows neither', () => {
     const root = render({
       signedIn: true,
       latest: thread({}),
       follows: { followed: 2, withChanges: 1, lastSuccessfulAt: null },
-    });
-    const resume = byAsk(root, 'welcome-resume')[0]!;
-    expect(resume.props.href).toBe('/ask?operation=op-1');
-    expect(textOf(resume)).toContain('What changed in living costs in Poland?');
-    const updates = byAsk(root, 'welcome-updates')[0]!;
-    expect(updates.props.href).toBe('/saved/updates');
-    expect(textOf(updates)).toBe('My updates2 followed · 1 with changes at last check›');
-    expect(textOf(updates)).not.toMatch(/review|unread|new for you/i);
-  });
-  it('signed in with no conversation: no Resume row is invented', () => {
-    const root = render({ signedIn: true, latest: null, follows: { followed: 1, withChanges: 0, lastSuccessfulAt: null } });
-    expect(byAsk(root, 'welcome-resume')).toHaveLength(0);
-    expect(byAsk(root, 'welcome-updates')).toHaveLength(1);
-  });
-  it('signed in with nothing followed: no My updates entry is manufactured (and no empty group)', () => {
-    const root = render({ signedIn: true, latest: null, follows: null });
-    expect(byAsk(root, 'welcome-updates')).toHaveLength(0);
-    expect(byAsk(root, 'welcome-resume-group')).toHaveLength(0);
-    const withResume = render({ signedIn: true, latest: thread({}), follows: null });
-    expect(byAsk(withResume, 'welcome-resume')).toHaveLength(1);
-    expect(byAsk(withResume, 'welcome-updates')).toHaveLength(0);
+    } as never);
+    for (const id of ['welcome-resume-group', 'welcome-resume', 'welcome-updates']) {
+      expect(byAsk(root, id)).toHaveLength(0);
+    }
+    expect(textOf(root)).not.toContain('What changed in living costs in Poland?');
+    expect(textOf(root)).not.toMatch(/followed|My updates/);
   });
   it('a desktop entry under the centred composer is not typing (real-browser finding: it unmounted mid-click)', () => {
     const frame = read('AskFrameScreen.tsx');

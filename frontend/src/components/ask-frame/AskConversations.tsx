@@ -18,6 +18,7 @@ import { askFormatLocalDay, askFormatLocalTime } from '@/lib/ask/askDirection';
 import { useAskNavOptional } from '@/components/ask-nav/AskNavShell';
 import { followStrings } from '@/lib/ask/followStrings';
 import styles from './askDashboard.module.css';
+import compact from './askConversationsCompact.module.css';
 import { AskConfirmDialog } from './AskConfirmDialog';
 import { askR3FullStrings } from '@/lib/ask/askR3FullStrings';
 import { askSettingsR2Strings } from '@/lib/ask/askSettingsR2Strings';
@@ -276,8 +277,8 @@ export function AskConversations({
         </p>
       )}
       {/* ASK R3 NAVIGATION / USABILITY R1 — the list scrolls in its own region, so New question
-          and search stay on top and the drawer footer (My updates, Saved, Help, Settings…) stays
-          in view with up to 50 conversations (audit gap #1). */}
+          and search stay on top with up to 50 conversations (audit gap #1). R3.1 FIX 3 removed
+          the drawer footer; the list now takes the whole remaining height. */}
       <div data-ask="conversations-list" className={styles.conversationsList}>
       {account === 'signed-out' ? (
         <p data-ask="conversations-note">{t.states.signedOut}</p>
@@ -333,16 +334,21 @@ export function AskConversations({
         ASK_RECENT_GROUPS.map((group) =>
           grouped[group].length === 0 ? null : (
             <section key={group} data-ask-conversations-group={group}>
-              <h3>{t.groups[group]}</h3>
-              <ul>
+              <h3 className={compact.group}>{t.groups[group]}</h3>
+              <ul className={compact.rows}>
                 {grouped[group].map((row) => {
                   const href = askReopenHref(row);
                   const at = new Date(row.lastActiveAt);
+                  /*
+                    R3.1 PRODUCT OWNER ACCEPTANCE · FIX 2 — COMPACT METADATA. The group heading
+                    already says Today / Yesterday, so those rows carry the time alone ("14:20");
+                    Earlier rows carry the date. Same real lastActiveAt, same formatters.
+                  */
                   const when = Number.isNaN(at.getTime())
                     ? ''
                     : group === 'earlier'
                       ? day.format(at)
-                      : `${t.groups[group]}, ${time.format(at)}`;
+                      : time.format(at);
                   /*
                     ASK DESIGN COMPLETENESS R2 — ONE ROW = ONE CONVERSATION, with a STABLE title:
                     the thread's root question (sequence 1), never its latest follow-up. A
@@ -359,14 +365,22 @@ export function AskConversations({
                           <span>{t.noStoredResult}</span>
                         </span>
                       ) : (
+                        /* FIX 2 — ONE LINE PER CONVERSATION: the title is truncated on screen only;
+                           the full question stays the link's text (its accessible name) and its
+                           tooltip, and the row opens the conversation that holds it. */
                         <Link
                           href={href}
                           prefetch={false}
+                          title={title}
+                          data-ask-row="compact"
+                          className={compact.row}
                           aria-current={row.id === currentThreadId ? 'page' : undefined}
                           onClick={() => onNavigate?.()}
                         >
-                          <span dir="auto" style={{ unicodeBidi: 'isolate' }}>{title}</span>
-                          <span>{when}</span>
+                          <span dir="auto" style={{ unicodeBidi: 'isolate' }} className={compact.title}>
+                            {title}
+                          </span>
+                          <span className={compact.when}>{when}</span>
                         </Link>
                       )}
                       </div>

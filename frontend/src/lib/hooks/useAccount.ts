@@ -10,6 +10,11 @@ export interface AccountUser {
   id: string;
   email: string;
   displayName: string | null;
+  /**
+   * R3.1 FIX 4 — the automatic account alias (never the address, "@" or the domain). Optional:
+   * a backend without the alias omits it, and the reader's preferred name always wins.
+   */
+  accountAlias?: string | null;
 }
 
 /**

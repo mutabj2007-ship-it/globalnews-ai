@@ -43,7 +43,7 @@ import { useAskNavOptional } from '@/components/ask-nav/AskNavShell';
 import { AskReadingFooter } from '@/components/ask-nav/AskReadingFooter';
 import { AskDeepConfirm } from './AskDeepConfirm';
 import { AskJobSetupSheet } from './AskJobSetupSheet';
-import { AskWelcomeEntries, useFollowSummary, useRecentConversations } from './AskWelcomeEntries';
+import { AskWelcomeEntries } from './AskWelcomeEntries';
 import { AskPrimaryNav } from '@/components/ask-nav/AskPrimaryNav';
 import { askR3FullStrings } from '@/lib/ask/askR3FullStrings';
 import { Composer } from './AskParts';
@@ -326,15 +326,12 @@ export function AskFrameScreen({
     suspended: nav?.open === true || jobSheetOpen || r2.signInRequired !== null || r2.deepQuote !== null,
   });
   /*
-    R3 FULL DESIGN · D02 — "when genuinely available": the signed-in reader's own latest
-    conversation (a read of their threads; 0 AI). A guest reads nothing here.
+    R3.1 PRODUCT OWNER ACCEPTANCE · FIX 1 — SUPERSEDED: the welcome's Resume / Continue rows and
+    My updates activity line, and the two reads behind them (GET /ask-v2/threads,
+    GET /ask-v2/briefings). The Ask home shows no history; the drawer reads it when opened.
   */
+  /* The greeting's audience: a signed-in reader (the shell's one session read). A guest reads nothing. */
   const signedInReader = !guestMode && nav?.account === 'signed-in';
-  const recentConversations = useRecentConversations(signedInReader && entryState);
-  const resumeConversation = recentConversations[0] ?? null;
-  /* ASK R3 NAVIGATION / USABILITY R1 — the reader's real follow facts (GET /ask-v2/briefings, a
-     database read: 0 AI · 0 provider); null until read, and whenever there is nothing followed. */
-  const followSummary = useFollowSummary(signedInReader && entryState);
   const r3 = askR3FullStrings(interfaceLocale);
   const closeJobSheet = (): void => {
     setJobSheetOpen(false);
@@ -871,13 +868,8 @@ export function AskFrameScreen({
                   </div>
                   <AskWelcomeEntries
                     locale={interfaceLocale}
-                    signedIn={signedInReader}
-                    latest={resumeConversation}
-                    recent={recentConversations}
-                    follows={followSummary}
                     onStageDraft={stageGuidedDraft}
                     compact={frameSize.compact}
-                    wide={frameSize.wide}
                     onOpenJobs={() => setJobSheetOpen(true)}
                     placement="welcome"
                   />
@@ -1284,13 +1276,8 @@ export function AskFrameScreen({
           {entryState && !typing && (
             <AskWelcomeEntries
               locale={interfaceLocale}
-              signedIn={signedInReader}
-              latest={resumeConversation}
-              recent={recentConversations}
-              follows={followSummary}
               onStageDraft={stageGuidedDraft}
               compact={frameSize.compact}
-              wide={frameSize.wide}
               onOpenJobs={() => setJobSheetOpen(true)}
               placement="desktop"
             />

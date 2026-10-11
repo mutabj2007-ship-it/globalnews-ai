@@ -32,7 +32,11 @@ describe('ruling 2 — the drawer is the conversations', () => {
     /* ASK R3 NAVIGATION / USABILITY R1 — the drawer on EVERY Ask page now ends in the one
        conversations footer (no route menu under the list anywhere), not only on the reading
        surface. */
-    expect(drawer).toMatch(/data-ask-nav="conversations">[\s\S]*?<\/div>\s*(\{(\/\*[\s\S]*?\*\/)?\}\s*)?<AskReadingFooter/);
+    /* SUPERSEDED, NOT DELETED (R3.1 FIX 3) — the line here required the drawer to end in
+       `<AskReadingFooter` after the conversations. The PO removed that footer: the drawer now
+       ends with the conversations, and still has no navigation menu under the list. */
+    expect(drawer.slice(0, drawer.indexOf('{settingsOpen && ('))).not.toContain('<AskReadingFooter');
+    expect(drawer).toMatch(/data-ask-nav="conversations">[\s\S]*?<\/div>/);
     expect(drawer).not.toMatch(/renderRoutes\(/);
     expect(drawer).not.toMatch(/\{reading \? \(/);
   });

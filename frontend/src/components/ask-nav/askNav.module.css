@@ -661,3 +661,8 @@
   }
 }
 
+/* R3.1 FIX 3 — with the drawer footer removed, the conversation list reaches the drawer's
+   bottom: the drawer itself keeps clear of the home indicator. */
+.drawer {
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+}

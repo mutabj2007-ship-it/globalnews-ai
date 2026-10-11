@@ -20,7 +20,7 @@ import {
   isPlainClick,
 } from '@/lib/ask/askCleanNavigation';
 import { useAccount } from '@/lib/hooks/useAccount';
-import { addressableName } from '@globalnews-ai/shared';
+import { shownAccountName } from '@/lib/account/accountName';
 import { persistLanguageSelection, displayLocaleOf } from '@/lib/i18n/languages';
 import { LanguageSelector } from '@/components/search/LanguageSelector';
 import { ThemeControl, ThemeScopeContext } from '@/components/platform/ThemeControl';
@@ -37,7 +37,6 @@ import { askProductName, askShellStrings } from '@/lib/ask/shell/askShellCatalog
 import { askDirectionProps } from '@/lib/ask/askDirection';
 import { AskConversations } from '@/components/ask-frame/AskConversations';
 import { AskEmblemMark } from '@/components/ask-frame/AskEmblem';
-import { AskReadingFooter } from './AskReadingFooter';
 import { AskSettingsGlyph } from '@/components/ask-frame/AskSettingsGlyph';
 import { AskSettingsSheet } from '@/components/account/AskSettingsSheet';
 import { askSettingsR2Strings } from '@/lib/ask/askSettingsR2Strings';
@@ -331,8 +330,9 @@ export function AskNavShell({
   /* ASK DESIGN COMPLETENESS R1 — publish what the one session read found (no second read). */
   useEffect(() => {
     setAccount(isLoading ? 'pending' : user === null ? 'signed-out' : 'signed-in');
-    /* REASON TO RETURN R1 · G6 — the reader's own saved name only; null for a guest */
-    setDisplayName(user === null ? null : addressableName(user.displayName));
+    /* REASON TO RETURN R1 · G6 — null for a guest. R3.1 FIX 4 — the reader's own saved name, or
+       the automatic account alias when they saved none (never the address). */
+    setDisplayName(shownAccountName(user));
   }, [isLoading, user, setAccount, setDisplayName]);
   const [accountOpen, setAccountOpen] = useState(false);
   const accountRef = useRef<HTMLDivElement | null>(null);
@@ -746,15 +746,15 @@ export function AskNavShell({
             <div data-ask-nav="drawer-identity" className={styles.drawerIdentity}>
               {!isLoading && user !== null && (
                 <>
-                  {addressableName(user.displayName) !== null && (
+                  {shownAccountName(user) !== null && (
                     <span aria-hidden="true" className={styles.drawerAvatar}>
-                      {Array.from(addressableName(user.displayName) ?? "")[0]?.toLocaleUpperCase()}
+                      {Array.from(shownAccountName(user) ?? "")[0]?.toLocaleUpperCase()}
                     </span>
                   )}
                   <span className="min-w-0">
-                    {addressableName(user.displayName) !== null && (
+                    {shownAccountName(user) !== null && (
                       <span dir="auto" style={{ unicodeBidi: "isolate" }} className={styles.drawerIdentityName}>
-                        {addressableName(user.displayName)}
+                        {shownAccountName(user)}
                       </span>
                     )}
                     <span className={styles.drawerIdentityState}>
@@ -806,22 +806,15 @@ export function AskNavShell({
           </div>
 
           {/*
-            ASK R3 NAVIGATION / USABILITY R1 — ONE drawer footer on every Ask page (it was the
-            reading surface's only): My updates, Saved, Help & feedback, Settings, the session
-            action, language, appearance and the legal row, in the compact Design footer. It is
-            PINNED (askNav.module.css): only the conversation list above it scrolls, so these stay
-            reachable with up to 50 conversations at every width (audit gap #1). New question and
-            the conversation list (the Recent destination's content) lead the drawer above it.
+            R3.1 PRODUCT OWNER ACCEPTANCE · FIX 3 (MASTER CTO, 2026-10-11) — THE DRAWER FOOTER IS
+            REMOVED. The drawer holds only Close · identity or Sign in · the Settings gear, New
+            question, conversation search and the compact history. Everything the footer carried
+            is in Settings (the gear above, AccountSettingsBody): Account and the display name,
+            Language, Appearance, Privacy & data with Privacy and Cookies, Followed questions → My
+            updates, Help & legal, Sign out. Ask / My updates / Saved stay in the primary
+            navigation, where they were approved. A guest's Sign in is the pill in the head row.
+            SUPERSEDED: ASK R3 NAVIGATION / USABILITY R1's pinned drawer footer (AskReadingFooter).
           */}
-          <AskReadingFooter
-            language={language}
-            selected={selectedLocale}
-            account={isLoading ? 'pending' : audience}
-            onSignOut={() => {
-              setOpen(false);
-              void signOutClean();
-            }}
-          />
         </div>
       )}
       {settingsOpen && (

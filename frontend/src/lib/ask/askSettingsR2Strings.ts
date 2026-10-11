@@ -11,7 +11,7 @@ import type { DisplayLocale } from '@globalnews-ai/shared';
  *    `GLOBALNEWSAI-R3-IA-DISCOVER-FINAL-R2.zip` (SHA-256 574fc35b…55e32be8),
  *    `07-COPY-DECK-7-LOCALES.csv`. EN is the qualified source; PL / FR / DE / ES / PT / AR are
  *    Claude Design drafts, PENDING Localisation (Claude L) qualification.
- * 2. INTEGRATOR keys (`accountH` … `privacyNote`) — labels the frames draw (F06b, F08a, F08d)
+ * 2. INTEGRATOR keys (`accountH` … `privacyNote`, R3.1 `aliasHint`) — labels the frames draw (F06b, F08a, F08d)
  *    but the deck does not list. EN written to the frames; the six other locales are Claude Code
  *    drafts, PENDING the same Claude L qualification. None is presented as qualified.
  */
@@ -41,6 +41,12 @@ export interface AskSettingsR2Strings {
   readonly themeSaved: string;
   /** F08a — the Privacy & data note (drawn; in neither deck: integrator draft) */
   readonly privacyNote: string;
+  /**
+   * R3.1 FIX 4 — the display-name hint when the account has an automatic alias (integrator draft:
+   * EN written for the PO ruling; the six others PENDING Claude L). The alias is wrapped in
+   * FSI/PDI so a Latin alias keeps its own direction inside Arabic.
+   */
+  readonly aliasHint: (a: string) => string;
 }
 
 const CATALOGUE: Record<DisplayLocale, AskSettingsR2Strings> = {
@@ -64,6 +70,8 @@ const CATALOGUE: Record<DisplayLocale, AskSettingsR2Strings> = {
     appearance: 'Appearance',
     themeSaved: 'Saved on this device.',
     privacyNote: 'Your conversations stay in your account. Delete one from its ⋯ menu in Conversations.',
+    aliasHint: (a) =>
+      `Your account name is ⁨${a}⁩, made from the first part of your sign-in address. Type the name you prefer, or leave this empty to use ⁨${a}⁩.`,
   },
   pl: {
     signedInState: 'Zalogowano',
@@ -88,6 +96,8 @@ const CATALOGUE: Record<DisplayLocale, AskSettingsR2Strings> = {
     appearance: 'Wygląd',
     themeSaved: 'Zapisano na tym urządzeniu.',
     privacyNote: 'Twoje rozmowy pozostają na Twoim koncie. Aby usunąć rozmowę, użyj jej menu ⋯ w Rozmowach.',
+    aliasHint: (a) =>
+      `Nazwa Twojego konta to ⁨${a}⁩, utworzona z pierwszej części adresu, którym się logujesz. Wpisz preferowane imię lub zostaw to pole puste, aby używać ⁨${a}⁩.`,
   },
   fr: {
     signedInState: 'Connecté',
@@ -109,6 +119,8 @@ const CATALOGUE: Record<DisplayLocale, AskSettingsR2Strings> = {
     appearance: 'Apparence',
     themeSaved: 'Enregistré sur cet appareil.',
     privacyNote: 'Vos conversations restent dans votre compte. Supprimez-en une depuis son menu ⋯ dans Conversations.',
+    aliasHint: (a) =>
+      `Le nom de votre compte est ⁨${a}⁩, créé à partir de la première partie de votre adresse de connexion. Saisissez le nom de votre choix, ou laissez ce champ vide pour utiliser ⁨${a}⁩.`,
   },
   de: {
     signedInState: 'Angemeldet',
@@ -130,6 +142,8 @@ const CATALOGUE: Record<DisplayLocale, AskSettingsR2Strings> = {
     appearance: 'Darstellung',
     themeSaved: 'Auf diesem Gerät gespeichert.',
     privacyNote: 'Ihre Unterhaltungen bleiben in Ihrem Konto. Löschen Sie eine über ihr ⋯-Menü in den Unterhaltungen.',
+    aliasHint: (a) =>
+      `Ihr Kontoname ist ⁨${a}⁩, gebildet aus dem ersten Teil Ihrer Anmeldeadresse. Geben Sie Ihren bevorzugten Namen ein oder lassen Sie das Feld leer, um ⁨${a}⁩ zu verwenden.`,
   },
   es: {
     signedInState: 'Sesión iniciada',
@@ -151,6 +165,8 @@ const CATALOGUE: Record<DisplayLocale, AskSettingsR2Strings> = {
     appearance: 'Apariencia',
     themeSaved: 'Guardado en este dispositivo.',
     privacyNote: 'Tus conversaciones siguen en tu cuenta. Elimina una desde su menú ⋯ en Conversaciones.',
+    aliasHint: (a) =>
+      `El nombre de tu cuenta es ⁨${a}⁩, creado a partir de la primera parte de tu dirección de inicio de sesión. Escribe el nombre que prefieras o deja este campo vacío para usar ⁨${a}⁩.`,
   },
   pt: {
     signedInState: 'Sessão iniciada',
@@ -172,6 +188,8 @@ const CATALOGUE: Record<DisplayLocale, AskSettingsR2Strings> = {
     appearance: 'Aparência',
     themeSaved: 'Salvo neste dispositivo.',
     privacyNote: 'Suas conversas continuam na sua conta. Exclua uma pelo menu ⋯ dela em Conversas.',
+    aliasHint: (a) =>
+      `O nome da sua conta é ⁨${a}⁩, criado a partir da primeira parte do seu endereço de login. Digite o nome que preferir ou deixe este campo vazio para usar ⁨${a}⁩.`,
   },
   ar: {
     signedInState: 'مسجّل الدخول',
@@ -204,6 +222,8 @@ const CATALOGUE: Record<DisplayLocale, AskSettingsR2Strings> = {
     appearance: 'المظهر',
     themeSaved: 'محفوظ على هذا الجهاز.',
     privacyNote: 'تبقى محادثاتك في حسابك. احذف أيًّا منها من قائمة ⋯ الخاصة بها في المحادثات.',
+    aliasHint: (a) =>
+      `اسم حسابك هو ⁨${a}⁩، وقد أُنشئ من الجزء الأول من عنوان تسجيل الدخول. اكتب الاسم الذي تفضّله، أو اترك هذا الحقل فارغًا لاستخدام ⁨${a}⁩.`,
   },
 };
 

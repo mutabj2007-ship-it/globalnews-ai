@@ -2,7 +2,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { createElement } from 'react';
 import { act, create, type ReactTestInstance } from 'react-test-renderer';
-import { AskWelcomeEntries, continueRowCount } from './AskWelcomeEntries';
+import { AskWelcomeEntries } from './AskWelcomeEntries';
 import { askDiscoverStrings, ASK_DISCOVER_QUALIFIED_LOCALES } from '@/lib/ask/askDiscoverStrings';
 import { ASK_R3_FULL_LOCALES } from '@/lib/ask/askR3FullStrings';
 import type { AskV2RecentThread } from '@/lib/api/askV2Api';
@@ -51,14 +51,12 @@ const render = (p: {
   let r!: ReturnType<typeof create>;
   act(() => {
     r = create(
+      /* R3.1 FIX 1 — the entries take no reader history any more (signedIn / recent / wide are
+         kept in this helper's signature only so the cases below read as before) */
       createElement(AskWelcomeEntries, {
         locale: p.locale ?? 'en',
-        signedIn: p.signedIn,
-        latest: p.recent?.[0] ?? null,
-        recent: p.recent ?? [],
         onStageDraft: p.onStage ?? (() => undefined),
         compact: p.compact ?? false,
-        wide: p.wide ?? false,
         onOpenJobs: p.onJobs ?? (() => undefined),
         placement: 'welcome',
       }),
@@ -131,44 +129,39 @@ describe('G1 G2 G3 guided cues, and the G4 globe that is not one', () => {
   });
 });
 
-describe('Continue — real conversations, no counts', () => {
-  it('3 rows on a phone, 5 at >=1024, 1 when compact', () => {
-    expect(continueRowCount(false, false)).toBe(3);
-    expect(continueRowCount(false, true)).toBe(5);
-    expect(continueRowCount(true, false)).toBe(1);
-    expect(continueRowCount(true, true)).toBe(1);
-  });
-  for (const [compact, wide, expected] of [
-    [false, false, 3],
-    [false, true, 5],
-    [true, false, 1],
+/*
+  SUPERSEDED, NOT DELETED — "Continue — real conversations, no counts" (IA R2 decision 5: 3 rows on
+  a phone, 5 at >=1024, 1 when compact, each with its real time; no block without a reopenable
+  conversation). R3.1 PRODUCT OWNER ACCEPTANCE · FIX 1 (MASTER CTO, 2026-10-11) removes Continue
+  from the Ask home entirely: no question titles, no timestamps, no "All conversations", at any
+  width. What those cases protected — nothing invented, no count — is now trivially and more
+  strictly true, and is asserted here: the home renders no conversation at all, even when the
+  reader has eight.
+*/
+describe('R3.1 FIX 1 — the Ask home shows no history', () => {
+  for (const [compact, wide] of [
+    [false, false],
+    [false, true],
+    [true, false],
   ] as const) {
-    it(`renders ${expected} row(s) from 8 real conversations (compact=${compact}, wide=${wide})`, () => {
-      const recent = [1, 2, 3, 4, 5, 6, 7, 8].map(thread);
-      const root = render({ signedIn: true, recent, compact, wide });
-      const rows = [...byAsk(root, 'welcome-resume'), ...byAsk(root, 'welcome-continue')];
-      expect(rows).toHaveLength(expected);
-      for (const row of rows) expect(typeof row.props.href).toBe('string');
+    it(`no Continue, Resume, time or "All conversations" (compact=${compact}, wide=${wide})`, () => {
+      const root = render({ signedIn: true, recent: [1, 2, 3, 4, 5, 6, 7, 8].map(thread), compact, wide });
+      for (const id of ['welcome-resume-group', 'welcome-resume', 'welcome-continue', 'continue-heading', 'continue-when', 'all-conversations', 'welcome-updates']) {
+        expect(byAsk(root, id)).toHaveLength(0);
+      }
+      expect(root.findAll((n) => n.type === 'a')).toHaveLength(0);
+      expect(textOf(root)).not.toMatch(/Question number|living costs/);
     });
   }
-  it('every row carries its own real time and no count of any kind', () => {
-    const root = render({ signedIn: true, recent: [1, 2, 3].map(thread) });
-    const whens = byAsk(root, 'continue-when');
-    expect(whens).toHaveLength(3);
-    for (const w of whens) expect(textOf(w).trim().length).toBeGreaterThan(0);
-    const group = byAsk(root, 'welcome-resume-group')[0]!;
-    expect(textOf(group)).not.toMatch(/\(\d+\)|\b\d+\s+(new|unread|changes to review)\b/i);
-  });
-  it('no Continue block at all when the reader has no reopenable conversation', () => {
-    const root = render({ signedIn: true, recent: [] });
-    expect(byAsk(root, 'continue-heading')).toHaveLength(0);
-    expect(byAsk(root, 'welcome-resume')).toHaveLength(0);
-    expect(byAsk(root, 'all-conversations')).toHaveLength(0);
-  });
 });
 
 describe('the compact rule (02 decision 4)', () => {
-  it('compact drops the My updates row — it is already in the primary nav', () => {
+  /*
+    SUPERSEDED, NOT DELETED — "compact drops the My updates row — it is already in the primary
+    nav" (IA R2 decision 4). R3.1 FIX 1 drops the row at EVERY size: My updates lives in the
+    primary navigation only. Asserted for both sizes.
+  */
+  it('R3.1 — no My updates activity row at any size (it is in the primary nav)', () => {
     const follows = { followed: 2, withChanges: 1, lastSuccessfulAt: '2026-10-10T08:00:00Z' };
     const render2 = (compact: boolean) => {
       let r!: ReturnType<typeof create>;
@@ -176,12 +169,7 @@ describe('the compact rule (02 decision 4)', () => {
         r = create(
           createElement(AskWelcomeEntries, {
             locale: 'en' as DisplayLocale,
-            signedIn: true,
-            latest: thread(1),
-            recent: [thread(1)],
-            follows,
             compact,
-            wide: false,
             onStageDraft: () => undefined,
             onOpenJobs: () => undefined,
             placement: 'welcome',
@@ -190,7 +178,8 @@ describe('the compact rule (02 decision 4)', () => {
       });
       return r.root;
     };
-    expect(byAsk(render2(false), 'welcome-updates')).toHaveLength(1);
+    void follows;
+    expect(byAsk(render2(false), 'welcome-updates')).toHaveLength(0);
     expect(byAsk(render2(true), 'welcome-updates')).toHaveLength(0);
   });
   it('the cue cluster becomes a list when compact and pills otherwise', () => {

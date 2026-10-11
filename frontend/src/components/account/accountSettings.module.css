@@ -227,3 +227,22 @@
   font-size: 13px;
   color: var(--ad-ink-2, #93a0b8);
 }
+
+/* R3.1 FIX 5 — the Language view: each language in its own name; the selected one is marked. */
+.optionName {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.optionCheck {
+  flex: 0 0 auto;
+  font-weight: 600;
+  color: var(--ad-accent, #6c93ff);
+}
+.option:has(input:checked) {
+  font-weight: 600;
+}
+.option:has(input:focus-visible) {
+  outline: 2px solid var(--ad-accent, #6c93ff);
+  outline-offset: -2px;
+  border-radius: 10px;
+}

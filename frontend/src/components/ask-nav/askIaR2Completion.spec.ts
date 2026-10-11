@@ -114,7 +114,13 @@ describe('1 · drawer top row: Close · identity · Settings gear', () => {
 
   it('identity: the saved name or "Signed in" — never an address; a guest gets the Sign in pill', () => {
     expect(head).toContain('user !== null');
-    expect(head).toContain('addressableName(user.displayName)');
+    /* SUPERSEDED, NOT DELETED (R3.1 FIX 4) — read `addressableName(user.displayName)`. The shown
+       name is now the saved name, else the automatic account alias (never an address), both
+       through the same shared rule: */
+    expect(head).toContain('shownAccountName(user)');
+    expect(read('lib', 'account', 'accountName.ts')).toContain(
+      'addressableName(user.displayName) ?? addressableName(user.accountAlias ?? null)',
+    );
     expect(head).not.toMatch(/\.email/);
     expect(head).toContain('data-ask-nav="drawer-sign-in"');
     expect(head).toContain('accountSignInUrl(pathname ?? undefined)');
