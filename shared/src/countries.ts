@@ -552,6 +552,7 @@ const COUNTRY_ALIASES: Record<string, string> = {
   'northern cyprus': 'QNC',
   'north cyprus': 'QNC',
   'republic of the congo': 'COG',
+  'republic of congo': 'COG',
   /* ASK PUBLIC BETA RETRIEVAL REPAIR R1 — the French form, so French COG reporting names COG. */
   'république du congo': 'COG',
   'republique du congo': 'COG',
