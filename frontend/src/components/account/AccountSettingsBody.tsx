@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { NavBar } from '@/components/navigation/NavBar';
 import { Footer } from '@/components/layout/Footer';
 import { DeleteAccountDangerZone } from '@/components/account/DeleteAccountDangerZone';
-import { DisplayNameEditor } from '@/components/account/DisplayNameEditor';
+import { AccountIdentity } from '@/components/account/AccountIdentity';
 import { AskAppearanceView, AskLanguageView, AskPreferencesSection } from '@/components/account/AskPreferencesSection';
 import { useAccount } from '@/lib/hooks/useAccount';
 import { getDictionary } from '@/lib/i18n/dictionaries';
@@ -20,7 +20,6 @@ import { MY_UPDATES_HREF } from '@/lib/ask/followedQuestions';
 import { accountSignInUrl } from '@/lib/api/accountBase';
 import { askLocation, cleanAskDestination } from '@/lib/ask/askCleanNavigation';
 import { useAskNavOptional } from '@/components/ask-nav/AskNavShell';
-import { addressableName } from '@globalnews-ai/shared';
 import tokens from './settingsTokens.module.css';
 import styles from './accountSettings.module.css';
 
@@ -139,18 +138,10 @@ export function AccountSettingsBody({
           <div className={styles.card}>
             {user !== null ? (
               <>
-                {/* REASON TO RETURN R1 · G6 — the name Ask may use: the reader's own, or none */}
-                <div className={styles.block}>
-                  {/* R3.1 FIX 4 — never a blank field: the saved name, else the account alias */}
-                  <DisplayNameEditor
-                    key={user.id}
-                    current={addressableName(user.displayName)}
-                    alias={addressableName(user.accountAlias ?? null)}
-                    aliasHint={g.aliasHint}
-                    locale={ui}
-                    onSave={updateDisplayName}
-                  />
-                </div>
+                {/* R3.1 GOOGLE PROFILE PERSONALIZATION — the identity is DISPLAYED (saved name, else the
+                    Google / verified-email greeting name) with an optional Change; the name-entry
+                    form opens only from Change. SUPERSEDED: the always-open DisplayNameEditor. */}
+                <AccountIdentity key={user.id} user={user} locale={ui} onSave={updateDisplayName} />
                 <p className={styles.row}>
                   <span className={styles.rowLabel}>{g.emailLabel}</span>
                   {/* an address is always left-to-right, also in an Arabic interface */}

@@ -119,7 +119,8 @@ describe('1 · drawer top row: Close · identity · Settings gear', () => {
        through the same shared rule: */
     expect(head).toContain('shownAccountName(user)');
     expect(read('lib', 'account', 'accountName.ts')).toContain(
-      'addressableName(user.displayName) ?? addressableName(user.accountAlias ?? null)',
+      /* R3.1 profile personalization: the alias is superseded by the sign-in greeting name */
+      'addressableName(user.displayName) ?? addressableName(user.greetingName ?? null)',
     );
     expect(head).not.toMatch(/\.email/);
     expect(head).toContain('data-ask-nav="drawer-sign-in"');

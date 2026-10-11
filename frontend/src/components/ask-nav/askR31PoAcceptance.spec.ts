@@ -47,7 +47,11 @@ import { AskLanguageView } from '@/components/account/AskPreferencesSection';
 // eslint-disable-next-line import/first
 import { DisplayNameEditor } from '@/components/account/DisplayNameEditor';
 // eslint-disable-next-line import/first
-import { shownAccountName } from '@/lib/account/accountName';
+import { accountNameSource, shownAccountName } from '@/lib/account/accountName';
+// eslint-disable-next-line import/first
+import { AccountIdentity } from '@/components/account/AccountIdentity';
+// eslint-disable-next-line import/first
+import { askDayPart, askGreetingStrings } from '@/lib/ask/askGreetingStrings';
 // eslint-disable-next-line import/first
 import { SELECTABLE_LOCALES } from '@/lib/i18n/languages';
 // eslint-disable-next-line import/first
@@ -155,59 +159,93 @@ describe('FIX 3 — the drawer holds only Close · identity · gear · New quest
   });
 });
 
-describe('FIX 4 — the automatic account alias', () => {
-  it('the saved name wins; else the alias; never an address; a guest has none', () => {
-    expect(shownAccountName({ displayName: 'Amina', accountAlias: 'amina.k-4821' })).toBe('Amina');
-    expect(shownAccountName({ displayName: null, accountAlias: 'amina.k-4821' })).toBe('amina.k-4821');
+/*
+  SUPERSEDED, NOT DELETED — "FIX 4 — the automatic account alias" (5 cases: alias shown when no
+  saved name; alias pre-filled in the field; alias hint in 7 locales; Settings passes the alias).
+  R3.1 GOOGLE PROFILE PERSONALIZATION (PO/CTO, 2026-10-11) revises the purpose: greet the reader
+  naturally — saved name, else the Google given name, else a verified-email first name, else
+  neutral — and DISPLAY the identity with an optional Change instead of a name-entry form. The
+  alias is not used for display. What the old cases protected (never blank when a name is known,
+  never an address, the saved name always wins, an older backend behaves as before) is asserted
+  below against the revised design.
+*/
+describe('FIX 4 (revised) — Google profile personalization', () => {
+  it('saved name > greeting name > nothing; never an address; a guest has none', () => {
+    expect(shownAccountName({ displayName: 'Amina K.', greetingName: 'Amina', greetingNameSource: 'GOOGLE_PROFILE' })).toBe('Amina K.');
+    expect(shownAccountName({ displayName: null, greetingName: 'Amina', greetingNameSource: 'GOOGLE_PROFILE' })).toBe('Amina');
     expect(shownAccountName({ displayName: null })).toBeNull();
-    expect(shownAccountName({ displayName: null, accountAlias: 'amina@example.com' })).toBeNull();
+    expect(shownAccountName({ displayName: null, greetingName: 'amina@example.com' })).toBeNull();
     expect(shownAccountName(null)).toBeNull();
+    expect(accountNameSource({ displayName: 'Amina K.', greetingName: 'Amina', greetingNameSource: 'EMAIL' })).toBe('CHOSEN');
+    expect(accountNameSource({ displayName: null, greetingName: 'Amina', greetingNameSource: 'EMAIL' })).toBe('EMAIL');
+    expect(accountNameSource({ displayName: null, greetingName: 'Amina', greetingNameSource: 'GOOGLE_PROFILE' })).toBe('GOOGLE_PROFILE');
+    expect(accountNameSource({ displayName: null })).toBeNull();
   });
 
-  const renderEditor = (current: string | null, alias: string | null) => {
+  const renderIdentity = (user: Record<string, unknown>) => {
     let r!: ReactTestRenderer;
     act(() => {
       r = create(
-        createElement(DisplayNameEditor, {
-          current,
-          alias,
-          aliasHint: askSettingsR2Strings('en').aliasHint,
-          locale: 'en',
+        createElement(AccountIdentity, {
+          user: user as never,
+          locale: 'en' as DisplayLocale,
           onSave: () => Promise.resolve({ ok: true as const }),
         }),
       );
     });
     return r;
   };
-  it('no saved name: the field shows the alias, not a blank, and the hint names it', () => {
-    const r = renderEditor(null, 'amina.k-4821');
-    expect(r.root.findByType('input').props.value).toBe('amina.k-4821');
-    expect(textOf(r.root.findByProps({ id: 'display-name-hint' }))).toContain('amina.k-4821');
-    expect(textOf(r.root)).not.toContain('never takes a name from your email');
+  it('Settings DISPLAYS the identity and its source, with an optional Change — no open form', () => {
+    const r = renderIdentity({ displayName: null, greetingName: 'Amina', greetingNameSource: 'GOOGLE_PROFILE' });
+    expect(textOf(by(r.root, 'data-account', 'identity-name')[0]!)).toBe('Amina');
+    expect(textOf(by(r.root, 'data-account', 'identity-source')[0]!)).toBe('From your Google account');
+    expect(r.root.findAll((n) => n.type === 'input')).toHaveLength(0);
+    act(() => by(r.root, 'data-account', 'identity-change')[0]!.props.onClick());
+    const input = r.root.findByType('input');
+    expect(input.props.value).toBe('Amina');
+    expect(textOf(r.root.findByProps({ id: 'display-name-hint' }))).toContain('Leave it empty to use the name from your Google account');
+    act(() => by(r.root, 'data-account', 'display-name-cancel')[0]!.props.onClick());
+    expect(r.root.findAll((n) => n.type === 'input')).toHaveLength(0);
     act(() => r.unmount());
   });
-  it('a saved name is shown unchanged', () => {
-    const r = renderEditor('Amina', 'amina.k-4821');
-    expect(r.root.findByType('input').props.value).toBe('Amina');
-    act(() => r.unmount());
-  });
-  it('no alias (an older backend): exactly the previous behaviour', () => {
-    const r = renderEditor(null, null);
-    expect(r.root.findByType('input').props.value).toBe('');
-    expect(textOf(r.root.findByProps({ id: 'display-name-hint' }))).toContain('never takes a name from your email');
-    act(() => r.unmount());
-  });
-  it('every locale names the alias in its hint, isolated for direction', () => {
-    for (const locale of SELECTABLE_LOCALES) {
-      const hint = askSettingsR2Strings(locale).aliasHint('amina.k-4821');
-      expect(hint).toContain('⁨amina.k-4821⁩');
-      expect(hint).not.toContain('@');
+  it('a saved name reads "Chosen by you"; an email-derived name says so; no name reads "Not set"', () => {
+    for (const [user, name, source] of [
+      [{ displayName: 'Amina K.', greetingName: 'Amina', greetingNameSource: 'GOOGLE_PROFILE' }, 'Amina K.', 'Chosen by you'],
+      [{ displayName: null, greetingName: 'Amina', greetingNameSource: 'EMAIL' }, 'Amina', 'From your email address'],
+      [{ displayName: null }, 'Not set', null],
+    ] as const) {
+      const r = renderIdentity(user);
+      expect(textOf(by(r.root, 'data-account', 'identity-name')[0]!)).toBe(name);
+      const line = by(r.root, 'data-account', 'identity-source');
+      expect(line.length === 0 ? null : textOf(line[0]!)).toBe(source);
+      act(() => r.unmount());
     }
   });
-  it('Settings passes the alias through the shared rule; the address stays only in the Email row', () => {
+  it('the greeting is localised and time-appropriate, never with an honorific or an address', () => {
+    expect(askDayPart(new Date(2026, 9, 11, 8))).toBe('morning');
+    expect(askDayPart(new Date(2026, 9, 11, 14))).toBe('afternoon');
+    expect(askDayPart(new Date(2026, 9, 11, 21))).toBe('evening');
+    expect(askDayPart(new Date(2026, 9, 11, 3))).toBe('evening');
+    for (const locale of SELECTABLE_LOCALES) {
+      for (const part of ['morning', 'afternoon', 'evening'] as const) {
+        const line = askGreetingStrings(locale).greet[part]('Amina');
+        expect(line).toContain('⁨Amina⁩');
+        expect(line).not.toMatch(/@|\b(Mr|Ms|Mrs|Pan|Pani|Herr|Frau|Sr|Sra|Monsieur|Madame)\b|سيد/);
+      }
+    }
+    expect(askGreetingStrings('en').greet.morning('Amina')).toBe('Good morning, ⁨Amina⁩');
+  });
+  it('the home greets only a signed-in reader, by name when there is one, neutrally otherwise', () => {
+    const frame = read('components', 'ask-frame', 'AskFrameScreen.tsx');
+    expect(frame).toMatch(/\{signedInReader && \(\s*<p data-ask="welcome-greeting"/);
+    expect(frame).toContain('askGreetingStrings(interfaceLocale).greet[askDayPart(new Date())](nav.displayName)');
+    expect(frame).toMatch(/: r3\.welcomeBack\}/);
+  });
+  it('Settings no longer opens a name form by default, and the alias is gone from display', () => {
     const body = read('components', 'account', 'AccountSettingsBody.tsx');
-    expect(body).toContain('alias={addressableName(user.accountAlias ?? null)}');
-    expect(body).toContain('current={addressableName(user.displayName)}');
+    expect(body).toContain('<AccountIdentity key={user.id} user={user} locale={ui} onSave={updateDisplayName} />');
+    expect(body).not.toMatch(/<DisplayNameEditor|accountAlias|aliasHint/);
+    expect(read('lib', 'account', 'accountName.ts')).not.toMatch(/user\.accountAlias/);
   });
 });
 

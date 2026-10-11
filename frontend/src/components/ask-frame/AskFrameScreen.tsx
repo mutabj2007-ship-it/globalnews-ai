@@ -44,6 +44,7 @@ import { AskReadingFooter } from '@/components/ask-nav/AskReadingFooter';
 import { AskDeepConfirm } from './AskDeepConfirm';
 import { AskJobSetupSheet } from './AskJobSetupSheet';
 import { AskWelcomeEntries } from './AskWelcomeEntries';
+import { askDayPart, askGreetingStrings } from '@/lib/ask/askGreetingStrings';
 import { AskPrimaryNav } from '@/components/ask-nav/AskPrimaryNav';
 import { askR3FullStrings } from '@/lib/ask/askR3FullStrings';
 import { Composer } from './AskParts';
@@ -850,8 +851,11 @@ export function AskFrameScreen({
                     {/* R3 FULL DESIGN · D02 — the verified name, or the neutral greeting; never a guess. */}
                     {signedInReader && (
                       <p data-ask="welcome-greeting" className={styles.emptyLead}>
+                        {/* R3.1 GOOGLE PROFILE PERSONALIZATION — a time-appropriate, localised
+                            greeting by name (saved name, else the Google / verified-email name);
+                            no honorific, never an address. No usable name → the neutral line. */}
                         {nav?.displayName != null
-                          ? followStrings(interfaceLocale).greeting(nav.displayName)
+                          ? askGreetingStrings(interfaceLocale).greet[askDayPart(new Date())](nav.displayName)
                           : r3.welcomeBack}
                       </p>
                     )}

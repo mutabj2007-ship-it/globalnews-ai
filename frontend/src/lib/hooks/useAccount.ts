@@ -11,10 +11,12 @@ export interface AccountUser {
   email: string;
   displayName: string | null;
   /**
-   * R3.1 FIX 4 — the automatic account alias (never the address, "@" or the domain). Optional:
-   * a backend without the alias omits it, and the reader's preferred name always wins.
+   * R3.1 GOOGLE PROFILE PERSONALIZATION — the greeting name stored at sign-in (Google given name,
+   * else a verified-email first name) and its source. Optional: today's backend omits them, and
+   * the reader's saved displayName always wins. (Supersedes the R3.1 FIX 4 `accountAlias`.)
    */
-  accountAlias?: string | null;
+  greetingName?: string | null;
+  greetingNameSource?: string | null;
 }
 
 /**
