@@ -3,6 +3,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { isArticleRef } from '../news/identity/article-ref.util';
 import { authorLabelOf } from './discussion.service';
 import { isLiveStatus, logicalAlert } from './alert-logic';
+import { isPublisherRightsHeld } from '../news/rights/publisher-rights-hold';
 import { StoryIdentityService } from './story-identity.service';
 
 /**
@@ -103,7 +104,8 @@ export class AlertsService {
     if (preferRef) members.sort((a, b) => Number(b.articleRef === preferRef) - Number(a.articleRef === preferRef));
     for (const m of members) {
       const article = await this.prisma.article.findFirst({ where: { url: m.articleUrl }, select: { title: true, url: true, sourceName: true } });
-      if (article) return { articleRef: m.articleRef, title: article.title, url: article.url, sourceName: article.sourceName };
+      /* MASTER CTO R4 · P0 #86 — a held publisher's headline is never an alert subject */
+      if (article && !isPublisherRightsHeld(article)) return { articleRef: m.articleRef, title: article.title, url: article.url, sourceName: article.sourceName };
     }
     return null;
   }
@@ -131,7 +133,8 @@ export class AlertsService {
       where: { url: member.articleUrl },
       select: { id: true, title: true, url: true, sourceName: true, publishedAt: true },
     });
-    if (!article) return null;
+    /* MASTER CTO R4 · P0 #86 — a held publisher's headline is never shown as what joined the story */
+    if (!article || isPublisherRightsHeld(article)) return null;
     return {
       articleRef,
       articleId: article.id,

@@ -4,6 +4,19 @@ import type { NewsResponse, ProviderHealthStatus } from '@globalnews-ai/shared';
 import { NewsService } from './news.service';
 import { CategoryParamsDto, SearchNewsDto, TopHeadlinesQueryDto } from './dto';
 import { LegacyRouteUsageInterceptor } from '../legacy-usage/legacy-route-usage.interceptor';
+import { withoutPublisherRightsHeld } from './rights/publisher-rights-hold';
+
+/*
+  MASTER CTO R4 · P0 #86 — THE READER EDGE. NewsService responses keep a held publisher's items so
+  that Analysis can WITHHOLD and COUNT them at its rights point (a rights exclusion is never told as
+  "no reporting"); no reader receives one. Every /news route that returns articles passes here.
+*/
+export function readerSafeNewsResponse(response: NewsResponse): NewsResponse {
+  const articles = withoutPublisherRightsHeld(response.articles);
+  return articles.length === response.articles.length
+    ? response
+    : { ...response, articles, totalResults: articles.length };
+}
 
 @Controller('news')
 export class NewsController {
@@ -19,7 +32,7 @@ export class NewsController {
   @UseInterceptors(new LegacyRouteUsageInterceptor('GET /news/search'))
   @Get('search')
   search(@Query() { q, limit }: SearchNewsDto): Promise<NewsResponse> {
-    return this.newsService.search(q, limit);
+    return this.newsService.search(q, limit).then(readerSafeNewsResponse);
   }
 
   /**
@@ -73,7 +86,7 @@ export class NewsController {
   @Throttle({ default: { limit: 120, ttl: 60000 } })
   @Get('top-headlines')
   topHeadlines(@Query() { limit, lang }: TopHeadlinesQueryDto): Promise<NewsResponse> {
-    return this.newsService.topHeadlines(limit, { lang });
+    return this.newsService.topHeadlines(limit, { lang }).then(readerSafeNewsResponse);
   }
 
   /**
@@ -118,7 +131,7 @@ export class NewsController {
   @Throttle({ default: { limit: 120, ttl: 60000 } })
   @Get('top-headlines/retained')
   retainedTopHeadlines(@Query() { limit, lang }: TopHeadlinesQueryDto): NewsResponse {
-    return this.newsService.topHeadlinesCacheOnly(limit, { lang });
+    return readerSafeNewsResponse(this.newsService.topHeadlinesCacheOnly(limit, { lang }));
   }
 
   /** GET /news/category/:category?limit=... */
@@ -127,7 +140,7 @@ export class NewsController {
     @Param() { category }: CategoryParamsDto,
     @Query() { limit }: TopHeadlinesQueryDto,
   ): Promise<NewsResponse> {
-    return this.newsService.byCategory(category, limit);
+    return this.newsService.byCategory(category, limit).then(readerSafeNewsResponse);
   }
 
   /** GET /news/providers/health */

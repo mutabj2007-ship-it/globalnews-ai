@@ -14,10 +14,10 @@ export const WITHHELD_BASIS = 'WITHHELD_SOURCE_RIGHTS' as const;
 
 type Json = Record<string, unknown>;
 
-const articlesOf = (payload: Json): Array<{ sourceId?: string | null; providerId?: string | null }> => {
+const articlesOf = (payload: Json): Array<{ sourceId?: string | null; providerId?: string | null; url?: string | null }> => {
   const analysis = payload.analysis as Json | null | undefined;
   const list = analysis?.articles;
-  return Array.isArray(list) ? (list as Array<{ sourceId?: string | null; providerId?: string | null }>) : [];
+  return Array.isArray(list) ? (list as Array<{ sourceId?: string | null; providerId?: string | null; url?: string | null }>) : [];
 };
 
 export function withheldForSourceRights(payload: unknown): unknown {
@@ -28,7 +28,7 @@ export function withheldForSourceRights(payload: unknown): unknown {
   let out: Json = p;
   const recent = p.recentReporting as Json | null | undefined;
   if (recent && Array.isArray(recent.items)) {
-    const items = partitionByRights(recent.items as Array<{ sourceId?: string | null }>, 'METADATA').allowed;
+    const items = partitionByRights(recent.items as Array<{ sourceId?: string | null; url?: string | null }>, 'METADATA').allowed;
     if (items.length !== (recent.items as unknown[]).length) out = { ...out, recentReporting: { ...recent, items } };
   }
   if (excluded.length === 0) return out;
@@ -55,7 +55,7 @@ export function withheldForSourceRights(payload: unknown): unknown {
  */
 export async function priorWorkRightsClearedWith(
   artifact: { readonly provenance?: string; readonly evidenceRefs?: readonly string[] },
-  findArticleById: ((id: string) => Promise<{ sourceId?: string | null; providerId?: string | null } | null>) | undefined,
+  findArticleById: ((id: string) => Promise<{ sourceId?: string | null; providerId?: string | null; url?: string | null } | null>) | undefined,
   maxRefs: number,
 ): Promise<boolean> {
   if (artifact.provenance !== 'SOURCED_REPORTING') return true;
@@ -64,7 +64,7 @@ export async function priorWorkRightsClearedWith(
   try {
     const found = await Promise.all(refs.map((id) => findArticleById(id)));
     if (found.some((a) => a === null)) return false;
-    return partitionByRights(found as Array<{ sourceId?: string | null; providerId?: string | null }>, 'AI_INPUT').excluded.length === 0;
+    return partitionByRights(found as Array<{ sourceId?: string | null; providerId?: string | null; url?: string | null }>, 'AI_INPUT').excluded.length === 0;
   } catch {
     return false;
   }

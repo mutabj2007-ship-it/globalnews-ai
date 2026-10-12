@@ -59,6 +59,8 @@ const RIGHTS_EXCLUSION_REASONS = [
   'PROVIDER_RIGHTS_NOT_CLEARED',
   'SOCIAL_RIGHTS_NOT_REVIEWED',
   'UNKNOWN_PROVENANCE',
+  /* MASTER CTO R4 · P0 #86 */
+  'PUBLISHER_RIGHTS_HOLD',
 ] as const satisfies readonly RightsExclusionReason[];
 
 const ATTEMPT_OUTCOMES = [

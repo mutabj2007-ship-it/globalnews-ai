@@ -22,6 +22,7 @@ import {
   scoreCountryRelevance,
 } from './country-relevance.util';
 import { assessCountryDevelopment } from './country-development-eligibility.util';
+import { withoutPublisherRightsHeld } from '../rights/publisher-rights-hold';
 
 interface CacheEntry {
   value: CountryNewsResponse;
@@ -278,9 +279,14 @@ export class CountryNewsService {
     // relevance scoring/sorting so every downstream step (persistence,
     // category filtering, dedup) already operates on a language-pure
     // set.
+    /*
+      MASTER CTO R4 · P0 #86 — a country feed is a reader surface: an item whose own URL host is under
+      a publisher rights hold is neither shown, scored, related to a country nor stored here.
+    */
+    const usableArticles = withoutPublisherRightsHeld(searchResponse.articles);
     const languageFilteredArticles = lang
-      ? searchResponse.articles.filter((article) => article.sourceLanguage === lang)
-      : searchResponse.articles;
+      ? usableArticles.filter((article) => article.sourceLanguage === lang)
+      : usableArticles;
 
     const scoredEntries = languageFilteredArticles
       .map((article) => ({

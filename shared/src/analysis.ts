@@ -927,7 +927,9 @@ export interface AnalysisRetrievalContext {
           | 'RIGHTS_NOT_CLEARED_FOR_AI'
           | 'PROVIDER_RIGHTS_NOT_CLEARED'
           | 'SOCIAL_RIGHTS_NOT_REVIEWED'
-          | 'UNKNOWN_PROVENANCE',
+          | 'UNKNOWN_PROVENANCE'
+          /* MASTER CTO R4 · P0 #86 — the article's own URL host is under a publisher rights hold */
+          | 'PUBLISHER_RIGHTS_HOLD',
           number
         >
       >

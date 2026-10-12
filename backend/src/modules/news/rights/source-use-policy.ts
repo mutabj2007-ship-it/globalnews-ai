@@ -34,6 +34,7 @@
   A rights exclusion is never "not relevant" and never evidence that no reporting exists.
 */
 import { FEED_SOURCES, type FeedSourceEntry } from '../providers/feed-source-registry';
+import { heldPublisherHostOf, publisherRightsHoldWhere } from './publisher-rights-hold';
 import { INTERNATIONAL_NEWS_SOURCES } from '../../global-reach/source-coverage.authority';
 import type { Prisma } from '../../../generated/prisma/client';
 
@@ -45,7 +46,9 @@ export type RightsExclusionReason =
   | 'RIGHTS_NOT_CLEARED_FOR_AI'
   | 'PROVIDER_RIGHTS_NOT_CLEARED'
   | 'SOCIAL_RIGHTS_NOT_REVIEWED'
-  | 'UNKNOWN_PROVENANCE';
+  | 'UNKNOWN_PROVENANCE'
+  /* MASTER CTO R4 · P0 #86 — the article's own URL host is under a publisher rights hold */
+  | 'PUBLISHER_RIGHTS_HOLD';
 
 export type ProviderEnforcement = 'record' | 'enforce';
 
@@ -73,6 +76,8 @@ export interface RightsPendingSummary {
 export interface UseInput {
   readonly sourceId?: string | null;
   readonly providerId?: string | null;
+  /** P0 #86 — the article's own URL; its canonical host decides a publisher rights hold. */
+  readonly url?: string | null;
 }
 
 export interface PolicyOptions {
@@ -94,6 +99,14 @@ export function sourceUseDecision(input: UseInput, use: EvidenceUse, options: Po
   /* 'enforce' is reachable only through an explicit code-level option, never from the environment */
   const enforcement = options.enforcement ?? 'record';
   const id = (input.sourceId ?? '').trim();
+
+  /*
+    MASTER CTO R4 · P0 #86 — A PUBLISHER RIGHTS HOLD DECIDES FIRST, FOR BOTH USES, IN EVERY MODE.
+    The article's own URL host (never its name or sourceId) is under a hold: E1 recorded no rights
+    basis for the publisher (AI_INPUT and headline display HOLD). `record` mode cannot loosen it —
+    PROVIDER_PENDING_REVIEW is not a licence. See publisher-rights-hold.ts.
+  */
+  if (heldPublisherHostOf(input.url) !== undefined) return { allowed: false, reason: 'PUBLISHER_RIGHTS_HOLD' };
 
   if (id.startsWith(FEED_PREFIX)) {
     const entry = feeds.find((row) => row.sourceId === id);
@@ -179,13 +192,20 @@ export function admittedStoredSourceWhere(feeds: readonly FeedSourceEntry[] = FE
     AND: [
       { NOT: { sourceId: '' } },
       { OR: [{ NOT: { sourceId: { startsWith: FEED_PREFIX } } }, { sourceId: { in: clearedFeedIds } }] },
+      /* P0 #86 — a held publisher host is not obtainable either (query half; the exact host predicate
+         runs again on every returned row in the repository) */
+      publisherRightsHoldWhere(),
     ],
   };
 }
 
 /** Repository-side check for what the query cannot express (malformed / unknown ids). */
-export function storedRowAdmissible(sourceId: string | null | undefined, feeds: readonly FeedSourceEntry[] = FEED_SOURCES): boolean {
-  return storedRowExclusionReason(sourceId, feeds) === null;
+export function storedRowAdmissible(
+  sourceId: string | null | undefined,
+  feeds: readonly FeedSourceEntry[] = FEED_SOURCES,
+  url?: string | null,
+): boolean {
+  return storedRowExclusionReason(sourceId, feeds, url) === null;
 }
 
 /**
@@ -197,7 +217,9 @@ export function storedRowAdmissible(sourceId: string | null | undefined, feeds: 
 export function storedRowExclusionReason(
   sourceId: string | null | undefined,
   feeds: readonly FeedSourceEntry[] = FEED_SOURCES,
+  /* P0 #86 — the stored row's URL, so a held publisher host is withheld by absence too */
+  url?: string | null,
 ): RightsExclusionReason | null {
-  const decision = sourceUseDecision({ sourceId }, 'AI_INPUT', { enforcement: 'record', feeds });
+  const decision = sourceUseDecision({ sourceId, url }, 'AI_INPUT', { enforcement: 'record', feeds });
   return decision.allowed ? null : decision.reason;
 }

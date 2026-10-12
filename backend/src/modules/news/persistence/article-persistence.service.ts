@@ -5,6 +5,7 @@ import { normalizeArticleUrl, type NewsArticle, type NewsCategory } from '@globa
 import { PrismaService } from '../../../database/prisma.service';
 import { stripUnresolvedTemplatePlaceholders } from '../article-metadata-hygiene.util';
 import { admittedStoredSourceWhere, storedRowAdmissible, storedRowExclusionReason } from '../rights/source-use-policy';
+import { partitionPublisherRightsHeld } from '../rights/publisher-rights-hold';
 import { RETAINED_ARTICLE_OBSERVER, type RetainedArticleObserver } from './retained-article-observer.port';
 import { currentRetrievalTrace, traceSafely } from '../retrieval-trace/retrieval-trace';
 
@@ -82,11 +83,16 @@ export class ArticlePersistenceService {
     (social posts, malformed / unknown ids) are dropped here, and the diagnostic records WHY by
     reason (counts only, never content): SOCIAL_RIGHTS_NOT_REVIEWED is never reported as malformed.
   */
-  private admissibleRows<T>(rows: readonly T[], sourceIdOf: (row: T) => string | null | undefined): T[] {
+  private admissibleRows<T>(
+    rows: readonly T[],
+    sourceIdOf: (row: T) => string | null | undefined,
+    /* P0 #86 — the row's URL, so a held publisher host is withheld by absence */
+    urlOf: (row: T) => string | null | undefined,
+  ): T[] {
     const kept: T[] = [];
     const dropped: Record<string, number> = {};
     for (const row of rows) {
-      const reason = storedRowExclusionReason(sourceIdOf(row));
+      const reason = storedRowExclusionReason(sourceIdOf(row), undefined, urlOf(row));
       if (reason === null) kept.push(row);
       else dropped[reason] = (dropped[reason] ?? 0) + 1;
     }
@@ -134,7 +140,17 @@ export class ArticlePersistenceService {
    * change, a `fallbackReason`, a new response field, or a retry. It means
    * one thing: omit `firstSeenAt`.
    */
-  async persistMany(articles: NewsArticle[]): Promise<FirstSeenByUrl> {
+  async persistMany(incoming: NewsArticle[]): Promise<FirstSeenByUrl> {
+    /*
+      MASTER CTO R4 · P0 #86 — NEW ADMISSION OF A HELD PUBLISHER HOST IS PAUSED.
+      An article whose own URL host is under a publisher rights hold is never written: no insert,
+      and no update over a row already stored (E1 B-5: those rows are RESTRICTED — retained as-is,
+      never back-filled or rewritten). Counts only are logged; never the URL or title.
+    */
+    const { kept: articles, held } = partitionPublisherRightsHeld(incoming);
+    if (held.length > 0) {
+      this.logger.debug(`persistence withheld ${held.length} article(s) under a publisher rights hold`);
+    }
     if (articles.length === 0) {
       return NO_OBSERVATIONS;
     }
@@ -395,7 +411,11 @@ export class ArticlePersistenceService {
         take: safeLimit,
       });
 
-      const articles = this.admissibleRows(rows, (row) => row.article.sourceId).map((row) => ({
+      const articles = this.admissibleRows(
+        rows,
+        (row) => row.article.sourceId,
+        (row) => row.article.url,
+      ).map((row) => ({
         securityCountryAttribution: {
           countryCode: row.countryCode,
           relevanceScore: row.relevanceScore,
@@ -529,7 +549,11 @@ export class ArticlePersistenceService {
         take: fetchLimit,
       });
 
-      return this.admissibleRows(rows, (row) => row.sourceId).map((row) => ({
+      return this.admissibleRows(
+        rows,
+        (row) => row.sourceId,
+        (row) => row.url,
+      ).map((row) => ({
         id: row.id,
         title: row.title,
         summary: stripUnresolvedTemplatePlaceholders(row.summary),
@@ -588,7 +612,7 @@ export class ArticlePersistenceService {
         where: { id: normalizedId, ...admittedStoredSourceWhere() },
       });
 
-      if (!row || !storedRowAdmissible(row.sourceId)) {
+      if (!row || !storedRowAdmissible(row.sourceId, undefined, row.url)) {
         return null;
       }
 
@@ -645,7 +669,7 @@ export class ArticlePersistenceService {
         where: { url: { in: candidates }, ...admittedStoredSourceWhere() },
         include: { countries: { where: { isRelevant: true }, select: { countryCode: true } } },
       });
-      if (!row || !storedRowAdmissible(row.sourceId)) return null;
+      if (!row || !storedRowAdmissible(row.sourceId, undefined, row.url)) return null;
 
       return {
         article: {

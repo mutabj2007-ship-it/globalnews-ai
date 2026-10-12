@@ -1,4 +1,10 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import {
   normalizeArticleUrl,
   STORY_IDENTITY_MAX_PUBLICATION_GAP_MS,
@@ -8,6 +14,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
 import { articleRefMatchesUrl, computeArticleRef, isArticleRef } from '../news/identity/article-ref.util';
 import { readPublishedAtBasis } from '../news/persistence/published-at-basis.util';
+import { isPublisherRightsHeld, withoutPublisherRightsHeld } from '../news/rights/publisher-rights-hold';
 import { isWriteConflict } from '../follows/follows.service';
 import { MAX_ALIAS_DEPTH, bringsNewEvidence, provableJoin, sourceHostOf } from './story-identity.rules';
 import { convergeLive } from './alert-logic';
@@ -197,6 +204,8 @@ export class StoryIdentityService {
    */
   async ensureStoryForArticle(input: { articleRef: string; url: string }): Promise<{ story: CanonicalStory; outcome: EnsureOutcome }> {
     if (!articleRefMatchesUrl(input.articleRef, input.url)) throw new BadRequestException('REF_URL_MISMATCH');
+    /* MASTER CTO R4 · P0 #86 — no story (which carries the headline) for a held publisher host */
+    if (isPublisherRightsHeld({ url: input.url })) throw new UnprocessableEntityException('PUBLISHER_RIGHTS_HOLD');
     const existing = await this.resolveByArticleRef(input.articleRef);
     if (existing) return { story: existing, outcome: 'EXISTING' };
 
@@ -233,7 +242,8 @@ export class StoryIdentityService {
     if ((await this.prisma.storyAlert.count({ where: { status: 'ACTIVE' } })) === 0) return out;
     // The STORED rows are the authority (the same basis every other placement reads).
     const rows = await this.prisma.article.findMany({ where: { url: { in: urls } }, select: ARTICLE_FIELDS, orderBy: { id: 'asc' } });
-    for (const row of rows) {
+    /* P0 #86 — a held publisher host is never placed in a story */
+    for (const row of withoutPublisherRightsHeld(rows)) {
       const ref = computeArticleRef(row.url);
       out.set(ref, (await this.placeArticle(ref, row, 'observe')) as ObserveOutcome);
     }
@@ -244,16 +254,19 @@ export class StoryIdentityService {
   private async rung3Candidates(row: { url: string; title: string; publishedAt: Date }) {
     if (row.title.trim().length === 0) return [];
     const gap = STORY_IDENTITY_MAX_PUBLICATION_GAP_MS;
-    return this.prisma.article.findMany({
-      where: {
-        url: { not: row.url },
-        title: { equals: row.title, mode: 'insensitive' },
-        publishedAt: { gte: new Date(row.publishedAt.getTime() - gap), lte: new Date(row.publishedAt.getTime() + gap) },
-      },
-      select: ARTICLE_FIELDS,
-      orderBy: [{ publishedAt: 'asc' }, { id: 'asc' }],
-      take: RUNG3_CANDIDATES,
-    });
+    /* P0 #86 — a held publisher host is never offered as a join candidate */
+    return withoutPublisherRightsHeld(
+      await this.prisma.article.findMany({
+        where: {
+          url: { not: row.url },
+          title: { equals: row.title, mode: 'insensitive' },
+          publishedAt: { gte: new Date(row.publishedAt.getTime() - gap), lte: new Date(row.publishedAt.getTime() + gap) },
+        },
+        select: ARTICLE_FIELDS,
+        orderBy: [{ publishedAt: 'asc' }, { id: 'asc' }],
+        take: RUNG3_CANDIDATES,
+      }),
+    );
   }
 
   private async placeArticle(articleRef: string, row: ArticleRow, mode: PlacementMode): Promise<EnsureOutcome | ObserveOutcome> {
@@ -454,7 +467,8 @@ export class StoryIdentityService {
     let existing = 0;
     let skipped = 0;
     for (const row of rows) {
-      if (!row.url?.trim()) {
+      /* P0 #86 — a held publisher host is never placed in a story */
+      if (!row.url?.trim() || isPublisherRightsHeld(row)) {
         skipped++;
         continue;
       }

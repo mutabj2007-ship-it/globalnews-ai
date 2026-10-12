@@ -14,6 +14,7 @@ import {
 import { PrismaService } from '../../database/prisma.service';
 import { computeArticleRef } from '../news/identity/article-ref.util';
 import { readPublishedAtBasis } from '../news/persistence/published-at-basis.util';
+import { publisherRightsHoldWhere, withoutPublisherRightsHeld } from '../news/rights/publisher-rights-hold';
 import {
   HOME_VISIBILITY_POLICY,
   REGION_MEMBERS,
@@ -125,6 +126,8 @@ export class HomeEditorialService {
       where: {
         publishedAt: { gte: since },
         countries: { some: { isRelevant: true, countryCode: { in: ALL_REGION_ISO3 } } },
+        /* MASTER CTO R4 · P0 #86 — a held publisher host never reaches a Home row (query half) */
+        AND: [publisherRightsHoldWhere()],
       },
       select: {
         id: true, url: true, title: true, summary: true, imageUrl: true, sourceId: true, sourceName: true,
@@ -134,7 +137,8 @@ export class HomeEditorialService {
       orderBy: { publishedAt: 'desc' },
       take: 2000,
     });
-    const rows = articles.map((a) => this.toRow(a));
+    /* P0 #86 — the exact host predicate on every row (the query half is a cap-saver, not the authority) */
+    const rows = withoutPublisherRightsHeld(articles).map((a) => this.toRow(a));
     const { storyIdByUrl, discussion } = await this.identityAndDiscussion(rows, now);
     this.cache = { at: now.getTime(), rows, storyIdByUrl, discussion };
     return this.cache;
@@ -216,6 +220,8 @@ export class HomeEditorialService {
               : { AND: needles.map(textMatch) },
             ...(input.days === null ? [] : [{ publishedAt: { gte: new Date(now.getTime() - input.days * 24 * 3_600_000) } }]),
             ...(regionIso === null ? [] : [{ countries: { some: { isRelevant: true, countryCode: { in: regionIso } } } }]),
+            /* MASTER CTO R4 · P0 #86 — a held publisher host is never listed (query half) */
+            publisherRightsHoldWhere(),
           ],
         },
         select: {
@@ -230,14 +236,17 @@ export class HomeEditorialService {
 
     let relaxed = false;
     const eligibleOnly = input.scope === 'HOME_ELIGIBLE';
-    let rows = (await run(terms)).map((a) => this.toRow(a));
+    /* P0 #86 — the exact host predicate on every returned row */
+    let rows = withoutPublisherRightsHeld(await run(terms)).map((a) => this.toRow(a));
     /* Sensible tolerance without fuzzy indexes: when the exact words leave NOTHING in scope (raw hits
        may all be out of scope, e.g. "refineri" ⊂ "refineries" in a sport report), retry on word stems
        (first 5 letters). */
     const inScope = (rs: RetainedRow[]): number => (eligibleOnly ? candidatesOf(rs, now, true).length : rs.length);
     if (inScope(rows) === 0 && terms.some((t) => t.length >= 6)) {
       relaxed = true;
-      rows = (await run(terms.map((t) => (t.length >= 6 ? t.slice(0, 5) : t)))).map((a) => this.toRow(a));
+      rows = withoutPublisherRightsHeld(await run(terms.map((t) => (t.length >= 6 ? t.slice(0, 5) : t)))).map((a) =>
+        this.toRow(a),
+      );
     }
     let candidates = candidatesOf(rows, now, eligibleOnly);
     if (!eligibleOnly) {
