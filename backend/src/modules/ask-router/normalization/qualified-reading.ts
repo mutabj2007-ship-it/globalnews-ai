@@ -47,6 +47,7 @@ import {
 import { classifyQueryIntent } from '../../analysis/query/query-intent.util';
 import { resolvePolishCountry } from '../../analysis/query/polish-country-forms.util';
 import { resolveGeography } from '../../geo/geo-resolver';
+import { localizedCountriesNamedIn } from '../../geo/language/localized-country-surface';
 import { detectAmbiguousCountryMention } from '../../analysis/anchor/event-anchor.util';
 import { resolveCountriesByDemonym } from '../../news/country/country-relevance.util';
 import { resolveCountryByAnyIdentifier } from '@globalnews-ai/shared';
@@ -635,6 +636,27 @@ export function normalizeAskQuestion(req: NormalizationRequest): NormalizationOu
       ) {
         geography.push(
           el(c.iso3, t, 'SURFACE_FORM_SET', 'polish-country-forms.util (G-ALPHA-2.1 A)'),
+        );
+      }
+    }
+    /*
+      EA-GEO-R1 G-2 (P0) — the QUALIFIED Polish name of a Congo. "Demokratyczna Republika Konga" (the
+      name the D0.1 picker shows for DR Congo) reached Tonga through the typo corrector, which now
+      refuses reviewed Congo words; with that gone it reached nothing. The shipped localized-country
+      index (geo/language) already reads it as COD. Taken only when nothing else typed a place, only
+      for COD / COG, and only when the ambiguity guard sees a QUALIFIED mention: a bare "Kongo" stays
+      ambiguous (the index alone would call it COG, which is exactly the guess R-10 forbids).
+    */
+    if (
+      !geography.some((g) => g.provenance !== 'SUPPLIED_BY_SURFACE') &&
+      detectAmbiguousCountryMention(text) === undefined
+    ) {
+      const congos = localizedCountriesNamedIn(text, 'pl')
+        .map((entry) => entry.country.iso3)
+        .filter((iso3, i, all) => (iso3 === 'COD' || iso3 === 'COG') && all.indexOf(iso3) === i);
+      if (congos.length === 1) {
+        geography.push(
+          el(congos[0], undefined, 'SURFACE_FORM_SET', 'localized-country-surface (pl, qualified Congo · EA-GEO-R1 G-2)'),
         );
       }
     }

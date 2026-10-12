@@ -459,12 +459,15 @@ export function detectAmbiguousCountryMention(
 */
 const EASTERN_DRC_QUALIFIER =
   /(?:^|[^\p{L}])(?:eastern\s+congo|(?:north|south)\s+kivu|kivu|uvira|bukavu|goma|beni|butembo|bunia|ituri|kisangani|kolwezi|lubumbashi|katanga|kinshasa|m23|afc\/m23|fardc|monusco)(?=$|[^\p{L}])/iu;
-/* "Republic of (the) Congo" — but never inside "Democratic Republic of (the) Congo". */
+/* "Republic of (the) Congo" — but never inside "Democratic Republic of (the) Congo".
+   EA-GEO-R1 G-3 — ES "República del Congo" and PT "República do Congo" (CLDR's own names). */
 const CONGO_BRAZZAVILLE_QUALIFIER =
-  /(?:^|[^\p{L}])(?:brazzaville|(?<!democratic\s+)republic\s+of\s+(?:the\s+)?congo|r[ée]publique\s+du\s+congo|pointe-noire)(?=$|[^\p{L}])/iu;
-/* EN + FR (EA review C4/C5): "RDC", "République démocratique du Congo" */
+  /(?:^|[^\p{L}])(?:brazzaville|(?<!democratic\s+)republic\s+of\s+(?:the\s+)?congo|r[ée]publique\s+du\s+congo|rep[uú]blica\s+d[eo]l?\s+congo|pointe-noire)(?=$|[^\p{L}])/iu;
+/* EN + FR (EA review C4/C5): "RDC", "République démocratique du Congo".
+   EA-GEO-R1 G-3 — FR "RD Congo", ES "República Democrática del Congo", PT "República Democrática
+   do Congo". */
 const DRC_NAMED =
-  /(?:^|[^\p{L}])(?:(?:dr|d\.r\.|democratic\s+republic\s+of(?:\s+the)?)\s*congo|r[ée]publique\s+d[ée]mocratique\s+du\s+congo|(?:drc|rdc)(?=$|[^\p{L}]))|congo\s*[-–(]?\s*kinshasa/iu;
+  /(?:^|[^\p{L}])(?:(?:dr|d\.r\.|rd|democratic\s+republic\s+of(?:\s+the)?)\s*congo|r[ée]publique\s+d[ée]mocratique\s+du\s+congo|rep[uú]blica\s+democr[aá]tica\s+d[eo]l?\s+congo|(?:drc|rdc)(?=$|[^\p{L}]))|congo\s*[-–(]?\s*kinshasa/iu;
 
 function settledAsDrcByEasternContext(text: string): boolean {
   return EASTERN_DRC_QUALIFIER.test(text) && !CONGO_BRAZZAVILLE_QUALIFIER.test(text);
@@ -490,7 +493,9 @@ function isQualifiedMention(text: string, at: number, length: number): boolean {
   const before = text.slice(Math.max(0, at - 32), at).toLowerCase();
   const after = text.slice(at + length, at + length + 16).toLowerCase();
   return (
-    /(?:^|[^\p{L}])(?:dr|d\.r\.|democratic republic of(?: the)?|republic of(?: the)?|demokratyczn\p{L}* republik\p{L}*|republik\p{L}*)\s*$/iu.test(
+    /* EA-GEO-R1 G-3 — FR "République démocratique du" / "République du" / "RD", ES "República
+       (Democrática) del", PT "República (Democrática) do": the long forms name ONE country. */
+    /(?:^|[^\p{L}])(?:dr|d\.r\.|rd|democratic republic of(?: the)?|republic of(?: the)?|demokratyczn\p{L}* republik\p{L}*|republik\p{L}*|r[ée]publique(?: d[ée]mocratique)? du|rep[uú]blica(?: democr[aá]tica)? d[eo]l?)\s*$/iu.test(
       before,
     ) || /^\s*[-–(]?\s*(?:kinshasa|brazzaville)/iu.test(after)
   );

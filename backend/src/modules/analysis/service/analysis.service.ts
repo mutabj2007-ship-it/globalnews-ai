@@ -345,8 +345,18 @@ export interface AnalysisExecutionPolicy {
    * the reports that concern the corrected scope, without running a search it says it did not run.
    */
   readonly anchorSupplements?: false;
+  /**
+   * EA-GEO-R1 G-1 (P0) — the ONE country the Ask router resolved from the reader's own words on the
+   * server (route envelope, source TYPED_GEOGRAPHY, precision COUNTRY), as ISO alpha-3. Never client
+   * text or a client code. Read only where the text reader decides the typed country, as a check:
+   * a matching reading stands, and when the two server readers name DIFFERENT countries there is NO
+   * typed country (an identity two readers dispute is not established). It never adds a typed
+   * country the text reader did not find. Part of the cache key. Absent for /analysis.
+   */
+  readonly typedCountry?: string;
 }
 import { officeGeographyCountryCode } from '../context-producers/office-geography.producer';
+import { reconcileTypedCountry } from './typed-country-handoff.util';
 import {
   decideContextEligibility,
   readSubjectInEitherLanguage,
@@ -945,7 +955,13 @@ export class AnalysisService {
       executionPolicy?.answerLanguage === undefined
         ? ''
         : `:answer:${executionPolicy.answerLanguage}`;
-    const cacheKey = `${requestedLanguage}${answerKeySegment}:${normalizedQuery.toLowerCase()}${storyAnchorKeySegment}${priorQuestionKeySegment}${selectionKeySegment}${identityKeySegment}${governedKeySegment}${windowKeySegment}${broadKeySegment}${relationshipKeySegment}${anchorKeySegment}`;
+    /* EA-GEO-R1 G-1 — the route's server-resolved country changes retrieval, so it keys the answer. */
+    const routeTypedCountry =
+      executionPolicy?.typedCountry === undefined
+        ? undefined
+        : resolveGovernedCountryCode(executionPolicy.typedCountry);
+    const typedCountryKeySegment = routeTypedCountry === undefined ? '' : `:typed:${routeTypedCountry.iso3.toLowerCase()}`;
+    const cacheKey = `${requestedLanguage}${answerKeySegment}:${normalizedQuery.toLowerCase()}${storyAnchorKeySegment}${priorQuestionKeySegment}${selectionKeySegment}${identityKeySegment}${governedKeySegment}${windowKeySegment}${broadKeySegment}${relationshipKeySegment}${anchorKeySegment}${typedCountryKeySegment}`;
 
     const cached = this.getCached(cacheKey);
 
@@ -1490,7 +1506,7 @@ export class AnalysisService {
          * classifier owns multi-country lists. No second country table or
          * heuristic is introduced.
          */
-        const rawTypedLocation =
+        const textTypedLocation =
           classification.sides.length >= 2 || classification.intent === 'CLARIFICATION_REQUIRED'
             ? undefined
             : (this.detectLocation(retrievalQuery) ??
@@ -1503,6 +1519,29 @@ export class AnalysisService {
                 christmas" has no office noun and resolves nothing here.
               */
               this.resolveOfficeGeographyLocation(retrievalQuery, requestedLanguage));
+        /*
+          EA-GEO-R1 G-1 (P0) — THE ROUTE'S SERVER-RESOLVED COUNTRY CROSSES THE BOUNDARY, AS A CHECK.
+          Ask passed no geography to Analysis, so Analysis re-read the text with a different reader
+          and could retrieve another country than the route resolved. The route's typed country is
+          read at exactly this rank and under exactly the same exclusions (comparison sides, a
+          clarification) to VALIDATE the text reading: a matching reading stands; two server readers
+          that name DIFFERENT countries leave no typed country (a disputed identity fails closed to
+          ordinary retrieval rather than searching either country's feed). It never fills a gap the
+          text reader leaves: that would move questions to the country feed (typed-country-handoff.util.ts).
+        */
+        const routeTyped =
+          routeTypedCountry === undefined ||
+          classification.sides.length >= 2 ||
+          classification.intent === 'CLARIFICATION_REQUIRED'
+            ? undefined
+            : ({ country: routeTypedCountry } as LocationContext);
+        const typedHandoff = reconcileTypedCountry(textTypedLocation, routeTyped);
+        if (typedHandoff.disputed) {
+          this.logger.debug(
+            `Typed country disputed (route ${routeTyped?.country.iso3}, text ${textTypedLocation?.country.iso3}); no typed country.`,
+          );
+        }
+        const rawTypedLocation = typedHandoff.location;
         /*
           ANCHORING R1 — GATE F. The shared resolver maps a bare "Congo" to one
           country. That is a guess, not an interpretation, so it is not used as a
@@ -6200,7 +6239,33 @@ export class AnalysisService {
     return country ? { country } : undefined;
   }
 
+  /**
+   * EA-GEO-R1 G-1 (P0) — ONE CONGO NEVER STANDS IN FOR THE OTHER.
+   *
+   * Measured at 737c42f: "What changed in Congo - Kinshasa" made the word-shrinking scan give up
+   * "- Kinshasa", match the bare head word "Congo" and return COG, while the Ask route,
+   * detectLocationV2 and resolveGeography all read COD. The ambiguity guard sees a qualified
+   * mention, so nothing dropped the wrong reading, and the typed feed searched Congo-Brazzaville.
+   *
+   * congoReadingOf() already holds the reviewed rule for which Congo a text names (a DRC name or an
+   * eastern-DRC place → COD; Brazzaville / Republic of the Congo / Pointe-Noire → COG). When the
+   * text settles ONE Congo and the scan produced the OTHER, the text's own reading wins. AMBIGUOUS
+   * and no-Congo texts are untouched (GATE F still decides a bare "Congo"), and no other country,
+   * city or path changes.
+   */
   private detectLocation(query: string): LocationContext | undefined {
+    const location = this.detectLocationUnchecked(query);
+    if (location === undefined || (location.country.iso3 !== 'COD' && location.country.iso3 !== 'COG')) {
+      return location;
+    }
+    const reading = congoReadingOf(query);
+    if ((reading === 'COD' || reading === 'COG') && reading !== location.country.iso3) {
+      return this.resolveStoryContextLocation(reading);
+    }
+    return location;
+  }
+
+  private detectLocationUnchecked(query: string): LocationContext | undefined {
     const normalized = query.trim().replace(/[?!.,;:]+$/g, '');
 
     if (!normalized) {

@@ -157,12 +157,13 @@ describe('EA-GEO-B COD/COG identity through the Ask handoff', () => {
     expect(plan.constraints.find((c: { axis: string }) => c.axis === 'TIME')).toMatchObject({ carried: false, refusal: 'CONSTRAINT_UNTRANSPORTABLE' });
   });
 
-  it.failing.each([
+  /* EA-GEO-R1 G-1 fix (Claude Code, geo-p0 Commit A): flipped it.failing → it in the fixing commit. */
+  it.each([
     'What changed in Congo - Kinshasa',
     'Latest news in Congo - Kinshasa',
     'What is happening in Congo (Kinshasa)',
     'What changed in Congo - Kinshasa over the last 7 days',
-  ])('B-03 HOLD-P0 Analysis never retrieves Congo-Brazzaville for a Congo-Kinshasa question: %s', (q) => {
+  ])('B-03 (was HOLD-P0) Analysis never retrieves Congo-Brazzaville for a Congo-Kinshasa question: %s', (q) => {
     expect(routeGeo(q)).toEqual(['COD']); /* the route is already right … */
     expect(analysisTypedCountry(q)).not.toBe('COG'); /* … Analysis's typed country feed is COG today */
   });
@@ -196,7 +197,10 @@ describe('EA-GEO-B COD/COG identity through the Ask handoff', () => {
 
   /* The draft a reader gets after choosing a place must reach Ask as that place in EVERY locale. */
   const HANDOFF_OK = [['en', 'CG'], ['fr', 'CD'], ['fr', 'CG'], ['de', 'CD'], ['de', 'CG'], ['pt', 'CD'], ['ar', 'CD'], ['ar', 'CG']] as const;
-  const HANDOFF_HOLD = [['en', 'CD'], ['pl', 'CD'], ['pl', 'CG'], ['es', 'CD'], ['es', 'CG'], ['pt', 'CG']] as const;
+  /* EA-GEO-R1 G-1/G-2/G-3 fix (Claude Code, geo-p0 Commit A): these four rows of the original HANDOFF_HOLD set now hold and
+     are flipped in the fixing commit; the two rows whose CLDR name is a BARE "Kongo" / "Congo" stay HOLD. */
+  const HANDOFF_FIXED = [['en', 'CD'], ['pl', 'CD'], ['es', 'CD'], ['pt', 'CG']] as const;
+  const HANDOFF_HOLD = [['pl', 'CG'], ['es', 'CG']] as const;
   const iso3Of = { CD: 'COD', CG: 'COG' } as const;
   const handoffHolds = (locale: string, iso2: 'CD' | 'CG'): void => {
     const q = d01Draft(locale, iso2);
@@ -205,26 +209,30 @@ describe('EA-GEO-B COD/COG identity through the Ask handoff', () => {
     expect([undefined, iso3Of[iso2]]).toContain(analysisTypedCountry(q));
   };
   it.each(HANDOFF_OK)('B-07 D0.1 handoff keeps identity (%s, %s)', (locale, iso2) => handoffHolds(locale, iso2));
+  it.each(HANDOFF_FIXED)('B-08 (was HOLD) D0.1 handoff keeps identity (%s, %s)', (locale, iso2) => handoffHolds(locale, iso2));
   it.failing.each(HANDOFF_HOLD)('B-08 HOLD D0.1 handoff loses or flips identity (%s, %s)', (locale, iso2) => handoffHolds(locale, iso2));
 
-  it.failing('B-09 HOLD-P0 the Polish DR Congo name is never Tonga', () => {
+  /* EA-GEO-R1 G-2 fix (geo-p0 Commit A) */
+  it('B-09 (was HOLD-P0) the Polish DR Congo name is never Tonga', () => {
     for (const q of ['Co zmieniło się w Demokratyczna Republika Konga', 'Co zmieniło się w Demokratycznej Republice Konga']) {
       expect(routeGeo(q, 'pl')).not.toContain('TON');
       expect((resolveGeography(q) as any).place?.country?.iso3).not.toBe('TON');
     }
   });
 
-  it.failing.each([
+  /* EA-GEO-R1 G-3 fix (geo-p0 Commit A) */
+  it.each([
     ['fr', 'Quoi de neuf en République démocratique du Congo'],
     ['fr', 'Quoi de neuf en RD Congo'],
     ['es', '¿Qué ha cambiado en la República Democrática del Congo?'],
     ['pt', 'O que mudou na República Democrática do Congo?'],
-  ])('B-10 HOLD a long-form DR Congo name is not ambiguous (%s: %s)', (_lang, q) => {
+  ])('B-10 (was HOLD) a long-form DR Congo name is not ambiguous (%s: %s)', (_lang, q) => {
     expect(detectAmbiguousCountryMention(q)).toBeUndefined();
     expect(congoReadingOf(q) === 'COD' || (resolveGeography(q) as any).place?.country?.iso3 === 'COD').toBe(true);
   });
 
-  it.failing('B-11 HOLD the Kinyarwanda DR Congo name never resolves to Congo-Brazzaville', () => {
+  /* EA-GEO-R1 G-2 fix (geo-p0 Commit A): "Kongo" is no longer typo-corrected; the name now fails closed (no lexicon added) */
+  it('B-11 (was HOLD) the Kinyarwanda DR Congo name never resolves to Congo-Brazzaville', () => {
     expect((resolveGeography('What changed in Repubulika Iharanira Demokarasi ya Kongo') as any).place?.country?.iso3).not.toBe('COG');
   });
 
