@@ -308,6 +308,23 @@ export const ASK_PRIMARY_SECTIONS: readonly AskPrimarySection[] = Object.freeze(
   { id: 'saved', href: '/saved' },
 ] as const);
 
+/**
+ * ASK D0.1 PO ACCEPTANCE R1 · V-01 — the section a path belongs to, from ASK_PRIMARY_SECTIONS.
+ * A My updates child (`/saved/updates/place`, Choose a place) is My updates, never Saved: the
+ * shell used an exact `/saved/updates` match, so the child fell through to the `/saved` prefix.
+ * Saved keeps every other `/saved…` page; Ask stays exact (`/ask/recent` is not marked, as before).
+ */
+export function askPrimarySectionForPath(pathname: string | null | undefined): AskPrimarySectionId | null {
+  if (!pathname) return null;
+  const hrefOf = (id: AskPrimarySectionId): string =>
+    ASK_PRIMARY_SECTIONS.find((entry) => entry.id === id)!.href;
+  const within = (base: string): boolean => pathname === base || pathname.startsWith(`${base}/`);
+  if (within(hrefOf('updates'))) return 'updates';
+  if (within(hrefOf('saved'))) return 'saved';
+  if (pathname === hrefOf('ask')) return 'ask';
+  return null;
+}
+
 export const ASK_NAV_PENDING_ROUTES: readonly string[] = [];
 
 /**

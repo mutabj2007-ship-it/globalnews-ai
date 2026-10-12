@@ -196,7 +196,8 @@ describe('D2 Choose a place under HOLD', () => {
     await act(async () => {
       byData(r, 'place-region:east-africa')[0].props.onClick();
     });
-    expect(byData(r, 'place-research')[0].props.href).toBe(`/ask?q=${encodeURIComponent('What changed this week in East Africa')}`);
+    /* PO ACCEPTANCE R1 · V-02 — the draft Ask can execute (was "What changed this week in …", refused) */
+    expect(byData(r, 'place-research')[0].props.href).toBe(`/ask?q=${encodeURIComponent('What are the latest developments in East Africa?')}`);
     expect(byData(r, 'place-follow')).toHaveLength(0);
     await act(async () => {
       byData(r, 'place-change')[0].props.onClick();

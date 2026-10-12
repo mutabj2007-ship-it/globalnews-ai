@@ -41,7 +41,7 @@ import { AskSettingsGlyph } from '@/components/ask-frame/AskSettingsGlyph';
 import { AskSettingsSheet } from '@/components/account/AskSettingsSheet';
 import { askSettingsR2Strings } from '@/lib/ask/askSettingsR2Strings';
 import { AskPrimaryNav } from './AskPrimaryNav';
-import type { AskPrimarySectionId } from '@/lib/askNavModel';
+import { askPrimarySectionForPath, type AskPrimarySectionId } from '@/lib/askNavModel';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -343,16 +343,10 @@ export function AskNavShell({
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const s = askShellStrings(language).askNavStrings;
+  /* ASK D0.1 PO ACCEPTANCE R1 · V-01 — one path rule, owned by the nav model (a My updates child
+     such as Choose a place is My updates, not Saved). */
   const currentSection: AskPrimarySectionId | null =
-    section !== undefined
-      ? section
-      : pathname === '/saved/updates'
-        ? 'updates'
-        : pathname?.startsWith('/saved') === true
-          ? 'saved'
-          : pathname === '/ask'
-            ? 'ask'
-            : null;
+    section !== undefined ? section : askPrimarySectionForPath(pathname);
   /* R4 · PHASE B — the shell's own direction scope. See the note at the header below. */
   const shellDirection = askDirectionProps(language);
   const audience: AskMenuAudience = user === null ? 'signed-out' : 'signed-in';
