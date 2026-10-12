@@ -42,6 +42,7 @@ export function AskWelcomeEntries({
   onStageDraft,
   compact = false,
   onOpenJobs,
+  onOpenStoryPicker,
   placement,
 }: {
   readonly locale: DisplayLocale;
@@ -50,6 +51,8 @@ export function AskWelcomeEntries({
   /** IA R2 — width < 360 or height < 640 (02 decision 4). */
   readonly compact?: boolean;
   readonly onOpenJobs: () => void;
+  /** ASK D0.1 · D1 — G2 opens the zero-compute story picker. Absent: G2 stages its draft as before. */
+  readonly onOpenStoryPicker?: () => void;
   /** The phone/tablet welcome group, or under the centred desktop composer. CSS shows one. */
   readonly placement: 'welcome' | 'desktop';
 }): JSX.Element {
@@ -57,7 +60,7 @@ export function AskWelcomeEntries({
   const g = askDiscoverStrings(locale);
   const cues: readonly { readonly id: 'g1' | 'g2' | 'g3'; readonly label: string; readonly run: () => void }[] = [
     { id: 'g1', label: g.cueRegion, run: () => onStageDraft?.(g.draftRegion, g.hintRegion) },
-    { id: 'g2', label: g.cueStory, run: () => onStageDraft?.(g.draftStory, g.hintStory) },
+    { id: 'g2', label: g.cueStory, run: () => (onOpenStoryPicker !== undefined ? onOpenStoryPicker() : onStageDraft?.(g.draftStory, g.hintStory)) },
     { id: 'g3', label: g.cueJobs, run: onOpenJobs },
   ];
 

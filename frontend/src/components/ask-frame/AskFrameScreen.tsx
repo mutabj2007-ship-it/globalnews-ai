@@ -43,6 +43,7 @@ import { useAskNavOptional } from '@/components/ask-nav/AskNavShell';
 import { AskReadingFooter } from '@/components/ask-nav/AskReadingFooter';
 import { AskDeepConfirm } from './AskDeepConfirm';
 import { AskJobSetupSheet } from './AskJobSetupSheet';
+import { StoryPicker } from '@/components/ask/StoryPicker';
 import { AskWelcomeEntries } from './AskWelcomeEntries';
 import { askDayPart, askGreetingStrings } from '@/lib/ask/askGreetingStrings';
 import { AskPrimaryNav } from '@/components/ask-nav/AskPrimaryNav';
@@ -273,6 +274,8 @@ export function AskFrameScreen({
   const [composerFocused, setComposerFocused] = useState(false);
   /* IA R2 — the staged cue's hint, announced through the composer's aria-describedby. */
   const [cueHint, setCueHint] = useState<string | null>(null);
+  /* ASK D0.1 · D1 — the G2 story picker (zero compute; stages a draft only). */
+  const [storyPickerOpen, setStoryPickerOpen] = useState(false);
   /* IA R2 02 decision 4 — compact is width < 360 OR height < 640; wide is >= 1024. */
   const [frameSize, setFrameSize] = useState<{ compact: boolean; wide: boolean }>({ compact: false, wide: false });
   useEffect(() => {
@@ -875,6 +878,7 @@ export function AskFrameScreen({
                     onStageDraft={stageGuidedDraft}
                     compact={frameSize.compact}
                     onOpenJobs={() => setJobSheetOpen(true)}
+                    onOpenStoryPicker={() => setStoryPickerOpen(true)}
                     placement="welcome"
                   />
                 </div>
@@ -1283,6 +1287,7 @@ export function AskFrameScreen({
               onStageDraft={stageGuidedDraft}
               compact={frameSize.compact}
               onOpenJobs={() => setJobSheetOpen(true)}
+              onOpenStoryPicker={() => setStoryPickerOpen(true)}
               placement="desktop"
             />
           )}
@@ -1329,6 +1334,21 @@ export function AskFrameScreen({
             requestAnimationFrame(() =>
               document.querySelector<HTMLTextAreaElement>('[data-ask="composer-input"]')?.focus(),
             );
+          }}
+        />
+      )}
+      {storyPickerOpen && (
+        <StoryPicker
+          locale={interfaceLocale}
+          onClose={() => {
+            setStoryPickerOpen(false);
+            /* G2-10 — close keeps nothing staged and returns focus to the cue that opened it */
+            requestAnimationFrame(() => document.querySelector<HTMLButtonElement>('[data-ask="cue-g2"]')?.focus());
+          }}
+          onStageDraft={(draft) => {
+            /* G2-7 — stage only; the reader sends (G2-8) */
+            setStoryPickerOpen(false);
+            stageGuidedDraft(draft, '');
           }}
         />
       )}

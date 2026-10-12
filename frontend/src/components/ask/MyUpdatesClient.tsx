@@ -29,6 +29,7 @@ import {
 } from '@/lib/ask/followOutcomePresentation';
 import { AskUpdatesChecking } from './AskUpdatesChecking';
 import { AskFollowAssessment } from '@/components/ask-frame/AskFollowAssessment';
+import { d01Strings } from '@/lib/ask/d01Strings';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -76,6 +77,10 @@ export function MyUpdatesClient({ locale }: { readonly locale: DisplayLocale }):
           </p>
         )}
       </header>
+      {/* ASK D0.1 · D2 — the separate Choose a place drill-in (D06); the followed questions below are unchanged */}
+      <Link href="/saved/updates/place" prefetch={false} data-ask="my-updates-choose-place" className="inline-flex min-h-[44px] w-fit items-center text-[13.5px] font-medium text-signal underline decoration-signal/50 underline-offset-4">
+        {d01Strings(locale).choosePlace} ›
+      </Link>
       {notice !== null && <p role="status" className="text-[13.5px] text-ink-secondary">{notice}</p>}
       {/* R3 FULL DESIGN · D14 — manual checking only; later options labelled, never active */}
       {list.ok && <AskUpdatesChecking locale={locale} />}
