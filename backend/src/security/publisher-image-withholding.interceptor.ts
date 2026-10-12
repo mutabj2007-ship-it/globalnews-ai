@@ -28,9 +28,10 @@ import { map, type Observable } from 'rxjs';
   No global serializer runs outside this interceptor (verified: no ClassSerializerInterceptor or
   instanceToPlain on the response path; class-transformer is used only for request DTOs).
 
-  KEY SET (D-1). Only `imageUrl` / `thumbnailUrl` are withheld. The set is guarded, not open: the
+  KEY SET (D-1). `imageUrl` / `thumbnailUrl` are always withheld. The set is guarded, not open: the
   spec walks the response contract (shared/src + controller-local response types) and FAILS when any
-  other image-like key appears there, so a new image field is a build failure, not a leak.
+  other image-like key appears there, so a new image field is a build failure, not a leak. Keys the
+  contract never declared (historical stored JSON) are covered by R-b below.
   Nothing is stored, deleted or rewritten: `Article.imageUrl` and `SavedStory.imageUrl` keep their
   data (E1-11 §7.1 — the URL is evidence for the pending legal question). No proxy, no thumbnail.
 */
@@ -39,6 +40,50 @@ export const WITHHELD_PUBLISHER_IMAGE_KEYS: ReadonlySet<string> = new Set([
   'imageUrl',
   'thumbnailUrl',
 ]);
+
+/* Image-like NAME PARTS: image / thumbnail / photo / enclosure anywhere; media / social only as a whole
+   name part (camelCase, SCREAMING_CASE or a leading word), so "immediateImpacts" or "medianMs" do not
+   match. One predicate for the D-1 contract guard (spec) and the R-b runtime rule (below). */
+export function isImageLikeKey(key: string): boolean {
+  return (
+    /image|thumbnail|photo|enclosure/iu.test(key) ||
+    /^(?:media|social)(?![a-z])/iu.test(key) ||
+    /[a-z0-9](?:Media|Social)(?![a-z])/u.test(key) ||
+    /(?:^|_)(?:MEDIA|SOCIAL)(?:_|$)/u.test(key)
+  );
+}
+
+/** Reviewed image-like names that are NOT media URLs. Adding to this list needs E1 review. */
+export const REVIEWED_NON_IMAGE_KEYS: ReadonlySet<string> = new Set([
+  'mediaType', // official-data MIME type of a retained snapshot (e.g. "text/csv"), never a URL
+  'MEDIA_TYPE_NOT_ALLOWED', // official-data admission refusal reason code, never a URL
+]);
+
+/*
+  U-1 R-b (E1-R4 §1.4.1) — STORED JSON IS NOT BOUND BY TODAY'S CONTRACT. A historical StoredResult
+  payload (an older serializer, a raw provider object) may carry a publisher image under a name no
+  type ever declared: `image`, `urlToImage`, `ogImage`, GDELT's `socialimage`, `media`, `enclosure`.
+  So, besides the exact withheld names, a property is withheld when BOTH hold:
+    1. its name is image-like (the D-1 predicate) and not E1-reviewed; and
+    2. its value is an ABSOLUTE URL — a string `http(s)://…` (E1's rule) or protocol-relative `//…`,
+       or an object / array that carries one at any depth (`media: { url }`, `enclosure: { url }`).
+  Relative first-party paths (`/images/…`), gradients and every non-image-like key — the article
+  `url` above all — are kept whatever their value.
+*/
+const ABSOLUTE_URL = /^(?:https?:)?\/\//iu;
+
+function carriesAbsoluteUrl(value: unknown, depth = 0): boolean {
+  if (typeof value === 'string') return ABSOLUTE_URL.test(value.trim());
+  if (value === null || typeof value !== 'object' || depth > 8) return false;
+  return Object.values(value as Record<string, unknown>).some((child) =>
+    carriesAbsoluteUrl(child, depth + 1),
+  );
+}
+
+function isWithheld(key: string, value: unknown): boolean {
+  if (WITHHELD_PUBLISHER_IMAGE_KEYS.has(key)) return true;
+  return isImageLikeKey(key) && !REVIEWED_NON_IMAGE_KEYS.has(key) && carriesAbsoluteUrl(value);
+}
 
 function isPlainObject(value: object): boolean {
   const prototype = Object.getPrototypeOf(value) as unknown;
@@ -90,7 +135,7 @@ export function withoutPublisherImages<T>(
   const copy: Record<string, unknown> = {};
   seen.set(source, copy);
   for (const [key, child] of Object.entries(source as Record<string, unknown>)) {
-    if (WITHHELD_PUBLISHER_IMAGE_KEYS.has(key)) continue;
+    if (isWithheld(key, child)) continue;
     copy[key] = withoutPublisherImages(child, seen);
   }
   return copy as unknown as T;

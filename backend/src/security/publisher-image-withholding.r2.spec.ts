@@ -9,7 +9,9 @@ import type { Response } from 'express';
 import request from 'supertest';
 import {
   PublisherImageWithholdingInterceptor,
+  REVIEWED_NON_IMAGE_KEYS,
   WITHHELD_PUBLISHER_IMAGE_KEYS,
+  isImageLikeKey as isImageLike,
   withoutPublisherImages,
 } from './publisher-image-withholding.interceptor';
 import { AskV2GuestController } from '../modules/ask-v2/guest/ask-v2-guest.controller';
@@ -30,21 +32,8 @@ import { AskRequestContextInterceptor } from '../modules/ask-v2/ask-request-cont
 */
 
 const IMAGE = 'https://publisher.example/photo.jpg';
-/* Image-like NAME PARTS: image / thumbnail / photo / enclosure anywhere; media / social only as a whole
-   name part (camelCase, SCREAMING_CASE or a leading word), so "immediateImpacts" or "medianMs" do not match. */
-function isImageLike(key: string): boolean {
-  return (
-    /image|thumbnail|photo|enclosure/iu.test(key) ||
-    /^(?:media|social)(?![a-z])/iu.test(key) ||
-    /[a-z0-9](?:Media|Social)(?![a-z])/u.test(key) ||
-    /(?:^|_)(?:MEDIA|SOCIAL)(?:_|$)/u.test(key)
-  );
-}
-/** Reviewed image-like names that are NOT media URLs. Adding to this list needs E1 review. */
-const REVIEWED_NON_IMAGE_KEYS: ReadonlySet<string> = new Set([
-  'mediaType', // official-data MIME type of a retained snapshot (e.g. "text/csv"), never a URL
-  'MEDIA_TYPE_NOT_ALLOWED', // official-data admission refusal reason code, never a URL
-]);
+/* The image-like name predicate and the E1-reviewed exemptions live in the interceptor (one
+   definition for this contract guard and the R-b runtime rule). Additions to the reviewed set need E1. */
 
 const ROOT = join(__dirname, '..', '..', '..');
 function sourcesUnder(dir: string, keep: (file: string) => boolean): string[] {
