@@ -373,9 +373,16 @@ describe('T1 · REGIONAL-02 Tim Kennedy / Erik Prince — COD vs COG identity', 
     },
   };
 
-  it('records the persisted-country identity of every survivor (bare "Congo" → CG is made visible)', async () => {
+  /*
+    Before D-07 this fixture recorded the defect itself — the bare-"Congo" headline was persisted as
+    CG ({ CG: 1, CD: 2 }). D-07 (EA-G-06 D07_SCOPED_PASS; CTO R3-GEO-01) makes an unqualified "Congo"
+    fail closed, so the trace now records it as UNRESOLVED, and the two DRC-qualified reports stay CD.
+    The trace still records, never decides: decision identity is asserted by runBoth().
+  */
+  it('records the persisted-country identity of every survivor (bare "Congo" is unresolved after D-07, never CG)', async () => {
     const { diagnostics } = await runBoth(world, ['Erik Prince Congo', 10, { type: 'none' }]);
-    expect(diagnostics.searches[0]?.stages?.countryTags).toEqual({ CG: 1, CD: 2 });
+    expect(diagnostics.searches[0]?.stages?.countryTags).toEqual({ CD: 2 });
+    expect(diagnostics.searches[0]?.stages?.countryUnresolved).toBe(1);
   });
 
   it('a stored CG-tagged report is a GEO_CONTRADICTION for an eastern-DR-Congo question on the retained rung', async () => {
