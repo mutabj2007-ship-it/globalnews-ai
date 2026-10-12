@@ -130,3 +130,53 @@ describe('WP6 · presentation rules in the generation prompt', () => {
     expect(WP6_PRESENTATION_RULES).toMatch(/A change in volume is not a change in price/u);
   });
 });
+
+describe('WP6 · quotations are exact or absent (QUOTE_NOT_IN_EVIDENCE, CTO R4 §5)', () => {
+  const evidenceText = [
+    'The district mayor said: "We are still counting the damaged stalls." Traders gathered outside.',
+    "Officials described the blaze as 'under control by midnight'.",
+  ];
+
+  it('a verbatim quotation (any quote style, case and spacing aside) raises nothing', () => {
+    for (const answer of [
+      'The mayor said "We are still counting the damaged stalls." [ev-goico-en]',
+      'The mayor said “we are still  counting the damaged stalls”. [ev-goico-en]',
+      'Officials called the blaze «under control by midnight». [ev-goico-en]',
+    ])
+      expect(assessAnswerComposition(answer, { evidenceText })).toEqual([]);
+  });
+
+  it('an invented or reworded quotation is flagged; paraphrase without quotation marks is not', () => {
+    expect(
+      assessAnswerComposition('The mayor said "Hundreds of stalls were destroyed." [ev-goico-en]', {
+        evidenceText,
+      }),
+    ).toContain('QUOTE_NOT_IN_EVIDENCE');
+    expect(
+      assessAnswerComposition(
+        'The mayor said “we are counting the stalls that were damaged”. [ev-goico-en]',
+        { evidenceText },
+      ),
+    ).toContain('QUOTE_NOT_IN_EVIDENCE');
+    expect(
+      assessAnswerComposition(
+        'The mayor said the damaged stalls are still being counted. [ev-goico-en]',
+        { evidenceText },
+      ),
+    ).toEqual([]);
+  });
+
+  it('short quoted terms and headings are not quotations; without evidence text the rule is silent', () => {
+    expect(
+      assessAnswerComposition('Traders call it the "new market". [ev-goico-en]', { evidenceText }),
+    ).toEqual([]);
+    expect(assessAnswerComposition('The mayor said "Hundreds of stalls were destroyed."')).toEqual(
+      [],
+    );
+  });
+
+  it('every reference answer that carries evidence text still raises nothing (no regression)', () => {
+    for (const c of CASES.filter((x) => x.ctx?.evidenceText !== undefined))
+      expect(assessAnswerComposition(c.good, c.ctx)).not.toContain('QUOTE_NOT_IN_EVIDENCE');
+  });
+});

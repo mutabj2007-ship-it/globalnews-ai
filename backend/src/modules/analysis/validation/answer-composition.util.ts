@@ -30,14 +30,15 @@ export type CompositionFinding =
   | 'UNVERIFIED_CAUSE_ASSERTED'
   | 'ALLEGATION_AS_FACT'
   | 'VOLUME_STATED_AS_PRICE'
-  | 'STATEMENT_WITHOUT_OUTLET';
+  | 'STATEMENT_WITHOUT_OUTLET'
+  | 'QUOTE_NOT_IN_EVIDENCE';
 
 export interface CompositionContext {
   /** Every evidence id the answer may cite as `[ev-…]`. Enables CITATION_NOT_IN_EVIDENCE / UNCITED_BULLET. */
   readonly evidenceIds?: readonly string[];
   /** Every URL in the evidence. Enables URL_NOT_IN_EVIDENCE. */
   readonly evidenceUrls?: readonly string[];
-  /** The evidence's own text (facts, titles, times) plus deterministic engine output. Enables NUMBER_NOT_IN_EVIDENCE. */
+  /** The evidence's own text (facts, titles, times) plus deterministic engine output. Enables NUMBER_NOT_IN_EVIDENCE and QUOTE_NOT_IN_EVIDENCE. */
   readonly evidenceText?: readonly string[];
   /** The reader's question: its own figures may be restated only where marked as not supported. */
   readonly questionText?: string;
@@ -91,6 +92,10 @@ const OFFICIAL =
   /\b(?:mayor|official|officials|police|minister|spokes(?:person|man|woman)|governor|army|military)\b/iu;
 const SPOKE = /\b(?:said|says|told|stated|announced)\b/iu;
 const URL = /https?:\/\/[^\s)\]>|]+/giu;
+/** A quoted span in straight, curly, guillemet or low-high quotes (one line). */
+const QUOTED = /["“”«»„]([^"“”«»„\n]{3,}?)["“”«»„]/gu;
+const normQuote = (text: string) =>
+  text.replace(/[‘’]/gu, "'").replace(/\s+/gu, ' ').trim().toLowerCase();
 
 const stripMarkup = (text: string) => text.replace(/\*\*/gu, '').replace(/`/gu, '');
 const normNumber = (n: string) => n.replace(/,/gu, '').replace(/%$/u, '');
@@ -140,6 +145,18 @@ export function assessAnswerComposition(
         if (asked.has(n) && QUALIFIED.test(s)) continue;
         found.add('NUMBER_NOT_IN_EVIDENCE');
       }
+    }
+  }
+
+  /* A quotation is exact or it is not a quotation: every quoted span of three or more words must
+     appear verbatim in the evidence text (case, apostrophe style and spacing aside). Paraphrase is
+     fine; an invented or reworded quotation is not. */
+  if (ctx.evidenceText !== undefined) {
+    const evidence = normQuote(ctx.evidenceText.join(' \n '));
+    for (const m of plain.replace(CITATION, '').matchAll(QUOTED)) {
+      const span = normQuote(m[1] ?? '');
+      if (span.split(' ').length >= 3 && !evidence.includes(span))
+        found.add('QUOTE_NOT_IN_EVIDENCE');
     }
   }
 

@@ -17,6 +17,7 @@ import {
   NEWS_PROVIDERS,
 } from '../../news/providers/provider.tokens';
 import { ArticlePersistenceService } from '../../news/persistence/article-persistence.service';
+import { REWORK_RESEARCH_RULES } from '../../ask-v2/execution-contract';
 
 /*
   RETRIEVAL R1 · WP6 — THE ENABLED PATH, END TO END, WITH NO LIVE MODEL.
@@ -192,12 +193,13 @@ describe('WP6 · enabled path — provider request (real OpenAiAnalysisProvider,
       }),
     } as unknown as AnalysisConfigService);
 
-  async function requestBody(wp6: boolean) {
+  async function requestBody(wp6: boolean, extra: Partial<AnalysisProviderInput> = {}) {
     fetchMock.mockClear();
     await provider(wp6)
       .analyzeNews({
         query: 'Nairobi commuter rail expansion',
         articles: RELEVANT,
+        ...extra,
       } as AnalysisProviderInput)
       .catch(() => undefined);
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -212,6 +214,27 @@ describe('WP6 · enabled path — provider request (real OpenAiAnalysisProvider,
     expect(off.messages[0]?.content).not.toContain(WP6_PRESENTATION_RULES);
     expect(on.messages[0]?.content).toContain(WP6_PRESENTATION_RULES);
     expect(on.messages[1]).toEqual(off.messages[1]);
+    expect(on.messages[0]?.content.replace(`\n\n${WP6_PRESENTATION_RULES}\n`, '')).toBe(
+      off.messages[0]?.content,
+    );
+  });
+
+  /* PRIOR-ANSWER REWORK (CTO R4 §5): the Ask adapter sends the rework rules as governed system rules
+     and the EARLIER WORK as governed data (withContractRules). With the flag on, the rework request
+     is the flag-off rework request plus the one WP6 block: the rework rules, the earlier work and the
+     evidence are untouched, the block appears exactly once, and it is still one request. Support's
+     NEWS_QUESTION reaches this same provider through the same AnalysisService.analyzeNews. */
+  it('flag ON, prior-answer rework: one request; rework rules and earlier work intact; the block once', async () => {
+    const governed = {
+      rules: REWORK_RESEARCH_RULES,
+      data: 'EARLIER WORK\nCabinet approved the Nairobi commuter rail expansion on Tuesday.',
+    };
+    const off = await requestBody(false, { governed });
+    const on = await requestBody(true, { governed });
+    expect(on.messages[0]?.content).toContain(REWORK_RESEARCH_RULES);
+    expect(on.messages[0]?.content.split(WP6_PRESENTATION_RULES)).toHaveLength(2);
+    expect(on.messages[1]).toEqual(off.messages[1]);
+    expect(on.messages[1]?.content).toContain('EARLIER WORK');
     expect(on.messages[0]?.content.replace(`\n\n${WP6_PRESENTATION_RULES}\n`, '')).toBe(
       off.messages[0]?.content,
     );
