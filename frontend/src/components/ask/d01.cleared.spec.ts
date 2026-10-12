@@ -173,6 +173,20 @@ describe('D1 · picker UI (CLEARED fixture)', () => {
     expect(link.props).toMatchObject({ href: 'https://publisher.example/a', target: '_blank', rel: 'noopener noreferrer' });
   });
 
+  it('Back (‹ Explain a story) returns to the same query and results, without a second request', async () => {
+    readStoryBrief.mockResolvedValue({ ok: false, reason: 'OFF' });
+    const opened = await openWith([card({}), card({ articleRef: 'b'.repeat(64), title: 'Second story' })]);
+    await act(async () => {
+      byData(opened.r, 'picker-row')[0].props.onClick();
+    });
+    await act(async () => {
+      byData(opened.r, 'picker-back')[0].props.onClick();
+    });
+    expect(byData(opened.r, 'picker-search')[0].props.value).toBe('fuel');
+    expect(byData(opened.r, 'picker-row')).toHaveLength(2);
+    expect(accountFetch).toHaveBeenCalledTimes(1);
+  });
+
   it('"Ask about this story" STAGES a draft (G2-7) and sends nothing', async () => {
     const opened = await openWith([card({ storyId: null })]);
     await act(async () => {

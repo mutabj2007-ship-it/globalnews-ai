@@ -50,9 +50,7 @@ export default function ChoosePlacePage(): JSX.Element {
         {/* ASK R3 NAVIGATION / USABILITY R1 — titled My updates, never "Saved" (audit D08) */}
         <AskContinuityHeader locale={chrome} surface="updates" />
         <AskClearedBoundary>
-          <main className="min-h-screen bg-void px-4 py-6 md:px-8">
-            <ChoosePlace locale={chrome} />
-          </main>
+          <ChoosePlace locale={chrome} />
         </AskClearedBoundary>
       </AskNavProvider>
     </AskThemedSurface>

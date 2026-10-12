@@ -8,6 +8,8 @@ import { searchPickerStories, type PickerSearchResult, type PickerStory } from '
 import { readStoryBrief } from '@/lib/api/storyBriefApi';
 import type { BriefResult, StoredBriefContent, StoryBriefView } from '@/lib/storyBrief/storyBriefView';
 import { askFormatLocalDayCompact } from '@/lib/ask/askDirection';
+import tokens from '../account/settingsTokens.module.css';
+import styles from './d01.module.css';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -27,6 +29,9 @@ import { askFormatLocalDayCompact } from '@/lib/ask/askDirection';
  *
  * Nothing here generates a Brief, creates a Story or sends a question. "Ask about this story" /
  * "Ask a follow-up" only STAGE a composer draft; the reader sends (G2-7, G2-8).
+ *
+ * Drawn with the R3 Settings/drawer token scope (settingsScope), so it follows the reader's Ask
+ * treatment; a sheet over the dimmed Ask page on phones, a centred dialog from 700 px.
  */
 type View =
   | { readonly kind: 'search' }
@@ -44,44 +49,68 @@ export function StoryPicker({
   /** Stages the composer draft; never submits. */
   readonly onStageDraft: (draft: string) => void;
 }): JSX.Element {
-  const s = d01Strings(locale);
   const titleId = useId();
   const [view, setView] = useState<View>({ kind: 'search' });
+  /* The query and its result live HERE, not in the search view, so "‹ Explain a story" from a story
+     returns to the same results (S05 → S02) without a second request. */
+  const [q, setQ] = useState('');
+  const [result, setResult] = useState<PickerSearchResult>({ kind: 'TOO_SHORT' });
+  useEffect(() => {
+    let live = true;
+    /* Debounced (G2-2). Under 2 characters searchPickerStories resolves TOO_SHORT without a request. */
+    const timer = setTimeout(() => {
+      void searchPickerStories(q).then((next) => live && setResult(next));
+    }, 250);
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+  }, [q]);
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-      data-ask="story-picker"
-      onKeyDown={(event) => {
-        /* G2-10 — Esc closes; the draft is kept and focus returns to the cue (parent) */
-        if (event.key === 'Escape') {
-          event.stopPropagation();
-          onClose();
-        }
-      }}
-      className="fixed inset-0 z-50 flex flex-col bg-void md:inset-x-auto md:left-1/2 md:top-10 md:bottom-10 md:w-[30rem] md:-translate-x-1/2 md:rounded-2xl md:border md:border-line md:shadow-xl"
-    >
-      {view.kind === 'search' ? (
-        <PickerSearch locale={locale} titleId={titleId} onClose={onClose} onOpen={(story) => setView({ kind: 'story', story })} />
-      ) : (
-        <PickerStoryView
-          locale={locale}
-          titleId={titleId}
-          story={view.story}
-          onBack={() => setView({ kind: 'search' })}
-          onStageDraft={onStageDraft}
-        />
-      )}
-      <span className="sr-only">{s.pickerNote}</span>
+    <div className={`${tokens.settingsScope} ${styles.backdrop}`} data-ask="story-picker-backdrop" onClick={onClose}>
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        data-ask="story-picker"
+        className={styles.sheet}
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => {
+          /* G2-10 — Esc closes; the draft is kept and focus returns to the cue (parent) */
+          if (event.key === 'Escape') {
+            event.stopPropagation();
+            onClose();
+          }
+        }}
+      >
+        {view.kind === 'search' ? (
+          <PickerSearch
+            locale={locale}
+            titleId={titleId}
+            q={q}
+            onQ={setQ}
+            result={result}
+            onClose={onClose}
+            onOpen={(story) => setView({ kind: 'story', story })}
+          />
+        ) : (
+          <PickerStoryView
+            locale={locale}
+            titleId={titleId}
+            story={view.story}
+            onBack={() => setView({ kind: 'search' })}
+            onStageDraft={onStageDraft}
+          />
+        )}
+      </section>
     </div>
   );
 }
 
 function Notice({ children, kind }: { readonly children: string; readonly kind: string }): JSX.Element {
   return (
-    <p role="status" data-ask={`picker-notice-${kind}`} className="rounded-xl bg-surface-raised px-3.5 py-3 text-[14px] leading-snug text-ink-primary">
+    <p role="status" data-ask={`picker-notice-${kind}`} className={styles.notice}>
       {children}
     </p>
   );
@@ -96,57 +125,51 @@ function dateLine(story: PickerStory, locale: DisplayLocale): string {
 function PickerSearch({
   locale,
   titleId,
+  q,
+  onQ,
+  result,
   onClose,
   onOpen,
 }: {
   readonly locale: DisplayLocale;
   readonly titleId: string;
+  readonly q: string;
+  readonly onQ: (q: string) => void;
+  readonly result: PickerSearchResult;
   readonly onClose: () => void;
   readonly onOpen: (story: PickerStory) => void;
 }): JSX.Element {
   const s = d01Strings(locale);
-  const [q, setQ] = useState('');
-  const [result, setResult] = useState<PickerSearchResult>({ kind: 'TOO_SHORT' });
   const input = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => input.current?.focus(), []);
-  useEffect(() => {
-    let live = true;
-    /* Debounced (G2-2). Under 2 characters searchPickerStories resolves TOO_SHORT without a request. */
-    const timer = setTimeout(() => {
-      void searchPickerStories(q).then((next) => live && setResult(next));
-    }, 250);
-    return () => {
-      live = false;
-      clearTimeout(timer);
-    };
-  }, [q]);
 
   return (
     <>
-      <header className="flex items-center justify-between px-4 pb-2 pt-4">
-        <h2 id={titleId} className="text-[19px] font-semibold text-ink-primary">
+      <header className={styles.head}>
+        <h2 id={titleId} className={styles.title}>
           {s.storyTitle}
         </h2>
-        <button type="button" data-ask="picker-close" aria-label={s.close} onClick={onClose} className="grid h-11 w-11 place-items-center rounded-full text-ink-secondary">
+        <button type="button" data-ask="picker-close" aria-label={s.close} onClick={onClose} className={styles.iconButton}>
           <span aria-hidden="true">✕</span>
         </button>
       </header>
-      <div className="flex flex-col gap-2 overflow-y-auto px-4 pb-6">
-        <label className="flex items-center gap-2 rounded-xl border border-signal bg-surface px-3.5 py-3">
-          <span aria-hidden="true" className="text-ink-tertiary">⌕</span>
+      <div className={styles.body}>
+        <label className={styles.search}>
+          <span aria-hidden="true" className={styles.searchGlyph}>
+            ⌕
+          </span>
           <input
             ref={input}
             type="search"
             data-ask="picker-search"
             value={q}
-            onChange={(event) => setQ(event.target.value)}
+            onChange={(event) => onQ(event.target.value)}
             placeholder={s.storySearch}
             aria-label={s.storySearch}
-            className="w-full bg-transparent text-[15px] text-ink-primary outline-none placeholder:text-ink-tertiary"
           />
         </label>
-        <p className="text-[13px] text-ink-tertiary">{s.pickerNote}</p>
+        <p className={styles.small}>{s.pickerNote}</p>
         <PickerResults result={result} q={q} locale={locale} onOpen={onOpen} />
       </div>
     </>
@@ -177,19 +200,21 @@ function PickerResults({
     case 'OK':
       if (result.stories.length === 0) return <Notice kind="no-story">{fillD01(s.noStory, { q: q.trim() })}</Notice>;
       return (
-        <ul data-ask="picker-results" className="overflow-hidden rounded-xl border border-line bg-surface">
+        <ul data-ask="picker-results" className={styles.list}>
           {result.stories.map((story) => (
-            <li key={story.articleRef} className="border-b border-line last:border-b-0">
-              <button type="button" data-ask="picker-row" onClick={() => onOpen(story)} className="flex w-full items-center gap-3 px-3.5 py-3 text-start">
-                <span className="min-w-0 flex-1">
-                  <span dir="auto" className="block text-[15px] font-medium leading-snug text-ink-primary">
+            <li key={story.articleRef}>
+              <button type="button" data-ask="picker-row" onClick={() => onOpen(story)} className={styles.row}>
+                <span className={styles.rowMain}>
+                  <span dir="auto" className={styles.rowTitle}>
                     {story.title}
                   </span>
-                  <span className="mt-1 block text-[13px] text-ink-tertiary">
+                  <span className={styles.rowMeta}>
                     {story.publisher} · {dateLine(story, locale)}
                   </span>
                 </span>
-                <span aria-hidden="true" className="text-ink-tertiary">›</span>
+                <span aria-hidden="true" className={styles.chevron}>
+                  ›
+                </span>
               </button>
             </li>
           ))}
@@ -224,20 +249,22 @@ function PickerStoryView({
     };
   }, [story.storyId]);
 
-  const href = safeExternalHref(story.url);
   const readable = brief?.kind === 'done' && brief.result.ok ? readableBrief(brief.result.value) : null;
+  const sources = readable?.evidence.length
+    ? readable.evidence
+    : [{ id: story.articleRef, url: story.url, title: story.title, publisher: story.publisher, publishedAt: story.date }];
   return (
     <>
-      <header className="border-b border-line px-4 py-3">
-        <button type="button" data-ask="picker-back" onClick={onBack} className="min-h-11 text-[15px] font-medium text-signal">
+      <header className={styles.head}>
+        <button type="button" data-ask="picker-back" onClick={onBack} className={styles.back}>
           ‹ {s.storyTitle}
         </button>
       </header>
-      <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-4">
-        <h2 id={titleId} dir="auto" className="text-[19px] font-semibold leading-snug text-ink-primary">
+      <div className={styles.body}>
+        <h2 id={titleId} dir="auto" className={styles.storyTitle}>
           {story.title}
         </h2>
-        <p className="text-[13px] text-ink-tertiary">
+        <p className={styles.small}>
           {story.publisher} · {dateLine(story, locale)}
         </p>
         {story.storyId === null ? (
@@ -245,43 +272,38 @@ function PickerStoryView({
         ) : brief === null || brief.kind === 'loading' ? null : (
           <BriefSection result={brief.result} readable={readable} locale={locale} />
         )}
-        <section className="flex flex-col gap-2">
-          <h3 className="text-[14px] text-ink-secondary">{s.sourcesH}</h3>
-          <ul className="overflow-hidden rounded-xl border border-line bg-surface">
-            {(readable?.evidence.length ? readable.evidence : [{ id: story.articleRef, url: story.url, title: story.title, publisher: story.publisher, publishedAt: story.date }]).map(
-              (source, index) => {
-                const link = safeExternalHref(source.url ?? undefined);
-                return (
-                  <li key={source.id} className="flex items-center gap-2 border-b border-line px-3.5 py-3 text-[13px] last:border-b-0">
-                    <span className="text-ink-tertiary">{index + 1}</span>
-                    <span className="min-w-0 flex-1 truncate text-ink-secondary">{source.publisher}</span>
-                    {link !== undefined && (
-                      <a href={link} target="_blank" rel="noopener noreferrer" data-ask="picker-read-original" className="font-medium text-signal">
-                        {s.readOriginal}
-                      </a>
-                    )}
-                  </li>
-                );
-              },
-            )}
-          </ul>
-          {href === undefined ? null : <span className="sr-only">{href}</span>}
-        </section>
+        <h3 className={styles.small}>{s.sourcesH}</h3>
+        <ul className={styles.list}>
+          {sources.map((source, index) => {
+            const link = safeExternalHref(source.url ?? undefined);
+            return (
+              <li key={source.id} className={styles.row} style={{ cursor: 'default' }}>
+                <span className={styles.chevron}>{index + 1}</span>
+                <span className={`${styles.rowMain} ${styles.rowMeta}`} style={{ marginTop: 0 }}>
+                  {source.publisher}
+                </span>
+                {link !== undefined && (
+                  <a href={link} target="_blank" rel="noopener noreferrer" data-ask="picker-read-original" className={styles.link}>
+                    {s.readOriginal}
+                  </a>
+                )}
+              </li>
+            );
+          })}
+        </ul>
       </div>
-      <footer className="flex flex-col items-center gap-2 border-t border-line px-4 pb-6 pt-3">
+      <footer className={styles.foot}>
         <button
           type="button"
           data-ask={readable === null ? 'picker-ask-about' : 'picker-follow-up'}
           onClick={() => onStageDraft(`${s.draftCtx}: ${story.title}`)}
-          className={
-            readable === null
-              ? 'min-h-12 w-full rounded-full bg-signal px-4 text-[15px] font-semibold text-white'
-              : 'min-h-12 w-full rounded-full border border-line bg-surface px-4 text-[15px] font-semibold text-ink-primary'
-          }
+          className={readable === null ? styles.primary : styles.secondary}
         >
           {readable === null ? s.askAbout : s.followUp}
         </button>
-        <p className="text-center text-[13px] text-ink-tertiary">{s.askNote}</p>
+        <p className={styles.small} style={{ textAlign: 'center' }}>
+          {s.askNote}
+        </p>
       </footer>
     </>
   );
@@ -312,25 +334,26 @@ function BriefSection({
   if (view.state === 'NONE') return <Notice kind="no-brief">{s.noBrief}</Notice>;
   if (view.state === 'FAILED' || readable === null) return <Notice kind="brief-off">{s.briefOff}</Notice>;
   const checkedDay = askFormatLocalDayCompact(new Date(readable.generatedAt), locale, new Date());
+  const gaps = [...readable.coverageGaps, ...readable.uncertainty];
   return (
-    <section data-ask="picker-brief" data-brief-state={view.state} className="flex flex-col gap-2">
-      <h3 className="text-[16px] font-semibold text-ink-primary">
-        {s.storedH} <span className="text-[13px] font-normal text-ink-tertiary">· {fillD01(s.checked, { d: checkedDay })}</span>
+    <section data-ask="picker-brief" data-brief-state={view.state} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <h3 className={styles.sectionTitle}>
+        {s.storedH} <span className={styles.sectionSub}>· {fillD01(s.checked, { d: checkedDay })}</span>
       </h3>
       {readable.summary !== null && (
-        <p dir="auto" className="text-[15px] leading-relaxed text-ink-primary">
+        <p dir="auto" className={styles.prose}>
           {readable.summary}
         </p>
       )}
       {readable.keyFacts.length > 0 && (
-        <ul className="flex flex-col gap-1.5">
+        <ul style={{ margin: 0, paddingInlineStart: 18 }}>
           {readable.keyFacts.map((fact, index) => (
-            <li key={index} dir="auto" className="text-[14px] leading-snug text-ink-primary">
-              {fact.claim}{' '}
+            <li key={index} dir="auto" className={styles.prose}>
+              {fact.claim}
               {fact.sourceArticleIds.map((id) => {
                 const n = readable.evidence.findIndex((source) => source.id === id);
                 return n < 0 ? null : (
-                  <sup key={id} className="ms-0.5 rounded border border-line px-1 text-[11px] text-ink-tertiary">
+                  <sup key={id} className={styles.cite}>
                     {n + 1}
                   </sup>
                 );
@@ -344,9 +367,9 @@ function BriefSection({
       {view.state === 'INSUFFICIENT' && (
         <>
           <Notice kind="insufficient">{s.insufficient}</Notice>
-          {[...readable.coverageGaps, ...readable.uncertainty].length > 0 && (
-            <ul data-ask="picker-gaps" className="list-disc ps-5 text-[13px] text-ink-secondary">
-              {[...readable.coverageGaps, ...readable.uncertainty].map((gap, index) => (
+          {gaps.length > 0 && (
+            <ul data-ask="picker-gaps" className={styles.small} style={{ paddingInlineStart: 18 }}>
+              {gaps.map((gap, index) => (
                 <li key={index} dir="auto">
                   {gap}
                 </li>

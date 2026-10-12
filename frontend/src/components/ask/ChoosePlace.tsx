@@ -10,6 +10,8 @@ import { browseRegionStories, type PickerSearchResult } from '@/lib/api/storyPic
 import { PICKER_PUBLISHER_CONTENT } from '@/lib/rights/pickerPublisherContent';
 import { useCountryFollows } from '@/components/home/useCountryFollows';
 import { askFormatLocalDayCompact } from '@/lib/ask/askDirection';
+import tokens from '../account/settingsTokens.module.css';
+import styles from './d01.module.css';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -45,17 +47,21 @@ function countryName(iso2: string, fallback: string, locale: DisplayLocale): str
 
 export function ChoosePlace({ locale }: { readonly locale: DisplayLocale }): JSX.Element {
   const [place, setPlace] = useState<Place | null>(null);
-  return place === null ? (
-    <PlaceChooser locale={locale} onChoose={setPlace} />
-  ) : (
-    <PlaceView locale={locale} place={place} onChange={() => setPlace(null)} />
+  return (
+    <main className={`${tokens.settingsScope} ${styles.page}`}>
+      {place === null ? (
+        <PlaceChooser locale={locale} onChoose={setPlace} />
+      ) : (
+        <PlaceView locale={locale} place={place} onChange={() => setPlace(null)} />
+      )}
+    </main>
   );
 }
 
 function BackToUpdates({ locale }: { readonly locale: DisplayLocale }): JSX.Element {
   const s = d01Strings(locale);
   return (
-    <Link href={MY_UPDATES_HREF} prefetch={false} data-ask="place-back" className="inline-flex min-h-11 items-center text-[15px] font-medium text-signal">
+    <Link href={MY_UPDATES_HREF} prefetch={false} data-ask="place-back" className={styles.back}>
       ‹ {s.updates}
     </Link>
   );
@@ -78,12 +84,12 @@ function PlaceChooser({ locale, onChoose }: { readonly locale: DisplayLocale; re
   }, [q, locale]);
 
   return (
-    <div data-ask="choose-place" className="mx-auto flex max-w-3xl flex-col gap-3">
+    <div data-ask="choose-place" className={styles.pageInner}>
       <BackToUpdates locale={locale} />
-      <h1 className="font-display text-[26px] font-semibold text-ink-primary">{s.choosePlace}</h1>
-      <p className="text-[15px] leading-snug text-ink-secondary">{s.chooseIntro}</p>
-      <label className="flex items-center gap-2 rounded-xl border border-border bg-surface px-3.5 py-3">
-        <span aria-hidden="true" className="text-ink-tertiary">⌕</span>
+      <h1 className={styles.pageTitle}>{s.choosePlace}</h1>
+      <p className={styles.pageIntro}>{s.chooseIntro}</p>
+      <label className={styles.search} style={{ borderColor: 'var(--ad-line-input, var(--ad-line))' }}>
+        <span aria-hidden="true" className={styles.searchGlyph}>⌕</span>
         <input
           type="search"
           data-ask="place-search"
@@ -91,33 +97,32 @@ function PlaceChooser({ locale, onChoose }: { readonly locale: DisplayLocale; re
           onChange={(event) => setQ(event.target.value)}
           placeholder={s.searchPlace}
           aria-label={s.searchPlace}
-          className="w-full bg-transparent text-[15px] text-ink-primary outline-none placeholder:text-ink-tertiary"
         />
       </label>
       {matches.length > 0 && (
-        <ul data-ask="place-matches" className="overflow-hidden rounded-xl border border-border bg-surface">
+        <ul data-ask="place-matches" className={styles.list}>
           {matches.map((c) => (
-            <li key={c.iso3} className="border-b border-border last:border-b-0">
-              <button type="button" onClick={() => onChoose({ kind: 'country', ...c })} className="flex min-h-12 w-full items-center justify-between px-3.5 text-start text-[15px] text-ink-primary">
-                {c.name}
-                <span aria-hidden="true" className="text-ink-tertiary">›</span>
+            <li key={c.iso3}>
+              <button type="button" onClick={() => onChoose({ kind: 'country', ...c })} className={styles.row}>
+                <span className={styles.rowMain}>{c.name}</span>
+                <span aria-hidden="true" className={styles.chevron}>›</span>
               </button>
             </li>
           ))}
         </ul>
       )}
-      <h2 className="mt-2 text-[14px] text-ink-secondary">{s.focusH}</h2>
-      <ul data-ask="coverage-focus-list" className="overflow-hidden rounded-xl border border-border bg-surface">
+      <h2 className={styles.small} style={{ marginTop: 8 }}>{s.focusH}</h2>
+      <ul data-ask="coverage-focus-list" className={styles.list}>
         {HOME_REGION_ORDER.map((region) => (
-          <li key={region} className="border-b border-border last:border-b-0">
-            <button type="button" data-ask={`place-${region}`} onClick={() => onChoose({ kind: 'region', region })} className="flex min-h-12 w-full items-center justify-between px-3.5 text-start text-[15px] text-ink-primary">
-              {regionLabel(region, locale)}
-              <span aria-hidden="true" className="text-ink-tertiary">›</span>
+          <li key={region}>
+            <button type="button" data-ask={`place-${region}`} onClick={() => onChoose({ kind: 'region', region })} className={styles.row}>
+              <span className={styles.rowMain}>{regionLabel(region, locale)}</span>
+              <span aria-hidden="true" className={styles.chevron}>›</span>
             </button>
           </li>
         ))}
       </ul>
-      <p data-ask="place-browse-note" className="text-[13px] text-ink-tertiary">
+      <p data-ask="place-browse-note" className={styles.small}>
         {s.browseNote}
       </p>
     </div>
@@ -126,7 +131,7 @@ function PlaceChooser({ locale, onChoose }: { readonly locale: DisplayLocale; re
 
 function Notice({ kind, children }: { readonly kind: string; readonly children: string }): JSX.Element {
   return (
-    <p role="status" data-ask={`place-notice-${kind}`} className="rounded-xl bg-surface-raised px-3.5 py-3 text-[14px] leading-snug text-ink-primary">
+    <p role="status" data-ask={`place-notice-${kind}`} className={styles.notice}>
       {children}
     </p>
   );
@@ -141,21 +146,21 @@ function PlaceView({ locale, place, onChange }: { readonly locale: DisplayLocale
   const name = place.kind === 'region' ? regionLabel(place.region, locale) : place.name;
   const research = `/ask?q=${encodeURIComponent(`${g.draftRegion}${name}`)}`;
   return (
-    <div data-ask="place-view" data-place-kind={place.kind} className="mx-auto flex max-w-3xl flex-col gap-3">
+    <div data-ask="place-view" data-place-kind={place.kind} className={styles.pageInner}>
       <BackToUpdates locale={locale} />
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="font-display text-[26px] font-semibold text-ink-primary">{name}</h1>
-        <button type="button" data-ask="place-change" onClick={onChange} className="min-h-11 text-[15px] font-medium text-signal">
+      <div className={styles.titleRow}>
+        <h1 className={styles.pageTitle}>{name}</h1>
+        <button type="button" data-ask="place-change" onClick={onChange} className={styles.back}>
           {s.change}
         </button>
       </div>
       {place.kind === 'country' && <FollowControl locale={locale} iso3={place.iso3} name={name} />}
       <PlaceRows locale={locale} place={place} />
-      <div className="mt-4 flex flex-col items-center gap-2">
-        <Link href={research} prefetch={false} data-ask="place-research" className="flex min-h-12 w-full items-center justify-center rounded-full border border-border bg-surface px-4 text-[15px] font-semibold text-ink-primary">
+      <div className={styles.foot} style={{ paddingInline: 0, marginTop: 16 }}>
+        <Link href={research} prefetch={false} data-ask="place-research" className={styles.secondary}>
           {s.research}
         </Link>
-        <p className="text-center text-[13px] text-ink-tertiary">{s.researchNote}</p>
+        <p className={styles.small} style={{ textAlign: 'center' }}>{s.researchNote}</p>
       </div>
     </div>
   );
@@ -167,23 +172,23 @@ function FollowControl({ locale, iso3, name }: { readonly locale: DisplayLocale;
   const followed = follows.follows?.includes(iso3) === true;
   if (followed) {
     return (
-      <p data-ask="place-followed" className="text-[13px] text-ink-secondary">
+      <p data-ask="place-followed" className={styles.small}>
         ✓ {fillD01(s.follow, { p: name })}
       </p>
     );
   }
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className={styles.followRow}>
       <button
         type="button"
         data-ask="place-follow"
         disabled={follows.pendingCountry === iso3}
         onClick={() => void follows.follow(iso3)}
-        className="inline-flex min-h-11 items-center gap-1.5 rounded-full border-2 border-signal px-4 text-[15px] font-semibold text-ink-primary"
+        className={styles.follow}
       >
         + {fillD01(s.follow, { p: name })}
       </button>
-      <p className="min-w-0 flex-1 text-[13px] leading-snug text-ink-tertiary">{s.notFollowed}</p>
+      <p className={styles.small} style={{ flex: 1, minWidth: 0 }}>{s.notFollowed}</p>
     </div>
   );
 }
@@ -206,17 +211,19 @@ function PlaceRows({ locale, place }: { readonly locale: DisplayLocale; readonly
   if (result.kind === 'UNAVAILABLE' || result.kind === 'NETWORK' || result.kind === 'TOO_SHORT') return <Notice kind="unavailable">{s.unavailable}</Notice>;
   if (result.kind === 'RIGHTS_HOLD') return <Notice kind="rights-hold">{s.rightsHold}</Notice>;
   return (
-    <ul data-ask="place-rows" className="overflow-hidden rounded-xl border border-border bg-surface">
+    <ul data-ask="place-rows" className={styles.list}>
       {result.stories.map((story) => (
-        <li key={story.articleRef} className="border-b border-border px-3.5 py-3 last:border-b-0">
-          <span dir="auto" className="block text-[15px] font-medium leading-snug text-ink-primary">
+        <li key={story.articleRef} className={styles.row} style={{ cursor: 'default' }}>
+          <span className={styles.rowMain}>
+          <span dir="auto" className={styles.rowTitle}>
             {story.title}
           </span>
-          <span className="mt-1 block text-[13px] text-ink-tertiary">
+          <span className={styles.rowMeta}>
             {story.publisher} ·{' '}
             {story.dateBasis === 'publisher'
               ? `${s.published} ${askFormatLocalDayCompact(new Date(story.date), locale, new Date())}`
               : fillD01(s.seenOn, { d: askFormatLocalDayCompact(new Date(story.date), locale, new Date()) })}
+          </span>
           </span>
         </li>
       ))}
