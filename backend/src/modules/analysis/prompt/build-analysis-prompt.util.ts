@@ -7,6 +7,7 @@ import type {
   SelectionPromptContext,
 } from '../interfaces/analysis-provider.interface';
 import { renderDimensionSemanticsInstruction } from './dimension-semantics';
+import { buildPresentationRulesInstruction } from './presentation-rules.util';
 import type {
   AnalysisEvidenceState,
   ComparisonCountryCoverage,
@@ -864,6 +865,8 @@ export function buildAnalysisMessages(
   reportingWindow?: { readonly statedPeriod: string; readonly from: string; readonly to: string },
   evidenceLinkageGuard?: boolean,
   broadHeadlinesCoverage?: 'LIVE' | 'LIMITED' | 'RETAINED',
+  /* RETRIEVAL R1 · WP6 — presentation rules; absent or false keeps the prompt byte-identical */
+  presentationRules?: boolean,
 ): { system: string; user: string } {
   const normalized = normalizeArticlesForPrompt(articles, maxChars);
   return {
@@ -883,6 +886,7 @@ export function buildAnalysisMessages(
       (governed === undefined || governed.rules === '' ? '' : `\n\n${governed.rules}\n`) +
       buildRelationalPromptSection(relationalContext) +
       buildResponseLanguageInstruction(responseLanguage) +
+      buildPresentationRulesInstruction(presentationRules) +
       /*
         EXECUTIVE-BRIEF-STRUCTURAL-COMPLIANCE-RECOVERY-1 — the measured breadth,
         appended by the same mechanism and for the same reason as the sections

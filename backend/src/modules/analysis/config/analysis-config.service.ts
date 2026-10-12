@@ -68,6 +68,14 @@ export interface AnalysisConfig {
   retryAttempts: number;
 
   /**
+   * RETRIEVAL R1 · WP6 — the answer-presentation rules block in the generation prompt
+   * (prompt/presentation-rules.util.ts). Present (true) only when
+   * ANSWER_PRESENTATION_WP6_ENABLED is exactly "true"; absent otherwise, so the default config
+   * object and the generation prompt are unchanged.
+   */
+  wp6Presentation?: true;
+
+  /**
    * Milestone #30 — base delay in milliseconds for exponential
    * retry backoff.
    *
@@ -182,6 +190,10 @@ export class AnalysisConfigService {
         'ANALYSIS_RETRY_BASE_DELAY_MS',
         DEFAULTS.retryBaseDelayMs,
       ),
+
+      ...(this.config.get<string>('ANSWER_PRESENTATION_WP6_ENABLED') === 'true'
+        ? { wp6Presentation: true as const }
+        : {}),
     };
   }
 

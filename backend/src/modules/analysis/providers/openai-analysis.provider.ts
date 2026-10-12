@@ -151,6 +151,8 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
       reportingWindow,
       evidenceLinkageGuard,
       broadHeadlinesCoverage,
+      /* RETRIEVAL R1 · WP6 — default off; the prompt is byte-identical unless the flag is set */
+      config.wp6Presentation === true,
     );
     const policyAttempts = comparisonCoverage?.length ? 1 : config.retryAttempts + 1;
     /* ASK R2 INTEGRATION R1 · GATE E — a caller ceiling can only LOWER the count. */
