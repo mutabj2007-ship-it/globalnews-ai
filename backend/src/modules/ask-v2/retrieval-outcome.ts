@@ -56,6 +56,40 @@ interface RetrievalFacts {
   };
 }
 
+/**
+ * RETRIEVAL R1 · D-28 — DID THE NEWS SEARCH FAIL TO COMPLETE?
+ *
+ * Alpha op 4f585f99 (2026-10-12): GNews rate-limited, GDELT DOC HTTP 429, a third lane answered
+ * with nothing. The outcome above was correctly PARTIAL_NO_MATCH, but the Ask fallback asked only
+ * whether EVERY provider failed, so the reader was told the search "found no verified current
+ * findings". A search with a failed or unavailable lane did not complete, whatever the other lanes
+ * returned: what current reporting says is not known, and absence is never claimed from it.
+ *
+ * True when every source failed (the P0-6 test, unchanged), or when any provider failure or any
+ * unavailable lane is recorded for a reason other than not being configured (a lane that is merely
+ * not configured is shown, never "incomplete coverage" — R2B). Reads only the facts the response
+ * already carries: no call, no question text.
+ */
+export function retrievalIncomplete(response: RetrievalFacts | null | undefined): boolean {
+  const ctx = response?.retrievalContext;
+  if (!response || !ctx || ctx.retrievalAttempted === false) return false;
+  if ((ctx.outcome ?? '').startsWith('PROVIDER_')) return true;
+  const answered = (ctx.providers ?? []).length;
+  const failures = ctx.providerFailures ?? [];
+  if (
+    answered === 0 &&
+    (failures.length > 0 || ctx.fallbackReason === 'provider-error' || ctx.dataMode === 'unavailable')
+  )
+    return true;
+  const configured = (reason: unknown) => reason !== 'not-configured';
+  return (
+    failures.some((f) => configured((f as { kind?: unknown } | null)?.kind)) ||
+    (ctx.retrievalTrace?.lanesUnavailable ?? []).some((l) =>
+      configured((l as { reason?: unknown } | null)?.reason),
+    )
+  );
+}
+
 const count = (v: unknown): number | null =>
   typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : null;
 

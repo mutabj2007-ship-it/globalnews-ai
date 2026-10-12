@@ -141,7 +141,7 @@ import { contextIdentityToken, type ResolvedAskContext } from './context/resolve
 import { isSameHeadline } from '../news/identity/headline-identity.util';
 import { AskObservationService } from '../ask-observability/ask-observation.service';
 import { questionAnchorsOf, sameMessageSubject, stableClauseNeedsMessage } from '../analysis/query/question-anchors.util';
-import { observedRetrievalOf } from './retrieval-outcome';
+import { observedRetrievalOf, retrievalIncomplete } from './retrieval-outcome';
 import { researchRecordOf, type ResearchFacts } from './research-record';
 import { productMetaAnswer, readProductMeta } from './product-meta';
 import { checkWrittenArithmetic } from '../analysis/providers/arithmetic-check.util';
@@ -336,12 +336,9 @@ const SEARCH_INCOMPLETE = [
  */
 function searchIncomplete(analysis: AnalysisApiResponse): boolean {
   if (retrievalFailed(analysis)) return true;
-  const lanes = (
-    analysis.retrievalContext as
-      | { retrievalTrace?: { lanesUnavailable?: readonly { reason?: unknown }[] } }
-      | undefined
-  )?.retrievalTrace?.lanesUnavailable;
-  return Array.isArray(lanes) && lanes.some((l) => l?.reason !== 'not-configured');
+  /* RETRIEVAL R1 · D-28 — a failed provider beside a lane that answered empty is incomplete too
+     (it was read from retrievalTrace.lanesUnavailable only, which a response may not carry) */
+  return retrievalIncomplete(analysis as Parameters<typeof retrievalIncomplete>[0]);
 }
 
 /** ASK EVIDENCE CONTINUITY R1 — the explicit no-evidence marker of a record, with its reason. */
@@ -1753,8 +1750,11 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         operationId,
         draft,
         /* ASK R2 LIVE-GATE REPAIR (P0-6) — an empty result because the SOURCES failed is not the
-           same fact as a search that found nothing: it is UNAVAILABLE, said as such */
-        noEvidence && !retrievalFailed(response) ? 'NO_EVIDENCE' : 'UNAVAILABLE',
+           same fact as a search that found nothing: it is UNAVAILABLE, said as such.
+           RETRIEVAL R1 · D-28 — and so is a search where SOME sources failed (op 4f585f99: GNews
+           and GDELT rate-limited, a third lane empty): it did not complete, so it is never
+           "no verified current findings". Only a completed search with nothing admitted is. */
+        noEvidence && !retrievalIncomplete(response) ? 'NO_EVIDENCE' : 'UNAVAILABLE',
         undefined,
         contract.stableQuestion ?? undefined,
         /* ASK R3 RESEARCH ACTIVITY R1 — the search that ran is recorded, not dropped; a call that

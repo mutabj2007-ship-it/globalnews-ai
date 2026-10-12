@@ -127,10 +127,13 @@ export const NO_CURRENT_FINDINGS_RULE =
  * (rate-limited, timed out, unavailable). That is NOT "nothing happened" and NOT "nothing was
  * found": the reasoning model says the current search could not be completed and supplies nothing
  * current from memory.
+ * RETRIEVAL R1 · D-28 — also when only SOME sources failed and the rest returned nothing: the
+ * search did not complete, so the wording names "one or more" sources, never all of them.
  */
 export const SOURCES_UNAVAILABLE_RULE =
-  'SOURCES UNAVAILABLE: the current-reporting sources could not be reached for this question right ' +
-  'now (they were rate-limited, timed out or unavailable), so the current part could not be checked. ' +
+  'SOURCES UNAVAILABLE: the search for current reporting could not be completed for this question ' +
+  'right now (one or more news sources were rate-limited, timed out or unavailable), so the current ' +
+  'part could not be checked. Do not say that no reporting or no findings exist. ' +
   'Say so plainly in your first sentence — it is not evidence that nothing happened. Do not name, ' +
   'list, date or describe any recent development, event, notice, figure or disruption as if it ' +
   'happened, and never fill a requested table of developments. Then answer ONLY the general or ' +
