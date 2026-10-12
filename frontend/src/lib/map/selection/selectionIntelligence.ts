@@ -355,6 +355,15 @@ export interface RetainedItem {
   readonly headline: string;
   readonly category: NewsCategory;
   readonly publisher: string;
+  /**
+   * E1 U-1 · R3B — THE CANONICAL INTERNAL SOURCE ID. `publisher` above stays
+   * exactly what it was, the VISIBLE attribution on the card; it is simply not
+   * a rights key, because a display name is self-asserted and can collide.
+   *
+   * OPTIONAL until Claude Code's U1 API candidate 2fcf76e supplies it on the
+   * Saved / map selection read. Absent, the image decision FAILS CLOSED.
+   */
+  readonly sourceId?: string | null;
   readonly publishedAt: string;
   /**
    * See `CoverageState.ageIsObservedOnly`. Carried per item because the basis

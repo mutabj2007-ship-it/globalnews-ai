@@ -38,8 +38,23 @@ import { resolvePublisherImage } from '@/lib/rights/publisherImageDisplay';
  * The retained record is untouched: `story.imageUrl` still carries what it
  * always carried, and nothing was deleted from saved data.
  */
-export function storyImageSrc(story: Pick<FixtureStory, 'imageUrl' | 'sourceName'>): string | undefined {
-  const decision = resolvePublisherImage(story.imageUrl, story.sourceName);
+export function storyImageSrc(story: Pick<FixtureStory, 'imageUrl' | 'sourceId'>): string | undefined {
+  /*
+    R3B — THE KEY IS THE CANONICAL `sourceId`, NEVER `sourceName`.
+
+    This surface used the publisher's DISPLAY NAME as the rights key. A display
+    name is self-asserted, not unique and not stable: two retained stories can
+    carry the same one, an outlet can rename itself, and a crafted name can be
+    made to collide with whatever a clearance is one day filed under.
+
+    FAIL CLOSED WHILE THE FIELD IS ABSENT. `FixtureStory.sourceId` is optional
+    because the My Intelligence read does not carry it yet — Claude Code's U1
+    API candidate 2fcf76e adds it. Until then every retained story resolves to
+    `undefined` here, which is the outcome the empty clearance set already
+    produced, now reached for the right reason. There is no fallback to
+    `sourceName`, and none to the article URL's host.
+  */
+  const decision = resolvePublisherImage(story.imageUrl, story.sourceId);
   return decision.kind === 'CLEARED' ? decision.src : undefined;
 }
 

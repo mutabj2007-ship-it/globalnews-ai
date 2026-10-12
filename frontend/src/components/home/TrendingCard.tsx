@@ -265,7 +265,7 @@ export function TrendingCard({ article, language, isLead = false }: TrendingCard
           <SafeImage
             src={article.imageUrl as string}
             /* already CLEARED one line above; the backstop re-decides, it does not trust this */
-            clearedPublisherKey={article.sourceId}
+            clearedSourceId={article.sourceId}
             alt=""
             fallbackSrc={TRANSPARENT_PIXEL}
             fill

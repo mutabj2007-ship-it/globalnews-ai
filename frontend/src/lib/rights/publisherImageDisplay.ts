@@ -120,8 +120,16 @@ export interface PublisherImageCandidate {
   /** The reference exactly as the record carries it. Never rewritten here. */
   readonly reference: string | null | undefined;
   /**
-   * Which clearance record was asked for. Present so a clearance resolved
-   * under another publisher's key cannot silently stand in for this one.
+   * The CANONICAL INTERNAL SOURCE ID the clearance record is filed under.
+   *
+   * R3B — NEVER A PUBLISHER DISPLAY NAME. A display name is self-asserted,
+   * not unique and not stable: two outlets can share one ("The Observer"),
+   * one outlet renames itself, and a crafted name can be made to collide with
+   * whatever a future clearance is filed under. Keying a rights decision on it
+   * would mean a record could be matched by a string anybody can choose.
+   *
+   * Also never the article URL's host, for the same reason in a different
+   * costume: the host is asserted by the link, not by the registry.
    */
   readonly clearanceKey: string;
   /** The record the authority holds, or null where it holds none. */
@@ -176,8 +184,8 @@ export function evaluatePublisherImageDisplay(c: PublisherImageCandidate): Publi
 /** The minimum an article-like record must carry to be asked about. */
 export interface PublisherImageSubject {
   readonly imageReference?: string | null;
-  /** The publisher the photograph belongs to, as the record names it. */
-  readonly publisherKey?: string | null;
+  /** The CANONICAL INTERNAL source id, never the publisher's display name. */
+  readonly sourceId?: string | null;
 }
 
 /**
@@ -193,7 +201,7 @@ export interface PublisherImageSubject {
  * It is not a stub to be filled in by whoever next edits this file. Writing a
  * clearance here is a rights-lane act (E1) with a cited instrument.
  */
-export function publisherImageClearanceFor(_publisherKey: string): PublisherImageClearance | null {
+export function publisherImageClearanceFor(_canonicalSourceId: string): PublisherImageClearance | null {
   return null;
 }
 
@@ -208,9 +216,20 @@ export function publisherImageClearanceFor(_publisherKey: string): PublisherImag
  */
 export function resolvePublisherImage(
   reference: string | null | undefined,
-  publisherKey: string | null | undefined,
+  sourceId: string | null | undefined,
 ): PublisherImageDecision {
-  const key = typeof publisherKey === 'string' && publisherKey.trim().length > 0 ? publisherKey.trim() : '';
+  /*
+    R3B — FAIL CLOSED ON A MISSING ID, with no fallback of any kind.
+
+    An older payload that carries no `sourceId` yields the empty key, which
+    resolves to no clearance and therefore to a refusal. That is the whole
+    behaviour: there is no second lookup, no display-name path, no host
+    derivation and no "best effort" branch to fall into. The parameter is
+    named for what it must be so that a call site reads as the question it is
+    asking — `publisherKey` was the name that invited two surfaces to pass a
+    display name, and both did.
+  */
+  const key = typeof sourceId === 'string' && sourceId.trim().length > 0 ? sourceId.trim() : '';
   return evaluatePublisherImageDisplay({
     reference,
     clearanceKey: key,
@@ -244,10 +263,10 @@ export function mayDisplayPublisherImage(decision: PublisherImageDecision): deci
  */
 export function publisherImageSrcOrFallback(
   reference: string | null | undefined,
-  publisherKey: string | null | undefined,
+  sourceId: string | null | undefined,
   fallbackSrc: string,
 ): string {
-  const decision = resolvePublisherImage(reference, publisherKey);
+  const decision = resolvePublisherImage(reference, sourceId);
   return mayDisplayPublisherImage(decision) ? decision.src : fallbackSrc;
 }
 
@@ -259,7 +278,7 @@ export function publisherImageSrcOrFallback(
  */
 export function publisherImageIsDisplayable(
   reference: string | null | undefined,
-  publisherKey: string | null | undefined,
+  sourceId: string | null | undefined,
 ): boolean {
-  return mayDisplayPublisherImage(resolvePublisherImage(reference, publisherKey));
+  return mayDisplayPublisherImage(resolvePublisherImage(reference, sourceId));
 }

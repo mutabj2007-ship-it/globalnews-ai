@@ -41,18 +41,23 @@ import { publisherImageIsDisplayable } from '@/lib/rights/publisherImageDisplay'
 interface StoryVisualProps {
   article: Pick<NewsArticle, 'category' | 'imageUrl'>;
   /**
-   * E1 U-1 — WHOSE photograph `article.imageUrl` is, as the record names it:
-   * `sourceId` where the surface holds an article, the publisher identity
-   * where it holds an editorial card.
+   * E1 U-1 · R3B — THE CANONICAL INTERNAL SOURCE ID of the record whose
+   * photograph this is. Never the publisher's display name.
+   *
+   * RENAMED FROM `publisherKey`, and the rename IS the fix. Under the old
+   * name two surfaces passed `card.publisher` — a display name — because that
+   * is what "publisher key" reads like, and `HomeStoryCard` carries BOTH
+   * `publisher` and `sourceId` so the wrong one was one character closer.
+   * A name that invites the defect is part of the defect.
    *
    * REQUIRED, and nullable. Required so that a surface cannot be added
-   * without deciding; nullable so that "this surface does not know whose
-   * photograph this is" is representable, and can therefore be REFUSED. An
-   * optional prop would let the absence be an oversight; a required nullable
-   * one makes it a statement — the same shape `OfficialSourceEntry.rights`
-   * uses, for the same reason.
+   * without deciding; nullable so that "this record has no canonical id" is
+   * representable, and can therefore be REFUSED. An optional prop would let
+   * the absence be an oversight; a required nullable one makes it a
+   * statement — the same shape `OfficialSourceEntry.rights` uses, for the
+   * same reason.
    */
-  publisherKey: string | null;
+  sourceId: string | null;
   /** Aspect and radius utilities from the calling surface. */
   className: string;
   /** Accessible description used only when there is no photograph. */
@@ -62,7 +67,7 @@ interface StoryVisualProps {
 
 export function StoryVisual({
   article,
-  publisherKey,
+  sourceId,
   className,
   missingLabel,
   sizes,
@@ -85,7 +90,7 @@ export function StoryVisual({
     fetched, and the point of the containment is that the request is never
     made.
   */
-  const hasPhoto = publisherImageIsDisplayable(article.imageUrl, publisherKey);
+  const hasPhoto = publisherImageIsDisplayable(article.imageUrl, sourceId);
 
   return (
     <span

@@ -328,9 +328,27 @@ describe('PWA-2 §3 — update behaviour cannot strand a user', () => {
     expect(nextConfigCode).toContain('application/manifest+json');
   });
 
-  it('next.config.mjs leaves the pre-existing image configuration untouched', () => {
-    expect(nextConfigCode).toContain('remotePatterns');
-    expect(nextConfigCode).toMatch(/hostname: '\*\*'/);
+  /* ── SUPERSEDED BY E1 U-1 · B-2 ────────────────────────────────────────
+     WAS: 'next.config.mjs leaves the pre-existing image configuration
+     untouched', asserting `hostname: '**'` was still there. That wildcard let
+     /_next/image proxy any HTTPS image on the internet from this origin —
+     measured, not theorised — so the requirement is withdrawn and replaced by
+     its inverse. `reactStrictMode` is still asserted, unchanged.
+
+     ASSERTED ON CODE, NOT PROSE. The new config header necessarily QUOTES the
+     old wildcard to record what was removed and why, so a raw-text match would
+     find it in a comment and pass while the code said the opposite. Comments
+     are stripped first — a mistake this lane has already paid for once.
+     ──────────────────────────────────────────────────────────────────────── */
+  it('next.config.mjs denies remote image optimization outright (B-2)', () => {
+    const code = nextConfigCode.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+    expect(code).toContain('remotePatterns: []');
+    expect(code).not.toMatch(/hostname: '\*\*'/);
+    expect(code).not.toMatch(/hostname:/);
+    expect(code).not.toMatch(/\bdomains\s*:/);
+    /* and the other half: a relative url is replayed through this server's own
+       router, so local matching is scoped to the one directory holding images */
+    expect(code).toMatch(/localPatterns: \[\{ pathname: '\/images\/\*\*' \}\]/);
     expect(nextConfigCode).toContain('reactStrictMode: true');
   });
 });

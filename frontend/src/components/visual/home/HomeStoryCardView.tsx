@@ -60,7 +60,7 @@ export function HomeStoryCardView({
       className="relative flex h-full w-full flex-col overflow-hidden rounded-[12px] border border-[var(--gt-line)] bg-[var(--gt-card)] shadow-[0_8px_24px_-20px_rgba(20,36,59,0.5)]"
     >
       <div aria-hidden="true" data-home-card-image="" className="pointer-events-none relative select-none">
-        <StoryVisual article={{ category: card.category as NewsArticle['category'], imageUrl: card.imageUrl ?? undefined }} publisherKey={card.publisher} className="aspect-[2/1]" missingLabel={dict.betaHome.imageUnavailable} sizes="(min-width: 1000px) 300px, (min-width: 600px) 45vw, 84vw" />
+        <StoryVisual article={{ category: card.category as NewsArticle['category'], imageUrl: card.imageUrl ?? undefined }} sourceId={card.sourceId} className="aspect-[2/1]" missingLabel={dict.betaHome.imageUnavailable} sizes="(min-width: 1000px) 300px, (min-width: 600px) 45vw, 84vw" />
         <span
           data-home-freshness=""
           className={`absolute start-[10px] top-[10px] inline-flex items-center gap-1 rounded-[6px] px-2 py-[3px] text-[11.5px] font-bold ${

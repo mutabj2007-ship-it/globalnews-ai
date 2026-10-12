@@ -110,7 +110,7 @@ export function WorldIn60Seconds({
             >
               <StoryVisual
                 article={lead}
-                publisherKey={lead.sourceId}
+                sourceId={lead.sourceId}
                 missingLabel={t.noImage}
                 sizes="(min-width: 1024px) 440px, 100vw"
                 className="block aspect-[16/9] w-full overflow-hidden rounded-[10px] [@container_home-content_(max-width:699.98px)]:rounded-none [@container_home-content_(min-width:700px)_and_(max-width:999.98px)]:aspect-auto [@container_home-content_(min-width:700px)_and_(max-width:999.98px)]:h-[190px] [@container_home-content_(min-width:1000px)_and_(max-width:1139.98px)]:aspect-auto [@container_home-content_(min-width:1000px)_and_(max-width:1139.98px)]:h-[240px] [@container_home-content_(min-width:1140px)]:rounded-none"
@@ -170,7 +170,7 @@ export function WorldIn60Seconds({
                   >
                     <StoryVisual
                       article={item}
-                      publisherKey={item.sourceId}
+                      sourceId={item.sourceId}
                       missingLabel={t.noImage}
                       sizes="72px"
                       className="h-full"

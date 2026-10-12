@@ -10,13 +10,14 @@ type SafeImageProps = Omit<ImageProps, 'onError'> & {
   /** Local image path to fall back to if the remote src fails to load. */
   fallbackSrc?: string;
   /**
-   * E1 U-1. The publisher whose photograph `src` is, as the record names it
-   * (`article.sourceId`). Supply it ONLY at a call site that has already put
-   * the reference through `resolvePublisherImage` and received a CLEARED
-   * verdict; it exists so the backstop below can tell a cleared external URL
-   * apart from one that reached here ungoverned.
+   * E1 U-1 · R3B. The CANONICAL INTERNAL SOURCE ID of the record whose
+   * photograph `src` is — never a publisher display name. Supply it ONLY at a
+   * call site that has already put the reference through
+   * `resolvePublisherImage` and received a CLEARED verdict; it exists so the
+   * backstop below can tell a cleared external URL apart from one that reached
+   * here ungoverned. It grants nothing on its own: the decision is re-run.
    */
-  clearedPublisherKey?: string;
+  clearedSourceId?: string;
 };
 
 /**
@@ -51,7 +52,7 @@ export function SafeImage({
   src,
   alt,
   fallbackSrc = FALLBACK_SRC,
-  clearedPublisherKey,
+  clearedSourceId,
   ...rest
 }: SafeImageProps): JSX.Element {
   /*
@@ -59,15 +60,15 @@ export function SafeImage({
     absolute http(s) URL is external; anything else (a local path, a static
     import object) is first-party and passes through as it always has.
   */
-  const governed = governSrc(src, clearedPublisherKey, fallbackSrc);
+  const governed = governSrc(src, clearedSourceId, fallbackSrc);
   const [currentSrc, setCurrentSrc] = useState(governed);
 
   // If the underlying article changes (e.g. a new list of search
   // results), make sure we start from the new src rather than staying
   // stuck on a previous fallback.
   useEffect(() => {
-    setCurrentSrc(governSrc(src, clearedPublisherKey, fallbackSrc));
-  }, [src, clearedPublisherKey, fallbackSrc]);
+    setCurrentSrc(governSrc(src, clearedSourceId, fallbackSrc));
+  }, [src, clearedSourceId, fallbackSrc]);
 
   return (
     <Image
@@ -88,11 +89,11 @@ export function SafeImage({
  */
 export function governSrc(
   src: ImageProps['src'],
-  clearedPublisherKey: string | undefined,
+  clearedSourceId: string | undefined,
   fallbackSrc: ImageProps['src'],
 ): ImageProps['src'] {
   if (typeof src !== 'string') return src;
   if (!/^https?:\/\//i.test(src)) return src;
-  const decision = resolvePublisherImage(src, clearedPublisherKey);
+  const decision = resolvePublisherImage(src, clearedSourceId);
   return mayDisplayPublisherImage(decision) ? decision.src : fallbackSrc;
 }

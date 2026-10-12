@@ -614,7 +614,7 @@ function StoryImage({
   return (
     <StoryVisual
       article={article}
-      publisherKey={article.sourceId}
+      sourceId={article.sourceId}
       className={className}
       missingLabel={t.imageUnavailable}
       sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 41vw, (min-width: 640px) 54vw, 88vw"

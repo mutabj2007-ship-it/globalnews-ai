@@ -124,7 +124,14 @@ export function SourceCard({
     and explicitly not a substituted photograph. Geometry is identical - the
     52px cell is fixed either way.
   */
-  const thumbnailDisplayable = publisherImageIsDisplayable(item.thumbnailUrl, item.publisher);
+  /*
+    R3B — THE KEY IS THE CANONICAL `sourceId`, NEVER `item.publisher`.
+    `item.publisher` remains the VISIBLE text on this card and is unchanged; it
+    is simply no longer a rights key. `RetainedItem.sourceId` is optional until
+    Claude Code's U1 API candidate 2fcf76e supplies it, and its absence fails
+    closed with no display-name and no URL-host fallback.
+  */
+  const thumbnailDisplayable = publisherImageIsDisplayable(item.thumbnailUrl, item.sourceId);
   const age = formatRelativeTime(item.publishedAt, language);
   const Bookmark = useContext(StoryBookmarkSlot);
   const timePrefix = item.timeIsObservedOnly ? labels.seenPrefix : labels.publishedPrefix;
@@ -194,7 +201,7 @@ export function SourceCard({
           <SafeImage
             src={item.thumbnailUrl as string}
             /* already CLEARED above; the backstop re-decides, it does not trust this */
-            clearedPublisherKey={item.publisher}
+            clearedSourceId={item.sourceId ?? undefined}
             /*
               EMPTY ALT, DELIBERATELY. The image "never carries meaning of its
               own", and the headline it sits beside is the same text an alt

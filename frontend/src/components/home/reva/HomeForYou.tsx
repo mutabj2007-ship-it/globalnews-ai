@@ -73,7 +73,7 @@ export function HomeForYou({ articles, language }: { articles: readonly NewsArti
                   >
                     <StoryVisual
                       article={article}
-                      publisherKey={article.sourceId}
+                      sourceId={article.sourceId}
                       missingLabel={t.imageUnavailable}
                       sizes="(min-width: 768px) 220px, 76px"
                       className="block h-[58px] w-[76px] shrink-0 overflow-hidden rounded-[8px] md:aspect-[16/9] md:h-auto md:w-full md:rounded-b-none"
