@@ -239,7 +239,8 @@ describe('EA-GEO-B COD/COG identity through the Ask handoff', () => {
     expect((resolveGeography('What changed in Repubulika Iharanira Demokarasi ya Kongo') as any).place?.country?.iso3).not.toBe('COG');
   });
 
-  it.failing('B-12 HOLD a stated "past week" is applied or disclosed, never silently dropped', () => {
+  /* EA-GEO-R1 G-6 fix (geo-p0 Commit C) */
+  it('B-12 (was HOLD) a stated "past week" is applied or disclosed, never silently dropped', () => {
     const r = route('What changed in Congo - Kinshasa in the past week');
     const timeConstraint = r.plan.constraints.find((c: { axis: string }) => c.axis === 'TIME');
     expect(r.reportingWindow?.hours === 168 || timeConstraint !== undefined).toBe(true);

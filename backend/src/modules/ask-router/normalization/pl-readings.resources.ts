@@ -589,6 +589,16 @@ export const EN_FALLBACK_PERIOD_RULES: readonly FallbackPeriodRule[] = [
     anchor: 'RELATIVE_TO_ASK',
     mirrors: 'last N units',
   },
+  /* EA-GEO-R1 G-6 — "in / over / during the past week" was read as no period at all: no window, no
+     constraint, no disclosure. It is the 7 days before the request (reporting-window.ts already
+     honours "past week" / "the past week" as 168 h); the period read here is exactly that phrase,
+     so the window and its applied chip carry the reader's own words. A calendar "this week" and
+     "last week" are untouched (still offered for broadening). */
+  {
+    pattern: /\b(?:the\s+)?past\s+week\b/i,
+    anchor: 'RELATIVE_TO_ASK',
+    mirrors: 'the past week',
+  },
   {
     pattern:
       /\bsince\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)\b/i,
