@@ -128,3 +128,23 @@ export function observedRetrievalOf(response: RetrievalFacts | null | undefined)
   if (seen !== null && seen > 0) return { retrievalOutcome: 'ALL_FILTERED', ...observedCounts };
   return { retrievalOutcome: 'COMPLETED_NO_MATCH', ...observedCounts };
 }
+
+/**
+ * MASTER CTO R4 · #87 F-1 — WAS THE EVIDENCE EMPTIED BY SOURCE-USE RIGHTS?
+ *
+ * E1 30-REVIEW-C F-1: a search whose reporting was ALL withheld because its source-use rights are
+ * not established was told to the reader as "no findings". It is neither a completed no-match
+ * (reporting was found) nor a provider failure (the sources answered). True when a search was
+ * attempted, nothing was admitted, at least one item was withheld for rights, and the search
+ * COMPLETED. A search that did not complete keeps D-28's "sources unavailable" (precedence: an
+ * incomplete search is the broader unknown — what the unreached sources hold is not known — and its
+ * wording already refuses to say that no reporting exists). Reads only facts already on the
+ * response: no call, no question text.
+ */
+export function retrievalRightsWithheld(response: RetrievalFacts | null | undefined): boolean {
+  const ctx = response?.retrievalContext;
+  if (!response || !ctx || ctx.retrievalAttempted === false) return false;
+  if ((response.articles?.length ?? 0) > 0) return false;
+  if ((ctx.rightsExcluded?.count ?? 0) <= 0) return false;
+  return !retrievalIncomplete(response);
+}

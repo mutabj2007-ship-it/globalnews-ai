@@ -10,7 +10,7 @@ import { PrismaService } from '../../../database/prisma.service';
 import { Prisma } from '../../../generated/prisma/client';
 import { readStoryMaterialVersion } from '../../stories/story-relation.read';
 import { retrievalFailed } from '../ask-r2-execution.adapter';
-import { withheldForSourceRights } from '../source-rights-withholding';
+import { withheldForPublisherRightsHold } from '../source-rights-withholding';
 import {
   briefingSnapshotOf,
   type BriefingEvidenceRef,
@@ -233,9 +233,9 @@ export class BriefingsService {
     });
     if (!turn) throw new NotFoundException();
     const stored = turn.operation?.status === 'COMPLETED' ? turn.operation.storedResult : null;
-    /* MASTER CTO R4 · P0 #86 — a briefing is a reader surface: the SAME read-time withholding the
+    /* MASTER CTO R4 · P0 #86 — a briefing is a reader surface: the publisher rights hold, in the same withheld shape the
        operation reopen applies, so an answer resting on held sources is never snapshotted */
-    const snapshot = stored ? briefingSnapshotOf(withheldForSourceRights(stored.payload)) : null;
+    const snapshot = stored ? briefingSnapshotOf(withheldForPublisherRightsHold(stored.payload)) : null;
     if (!stored || !snapshot) {
       throw new UnprocessableEntityException({ code: 'BRIEFING_TURN_NOT_SAVEABLE' });
     }
@@ -415,10 +415,10 @@ export class BriefingsService {
         throw new ConflictException({ code: 'BRIEFING_CHECK_NOT_FINISHED' });
       }
 
-      /* P0 #86 — the same read-time source-rights withholding as the operation reopen */
+      /* P0 #86 — the publisher rights hold (source-specific; see withheldForPublisherRightsHold) */
       const payload =
         turn.operation.status === 'COMPLETED'
-          ? withheldForSourceRights(turn.operation.storedResult?.payload ?? null)
+          ? withheldForPublisherRightsHold(turn.operation.storedResult?.payload ?? null)
           : null;
       const snapshot = payload === null ? null : briefingSnapshotOf(payload);
       const analysis = (payload as { analysis?: unknown } | null)?.analysis ?? null;

@@ -252,6 +252,11 @@ describe('#86 · reader surfaces never carry a held-host item', () => {
     expect(readerSafeNewsResponse(clean)).toBe(clean);
   });
 
+  it('/news reader edge never throws on a response without an article list (returned as-is)', () => {
+    const odd = {} as NewsResponse;
+    expect(readerSafeNewsResponse(odd)).toBe(odd);
+  });
+
   it('country feed: a held item is never shown, scored or related to the country', async () => {
     const persistence = {
       persistCountryRelations: jest.fn(async () => undefined),
@@ -321,5 +326,78 @@ describe('#86 · Home editorial reads (direct Prisma) never list a held-host row
       expect(urls).not.toContain('reuters.com');
       expect(r.matched).toBe(1);
     }
+  });
+});
+
+/* ── C · Home rows load, story observe / rung-3 / backfill, alert subjects ──────────────────── */
+describe('#86 · remaining direct readers', () => {
+  const heldRow = {
+    id: 'gnews-held', url: 'https://uk.reuters.com/world/synthetic', title: 'Synthetic held', summary: 'S.', imageUrl: null,
+    sourceId: 'reuters', sourceName: 'Synthetic', category: 'world', publishedAt: new Date(NOW - 3_600_000),
+    publishedAtBasis: 'publisher', fetchedAt: new Date(NOW - 3_600_000), countryName: null,
+    countries: [{ countryCode: 'KEN', relevanceScore: 80, isRelevant: true }],
+  };
+  const okRow = { ...heldRow, id: 'gnews-ok', url: 'https://www.bbc.com/news/synthetic', title: 'Synthetic ok' };
+
+  it('Home rows load: a held-host row never becomes a Home row (subdomain caught by the exact predicate)', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { HomeEditorialService } = require('../../home-editorial/home-editorial.service');
+    const prisma = {
+      article: { findMany: jest.fn(async () => [heldRow, okRow]) },
+      storyArticle: { findMany: async () => [] },
+      story: { findMany: async () => [] },
+      storyComment: { findMany: async () => [] },
+    };
+    const svc = new HomeEditorialService(prisma);
+    const loaded = await (svc as unknown as { load: (now: Date) => Promise<{ rows: Array<{ id: string }> }> }).load(new Date(NOW));
+    expect(loaded.rows.map((r) => r.id)).toEqual(['gnews-ok']);
+  });
+
+  it('story observe never places a held-host row; backfill skips it; rung-3 never offers it as a join candidate', async () => {
+    const prisma = {
+      storyAlert: { count: jest.fn(async () => 1) },
+      article: { findMany: jest.fn(async () => [heldRow, okRow]) },
+    };
+    const svc = new StoryIdentityService(prisma as never);
+    const place = jest.spyOn(svc as unknown as { placeArticle: () => Promise<string> }, 'placeArticle').mockResolvedValue('CREATED');
+    await svc.observeRetainedForAlerts([live('a', heldRow.url), live('b', okRow.url)]);
+    expect(place.mock.calls.map((c) => (c as unknown as [string, { url: string }])[1].url)).toEqual([okRow.url]);
+
+    place.mockClear();
+    prisma.storyAlert.count.mockResolvedValue(0);
+    const report = await svc.backfill({ limit: 10 });
+    expect(place.mock.calls.map((c) => (c as unknown as [string, { url: string }])[1].url)).toEqual([okRow.url]);
+    expect(report).toMatchObject({ processed: 2, created: 1 });
+
+    const rung3 = await (svc as unknown as { rung3Candidates: (r: object) => Promise<Array<{ url: string }>> }).rung3Candidates({
+      url: 'https://www.bbc.com/other', title: 'Synthetic held', publishedAt: new Date(NOW),
+    });
+    expect(rung3.map((r) => r.url)).toEqual([okRow.url]);
+  });
+
+  it('alert subject / joined evidence never show a held-host headline', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { AlertsService } = require('../../stories/alerts.service');
+    const byUrl = (url: string) => (url === heldRow.url ? heldRow : url === okRow.url ? okRow : null);
+    const prisma = {
+      storyArticle: {
+        findMany: jest.fn(async () => [
+          { articleRef: 'r-held', articleUrl: heldRow.url, addedAt: new Date(1) },
+          { articleRef: 'r-ok', articleUrl: okRow.url, addedAt: new Date(2) },
+        ]),
+        findFirst: jest.fn(async () => ({ articleUrl: heldRow.url })),
+      },
+      article: { findFirst: jest.fn(async (q: { where: { url: string } }) => byUrl(q.where.url)) },
+      storyIdentityEvent: { findFirst: jest.fn(async () => ({ articleRefs: ['r-held'] })) },
+    };
+    const svc = new AlertsService(prisma, {} as never);
+    const subject = await (svc as unknown as { subjectOf: (id: string) => Promise<{ url: string } | null> }).subjectOf('story-1');
+    expect(subject?.url).toBe(okRow.url);
+    const joined = await (svc as unknown as { joinedEvidenceOf: (s: string, c: string, v: number) => Promise<unknown> }).joinedEvidenceOf('s', 'c', 2);
+    expect(joined).toBeNull();
+    /* control: a benign joined report is shown */
+    prisma.storyArticle.findFirst.mockResolvedValue({ articleUrl: okRow.url });
+    const joinedOk = (await (svc as unknown as { joinedEvidenceOf: (s: string, c: string, v: number) => Promise<{ url: string } | null> }).joinedEvidenceOf('s', 'c', 2));
+    expect(joinedOk?.url).toBe(okRow.url);
   });
 });

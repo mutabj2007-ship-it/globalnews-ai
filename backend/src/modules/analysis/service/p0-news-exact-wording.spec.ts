@@ -23,7 +23,11 @@ const REUTERS_FIXTURE: NewsArticle = {
   id: 'reuters-fixture-1',
   title: "Erik Prince's forces suffer battlefield loss in Congo, former UFC fighter among wounded, sources say",
   summary: 'FIXTURE — synthetic summary for a retrieval-boundary test; not the article text.',
-  url: 'https://www.reuters.com/world/africa/erik-princes-forces-suffer-battlefield-loss-congo-former-ufc-fighter-among-2026-10-09/',
+  /* MASTER CTO R4 · P0 #86 — every reuters.com URL is now under the publisher rights hold
+     (publisher-rights-hold.ts) and is correctly withheld from evidence. This spec is about query
+     wording, spelling disclosure and scoping, not Reuters' rights: the admissible fixture article sits
+     on a synthetic host. The held-host behaviour is asserted in publisher-rights-hold.*.spec.ts. */
+  url: 'https://wire.example/world/africa/fixture-erik-prince-battlefield-loss-congo-2026-10-09/',
   /* RIGHTS CONTAINMENT R1 — real provenance: GNews emits the publisher slug, and the live article
      carries its acquiring provider ('gnews:reuters' is an id no producer emits → UNKNOWN_PROVENANCE) */
   sourceId: 'reuters',

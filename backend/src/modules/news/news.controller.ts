@@ -12,6 +12,8 @@ import { withoutPublisherRightsHeld } from './rights/publisher-rights-hold';
   "no reporting"); no reader receives one. Every /news route that returns articles passes here.
 */
 export function readerSafeNewsResponse(response: NewsResponse): NewsResponse {
+  /* a response without an article list has nothing to withhold (never throws on the reader path) */
+  if (!Array.isArray(response?.articles)) return response;
   const articles = withoutPublisherRightsHeld(response.articles);
   return articles.length === response.articles.length
     ? response

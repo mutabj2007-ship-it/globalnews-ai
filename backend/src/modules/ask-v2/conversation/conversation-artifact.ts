@@ -113,7 +113,9 @@ export interface ConversationArtifact {
   readonly noEvidenceReason?: NoEvidenceReason;
 }
 
-export type NoEvidenceReason = 'SEARCH_INCOMPLETE' | 'NO_QUALIFYING_REPORTING';
+/* MASTER CTO R4 · #87 F-1 — RIGHTS_WITHHELD: the search completed and found reporting, all of it
+   withheld for source-use rights (never "no qualifying reporting", never "incomplete") */
+export type NoEvidenceReason = 'SEARCH_INCOMPLETE' | 'NO_QUALIFYING_REPORTING' | 'RIGHTS_WITHHELD';
 
 /** The artifact as it is handed to a later turn: with the turn that produced it. */
 export interface PriorArtifact extends ConversationArtifact {
@@ -204,7 +206,9 @@ export function validateStoredArtifact(candidate: unknown): ConversationArtifact
     ...(server && c.currentFindings === 'NONE' ? { currentFindings: 'NONE' as const } : {}),
     ...(server &&
     c.currentFindings === 'NONE' &&
-    (c.noEvidenceReason === 'SEARCH_INCOMPLETE' || c.noEvidenceReason === 'NO_QUALIFYING_REPORTING')
+    (c.noEvidenceReason === 'SEARCH_INCOMPLETE' ||
+      c.noEvidenceReason === 'NO_QUALIFYING_REPORTING' ||
+      c.noEvidenceReason === 'RIGHTS_WITHHELD')
       ? { noEvidenceReason: c.noEvidenceReason as NoEvidenceReason }
       : {}),
     ...(server && c.incomplete === true ? { incomplete: true as const } : {}),
@@ -333,7 +337,13 @@ export function priorEvidenceGap(
 }
 
 /** ASK EVIDENCE CONTINUITY R1 — the truthful reason a record holds no verified reports. */
-export function noEvidenceReasonText(gap: 'UNAVAILABLE' | 'NO_EVIDENCE'): string {
+export function noEvidenceReasonText(
+  gap: 'UNAVAILABLE' | 'NO_EVIDENCE',
+  /** #87 F-1 — the record's reporting was withheld for source-use rights (E1 WORDING REVIEW REQUIRED) */
+  rightsWithheld = false,
+): string {
+  if (gap === 'NO_EVIDENCE' && rightsWithheld)
+    return 'the search found reporting, but it could not be used because permission to use those sources has not been established';
   return gap === 'UNAVAILABLE'
     ? 'the search did not complete (a news source was unavailable or rate-limited), so what current reporting says is not known'
     : 'the search completed and found no qualifying reporting, which is not evidence that nothing happened';
@@ -347,7 +357,7 @@ export function artifactPromptBlock(artifact: ConversationArtifact): string {
   const gap = sourced ? priorEvidenceGap(artifact) : null;
   const header =
     gap !== null
-      ? `your own earlier answer; its search returned NO verified reports because ${noEvidenceReasonText(gap)}; it holds no findings, is NOT evidence and NOT a current fact`
+      ? `your own earlier answer; its search returned NO verified reports because ${noEvidenceReasonText(gap, artifact.noEvidenceReason === 'RIGHTS_WITHHELD')}; it holds no findings, is NOT evidence and NOT a current fact`
       : sourced
         ? 'your own earlier answer, which summarised sourced reporting retrieved at that time; this summary is NOT evidence and NOT a current fact'
         : 'your own earlier model reasoning; NOT evidence, NOT a source, NOT a current fact';

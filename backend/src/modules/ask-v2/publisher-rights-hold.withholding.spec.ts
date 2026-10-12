@@ -1,4 +1,9 @@
-import { priorWorkRightsClearedWith, withheldForSourceRights, WITHHELD_BASIS } from './source-rights-withholding';
+import {
+  priorWorkRightsClearedWith,
+  withheldForPublisherRightsHold,
+  withheldForSourceRights,
+  WITHHELD_BASIS,
+} from './source-rights-withholding';
 import { briefingSnapshotOf } from './briefings/briefing-snapshot';
 
 /**
@@ -49,9 +54,16 @@ describe('#86 · briefing snapshot and prior-work rework', () => {
   it('a briefing is never snapshotted from an answer resting on a held host (snapshot null → not saveable)', () => {
     const held = payload([article('r', 'https://www.reuters.com/world/x', 'reuters')]);
     expect(briefingSnapshotOf(held)).not.toBeNull(); /* non-vacuous: the raw payload WOULD snapshot */
-    expect(briefingSnapshotOf(withheldForSourceRights(held))).toBeNull();
+    expect(briefingSnapshotOf(withheldForPublisherRightsHold(held))).toBeNull();
     const ok = payload([article('b', 'https://www.bbc.com/n', 'bbc')]);
-    expect(briefingSnapshotOf(withheldForSourceRights(ok))).not.toBeNull();
+    expect(briefingSnapshotOf(withheldForPublisherRightsHold(ok))).not.toBeNull();
+  });
+
+  it('the briefing guard is source-specific: another rights class (here unknown provenance) is NOT newly withheld by #86', () => {
+    const other = payload([article('u', 'https://www.bbc.com/n', 'Bad Id')]);
+    expect(withheldForPublisherRightsHold(other)).toBe(other);
+    /* (the reopen path still withholds it, as before — unchanged) */
+    expect((withheldForSourceRights(other) as { answer: { basis: string } }).answer.basis).toBe(WITHHELD_BASIS);
   });
 
   it('prior work whose evidence resolves to a held-host article does not reach the model again', async () => {

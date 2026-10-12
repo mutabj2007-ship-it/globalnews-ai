@@ -9,6 +9,7 @@
   METADATA decision admits. Pure; no I/O.
 */
 import { partitionByRights } from '../news/rights/source-use-policy';
+import { isPublisherRightsHeld } from '../news/rights/publisher-rights-hold';
 
 export const WITHHELD_BASIS = 'WITHHELD_SOURCE_RIGHTS' as const;
 
@@ -32,7 +33,10 @@ export function withheldForSourceRights(payload: unknown): unknown {
     if (items.length !== (recent.items as unknown[]).length) out = { ...out, recentReporting: { ...recent, items } };
   }
   if (excluded.length === 0) return out;
+  return withheldPayload(out, p, excluded.length);
+}
 
+function withheldPayload(out: Json, p: Json, count: number): Json {
   const answer = (p.answer as Json | undefined) ?? {};
   return {
     ...out,
@@ -43,8 +47,27 @@ export function withheldForSourceRights(payload: unknown): unknown {
     comparisonTable: null,
     artifact: null,
     intelligence: null,
-    withheld: { reason: 'SOURCE_RIGHTS', count: excluded.length },
+    withheld: { reason: 'SOURCE_RIGHTS', count },
   };
+}
+
+/**
+ * MASTER CTO R4 · P0 #86 — the SAME withheld shape, decided by the publisher rights hold ONLY.
+ * Briefing snapshots never passed the read-time withholding at all (a pre-existing bypass for every
+ * rights class); #86 is source-specific, so a briefing is withheld here only when its answer rests on
+ * a held publisher host. Widening it to every rights class is a separate CTO / E1 decision.
+ */
+export function withheldForPublisherRightsHold(payload: unknown): unknown {
+  if (payload === null || typeof payload !== 'object' || Array.isArray(payload)) return payload;
+  const p = payload as Json;
+  const held = articlesOf(p).filter((a) => isPublisherRightsHeld(a)).length;
+  let out: Json = p;
+  const recent = p.recentReporting as Json | null | undefined;
+  if (recent && Array.isArray(recent.items)) {
+    const items = (recent.items as Array<{ url?: string | null }>).filter((i) => !isPublisherRightsHeld(i));
+    if (items.length !== (recent.items as unknown[]).length) out = { ...out, recentReporting: { ...recent, items } };
+  }
+  return held === 0 ? out : withheldPayload(out, p, held);
 }
 
 /**

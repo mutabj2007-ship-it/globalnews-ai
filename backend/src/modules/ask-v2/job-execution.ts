@@ -140,16 +140,45 @@ export const SOURCES_UNAVAILABLE_RULE =
   'advisory part of the question, clearly as general guidance; if none exists, stop.';
 
 /**
+ * MASTER CTO R4 · #87 F-1 — E1 WORDING REVIEW REQUIRED (proposal; not E1-approved).
+ *
+ * The search completed and found reporting, but every item was withheld because its source-use
+ * permissions are not established (E1-REUTERS-PER-USE-MATRIX-R2: Reuters-host AI_INPUT HOLD). That
+ * is NOT "no findings" (reporting exists) and NOT "sources unavailable" (the sources answered). The
+ * reasoning model says only that: no item, publisher, headline or content is named or described,
+ * nothing is supplied from memory, and it is never called an outage.
+ */
+export const RIGHTS_WITHHELD_RULE =
+  'REPORTING WITHHELD: the search for current reporting found reporting for this question, but it ' +
+  'could not be used because permission to use those sources has not been established. Say so ' +
+  'plainly in your first sentence. Do not say that no reporting or no findings exist, and do not ' +
+  'describe this as a technical failure or outage. Do not name, quote, list, date or describe the ' +
+  'withheld reporting, its publisher or any recent development, event, figure or disruption as if it ' +
+  'happened, and never fill a requested table of developments. Then answer ONLY the general or ' +
+  'advisory part of the question, clearly as general guidance; if none exists, stop.';
+
+/** #87 F-1 — E1 WORDING REVIEW REQUIRED: the same fact, said of an EARLIER turn's search. */
+export const EARLIER_RIGHTS_WITHHELD_REASON =
+  'the earlier search found reporting, but it could not be used because permission to use those ' +
+  'sources has not been established (which is not evidence that nothing happened)';
+
+/**
  * ASK EVIDENCE CONTINUITY R1 (Production op 9713f8ee) — the reader's turn rests on the earlier
  * turn's reports ("Based on those reports…"), but that turn obtained NO verified reports. The model
  * says so first, attributes nothing to "reports", and keeps any general background labelled as
  * background. No search runs for it (the existing partial-current contract names the gap).
  */
-export function earlierReportsUnverifiedRule(gap: 'UNAVAILABLE' | 'NO_EVIDENCE'): string {
+export function earlierReportsUnverifiedRule(
+  gap: 'UNAVAILABLE' | 'NO_EVIDENCE',
+  /** MASTER CTO R4 · #87 F-1 — the earlier search's reporting was withheld for source-use rights */
+  rightsWithheld = false,
+): string {
   const why =
     gap === 'UNAVAILABLE'
       ? 'the earlier search did not complete (a news source was unavailable or rate-limited), so it is not known what current reporting says'
-      : 'the earlier search completed and found no qualifying reporting (which is not evidence that nothing happened)';
+      : rightsWithheld
+        ? EARLIER_RIGHTS_WITHHELD_REASON
+        : 'the earlier search completed and found no qualifying reporting (which is not evidence that nothing happened)';
   return (
     'NO VERIFIED EARLIER REPORTS: the reader refers to earlier reports, sources or findings, but ' +
     `NO verified reports were obtained in this conversation: ${why}. Say this plainly in your ` +
