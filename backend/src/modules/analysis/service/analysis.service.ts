@@ -261,6 +261,7 @@ import {
 } from '../../news/identity/requested-source.util';
 import { classifyRequestedPublisher } from '../../news/identity/requested-publisher-state.util';
 import { partitionByRights, summarizeExclusions, summarizePending } from '../../news/rights/source-use-policy';
+import { isGeoQuarantined, partitionGeoQuarantined } from '../../news/geo-quarantine/geo-identity-quarantine';
 import { polishCountryName } from '../query/polish-country-forms.util';
 import { derivePolishRetrievalQuery } from '../language/derive-polish-retrieval-query.util';
 import {
@@ -3910,6 +3911,25 @@ export class AnalysisService {
           rights exclusion with its reason, never as "not relevant" and never as proof that no
           reporting exists. Provider-path articles are untouched.
         */
+        /*
+          MASTER CTO P0 #85 — THE SAME ONE POINT, FOR A DISPUTED GEOGRAPHY. Upstream every read already
+          strips a held identity's country (persistence, NewsService), so it cannot steer scope or
+          coverage; here it is withheld from the evidence before any claim, trace or model call, and
+          counted as held — never as "not relevant", never as no reporting.
+        */
+        {
+          const { kept, held } = partitionGeoQuarantined(articles);
+          if (held.length > 0) {
+            this.logger.warn(`ask geo-identity hold count=${held.length}`);
+            articles = kept;
+            retrievalContext = {
+              ...retrievalContext,
+              articlesRetrieved: kept.length,
+              geoIdentityHeld: { count: (retrievalContext.geoIdentityHeld?.count ?? 0) + held.length },
+              ...(kept.length === 0 && retrievalContext.outcome === 'RETAINED_ONLY' ? { outcome: undefined } : {}),
+            };
+          }
+        }
         {
           const { allowed, excluded, pending } = partitionByRights(articles, 'AI_INPUT');
           /* RETRIEVAL R1 · T1.1 — this gate executed: its counts into the passive trace */
@@ -5543,14 +5563,17 @@ export class AnalysisService {
     supporting: NewsArticle[],
     storyContextCountryCode: string | undefined,
   ): { iso2: string; name: string } | undefined {
-    const fromAnchor = anchorArticle.countryCode
-      ? resolveCountryByAnyIdentifier(anchorArticle.countryCode)
-      : undefined;
+    /* MASTER CTO P0 #85 — defence in depth: a held identity never supplies a country, even if a
+       caller handed one in with a stored code still attached. */
+    const fromAnchor =
+      anchorArticle.countryCode && !isGeoQuarantined(anchorArticle)
+        ? resolveCountryByAnyIdentifier(anchorArticle.countryCode)
+        : undefined;
     if (fromAnchor) return { iso2: fromAnchor.iso2, name: fromAnchor.name };
 
     const counts = new Map<string, number>();
     for (const article of supporting) {
-      if (!article.countryCode) continue;
+      if (!article.countryCode || isGeoQuarantined(article)) continue;
       const resolved = resolveCountryByAnyIdentifier(article.countryCode);
       if (!resolved) continue;
       counts.set(resolved.iso3, (counts.get(resolved.iso3) ?? 0) + 1);

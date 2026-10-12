@@ -17,6 +17,7 @@ import {
   type StoryContext,
 } from '@globalnews-ai/shared';
 import { NewsService } from '../../news/news.service';
+import { isGeoQuarantined, isGeoQuarantinedRef } from '../../news/geo-quarantine/geo-identity-quarantine';
 import { computeArticleRef } from '../../news/identity/article-ref.util';
 import {
   ASK_CONTEXT_ARTICLE_ID_PATTERN,
@@ -45,6 +46,8 @@ export type AskContextRefusalCode =
   | 'ASK_CONTEXT_STORY_NOT_FOUND'
   /** The retained article's own fields exceed the persisted-plan bounds. */
   | 'ASK_CONTEXT_STORY_OUT_OF_BOUNDS'
+  /** MASTER CTO P0 #85 — the story is under a geo-identity hold: its stored country is disputed. */
+  | 'ASK_CONTEXT_STORY_GEO_IDENTITY_DISPUTED'
   /** Not an ISO alpha-2/alpha-3 code of a governed country. */
   | 'ASK_CONTEXT_GEOGRAPHY_UNKNOWN'
   /** The resolver is not bound (a construction without it); context fails closed. */
@@ -59,6 +62,7 @@ const STATUS: Readonly<Record<AskContextRefusalCode, HttpStatus>> = {
   ASK_CONTEXT_STORY_REF_MISMATCH: HttpStatus.BAD_REQUEST,
   ASK_CONTEXT_STORY_NOT_FOUND: HttpStatus.UNPROCESSABLE_ENTITY,
   ASK_CONTEXT_STORY_OUT_OF_BOUNDS: HttpStatus.UNPROCESSABLE_ENTITY,
+  ASK_CONTEXT_STORY_GEO_IDENTITY_DISPUTED: HttpStatus.UNPROCESSABLE_ENTITY,
   ASK_CONTEXT_GEOGRAPHY_UNKNOWN: HttpStatus.UNPROCESSABLE_ENTITY,
   ASK_CONTEXT_UNAVAILABLE: HttpStatus.SERVICE_UNAVAILABLE,
   ASK_CONTEXT_MODULE_NOT_BINDABLE: HttpStatus.UNPROCESSABLE_ENTITY,
@@ -137,6 +141,9 @@ export class AskContextResolver {
     if (typeof articleId !== 'string' || !ASK_CONTEXT_ARTICLE_ID_PATTERN.test(articleId)) {
       throw new AskContextRefused('ASK_CONTEXT_INVALID');
     }
+    /* MASTER CTO P0 #85 — a held story is refused explicitly, before any read: never remapped, never
+       dropped to a general or free-text country retrieval, never told as "not found". */
+    if (isGeoQuarantined({ id: articleId })) throw new AskContextRefused('ASK_CONTEXT_STORY_GEO_IDENTITY_DISPUTED');
     let article: NewsArticle | null;
     try {
       article = await this.stories.findArticleById(articleId);
@@ -160,6 +167,9 @@ export class AskContextResolver {
     ) {
       throw new AskContextRefused('ASK_CONTEXT_INVALID');
     }
+    /* MASTER CTO P0 #85 — held story: explicit refusal, whatever URL accompanies the ref (see
+       resolveStoryById) */
+    if (isGeoQuarantinedRef(articleRef)) throw new AskContextRefused('ASK_CONTEXT_STORY_GEO_IDENTITY_DISPUTED');
     if (computeArticleRef(url) !== articleRef) {
       throw new AskContextRefused('ASK_CONTEXT_STORY_REF_MISMATCH');
     }
@@ -243,6 +253,10 @@ export class AskContextResolver {
         throw new AskContextRefused('ASK_CONTEXT_INVALID');
       }
       seen.add(story.articleRef);
+      /* MASTER CTO P0 #85 — a selection containing a held story is refused, not silently narrowed */
+      if (isGeoQuarantinedRef(story.articleRef)) {
+        throw new AskContextRefused('ASK_CONTEXT_STORY_GEO_IDENTITY_DISPUTED');
+      }
       if (computeArticleRef(story.url) !== story.articleRef) {
         throw new AskContextRefused('ASK_CONTEXT_STORY_REF_MISMATCH');
       }

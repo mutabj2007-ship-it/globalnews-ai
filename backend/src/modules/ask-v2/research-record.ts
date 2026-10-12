@@ -79,6 +79,7 @@ export interface ResearchFacts {
     readonly requestedPublisher?: AskRequestedPublisher;
     readonly entitySpellings?: readonly AskEntitySpelling[];
     readonly rightsExcluded?: { readonly count: number };
+    readonly geoIdentityHeld?: { readonly count: number };
     readonly dataMode?: string;
     readonly outcome?: string;
     readonly retrievalOutcome?: string;
@@ -148,7 +149,13 @@ export function researchRecordOf(
       : { entitySpellings: ctx.entitySpellings.map(({ asked, searched }) => ({ asked, searched })) }),
     ...((ctx.rightsExcluded?.count ?? 0) > 0 ? { rightsWithheld: ctx.rightsExcluded!.count } : {}),
     performed: true,
-    outcome: observed.retrievalOutcome ?? 'OUTCOME_UNAVAILABLE',
+    /* MASTER CTO P0 #85 — GEO_IDENTITY_HELD is recorded in the operator observation; the reader
+       payload carries the existing OUTCOME_UNAVAILABLE ("status unknown", never "no match") until the
+       frontend renders the new code: the live frontend has no case for it. */
+    outcome:
+      observed.retrievalOutcome === 'GEO_IDENTITY_HELD'
+        ? 'OUTCOME_UNAVAILABLE'
+        : (observed.retrievalOutcome ?? 'OUTCOME_UNAVAILABLE'),
     reused,
     lanes: reused ? NO_LANES : lanesOf(ctx),
     candidatesSeen: observed.candidatesSeen,

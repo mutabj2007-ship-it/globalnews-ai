@@ -1754,7 +1754,10 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
         draft,
         /* ASK R2 LIVE-GATE REPAIR (P0-6) — an empty result because the SOURCES failed is not the
            same fact as a search that found nothing: it is UNAVAILABLE, said as such */
-        noEvidence && !retrievalFailed(response) ? 'NO_EVIDENCE' : 'UNAVAILABLE',
+        /* MASTER CTO P0 #85 — reporting withheld by the geo-identity hold is not "nothing found" */
+        noEvidence && !retrievalFailed(response) && (response?.retrievalContext?.geoIdentityHeld?.count ?? 0) === 0
+          ? 'NO_EVIDENCE'
+          : 'UNAVAILABLE',
         undefined,
         contract.stableQuestion ?? undefined,
         /* ASK R3 RESEARCH ACTIVITY R1 — the search that ran is recorded, not dropped; a call that

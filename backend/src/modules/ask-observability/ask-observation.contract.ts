@@ -50,6 +50,8 @@ export const OBSERVED_RETRIEVAL_OUTCOMES: ReadonlySet<string> = new Set([
   'ALL_FILTERED',
   'COMPLETED_NO_MATCH',
   'PROVIDER_FAILED',
+  /* MASTER CTO P0 #85 — every candidate withheld by the geo-identity hold */
+  'GEO_IDENTITY_HELD',
 ]);
 
 /*

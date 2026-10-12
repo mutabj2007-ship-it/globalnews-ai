@@ -1,3 +1,4 @@
+import { isGeoQuarantined } from '../news/geo-quarantine/geo-identity-quarantine';
 import { Injectable, Logger } from '@nestjs/common';
 import {
   COUNTRIES,
@@ -230,14 +231,20 @@ export class HomeEditorialService {
 
     let relaxed = false;
     const eligibleOnly = input.scope === 'HOME_ELIGIBLE';
-    let rows = (await run(terms)).map((a) => this.toRow(a));
+    /* MASTER CTO P0 #85 — a held identity may match only by its own headline, summary or publisher,
+       never through its disputed stored country name. */
+    const lacksDisputedOnlyMatch = (a: { id: string; url: string; title: string; summary: string; sourceName: string }, needles: string[]): boolean =>
+      !isGeoQuarantined(a) ||
+      needles.every((n) => [a.title, a.summary, a.sourceName].some((field) => field.toLowerCase().includes(n.toLowerCase())));
+    let rows = (await run(terms)).filter((a) => lacksDisputedOnlyMatch(a, terms)).map((a) => this.toRow(a));
     /* Sensible tolerance without fuzzy indexes: when the exact words leave NOTHING in scope (raw hits
        may all be out of scope, e.g. "refineri" ⊂ "refineries" in a sport report), retry on word stems
        (first 5 letters). */
     const inScope = (rs: RetainedRow[]): number => (eligibleOnly ? candidatesOf(rs, now, true).length : rs.length);
     if (inScope(rows) === 0 && terms.some((t) => t.length >= 6)) {
       relaxed = true;
-      rows = (await run(terms.map((t) => (t.length >= 6 ? t.slice(0, 5) : t)))).map((a) => this.toRow(a));
+      const stems = terms.map((t) => (t.length >= 6 ? t.slice(0, 5) : t));
+      rows = (await run(stems)).filter((a) => lacksDisputedOnlyMatch(a, stems)).map((a) => this.toRow(a));
     }
     let candidates = candidatesOf(rows, now, eligibleOnly);
     if (!eligibleOnly) {
