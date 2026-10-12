@@ -280,7 +280,7 @@ export class CountryNewsService {
     // category filtering, dedup) already operates on a language-pure
     // set.
     /* MASTER CTO P0 #85 — a held identity is never served as reporting FOR a country: its text is
-       what produced the disputed country, so it is not re-scored against one. */
+       what produced the unsupported country, so it is not re-scored against one. */
     const unheld = searchResponse.articles.filter((article) => !isGeoQuarantined(article));
     const languageFilteredArticles = lang
       ? unheld.filter((article) => article.sourceLanguage === lang)

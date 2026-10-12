@@ -135,7 +135,9 @@ export class HomeEditorialService {
       orderBy: { publishedAt: 'desc' },
       take: 2000,
     });
-    const rows = articles.map((a) => this.toRow(a));
+    /* MASTER CTO P0 #85 — not reachable today (Home rows need a relevant ArticleCountry row, and the
+       held reports have none); excluded so it stays true if one is ever written */
+    const rows = articles.filter((a) => !isGeoQuarantined(a)).map((a) => this.toRow(a));
     const { storyIdByUrl, discussion } = await this.identityAndDiscussion(rows, now);
     this.cache = { at: now.getTime(), rows, storyIdByUrl, discussion };
     return this.cache;
@@ -231,20 +233,18 @@ export class HomeEditorialService {
 
     let relaxed = false;
     const eligibleOnly = input.scope === 'HOME_ELIGIBLE';
-    /* MASTER CTO P0 #85 — a held identity may match only by its own headline, summary or publisher,
-       never through its disputed stored country name. */
-    const lacksDisputedOnlyMatch = (a: { id: string; url: string; title: string; summary: string; sourceName: string }, needles: string[]): boolean =>
-      !isGeoQuarantined(a) ||
-      needles.every((n) => [a.title, a.summary, a.sourceName].some((field) => field.toLowerCase().includes(n.toLowerCase())));
-    let rows = (await run(terms)).filter((a) => lacksDisputedOnlyMatch(a, terms)).map((a) => this.toRow(a));
+    /* MASTER CTO P0 #85 (EA Q-4 / P10) — a report under the location hold is not listed at all: its
+       card is an entry point into the story context Ask refuses (direct read, so excluded here). */
+    let rows = (await run(terms)).filter((a) => !isGeoQuarantined(a)).map((a) => this.toRow(a));
     /* Sensible tolerance without fuzzy indexes: when the exact words leave NOTHING in scope (raw hits
        may all be out of scope, e.g. "refineri" ⊂ "refineries" in a sport report), retry on word stems
        (first 5 letters). */
     const inScope = (rs: RetainedRow[]): number => (eligibleOnly ? candidatesOf(rs, now, true).length : rs.length);
     if (inScope(rows) === 0 && terms.some((t) => t.length >= 6)) {
       relaxed = true;
-      const stems = terms.map((t) => (t.length >= 6 ? t.slice(0, 5) : t));
-      rows = (await run(stems)).filter((a) => lacksDisputedOnlyMatch(a, stems)).map((a) => this.toRow(a));
+      rows = (await run(terms.map((t) => (t.length >= 6 ? t.slice(0, 5) : t))))
+        .filter((a) => !isGeoQuarantined(a))
+        .map((a) => this.toRow(a));
     }
     let candidates = candidatesOf(rows, now, eligibleOnly);
     if (!eligibleOnly) {

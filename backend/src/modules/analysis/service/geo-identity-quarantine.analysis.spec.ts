@@ -66,8 +66,20 @@ function service(articles: NewsArticle[]) {
       maxCompletionTokens: 2000,
     }),
   } as unknown as AnalysisConfigService;
-  const svc = new AnalysisService(news as never, { getCountryNews: jest.fn() } as never, provider, config);
-  return { svc, news, analyze };
+  /* the country feed: records which country each request was scoped to */
+  const getCountryNews = jest.fn(async (iso3: string) => ({
+    articles: [],
+    totalResults: 0,
+    providers: ['gnews'],
+    dataMode: 'live',
+    countryCode: iso3,
+    countryName: iso3,
+    feedTier: 'delayed',
+    providerDisplayName: 'GNews',
+    generatedAt: new Date().toISOString(),
+  }));
+  const svc = new AnalysisService(news as never, { getCountryNews } as never, provider, config);
+  return { svc, news, analyze, getCountryNews };
 }
 
 const QUESTION = 'What happened in the ambush involving Erik Prince contractors?';
@@ -103,5 +115,43 @@ describe('#85 · the analysis evidence point', () => {
     const result = await svc.analyzeNews(QUESTION);
     expect(result.articles.map((a) => a.id)).toEqual([benign.id]);
     expect(result.retrievalContext.geoIdentityHeld).toBeUndefined();
+  });
+});
+
+describe('#85 · BW-EA-Q5 (EA P6 / Q-3): legacy /analysis/news never trusts a client country for a held story', () => {
+  const STORY_QUESTION = 'What is the latest on this story?';
+  const scopedTo = (calls: unknown[][]) => calls.map((c) => c[0]);
+
+  it.each(HELD_IDS)('{articleId: %s, countryCode: CG} → never scoped to COG (as if no country was sent)', async (articleId) => {
+    const { svc, getCountryNews } = service([]);
+    const result = await svc.analyzeNews(STORY_QUESTION, 'en', { title: 'Synthetic held story', articleId, countryCode: 'CG' });
+    expect(scopedTo(getCountryNews.mock.calls)).not.toContain('COG');
+    expect(result.retrievalContext.countryCode).not.toBe('CG');
+    expect(result.retrievalContext.countryCode).not.toBe('COG');
+  });
+
+  it('control: an unheld story with countryCode CG is still scoped to COG (unchanged)', async () => {
+    const { svc, getCountryNews } = service([]);
+    await svc.analyzeNews(STORY_QUESTION, 'en', { title: 'Synthetic story', articleId: 'unheld-story-1', countryCode: 'CG' });
+    expect(scopedTo(getCountryNews.mock.calls)).toContain('COG');
+  });
+});
+
+describe('#85 · BW-EA-Q4: the anchored country never comes from a held report', () => {
+  const resolveAnchored = (anchor: NewsArticle, supporting: NewsArticle[]) =>
+    (AnalysisService.prototype as unknown as {
+      resolveAnchoredEvidenceCountry(a: NewsArticle, s: NewsArticle[], c: string | undefined): { iso2: string } | undefined;
+    }).resolveAnchoredEvidenceCountry.call({}, anchor, supporting, undefined);
+  const withCountry = (a: NewsArticle, countryCode: string) => ({ ...a, countryCode });
+
+  it('a held anchor carrying CG supplies no country; 5 held supporting carrying CG supply none', () => {
+    expect(resolveAnchored(withCountry(held[0], 'CG'), [])).toBeUndefined();
+    expect(resolveAnchored(withCountry(benign, ''), held.map((h) => withCountry(h, 'CG')))).toBeUndefined();
+  });
+  it('a held anchor falls through to authentic supporting reporting (COD decides)', () => {
+    expect(resolveAnchored(withCountry(held[0], 'CG'), [withCountry(benign, 'CD'), ...held.map((h) => withCountry(h, 'CG'))])?.iso2).toBe('CD');
+  });
+  it('control: an unheld anchor carrying CG still gives CG', () => {
+    expect(resolveAnchored(withCountry(benign, 'CG'), [])?.iso2).toBe('CG');
   });
 });

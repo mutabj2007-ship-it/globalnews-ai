@@ -7,7 +7,7 @@ import {
   isGeoQuarantined,
   isGeoQuarantinedRef,
   partitionGeoQuarantined,
-  withoutDisputedGeography,
+  withoutHeldGeography,
 } from './geo-identity-quarantine';
 import { computeArticleRef } from '../identity/article-ref.util';
 import { ArticlePersistenceService } from '../persistence/article-persistence.service';
@@ -18,6 +18,9 @@ import { AskContextRefused, AskContextResolver } from '../../ask-v2/context/ask-
 import { observedRetrievalOf } from '../../ask-v2/retrieval-outcome';
 import { researchRecordOf } from '../../ask-v2/research-record';
 import { OBSERVED_RETRIEVAL_OUTCOMES } from '../../ask-observability/ask-observation.contract';
+import { withHeldGeographyWithdrawn } from '../../ask-v2/held-geography-on-reopen';
+import { priorWorkRightsClearedWith } from '../../ask-v2/source-rights-withholding';
+import { detectAmbiguousCountryMention } from '../../analysis/anchor/event-anchor.util';
 
 /**
  * MASTER CTO P0 #85 — GEO-IDENTITY QUARANTINE, OFFLINE FIXTURES.
@@ -73,7 +76,7 @@ describe('#85 · the guard (identity only, no rule)', () => {
   it('is not a CG/CD rule: genuine COG and COD reports, and other historical CG/CD rows, are not held', () => {
     for (const a of [BENIGN_COG, BENIGN_COD, article({ id: 'historic-cg', countryCode: 'CG' }), article({ id: 'historic-cd', countryCode: 'CD' })]) {
       expect(isGeoQuarantined(a)).toBe(false);
-      expect(withoutDisputedGeography(a)).toBe(a);
+      expect(withoutHeldGeography(a)).toBe(a);
     }
     expect(isGeoQuarantined({})).toBe(false);
     expect(isGeoQuarantinedRef('0'.repeat(64))).toBe(false);
@@ -85,12 +88,13 @@ describe('#85 · the guard (identity only, no rule)', () => {
     const source = readFileSync(join(__dirname, 'geo-identity-quarantine.ts'), 'utf8');
     expect(source).toContain('HELD_REFS.has(computeArticleRef(url))');
     /* no publisher URL is written into the hold list */
+    expect(readFileSync(join(__dirname, 'geo-identity-quarantine.list.ts'), 'utf8')).not.toMatch(/https?:\/\//i);
     expect(source).not.toMatch(/https?:\/\/(www\.)?(reuters|marketscreener|straitstimes|timesnownews|nypost)/i);
   });
 
   it('a held record keeps its content but loses its stored geography', () => {
     const [held] = heldArticles();
-    const stripped = withoutDisputedGeography(held);
+    const stripped = withoutHeldGeography(held);
     expect(stripped.countryCode).toBeUndefined();
     expect(stripped.countryName).toBeUndefined();
     expect(stripped.title).toBe(held.title);
@@ -168,7 +172,7 @@ function store() {
 }
 
 describe('#85 · persistence reads and writes', () => {
-  it('retained query reads keep a held row but never with its stored (disputed) country', async () => {
+  it('retained query reads keep a held row but never with its stored (unsupported) country', async () => {
     const { svc } = store();
     const got = await svc.findRecent({ limit: 50, maxAgeMinutes: 1440 });
     const byId = new Map(got.map((a) => [a.id, a]));
@@ -204,7 +208,7 @@ describe('#85 · persistence reads and writes', () => {
 
   it('stored data is never rewritten: a re-fetched held copy is not upserted, no relation is created for it', async () => {
     const { svc, upserts, relationUpserts } = store();
-    await svc.persistMany([...heldArticles().map((a) => withoutDisputedGeography(a)), BENIGN_COG]);
+    await svc.persistMany([...heldArticles().map((a) => withoutHeldGeography(a)), BENIGN_COG]);
     expect(upserts).toEqual([BENIGN_COG.url]);
     await svc.persistCountryRelations([
       ...HELD_IDS.map((articleId) => ({ articleId, countryCode: 'COG', countryName: 'Congo', relevanceScore: 9, isRelevant: true })),
@@ -284,16 +288,16 @@ describe('#85 · Ask story context: an explicit hold, before any read, never "no
     }
   };
 
-  it.each(HELD_IDS)('STORY by id %s → ASK_CONTEXT_STORY_GEO_IDENTITY_DISPUTED, store not read', async (articleId) => {
+  it.each(HELD_IDS)('STORY by id %s → ASK_CONTEXT_STORY_LOCATION_UNDER_REVIEW, store not read', async (articleId) => {
     const r = reader();
-    expect(await code(r.resolver.resolve({ kind: 'STORY', articleId }))).toBe('ASK_CONTEXT_STORY_GEO_IDENTITY_DISPUTED');
+    expect(await code(r.resolver.resolve({ kind: 'STORY', articleId }))).toBe('ASK_CONTEXT_STORY_LOCATION_UNDER_REVIEW');
     expect(r.findArticleById).not.toHaveBeenCalled();
   });
 
   it.each(HELD_REFS)('STORY by ref %s → held refusal (whatever URL accompanies it), store not read', async (articleRef) => {
     const r = reader();
     expect(await code(r.resolver.resolve({ kind: 'STORY', articleRef, url: 'https://wire.example/any' }))).toBe(
-      'ASK_CONTEXT_STORY_GEO_IDENTITY_DISPUTED',
+      'ASK_CONTEXT_STORY_LOCATION_UNDER_REVIEW',
     );
     expect(r.findRetainedArticleByUrl).not.toHaveBeenCalled();
   });
@@ -306,7 +310,7 @@ describe('#85 · Ask story context: an explicit hold, before any read, never "no
       { articleRef: computeArticleRef(other), url: other },
     ];
     expect(await code(r.resolver.resolve({ kind: 'SELECTION', action: 'COMPARE', stories }))).toBe(
-      'ASK_CONTEXT_STORY_GEO_IDENTITY_DISPUTED',
+      'ASK_CONTEXT_STORY_LOCATION_UNDER_REVIEW',
     );
     expect(r.findRetainedArticleByUrl).not.toHaveBeenCalled();
   });
@@ -345,7 +349,51 @@ describe('#85 · outcome codes: a held-only search is never "no match"', () => {
   });
 });
 
-describe('#85 · persisted story search never matches a held row through its disputed country name', () => {
+
+/* ── EA §3 negative controls NC-1…NC-7: none is one of the five; each keeps its behaviour ── */
+const NC4_OTHER_REUTERS = article({ id: 'gnews-nc4-reuters-other', sourceId: 'reuters', sourceName: 'Reuters', url: 'https://www.reuters.com/business/nc4-other-report-2026-10-09/', countryCode: 'GB', countryName: 'United Kingdom' });
+const NC5_SAME_HOST = article({ id: 'gnews-nc5-reuters-africa', sourceId: 'reuters', sourceName: 'Reuters', url: 'https://www.reuters.com/world/africa/nc5-neighbour-report-2026-10-09/', countryCode: 'CD', countryName: 'DR Congo' });
+const NC6_PRINCE_MANILA = article({ id: 'gnews-2046076314', sourceId: 'manila-times', title: 'Erik Prince contractors linked to ambush', summary: 'Synthetic summary.' });
+const NC6_PRINCE_TAARIFA = article({ id: 'rss-1485865975', sourceId: 'feed:taarifa-rw', title: 'Erik Prince contractors linked to ambush', summary: 'Synthetic summary.' });
+
+describe('#85 · EA negative controls NC-1…NC-7 (unchanged by the hold)', () => {
+  const resolve = (articles: NewsArticle[]): NewsArticle[] =>
+    (NewsService.prototype as unknown as { resolveArticleCountries(a: NewsArticle[]): NewsArticle[] }).resolveArticleCountries.call({}, articles);
+
+  it('NC-1 authentic COG (Brazzaville): not held, keeps CG, resolves CG', () => {
+    expect(isGeoQuarantined(BENIGN_COG)).toBe(false);
+    expect(withoutHeldGeography(BENIGN_COG).countryCode).toBe('CG');
+    expect(resolve([BENIGN_COG])[0].countryCode).toBe('CG');
+  });
+  it('NC-2 authentic COD (Goma): not held, keeps CD, resolves CD', () => {
+    expect(isGeoQuarantined(BENIGN_COD)).toBe(false);
+    expect(resolve([BENIGN_COD])[0].countryCode).toBe('CD');
+  });
+  it('NC-3 legacy CG/CD rows with no ArticleCountry row, outside the five, keep their stored code', async () => {
+    const { svc } = store();
+    const byId = new Map((await svc.findRecent({ limit: 50, maxAgeMinutes: 1440 })).map((a) => [a.id, a]));
+    expect(byId.get('historic-cg')!.countryCode).toBe('CG');
+    expect((await svc.findById('historic-cg'))?.countryCode).toBe('CG');
+  });
+  it("NC-4 other Reuters-host rows are not held (rights stay E1's separate ruling)", () => {
+    expect(isGeoQuarantined(NC4_OTHER_REUTERS)).toBe(false);
+    expect(withoutHeldGeography(NC4_OTHER_REUTERS)).toBe(NC4_OTHER_REUTERS);
+  });
+  it('NC-5 a same-host /world/africa/ neighbour with a different ref is not held', () => {
+    expect(isGeoQuarantined(NC5_SAME_HOST)).toBe(false);
+    expect(isGeoQuarantinedRef(computeArticleRef(NC5_SAME_HOST.url))).toBe(false);
+  });
+  it('NC-6 Prince/Vectus rows outside the five are untouched by this hold (Taarifa stays held only by its feed rule)', () => {
+    expect(isGeoQuarantined(NC6_PRINCE_MANILA)).toBe(false);
+    expect(isGeoQuarantined(NC6_PRINCE_TAARIFA)).toBe(false);
+  });
+  it('NC-7 bare "Congo" still fails closed: the query is flagged ambiguous, the text resolves to no country', () => {
+    expect(detectAmbiguousCountryMention('What happened in Congo this week?')?.candidates).toEqual(expect.arrayContaining(['COD', 'COG']));
+    expect(resolve([article({ id: 'nc7-bare-congo', title: 'Fighting reported in Congo', summary: 'Clashes in Congo.' })])[0].countryCode).toBeUndefined();
+  });
+});
+
+describe('#85 · /stories/search (EA P10 / Q-4): a held report is not listed at all; controls are', () => {
   const ev = (w: any, r: any): boolean =>
     w == null ||
     Object.entries(w).every(([k, v]: [string, any]) => {
@@ -361,8 +409,9 @@ describe('#85 · persisted story search never matches a held row through its dis
     category: 'world', publishedAt: new Date(NOW - 3_600_000), publishedAtBasis: 'publisher', fetchedAt: new Date(NOW - 3_600_000),
     countryName: a.countryName ?? null, countries: [],
   });
+  const control = article({ id: 'nc-search-ambush', ...HELD_TEXT });
   const prisma: any = {
-    article: { findMany: async (q: any) => [...heldArticles(), BENIGN_COG].map(row).filter((r) => ev(q.where, r)) },
+    article: { findMany: async (q: any) => [...heldArticles(), BENIGN_COG, control].map(row).filter((r) => ev(q.where, r)) },
     storyArticle: { findMany: async () => [] },
     story: { findMany: async () => [] },
     storyComment: { findMany: async () => [] },
@@ -371,17 +420,73 @@ describe('#85 · persisted story search never matches a held row through its dis
   const { HomeEditorialService } = require('../../home-editorial/home-editorial.service');
   const svc = new HomeEditorialService(prisma);
   const search = (q: string) => svc.search({ q, scope: 'ALL_RETAINED', region: null, domain: null, days: null, now: new Date(NOW) });
+  const heldRefs = () => heldArticles().map((a) => computeArticleRef(a.url));
 
-  it('"Republic" matches the genuine COG report by its headline, and no held row by its stored country name', async () => {
-    const ids = (await search('Republic')).results.map((c: any) => c.articleRef);
-    expect(ids).toContain(computeArticleRef(BENIGN_COG.url));
-    for (const a of heldArticles()) expect(ids).not.toContain(computeArticleRef(a.url));
+  it('by its own words: only the unheld report with the same text is listed (non-vacuous)', async () => {
+    const refs = (await search('ambushed')).results.map((c: any) => c.articleRef);
+    expect(refs).toContain(computeArticleRef(control.url));
+    for (const r of heldRefs()) expect(refs).not.toContain(r);
+  });
+  it('by its stored country name: no held row; NC-1 still listed', async () => {
+    const refs = (await search('Republic')).results.map((c: any) => c.articleRef);
+    expect(refs).toContain(computeArticleRef(BENIGN_COG.url));
+    for (const r of heldRefs()) expect(refs).not.toContain(r);
+  });
+});
+
+describe("#85 · E1 M-1: the display reopen withdraws a held report's country (same predicate)", () => {
+  const stored = () => ({
+    schema: 'ask-r2/x',
+    answer: { state: 'CURRENT_REPORTING' },
+    analysis: {
+      headline: 'Synthetic',
+      articles: [
+        ...HELD_IDS.map((id) => ({ id, url: `https://wire.example/${id}`, title: 't', countryCode: 'CG', countryName: 'Congo', geographicPrecision: 'country' })),
+        { ...BENIGN_COG, geographicPrecision: 'country' },
+        { ...BENIGN_COD, geographicPrecision: 'country' },
+      ],
+    },
+    recentReporting: { country: 'COG', items: [{ id: HELD_IDS[0], url: 'https://wire.example/x', title: 't' }, { id: BENIGN_COG.id, url: BENIGN_COG.url, title: 't' }] },
   });
 
-  it('a held row still matches its OWN words (not hidden, just not geolocated)', async () => {
-    /* the five copies share one headline: the search collapses them; at least one held row is listed */
-    const ids = (await search('ambushed')).results.map((c: any) => c.articleRef);
-    const heldRefs = heldArticles().map((a) => computeArticleRef(a.url));
-    expect(ids.some((r: string) => heldRefs.includes(r))).toBe(true);
+  it('pins analysis.articles[].countryCode / countryName (gone) and geographicPrecision (unknown) for each held item', () => {
+    const out = withHeldGeographyWithdrawn(stored()) as any;
+    for (const a of out.analysis.articles.slice(0, 5)) {
+      expect(a).not.toHaveProperty('countryCode');
+      expect(a).not.toHaveProperty('countryName');
+      expect(a.geographicPrecision).toBe('unknown');
+    }
+    expect(JSON.stringify(out.analysis.articles.slice(0, 5))).not.toMatch(/"(CG|COG)"/);
+  });
+  it('controls keep their country; a held item is not listed in a per-country companion list', () => {
+    const out = withHeldGeographyWithdrawn(stored()) as any;
+    expect(out.analysis.articles[5].countryCode).toBe('CG');
+    expect(out.analysis.articles[6].countryCode).toBe('CD');
+    expect(out.recentReporting.items.map((i: any) => i.id)).toEqual([BENIGN_COG.id]);
+  });
+  it('a payload citing no held report is returned as the same object (nothing else changes)', () => {
+    const p = { analysis: { articles: [BENIGN_COG, BENIGN_COD] }, recentReporting: { items: [] } };
+    expect(withHeldGeographyWithdrawn(p)).toBe(p);
+    expect(withHeldGeographyWithdrawn(null)).toBeNull();
+  });
+  it('GET /operations/:id applies it to the display payload (after the rights withholding)', () => {
+    const source = readFileSync(join(__dirname, '../../ask-v2/ask-v2.service.ts'), 'utf8');
+    expect(source).toContain('payload: withHeldGeographyWithdrawn(withheldForSourceRights(withComparisonTable(result.payload))),');
+  });
+});
+
+describe('#85 · BW-EA-Q6 (P9b): PRIOR-WORK rework citing a held id fails closed', () => {
+  const finder = () => {
+    const { svc } = store();
+    return (id: string) => (NewsService.prototype.findArticleById as (id: string) => Promise<NewsArticle | null>).call({ articlePersistence: svc }, id);
+  };
+  it('evidenceRefs including a held id → prior work withheld (priorWorkRightsClearedWith false)', async () => {
+    const find = finder();
+    for (const id of HELD_IDS) {
+      expect(await priorWorkRightsClearedWith({ provenance: 'SOURCED_REPORTING', evidenceRefs: [BENIGN_COD.id, id] }, find, 8)).toBe(false);
+    }
+  });
+  it('control: the same answer citing only unheld reports is still usable', async () => {
+    expect(await priorWorkRightsClearedWith({ provenance: 'SOURCED_REPORTING', evidenceRefs: [BENIGN_COD.id, BENIGN_COG.id] }, finder(), 8)).toBe(true);
   });
 });

@@ -5,7 +5,7 @@ import { normalizeArticleUrl, type NewsArticle, type NewsCategory } from '@globa
 import { PrismaService } from '../../../database/prisma.service';
 import { stripUnresolvedTemplatePlaceholders } from '../article-metadata-hygiene.util';
 import { admittedStoredSourceWhere, storedRowAdmissible, storedRowExclusionReason } from '../rights/source-use-policy';
-import { isGeoQuarantined, withoutDisputedGeography } from '../geo-quarantine/geo-identity-quarantine';
+import { isGeoQuarantined, withoutHeldGeography } from '../geo-quarantine/geo-identity-quarantine';
 import { RETAINED_ARTICLE_OBSERVER, type RetainedArticleObserver } from './retained-article-observer.port';
 import { currentRetrievalTrace, traceSafely } from '../retrieval-trace/retrieval-trace';
 
@@ -136,7 +136,7 @@ export class ArticlePersistenceService {
    * one thing: omit `firstSeenAt`.
    */
   async persistMany(incoming: NewsArticle[]): Promise<FirstSeenByUrl> {
-    /* MASTER CTO P0 #85 — a held identity is never written: its stored row (including the disputed
+    /* MASTER CTO P0 #85 — a held identity is never written: its stored row (including the unsupported
        country) stays exactly as it is, and a re-fetched copy cannot overwrite it. */
     const articles = incoming.filter((article) => !isGeoQuarantined(article));
     if (articles.length === 0) {
@@ -401,7 +401,7 @@ export class ArticlePersistenceService {
         take: safeLimit,
       });
 
-      /* MASTER CTO P0 #85 — a held identity is never served BY its (disputed) country */
+      /* MASTER CTO P0 #85 — a held identity is never served BY its (unsupported) country */
       const articles = this.admissibleRows(rows, (row) => row.article.sourceId)
         .filter((row) => !isGeoQuarantined(row.article))
         .map((row) => ({
@@ -539,7 +539,7 @@ export class ArticlePersistenceService {
       });
 
       /* MASTER CTO P0 #85 — a held identity stays readable but carries no stored country */
-      return this.admissibleRows(rows, (row) => row.sourceId).map((row) => withoutDisputedGeography({
+      return this.admissibleRows(rows, (row) => row.sourceId).map((row) => withoutHeldGeography({
         id: row.id,
         title: row.title,
         summary: stripUnresolvedTemplatePlaceholders(row.summary),

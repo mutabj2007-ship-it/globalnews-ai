@@ -24,7 +24,7 @@ const REUTERS_FIXTURE: NewsArticle = {
   title: "Erik Prince's forces suffer battlefield loss in Congo, former UFC fighter among wounded, sources say",
   summary: 'FIXTURE — synthetic summary for a retrieval-boundary test; not the article text.',
   /* MASTER CTO P0 #85 — the published URL is a held identity (geo-identity-quarantine.ts): the five
-     stored copies carry a disputed country, so it is withheld from evidence. This spec is about query
+     stored copies carry an unsupported country, so it is withheld from evidence. This spec is about query
      wording, spelling disclosure and scoping, not that record: same publisher host, a fixture path. */
   url: 'https://www.reuters.com/world/africa/fixture-erik-prince-battlefield-loss-congo-2026-10-09/',
   /* RIGHTS CONTAINMENT R1 — real provenance: GNews emits the publisher slug, and the live article

@@ -947,7 +947,7 @@ export interface AnalysisRetrievalContext {
 
   /**
    * MASTER CTO P0 #85 — internal diagnostic. Reports a search or retained read DID return that were
-   * withheld from this answer because their stored geography is disputed (an identity-based hold,
+   * withheld from this answer because their stored location is under review (an identity-based hold,
    * backend geo-identity-quarantine.ts). Never a relevance judgement, never a rights decision and
    * never evidence that no reporting exists.
    */

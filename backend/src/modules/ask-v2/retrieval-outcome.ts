@@ -18,7 +18,7 @@
  *                       reuse rights are not cleared (MASTER CTO P0 RIGHTS CONTAINMENT R1.1) — never
  *                       "nothing relevant", never "no reporting exists"
  *   GEO_IDENTITY_HELD   the search returned items, and every one was withheld because its stored
- *                       geography is disputed (MASTER CTO P0 #85 identity hold) — never "nothing
+ *                       location is under review (MASTER CTO P0 #85 identity hold) — never "nothing
  *                       relevant", never "no reporting exists"
  *
  * Production FJ-1 (A4): 48 zero-item answers in 14 days could not be told apart. These codes are

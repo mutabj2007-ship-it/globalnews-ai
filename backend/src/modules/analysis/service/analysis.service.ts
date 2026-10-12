@@ -832,6 +832,19 @@ export class AnalysisService {
     }
 
     /*
+      MASTER CTO P0 #85 (EA Q-3 / P6) — a CLIENT-SUPPLIED country for a held story is never trusted.
+      Legacy /analysis/news accepts storyContext.countryCode from the body and seeded the location from
+      it before the anchor was read. When the story's id or URL is under the location hold, the code is
+      dropped here, before the location, the cache key or the anchored country can read it: the
+      request runs as if no country had been sent (the story context itself stays, so the map
+      geography fallback does not apply either).
+    */
+    if (storyContext?.countryCode !== undefined && isGeoQuarantined({ id: storyContext.articleId, url: storyContext.url })) {
+      const { countryCode: _heldCountry, ...withoutCountry } = storyContext;
+      storyContext = withoutCountry;
+    }
+
+    /*
       MAP ASK GEOGRAPHY CONTEXT R1 — THE WEAKEST CAMERA.
 
       Eligible only with no selection and no storyContext: a selected story is
@@ -3912,7 +3925,7 @@ export class AnalysisService {
           reporting exists. Provider-path articles are untouched.
         */
         /*
-          MASTER CTO P0 #85 — THE SAME ONE POINT, FOR A DISPUTED GEOGRAPHY. Upstream every read already
+          MASTER CTO P0 #85 — THE SAME ONE POINT, FOR A LOCATION UNDER REVIEW. Upstream every read already
           strips a held identity's country (persistence, NewsService), so it cannot steer scope or
           coverage; here it is withheld from the evidence before any claim, trace or model call, and
           counted as held — never as "not relevant", never as no reporting.
