@@ -506,7 +506,32 @@ export function anchoredQueries(anchors: QuestionAnchors): string[] {
   if (anchors.relation === 'LINKED' || anchors.actors.length <= 1) {
     return [[...anchors.actors.map((a) => a.label), topic].filter((part) => part !== '').join(' ')];
   }
-  return anchors.actors.slice(0, 2).map((a) => [a.label, topic].filter((part) => part !== '').join(' '));
+  return sideQueries(anchors.actors, topic);
+}
+
+/**
+ * EA-GEO-R1 G-4 — at most this many sides are topped up in one turn: the comparison classifier's own
+ * side bound (query-intent.util.ts MAX_SIDES = 3), so every side a comparison keeps can be searched.
+ * It was two, which never searched a third side. The searches run in parallel inside the existing
+ * retrieval deadline (analysis.service.ts), one NewsService.search + one retained read each.
+ */
+const MAX_SIDE_SUPPLEMENTS = 3;
+
+/**
+ * EA-GEO-R1 G-4a (G MV-4) — the question's subject as search words ("economy"), for a gated
+ * question that names one: the same topic words every anchored query above carries. Undefined for
+ * an ungated question, a corridor, or a question with no topic family.
+ */
+export function anchorSubjectQuery(anchors: QuestionAnchors | undefined): string | undefined {
+  if (anchors === undefined || !anchors.gated || anchors.relation === 'CORRIDOR' || anchors.topics.length === 0) return undefined;
+  return anchors.topics.map((t) => t.query ?? t.label).slice(0, 2).join(' ');
+}
+
+/** One anchored search per side: the side's own name with the question's subject ("Rwanda economy"). */
+function sideQueries(actors: readonly AnchorGroup[], topic: string): string[] {
+  return actors
+    .slice(0, MAX_SIDE_SUPPLEMENTS)
+    .map((a) => [a.label, topic].filter((part) => part !== '').join(' '));
 }
 
 /** The same bound as every anchored supplement: at most two searches. */
@@ -544,6 +569,21 @@ export function supplementQueries(
       (a) => a.role === 'ROUTE' && !texts.some((t) => a.terms.some((term) => hasPhrase(t, term))),
     );
     if (uncovered.length > 0) return corridorQueries(anchors, uncovered);
+  }
+  /*
+    EA-GEO-R1 G-4 — THE TOP-UP IS PER SIDE. For several named sides that are not linked (a
+    comparison: "Kenya and Rwanda"), three admitted Kenya reports used to end retrieval with Rwanda
+    never searched again, because the rule counted reports in total. A side that no admitted report
+    names is searched on its own, with the subject; a report counts for a side only when it names
+    that side (the same terms the admission gate reads), so three Kenya reports never cover Rwanda.
+  */
+  /* a corridor keeps its own route-coverage rule above (its destination is not a compared side) */
+  if (anchors.relation !== 'LINKED' && anchors.relation !== 'CORRIDOR' && anchors.actors.length >= 2) {
+    const texts = admitted.map((r) => normalizeText(`${r.title} ${r.summary ?? ''}`));
+    const uncovered = anchors.actors.filter((a) => !texts.some((t) => a.terms.some((term) => hasPhrase(t, term))));
+    if (uncovered.length > 0) {
+      return sideQueries(uncovered, anchors.topics.map((t) => t.query ?? t.label).slice(0, 2).join(' '));
+    }
   }
   return admitted.length >= 3 ? [] : anchoredQueries(anchors);
 }

@@ -87,11 +87,13 @@ describe('EA-GEO-A Kenya–Rwanda comparison', () => {
     expect(anchoredQueries(a)).toEqual(['Kenya economy', 'Rwanda economy']);
   });
 
-  it.failing('A-03 HOLD the Ask plan scope names BOTH countries (route envelope carries only the first)', () => {
+  /* EA-GEO-R1 G-5 fix (geo-p0 Commit B) */
+  it('A-03 (was HOLD) the Ask plan scope names BOTH countries (route envelope carries only the first)', () => {
     expect(routeGeo(SENTINEL)).toEqual(expect.arrayContaining(['KEN', 'RWA']));
   });
 
-  it.failing('A-04 HOLD a one-sided admitted set still searches the missing side (3 Kenya items → no Rwanda supplement)', () => {
+  /* EA-GEO-R1 G-4 fix (geo-p0 Commit B) */
+  it('A-04 (was HOLD) a one-sided admitted set still searches the missing side (3 Kenya items → no Rwanda supplement)', () => {
     const kenya = [
       { title: 'Kenyan shilling steadies as central bank intervenes', summary: 'The Central Bank of Kenya sold dollars.' },
       { title: 'Kenya inflation eases to 4.1%', summary: 'Prices in Kenya rose more slowly.' },
@@ -102,7 +104,8 @@ describe('EA-GEO-A Kenya–Rwanda comparison', () => {
     expect(supplementQueries(a, kenya)).toContain('Rwanda economy');
   });
 
-  it.failing('A-05 HOLD a three-country comparison supplements every side (bounded at two today: Tanzania never searched)', () => {
+  /* EA-GEO-R1 G-4 fix (geo-p0 Commit B) */
+  it('A-05 (was HOLD) a three-country comparison supplements every side (bounded at two today: Tanzania never searched)', () => {
     const a = questionAnchorsOf('Compare the latest economic news from Kenya, Rwanda and Tanzania.');
     expect(anchoredQueries(a)).toContain('Tanzania economy');
   });

@@ -357,6 +357,7 @@ export interface AnalysisExecutionPolicy {
 }
 import { officeGeographyCountryCode } from '../context-producers/office-geography.producer';
 import { reconcileTypedCountry } from './typed-country-handoff.util';
+import { supplementCredit } from './comparison-coverage-credit.util';
 import {
   decideContextEligibility,
   readSubjectInEitherLanguage,
@@ -366,6 +367,7 @@ import { readCapabilityRequests } from '../../ask-router/capability-producers';
 import { readContinuationEllipsis } from '../anchor/continuation-ellipsis.util';
 import {
   admitsReport,
+  anchorSubjectQuery,
   supplementQueries,
   anchorsKey,
   normalizeText as normalizeAnchorText,
@@ -1689,6 +1691,11 @@ export class AnalysisService {
         };
         /* ASK TRUTHFUL RETRIEVAL R2A — set by a branch that ran planned searches. */
         let plannedTrace: PlannedSearchTrace | undefined;
+        /* EA-GEO-R1 G-4 — reports the anchored supplement searches added, by how they arrived (a
+           live provider search or the retained read), so a comparison's per-country coverage can
+           credit each one to the country it evidences (below, after dedup). */
+        const supplementLiveIds = new Set<string>();
+        const supplementRetainedIds = new Set<string>();
         /*
           P0 NEWS QUERY A4 — what the ORDINARY generic search actually sent (primary and the one
           bounded fallback), or why it sent nothing. Recorded only by the generic branch; the
@@ -2895,6 +2902,9 @@ export class AnalysisService {
             const perSide = await this.retrievePerSideEvidence(
               classification.sides,
               requestedLanguage,
+              /* EA-GEO-R1 G-4a (G MV-4) — each side is searched WITH the question's subject
+                 ("Rwanda economy"), not by its bare name with the subject only a filter afterwards. */
+              anchorSubjectQuery(executionPolicy?.questionAnchors),
             );
 
             /* R3 L-1 — a relationship never reaches here: the router's scope branch above owns it. */
@@ -3892,13 +3902,17 @@ export class AnalysisService {
                 });
                 for (const id of response.providers ?? []) supplementProviders.add(id);
                 supplementFailures.push(...readProviderFailures(response));
+                for (const article of response.articles)
+                  (response.dataMode === 'live' ? supplementLiveIds : supplementRetainedIds).add(article.id);
                 found.push(response.articles);
               } catch {
                 /* a refused or failed supplement never fails the answer; the retained read follows */
               }
               try {
                 const terms = normalizeAnchorText(query).trim().split(' ').filter((t) => t.length >= 3).slice(0, 8);
-                found.push(await this.newsService.findRetainedByQuery(query, terms, 60, 7 * 24 * 60));
+                const retained = await this.newsService.findRetainedByQuery(query, terms, 60, 7 * 24 * 60);
+                for (const article of retained) if (!supplementLiveIds.has(article.id)) supplementRetainedIds.add(article.id);
+                found.push(retained);
               } catch {
                 /* retained store unavailable — the gate result stands */
               }
@@ -4204,8 +4218,22 @@ export class AnalysisService {
         for (const member of retrievalContext.comparisonCoverage ?? []) {
           const liveIds = new Set(member.liveArticleIds);
           const retainedIds = new Set(member.retainedArticleIds);
-          const liveCount = deduped.filter((article) => liveIds.has(article.id)).length;
-          const retainedCount = deduped.filter((article) => retainedIds.has(article.id)).length;
+          /* EA-GEO-R1 G-4 — a supplement report counts for the country it evidences, by the same
+             per-side rule the comparison applies to retained reporting (comparison-coverage-credit). */
+          const side = resolveCountryByAnyIdentifier(member.iso3);
+          const credited =
+            side === undefined
+              ? { live: 0, retained: 0 }
+              : supplementCredit(
+                  deduped,
+                  { live: liveIds, retained: retainedIds },
+                  { live: supplementLiveIds, retained: supplementRetainedIds },
+                  (article) =>
+                    scoreCountryRelevance(article, side, requestedLanguage).isRelevant &&
+                    admitsToAnalysisCorpus(article, side, requestedLanguage),
+                );
+          const liveCount = deduped.filter((article) => liveIds.has(article.id)).length + credited.live;
+          const retainedCount = deduped.filter((article) => retainedIds.has(article.id)).length + credited.retained;
           member.finalQualifyingEvidenceCount = liveCount + retainedCount;
           member.finalLiveEvidenceCount = liveCount;
           member.finalRetainedEvidenceCount = retainedCount;
@@ -5639,6 +5667,8 @@ export class AnalysisService {
   private async retrievePerSideEvidence(
     sides: readonly CountryMeta[],
     requestedLanguage: LanguageCode,
+    /** EA-GEO-R1 G-4a — the question's subject, searched with each side's name. */
+    subject?: string,
   ): Promise<{ articles: NewsArticle[]; retrievalContext: AnalysisRetrievalContext }> {
     const collected: NewsArticle[] = [];
     const coverage: ComparisonCountryCoverage[] = [];
@@ -5648,7 +5678,7 @@ export class AnalysisService {
        lane as "checked" and a partial outage is told apart from a total one. */
     const failedLanes = new Map<string, string>();
     for (const side of sides) {
-      const result = await this.retrieveMemberEvidence(side, requestedLanguage);
+      const result = await this.retrieveMemberEvidence(side, requestedLanguage, true, subject);
       result.providers.forEach((provider) => providers.add(provider));
       result.failureKinds.forEach((kind) => failureKinds.add(kind));
       for (const failure of result.failures ?? [])
@@ -5850,6 +5880,12 @@ export class AnalysisService {
     member: CountryMeta,
     requestedLanguage: LanguageCode,
     allowFallback = true,
+    /**
+     * EA-GEO-R1 G-4a — the question's subject ("economy"), added to an English provider query.
+     * Not added to the Polish top-headlines query, whose subject words would be English (the
+     * Polish path keeps its own behaviour). Absent for every declared-region member.
+     */
+    subject?: string,
   ): Promise<{
     articles: NewsArticle[];
     providers: string[];
@@ -5862,7 +5898,7 @@ export class AnalysisService {
   }> {
     const isPolish = requestedLanguage === 'pl';
     const term = isPolish ? (polishCountryName(member) ?? member.name) : member.name;
-    const sent = makeProviderSafeNewsQuery(term);
+    const sent = makeProviderSafeNewsQuery(subject !== undefined && !isPolish ? `${term} ${subject}` : term);
 
     const empty = {
       articles: [],
