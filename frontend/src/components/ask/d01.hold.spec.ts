@@ -95,6 +95,21 @@ describe('D1 story picker under HOLD', () => {
     expect(textOf(r.root)).toContain('Opening a story only reads it. Nothing is researched.');
   });
 
+  it('RTL: in Arabic the dialog carries dir=rtl and lang=ar (and Choose a place too)', async () => {
+    let r!: ReactTestRenderer;
+    await act(async () => {
+      r = create(createElement(StoryPicker, { locale: 'ar' as DisplayLocale, onClose: jest.fn(), onStageDraft: jest.fn() }));
+    });
+    const dialog = r.root.find((n) => n.props.role === 'dialog');
+    expect([dialog.props.dir, dialog.props.lang]).toEqual(['rtl', 'ar']);
+    let p!: ReactTestRenderer;
+    await act(async () => {
+      p = create(createElement(ChoosePlace, { locale: 'ar' as DisplayLocale }));
+    });
+    const main = p.root.find((n) => n.type === 'main');
+    expect([main.props.dir, main.props.lang]).toEqual(['rtl', 'ar']);
+  });
+
   it('S03: a real query shows the rights-hold notice, lists no rows, fetches nothing', async () => {
     const { r } = await open();
     await type(r, 'picker-search', 'fuel prices');

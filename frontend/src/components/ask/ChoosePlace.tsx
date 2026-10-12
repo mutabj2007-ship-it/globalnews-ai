@@ -9,7 +9,7 @@ import { MY_UPDATES_HREF } from '@/lib/ask/followedQuestions';
 import { browseRegionStories, type PickerSearchResult } from '@/lib/api/storyPickerApi';
 import { PICKER_PUBLISHER_CONTENT } from '@/lib/rights/pickerPublisherContent';
 import { useCountryFollows } from '@/components/home/useCountryFollows';
-import { askFormatLocalDayCompact } from '@/lib/ask/askDirection';
+import { askDirectionProps, askFormatLocalDayCompact } from '@/lib/ask/askDirection';
 import tokens from '../account/settingsTokens.module.css';
 import styles from './d01.module.css';
 
@@ -48,7 +48,7 @@ function countryName(iso2: string, fallback: string, locale: DisplayLocale): str
 export function ChoosePlace({ locale }: { readonly locale: DisplayLocale }): JSX.Element {
   const [place, setPlace] = useState<Place | null>(null);
   return (
-    <main className={`${tokens.settingsScope} ${styles.page}`}>
+    <main className={`${tokens.settingsScope} ${styles.page}`} {...askDirectionProps(locale)}>
       {place === null ? (
         <PlaceChooser locale={locale} onChoose={setPlace} />
       ) : (

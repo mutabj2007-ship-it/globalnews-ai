@@ -7,7 +7,7 @@ import { d01Strings, fillD01 } from '@/lib/ask/d01Strings';
 import { searchPickerStories, type PickerSearchResult, type PickerStory } from '@/lib/api/storyPickerApi';
 import { readStoryBrief } from '@/lib/api/storyBriefApi';
 import type { BriefResult, StoredBriefContent, StoryBriefView } from '@/lib/storyBrief/storyBriefView';
-import { askFormatLocalDayCompact } from '@/lib/ask/askDirection';
+import { askDirectionProps, askFormatLocalDayCompact } from '@/lib/ask/askDirection';
 import tokens from '../account/settingsTokens.module.css';
 import styles from './d01.module.css';
 
@@ -76,11 +76,28 @@ export function StoryPicker({
         data-ask="story-picker"
         className={styles.sheet}
         onClick={(event) => event.stopPropagation()}
+        {...askDirectionProps(locale)}
         onKeyDown={(event) => {
           /* G2-10 — Esc closes; the draft is kept and focus returns to the cue (parent) */
           if (event.key === 'Escape') {
             event.stopPropagation();
             onClose();
+            return;
+          }
+          /* aria-modal is a promise: Tab stays inside the sheet, exactly as the J01 jobs sheet does */
+          if (event.key !== 'Tab') return;
+          const nodes = Array.from(
+            event.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled]), input, [href]'),
+          );
+          const first = nodes[0];
+          const last = nodes[nodes.length - 1];
+          if (first === undefined || last === undefined) return;
+          if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+          } else if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
           }
         }}
       >
