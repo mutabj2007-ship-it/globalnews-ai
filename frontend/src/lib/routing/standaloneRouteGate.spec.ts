@@ -182,6 +182,9 @@ describe('every application page is classified (no accidental exposure)', () => 
       '/account/settings',
       '/admin',
       '/ask',
+      /* R28 — Alpha design preview: inside the /ask/ subtree, but the page itself 404s on
+         Standalone (designPreviewAvailable), like /visual — defence in depth */
+      '/ask/preview',
       '/ask/recent',
       '/cookies',
       '/history',

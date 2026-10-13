@@ -660,7 +660,15 @@ describe('N10/N11/N12 — routing, product contracts and providers are untouched
        Choose a place. The page declares noindex itself and classify() gives it /saved/updates'
        entry by prefix (noindex, absent from the sitemap), so no registry entry is added; no
        dynamic segment, so N5 holds. */
-    expect(pages).toHaveLength(62);
+    /* CTO R28 — sixty-three: /ask/preview, the Alpha-only Ask design preview of the 23 R3 presets
+       that need a missing backend or rights capability. The page declares noindex itself and is a
+       404 on the Standalone root (lib/ask/designPreviewGate.ts, the /visual rule); classify() gives
+       it /ask's entry by prefix (noindex, absent from the sitemap), so no registry entry is added;
+       no dynamic segment, so N5 holds. */
+    expect(pages).toHaveLength(63);
+    expect(pages).toContain('/ask/preview');
+    expect(classify('/ask/preview').indexability).toBe('noindex');
+    expect(classify('/ask/preview').sitemap).toBe(false);
     expect(pages).toContain('/saved/updates');
     expect(classify('/saved/updates').indexability).toBe('noindex');
     expect(pages).toContain('/saved/updates/place');
