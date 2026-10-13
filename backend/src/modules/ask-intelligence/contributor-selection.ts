@@ -287,8 +287,8 @@ export function retainedCycleCovers(question: string, statedPeriod: string): boo
      inside the retained cycle, and the cycle must be named in the question. */
   const cycleYears: string[] = [...(view.cycle.match(/\d{4}/g) ?? [])];
   const statedYears: string[] = [...(statedPeriod.match(/\d{4}/g) ?? [])];
-  const named = (question.match(/\d{4}\s*[/\-–—]\s*\d{2,4}/g) ?? []).some((span) => {
-    const years = span.match(/\d{2,4}/g) ?? [];
+  const named = (question.match(/\d{4}\s*[/\-–—]\s*\d{2,4}/g) ?? []).some((span: string) => {
+    const years: string[] = span.match(/\d{2,4}/g) ?? [];
     const expanded = years.map((y) => (y.length === 2 ? `${(years[0] ?? '').slice(0, 2)}${y}` : y));
     return cycleKey(expanded.join('/')) === cycleKey(view.cycle);
   });
