@@ -345,8 +345,19 @@ export interface AnalysisExecutionPolicy {
    * the reports that concern the corrected scope, without running a search it says it did not run.
    */
   readonly anchorSupplements?: false;
+  /**
+   * EA-GEO-R1 G-1 (P0) — the ONE country the Ask router resolved from the reader's own words on the
+   * server (route envelope, source TYPED_GEOGRAPHY, precision COUNTRY), as ISO alpha-3. Never client
+   * text or a client code. Read only where the text reader decides the typed country, as a check:
+   * a matching reading stands, and when the two server readers name DIFFERENT countries there is NO
+   * typed country (an identity two readers dispute is not established). It never adds a typed
+   * country the text reader did not find. Part of the cache key. Absent for /analysis.
+   */
+  readonly typedCountry?: string;
 }
 import { officeGeographyCountryCode } from '../context-producers/office-geography.producer';
+import { reconcileTypedCountry } from './typed-country-handoff.util';
+import { supplementCredit } from './comparison-coverage-credit.util';
 import {
   decideContextEligibility,
   readSubjectInEitherLanguage,
@@ -356,6 +367,7 @@ import { readCapabilityRequests } from '../../ask-router/capability-producers';
 import { readContinuationEllipsis } from '../anchor/continuation-ellipsis.util';
 import {
   admitsReport,
+  anchorSubjectQuery,
   supplementQueries,
   anchorsKey,
   normalizeText as normalizeAnchorText,
@@ -945,7 +957,13 @@ export class AnalysisService {
       executionPolicy?.answerLanguage === undefined
         ? ''
         : `:answer:${executionPolicy.answerLanguage}`;
-    const cacheKey = `${requestedLanguage}${answerKeySegment}:${normalizedQuery.toLowerCase()}${storyAnchorKeySegment}${priorQuestionKeySegment}${selectionKeySegment}${identityKeySegment}${governedKeySegment}${windowKeySegment}${broadKeySegment}${relationshipKeySegment}${anchorKeySegment}`;
+    /* EA-GEO-R1 G-1 — the route's server-resolved country changes retrieval, so it keys the answer. */
+    const routeTypedCountry =
+      executionPolicy?.typedCountry === undefined
+        ? undefined
+        : resolveGovernedCountryCode(executionPolicy.typedCountry);
+    const typedCountryKeySegment = routeTypedCountry === undefined ? '' : `:typed:${routeTypedCountry.iso3.toLowerCase()}`;
+    const cacheKey = `${requestedLanguage}${answerKeySegment}:${normalizedQuery.toLowerCase()}${storyAnchorKeySegment}${priorQuestionKeySegment}${selectionKeySegment}${identityKeySegment}${governedKeySegment}${windowKeySegment}${broadKeySegment}${relationshipKeySegment}${anchorKeySegment}${typedCountryKeySegment}`;
 
     const cached = this.getCached(cacheKey);
 
@@ -1490,7 +1508,7 @@ export class AnalysisService {
          * classifier owns multi-country lists. No second country table or
          * heuristic is introduced.
          */
-        const rawTypedLocation =
+        const textTypedLocation =
           classification.sides.length >= 2 || classification.intent === 'CLARIFICATION_REQUIRED'
             ? undefined
             : (this.detectLocation(retrievalQuery) ??
@@ -1503,6 +1521,29 @@ export class AnalysisService {
                 christmas" has no office noun and resolves nothing here.
               */
               this.resolveOfficeGeographyLocation(retrievalQuery, requestedLanguage));
+        /*
+          EA-GEO-R1 G-1 (P0) — THE ROUTE'S SERVER-RESOLVED COUNTRY CROSSES THE BOUNDARY, AS A CHECK.
+          Ask passed no geography to Analysis, so Analysis re-read the text with a different reader
+          and could retrieve another country than the route resolved. The route's typed country is
+          read at exactly this rank and under exactly the same exclusions (comparison sides, a
+          clarification) to VALIDATE the text reading: a matching reading stands; two server readers
+          that name DIFFERENT countries leave no typed country (a disputed identity fails closed to
+          ordinary retrieval rather than searching either country's feed). It never fills a gap the
+          text reader leaves: that would move questions to the country feed (typed-country-handoff.util.ts).
+        */
+        const routeTyped =
+          routeTypedCountry === undefined ||
+          classification.sides.length >= 2 ||
+          classification.intent === 'CLARIFICATION_REQUIRED'
+            ? undefined
+            : ({ country: routeTypedCountry } as LocationContext);
+        const typedHandoff = reconcileTypedCountry(textTypedLocation, routeTyped);
+        if (typedHandoff.disputed) {
+          this.logger.debug(
+            `Typed country disputed (route ${routeTyped?.country.iso3}, text ${textTypedLocation?.country.iso3}); no typed country.`,
+          );
+        }
+        const rawTypedLocation = typedHandoff.location;
         /*
           ANCHORING R1 — GATE F. The shared resolver maps a bare "Congo" to one
           country. That is a guess, not an interpretation, so it is not used as a
@@ -1650,6 +1691,11 @@ export class AnalysisService {
         };
         /* ASK TRUTHFUL RETRIEVAL R2A — set by a branch that ran planned searches. */
         let plannedTrace: PlannedSearchTrace | undefined;
+        /* EA-GEO-R1 G-4 — reports the anchored supplement searches added, by how they arrived (a
+           live provider search or the retained read), so a comparison's per-country coverage can
+           credit each one to the country it evidences (below, after dedup). */
+        const supplementLiveIds = new Set<string>();
+        const supplementRetainedIds = new Set<string>();
         /*
           P0 NEWS QUERY A4 — what the ORDINARY generic search actually sent (primary and the one
           bounded fallback), or why it sent nothing. Recorded only by the generic branch; the
@@ -2856,6 +2902,9 @@ export class AnalysisService {
             const perSide = await this.retrievePerSideEvidence(
               classification.sides,
               requestedLanguage,
+              /* EA-GEO-R1 G-4a (G MV-4) — each side is searched WITH the question's subject
+                 ("Rwanda economy"), not by its bare name with the subject only a filter afterwards. */
+              anchorSubjectQuery(executionPolicy?.questionAnchors),
             );
 
             /* R3 L-1 — a relationship never reaches here: the router's scope branch above owns it. */
@@ -3853,13 +3902,17 @@ export class AnalysisService {
                 });
                 for (const id of response.providers ?? []) supplementProviders.add(id);
                 supplementFailures.push(...readProviderFailures(response));
+                for (const article of response.articles)
+                  (response.dataMode === 'live' ? supplementLiveIds : supplementRetainedIds).add(article.id);
                 found.push(response.articles);
               } catch {
                 /* a refused or failed supplement never fails the answer; the retained read follows */
               }
               try {
                 const terms = normalizeAnchorText(query).trim().split(' ').filter((t) => t.length >= 3).slice(0, 8);
-                found.push(await this.newsService.findRetainedByQuery(query, terms, 60, 7 * 24 * 60));
+                const retained = await this.newsService.findRetainedByQuery(query, terms, 60, 7 * 24 * 60);
+                for (const article of retained) if (!supplementLiveIds.has(article.id)) supplementRetainedIds.add(article.id);
+                found.push(retained);
               } catch {
                 /* retained store unavailable — the gate result stands */
               }
@@ -4165,8 +4218,22 @@ export class AnalysisService {
         for (const member of retrievalContext.comparisonCoverage ?? []) {
           const liveIds = new Set(member.liveArticleIds);
           const retainedIds = new Set(member.retainedArticleIds);
-          const liveCount = deduped.filter((article) => liveIds.has(article.id)).length;
-          const retainedCount = deduped.filter((article) => retainedIds.has(article.id)).length;
+          /* EA-GEO-R1 G-4 — a supplement report counts for the country it evidences, by the same
+             per-side rule the comparison applies to retained reporting (comparison-coverage-credit). */
+          const side = resolveCountryByAnyIdentifier(member.iso3);
+          const credited =
+            side === undefined
+              ? { live: 0, retained: 0 }
+              : supplementCredit(
+                  deduped,
+                  { live: liveIds, retained: retainedIds },
+                  { live: supplementLiveIds, retained: supplementRetainedIds },
+                  (article) =>
+                    scoreCountryRelevance(article, side, requestedLanguage).isRelevant &&
+                    admitsToAnalysisCorpus(article, side, requestedLanguage),
+                );
+          const liveCount = deduped.filter((article) => liveIds.has(article.id)).length + credited.live;
+          const retainedCount = deduped.filter((article) => retainedIds.has(article.id)).length + credited.retained;
           member.finalQualifyingEvidenceCount = liveCount + retainedCount;
           member.finalLiveEvidenceCount = liveCount;
           member.finalRetainedEvidenceCount = retainedCount;
@@ -5600,6 +5667,8 @@ export class AnalysisService {
   private async retrievePerSideEvidence(
     sides: readonly CountryMeta[],
     requestedLanguage: LanguageCode,
+    /** EA-GEO-R1 G-4a — the question's subject, searched with each side's name. */
+    subject?: string,
   ): Promise<{ articles: NewsArticle[]; retrievalContext: AnalysisRetrievalContext }> {
     const collected: NewsArticle[] = [];
     const coverage: ComparisonCountryCoverage[] = [];
@@ -5609,7 +5678,7 @@ export class AnalysisService {
        lane as "checked" and a partial outage is told apart from a total one. */
     const failedLanes = new Map<string, string>();
     for (const side of sides) {
-      const result = await this.retrieveMemberEvidence(side, requestedLanguage);
+      const result = await this.retrieveMemberEvidence(side, requestedLanguage, true, subject);
       result.providers.forEach((provider) => providers.add(provider));
       result.failureKinds.forEach((kind) => failureKinds.add(kind));
       for (const failure of result.failures ?? [])
@@ -5811,6 +5880,12 @@ export class AnalysisService {
     member: CountryMeta,
     requestedLanguage: LanguageCode,
     allowFallback = true,
+    /**
+     * EA-GEO-R1 G-4a — the question's subject ("economy"), added to an English provider query.
+     * Not added to the Polish top-headlines query, whose subject words would be English (the
+     * Polish path keeps its own behaviour). Absent for every declared-region member.
+     */
+    subject?: string,
   ): Promise<{
     articles: NewsArticle[];
     providers: string[];
@@ -5823,7 +5898,7 @@ export class AnalysisService {
   }> {
     const isPolish = requestedLanguage === 'pl';
     const term = isPolish ? (polishCountryName(member) ?? member.name) : member.name;
-    const sent = makeProviderSafeNewsQuery(term);
+    const sent = makeProviderSafeNewsQuery(subject !== undefined && !isPolish ? `${term} ${subject}` : term);
 
     const empty = {
       articles: [],
@@ -6200,7 +6275,33 @@ export class AnalysisService {
     return country ? { country } : undefined;
   }
 
+  /**
+   * EA-GEO-R1 G-1 (P0) — ONE CONGO NEVER STANDS IN FOR THE OTHER.
+   *
+   * Measured at 737c42f: "What changed in Congo - Kinshasa" made the word-shrinking scan give up
+   * "- Kinshasa", match the bare head word "Congo" and return COG, while the Ask route,
+   * detectLocationV2 and resolveGeography all read COD. The ambiguity guard sees a qualified
+   * mention, so nothing dropped the wrong reading, and the typed feed searched Congo-Brazzaville.
+   *
+   * congoReadingOf() already holds the reviewed rule for which Congo a text names (a DRC name or an
+   * eastern-DRC place → COD; Brazzaville / Republic of the Congo / Pointe-Noire → COG). When the
+   * text settles ONE Congo and the scan produced the OTHER, the text's own reading wins. AMBIGUOUS
+   * and no-Congo texts are untouched (GATE F still decides a bare "Congo"), and no other country,
+   * city or path changes.
+   */
   private detectLocation(query: string): LocationContext | undefined {
+    const location = this.detectLocationUnchecked(query);
+    if (location === undefined || (location.country.iso3 !== 'COD' && location.country.iso3 !== 'COG')) {
+      return location;
+    }
+    const reading = congoReadingOf(query);
+    if ((reading === 'COD' || reading === 'COG') && reading !== location.country.iso3) {
+      return this.resolveStoryContextLocation(reading);
+    }
+    return location;
+  }
+
+  private detectLocationUnchecked(query: string): LocationContext | undefined {
     const normalized = query.trim().replace(/[?!.,;:]+$/g, '');
 
     if (!normalized) {

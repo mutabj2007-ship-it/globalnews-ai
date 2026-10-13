@@ -53,6 +53,7 @@
  */
 
 import { COUNTRIES, getCuratedCityNames } from './countries';
+import { AMBIGUOUS_COUNTRY_NAMES } from './event-anchor';
 
 export type GeoMatchKind = 'country' | 'city';
 
@@ -198,6 +199,16 @@ function similarity(a: string, b: string, distance: number): number {
 export function resolveGeoTypo(candidate: string): GeoFuzzyMatch | undefined {
   const typed = candidate.trim().toLowerCase();
   if (!typed || typed.length < MIN_TARGET_LENGTH || typed.includes(' ')) {
+    return undefined;
+  }
+  /*
+    EA-GEO-R1 G-2 (P0) — a REVIEWED country word is not a typo. "Konga" / "Kongu" / "Kongo" are the
+    Polish inflections of Congo, listed in AMBIGUOUS_COUNTRY_NAMES because they name one of two
+    Congos. One edit from "tonga", they put Tonga into the Ask route for "Demokratyczna Republika
+    Konga" (DR Congo). A word the project has already reviewed as a country name is never corrected
+    into a different country: it stays ambiguous, and the ambiguity rules decide.
+  */
+  if (AMBIGUOUS_COUNTRY_NAMES[typed] !== undefined) {
     return undefined;
   }
 

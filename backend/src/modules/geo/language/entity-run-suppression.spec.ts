@@ -200,7 +200,13 @@ describe('G-GEO-D14-B1-RUNG · acceptance', () => {
      * same way while total correctness dropped, and the old literal could not
      * tell anyone which had happened.
      */
-    expect(gains).toBe(450);
+    /*
+     * EA-GEO-R1 G-2 (P0) — 450 → 451, REPORTED NOT SILENT. pl "Report from Kongo." was resolved COG by
+     * FUZZY (the typo corrector rewrote the reviewed Congo word); it now resolves COG by
+     * COUNTRY_BY_LOCALIZED_NAME. Same country, attribution moved to this rung. Row-by-row diff base
+     * 737c42f vs this change: the only reason change in any language.
+     */
+    expect(gains).toBe(451);
 
     let correct = 0;
     for (const lang of ['en', 'fr', 'es', 'pl', 'sw', 'ar']) {

@@ -246,6 +246,19 @@ function retrievalLanguageOf(language: AskRequest['language']): LanguageCode {
   return language === 'de' || language === 'pt' ? 'en' : language;
 }
 /**
+ * EA-GEO-R1 G-1 (P0) — the ONE country the router read from the reader's OWN words on the server:
+ * exactly one TYPED_GEOGRAPHY candidate at COUNTRY precision (an ISO alpha-3), never a Map / story /
+ * inherited candidate, never a corridor's several places. Absent otherwise; Analysis then reads the
+ * text exactly as before.
+ */
+export function routeTypedCountryOf(route: Pick<AskR2Route, 'envelope' | 'corridor'>): string | undefined {
+  if (route.corridor != null) return undefined;
+  const typed = route.envelope.geography.candidates.filter((c) => c.source === 'TYPED_GEOGRAPHY');
+  return typed.length === 1 && typed[0].precision === 'COUNTRY' && /^[A-Z]{3}$/.test(typed[0].value)
+    ? typed[0].value
+    : undefined;
+}
+/**
  * R4 ALPHA R-1 / R-5 — the execution contract's answer rules travel through the EXISTING governed
  * prompt boundary: trusted rules to the system prompt, delimited data to the user message.
  */
@@ -1677,6 +1690,9 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
           /* ASK RELIABILITY R1 — the reader's OWN named actors and topic, read from their original
              words: only reports that concern them are admitted as evidence (analysis gate). */
           ...(anchors.gated ? { questionAnchors: anchors } : {}),
+          /* EA-GEO-R1 G-1 (P0) — the ONE country the route read from the reader's words, so
+             Analysis cannot retrieve a different one (Congo - Kinshasa was retrieved as COG). */
+          ...(routeTypedCountryOf(route) === undefined ? {} : { typedCountry: routeTypedCountryOf(route) }),
         },
       );
       /* The landed path's no-evidence answer (0 articles, "no AI call was made") is not a

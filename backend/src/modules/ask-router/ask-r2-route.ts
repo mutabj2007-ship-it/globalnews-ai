@@ -917,12 +917,28 @@ export function routeAskR2(
   /* ASK R2 · GEOGRAPHY — the corridor's further typed places, right after the primary one (frozen
      C's envelope carries one typed place; its planner carries every candidate as a constraint).
      Only when the composed source kept typed geography (a stable / reasoning turn drops it). */
-  const corridorExtra =
+  const corridorPlaces =
     corridor === null || source.typedGeography === undefined
       ? []
       : corridorCountries(corridor).filter(
           (iso3) => !built.geography.candidates.some((c) => c.value === iso3),
         );
+  /* EA-GEO-R1 G-5 — a COMPARISON's further typed sides, the same way: "Compare the latest economic
+     news from Kenya and Rwanda" carried only TYPED_GEOGRAPHY:KEN, so plan scope, the local-coverage
+     diagnostics and the companion block saw one country. The reader's own typed places only (the
+     same filter as typedGeographyOf: no surface-supplied, contested or demonym place). */
+  const comparisonPlaces =
+    corridor !== null ||
+    source.typedGeography === undefined ||
+    source.reading.queryIntent !== 'COMPARISON_RESEARCH'
+      ? []
+      : reading.geography
+          .filter(
+            (g) => g.provenance !== 'SUPPLIED_BY_SURFACE' && g.value !== 'CONTESTED' && g.source !== DEMONYM_SOURCE,
+          )
+          .map((g) => g.value)
+          .filter((iso3, i, all) => all.indexOf(iso3) === i && !built.geography.candidates.some((c) => c.value === iso3));
+  const corridorExtra = [...corridorPlaces, ...comparisonPlaces];
   const derived: typeof built =
     corridorExtra.length === 0
       ? built

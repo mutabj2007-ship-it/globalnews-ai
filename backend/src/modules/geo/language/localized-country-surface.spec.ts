@@ -104,10 +104,17 @@ describe('1 · country resolution across language directions', () => {
    * beats the no-language path - are untouched, and both still hold at the new
    * baseline. Had the WITH-language figure fallen, they would have failed.
    */
+  /*
+   * EA-GEO-R1 G-2 (P0) — pl 94 → 93, REPORTED NOT SILENT. The typo corrector no longer rewrites a
+   * reviewed Congo word, so "Report from Kongo." (CLDR pl, Republic of the Congo) is no longer
+   * guessed COG by fuzzy WITHOUT a language: a bare "Kongo" names one of two Congos. With the
+   * language it still resolves COG (localized-name rung). Measured row by row, base 737c42f vs this
+   * change: that is the only exact row that moved in any language.
+   */
   it.each([
     ['fr', 110, 165],
     ['es', 117, 160],
-    ['pl', 94, 170],
+    ['pl', 93, 170],
     ['sw', 121, 165],
     ['ar', 0, 180],
   ])(
@@ -190,7 +197,14 @@ describe('2 · the rung fills gaps and can never override an answer', () => {
       reduction += withoutLanguage - withLanguage;
     }
 
-    expect(reduction).toBe(6);
+    /*
+     * EA-GEO-R1 G-2 (P0) — 6 → 5, REPORTED NOT SILENT. The sixth F5 case ("Demokratyczna Republika
+     * Konga" → TONGA) no longer occurs WITHOUT a language either: the typo corrector refuses reviewed
+     * Congo words, so that row is now unresolved instead of a wrong country. The wrong-country count
+     * fell on the no-language side, so the language has one fewer to remove. Per-language invariant
+     * above unchanged. Row-by-row diff base 737c42f vs this change: 2 rows, both pl Congo.
+     */
+    expect(reduction).toBe(5);
   });
 
   it('an existing city resolution is not displaced by a country name in the same text', () => {
