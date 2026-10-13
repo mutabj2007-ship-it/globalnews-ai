@@ -284,3 +284,45 @@ describe('R48-P5 · briefings (R46-6): a stored version resting on evidence with
     expect(svc).toMatch(/if \(readerRightsEnforced\(\) && withholdThirdPartyArticles\(row\.evidenceRefs\)\.withheld > 0\) \{\s*throw new HttpException\(\{ statusCode: 451, reason: 'SOURCE_RIGHTS_WITHHELD' \}, 451\);/);
   });
 });
+
+describe('R52 · U-1 imageUrl zero-leak (E1 M-18): no third-party image survives without a recorded right', () => {
+  const g = article('g9', 'gnews-pub');
+  const c = article('c9', CLEARED);
+  const nested = {
+    stories: [
+      /* a story card that copied its lead article's image and headline but carries no link */
+      { id: 'story-1', title: 'Story headline from GNews', imageUrl: g.imageUrl, leadArticleId: 'g9', articles: [g, c] },
+    ],
+    hero: { imageUrl: 'https://img.example/hero-from-gnews.jpg', caption: 'Hero' },
+    thumbs: [{ thumbnail: 'https://img.example/thumb-gnews.jpg', label: 'x' }],
+    country: { articles: [{ ...g, id: 'g10', imageUrl: 'https://img.example/g10.jpg' }] },
+    flag: 'https://static.globalnews.example/flags/ke.svg',
+  };
+  it('a deep reader response keeps no uncleared image, link or headline anywhere — nested cards, hero, thumbnails included', () => {
+    const { value, withheld } = withholdThirdPartyArticles(nested);
+    const json = JSON.stringify(value);
+    for (const leak of ['img.example/g9', 'img.example/g10', 'hero-from-gnews', 'thumb-gnews', 'news.example/g9', 'Kenya budget g9 report']) {
+      expect(json).not.toContain(leak);
+    }
+    expect(withheld).toBeGreaterThanOrEqual(5);
+    /* non-image values are untouched (a flag asset under a non-image key, captions, labels, ids) */
+    expect(value.flag).toBe(nested.flag);
+    expect((value as typeof nested).hero.caption).toBe('Hero');
+  });
+  it('positive control: a CLEARED feed article keeps its own image, link and headline', () => {
+    const { value } = withholdThirdPartyArticles(nested);
+    const json = JSON.stringify(value);
+    expect(json).toContain('img.example/c9.jpg');
+    expect(json).toContain('Kenya budget c9 report');
+  });
+  it('an Ask answer read by any reader carries no uncleared image anywhere in its payload', () => {
+    const payload = {
+      schema: 'ask-r2-result/1',
+      answer: { state: 'CURRENT_REPORTING', basis: 'REQUIRED_EVIDENCE_OBTAINED', missingRoles: [] },
+      analysis: { articles: [g], analysis: { summary: 'x', sources: [{ articleId: 'g9', publisher: 'P', title: 'T', url: g.url }] } },
+      recentReporting: { items: [{ ...g, id: 'g11', imageUrl: 'https://img.example/g11.jpg' }] },
+    };
+    const json = JSON.stringify(withholdAskPayload(payload).payload);
+    expect(json).not.toMatch(/img\.example\/g(9|11)/);
+  });
+});

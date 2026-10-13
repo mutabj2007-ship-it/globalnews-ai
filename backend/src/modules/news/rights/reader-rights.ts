@@ -57,6 +57,9 @@ export function partitionReaderRights<T extends { readonly sourceId?: string | n
   return { allowed, withheld };
 }
 
+/** CTO R52 · U-1 — the fields that carry a hotlinked third-party image in reader JSON. */
+const IMAGE_KEYS: ReadonlySet<string> = new Set(['imageUrl', 'image', 'urlToImage', 'thumbnail', 'thumbnailUrl', 'heroImageUrl']);
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 
@@ -126,9 +129,20 @@ export function withholdThirdPartyArticles<T>(
       /* only plain JSON objects are rebuilt; Date, Decimal, Buffer and other instances pass as is */
       const proto = Object.getPrototypeOf(node);
       if (proto !== Object.prototype && proto !== null) return node;
+      /*
+        CTO R52 · U-1 — an image is a third-party asset in its own right (E1 M-18 UNCLEARED). It may
+        reach a reader only on a CLEARED article object; on ANY other object — a story card or hero
+        block that copied the lead image, a thumbnail, an object that is not a full article — an
+        http(s) image field is dropped. Fail closed: no image survives without a recorded right.
+      */
+      const clearedArticle = isThirdPartyArticle(node) && allowedArticle(node);
       const out: Record<string, unknown> = {};
       for (const [key, child] of Object.entries(node)) {
         if (isThirdPartyArticle(child) && !allowedArticle(child)) {
+          withheld += 1;
+          continue;
+        }
+        if (!clearedArticle && IMAGE_KEYS.has(key) && typeof child === 'string' && /^https?:\/\//i.test(child.trim())) {
           withheld += 1;
           continue;
         }
