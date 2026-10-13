@@ -68,6 +68,7 @@ import { isAnaphoricFollowUp } from '../analysis/anchor/event-anchor.util';
 import { ComputeMeterService } from '../compute-controls/compute-meter.service';
 import { OperationalSwitchService } from '../compute-controls/operational-switch.service';
 import { withComparisonTable } from './comparison-table';
+import { readerRightsEnforced, withholdAskPayload } from '../news/rights/reader-rights';
 import { isSemanticFirstLanguage } from '../ask-router/semantic-ir/semantic-first';
 import {
   dayBucket,
@@ -280,6 +281,9 @@ export async function priorArtifactIn(
       });
       if (incomplete !== null) return { ...incomplete, sourceOperationId: t.operationId };
     }
+    /* MASTER CTO R48 / #96 (E1-R46 R46-10) — an earlier answer resting on material with no recorded
+       right is never fed back to the model: the walk stops here, nothing is re-used. */
+    if (readerRightsEnforced() && payload != null && withholdAskPayload(payload).withheld > 0) return undefined;
     /* R4 ALPHA R-3 — a stored answer's memory: model-emitted or server-derived (bounded either way) */
     const artifact = validateStoredArtifact(payload?.artifact);
     if (artifact !== null) return { ...artifact, sourceOperationId: t.operationId };
@@ -815,7 +819,12 @@ export class AskV2Service {
             ? {
                 id: result.id,
                 /* R2-S1 — the evidence-linked comparison table, projected on read (no AI). */
-                payload: withComparisonTable(result.payload),
+                /* MASTER CTO R48 / #96 (E1-R46 R46-1/2/5) — fresh, reopened and guest results are read
+                   through ONE gate: an answer resting on material with no recorded right is withheld
+                   at read time (the stored row is untouched). */
+                payload: readerRightsEnforced()
+                  ? withholdAskPayload(withComparisonTable(result.payload)).payload
+                  : withComparisonTable(result.payload),
                 evidenceRevision: result.evidenceRevision,
                 expiresAt: result.expiresAt,
                 expired: result.expiresAt.getTime() <= Date.now(),

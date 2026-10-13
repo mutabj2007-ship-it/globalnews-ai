@@ -947,6 +947,15 @@ export interface AnalysisRetrievalContext {
    */
   sourceCoverage?: SourceCoverageDisclosure;
 
+  /**
+   * MASTER CTO R48 / #96 (E1-R46) — how many retrieved articles were WITHHELD before the model and
+   * from the reader because their source has no recorded per-use right (only CLEARED publisher
+   * feeds qualify). Withheld reporting is not "no reporting". Absent when nothing was withheld.
+   */
+  rightsWithheld?: {
+    readonly count: number;
+  };
+
   /** Present only when country-aware retrieval was used. */
   providerDisplayName?: string;
 

@@ -1,4 +1,5 @@
 import { HumanitarianReadModule } from './modules/humanitarian/humanitarian-read.module';
+import { ReaderRightsInterceptor } from './modules/news/rights/reader-rights.interceptor';
 import { OwnerAccessModule } from './modules/owner-access/owner-access.module';
 import { HomeEditorialModule } from './modules/home-editorial/home-editorial.module';
 import { AskV2Module } from './modules/ask-v2/ask-v2.module';
@@ -325,6 +326,12 @@ import {
     {
       provide: APP_INTERCEPTOR,
       useClass: TelemetryInterceptor,
+    },
+    // MASTER CTO R48 / #96 — emergency source-use containment: third-party article objects without a
+    // recorded per-use right never reach a reader (reader-rights.interceptor.ts). Admin routes exempt.
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ReaderRightsInterceptor,
     },
   ],
 })

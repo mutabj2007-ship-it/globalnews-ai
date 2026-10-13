@@ -83,6 +83,9 @@
     "moduleNameMapper": {
       "^@globalnews-ai/shared$": "<rootDir>/../../shared/dist/index.js",
       "^(\\.{1,2}/(?:src|corpus|fixtures)/[a-z-]+(?:\\.fixture)?|\\./(?:ports|envelope|planner|registry|classify|index))\\.js$": "$1"
-    }
+    },
+    "setupFiles": [
+      "<rootDir>/test-setup/reader-rights-fixture-mode.ts"
+    ]
   }
 }

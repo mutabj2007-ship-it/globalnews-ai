@@ -7,6 +7,7 @@ import {
   TABLE_GENERATION_RESERVE_MS,
 } from '../../news/retrieval-budget';
 import { isSameHeadline } from '../../news/identity/headline-identity.util';
+import { partitionReaderRights, readerRightsEnforced } from '../../news/rights/reader-rights';
 import { createHash } from 'node:crypto';
 import {
   BadRequestException,
@@ -590,10 +591,18 @@ const PROVIDER_FAILURE_MESSAGE: Partial<Record<LanguageCode, string>> = {
   pl: 'Nie udało się wiarygodnie połączyć z dostawcami wiadomości, a żadne zapisane doniesienia nie kwalifikowały się do tego pytania.',
 };
 
+/* MASTER CTO R48 / #96 — reporting WAS retrieved but has no recorded right to be used: never "no reporting". */
+const SOURCE_RIGHTS_WITHHELD_MESSAGE: Partial<Record<LanguageCode, string>> = {
+  en: 'Reporting was found, but it cannot be shown or used here because its source-use rights are not established. Nothing has been inferred from it.',
+  pl: 'Znaleziono doniesienia, ale nie można ich tu pokazać ani wykorzystać, ponieważ prawa do korzystania ze źródeł nie zostały ustalone. Niczego z nich nie wywnioskowano.',
+};
+
 function resolveNoEvidenceMessage(
   language: LanguageCode,
   evidenceState: AnalysisEvidenceState = 'no-relevant-evidence',
+  rightsWithheld = false,
 ): string {
+  if (rightsWithheld) return SOURCE_RIGHTS_WITHHELD_MESSAGE[language] ?? SOURCE_RIGHTS_WITHHELD_MESSAGE.en!;
   const table =
     evidenceState === 'degraded-fallback' ? PROVIDER_FAILURE_MESSAGE : NO_EVIDENCE_MESSAGE;
   return table[language] ?? table.en!;
@@ -3673,6 +3682,26 @@ export class AnalysisService {
         }
 
         /*
+          MASTER CTO R48 / #96 (E1-R46 R46-9) — THE MODEL AND THE READER GET A NEWS ARTICLE ONLY ON AN
+          AFFIRMATIVE PER-USE BASIS. Every retrieval path converges above; here, before any claim, trace
+          or model call, articles without a recorded right (only CLEARED publisher feeds qualify —
+          reader-rights.ts) are withheld and counted. Withheld reporting is never "no reporting":
+          the count travels as `rightsWithheld` and the no-evidence branch below says so.
+        */
+        if (readerRightsEnforced()) {
+          const { allowed, withheld } = partitionReaderRights(articles);
+          if (withheld > 0) {
+            this.logger.warn(`source-rights containment: withheld=${withheld} before the model`);
+            articles = allowed;
+            retrievalContext = {
+              ...retrievalContext,
+              articlesRetrieved: allowed.length,
+              rightsWithheld: { count: withheld },
+            };
+          }
+        }
+
+        /*
           CURRENT-REPORTING TRUTH R1 (B2) — PROVIDER HEALTH, ONE RULE FOR EVERY BRANCH.
           Usable evidence was admitted while a provider the branch attempted failed: the answer uses
           what could be reached and the search is disclosed as limited — the existing
@@ -3722,6 +3751,7 @@ export class AnalysisService {
             analysisError: resolveNoEvidenceMessage(
               requestedLanguage,
               retrievalContext.evidenceState,
+              (retrievalContext.rightsWithheld?.count ?? 0) > 0,
             ),
             retrievalContext,
             sourceEntities: buildSourceEntities([]),

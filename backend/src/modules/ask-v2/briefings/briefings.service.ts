@@ -1,10 +1,12 @@
 import {
   ConflictException,
   Injectable,
+  HttpException,
   NotFoundException,
   UnauthorizedException,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import { readerRightsEnforced, withholdThirdPartyArticles } from '../../news/rights/reader-rights';
 import { ALL_ISO3_CODES } from '@globalnews-ai/shared';
 import { PrismaService } from '../../../database/prisma.service';
 import { Prisma } from '../../../generated/prisma/client';
@@ -304,6 +306,12 @@ export class BriefingsService {
       },
     });
     if (!row) throw new NotFoundException();
+    /* MASTER CTO R48 / #96 (E1-R46 R46-6) — a stored version whose evidence has no recorded right is
+       withheld at read time (451, which the reader sees as unavailable — never as "no news"); the
+       stored version itself is untouched. */
+    if (readerRightsEnforced() && withholdThirdPartyArticles(row.evidenceRefs).withheld > 0) {
+      throw new HttpException({ statusCode: 451, reason: 'SOURCE_RIGHTS_WITHHELD' }, 451);
+    }
     const latest = briefing.versions[0]?.version ?? version;
     return {
       briefingId: briefing.id,
