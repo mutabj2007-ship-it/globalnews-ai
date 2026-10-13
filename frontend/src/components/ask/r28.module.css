@@ -163,3 +163,8 @@
 .stageStopped {
   color: var(--ad-ink-3, #7d89a1);
 }
+/* English fallback copy inside an RTL layout: each paragraph takes its own (LTR) direction so the
+   punctuation stays at the end of the sentence; the boxes keep the reader's direction. */
+.page[data-copy-fallback] :is(p, h1, h2, h3, li, span) {
+  unicode-bidi: plaintext;
+}

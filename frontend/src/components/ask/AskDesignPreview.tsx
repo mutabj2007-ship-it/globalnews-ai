@@ -1,7 +1,7 @@
 import type { JSX, ReactNode } from 'react';
 import type { DisplayLocale } from '@globalnews-ai/shared';
 import { askDirectionProps } from '@/lib/ask/askDirection';
-import { r28PreviewStrings } from '@/lib/ask/r28PreviewStrings';
+import { r28PreviewStrings, r28PreviewStringsFellBack } from '@/lib/ask/r28PreviewStrings';
 import tokens from '../account/settingsTokens.module.css';
 import styles from './r28.module.css';
 
@@ -25,8 +25,18 @@ import styles from './r28.module.css';
  */
 export function AskDesignPreview({ locale }: { readonly locale: DisplayLocale }): JSX.Element {
   const s = r28PreviewStrings(locale);
+  /* Fallback copy is English: say so (lang) and let each English paragraph take its own direction
+     (data-copy-fallback → unicode-bidi: plaintext), while the layout keeps the reader's direction. */
+  const fellBack = r28PreviewStringsFellBack(locale);
+  const direction = askDirectionProps(locale);
   return (
-    <main data-ask="design-preview" className={`${tokens.settingsScope} ${styles.page}`} {...askDirectionProps(locale)}>
+    <main
+      data-ask="design-preview"
+      data-copy-fallback={fellBack ? 'en' : undefined}
+      className={`${tokens.settingsScope} ${styles.page}`}
+      dir={direction.dir}
+      lang={fellBack ? 'en' : direction.lang}
+    >
       <div className={styles.inner}>
         <p role="note" data-ask="preview-banner" className={styles.banner}>
           {s.banner}

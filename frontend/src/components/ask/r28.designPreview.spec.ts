@@ -112,6 +112,10 @@ describe('R28 · Ask design preview (Alpha only, labelled, non-actionable)', () 
     expect(byData(ar, 'design-preview')[0].props.dir).toBe('rtl');
     const en = render('en' as DisplayLocale);
     expect(byData(en, 'design-preview')[0].props.dir).toBe('ltr');
+    /* the fallback copy is declared English (lang) and marked for per-paragraph bidi */
+    expect(byData(ar, 'design-preview')[0].props.lang).toBe('en');
+    expect(byData(ar, 'design-preview')[0].props['data-copy-fallback']).toBe('en');
+    expect(byData(en, 'design-preview')[0].props['data-copy-fallback']).toBeUndefined();
     expect(r28PreviewStringsFellBack('ar' as DisplayLocale)).toBe(true);
     expect(r28PreviewStringsFellBack('en' as DisplayLocale)).toBe(false);
   });
