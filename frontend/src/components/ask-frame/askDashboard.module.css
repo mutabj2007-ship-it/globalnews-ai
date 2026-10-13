@@ -2319,6 +2319,25 @@
     display: none;
   }
 }
+/*
+  MASTER CTO R38 · U-1 — TALL PORTRAIT WINDOWS THAT ARE NOT PHONES (the Product Owner's 820x1280 /
+  845x1308 Chrome windows; portrait tablets). The phone rule above put the composer at the bottom
+  edge and the welcome group in the middle of the free space, which on a 1,300 px window left the
+  composer stranded ~400 px below the group (PO red mark). Here the free space is split EVENLY
+  above the group and below the composer, so headline, cues and the one composer form one
+  contiguous group at the optical centre — the same composition the desktop entry grid uses.
+  Phones (<= 600 px) keep the thumb-reach bottom composer; nothing changes after the first question.
+*/
+@media (min-width: 601px) and (max-width: 1100px) and (orientation: portrait) and (min-height: 900px) {
+  .frame[data-ask-entry='true'] .reader {
+    justify-content: flex-end;
+  }
+  .frame[data-ask-entry='true'] .entrySpacer {
+    display: block;
+    flex: 1 1 0;
+    height: auto;
+  }
+}
 
 /*
   ══════════════════════════════════════════════════════════════════════════════

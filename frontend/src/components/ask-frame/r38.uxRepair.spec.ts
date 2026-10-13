@@ -15,10 +15,15 @@ const code = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\{\/\*[\
 
 describe('R38 · U-1 typing keeps one coherent composition', () => {
   const frame = read('components', 'ask-frame', 'AskFrameScreen.tsx');
-  it('the welcome group collapses only on a compact viewport (phone keyboard / small phone), never on a tall one', () => {
-    expect(frame).toMatch(/const typing = entryState && frameSize\.compact && \(composerFocused \|\| question\.trim\(\) !== ''\);/);
-    /* compact is the existing width < 360 or height < 640 query */
-    expect(frame).toContain("window.matchMedia('(max-width: 359px), (max-height: 639px)')");
+  it('the welcome group collapses only when the visible height is under 460 px (small phone with keyboard, landscape), never on a tall one', () => {
+    expect(frame).toMatch(/const typing = entryState && frameSize\.short && \(composerFocused \|\| question\.trim\(\) !== ''\);/);
+    expect(frame).toContain("window.matchMedia('(max-height: 459px)')");
+  });
+  it('tall portrait windows that are not phones centre the group and the composer together', () => {
+    const css = read('components', 'ask-frame', 'askDashboard.module.css');
+    expect(css).toMatch(
+      /@media \(min-width: 601px\) and \(max-width: 1100px\) and \(orientation: portrait\) and \(min-height: 900px\) \{\s*\.frame\[data-ask-entry='true'\] \.reader \{\s*justify-content: flex-end;\s*\}\s*\.frame\[data-ask-entry='true'\] \.entrySpacer \{\s*display: block;\s*flex: 1 1 0;/,
+    );
   });
   it('the emblem keeps its ready pose unless the welcome group actually collapsed', () => {
     expect(frame).toMatch(/const emblemState = isPending \? 'leaving' : typing \? 'typing' : 'ready';/);

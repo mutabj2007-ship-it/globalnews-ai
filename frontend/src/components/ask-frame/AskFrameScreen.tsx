@@ -277,18 +277,27 @@ export function AskFrameScreen({
   /* ASK D0.1 · D1 — the G2 story picker (zero compute; stages a draft only). */
   const [storyPickerOpen, setStoryPickerOpen] = useState(false);
   /* IA R2 02 decision 4 — compact is width < 360 OR height < 640; wide is >= 1024. */
-  const [frameSize, setFrameSize] = useState<{ compact: boolean; wide: boolean }>({ compact: false, wide: false });
+  /* R38 U-1 — `short`: the visible height is under 460 px (a small phone with the keyboard up, landscape). */
+  const [frameSize, setFrameSize] = useState<{ compact: boolean; wide: boolean; short: boolean }>({
+    compact: false,
+    wide: false,
+    short: false,
+  });
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
     const compactQuery = window.matchMedia('(max-width: 359px), (max-height: 639px)');
     const wideQuery = window.matchMedia('(min-width: 1024px)');
-    const read = () => setFrameSize({ compact: compactQuery.matches, wide: wideQuery.matches });
+    const shortQuery = window.matchMedia('(max-height: 459px)');
+    const read = () =>
+      setFrameSize({ compact: compactQuery.matches, wide: wideQuery.matches, short: shortQuery.matches });
     read();
     compactQuery.addEventListener?.('change', read);
     wideQuery.addEventListener?.('change', read);
+    shortQuery.addEventListener?.('change', read);
     return () => {
       compactQuery.removeEventListener?.('change', read);
       wideQuery.removeEventListener?.('change', read);
+      shortQuery.removeEventListener?.('change', read);
     };
   }, []);
   /*
@@ -296,11 +305,12 @@ export function AskFrameScreen({
     the welcome group"): on a normal or tall viewport, typing KEEPS the welcome group — headline,
     support line and cues stay with the one composer as the same calm composition as the ready
     screen, so a tall narrow window never shows a lone emblem in an empty viewport above a composer
-    pinned to the bottom. The collapse remains only where space is genuinely short (compact: width
-    < 360 or height < 640, which is what a phone keyboard leaves), so the composer and Send stay in
-    view. One composer, one Send; the draft and focus are untouched either way.
+    pinned to the bottom. The collapse remains only where the visible height is genuinely too small
+    for the group (short: under 460 px — a small phone with its keyboard up, or landscape), so the
+    composer and Send stay in view; a 390 x 844 phone with its keyboard up (~544 px) keeps the group.
+    One composer, one Send; the draft and focus are untouched either way.
   */
-  const typing = entryState && frameSize.compact && (composerFocused || question.trim() !== '');
+  const typing = entryState && frameSize.short && (composerFocused || question.trim() !== '');
   const emblemState = isPending ? 'leaving' : typing ? 'typing' : 'ready';
   const showEmblem =
     (entryState ||
