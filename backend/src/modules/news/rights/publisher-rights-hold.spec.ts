@@ -53,6 +53,11 @@ describe('#86 · host predicate — matches the article URL host only', () => {
     ['reuters.com?x=1'],
     ['www.reuters.com:443/world/x'],
     ['jp.reuters.com/article/z'],
+    /* E1 C-86-1 — a `://` inside the QUERY of a scheme-less Reuters URL must not disable the repair */
+    ['www.reuters.com/x?u=http://a.example'],
+    ['reuters.com/x?r=https://b.example'],
+    ['www.reuters.com?u=http://a.example'],
+    ['//reuters.com/x?u=http://a.example'],
   ])('POSITIVE %s → reuters.com', (url) => {
     expect(heldPublisherHostOf(url)).toBe('reuters.com');
     expect(isPublisherRightsHeld({ url })).toBe(true);
@@ -71,6 +76,9 @@ describe('#86 · host predicate — matches the article URL host only', () => {
     ['hyphenated lookalike', 'https://reuters-com.example/x'],
     ['not http(s)', 'ftp://www.reuters.com/x'],
     ['scheme-less non-Reuters host', 'www.bbc.com/news/x'],
+    /* E1 C-86-1 negative control — the prefix fix must not become an over-block */
+    ['scheme-less non-Reuters host with :// in its query', 'www.bbc.com/news/x?u=https://www.reuters.com/y'],
+    ['scheme-less non-Reuters host, Reuters URL in the query', 'other.example/r?u=http://reuters.com/x'],
     ['protocol-relative non-Reuters host', '//other.example/www.reuters.com/x'],
     ['scheme-less, Reuters only in the path', 'other.example/www.reuters.com/x'],
     ['scheme-less userinfo trick (not a host)', 'reuters.com@other.example/x'],
