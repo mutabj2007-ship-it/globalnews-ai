@@ -21,6 +21,18 @@ import { ASK_EXECUTION_PORT, AskPlan, AskRequest, ExecutionResult } from '../ask
   external-reader positive-basis gate is covered by r46-reader-rights-containment.spec.ts; here, and in
   this spec ONLY, the reader-sink policy is held at its record semantics. Production has no such switch.
 */
+/*
+  CTO R48 · #96 lane A — TEST-OWNED, LEGITIMATE SOURCE PROVENANCE. The briefing read path withholds an
+  evidence reference whose stored source has no positive basis (E1-R46; unresolvable refs fail closed).
+  This spec's evidence therefore needs persisted Article rows whose source is a CLEARED registry entry:
+  the entries below exist only in this spec (the live registry is unchanged and has no CLEARED feed).
+*/
+jest.mock('../../news/providers/feed-source-registry', () => {
+  const actual = jest.requireActual('../../news/providers/feed-source-registry');
+  const base = actual.FEED_SOURCES[0];
+  const cleared = (sourceId: string) => ({ ...base, sourceId, rights: { ...base.rights, state: 'CLEARED' } });
+  return { ...actual, FEED_SOURCES: [...actual.FEED_SOURCES, cleared('feed:r48-one-example'), cleared('feed:r48-two-example'), cleared('feed:r48-three-example')] };
+});
 jest.mock('../../news/rights/source-use-policy', () => {
   const actual = jest.requireActual('../../news/rights/source-use-policy');
   return {
@@ -87,12 +99,15 @@ live('R2-S1 end-to-end slice — live PostgreSQL', () => {
     const articleUrl = `https://${host}/r2-${stamp}-${minutes}`;
     await db.article.create({
       data: {
-        id: `r2-${stamp}-${minutes}`,
+        /* CTO R48 — the stored row carries the id this spec's evidence cites (its articleRef), so the
+           E1-R46 briefing read resolves each citation to its persisted, test-owned CLEARED source */
+        id: computeArticleRef(articleUrl),
         title,
         summary: 'Retained summary',
         url: articleUrl,
         imageUrl: image,
-        sourceId: host,
+        /* CTO R48 — a test-owned CLEARED feed per host (sourceName stays the host) */
+        sourceId: `feed:r48-${host.replace(/\./g, '-')}`,
         sourceName: host,
         category: 'business',
         publishedAt: new Date(Date.UTC(2026, 9, 2, 8, minutes)),
