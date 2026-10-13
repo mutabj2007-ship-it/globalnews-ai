@@ -334,6 +334,8 @@ describe('CountryNewsService', () => {
       limit: 8,
       maxAgeMinutes: 1440,
       relevantOnly: true,
+      /* P0 #86 / #87 F-1 — the stored fallback hands held rows on to be withheld AND counted */
+      retainPublisherRightsHeld: true,
     });
 
     expect(articlePersistence.persistCountryRelations).not.toHaveBeenCalled();
@@ -384,6 +386,8 @@ describe('CountryNewsService', () => {
       limit: 5,
       maxAgeMinutes: 1440,
       relevantOnly: true,
+      /* P0 #86 / #87 F-1 — the stored fallback hands held rows on to be withheld AND counted */
+      retainPublisherRightsHeld: true,
     });
 
     expect(response.countryCode).toBe('ESP');
@@ -559,6 +563,8 @@ describe('CountryNewsService', () => {
       limit: 5,
       maxAgeMinutes: 1440,
       relevantOnly: true,
+      /* P0 #86 / #87 F-1 — the stored fallback hands held rows on to be withheld AND counted */
+      retainPublisherRightsHeld: true,
     });
 
     expect(response.articles).toEqual([olderStoredArticle, newerStoredArticle]);

@@ -8,6 +8,20 @@ import {
 } from '../../global-reach/source-coverage.authority';
 import { CountryNewsService } from './country-news.service';
 import { CountryNewsQueryDto, CountryParamsDto } from './country-news.dto';
+import { withoutPublisherRightsHeld } from '../rights/publisher-rights-hold';
+
+/*
+  MASTER CTO R4 · P0 #86 — THE COUNTRY FEED'S READER EDGE. CountryNewsService keeps a held publisher's
+  items so Analysis's typed-country branch withholds AND COUNTS them (#87 F-1); no reader receives
+  one. A response without an article list is returned as-is.
+*/
+export function readerSafeCountryResponse(response: CountryNewsResponse): CountryNewsResponse {
+  if (!Array.isArray(response?.articles)) return response;
+  const articles = withoutPublisherRightsHeld(response.articles);
+  return articles.length === response.articles.length
+    ? response
+    : { ...response, articles, totalResults: articles.length };
+}
 
 @Controller('news/country')
 export class CountryNewsController {
@@ -35,7 +49,7 @@ export class CountryNewsController {
   ): Promise<CountryNewsResponse> {
     return this.countryNewsService
       .getCountryNews(countryCode, category, limit, undefined, lang)
-      .then((response) => this.withSourceCoverage(response));
+      .then((response) => this.withSourceCoverage(readerSafeCountryResponse(response)));
   }
 
   /**

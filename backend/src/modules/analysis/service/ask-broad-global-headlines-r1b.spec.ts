@@ -237,7 +237,8 @@ describe('PUBLIC BETA HARDENING R1B — broad global headlines, live first', () 
     expect(calls.search).toEqual([]);
     /* ONE local read, bounded by count and by the 24-hour age, with no invented topic */
     expect(persistence.findRecent).toHaveBeenCalledTimes(1);
-    expect(persistence.findRecent).toHaveBeenCalledWith({ limit: 40, maxAgeMinutes: 1440 });
+    /* P0 #86 / #87 F-1 — held rows are handed on to be withheld AND counted at the rights point */
+    expect(persistence.findRecent).toHaveBeenCalledWith({ limit: 40, maxAgeMinutes: 1440, retainPublisherRightsHeld: true });
     expect(result.articles.map((x) => x.id).sort()).toEqual(['r1', 'r2']);
     expect(result.retrievalContext?.dataMode).toBe('cached');
     expect(result.retrievalContext?.fallbackReason).toBe('provider-error');

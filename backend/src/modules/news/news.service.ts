@@ -688,6 +688,8 @@ export class NewsService {
       queryTerms,
       limit,
       maxAgeMinutes,
+      /* P0 #86 / #87 F-1 — held rows reach Analysis's rights point (withheld AND counted); readers get them stripped at news.controller */
+      retainPublisherRightsHeld: true,
     });
     this.noteRetainedRead('findRetainedByQuery', retained.length);
     return retained.map((article) => withDerivedEvidenceFields(article));
@@ -717,6 +719,8 @@ export class NewsService {
     const candidates = await this.articlePersistence.findRecent({
       limit: Math.min(limit * 2, 100),
       maxAgeMinutes,
+      /* P0 #86 / #87 F-1 — held rows reach Analysis's rights point (withheld AND counted); readers get them stripped at news.controller */
+      retainPublisherRightsHeld: true,
     });
     const admitted = candidates
       .filter(
@@ -746,6 +750,8 @@ export class NewsService {
       countryCode,
       limit,
       maxAgeMinutes,
+      /* P0 #86 / #87 F-1 — held rows reach Analysis's rights point (withheld AND counted); readers get them stripped at news.controller */
+      retainPublisherRightsHeld: true,
     });
 
     /*
@@ -1268,6 +1274,8 @@ export class NewsService {
       limit,
       maxAgeMinutes: DATABASE_FALLBACK_MAX_AGE_MINUTES,
       ...(useTermParity ? { queryTerms: retainedCandidateTerms(retainedTerms) } : {}),
+      /* P0 #86 / #87 F-1 — held rows reach Analysis's rights point (withheld AND counted); readers get them stripped at news.controller */
+      retainPublisherRightsHeld: true,
     });
     const retainedConsidered = cachedArticles.length;
 
@@ -1569,6 +1577,8 @@ export class NewsService {
     const cachedArticles = await this.articlePersistence.findRecent({
       limit,
       maxAgeMinutes: DATABASE_FALLBACK_MAX_AGE_MINUTES,
+      /* P0 #86 / #87 F-1 — held rows reach Analysis's rights point (withheld AND counted); readers get them stripped at news.controller */
+      retainPublisherRightsHeld: true,
     });
 
     if (cachedArticles.length === 0) {
@@ -1861,6 +1871,8 @@ export class NewsService {
       category,
       limit,
       maxAgeMinutes: DATABASE_FALLBACK_MAX_AGE_MINUTES,
+      /* P0 #86 / #87 F-1 — held rows reach Analysis's rights point (withheld AND counted); readers get them stripped at news.controller */
+      retainPublisherRightsHeld: true,
     });
 
     if (cachedArticles.length === 0) {

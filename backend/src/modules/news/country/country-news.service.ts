@@ -22,7 +22,7 @@ import {
   scoreCountryRelevance,
 } from './country-relevance.util';
 import { assessCountryDevelopment } from './country-development-eligibility.util';
-import { withoutPublisherRightsHeld } from '../rights/publisher-rights-hold';
+import { isPublisherRightsHeld } from '../rights/publisher-rights-hold';
 
 interface CacheEntry {
   value: CountryNewsResponse;
@@ -279,14 +279,9 @@ export class CountryNewsService {
     // relevance scoring/sorting so every downstream step (persistence,
     // category filtering, dedup) already operates on a language-pure
     // set.
-    /*
-      MASTER CTO R4 · P0 #86 — a country feed is a reader surface: an item whose own URL host is under
-      a publisher rights hold is neither shown, scored, related to a country nor stored here.
-    */
-    const usableArticles = withoutPublisherRightsHeld(searchResponse.articles);
     const languageFilteredArticles = lang
-      ? usableArticles.filter((article) => article.sourceLanguage === lang)
-      : usableArticles;
+      ? searchResponse.articles.filter((article) => article.sourceLanguage === lang)
+      : searchResponse.articles;
 
     const scoredEntries = languageFilteredArticles
       .map((article) => ({
@@ -318,7 +313,11 @@ export class CountryNewsService {
 
     if (searchResponse.dataMode === 'live') {
       await this.articlePersistence.persistCountryRelations(
-        scoredEntries.map(({ article, relevance }) => ({
+        /* MASTER CTO R4 · P0 #86 — a held publisher host is never related to a country (it is never
+           stored either). The feed itself keeps held items so Analysis's typed-country branch
+           withholds AND COUNTS them at its rights point (#87 F-1); the reader edge
+           (country-news.controller) strips them. */
+        scoredEntries.filter(({ article }) => !isPublisherRightsHeld(article)).map(({ article, relevance }) => ({
           articleId: article.id,
           countryCode: country.iso3,
           countryName: country.name,
@@ -611,6 +610,8 @@ export class CountryNewsService {
         limit,
         maxAgeMinutes: DATABASE_FALLBACK_MAX_AGE_MINUTES,
         relevantOnly: true,
+        /* P0 #86 / #87 F-1 — counted at Analysis's rights point; stripped at the reader edge */
+        retainPublisherRightsHeld: true,
       })
     ).filter(inWindow);
 
@@ -623,6 +624,8 @@ export class CountryNewsService {
       category,
       limit,
       maxAgeMinutes: DATABASE_FALLBACK_MAX_AGE_MINUTES,
+      /* P0 #86 / #87 F-1 — counted at Analysis's rights point; stripped at the reader edge */
+      retainPublisherRightsHeld: true,
     });
 
     const cityStored = cityStoredCandidates.filter(

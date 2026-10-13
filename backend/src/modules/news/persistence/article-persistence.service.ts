@@ -23,6 +23,14 @@ interface FindRecentArticlesOptions {
    * Absent (every pre-R1 caller) => the previous whole-string predicate.
    */
   queryTerms?: string[];
+  /**
+   * MASTER CTO R4 · P0 #86 / #87 F-1 — also return rows under a publisher rights hold, so the
+   * CALLER's single rights point withholds AND COUNTS them (Analysis: rightsExcluded
+   * PUBLISHER_RIGHTS_HOLD) instead of the rows silently vanishing here — a held-only stored result
+   * is then never told as "no reporting". Only callers whose results reach that point, or a reader
+   * edge that strips held items (news.controller / country-news.controller), may set it.
+   */
+  retainPublisherRightsHeld?: true;
 }
 
 interface ArticleCountryRelationInput {
@@ -38,6 +46,14 @@ export interface FindRecentByCountryOptions {
   maxAgeMinutes?: number;
   category?: NewsCategory;
   relevantOnly?: boolean;
+  /**
+   * MASTER CTO R4 · P0 #86 / #87 F-1 — also return rows under a publisher rights hold, so the
+   * CALLER's single rights point withholds AND COUNTS them (Analysis: rightsExcluded
+   * PUBLISHER_RIGHTS_HOLD) instead of the rows silently vanishing here — a held-only stored result
+   * is then never told as "no reporting". Only callers whose results reach that point, or a reader
+   * edge that strips held items (news.controller / country-news.controller), may set it.
+   */
+  retainPublisherRightsHeld?: true;
 }
 
 /**
@@ -367,6 +383,7 @@ export class ArticlePersistenceService {
       maxAgeMinutes = 1440,
       category,
       relevantOnly = true,
+      retainPublisherRightsHeld,
     } = options;
 
     const safeLimit = Math.max(1, Math.min(limit, 100));
@@ -392,7 +409,7 @@ export class ArticlePersistenceService {
             },
             ...(category ? { category } : {}),
             /* E1-TAA-5 — enforce by absence */
-            ...admittedStoredSourceWhere(),
+            ...admittedStoredSourceWhere(undefined, { publisherHold: retainPublisherRightsHeld !== true }),
           },
         },
         include: {
@@ -414,7 +431,8 @@ export class ArticlePersistenceService {
       const articles = this.admissibleRows(
         rows,
         (row) => row.article.sourceId,
-        (row) => row.article.url,
+        /* P0 #86 — held rows are kept only for a counting caller (retainPublisherRightsHeld) */
+        (row) => (retainPublisherRightsHeld === true ? undefined : row.article.url),
       ).map((row) => ({
         securityCountryAttribution: {
           countryCode: row.countryCode,
@@ -457,7 +475,7 @@ export class ArticlePersistenceService {
     }
   }
   async findRecent(options: FindRecentArticlesOptions = {}): Promise<NewsArticle[]> {
-    const { limit = 20, maxAgeMinutes = 1440, category, query, queryTerms } = options;
+    const { limit = 20, maxAgeMinutes = 1440, category, query, queryTerms, retainPublisherRightsHeld } = options;
 
     const safeLimit = Math.max(1, Math.min(limit, 100));
 
@@ -515,7 +533,7 @@ export class ArticlePersistenceService {
           },
           ...(category ? { category } : {}),
           /* E1-TAA-5 — enforce by absence */
-          ...admittedStoredSourceWhere(),
+          ...admittedStoredSourceWhere(undefined, { publisherHold: retainPublisherRightsHeld !== true }),
           ...(usingTermNet
             ? { OR: termNetClauses }
             : normalizedQuery
@@ -552,7 +570,7 @@ export class ArticlePersistenceService {
       return this.admissibleRows(
         rows,
         (row) => row.sourceId,
-        (row) => row.url,
+        (row) => (retainPublisherRightsHeld === true ? undefined : row.url),
       ).map((row) => ({
         id: row.id,
         title: row.title,

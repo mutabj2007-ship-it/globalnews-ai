@@ -186,7 +186,11 @@ export function summarizePending(pending: readonly string[]): RightsPendingSumma
   empty source id. Malformed ids (not expressible in this query) are dropped by
   `storedRowAdmissible` inside the same repository methods before anything is returned.
 */
-export function admittedStoredSourceWhere(feeds: readonly FeedSourceEntry[] = FEED_SOURCES): Prisma.ArticleWhereInput {
+export function admittedStoredSourceWhere(
+  feeds: readonly FeedSourceEntry[] = FEED_SOURCES,
+  /* P0 #86 — false only for a caller that withholds and counts held rows itself */
+  { publisherHold = true }: { readonly publisherHold?: boolean } = {},
+): Prisma.ArticleWhereInput {
   const clearedFeedIds = feeds.filter((row) => row.rights.state === 'CLEARED').map((row) => row.sourceId);
   return {
     AND: [
@@ -194,7 +198,7 @@ export function admittedStoredSourceWhere(feeds: readonly FeedSourceEntry[] = FE
       { OR: [{ NOT: { sourceId: { startsWith: FEED_PREFIX } } }, { sourceId: { in: clearedFeedIds } }] },
       /* P0 #86 — a held publisher host is not obtainable either (query half; the exact host predicate
          runs again on every returned row in the repository) */
-      publisherRightsHoldWhere(),
+      ...(publisherHold ? [publisherRightsHoldWhere()] : []),
     ],
   };
 }

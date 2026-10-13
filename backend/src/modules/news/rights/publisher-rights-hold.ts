@@ -40,14 +40,34 @@ export const PUBLISHER_RIGHTS_HOLDS: readonly PublisherRightsHold[] = Object.fre
   } as const),
 ]);
 
-/** The URL's canonical host (lowercase, no trailing dot), or undefined when it is not an http(s) URL. */
+/*
+  A bare host at the start of a scheme-less URL: dotted labels, a TLD, an optional port, then a path,
+  query, fragment or the end. Tested BEFORE scheme detection, because `www.reuters.com:443/x` is also
+  syntactically a URL scheme ("www.reuters.com:").
+*/
+const BARE_HOST_START = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}\.?(?::\d{1,5})?(?:[/?#]|$)/i;
+
+/**
+ * The URL's canonical host (lowercase, no trailing dot), or undefined when it is not an http(s) URL.
+ *
+ * FAIL CLOSED ON THE HOST (#86 follow-up): providers pass their `url` through verbatim (GNews
+ * `toNewsArticle`, GDELT `toArticle` — no scheme check), so a scheme-less (`www.reuters.com/…`) or
+ * protocol-relative (`//reuters.com/…`) URL is read as https on that host rather than escaping the
+ * hold. A string that still cannot be parsed has no host and is NOT held by #86 (a publisher hold
+ * never over-blocks other publishers on a guess).
+ */
 export function canonicalUrlHostOf(url: string | null | undefined): string | undefined {
   if (typeof url !== 'string') return undefined;
   const trimmed = url.trim();
   if (trimmed === '') return undefined;
+  const candidate = trimmed.startsWith('//')
+    ? `https:${trimmed}`
+    : BARE_HOST_START.test(trimmed) && !trimmed.includes('://')
+      ? `https://${trimmed}`
+      : trimmed;
   let parsed: URL;
   try {
-    parsed = new URL(trimmed);
+    parsed = new URL(candidate);
   } catch {
     return undefined;
   }

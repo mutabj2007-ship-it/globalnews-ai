@@ -18,6 +18,7 @@ import {
 import { ArticlePersistenceService } from '../persistence/article-persistence.service';
 import { readerSafeNewsResponse } from '../news.controller';
 import { CountryNewsService } from '../country/country-news.service';
+import { readerSafeCountryResponse } from '../country/country-news.controller';
 import { StoryIdentityService } from '../../stories/story-identity.service';
 import { computeArticleRef } from '../identity/article-ref.util';
 
@@ -44,6 +45,14 @@ describe('#86 · host predicate — matches the article URL host only', () => {
     ['https://www.reuters.com./world/x'],
     ['https://www.reuters.com:443/world/x'],
     ['  https://www.reuters.com/world/x  '],
+    /* #86 follow-up — FAIL CLOSED on the host: scheme-less and protocol-relative URLs are read as https */
+    ['www.reuters.com/world/x'],
+    ['//reuters.com/world/x'],
+    ['//www.reuters.com/world/x'],
+    ['Reuters.com'],
+    ['reuters.com?x=1'],
+    ['www.reuters.com:443/world/x'],
+    ['jp.reuters.com/article/z'],
   ])('POSITIVE %s → reuters.com', (url) => {
     expect(heldPublisherHostOf(url)).toBe('reuters.com');
     expect(isPublisherRightsHeld({ url })).toBe(true);
@@ -61,7 +70,13 @@ describe('#86 · host predicate — matches the article URL host only', () => {
     ['redirector on another host', 'https://news.google.com/rss/articles/abc?url=https%3A%2F%2Fwww.reuters.com%2Fx'],
     ['hyphenated lookalike', 'https://reuters-com.example/x'],
     ['not http(s)', 'ftp://www.reuters.com/x'],
-    ['no scheme', 'www.reuters.com/world/x'],
+    ['scheme-less non-Reuters host', 'www.bbc.com/news/x'],
+    ['protocol-relative non-Reuters host', '//other.example/www.reuters.com/x'],
+    ['scheme-less, Reuters only in the path', 'other.example/www.reuters.com/x'],
+    ['scheme-less userinfo trick (not a host)', 'reuters.com@other.example/x'],
+    ['mailto', 'mailto:desk@reuters.com'],
+    ['unparseable: no host at all (not held by #86; documented)', 'not a url'],
+    ['bare word', 'reuters'],
     ['empty', ''],
     ['null', null],
   ])('NEGATIVE %s', (_label, url) => {
@@ -226,6 +241,19 @@ describe('#86 · persistence — new admission paused, stored rows retained as-i
     expect([...ids].sort()).toEqual(['gnews-bbc', 'gnews-st']);
   });
 
+  it('COUNTING opt-in: retained-list reads return held rows ONLY to a caller that sets retainPublisherRightsHeld', async () => {
+    const { svc } = store();
+    const optIn = { retainPublisherRightsHeld: true as const };
+    expect((await svc.findRecent({ limit: 50, maxAgeMinutes: 1440, ...optIn })).map((a) => a.id).sort()).toEqual(
+      ['gnews-bbc', 'gnews-held-sub', 'gnews-held-www', 'gnews-st'],
+    );
+    expect((await svc.findRecentByCountry({ countryCode: 'COD', limit: 50, maxAgeMinutes: 1440, ...optIn })).map((a) => a.id).sort()).toEqual(
+      ['gnews-bbc', 'gnews-held-sub', 'gnews-held-www', 'gnews-st'],
+    );
+    /* default (My Intelligence, security read, every reader-facing direct caller): withheld */
+    expect((await svc.findRecent({ limit: 50, maxAgeMinutes: 1440 })).map((a) => a.id).sort()).toEqual(['gnews-bbc', 'gnews-st']);
+  });
+
   it('a held-host row is not obtainable by id or by URL; benign rows are', async () => {
     const { svc } = store();
     expect(await svc.findById('gnews-held-www')).toBeNull();
@@ -257,18 +285,22 @@ describe('#86 · reader surfaces never carry a held-host item', () => {
     expect(readerSafeNewsResponse(odd)).toBe(odd);
   });
 
-  it('country feed: a held item is never shown, scored or related to the country', async () => {
+  it('country feed: a held item is never related to the country nor shown to a reader; Analysis still receives it to COUNT it', async () => {
     const persistence = {
       persistCountryRelations: jest.fn(async () => undefined),
       findRecentByCountry: jest.fn(async () => []),
       findRecent: jest.fn(async () => []),
     };
-    const kenya = (id: string, url: string): NewsArticle => ({ ...live(id, url), title: `Kenya parliament passes budget ${id}`, summary: 'Nairobi, Kenya.' });
-    const search = jest.fn(async () => resp([kenya('held-1', 'https://www.reuters.com/world/africa/k/'), kenya('ok-1', 'https://www.bbc.com/news/k')]));
+    const kenya = (id: string, url: string, title: string): NewsArticle => ({ ...live(id, url), title, summary: 'Nairobi, Kenya.' });
+    const search = jest.fn(async () => resp([kenya('held-1', 'https://www.reuters.com/world/africa/k/', 'Kenya parliament passes the national budget'), kenya('ok-1', 'https://www.bbc.com/news/k', 'Kenya shilling steadies as Nairobi traders return')]));
     const config = { get: (_k: string, d?: unknown) => d } as never;
     const svc = new CountryNewsService({ search } as never, config, persistence as never);
     const out = await svc.getCountryNews('KEN');
-    expect(out.articles.map((a) => a.id)).toEqual(['ok-1']);
+    /* the service result (Analysis's typed-country branch) keeps the held item: withheld + counted there */
+    expect(out.articles.map((a) => a.id).sort()).toEqual(['held-1', 'ok-1']);
+    /* the reader edge (country-news.controller) strips it */
+    expect(readerSafeCountryResponse(out).articles.map((a) => a.id)).toEqual(['ok-1']);
+    expect(readerSafeCountryResponse({} as never)).toEqual({});
     const related = (persistence.persistCountryRelations.mock.calls as unknown as Array<[Array<{ articleId: string }>]>).flatMap(([rels]) => rels.map((r) => r.articleId));
     expect(related).not.toContain('held-1');
     expect(related).toContain('ok-1');
@@ -399,5 +431,28 @@ describe('#86 · remaining direct readers', () => {
     prisma.storyArticle.findFirst.mockResolvedValue({ articleUrl: okRow.url });
     const joinedOk = (await (svc as unknown as { joinedEvidenceOf: (s: string, c: string, v: number) => Promise<{ url: string } | null> }).joinedEvidenceOf('s', 'c', 2));
     expect(joinedOk?.url).toBe(okRow.url);
+  });
+});
+
+/* ── #87 F-1 · NewsService retained reads opt in to counting ────────────────────────────────── */
+describe('#86 follow-up · NewsService retained reads pass held rows on to Analysis (to be withheld AND counted there)', () => {
+  it('findRetainedByQuery / findRetainedHeadlines / findRetainedByCountry all request retainPublisherRightsHeld', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { NewsService } = require('../news.service');
+    const persistence = {
+      persistMany: jest.fn().mockResolvedValue(new Map()),
+      findRecent: jest.fn().mockResolvedValue([]),
+      findRecentByCountry: jest.fn().mockResolvedValue([]),
+    };
+    const provider = { id: 'gnews', displayName: 'GNews', isMock: false, search: jest.fn(), topHeadlines: jest.fn(), category: jest.fn(), health: jest.fn() };
+    const svc = new NewsService([provider], [provider], persistence);
+    await svc.findRetainedByQuery('kenya rate', ['kenya', 'rate'], 10, 1440);
+    await svc.findRetainedHeadlines(10, 1440);
+    await svc.findRetainedByCountry('KEN', 10, 1440);
+    for (const [opts] of [...persistence.findRecent.mock.calls, ...persistence.findRecentByCountry.mock.calls] as Array<[Record<string, unknown>]>) {
+      expect(opts.retainPublisherRightsHeld).toBe(true);
+    }
+    expect(persistence.findRecent).toHaveBeenCalledTimes(2);
+    expect(persistence.findRecentByCountry).toHaveBeenCalledTimes(1);
   });
 });
