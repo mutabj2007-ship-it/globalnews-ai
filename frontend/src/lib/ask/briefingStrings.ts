@@ -67,7 +67,7 @@ const EN: BriefingStrings = {
   versions: 'Versions',
   version: (n) => `Version ${n}`,
   asOf: 'As of',
-  window: 'Monitored since the previous version',
+  window: 'Reporting window since the previous version',
   superseded: (n) => `A newer version (${n}) exists. This version is kept as it was saved.`,
   readOnly: 'Saved copy · read-only · opening it runs no AI and searches nothing.',
   summary: 'Answer',
@@ -109,7 +109,7 @@ const PL: BriefingStrings = {
   versions: 'Wersje',
   version: (n) => `Wersja ${n}`,
   asOf: 'Stan na',
-  window: 'Obserwowano od poprzedniej wersji',
+  window: 'Okres doniesień od poprzedniej wersji',
   superseded: (n) => `Istnieje nowsza wersja (${n}). Ta wersja pozostaje taka, jak ją zapisano.`,
   readOnly:
     'Zapisana kopia · tylko do odczytu · otwarcie nie uruchamia AI i niczego nie wyszukuje.',

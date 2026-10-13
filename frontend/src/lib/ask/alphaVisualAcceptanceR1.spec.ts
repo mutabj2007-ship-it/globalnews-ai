@@ -201,10 +201,19 @@ describe('F — no clarification renders without an actionable question', () => 
         candidates: ['COD', 'COG'],
       },
     });
+    /* MASTER CTO R47 · D04–D06 — a bare "Congo" in the reader's words: the choices replace that word
+       with the full name (the rest of the question kept), instead of appending "(DR Congo)". */
     const v = askR2View(p, askR2Strings('en'), 'en', place, 'What is happening in Congo?');
+    expect(v.clarification.lead).toBe('Which Congo do you mean? The rest of your question stays as you wrote it.');
     expect(v.clarification.choices).toEqual([
-      { label: 'DR Congo', question: 'What is happening in Congo (DR Congo)?' },
-      { label: 'Congo', question: 'What is happening in Congo (Congo)?' },
+      { label: 'Democratic Republic of the Congo (Kinshasa)', question: 'What is happening in Democratic Republic of the Congo?' },
+      { label: 'Republic of the Congo (Brazzaville)', question: 'What is happening in Republic of the Congo?' },
+    ]);
+    /* a server ambiguity over places the reader did not write as a bare "Congo" keeps the server's choices */
+    const named = askR2View(p, askR2Strings('en'), 'en', place, 'What is happening there?');
+    expect(named.clarification.choices).toEqual([
+      { label: 'DR Congo', question: 'What is happening there (DR Congo)?' },
+      { label: 'Congo', question: 'What is happening there (Congo)?' },
     ]);
     expect(Object.values(api).every((fn) => (fn as jest.Mock).mock.calls.length === 0)).toBe(true);
   });

@@ -439,6 +439,10 @@ export function AskFrameScreen({
                 operation: read.value,
                 payload: askR2PayloadOf(read.value),
                 expired: read.value.result?.expired === true,
+                /* MASTER CTO R47 · D13/D15 — a reopened timed-out or failed operation keeps its own
+                   recorded failure (as earlier turns already do, askThreadRestore), so it never reads
+                   as "Ask is unavailable right now. Nothing was run." */
+                ...(read.value.failureCode ? { failure: read.value.failureCode } : {}),
               }
             : { question: '', failure: read.reason },
         );

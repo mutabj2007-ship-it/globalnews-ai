@@ -32,6 +32,8 @@ export interface AskR38Strings {
   /* U-6 — Saved */
   readonly savedRequestCompleted: string;
   readonly savedOpenToSee: string;
+  /** R47 — a REOPENED request that failed or timed out: when it was made, and that nothing new ran. */
+  readonly reopenedFailedRequest: (when: string) => string;
 }
 
 const EN: AskR38Strings = {
@@ -55,6 +57,7 @@ const EN: AskR38Strings = {
   updatesManualNote: 'Nothing is checked automatically. “Ask again” runs this question once more when you choose, uses 1 question, and is compared with your last saved answer.',
   savedRequestCompleted: 'Request completed',
   savedOpenToSee: 'Open to see what is available',
+  reopenedFailedRequest: (when) => `Request from ${when}. Nothing new was run.`,
 };
 
 const PL: AskR38Strings = {
@@ -78,6 +81,7 @@ const PL: AskR38Strings = {
   updatesManualNote: 'Nic nie jest sprawdzane automatycznie. „Zapytaj ponownie” uruchamia to pytanie jeszcze raz, gdy zdecydujesz, zużywa 1 pytanie i porównuje wynik z ostatnią zapisaną odpowiedzią.',
   savedRequestCompleted: 'Zapytanie zakończone',
   savedOpenToSee: 'Otwórz, aby zobaczyć, co jest dostępne',
+  reopenedFailedRequest: (when) => `Zapytanie z ${when}. Nic nowego nie zostało uruchomione.`,
 };
 
 const FR: AskR38Strings = {
@@ -101,6 +105,7 @@ const FR: AskR38Strings = {
   updatesManualNote: 'Rien n’est vérifié automatiquement. « Redemander » relance cette question quand vous le choisissez, utilise 1 question et compare le résultat à votre dernière réponse enregistrée.',
   savedRequestCompleted: 'Demande terminée',
   savedOpenToSee: 'Ouvrir pour voir ce qui est disponible',
+  reopenedFailedRequest: (when) => `Demande du ${when}. Rien de nouveau n’a été lancé.`,
 };
 
 const DE: AskR38Strings = {
@@ -124,6 +129,7 @@ const DE: AskR38Strings = {
   updatesManualNote: 'Nichts wird automatisch geprüft. „Erneut fragen“ stellt diese Frage noch einmal, wenn Sie es wählen, verbraucht 1 Frage und vergleicht mit Ihrer letzten gespeicherten Antwort.',
   savedRequestCompleted: 'Anfrage abgeschlossen',
   savedOpenToSee: 'Öffnen, um zu sehen, was verfügbar ist',
+  reopenedFailedRequest: (when) => `Anfrage vom ${when}. Nichts Neues wurde ausgeführt.`,
 };
 
 const ES: AskR38Strings = {
@@ -147,6 +153,7 @@ const ES: AskR38Strings = {
   updatesManualNote: 'Nada se comprueba automáticamente. «Volver a preguntar» repite esta pregunta cuando lo decides, usa 1 pregunta y se compara con tu última respuesta guardada.',
   savedRequestCompleted: 'Solicitud completada',
   savedOpenToSee: 'Abrir para ver lo disponible',
+  reopenedFailedRequest: (when) => `Solicitud del ${when}. No se ha ejecutado nada nuevo.`,
 };
 
 const PT: AskR38Strings = {
@@ -170,6 +177,7 @@ const PT: AskR38Strings = {
   updatesManualNote: 'Nada é verificado automaticamente. «Perguntar de novo» repete esta pergunta quando escolher, usa 1 pergunta e compara com a sua última resposta guardada.',
   savedRequestCompleted: 'Pedido concluído',
   savedOpenToSee: 'Abrir para ver o que está disponível',
+  reopenedFailedRequest: (when) => `Pedido de ${when}. Nada de novo foi executado.`,
 };
 
 const AR: AskR38Strings = {
@@ -193,6 +201,7 @@ const AR: AskR38Strings = {
   updatesManualNote: 'لا يُفحص شيء تلقائياً. «اسأل مجدداً» يعيد هذا السؤال عندما تختار، ويستهلك سؤالاً واحداً، ويُقارن بآخر إجابة محفوظة لك.',
   savedRequestCompleted: 'اكتمل الطلب',
   savedOpenToSee: 'افتح لترى ما هو متاح',
+  reopenedFailedRequest: (when) => `طلب بتاريخ ${when}. لم يُشغَّل شيء جديد.`,
 };
 
 const BY_LOCALE: Readonly<Record<string, AskR38Strings>> = { en: EN, pl: PL, fr: FR, de: DE, es: ES, pt: PT, ar: AR };

@@ -1,3 +1,4 @@
+import { congoClarificationOf } from './askCongoClarification';
 import { askFormatUtcInstant } from './askDirection';
 import type { AskAnswerState, AskPlanChip, AskR2Payload } from '@/lib/api/askV2Api';
 import type { AskR2Locale, AskR2Strings } from './askR2Strings';
@@ -457,13 +458,35 @@ export function askR2View(
     lead ??= s.clarify.fallback;
   }
   const trimmed = question.trim().replace(/[?.!]+$/, '');
-  const choices =
+  let choices =
     trimmed.length === 0
       ? []
       : candidates.map((label) => ({
           label,
           question: objectiveAsk ? s.r3.choiceFor(trimmed, label) : `${trimmed} (${label})?`,
         }));
+  /*
+    MASTER CTO R47 · D04–D06 — the reader named a bare "Congo": the ONE specific question is which
+    Congo, whether the server said so (LANDED_AMBIGUOUS_COUNTRY → [COD, COG]) or returned a
+    clarification with no candidates (live NO_PRIOR_SUBJECT defect). Each choice is the reader's own
+    question with only that word replaced; nothing is assigned until the reader picks and sends.
+  */
+  const serverCandidates = payload.answer.candidates ?? [];
+  const congoAmbiguity =
+    serverCandidates.length === 2 && serverCandidates.includes('COD') && serverCandidates.includes('COG');
+  const congo =
+    badge === 'clar' &&
+    !objectiveAsk &&
+    basis !== 'CONSTRAINT_NOTED' &&
+    basis !== 'PRIOR_REFERENCE_UNRESOLVED' &&
+    (candidates.length === 0 || congoAmbiguity)
+      ? congoClarificationOf(question, locale)
+      : null;
+  if (congo !== null) {
+    lead = congo.lead;
+    suggestion = null;
+    choices = congo.choices.map(({ label, question: draft }) => ({ label, question: draft }));
+  }
 
   return {
     badge,
@@ -483,7 +506,7 @@ export function askR2View(
     unavailableText,
     clarification: {
       byExecutor,
-      candidates,
+      candidates: congo !== null ? congo.choices.map((choice) => choice.label) : candidates,
       /* MC-070: the place is kept as the plan's GEOGRAPHY chip, not inflected into the sentence. */
       lead,
       suggestion,

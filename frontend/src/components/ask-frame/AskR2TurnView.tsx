@@ -206,6 +206,17 @@ export function AskR2TurnView({
           governed sentence (budget, deadline, length) in the same panel. "Try again" only where
           sending the same question again can help, and only for the latest turn (onRetry).
         */}
+        {/* MASTER CTO R47 · D13/D15 — a REOPENED failed or timed-out request says when it was made and that
+            nothing new ran; it never reads as a fresh failure. */}
+        {reopenedAt != null && !Number.isNaN(Date.parse(reopenedAt)) && (
+          <p data-ask="reopened-line" className={`mb-2 ${NOTE}`}>
+            {askR38Strings(locale).reopenedFailedRequest(
+              new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(
+                new Date(reopenedAt),
+              ),
+            )}
+          </p>
+        )}
         <div
           role="alert"
           data-ask="unavailable"
