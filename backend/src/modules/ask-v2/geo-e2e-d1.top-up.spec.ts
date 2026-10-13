@@ -291,7 +291,7 @@ describe('GEO-E2E-D1 · the control premises, measured on the real article resol
 });
 
 describe('GEO-E2E-D1 · the anchored top-up boundary (DR Congo question)', () => {
-  it.failing('D1-1 [DEFECT] a correctly stored COG report offered by the top-up never reaches a COD answer: not evidence, not model context, no COG in scope', async () => {
+  it('D1-1 [GEO-E2E-D1] a correctly stored COG report offered by the top-up never reaches a COD answer: not evidence, not model context, no COG in scope', async () => {
     const o = await ask(COD_Q);
     expect(o.counts.retained).toBeGreaterThanOrEqual(1);
     expect(o.offeredRetainedIds).toContain('ret-cog-brazza'); // non-vacuous: the gate WAS offered it
@@ -301,17 +301,18 @@ describe('GEO-E2E-D1 · the anchored top-up boundary (DR Congo question)', () =>
     expect(outside(allScope(o), ['COD'])).toEqual([]);
     bounded(o);
   });
-  it.failing('D1-2 [DEFECT] a COD event whose LEGACY stored code is CG is kept for the COD answer, and the unsupported CG label is never shown or counted', async () => {
+  it('D1-2 [GEO-E2E-D1] a COD event whose LEGACY stored code is CG is kept for the COD answer, and the unsupported CG label is never shown or counted', async () => {
     const o = await ask(COD_Q);
     expect(o.offeredRetainedIds).toContain('ret-cod-legacy-cg');
     expect(o.evidenceIds).toContain('ret-cod-legacy-cg');
     expect(o.evidenceLabel['ret-cod-legacy-cg']).not.toBe('COG');
     expect(outside(allScope(o), ['COD'])).toEqual([]);
   });
-  it.failing('D1-3 [DEFECT] bare "Congo" (stored CG) is not silently decided: never labelled or counted as COG inside a COD answer', async () => {
+  it('D1-3 [GEO-E2E-D1] bare "Congo" (stored CG) is not silently decided: kept (absence of a competing country is not a contradiction) but never labelled or counted as COG inside a COD answer', async () => {
     const o = await ask(COD_Q);
     expect(o.offeredRetainedIds).toContain('ret-bare-congo-cg');
-    if (o.evidenceIds.includes('ret-bare-congo-cg')) expect(o.evidenceLabel['ret-bare-congo-cg']).toBeNull();
+    expect(o.evidenceIds).toContain('ret-bare-congo-cg');
+    expect(o.evidenceLabel['ret-bare-congo-cg']).toBeNull();
     expect(outside(allScope(o), ['COD'])).toEqual([]);
   });
   it('D1-4 control: an office-based-in-Brazzaville source inside a COD incident is NOT excluded for the COD answer', async () => {
@@ -332,7 +333,7 @@ describe('GEO-E2E-D1 · the mirror (Republic of the Congo question)', () => {
     expect(o.evidenceIds).toEqual(expect.arrayContaining(['ret-cog-municipal']));
     expect(o.modelEvidenceIds.length).toBeGreaterThan(0);
   });
-  it.failing('D1-7 [DEFECT] COD events never reach a COG answer: not the legacy-CG COD row, not the office case, not the cross-border COD event', async () => {
+  it('D1-7 [GEO-E2E-D1] COD events never reach a COG answer: not the legacy-CG COD row, not the office case, not the cross-border COD event', async () => {
     const o = await ask(COG_Q);
     expect(o.offeredRetainedIds).toEqual(expect.arrayContaining(['ret-cod-legacy-cg', 'ret-office-brazza-cod', 'ret-crossborder-cod']));
     for (const id of ['ret-cod-legacy-cg', 'ret-office-brazza-cod', 'ret-crossborder-cod']) {

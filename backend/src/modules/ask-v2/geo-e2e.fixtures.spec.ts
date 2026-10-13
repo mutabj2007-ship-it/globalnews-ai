@@ -474,7 +474,7 @@ describe('E2E-7 · persisted and live evidence', () => {
      the anchored supplement ("DR Congo economy"); its retained read matches ANY term ("congo") and the
      admission gate does not check the typed country, so a stored-CG Brazzaville row reaches the
      evidence and the model context of a COD question. it.failing until a scoped fix; never weakened. */
-  it.failing('E2E-7a [DEFECT GEO-E2E-D1] the retained (stored CG) Brazzaville row is admitted only for a COG question', async () => {
+  it('E2E-7a [GEO-E2E-D1 FIXED] the retained (stored CG) Brazzaville row is admitted only for a COG question', async () => {
     const cog = await ask('7a-cog-retained', 'What are the latest developments in Congo - Brazzaville budget talks?', 'en');
     const cod = await ask('7a-cod-retained', 'What are the latest developments in Congo - Kinshasa budget talks?', 'en');
     expect(cod.evidenceIds).not.toContain('ret-cog-brazza');
