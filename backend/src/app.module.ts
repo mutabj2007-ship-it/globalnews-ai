@@ -299,6 +299,14 @@ import {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
+    // MASTER CTO R48 / #96 — emergency source-use containment: third-party article objects without a
+    // recorded per-use right never reach a reader (reader-rights.interceptor.ts). Admin routes exempt.
+    // CTO R54 · C-2 — registered FIRST of the global interceptors, so it is the OUTERMOST: it sees the
+    // final response body after every other interceptor has run, and nothing runs after it.
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ReaderRightsInterceptor,
+    },
     // Milestone #55 — global request correlation + HTTP access
     // logging. Runs on every request (registered before the exception
     // filter so its own request-start log always precedes anything
@@ -326,12 +334,6 @@ import {
     {
       provide: APP_INTERCEPTOR,
       useClass: TelemetryInterceptor,
-    },
-    // MASTER CTO R48 / #96 — emergency source-use containment: third-party article objects without a
-    // recorded per-use right never reach a reader (reader-rights.interceptor.ts). Admin routes exempt.
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: ReaderRightsInterceptor,
     },
   ],
 })

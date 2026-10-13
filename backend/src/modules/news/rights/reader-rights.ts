@@ -159,6 +159,9 @@ export function withholdThirdPartyArticles<T>(
 /** The reader-facing state of an Ask answer whose evidence is withheld (read time; stored row untouched). */
 export const SOURCE_RIGHTS_WITHHELD_BASIS = 'SOURCE_RIGHTS_WITHHELD' as const;
 
+/** CTO R54 · C-96 — the only payload fields a withheld answer keeps (none can carry source text). */
+export const WITHHELD_ANSWER_ALLOWLIST = ['schema', 'route', 'chips', 'checkedAt', 'aiExecuted', 'modelPriorCitable'] as const;
+
 /**
  * An Ask R2 result payload, as read for an external reader. When ANY of its evidence articles or
  * cited sources lacks an affirmative basis — or the analysis recorded that evidence was withheld
@@ -210,18 +213,26 @@ export function withholdAskPayload<T>(payload: T, feeds: readonly FeedSourceEntr
       artifactUrls.every((url) => clearedUrls.has(url)) &&
       artifactRefs.every((ref) => clearedIds.has(ref)));
   if (answerWithheld > 0) {
-    /* the artifact is derived from the withheld answer: it goes with it, whatever it names */
-    const { analysis: _a, comparisonTable: _c, recentReporting: _r, artifact: _art, ...rest } = payload;
-    void _a;
-    void _c;
-    void _r;
-    void _art;
+    /*
+      CTO R54 · C-96 — an EXPLICIT allowlist, never a spread of the rest: every field the payload may
+      carry that is or could be derived from the withheld sources (background, intelligence, artifact,
+      comparisonTable, recentReporting, guidance, verification, continuation, prior answer, any
+      future field) is dropped by default. Kept: the payload's identity and the reader's own words
+      and scope (schema, route, chips: plan codes and the reader's terms) and the run's facts
+      (checkedAt, aiExecuted, modelPriorCitable). The answer decision is rebuilt from codes too.
+    */
+    const kept: Record<string, unknown> = {};
+    for (const key of WITHHELD_ANSWER_ALLOWLIST) if (key in payload) kept[key] = payload[key];
     const answer = isRecord(payload.answer) ? payload.answer : {};
+    const missingRoles = Array.isArray(answer.missingRoles)
+      ? answer.missingRoles.filter((r): r is string => typeof r === 'string')
+      : [];
     return {
       payload: {
-        ...rest,
+        ...kept,
         analysis: null,
-        answer: { ...answer, state: 'CAPABILITY_UNAVAILABLE', basis: SOURCE_RIGHTS_WITHHELD_BASIS, candidates: [] },
+        background: null,
+        answer: { state: 'CAPABILITY_UNAVAILABLE', basis: SOURCE_RIGHTS_WITHHELD_BASIS, missingRoles, candidates: [] },
         sourceRightsWithheld: { count: Math.max(answerWithheld, 1) },
       } as T,
       withheld: Math.max(answerWithheld, 1),

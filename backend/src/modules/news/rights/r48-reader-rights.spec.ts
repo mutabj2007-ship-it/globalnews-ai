@@ -1,5 +1,6 @@
 import { ANALYSIS_TOTAL_BUDGET_MS, type CountryNewsResponse, type NewsArticle, type NewsResponse } from '@globalnews-ai/shared';
-import { lastValueFrom, of } from 'rxjs';
+import { InterceptorsConsumer } from '@nestjs/core/interceptors/interceptors-consumer';
+import { lastValueFrom, map as mapRx, of, type Observable } from 'rxjs';
 
 /*
   MASTER CTO R48 / #96 — Production emergency source-use containment (E1-R46 adapted to e7b8105).
@@ -438,5 +439,131 @@ describe('R53 · the stored conversation artifact of a sourced answer is withhel
     expect(withheld).toBe(0);
     expect(JSON.stringify(payload)).toContain(CLAIM);
     expect((payload as { artifact: { evidenceUrls: string[] } }).artifact.evidenceUrls).toEqual([c.url]);
+  });
+});
+
+describe('R54 · C-96 — a withheld answer is an explicit allowlist: nothing source-derived survives anywhere in the serialized response', () => {
+  const SECRET = [
+    'BG-SECRET Kigali fuel rose 4%',
+    'INTEL-SECRET specialist claim',
+    'ART-SECRET claim point',
+    'TABLE-SECRET row',
+    'RECENT-SECRET headline',
+    'GUIDE-SECRET objective',
+    'PRIOR-SECRET outcome',
+    'FUTURE-SECRET field',
+    'ANSWER-SECRET summary',
+  ];
+  const g = article('gs', 'gnews-pub', { title: 'RECENT-SECRET headline', summary: 'RECENT-SECRET headline' });
+  const withheldAnswer = () => ({
+    schema: 'ask-r2-result/1',
+    route: { questionClass: 'CURRENT_EVENTS', terminalState: 'ANSWERED', clarification: [], questionLanguage: 'en' },
+    chips: { places: ['RWA'], topics: ['fuel prices'] },
+    checkedAt: '2026-10-13T12:00:00.000Z',
+    aiExecuted: true,
+    modelPriorCitable: false,
+    answer: { state: 'CURRENT_REPORTING', basis: 'REQUIRED_EVIDENCE_OBTAINED', missingRoles: [], summary: SECRET[8] },
+    analysis: { articles: [g], analysis: { summary: 'withheld claim', sources: [{ articleId: g.id, url: g.url }] } },
+    background: { text: SECRET[0] },
+    intelligence: { contributions: [{ domain: 'economy', claim: SECRET[1], url: g.url }] },
+    artifact: { kind: 'SOURCED_ANSWER', components: [SECRET[2]], provenance: 'SOURCED_REPORTING', evidenceUrls: [g.url], evidenceRefs: [g.id] },
+    comparisonTable: { rows: [[SECRET[3], g.url]] },
+    recentReporting: { articles: [g] },
+    guidance: { kind: 'DECISION_SUPPORT', currentEvidenceNeeded: [], objective: SECRET[5] },
+    priorAnswer: { form: 'REWORK', outcome: SECRET[6], evidence: 'RE_READ' },
+    futureField: { text: SECRET[7] },
+  });
+  it('the whole serialized payload carries no source-derived string, URL or field; the reader scope is kept', () => {
+    const stored = withheldAnswer();
+    const before = JSON.stringify(stored);
+    const { payload, withheld } = withholdAskPayload(stored);
+    const json = JSON.stringify(payload);
+    expect(withheld).toBeGreaterThan(0);
+    for (const s of SECRET) expect(json).not.toContain(s);
+    expect(json).not.toContain(g.url);
+    expect(json).not.toContain('withheld claim');
+    expect(Object.keys(payload as object).sort()).toEqual(
+      ['aiExecuted', 'analysis', 'answer', 'background', 'checkedAt', 'chips', 'modelPriorCitable', 'route', 'schema', 'sourceRightsWithheld'].sort(),
+    );
+    expect(payload).toMatchObject({
+      schema: stored.schema,
+      route: stored.route,
+      chips: stored.chips,
+      analysis: null,
+      background: null,
+      answer: { state: 'CAPABILITY_UNAVAILABLE', basis: 'SOURCE_RIGHTS_WITHHELD', missingRoles: [], candidates: [] },
+    });
+    expect(JSON.stringify(stored)).toBe(before);
+  });
+  it('preserved: a general-knowledge answer with background, guidance and reasoning artifact is unchanged', () => {
+    const general = {
+      schema: 'ask-r2-result/1',
+      route: { questionClass: 'EXPLAINER' },
+      answer: { state: 'REFERENCE_BACKGROUND', basis: 'PLAN_NO_REQUIRED_EVIDENCE', missingRoles: [] },
+      analysis: null,
+      background: { text: 'Inflation is a general rise in prices.' },
+      guidance: { kind: 'CONCEPTUAL_ANALYSIS', currentEvidenceNeeded: [] },
+      artifact: { kind: 'EXPLANATION', components: ['general rise in prices'], provenance: 'MODEL_REASONING', citable: false },
+    };
+    const { payload, withheld } = withholdAskPayload(general);
+    expect(withheld).toBe(0);
+    expect(payload).toEqual(general);
+  });
+  it('positive control: a CLEARED-feed answer keeps its analysis, intelligence, table and artifact unchanged', () => {
+    const c = article('cs', CLEARED);
+    const cleared = {
+      ...withheldAnswer(),
+      answer: { state: 'CURRENT_REPORTING', basis: 'REQUIRED_EVIDENCE_OBTAINED', missingRoles: [] },
+      analysis: { articles: [c], analysis: { summary: 'cleared claim', sources: [{ articleId: c.id, url: c.url }] } },
+      background: null,
+      intelligence: { contributions: [{ domain: 'economy', claim: 'cleared intel', url: c.url }] },
+      artifact: { kind: 'SOURCED_ANSWER', components: ['cleared point'], provenance: 'SOURCED_REPORTING', evidenceUrls: [c.url], evidenceRefs: [c.id] },
+      comparisonTable: { rows: [['cleared row', c.url]] },
+      recentReporting: { articles: [c] },
+    };
+    const { payload, withheld } = withholdAskPayload(cleared);
+    expect(withheld).toBe(0);
+    expect(payload).toEqual(cleared);
+  });
+});
+
+describe('R54 · C-2 — ReaderRightsInterceptor is registered FIRST, so it is the outermost interceptor', () => {
+  type InterceptorLike = { intercept: (c: unknown, n: { handle: () => Observable<unknown> }) => Observable<unknown> };
+  const { readFileSync } = jest.requireActual('fs') as typeof import('fs');
+  const { join } = jest.requireActual('path') as typeof import('path');
+  const order = (): string[] =>
+    [...readFileSync(join(__dirname, '..', '..', '..', 'app.module.ts'), 'utf8').matchAll(/provide: APP_INTERCEPTOR,\s*useClass: (\w+),/g)].map(
+      (m) => m[1],
+    );
+  it('app.module.ts lists it before every other global interceptor', () => {
+    const list = order();
+    expect(list.length).toBeGreaterThan(1);
+    expect(list[0]).toBe('ReaderRightsInterceptor');
+    expect(list.filter((n) => n === 'ReaderRightsInterceptor')).toHaveLength(1);
+  });
+  /* Nest's own consumer composes global interceptors in registration order: interceptors[0] wraps the rest */
+  const run = async (interceptors: InterceptorLike[]): Promise<unknown> => {
+    const out$ = await new InterceptorsConsumer().intercept(
+      interceptors as never,
+      [{ originalUrl: '/news/search?q=kenya' }, { setHeader: () => undefined }, () => undefined],
+      {},
+      () => undefined,
+      async () => ({ articles: [] }),
+      'http',
+    );
+    return lastValueFrom(out$ as Observable<unknown>);
+  };
+  /* a later-registered interceptor that adds article JSON to the response (as a response shaper could) */
+  const adder: InterceptorLike = {
+    intercept: (_c, n) => n.handle().pipe(mapRx((body) => ({ ...(body as object), articles: [article('late', 'gnews-pub')] }))),
+  };
+  it('first = outermost: what an inner interceptor adds is still withheld', async () => {
+    const out = JSON.stringify(await run([new ReaderRightsInterceptor(), adder]));
+    expect(out).not.toContain('https://news.example/late');
+    expect(out).toContain('SOURCE_RIGHTS_WITHHELD');
+  });
+  it('control: registered after it, the same addition would reach the reader (the order is what protects)', async () => {
+    const out = JSON.stringify(await run([adder, new ReaderRightsInterceptor()]));
+    expect(out).toContain('https://news.example/late');
   });
 });
