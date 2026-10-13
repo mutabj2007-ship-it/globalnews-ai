@@ -8,6 +8,7 @@ import { AnalysisService } from '../analysis/service/analysis.service';
 import type { AnalysisConfigService } from '../analysis/config/analysis-config.service';
 import { MockAnalysisProvider } from '../analysis/providers/mock-analysis.provider';
 import { resolvePrimaryCountry, scoreCountryRelevance } from '../news/country/country-relevance.util';
+import { congoIdentityUnestablished, congoScopesOf } from '../analysis/service/scope-contradiction.util';
 import { AskR2ExecutionAdapter } from './ask-r2-execution.adapter';
 import { askRequestContext } from './ask-request-context';
 import type { AskRequest } from './ask-compute.contract';
@@ -71,6 +72,21 @@ const LIVE: Item[] = [
   item('live-cog-brazza', 'COG', 'Brazzaville hosts budget talks in the Republic of the Congo', 'Officials in Brazzaville, Republic of the Congo, discussed the budget.'),
 ].map(tagged);
 
+// CTO R30 R-1: live feed rows, passed per test (the shared LIVE set stays as it was, so the first pass
+// admits fewer than three reports and the anchored top-up still runs). One COD report establishing
+// DR Congo, a bare-Congo row for each feed, and a COG report the DR Congo feed returns.
+const R1_LIVE: Record<string, Item> = Object.fromEntries(
+  [
+    item('live-cod-kinshasa-budget', 'COD', 'Kinshasa resumes budget talks in DR Congo', 'Officials in Kinshasa, DR Congo, resumed budget talks.'),
+    item('live-bare-congo-cod', 'COD', 'Congo budget talks resume', 'Negotiators in Congo resumed budget talks on Monday.'),
+    item('live-bare-congo-cog', 'COG', 'Congo parliament opens budget talks', 'Members of parliament in Congo opened budget talks.'),
+    item('live-cog-oil-cod', 'COD', 'Brazzaville awards new oil blocks as budget talks open', 'The Republic of the Congo signed three licences.'),
+  ]
+    .map(tagged)
+    .map((a) => [a.id, a]),
+);
+const r1 = (...ids: string[]): Item[] => ids.map((id) => R1_LIVE[id]);
+
 /* RETAINED rows carry their STORED code — deliberately including WRONG legacy codes */
 const RETAINED: Item[] = [
   /* the defect row: a correctly stored COG report */
@@ -122,6 +138,8 @@ const sorted = (s: Iterable<string>) => [...new Set(s)].sort();
 
 interface Observed {
   offeredRetainedIds: string[];
+  fedIds: string[];
+  held: number;
   evidenceIds: string[];
   evidenceCountries: string[];
   evidenceLabel: Record<string, string | null>;
@@ -135,10 +153,12 @@ interface Observed {
   counts: { search: number; retained: number; feed: number; model: number; background: number; analyzeNews: number };
 }
 
-async function ask(question: string): Promise<Observed> {
+async function ask(question: string, extraLive: readonly Item[] = []): Promise<Observed> {
+  const liveRows = [...LIVE, ...extraLive];
   const counts = { search: 0, retained: 0, feed: 0, model: 0, background: 0, analyzeNews: 0 };
   const searches: string[] = [];
   const feedCountries: string[] = [];
+  const fed = new Set<string>();
   const offered = new Set<string>();
   const empty = (): NewsResponse => ({ articles: [], totalResults: 0, providers: ['gnews'], dataMode: 'live', generatedAt: new Date().toISOString() });
   const live = (articles: NewsArticle[]): NewsResponse => ({ ...empty(), articles: articles.map((a) => ({ ...a })), totalResults: articles.length });
@@ -146,7 +166,7 @@ async function ask(question: string): Promise<Observed> {
     search: jest.fn(async (q: string) => {
       counts.search += 1;
       searches.push(q);
-      return live(LIVE.filter((a) => matchesAll(q, a)));
+      return live(liveRows.filter((a) => matchesAll(q, a)));
     }),
     topHeadlines: jest.fn(async () => empty()),
     findRetainedByQuery: jest.fn(async (q: string, terms: string[]) => {
@@ -166,7 +186,9 @@ async function ask(question: string): Promise<Observed> {
     counts.feed += 1;
     feedCountries.push(code);
     const meta = resolveCountryByAnyIdentifier(code);
-    return { ...live(LIVE.filter((a) => a.about === meta?.iso3)), countryCode: meta?.iso2 ?? code, countryName: meta?.name ?? code, feedTier: 'delayed', providerDisplayName: 'GNews' };
+    const rows = liveRows.filter((a) => a.about === meta?.iso3);
+    for (const r of rows) fed.add(r.id);
+    return { ...live(rows), countryCode: meta?.iso2 ?? code, countryName: meta?.name ?? code, feedTier: 'delayed', providerDisplayName: 'GNews' };
   });
   const countryNews = new Proxy({ getCountryNews } as Record<string, unknown>, { get: (t, p: string) => (p in t ? t[p] : jest.fn(async () => empty())) });
   const provider = new MockAnalysisProvider();
@@ -246,6 +268,8 @@ async function ask(question: string): Promise<Observed> {
   const coverageSrc: any[] = (modelInputs[modelInputs.length - 1] as any)?.comparisonCoverage ?? response?.retrievalContext?.comparisonCoverage ?? [];
   return {
     offeredRetainedIds: sorted(offered),
+    fedIds: sorted(fed),
+    held: response?.retrievalContext?.geoIdentityHeld?.count ?? 0,
     evidenceIds: sorted(evidence.map((a) => a.id)),
     evidenceCountries: sorted(evidence.map((a) => iso3(a.countryCode)).filter((c): c is string => !!c)),
     evidenceLabel: Object.fromEntries(evidence.map((a) => [a.id, iso3(a.countryCode) ?? null])),
@@ -308,11 +332,13 @@ describe('GEO-E2E-D1 · the anchored top-up boundary (DR Congo question)', () =>
     expect(o.evidenceLabel['ret-cod-legacy-cg']).not.toBe('COG');
     expect(outside(allScope(o), ['COD'])).toEqual([]);
   });
-  it('D1-3 [GEO-E2E-D1] bare "Congo" (stored CG) is not silently decided: kept (absence of a competing country is not a contradiction) but never labelled or counted as COG inside a COD answer', async () => {
+  // CTO R30 R-1 supersedes the earlier D1-3 (kept, unlabelled): a bare "Congo" FAILS CLOSED.
+  it('D1-3 [R-1] bare "Congo" (stored CG) is not COD evidence: offered, withheld from evidence and model input, counted as held, never labelled', async () => {
     const o = await ask(COD_Q);
     expect(o.offeredRetainedIds).toContain('ret-bare-congo-cg');
-    expect(o.evidenceIds).toContain('ret-bare-congo-cg');
-    expect(o.evidenceLabel['ret-bare-congo-cg']).toBeNull();
+    expect(o.evidenceIds).not.toContain('ret-bare-congo-cg');
+    expect(o.modelEvidenceIds).not.toContain('ret-bare-congo-cg');
+    expect(o.held).toBeGreaterThanOrEqual(1);
     expect(outside(allScope(o), ['COD'])).toEqual([]);
   });
   it('D1-4 control: an office-based-in-Brazzaville source inside a COD incident is NOT excluded for the COD answer', async () => {
@@ -342,6 +368,75 @@ describe('GEO-E2E-D1 · the mirror (Republic of the Congo question)', () => {
     }
     expect(outside(allScope(o), ['COG'])).toEqual([]);
     bounded(o);
+  });
+});
+
+describe('CTO R30 · R-1 · a bare "Congo" fails closed for both countries, live and retained', () => {
+  it('R1-1 COD: neither the bare-Congo live feed row nor the stored-CG bare-Congo retained row, nor a COG report the DR Congo feed returned, becomes COD evidence or model input', async () => {
+    const o = await ask(COD_Q, r1('live-bare-congo-cod', 'live-cog-oil-cod'));
+    expect(o.fedIds).toEqual(expect.arrayContaining(['live-bare-congo-cod', 'live-cog-oil-cod'])); // non-vacuous: the live lane returned them
+    expect(o.offeredRetainedIds).toContain('ret-bare-congo-cg'); // non-vacuous: the retained read offered it
+    for (const id of ['live-bare-congo-cod', 'live-cog-oil-cod', 'ret-bare-congo-cg']) {
+      expect(o.evidenceIds).not.toContain(id);
+      expect(o.modelEvidenceIds).not.toContain(id);
+    }
+    expect(o.held).toBeGreaterThanOrEqual(2);
+    expect(outside(allScope(o), ['COD'])).toEqual([]);
+    bounded(o);
+  });
+  it('R1-2 COG: the bare-Congo live feed row and the bare-Congo row STORED as CG are not COG evidence either: a stored label never establishes the country', async () => {
+    const o = await ask(COG_Q, r1('live-bare-congo-cog'));
+    expect(o.fedIds).toContain('live-bare-congo-cog');
+    expect(o.offeredRetainedIds).toContain('ret-bare-congo-cg');
+    for (const id of ['live-bare-congo-cog', 'ret-bare-congo-cg']) {
+      expect(o.evidenceIds).not.toContain(id);
+      expect(o.modelEvidenceIds).not.toContain(id);
+    }
+    expect(o.held).toBeGreaterThanOrEqual(1);
+    expect(outside(allScope(o), ['COG'])).toEqual([]);
+  });
+  it('R1-3 COD positive controls are kept: a Kinshasa live report, a COD event with a legacy CG code, the office-in-Brazzaville COD incident, a cross-border COD event', async () => {
+    const o = await ask(COD_Q, r1('live-cod-kinshasa-budget', 'live-bare-congo-cod'));
+    expect(o.fedIds).toContain('live-cod-kinshasa-budget');
+    for (const id of ['live-cod-kinshasa-budget', 'ret-cod-legacy-cg', 'ret-office-brazza-cod', 'ret-crossborder-cod']) {
+      expect(o.evidenceIds).toContain(id);
+      expect(o.modelEvidenceIds).toContain(id);
+    }
+  });
+  it('R1-4 COG positive controls are kept: a Brazzaville live report and the Republic-of-the-Congo municipal item', async () => {
+    const o = await ask(COG_Q);
+    for (const id of ['live-cog-brazza', 'ret-cog-municipal']) {
+      expect(o.evidenceIds).toContain(id);
+      expect(o.modelEvidenceIds).toContain(id);
+    }
+  });
+});
+
+describe('CTO R30 · R-1 · congoIdentityUnestablished (pure)', () => {
+  const art = (title: string, summary: string, countryCode?: string) => ({ title, summary, ...(countryCode ? { countryCode } : {}) });
+  const CDs = congoScopesOf(['COD']);
+  const CGs = congoScopesOf(['COG']);
+  const both = congoScopesOf(['CD', 'CG']);
+  it.each<[string, ReturnType<typeof art>, ReadonlySet<'CD' | 'CG'>, boolean]>([
+    ['bare Congo, COD scope', art(TEXT.bareCongo[0], TEXT.bareCongo[1]), CDs, true],
+    ['bare Congo, COG scope', art(TEXT.bareCongo[0], TEXT.bareCongo[1]), CGs, true],
+    ['bare Congo, both scopes', art(TEXT.bareCongo[0], TEXT.bareCongo[1]), both, true],
+    ['bare Congo stored CD, COD scope (stored code never establishes)', art(TEXT.bareCongo[0], TEXT.bareCongo[1], 'CD'), CDs, true],
+    ['bare Congo stored CG, COG scope (stored code never establishes)', art(TEXT.bareCongo[0], TEXT.bareCongo[1], 'CG'), CGs, true],
+    ['bilateral, bare Congo', art('Rwanda and Congo hold border talks', 'Officials from Rwanda and Congo met at the border.'), CDs, true],
+    ['COD event, COD scope', art(TEXT.codEvent[0], TEXT.codEvent[1]), CDs, false],
+    ['COD event, COG scope', art(TEXT.codEvent[0], TEXT.codEvent[1]), CGs, true],
+    ['COG municipal, COG scope', art(TEXT.cogMunicipal[0], TEXT.cogMunicipal[1]), CGs, false],
+    ['COG municipal, COD scope', art(TEXT.cogMunicipal[0], TEXT.cogMunicipal[1]), CDs, true],
+    ['office in Brazzaville inside a COD incident, COD scope', art(TEXT.officeInBrazzaville[0], TEXT.officeInBrazzaville[1]), CDs, false],
+    ['cross-border, explicit COD event place, COD scope', art(TEXT.crossBorderCodEvent[0], TEXT.crossBorderCodEvent[1]), CDs, false],
+    ['bilateral naming DR Congo, COD scope', art('Rwanda and DR Congo hold border talks', 'Officials from Rwanda and DR Congo met at the border.'), CDs, false],
+    ['eastern-DRC qualifier with bare Congo, COD scope', art('M23 advance near Goma in Congo', 'Fighting near Goma continued.'), CDs, false],
+    ['comparison scope (both), COD event', art(TEXT.codEvent[0], TEXT.codEvent[1]), both, false],
+    ['no Congo at all, COD scope (not decided here)', art('Kenya budget talks continue', 'Negotiators in Nairobi met.'), CDs, false],
+    ['bare Congo, no Congo scope (not decided here)', art(TEXT.bareCongo[0], TEXT.bareCongo[1]), congoScopesOf(['RW', undefined, null]), false],
+  ])('%s → withheld=%s', (_label, a, scopes, expected) => {
+    expect(congoIdentityUnestablished(a, scopes)).toBe(expected);
   });
 });
 

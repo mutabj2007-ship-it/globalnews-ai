@@ -358,7 +358,12 @@ export interface AnalysisExecutionPolicy {
 }
 import { officeGeographyCountryCode } from '../context-producers/office-geography.producer';
 import { reconcileTypedCountry } from './typed-country-handoff.util';
-import { articleContradictsCountryScope, withoutUnsupportedForeignLabel } from './scope-contradiction.util';
+import {
+  articleContradictsCountryScope,
+  congoIdentityUnestablished,
+  congoScopesOf,
+  withoutUnsupportedForeignLabel,
+} from './scope-contradiction.util';
 import { supplementCredit } from './comparison-coverage-credit.util';
 import {
   decideContextEligibility,
@@ -4009,6 +4014,38 @@ export class AnalysisService {
               geoIdentityHeld: { count: (retrievalContext.geoIdentityHeld?.count ?? 0) + held.length },
               ...(kept.length === 0 && retrievalContext.outcome === 'RETAINED_ONLY' ? { outcome: undefined } : {}),
             };
+          }
+        }
+        /*
+          MASTER CTO R30 · R-1 — THE SAME ONE POINT, FOR A CONGO WHOSE IDENTITY THE REPORT DOES NOT
+          ESTABLISH. When this turn's scope names DR Congo and/or the Republic of the Congo (the typed or
+          story country, comparison sides, named countries, a bilateral relationship), a report that
+          mentions Congo without its own text establishing one of those countries
+          (`congoIdentityUnestablished`) is withheld from evidence, claims, trace and model input —
+          whichever lane, live or retained, found it, and whatever country code it was stored with. It
+          is counted with the geo-identity hold: reporting withheld because its location is not
+          established, never "not relevant" and never proof that no reporting exists.
+        */
+        {
+          const congoScopes = congoScopesOf([
+            location?.country.iso2,
+            ...classification.sides.map((side) => side.iso2),
+            ...classification.countries.map((country) => country.iso2),
+            ...(executionPolicy?.relationship?.countries ?? []),
+          ]);
+          if (congoScopes.size > 0) {
+            const kept = articles.filter((article) => !congoIdentityUnestablished(article, congoScopes));
+            const held = articles.length - kept.length;
+            if (held > 0) {
+              this.logger.warn(`ask congo-identity hold count=${held} scopes=${[...congoScopes].join(',')}`);
+              articles = kept;
+              retrievalContext = {
+                ...retrievalContext,
+                articlesRetrieved: kept.length,
+                geoIdentityHeld: { count: (retrievalContext.geoIdentityHeld?.count ?? 0) + held },
+                ...(kept.length === 0 && retrievalContext.outcome === 'RETAINED_ONLY' ? { outcome: undefined } : {}),
+              };
+            }
           }
         }
         {

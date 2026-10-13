@@ -177,13 +177,18 @@ describe('N3 — "Give any recent reports about Eric Prince in Congo." (exact)',
 });
 
 describe('the reader named the country — person search scoped to it, never the country feed', () => {
-  it('"…Eric Prince in DRC." → one "Erik Prince" search; the bare-Congo Reuters headline is consistent with DRC', async () => {
+  // MASTER CTO R30 · R-1 supersedes "the bare-Congo headline is consistent with DRC": a headline that says only
+  // "Congo" does not establish DR Congo, and the reader naming DRC never establishes it for the report. It is
+  // withheld and counted as held (not "nothing found"); the person search and the COD scope are unchanged.
+  it('"…Eric Prince in DRC." → one "Erik Prince" search; the bare-Congo headline is withheld from DR Congo evidence (R-1), counted as held', async () => {
     const h = harness([REUTERS_FIXTURE, BRAZZAVILLE_CONTROL]);
     const response = await h.service.analyzeNews('Give any recent reports about Eric Prince in DRC.');
     expect(traced(h).queries()).toEqual(['Erik Prince']);
     expect(h.countryCalls).toEqual([]);
     expect(response.retrievalContext.countryCode).toBe('COD');
-    expect(traced(h).modelArticles().map((a) => a.id)).toEqual(['reuters-fixture-1']);
+    expect(traced(h).modelArticles().map((a) => a.id)).toEqual([]);
+    expect(response.articles.map((a) => a.id)).not.toContain('reuters-fixture-1');
+    expect(response.retrievalContext.geoIdentityHeld?.count ?? 0).toBeGreaterThanOrEqual(1);
   });
 
   it('"What is Erik Prince doing in eastern Congo?" → "Erik Prince" is the provider phrase', async () => {

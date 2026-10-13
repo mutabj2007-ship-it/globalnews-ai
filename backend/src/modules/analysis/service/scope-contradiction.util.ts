@@ -8,9 +8,9 @@ import { congoReadingOf } from '../anchor/event-anchor.util';
   contradiction when it names the OTHER Congo. `resolvePrimaryCountry` returns nothing for texts such
   as "Brazzaville awards new oil blocks … The Republic of the Congo signed …" (the C-05 recall gap), so
   such a report reached a DR Congo answer unlabelled. Only an unambiguous reading of the other Congo
-  excludes: AMBIGUOUS (qualifiers of both, e.g. an office in Brazzaville inside an eastern DRC
-  incident) and no reading (a bare "Congo") never exclude. No keyword, city or threshold is added; no
-  D-21 change.
+  excludes: AMBIGUOUS (a bare "Congo", or qualifiers of both, e.g. an office in Brazzaville inside an
+  eastern DRC incident) and no Congo at all never exclude here (R-1 below decides the bare "Congo").
+  No keyword, city or threshold is added; no D-21 change.
 */
 const OTHER_CONGO: Readonly<Record<string, 'COD' | 'COG'>> = { CD: 'COG', CG: 'COD' };
 
@@ -57,6 +57,42 @@ export function articleContradictsCountryScope(
 
 const iso2Of = (code: string | undefined | null): string | undefined =>
   typeof code === 'string' && code.trim() !== '' ? resolveCountryByAnyIdentifier(code.trim())?.iso2 : undefined;
+
+const CONGO_ISO3: Readonly<Record<'CD' | 'CG', 'COD' | 'COG'>> = { CD: 'COD', CG: 'COG' };
+
+/** The Congo countries (CD / CG) among a turn's scope countries, given in any identifier form. */
+export function congoScopesOf(codes: Iterable<string | undefined | null>): ReadonlySet<'CD' | 'CG'> {
+  const out = new Set<'CD' | 'CG'>();
+  for (const code of codes) {
+    const iso2 = iso2Of(code);
+    if (iso2 === 'CD' || iso2 === 'CG') out.add(iso2);
+  }
+  return out;
+}
+
+/**
+ * MASTER CTO R30 · R-1 — A BARE "CONGO" FAILS CLOSED. For a turn whose scope names DR Congo and/or
+ * the Republic of the Congo, a report whose own text mentions Congo is evidence for that scope only
+ * when its OWN text establishes one of those countries: the reviewed Congo reading
+ * (`congoReadingOf`: a DRC name / eastern-DRC place or actor → COD; Brazzaville / Republic of the
+ * Congo / Pointe-Noire → COG) or the article resolver (`resolvePrimaryCountry`) names a scope
+ * country. Otherwise — a bare "Congo", or a reading of the other Congo — it is not established and is
+ * withheld. A stored country code, the question's country and the retrieval lane that found it never
+ * establish it. A report that does not mention Congo at all is not decided here.
+ */
+export function congoIdentityUnestablished(
+  article: Pick<NewsArticle, 'title' | 'summary'>,
+  scopes: ReadonlySet<'CD' | 'CG'>,
+): boolean {
+  if (scopes.size === 0) return false;
+  const reading = congoReadingOf(`${article.title ?? ''} ${article.summary ?? ''}`);
+  if (reading === undefined) return false;
+  const own = resolvePrimaryCountry(article)?.countryCode;
+  for (const scope of scopes) {
+    if (reading === CONGO_ISO3[scope] || own === scope) return false;
+  }
+  return true;
+}
 
 /**
  * An ADMITTED report whose stored code names a country other than the scope, and whose own text does
