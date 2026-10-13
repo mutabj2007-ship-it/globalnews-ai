@@ -106,14 +106,10 @@ async function choose(locale: DisplayLocale, pick: { search: string; label: stri
 
 describe('V-02 · D0.1 → Ask: the staged draft is one Ask executes, for the chosen place', () => {
   it.each([
-    ['en', { search: 'kinshasa', label: 'Congo - Kinshasa' }, 'What are the latest developments in Congo - Kinshasa?'],
-    ['en', { search: 'brazzaville', label: 'Congo - Brazzaville' }, 'What are the latest developments in Congo - Brazzaville?'],
     ['en', { search: 'rwanda', label: 'Rwanda' }, 'What are the latest developments in Rwanda?'],
     ['en', { region: 'region:east-africa' }, 'What are the latest developments in East Africa?'],
     ['en', { region: 'region:european-union' }, 'What are the latest developments in European Union?'],
     ['en', { region: 'region:middle-east' }, 'What are the latest developments in Middle East?'],
-    ['pl', { search: 'demokratyczna', label: 'Demokratyczna Republika Konga' }, 'Demokratyczna Republika Konga: jakie są najnowsze wydarzenia?'],
-    ['pl', { search: 'kongo', label: 'Kongo' }, 'Kongo: jakie są najnowsze wydarzenia?'],
     ['pl', { search: 'polska', label: 'Polska' }, 'Polska: jakie są najnowsze wydarzenia?'],
     ['pl', { region: 'region:european-union' }, 'Unia Europejska: jakie są najnowsze wydarzenia?'],
   ] as const)('%s %j → %s', async (locale, pick, expected) => {
@@ -124,9 +120,30 @@ describe('V-02 · D0.1 → Ask: the staged draft is one Ask executes, for the ch
     expect(follow).not.toHaveBeenCalled();
   });
 
-  it('the chosen country keeps its identity: COD and COG drafts differ and name their own country', async () => {
-    const cod = draftOf(await choose('en' as DisplayLocale, { search: 'kinshasa', label: 'Congo - Kinshasa' }));
-    const cog = draftOf(await choose('en' as DisplayLocale, { search: 'brazzaville', label: 'Congo - Brazzaville' }));
+  /*
+    CTO R25 — country research FAILS CLOSED for COD / COG until the COD/COG-safe backend is live on
+    Alpha (ChoosePlace PLACE_RESEARCH_HELD_ISO3). These four places were previously asserted to stage a
+    research draft; they now offer NO research action, while the read-only place view still renders
+    and nothing is fetched or followed. The V-02 draft WORDING for them is still pinned below via
+    placeResearchDraft, so restoring the action later needs only the held set removed.
+  */
+  it.each([
+    ['en', { search: 'kinshasa', label: 'Congo - Kinshasa' }, 'What are the latest developments in Congo - Kinshasa?'],
+    ['en', { search: 'brazzaville', label: 'Congo - Brazzaville' }, 'What are the latest developments in Congo - Brazzaville?'],
+    ['pl', { search: 'demokratyczna', label: 'Demokratyczna Republika Konga' }, 'Demokratyczna Republika Konga: jakie są najnowsze wydarzenia?'],
+    ['pl', { search: 'kongo', label: 'Kongo' }, 'Kongo: jakie są najnowsze wydarzenia?'],
+  ] as const)('R25 fail-closed · %s %j → no research action (draft wording still "%s")', async (locale, pick, wording) => {
+    const r = await choose(locale as DisplayLocale, pick);
+    expect(byData(r, 'place-view')).toHaveLength(1);
+    expect(byData(r, 'place-research')).toHaveLength(0);
+    expect(placeResearchDraft(locale, pick.label)).toBe(wording);
+    expect(accountFetch).not.toHaveBeenCalled();
+    expect(follow).not.toHaveBeenCalled();
+  });
+
+  it('the chosen country keeps its identity in the draft wording: COD and COG drafts differ and name their own country', () => {
+    const cod = placeResearchDraft('en', 'Congo - Kinshasa');
+    const cog = placeResearchDraft('en', 'Congo - Brazzaville');
     expect(cod).not.toBe(cog);
     expect(cod).toContain('Kinshasa');
     expect(cog).toContain('Brazzaville');
