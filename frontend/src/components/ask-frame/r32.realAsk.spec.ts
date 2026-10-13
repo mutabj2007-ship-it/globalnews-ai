@@ -129,8 +129,8 @@ describe('R32 · jobs inside the real Ask', () => {
         ...props,
       } as never),
     );
-  it('a job-context answer offers the job sheet ("Find job opportunities"); without the handler, nothing', () => {
-    expect(render({ onOpenJobs: () => undefined })).toMatch(/data-ask="job-entry"[^>]*>Find job opportunities</);
+  it('a job-context answer offers the job sheet (R38: "Ask about jobs and careers"); without the handler, nothing', () => {
+    expect(render({ onOpenJobs: () => undefined })).toMatch(/data-ask="job-entry"[^>]*>Ask about jobs and careers</);
     expect(render({})).not.toContain('data-ask="job-entry"');
   });
   it('focus returns to the entry that opened the sheet (the G3 cue or the answer’s job entry)', () => {

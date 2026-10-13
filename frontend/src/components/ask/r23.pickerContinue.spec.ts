@@ -48,7 +48,8 @@ async function open(props: Record<string, unknown> = {}, locale = 'en') {
 }
 async function type(r: ReactTestRenderer, value: string) {
   await act(async () => {
-    byData(r, 'picker-search')[0].props.onChange({ target: { value } });
+    /* MASTER CTO R38 · U-2 — under HOLD the field takes the story in the reader's own words */
+    byData(r, 'picker-describe')[0].props.onChange({ target: { value } });
   });
   await act(async () => {
     jest.advanceTimersByTime(300);
@@ -76,33 +77,34 @@ describe('R23 · the picker always offers a way back into Ask (real HOLD gate)',
     expect(accountFetch).not.toHaveBeenCalled();
   });
 
-  it('typed query under the rights HOLD: the notice stays truthful, no row appears, and the CTA carries the exact words', async () => {
+  it('typed story under the rights HOLD: the limitation is said FIRST, no row appears, and the action stages the reader\'s exact words as an explain question', async () => {
     const { r, onStageDraft } = await open();
+    /* said before any input */
+    expect(textOf(byData(r, 'picker-notice-rights-hold')[0])).toMatch(/^Stored stories can’t be listed here while source permissions are reviewed\./);
     await type(r, '  fuel prices in Kigali  ');
-    expect(textOf(byData(r, 'picker-notice-rights-hold')[0])).toBe('Stories can’t be listed here while source permissions are reviewed.');
     expect(byData(r, 'picker-row')).toHaveLength(0);
     const cta = byData(r, 'picker-continue')[0];
     expect(cta.props['data-staged']).toBe('typed');
-    expect(textOf(byData(r, 'picker-continue-text')[0])).toBe('“fuel prices in Kigali”');
+    expect(textOf(cta)).toBe('Ask about this story');
     await act(async () => {
       cta.props.onClick();
     });
     /* the reader's words, trimmed of surrounding spaces only; staged UNSENT by the parent */
-    expect(onStageDraft).toHaveBeenCalledWith('fuel prices in Kigali');
+    expect(onStageDraft).toHaveBeenCalledWith('Explain this story: fuel prices in Kigali');
     /* no provider, model or account request from opening, typing or the action */
     expect(accountFetch).not.toHaveBeenCalled();
     expect(readStoryBrief).not.toHaveBeenCalled();
     expect(ensureStoryForArticle).not.toHaveBeenCalled();
   });
 
-  it('a one-character query still has the action (the min-characters notice stays)', async () => {
+  it('a one-character description still has the action (no search, so no minimum)', async () => {
     const { r, onStageDraft } = await open();
     await type(r, 'k');
-    expect(byData(r, 'picker-notice-min-chars')).toHaveLength(1);
+    expect(byData(r, 'picker-notice-min-chars')).toHaveLength(0);
     await act(async () => {
       byData(r, 'picker-continue')[0].props.onClick();
     });
-    expect(onStageDraft).toHaveBeenCalledWith('k');
+    expect(onStageDraft).toHaveBeenCalledWith('Explain this story: k');
     expect(accountFetch).not.toHaveBeenCalled();
   });
 
@@ -111,27 +113,27 @@ describe('R23 · the picker always offers a way back into Ask (real HOLD gate)',
     const { r, onStageDraft } = await open({ existingDraft: 'What changed in Rwanda?', onReplaceDraft });
     await type(r, 'fuel prices');
     expect(textOf(byData(r, 'picker-draft-kept')[0])).toBe('Your unsent question stays in the Ask box.');
-    /* the primary action does not carry the search words when they would not be applied */
+    /* the primary action does not carry the reader's words when they would not be applied */
     expect(byData(r, 'picker-continue')[0].props['data-staged']).toBe('none');
-    expect(byData(r, 'picker-continue-text')).toHaveLength(0);
+    expect(textOf(byData(r, 'picker-continue')[0])).toBe('Ask a question');
     await act(async () => {
       byData(r, 'picker-continue')[0].props.onClick();
     });
     expect(onStageDraft).toHaveBeenCalledWith('');
     expect(onReplaceDraft).not.toHaveBeenCalled();
     const replace = byData(r, 'picker-replace-draft')[0];
-    expect(textOf(replace)).toBe('Use the search words instead“fuel prices”');
+    expect(textOf(replace)).toBe('Replace the Ask box text with this“Explain this story: fuel prices”');
     await act(async () => {
       replace.props.onClick();
     });
-    expect(onReplaceDraft).toHaveBeenCalledWith('fuel prices');
+    expect(onReplaceDraft).toHaveBeenCalledWith('Explain this story: fuel prices');
     expect(accountFetch).not.toHaveBeenCalled();
   });
 
   it('no conflict is shown when the unsent question is empty, identical, or the parent offers no replace', async () => {
     for (const props of [
       { existingDraft: '   ', onReplaceDraft: jest.fn() },
-      { existingDraft: 'fuel prices', onReplaceDraft: jest.fn() },
+      { existingDraft: 'Explain this story: fuel prices', onReplaceDraft: jest.fn() },
       { existingDraft: 'something else' },
     ]) {
       const { r } = await open(props);
@@ -141,7 +143,7 @@ describe('R23 · the picker always offers a way back into Ask (real HOLD gate)',
     }
   });
 
-  it('Enter in the search field never submits or stages anything (only the explicit action does)', async () => {
+  it('Enter in the story field never submits or stages anything (only the explicit action does)', async () => {
     const { r, onStageDraft, onClose } = await open();
     await type(r, 'fuel prices');
     const dialog = r.root.find((n) => n.props.role === 'dialog');
@@ -189,14 +191,15 @@ describe('R23 · the picker always offers a way back into Ask (real HOLD gate)',
     }
   });
 
-  it('the action is a real <button type="button"> with a visible label (its accessible name), in a footer outside the scroll area', async () => {
+  it('the action is a real <button type="button"> with a visible label, directly beside the field (R38 U-2: no dead space between them)', async () => {
     const { r } = await open();
     const cta = byData(r, 'picker-continue')[0];
     expect(cta.type).toBe('button');
     expect(cta.props.type).toBe('button');
-    const foot = byData(r, 'picker-continue-foot')[0];
-    expect(foot.type).toBe('footer');
-    expect(foot.findAll((n) => n.props['data-ask'] === 'picker-continue')).toHaveLength(1);
+    const group = byData(r, 'picker-describe-form')[0];
+    expect(group.findAll((n) => n.props['data-ask'] === 'picker-describe' && typeof n.type === 'string')).toHaveLength(1);
+    expect(group.findAll((n) => n.props['data-ask'] === 'picker-continue' && typeof n.type === 'string')).toHaveLength(1);
+    expect(byData(r, 'picker-continue-foot')).toHaveLength(0);
   });
 
   it('every locale: the label is the Ask composer\'s own approved "Ask a question" copy, RTL for Arabic', async () => {

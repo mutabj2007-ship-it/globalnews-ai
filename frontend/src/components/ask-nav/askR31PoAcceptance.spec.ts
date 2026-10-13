@@ -369,7 +369,8 @@ describe('R3.2 MOBILE COMPACT — My updates and Saved', () => {
   it('critical states are never folded away; the cost is said once for the page', () => {
     expect(updates).toContain("presentation?.attention === true || latestCheck.outcome === 'INCOMPLETE_CHECK' || latestCheck.partial === true");
     expect(updates).toContain('data-ask="followed-structured-unassessed"');
-    expect(updates.match(/\{s\.checkCost\}/g)).toHaveLength(1);
+    /* MASTER CTO R38 · U-5 — the manual re-ask note replaces the bare cost line, still said once */
+    expect(updates.match(/askR38Strings\(locale\)\.updatesManualNote/g)).toHaveLength(1);
     expect(updates).toContain('data-ask="my-updates-check-cost"');
   });
   it('Saved rows: two-line question, compact date, Open and an accessible Remove; no per-row note', () => {

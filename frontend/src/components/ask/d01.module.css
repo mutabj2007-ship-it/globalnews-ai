@@ -33,6 +33,47 @@
     border-radius: 16px;
   }
 }
+/* MASTER CTO R38 · U-2 — the held Explain-a-story dialog is CONTENT-sized: notice, field and action
+   stay together; it scrolls only when the content is taller than the space (keyboard up). */
+.sheet.sheetContent {
+  height: auto;
+  max-height: calc(100% - 56px);
+}
+@media (min-width: 700px) {
+  .sheet.sheetContent {
+    height: auto;
+    max-height: min(86%, 760px);
+  }
+}
+.bodyContent {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 12px;
+  padding: 6px 18px max(18px, env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.describeLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ad-ink, #edeff5);
+}
+.describeInput {
+  min-height: 48px;
+  width: 100%;
+  padding: 0 14px;
+  border: 1px solid var(--ad-accent, #6c93ff);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ad-ink, #edeff5);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 400;
+}
 .head {
   display: flex;
   min-height: 60px;

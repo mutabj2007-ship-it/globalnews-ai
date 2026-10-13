@@ -31,6 +31,7 @@ import {
 import { AskUpdatesChecking } from './AskUpdatesChecking';
 import { AskFollowAssessment } from '@/components/ask-frame/AskFollowAssessment';
 import { d01Strings } from '@/lib/ask/d01Strings';
+import { askR38Strings } from '@/lib/ask/askR38Strings';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -69,7 +70,9 @@ export function MyUpdatesClient({ locale }: { readonly locale: DisplayLocale }):
       <header className="flex flex-col gap-0.5">
         <h1 className="font-display text-[24px] font-semibold text-ink-primary">{s.myUpdates}</h1>
         <p className="text-[13px] leading-snug text-ink-tertiary">{s.myUpdatesIntro}</p>
-        <p data-ask="my-updates-check-cost" className="text-[13px] leading-snug text-ink-tertiary">{s.checkCost}</p>
+        {/* MASTER CTO R38 · U-5 — nothing is monitored: a follow is re-asked only when the reader
+            chooses, at the cost of one question, and compared with the last saved answer. */}
+        <p data-ask="my-updates-check-cost" className="text-[13px] leading-snug text-ink-tertiary">{askR38Strings(locale).updatesManualNote}</p>
         {summary !== null && (
           <p data-ask="my-updates-summary" className="text-[13.5px] font-medium text-ink-secondary">
             {[n.followedCount(summary.followed), summary.withChanges > 0 ? n.withChangesAtLastCheck(summary.withChanges) : null]
@@ -277,7 +280,7 @@ function FollowedRow({
               data-ask="followed-check"
               className="inline-flex min-h-[44px] items-center text-[13px] font-semibold text-signal underline decoration-signal/50 underline-offset-4"
             >
-              {s.checkForChanges}
+              {askR38Strings(locale).updatesAskAgain}
             </Link>
           ))}
         <button

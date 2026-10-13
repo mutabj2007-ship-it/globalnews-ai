@@ -7,6 +7,7 @@ import { askBookmarkReopenHref, filterBookmarks } from '@/lib/ask/askRecentGroup
 import type { DisplayLocale } from '@globalnews-ai/shared';
 import { SavedBriefings } from './SavedBriefings';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
+import { askR38Strings } from '@/lib/ask/askR38Strings';
 import { askDirectionProps, askFormatLocalDayCompact } from '@/lib/ask/askDirection';
 
 /**
@@ -163,7 +164,12 @@ export function SavedClient({ locale }: { readonly locale: DisplayLocale }): JSX
                         <>
                           <span aria-hidden="true">{'·'}</span>
                           <span data-saved="state">
-                            {t.operationStates[row.state] ?? row.state}
+                            {/* MASTER CTO R38 · U-6 — a completed REQUEST is not proof of a usable answer
+                                (its evidence may be withheld or the answer insufficient): said as a request
+                                state; the record itself is untouched and Reopen shows what is there. */}
+                            {row.state === 'COMPLETED'
+                              ? askR38Strings(locale).savedRequestCompleted
+                              : (t.operationStates[row.state] ?? row.state)}
                           </span>
                         </>
                       )}

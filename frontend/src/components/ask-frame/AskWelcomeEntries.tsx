@@ -4,6 +4,7 @@ import type { JSX } from 'react';
 import type { DisplayLocale } from '@globalnews-ai/shared';
 import { askR3FullStrings } from '@/lib/ask/askR3FullStrings';
 import { askDiscoverStrings } from '@/lib/ask/askDiscoverStrings';
+import { askR38Strings } from '@/lib/ask/askR38Strings';
 import { AskDiscoverIcon } from './AskDiscoverIcon';
 import styles from './askDashboard.module.css';
 
@@ -61,7 +62,8 @@ export function AskWelcomeEntries({
   const cues: readonly { readonly id: 'g1' | 'g2' | 'g3'; readonly label: string; readonly run: () => void }[] = [
     { id: 'g1', label: g.cueRegion, run: () => onStageDraft?.(g.draftRegion, g.hintRegion) },
     { id: 'g2', label: g.cueStory, run: () => (onOpenStoryPicker !== undefined ? onOpenStoryPicker() : onStageDraft?.(g.draftStory, g.hintStory)) },
-    { id: 'g3', label: g.cueJobs, run: onOpenJobs },
+    /* MASTER CTO R38 · U-3 — a career QUESTION, never a vacancy search (listings are not connected) */
+    { id: 'g3', label: askR38Strings(locale).jobsCue, run: onOpenJobs },
   ];
 
   return (

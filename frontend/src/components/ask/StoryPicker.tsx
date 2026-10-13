@@ -9,6 +9,8 @@ import { readStoryBrief } from '@/lib/api/storyBriefApi';
 import type { BriefResult, StoredBriefContent, StoryBriefView } from '@/lib/storyBrief/storyBriefView';
 import { askDirectionProps, askFormatLocalDayCompact } from '@/lib/ask/askDirection';
 import { r23PickerStrings } from '@/lib/ask/r23PickerStrings';
+import { askR38Strings } from '@/lib/ask/askR38Strings';
+import { PICKER_PUBLISHER_CONTENT } from '@/lib/rights/pickerPublisherContent';
 import tokens from '../account/settingsTokens.module.css';
 import styles from './d01.module.css';
 
@@ -81,6 +83,13 @@ export function StoryPicker({
 }): JSX.Element {
   const titleId = useId();
   const viewportBox = useVisualViewportBox();
+  /*
+    MASTER CTO R38 · U-2 — while E1 holds publisher content no stored story can ever be listed, so
+    the search sheet was a dead end (an empty 760 px dialog, the action far below the field). Held,
+    the dialog says so FIRST and asks for the story in the reader's own words; its one action sits
+    under the field and only stages an unsent draft. CLEARED keeps the search picker unchanged.
+  */
+  const held = PICKER_PUBLISHER_CONTENT !== 'CLEARED';
   const [view, setView] = useState<View>({ kind: 'search' });
   /* The query and its result live HERE, not in the search view, so "‹ Explain a story" from a story
      returns to the same results (S05 → S02) without a second request. */
@@ -110,7 +119,8 @@ export function StoryPicker({
         aria-modal="true"
         aria-labelledby={titleId}
         data-ask="story-picker"
-        className={styles.sheet}
+        data-ask-picker-mode={held ? 'describe' : 'search'}
+        className={held ? `${styles.sheet} ${styles.sheetContent}` : styles.sheet}
         onClick={(event) => event.stopPropagation()}
         {...askDirectionProps(locale)}
         onKeyDown={(event) => {
@@ -137,7 +147,16 @@ export function StoryPicker({
           }
         }}
       >
-        {view.kind === 'search' ? (
+        {held ? (
+          <PickerDescribe
+            locale={locale}
+            titleId={titleId}
+            onClose={onClose}
+            existingDraft={existingDraft}
+            onStageDraft={onStageDraft}
+            onReplaceDraft={onReplaceDraft}
+          />
+        ) : view.kind === 'search' ? (
           <PickerSearch
             locale={locale}
             titleId={titleId}
@@ -284,6 +303,103 @@ function PickerSearch({
           </button>
         )}
       </footer>
+    </>
+  );
+}
+
+/**
+ * MASTER CTO R38 · U-2 — Explain a story while stored stories are held: the limitation first, one
+ * field for the story in the reader's words, the action directly under it. Nothing is searched,
+ * read or sent; the action only STAGES a draft (R23 rules: an unsent question in the Ask box is
+ * kept unless the reader explicitly chooses to replace it; empty → close and focus the composer).
+ */
+function PickerDescribe({
+  locale,
+  titleId,
+  onClose,
+  existingDraft,
+  onStageDraft,
+  onReplaceDraft,
+}: {
+  readonly locale: DisplayLocale;
+  readonly titleId: string;
+  readonly onClose: () => void;
+  readonly existingDraft: string;
+  readonly onStageDraft: (draft: string) => void;
+  readonly onReplaceDraft?: (draft: string) => void;
+}): JSX.Element {
+  const s = d01Strings(locale);
+  const r23 = r23PickerStrings(locale);
+  const r38 = askR38Strings(locale);
+  const input = useRef<HTMLInputElement | null>(null);
+  const noticeId = useId();
+  const [described, setDescribed] = useState('');
+  const typed = described.trim();
+  const draft = typed.length > 0 ? r38.storyDraft(typed) : '';
+  const kept = existingDraft.trim();
+  const conflict = typed.length > 0 && kept.length > 0 && kept !== draft && onReplaceDraft !== undefined;
+
+  useEffect(() => input.current?.focus(), []);
+
+  return (
+    <>
+      <header className={styles.head}>
+        <h2 id={titleId} className={styles.title}>
+          {s.storyTitle}
+        </h2>
+        <button type="button" data-ask="picker-close" aria-label={s.close} onClick={onClose} className={styles.iconButton}>
+          <span aria-hidden="true">✕</span>
+        </button>
+      </header>
+      {/* R23 — Enter in the field never stages anything; only the explicit action below does. */}
+      <div className={styles.bodyContent} data-ask="picker-describe-form">
+        <p id={noticeId} data-ask="picker-notice-rights-hold" className={styles.notice}>
+          {r38.storyHeldNotice}
+        </p>
+        <label className={styles.describeLabel}>
+          <span>{r38.storyDescribeLabel}</span>
+          <input
+            ref={input}
+            type="text"
+            data-ask="picker-describe"
+            value={described}
+            onChange={(event) => setDescribed(event.target.value)}
+            placeholder={r38.storyDescribePlaceholder}
+            aria-describedby={noticeId}
+            className={styles.describeInput}
+            dir="auto"
+          />
+        </label>
+        {conflict && (
+          <p role="status" data-ask="picker-draft-kept" className={styles.small}>
+            {r23.keptDraft}
+          </p>
+        )}
+        <button
+          type="button"
+          data-ask="picker-continue"
+          onClick={() => onStageDraft(conflict ? '' : draft)}
+          data-staged={!conflict && typed.length > 0 ? 'typed' : 'none'}
+          className={styles.primary}
+        >
+          {typed.length > 0 && !conflict ? r38.storyAskAbout : r23.askLabel}
+        </button>
+        {conflict && onReplaceDraft !== undefined && (
+          <button
+            type="button"
+            data-ask="picker-replace-draft"
+            onClick={() => onReplaceDraft(draft)}
+            className={styles.secondary}
+            style={{ flexDirection: 'column', gap: 2, padding: '6px 16px' }}
+          >
+            <span>{r38.storyReplaceDraft}</span>
+            <span dir="auto" className={styles.continueText}>
+              “{draft}”
+            </span>
+          </button>
+        )}
+        <p className={styles.small}>{r38.storyNothingSent}</p>
+      </div>
     </>
   );
 }

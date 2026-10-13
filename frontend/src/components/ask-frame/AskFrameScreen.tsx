@@ -291,13 +291,17 @@ export function AskFrameScreen({
       wideQuery.removeEventListener?.('change', read);
     };
   }, []);
-  /* Design A2 — typing collapses the welcome group; only the emblem and the composer remain. */
-  const typing = entryState && (composerFocused || question.trim() !== '');
-  const emblemState = isPending
-    ? 'leaving'
-    : composerFocused || question.trim() !== ''
-      ? 'typing'
-      : 'ready';
+  /*
+    MASTER CTO R38 · U-1 (Product Owner screenshot rejection, supersedes Design A2 "typing collapses
+    the welcome group"): on a normal or tall viewport, typing KEEPS the welcome group — headline,
+    support line and cues stay with the one composer as the same calm composition as the ready
+    screen, so a tall narrow window never shows a lone emblem in an empty viewport above a composer
+    pinned to the bottom. The collapse remains only where space is genuinely short (compact: width
+    < 360 or height < 640, which is what a phone keyboard leaves), so the composer and Send stay in
+    view. One composer, one Send; the draft and focus are untouched either way.
+  */
+  const typing = entryState && frameSize.compact && (composerFocused || question.trim() !== '');
+  const emblemState = isPending ? 'leaving' : typing ? 'typing' : 'ready';
   const showEmblem =
     (entryState ||
       (isPending && r2.turns.length === 0 && opened === null && r2.signInRequired === null)) &&

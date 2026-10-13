@@ -86,13 +86,18 @@ describe('D1 story picker under HOLD', () => {
     return { r, onClose, onStageDraft };
   }
 
-  it('S01: opens as a dialog titled "Explain a story", empty, with the min-characters notice', async () => {
+  /* MASTER CTO R38 · U-2 supersedes S01/S03's search-first sheet while HOLD is in force: the dialog
+     never invites a search of stories it may not list. */
+  it('S01 (R38): opens as a dialog titled "Explain a story" that says FIRST stories cannot be listed, and asks for the story in the reader\'s words', async () => {
     const { r } = await open();
     const dialog = r.root.find((n) => n.props.role === 'dialog');
     expect(dialog.props['aria-modal']).toBe('true');
+    expect(dialog.props['data-ask-picker-mode']).toBe('describe');
     expect(textOf(r.root)).toContain('Explain a story');
-    expect(textOf(byData(r, 'picker-notice-min-chars')[0])).toBe('Type at least 2 characters to search stories GlobalNews AI holds.');
-    expect(textOf(r.root)).toContain('Opening a story only reads it. Nothing is researched.');
+    expect(textOf(byData(r, 'picker-notice-rights-hold')[0])).toMatch(/^Stored stories can’t be listed here/);
+    expect(byData(r, 'picker-search')).toHaveLength(0);
+    expect(byData(r, 'picker-notice-min-chars')).toHaveLength(0);
+    expect(byData(r, 'picker-describe')).toHaveLength(1);
   });
 
   it('RTL: in Arabic the dialog carries dir=rtl and lang=ar (and Choose a place too)', async () => {
@@ -110,10 +115,10 @@ describe('D1 story picker under HOLD', () => {
     expect([main.props.dir, main.props.lang]).toEqual(['rtl', 'ar']);
   });
 
-  it('S03: a real query shows the rights-hold notice, lists no rows, fetches nothing', async () => {
+  it('S03 (R38): a typed description keeps the rights-hold notice, lists no rows, fetches nothing', async () => {
     const { r } = await open();
-    await type(r, 'picker-search', 'fuel prices');
-    expect(textOf(byData(r, 'picker-notice-rights-hold')[0])).toBe('Stories can’t be listed here while source permissions are reviewed.');
+    await type(r, 'picker-describe', 'fuel prices');
+    expect(textOf(byData(r, 'picker-notice-rights-hold')[0])).toMatch(/^Stored stories can’t be listed here/);
     expect(byData(r, 'picker-row')).toHaveLength(0);
     expect(accountFetch).not.toHaveBeenCalled();
     expect(readStoryBrief).not.toHaveBeenCalled();

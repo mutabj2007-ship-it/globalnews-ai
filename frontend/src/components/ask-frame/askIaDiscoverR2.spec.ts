@@ -1,3 +1,4 @@
+import { askR38Strings } from '@/lib/ask/askR38Strings';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { createElement } from 'react';
@@ -72,7 +73,8 @@ describe('G1 G2 G3 guided cues, and the G4 globe that is not one', () => {
     for (const [id, label] of [
       ['cue-g1', g.cueRegion],
       ['cue-g2', g.cueStory],
-      ['cue-g3', g.cueJobs],
+      /* MASTER CTO R38 · U-3 — G3 is a career QUESTION entry while listings are not connected */
+      ['cue-g3', askR38Strings('en').jobsCue],
     ] as const) {
       const cue = byAsk(root, id)[0]!;
       expect(cue.type).toBe('button');

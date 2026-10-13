@@ -121,7 +121,8 @@ describe('§3 welcome entries (§Composition 6–8)', () => {
     const root = render({ signedIn: false, latest: null });
     expect(byAsk(root, 'welcome-resume-group')).toHaveLength(0);
     const g3 = byAsk(root, 'cue-g3')[0]!;
-    expect(textOf(g3)).toBe('Find job opportunities');
+    /* MASTER CTO R38 · U-3 — a career question, not a vacancy search */
+    expect(textOf(g3)).toBe('Ask about jobs and careers');
     expect(g3.props.type).toBe('button');
     expect(byAsk(root, 'job-entry')).toHaveLength(0);
     const line = byAsk(root, 'coverage-focus')[0]!;
@@ -201,27 +202,30 @@ describe('J01 setup → J06-unsupported: truthful, local, and runs nothing', () 
   const setInput = (root: ReactTestInstance, id: string, value: string) =>
     act(() => byAsk(root, id)[0]!.props.onChange({ target: { value } }));
 
-  it('is a named modal dialog; Search is disabled until a place is typed', () => {
+  /* MASTER CTO R38 · U-3 — the sheet says FIRST that listings are not connected; there is no search. */
+  it('is a named modal dialog that says listings are not connected BEFORE any field; the action needs a place', () => {
     const { root } = open();
     const dialog = root.find((n) => n.props.role === 'dialog');
     expect(dialog.props['aria-modal']).toBe('true');
-    expect(byAsk(root, 'job-search')[0]!.props.disabled).toBe(true);
+    const notice = byAsk(root, 'job-not-connected')[0]!;
+    expect(textOf(notice)).toContain('Job listings aren’t connected to Ask yet, so Ask can’t search for vacancies.');
+    expect(dialog.props['aria-describedby']).toBe(notice.props.id);
+    const form = byAsk(root, 'job-setup')[0]!;
+    const order = form.findAll((n) => typeof n.type === 'string' && typeof n.props['data-ask'] === 'string').map((n) => n.props['data-ask']);
+    expect(order.indexOf('job-not-connected')).toBeLessThan(order.indexOf('job-role'));
+    expect(byAsk(root, 'job-ask-general')[0]!.props.disabled).toBe(true);
     setInput(root, 'job-role', 'accountant');
-    expect(byAsk(root, 'job-search')[0]!.props.disabled).toBe(true);
+    expect(byAsk(root, 'job-ask-general')[0]!.props.disabled).toBe(true);
     setInput(root, 'job-place', 'Kigali, Rwanda');
-    expect(byAsk(root, 'job-search')[0]!.props.disabled).toBe(false);
+    expect(byAsk(root, 'job-ask-general')[0]!.props.disabled).toBe(false);
   });
-  it('Search shows the coverage truth for the typed place — never "no jobs" — with zero network', () => {
+  it('nothing on the sheet pretends to search: no "Search opportunities", filters or outcome step, zero network', () => {
     const { root } = open();
-    setInput(root, 'job-place', 'Kigali, Rwanda');
-    act(() => byAsk(root, 'job-setup')[0]!.props.onSubmit({ preventDefault: () => undefined }));
-    const outcome = byAsk(root, 'job-outcome')[0]!;
-    expect(outcome.props['data-ask-job-outcome']).toBe('UNSUPPORTED');
-    const text = textOf(outcome);
-    /* MASTER CTO R32 — the headline says listings are not connected here (never "no jobs") */
-    expect(text).toContain('Job listings for Kigali, Rwanda aren’t connected here yet.');
-    expect(text).toContain('This isn’t a “no jobs” result.');
-    expect(text).not.toMatch(/no matching listings|\d+ listings?/i);
+    const text = textOf(root);
+    expect(text).not.toMatch(/Search opportunities|More filters|Work type|Experience/);
+    expect(byAsk(root, 'job-search')).toHaveLength(0);
+    expect(byAsk(root, 'job-outcome')).toHaveLength(0);
+    expect(byAsk(root, 'job-filters-toggle')).toHaveLength(0);
     expect(fetchSpy).not.toHaveBeenCalled();
   });
   it('Escape closes the sheet', () => {
@@ -230,14 +234,15 @@ describe('J01 setup → J06-unsupported: truthful, local, and runs nothing', () 
     act(() => listeners.forEach((fn) => fn({ key: 'Escape', stopPropagation: () => undefined } as never)));
     expect(onClose).toHaveBeenCalled();
   });
-  it('"Ask a general question" hands an UNSENT draft from the reader’s own role and place to the composer; Close closes', () => {
+  it('"Write my question" hands an UNSENT general career question from the reader’s own role and place to the composer; Close closes', () => {
     const { root, onClose, onAskGeneral } = open();
     setInput(root, 'job-role', 'accountant');
     setInput(root, 'job-place', 'Warsaw');
+    expect(textOf(byAsk(root, 'job-ask-general')[0]!)).toBe('Write my question');
     act(() => byAsk(root, 'job-setup')[0]!.props.onSubmit({ preventDefault: () => undefined }));
-    act(() => byAsk(root, 'job-ask-general')[0]!.props.onClick());
     expect(onAskGeneral).toHaveBeenCalledTimes(1);
     expect(onAskGeneral).toHaveBeenCalledWith('What is the job market like for accountant in Warsaw?');
+    expect(fetchSpy).not.toHaveBeenCalled();
     act(() => byAsk(root, 'job-sheet-close')[0]!.props.onClick());
     expect(onClose).toHaveBeenCalledTimes(1);
   });

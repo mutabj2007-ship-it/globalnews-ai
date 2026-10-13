@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { COUNTRIES, HOME_REGION_ORDER, getLocalizedCountryName, type DisplayLocale, type HomeRegionId } from '@globalnews-ai/shared';
 import { d01Strings, fillD01 } from '@/lib/ask/d01Strings';
 import { placeResearchDraft } from '@/lib/ask/d01PlaceDraft';
+import { askR38Strings } from '@/lib/ask/askR38Strings';
 import { MY_UPDATES_HREF } from '@/lib/ask/followedQuestions';
 import { browseRegionStories, type PickerSearchResult } from '@/lib/api/storyPickerApi';
 import { PICKER_PUBLISHER_CONTENT } from '@/lib/rights/pickerPublisherContent';
@@ -160,6 +161,7 @@ function PlaceView({ locale, place, onChange }: { readonly locale: DisplayLocale
   const name = place.kind === 'region' ? regionLabel(place.region, locale) : place.name;
   /* V-02 — a draft Ask can execute (no unsupported "this week" window); see d01PlaceDraft.ts */
   const research = `/ask?q=${encodeURIComponent(placeResearchDraft(locale, name))}`;
+  const held = PICKER_PUBLISHER_CONTENT !== 'CLEARED';
   return (
     <div data-ask="place-view" data-place-kind={place.kind} className={styles.pageInner}>
       <BackToUpdates locale={locale} />
@@ -173,10 +175,15 @@ function PlaceView({ locale, place, onChange }: { readonly locale: DisplayLocale
       <PlaceRows locale={locale} place={place} />
       {placeResearchHeld(place) ? null : (
         <div className={styles.foot} style={{ paddingInline: 0, marginTop: 16 }}>
+          {/* MASTER CTO R38 · U-4 — while reports for places are held, the action is an honest unsent
+              Ask question about the place, never "research new changes" next to an on-hold notice.
+              Following (above) stays a separate account action. */}
           <Link href={research} prefetch={false} data-ask="place-research" className={styles.secondary}>
-            {s.research}
+            {held ? askR38Strings(locale).placeAskAbout(name) : s.research}
           </Link>
-          <p className={styles.small} style={{ textAlign: 'center' }}>{s.researchNote}</p>
+          <p className={styles.small} style={{ textAlign: 'center' }}>
+            {held ? askR38Strings(locale).placeAskNote : s.researchNote}
+          </p>
         </div>
       )}
     </div>

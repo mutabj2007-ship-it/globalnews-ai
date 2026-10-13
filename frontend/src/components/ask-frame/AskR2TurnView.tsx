@@ -11,7 +11,7 @@ import type { StoryContext } from '@globalnews-ai/shared';
 import { AskCompactResult } from '@/components/ask/AskCompactResult';
 import { AskIntelligenceBasis } from './AskIntelligenceBasis';
 import { AskEvidencePlaces } from './AskEvidencePlaces';
-import { askR32Strings } from '@/lib/ask/askR32Strings';
+import { askR38Strings } from '@/lib/ask/askR38Strings';
 import { askGovernedConversation } from '@/lib/ask/askGovernedConversation';
 import { askR2View, failedTurnCopy, type AskR2View } from '@/lib/ask/askR2View';
 import { openFullAnalysisHref, type AskR2Turn } from '@/lib/ask/useAskR2Conversation';
@@ -438,7 +438,7 @@ export function AskR2TurnView({
           onClick={onOpenJobs}
           className={`-mt-1 mb-3 inline-flex min-h-[44px] items-center text-[0.8125rem] font-medium text-[var(--ask-read-control-ink,#7cc4f5)] underline underline-offset-2`}
         >
-          {askR32Strings(locale).findOpportunities}
+          {askR38Strings(locale).jobsCue}
         </button>
       )}
       {/* ASK R3 RESEARCH ACTIVITY R1 — the answer position's Search activity RECORD, after the reader's
