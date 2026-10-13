@@ -454,10 +454,34 @@ describe('R7 · characterization at bf202a4 (what the live code does today)', ()
     expect(q3.background!.system).not.toContain('ANSWER PRESENTATION');
     bounded(q3);
   });
-  it('C-9 Q3 background system prompt has no rule about illustrative numbers or invented probabilities; job rules carry only the artifact memory line', () => {
-    expect(q3.background!.system).not.toMatch(/illustrat|percentage|probabilit/i);
+  /* C-9 REWRITTEN by R7 C2 (X4): at bf202a4 / 2c7eead the background job rules carried only the
+     artifact memory line and no presentation or number rule. The memory line stays rule 1 (numbering
+     unchanged); the presentation contract is appended LAST. R7-D5 / R7-D6 assert its content. */
+  it('C-9 (R7 C2) Q3 background job rules: memory line still rule 1; the presentation contract appended last', () => {
     expect(q3.background!.jobRules).toMatch(/^R4 JOB RULES \(trusted\)\n1\. MEMORY:/);
-    expect(q3.background!.jobRules).not.toMatch(/\n2\./);
+    expect(q3.background!.jobRules).toMatch(/\n2\. PRESENTATION: Lead with the direct answer/);
+    expect(q3.background!.jobRules).not.toMatch(/\n3\./);
+  });
+});
+
+/* R7 C2 — COST PARITY, against the counts MEASURED at the combined base 2c7eead with this same file
+   (fork J, evidence/truthful-dev/counts-r7-truthful-base.json). No case may add a provider, model,
+   background, interpreter or network call; Q2 spends fewer (the window empties the stale corpus). */
+describe('R7 · cost parity vs 2c7eead (measured; no case adds a call)', () => {
+  const BASE = {
+    q1: { search: 4, retained: 2, feed: 0, model: 0, background: 0, analyzeNews: 1, fetch: 0, interpreter: 0 },
+    q2: { search: 1, retained: 0, feed: 0, model: 1, background: 0, analyzeNews: 1, fetch: 0, interpreter: 1 },
+    q3: { search: 0, retained: 0, feed: 0, model: 0, background: 1, analyzeNews: 0, fetch: 1, interpreter: 0 },
+    q2b: { search: 1, retained: 0, feed: 0, model: 1, background: 0, analyzeNews: 1, fetch: 0, interpreter: 1 },
+  } as const;
+  it.each(['q1', 'q2', 'q3', 'q2b'] as const)('%s: every call count is <= the 2c7eead count', (k) => {
+    const now = { q1, q2, q3, q2b }[k].counts as Record<string, number>;
+    for (const [key, base] of Object.entries(BASE[k])) expect(now[key]).toBeLessThanOrEqual(base);
+  });
+  it('q1, q3 and q2b are exactly unchanged', () => {
+    expect(q1.counts).toEqual(BASE.q1);
+    expect(q3.counts).toEqual(BASE.q3);
+    expect(q2b.counts).toEqual(BASE.q2b);
   });
 });
 
@@ -483,11 +507,12 @@ describe('R7 · DESIRED behaviour (it.failing = defect present at bf202a4)', () 
   it('R7-D4 the prompt Alpha actually sends forbids inferring that nothing happened from the absence of reports', () => {
     expect(q2b.prompt!.system).toMatch(/never state that an event did not happen because no report was found/i);
   });
-  it.failing('R7-D5 Q3 background: illustrative numbers must be labelled illustrative; no arbitrary probability', () => {
+  /* R7 C2 — D5 / D6 now pass: flipped to `it`, assertions unchanged. */
+  it('R7-D5 Q3 background: illustrative numbers must be labelled illustrative; no arbitrary probability', () => {
     expect(q3.background!.system).toMatch(/illustrat/i);
     expect(q3.background!.system).toMatch(/probabilit|percentage/i);
   });
-  it.failing('R7-D6 Q3 background: the compact answer contract (direct lead first, short sections, no paragraph-style numbered lists)', () => {
+  it('R7-D6 Q3 background: the compact answer contract (direct lead first, short sections, no paragraph-style numbered lists)', () => {
     expect(q3.background!.system).toMatch(/Lead with the direct answer/i);
   });
 });

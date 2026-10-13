@@ -5,6 +5,7 @@ import type { AskRequest } from './ask-compute.contract';
 import { conversationOf } from './ask-v2.service';
 import { readConversationalTurn } from './conversation/conversation-state';
 import { incompleteTurnArtifact, validateStoredArtifact, type PriorArtifact } from './conversation/conversation-artifact';
+import { BACKGROUND_PRESENTATION_RULE } from './job-execution';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -165,11 +166,13 @@ const BASELINE_SOURCED_T2_CALL = {
   jobRules: `R4 JOB RULES (trusted)\n${MEMORY_RULE} For this answer the kind is most likely RECOMMENDATION.`,
 };
 const NON_FINANCIAL = 'Explain the difference between weather and climate, using a simple example.';
+/* R7 X4 (#92) — the fc00e98 call plus EXACTLY one appended job rule (the background presentation
+   contract, rule 2, last); every other field byte-identical. */
 const BASELINE_NON_FINANCIAL_CALL = {
   question: NON_FINANCIAL,
   responseLanguage: 'en',
   maxModelAttempts: 1,
-  jobRules: `R4 JOB RULES (trusted)\n${MEMORY_RULE}`,
+  jobRules: `R4 JOB RULES (trusted)\n${MEMORY_RULE}\n2. ${BACKGROUND_PRESENTATION_RULE}`,
 };
 const APR_Q =
   'Explain the difference between APR and the nominal interest rate on a loan, using a simple numerical example. State your assumptions.';
@@ -418,7 +421,7 @@ describe('ASK FINANCE INTEGRITY R1 — APR explanation (op b3924ff0)', () => {
     expect(background).toHaveLength(0);
   });
 
-  it('a non-financial explanation sends a byte-identical call (as fc00e98)', async () => {
+  it('a non-financial explanation sends the fc00e98 call (+ exactly the R7 X4 presentation rule)', async () => {
     const t = await conversation().ask(NON_FINANCIAL, 'SOURCED');
     expect(JSON.parse(JSON.stringify(t.backgroundCalls))).toEqual([BASELINE_NON_FINANCIAL_CALL]);
   });

@@ -192,6 +192,23 @@ export function earlierReportsUnverifiedRule(
   );
 }
 
+/**
+ * R7 X4 (#92) — BACKGROUND PRESENTATION. The PO's conceptual answer (report vs. confirmation vs.
+ * forecast) came back as long paragraph-style numbered points with an invented "70%" forecast: the
+ * general-background path has its own prompt, which WP6 never reaches, and had no layout contract
+ * and no rule about illustrative numbers. Added LAST to the job rules so existing rule numbering is
+ * unchanged. Product law already forbids invented forecast probabilities (Conflict contract: escalation
+ * asks whether a thing is observed, never whether it will happen); this states it for this path.
+ *
+ * E1 WORDING REVIEW REQUIRED — new model-facing text.
+ */
+export const BACKGROUND_PRESENTATION_RULE =
+  'PRESENTATION: Lead with the direct answer in one or two sentences. Then explain each distinct ' +
+  'idea in its own short paragraph or bullet; do not write long numbered paragraphs. Label any ' +
+  'example, scenario or hypothetical as illustrative. Do not give a numerical probability, ' +
+  'percentage or likelihood figure unless it is a calibrated figure from a source you can name; ' +
+  'for a hypothetical, describe likelihood in words and say it is illustrative, not an estimate.';
+
 const ARTIFACT_RULE =
   'MEMORY: if your answer establishes a reusable structure — a conceptual framework, a diagnosis, ' +
   'a comparison, decision criteria, recommendations, a plan or a summary — end your reply with ' +
@@ -264,6 +281,8 @@ export function jobRulesFor(
         : `${ARTIFACT_RULE} For this answer the kind is most likely ${kind}.`,
     );
   }
+  /* R7 X4 — every general-background answer carries the presentation contract, last */
+  rules.push(BACKGROUND_PRESENTATION_RULE);
   return rules.length === 0
     ? ''
     : `R4 JOB RULES (trusted)\n${rules.map((r, i) => `${i + 1}. ${r}`).join('\n')}`;
