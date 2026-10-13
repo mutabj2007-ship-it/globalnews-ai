@@ -18,6 +18,18 @@ import { ASK_EXECUTION_PORT, AskPlan, AskRequest, ExecutionResult } from '../ask
   external-reader positive-basis gate is covered by r46-reader-rights-containment.spec.ts; here, and in
   this spec ONLY, the reader-sink policy is held at its record semantics. Production has no such switch.
 */
+/*
+  CTO R48 · #96 lane A — TEST-OWNED, LEGITIMATE SOURCE PROVENANCE. The briefing read path withholds an
+  evidence reference whose stored source has no positive basis (E1-R46; unresolvable refs fail closed).
+  This spec's evidence therefore needs persisted Article rows whose source is a CLEARED registry entry:
+  the entries below exist only in this spec (the live registry is unchanged and has no CLEARED feed).
+*/
+jest.mock('../../news/providers/feed-source-registry', () => {
+  const actual = jest.requireActual('../../news/providers/feed-source-registry');
+  const base = actual.FEED_SOURCES[0];
+  const cleared = (sourceId: string) => ({ ...base, sourceId, rights: { ...base.rights, state: 'CLEARED' } });
+  return { ...actual, FEED_SOURCES: [...actual.FEED_SOURCES, cleared('feed:r48-briefing-fixture-cleared')] };
+});
 jest.mock('../../news/rights/source-use-policy', () => {
   const actual = jest.requireActual('../../news/rights/source-use-policy');
   return {
@@ -206,7 +218,24 @@ live('REASON TO RETURN R1 — followed questions + conversation delete/search (l
     app = module.createNestApplication();
     app.use(cookieParser());
     await app.init();
+    await seedCitedArticles();
   });
+
+  /* CTO R48 — the persisted Article rows this spec's evidence references cite (test-owned CLEARED source) */
+  async function seedCitedArticles(): Promise<void> {
+    for (const id of ['a1', 'n1', 'n2', 'n3']) {
+      const data = {
+        title: `R48 fixture ${id}`,
+        summary: 'Fixture summary',
+        url: `https://r48-briefing-fixture.example/${id}`,
+        sourceId: 'feed:r48-briefing-fixture-cleared',
+        sourceName: 'R48 Fixture Wire',
+        category: 'business',
+        publishedAt: new Date('2026-10-01T08:00:00Z'),
+      };
+      await db.article.upsert({ where: { id }, create: { id, ...data }, update: data });
+    }
+  }
   beforeEach(async () => {
     configValues = {
       ASK_V2_ENABLED: 'true',
@@ -241,6 +270,7 @@ live('REASON TO RETURN R1 — followed questions + conversation delete/search (l
     await db.user.deleteMany({ where: { id: { in: [ids.a, ids.b] } } });
   });
   afterAll(async () => {
+    await db?.article.deleteMany({ where: { id: { in: ['a1', 'n1', 'n2', 'n3'] } } });
     await app?.close();
     await db?.$disconnect();
   });
