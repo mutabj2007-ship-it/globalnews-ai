@@ -187,7 +187,11 @@ describe('T1 · ZERO provider calls to render coverage state', () => {
       countryName: 'Kenya',
       articles: [
         { id: 'a', title: 't', url: 'https://www.standardmedia.co.ke/a' } as never,
-        { id: 'b', title: 't', url: 'https://www.reuters.com/b' } as never,
+        /* P0 #86 — a non-held host of unverified locality (neither a registered local source nor a
+           known international one), which is what this test counts. The Reuters-host item it used
+           before is now withheld from the reader response (publisher rights hold) and therefore no
+           longer counted; see the next test. */
+        { id: 'b', title: 't', url: 'https://news.example.org/b' } as never,
       ],
       totalResults: 2,
       providers: ['gnews'],
@@ -214,6 +218,43 @@ describe('T1 · ZERO provider calls to render coverage state', () => {
     });
     /* The service's cached object is never mutated. */
     expect(cached).not.toHaveProperty('sourceCoverage');
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(httpsSpy).not.toHaveBeenCalled();
+  });
+
+  it('P0 #86: a Reuters-host item is withheld from the reader response and never counted as coverage evidence; still ONE service read', async () => {
+    const cached: CountryNewsResponse = {
+      countryCode: 'KEN',
+      countryName: 'Kenya',
+      articles: [
+        { id: 'a', title: 't', url: 'https://www.standardmedia.co.ke/a' } as never,
+        { id: 'b', title: 't', url: 'https://www.reuters.com/b' } as never,
+      ],
+      totalResults: 2,
+      providers: ['gnews'],
+      dataMode: 'live',
+      feedTier: 'live',
+      providerDisplayName: 'GNews',
+      generatedAt: '2026-10-04T00:00:00.000Z',
+    };
+    const service = { getCountryNews: jest.fn().mockResolvedValue(cached) };
+    const controller = new CountryNewsController(
+      service as never,
+      { get: (k: string) => (k === 'GNEWS_API_KEY' ? 'live-key-abc123' : undefined) } as never,
+    );
+    const response = await controller.getCountryNews(
+      { countryCode: 'KEN' } as never,
+      { limit: 8, lang: 'en' } as never,
+    );
+    expect(service.getCountryNews).toHaveBeenCalledTimes(1);
+    expect(response.articles.map((a) => a.url)).toEqual(['https://www.standardmedia.co.ke/a']);
+    expect(response.sourceCoverage).toMatchObject({
+      state: 'COVERAGE_GAP',
+      notice: 'LOCAL_COVERAGE_ABSENT',
+      evidence: { local: 1, international: 0, unverifiedLocality: 0 },
+    });
+    expect(cached).not.toHaveProperty('sourceCoverage');
+    expect(cached.articles).toHaveLength(2);
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(httpsSpy).not.toHaveBeenCalled();
   });
