@@ -1496,6 +1496,36 @@ export function buildEvidenceStateInstruction(
  *
  * E1 WORDING REVIEW REQUIRED — new model-facing text.
  */
+/**
+ * E1 W-1 (R23 Stage 2, decision C(ii); CTO R24 rules A/B) — the publication-date sentence depends on
+ * the BASIS of the newest report's time. The single sentence used before ("Give each development with
+ * its own publication date where its report states one") contradicted the unknown-basis prohibition
+ * inside the same authoritative block, and invited an observation time to pass as a publication date.
+ *   publisher — unchanged, byte-identical to bc7b73b (FC-4);
+ *   observed  — rule B: a report-stated date only, labelled as stated, never the observed / seen time;
+ *   unknown   — rule A: no date at all, no substituted seen / collected / observed time, and never
+ *               placed inside the reader's period.
+ * Wording is E1's (32-VERDICT-R23-BC7B73B-PRELIMINARY.md §3), verbatim.
+ */
+export function publicationDateRuleFor(basis: EvidenceFreshnessFact['basis']): string {
+  switch (basis) {
+    case 'publisher':
+      return ' Give each development with its own publication date where its report states one.';
+    case 'observed':
+      return (
+        ' Give a publication date only where the report text itself states one, and say it is as stated in ' +
+        'the report; never present the observed time, or any first-seen or collection time, as a publication date.'
+      );
+    case 'unknown':
+    default:
+      return (
+        ' Do not give any publication date for these reports, and do not use the time a report was first ' +
+        'seen, collected or observed as its publication date. Do not describe any of these reports as falling ' +
+        'inside a period the reader named.'
+      );
+  }
+}
+
 export function buildLiveEvidenceFreshnessInstruction(
   evidenceState?: AnalysisEvidenceState,
   newestEvidence?: EvidenceFreshnessFact,
@@ -1504,7 +1534,8 @@ export function buildLiveEvidenceFreshnessInstruction(
   return (
     '\n\nEVIDENCE FRESHNESS (authoritative):' +
     describeNewestEvidence(newestEvidence) +
-    ' Give each development with its own publication date where its report states one. Call a ' +
+    publicationDateRuleFor(newestEvidence.basis) +
+    ' Call a ' +
     'report recent, current, or ' +
     'inside a period the reader named only if its publication time falls inside that period; if ' +
     'the newest report is older than the period the reader asked about, say so plainly in your ' +
