@@ -165,6 +165,6 @@
 }
 /* English fallback copy inside an RTL layout: each paragraph takes its own (LTR) direction so the
    punctuation stays at the end of the sentence; the boxes keep the reader's direction. */
-.page[data-copy-fallback] :is(p, h1, h2, h3, li, span) {
+.page[data-copy-fallback] :is(p, h1, h2, h3, li, span, figcaption, button) {
   unicode-bidi: plaintext;
 }
