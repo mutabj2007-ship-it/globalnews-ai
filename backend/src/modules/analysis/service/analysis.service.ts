@@ -357,6 +357,7 @@ export interface AnalysisExecutionPolicy {
 }
 import { officeGeographyCountryCode } from '../context-producers/office-geography.producer';
 import { reconcileTypedCountry } from './typed-country-handoff.util';
+import { articleContradictsCountryScope, withoutUnsupportedForeignLabel } from './scope-contradiction.util';
 import { supplementCredit } from './comparison-coverage-credit.util';
 import {
   decideContextEligibility,
@@ -3871,14 +3872,28 @@ export class AnalysisService {
             executionPolicy.anchorSupplements === false ? [] : supplementQueries(anchors, admitted);
           const seen = new Set(admitted.map((article) => article.id));
           const seenUrls = new Set(admitted.map((article) => article.url));
+          /*
+            MASTER CTO R5 · GEO-E2E-D1 (#89) — THE TOP-UP CHECKS THE TURN'S ONE COUNTRY.
+            The supplement's retained read matches ANY term ("congo") and `admits` reads actors and
+            topics only, so a correctly stored Republic-of-the-Congo report reached a DR Congo answer.
+            Where this turn has ONE country scope (typed or story), a top-up report whose OWN text
+            positively resolves to a different country is not admitted — the country feed's existing
+            rule (CountryNewsService `resolvesToADifferentCountry`), not a new one. A tie or no country
+            evidence is never a different country. An admitted report's stored code is never shown or
+            counted as another country its own text does not support. Member, per-side and domain
+            top-ups already admit on `scoreCountryRelevance(article, member)` (measured: the other
+            Congo scores 0–5 there) and are unchanged.
+          */
+          const topUpScopeIso2 = location?.country.iso2;
           const take = (pool: readonly NewsArticle[]): void => {
             for (const article of pool) {
               if (seen.has(article.id) || seenUrls.has(article.url)) continue;
               if (!admits(article)) continue;
               if (executionPolicy.reportingWindow !== undefined && !publishedInsideWindow(article, executionPolicy.reportingWindow.from, executionPolicy.reportingWindow.to)) continue;
+              if (topUpScopeIso2 !== undefined && articleContradictsCountryScope(article, topUpScopeIso2)) continue;
               seen.add(article.id);
               seenUrls.add(article.url);
-              admitted.push(article);
+              admitted.push(topUpScopeIso2 === undefined ? article : withoutUnsupportedForeignLabel(article, topUpScopeIso2));
             }
           };
           /* ASK R2 LIVE-GATE REPAIR (P0-3) — the (at most two) supplement searches are independent:
