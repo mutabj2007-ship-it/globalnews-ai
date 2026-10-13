@@ -167,7 +167,7 @@ function harness(corpus: NewsArticle[]): Harness {
       totalBudgetMs: ANALYSIS_TOTAL_BUDGET_MS,
       cacheTtlSeconds: 0,
       openAiApiKey: undefined,
-      openAiModel: 'gpt-4o-mini',
+      rightsAudience: 'TEST_FIXTURE' as const, openAiModel: 'gpt-4o-mini',
       executionMode: 'development' as const,
       retryAttempts: 2,
       retryBaseDelayMs: 300,

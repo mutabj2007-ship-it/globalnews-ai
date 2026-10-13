@@ -80,6 +80,7 @@ export function harness(corpus: NewsArticle[] = []) {
 
   const config = {
     get: () => ({
+      rightsAudience: 'TEST_FIXTURE' as const,
       maxArticles: 8,
       maxArticleChars: 1200,
       timeoutMs: 20000,

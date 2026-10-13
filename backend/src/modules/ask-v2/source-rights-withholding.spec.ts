@@ -26,9 +26,12 @@ describe('withheldForSourceRights', () => {
     },
   );
 
-  it('a provider-only answer is returned unchanged (same object)', () => {
-    const payload = stored(['bbc', 'reuters']);
-    expect(withheldForSourceRights(payload)).toBe(payload);
+  /* MASTER CTO R47 / E1-R46 supersedes "a provider-only answer is returned unchanged": a GNews-pending
+     (PROVIDER_PENDING_REVIEW) answer has no positive basis for an external reader, so it is withheld too */
+  it('E1-R46: a provider-only (GNews pending) answer is withheld from the external reader; the reason is stated', () => {
+    const out = withheldForSourceRights(stored(['bbc', 'reuters'])) as Record<string, unknown>;
+    expect((out.answer as { basis: string }).basis).toBe(WITHHELD_BASIS);
+    expect(out.withheld).toEqual({ reason: 'SOURCE_RIGHTS', count: 2 });
   });
 
   it('one held source among provider sources withholds the whole derived answer', () => {
@@ -49,7 +52,8 @@ describe('withheldForSourceRights', () => {
       recentReporting: { items: [{ sourceId: 'bbc', providerId: 'gnews' }, { sourceId: 'feed:wp-pl' }, { sourceId: 'feed:taarifa-rw' }] },
     };
     const out = withheldForSourceRights(payload) as { recentReporting: { items: Array<{ sourceId: string }> } };
-    expect(out.recentReporting.items.map((i) => i.sourceId)).toEqual(['bbc', 'feed:taarifa-rw']);
+    /* E1-R46 — a GNews-pending item has no positive METADATA basis; Taarifa's recorded metadata grant stays */
+    expect(out.recentReporting.items.map((i) => i.sourceId)).toEqual(['feed:taarifa-rw']);
   });
 
   it.each([null, undefined, 'x', 3, []])('non-object payload %p passes through', (v) => {
@@ -65,8 +69,9 @@ describe('priorWorkRightsClearedWith', () => {
   it('a model-reasoning answer carries no source content → reusable', async () => {
     expect(await priorWorkRightsClearedWith({ provenance: 'MODEL_REASONING' }, undefined, 20)).toBe(true);
   });
-  it('every ref resolves to a provider-path article → reusable', async () => {
-    expect(await priorWorkRightsClearedWith(sourced(['a', 'b']), store({ a: { sourceId: 'bbc', providerId: 'gnews' }, b: { sourceId: 'reuters' } }), 20)).toBe(true);
+  /* E1-R46 R46-10 supersedes "provider-path prior work is reusable": a GNews-pending source is not re-input */
+  it('E1-R46: prior work resting on provider-path (GNews pending) articles is NOT handed to the model again', async () => {
+    expect(await priorWorkRightsClearedWith(sourced(['a', 'b']), store({ a: { sourceId: 'bbc', providerId: 'gnews' }, b: { sourceId: 'reuters' } }), 20)).toBe(false);
   });
   it.each([
     ['a held RSS source', { a: { sourceId: 'feed:taarifa-rw' } }],

@@ -88,7 +88,7 @@ function makeConfigService(totalBudgetMs: number): AnalysisConfigService {
       totalBudgetMs,
       cacheTtlSeconds: 300,
       openAiApiKey: undefined,
-      openAiModel: 'gpt-4o-mini',
+      rightsAudience: 'TEST_FIXTURE' as const, openAiModel: 'gpt-4o-mini',
       executionMode: 'development' as const,
       retryAttempts: 2,
       retryBaseDelayMs: 300,

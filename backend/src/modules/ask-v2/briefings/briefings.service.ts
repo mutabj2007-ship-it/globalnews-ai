@@ -3,14 +3,18 @@ import {
   Injectable,
   NotFoundException,
   UnauthorizedException,
-  UnprocessableEntityException,
-} from '@nestjs/common';
+  UnprocessableEntityException, HttpException } from '@nestjs/common';
 import { ALL_ISO3_CODES } from '@globalnews-ai/shared';
 import { PrismaService } from '../../../database/prisma.service';
 import { Prisma } from '../../../generated/prisma/client';
 import { readStoryMaterialVersion } from '../../stories/story-relation.read';
 import { retrievalFailed } from '../ask-r2-execution.adapter';
-import { withheldForPublisherRightsHold } from '../source-rights-withholding';
+import {
+  assessmentEvidenceIds,
+  readerSafeAssessment,
+  withheldForPublisherRightsHold,
+} from '../source-rights-withholding';
+import { sourceUsePermittedForReader } from '../../news/rights/source-use-policy';
 import {
   briefingSnapshotOf,
   type BriefingEvidenceRef,
@@ -190,6 +194,40 @@ export class BriefingsService {
       updatedAt: story.briefUpdatedAt,
       storyId: story.storyId,
     };
+  }
+
+  /**
+   * E1-R46 — which stored evidence ids an external reader may receive: METADATA (a listed line) and
+   * AI_INPUT (our model-written text resting on it), each on a POSITIVE basis only. One batched read;
+   * an id with no stored row is not permitted (fails closed). No row is written.
+   */
+  private async readerPermitted(ids: readonly string[]) {
+    const unique = [...new Set(ids)];
+    if (unique.length === 0) return { metadata: new Set<string>(), aiInput: new Set<string>() };
+    const rows = await this.prisma.article.findMany({
+      where: { id: { in: unique } },
+      select: { id: true, sourceId: true, url: true },
+    });
+    return {
+      metadata: new Set(rows.filter((r) => sourceUsePermittedForReader(r, 'METADATA')).map((r) => r.id)),
+      aiInput: new Set(rows.filter((r) => sourceUsePermittedForReader(r, 'AI_INPUT')).map((r) => r.id)),
+    };
+  }
+
+  /** E1-R46 R46-8 — checks with their evidence withheld at read time where no positive basis exists. */
+  private async readerChecks<
+    T extends {
+      id: string;
+      turnId: string;
+      outcome: string;
+      assessment: unknown;
+      baselineVersion: number | null;
+      resultingVersion: number | null;
+      checkedAt: Date;
+    },
+  >(rows: readonly T[]) {
+    const permitted = await this.readerPermitted(rows.flatMap((row) => assessmentEvidenceIds(row.assessment)));
+    return rows.map((row) => this.checkView({ ...row, assessment: readerSafeAssessment(row.assessment, permitted) }));
   }
 
   private user(userId: string): void {
@@ -383,7 +421,7 @@ export class BriefingsService {
       const existing = await tx.briefingCheck.findUnique({
         where: { briefingId_turnId: { briefingId, turnId } },
       });
-      if (existing) return this.checkView(existing);
+      if (existing) return (await this.readerChecks([existing]))[0];
       if (briefing.status !== 'ACTIVE') {
         throw new ConflictException({ code: 'BRIEFING_NOT_ACTIVE', status: briefing.status });
       }
@@ -482,7 +520,7 @@ export class BriefingsService {
       });
       /* the followed question moves to the top of My updates once it has been checked */
       await tx.briefing.update({ where: { id: briefingId }, data: { updatedAt: new Date() } });
-      return this.checkView(created);
+      return (await this.readerChecks([created]))[0];
     });
   }
 
@@ -635,7 +673,8 @@ export class BriefingsService {
     return {
       ...row,
       versions: row.versions.map(({ blocks: _blocks, ...v }) => v),
-      checks: row.checks.map((check) => this.checkView(check)),
+      /* E1-R46 R46-8 — each check's evidence, as an external reader may receive it */
+      checks: await this.readerChecks(row.checks),
       update: await this.updateOf(row.scope, latest?.blocks ?? null),
     };
   }
@@ -667,6 +706,20 @@ export class BriefingsService {
       },
     });
     if (!row) throw new NotFoundException();
+    /*
+      MASTER CTO R47 / E1-R46 R46-6 / R46-8 (#93) — a stored version is our own text built FROM its
+      evidence: an external reader receives it only when every evidence reference resolves to a stored
+      source with a positive AI_INPUT basis. Otherwise 451 (the reader is told it is withheld — the
+      frontend reads 451 as WITHHELD, never as "no relevant news"); the stored version is unchanged.
+    */
+    const refIds = (Array.isArray(row.evidenceRefs) ? (row.evidenceRefs as Array<{ id?: unknown }>) : [])
+      .map((ref) => ref?.id)
+      .filter((id): id is string => typeof id === 'string');
+    const permitted = await this.readerPermitted(refIds);
+    const withheld = refIds.filter((id) => !permitted.aiInput.has(id)).length;
+    if (withheld > 0) {
+      throw new HttpException({ code: 'SOURCE_RIGHTS_WITHHELD', withheld }, 451);
+    }
     const latest = briefing.versions[0]?.version ?? version;
     return {
       briefingId: briefing.id,

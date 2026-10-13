@@ -146,7 +146,7 @@ import { observedRetrievalOf, retrievalIncomplete, retrievalRightsWithheld } fro
 import { researchRecordOf, type ResearchFacts } from './research-record';
 import { productMetaAnswer, readProductMeta } from './product-meta';
 import { checkWrittenArithmetic } from '../analysis/providers/arithmetic-check.util';
-import { partitionByRights } from '../news/rights/source-use-policy';
+import { partitionByRights, EXTERNAL_READER_POLICY } from '../news/rights/source-use-policy';
 import { priorWorkRightsClearedWith, WITHHELD_BASIS } from './source-rights-withholding';
 import {
   newAskObservationDraft,
@@ -2983,7 +2983,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       const oldest = now - RECENT_REPORTING_DAYS * 24 * 60 * 60 * 1000;
       /* MASTER CTO P0 RIGHTS CONTAINMENT R1 — a listed item is METADATA use (publisher, title,
          date, link; no model): restricted / prohibited / unknown-provenance sources are not listed. */
-      const recent = partitionByRights(articles, 'METADATA').allowed.filter((a) => {
+      /* MASTER CTO R47 / E1-R46 R46-2 — listing to an external reader needs a POSITIVE basis */
+      const recent = partitionByRights(articles, 'METADATA', EXTERNAL_READER_POLICY).allowed.filter((a) => {
         const t = Date.parse(a.publishedAt);
         return (
           a.countryCode === country.iso2 &&

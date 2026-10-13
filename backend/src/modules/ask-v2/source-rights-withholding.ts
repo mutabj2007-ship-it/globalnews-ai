@@ -8,7 +8,7 @@
   withholds it — no data rewrite either way. A metadata list (recentReporting) keeps only items the
   METADATA decision admits. Pure; no I/O.
 */
-import { partitionByRights } from '../news/rights/source-use-policy';
+import { EXTERNAL_READER_POLICY, partitionByRights } from '../news/rights/source-use-policy';
 import { isPublisherRightsHeld } from '../news/rights/publisher-rights-hold';
 
 export const WITHHELD_BASIS = 'WITHHELD_SOURCE_RIGHTS' as const;
@@ -24,12 +24,18 @@ const articlesOf = (payload: Json): Array<{ sourceId?: string | null; providerId
 export function withheldForSourceRights(payload: unknown): unknown {
   if (payload === null || typeof payload !== 'object' || Array.isArray(payload)) return payload;
   const p = payload as Json;
-  const excluded = partitionByRights(articlesOf(p), 'AI_INPUT').excluded;
+  /* MASTER CTO R47 / E1-R46 R46-1/2/5/7 — every operation response (fresh, reopen, Saved, guest)
+     passes here: an external reader gets a stored answer only on a POSITIVE basis */
+  const excluded = partitionByRights(articlesOf(p), 'AI_INPUT', EXTERNAL_READER_POLICY).excluded;
 
   let out: Json = p;
   const recent = p.recentReporting as Json | null | undefined;
   if (recent && Array.isArray(recent.items)) {
-    const items = partitionByRights(recent.items as Array<{ sourceId?: string | null; url?: string | null }>, 'METADATA').allowed;
+    const items = partitionByRights(
+      recent.items as Array<{ sourceId?: string | null; url?: string | null }>,
+      'METADATA',
+      EXTERNAL_READER_POLICY,
+    ).allowed;
     if (items.length !== (recent.items as unknown[]).length) out = { ...out, recentReporting: { ...recent, items } };
   }
   if (excluded.length === 0) return out;
@@ -87,8 +93,71 @@ export async function priorWorkRightsClearedWith(
   try {
     const found = await Promise.all(refs.map((id) => findArticleById(id)));
     if (found.some((a) => a === null)) return false;
-    return partitionByRights(found as Array<{ sourceId?: string | null; providerId?: string | null; url?: string | null }>, 'AI_INPUT').excluded.length === 0;
+    /* E1-R46 R46-10 — model re-input of a prior sourced answer needs a positive basis too */
+    return (
+      partitionByRights(
+        found as Array<{ sourceId?: string | null; providerId?: string | null; url?: string | null }>,
+        'AI_INPUT',
+        EXTERNAL_READER_POLICY,
+      ).excluded.length === 0
+    );
   } catch {
     return false;
   }
+}
+
+/**
+ * MASTER CTO R47 / E1-R46 R46-6 / R46-8 (#93) — a followed-question CHECK, as an external reader may
+ * receive it. Its evidence lines (new, late-found, possible corrections) are publisher metadata; its
+ * supported changes are model-written claims resting on those lines. A line whose stored source has
+ * no positive basis for METADATA, and a claim citing any source without a positive basis for
+ * AI_INPUT, is withheld HERE, at read time: the stored assessment is never rewritten, and what was
+ * withheld is counted and said ("withheld" — never "no relevant news").
+ */
+const CHECK_EVIDENCE_LISTS = ['newEvidence', 'earlierReportingFoundNow', 'possibleCorrections'] as const;
+
+/** Every evidence id a check's assessment refers to (lines and claims), for one batched lookup. */
+export function assessmentEvidenceIds(assessment: unknown): string[] {
+  if (assessment === null || typeof assessment !== 'object') return [];
+  const a = assessment as Json;
+  const ids: string[] = [];
+  for (const key of CHECK_EVIDENCE_LISTS) {
+    const list = a[key];
+    if (Array.isArray(list)) for (const line of list) if (typeof (line as Json)?.id === 'string') ids.push((line as Json).id as string);
+  }
+  const claims = a.supportedChanges;
+  if (Array.isArray(claims)) {
+    for (const claim of claims) {
+      const refs = (claim as Json)?.sourceArticleIds;
+      if (Array.isArray(refs)) for (const id of refs) if (typeof id === 'string') ids.push(id);
+    }
+  }
+  return [...new Set(ids)];
+}
+
+export function readerSafeAssessment(
+  assessment: unknown,
+  permitted: { readonly metadata: ReadonlySet<string>; readonly aiInput: ReadonlySet<string> },
+): unknown {
+  if (assessment === null || typeof assessment !== 'object' || Array.isArray(assessment)) return assessment;
+  const a = assessment as Json;
+  let withheld = 0;
+  const out: Json = { ...a };
+  for (const key of CHECK_EVIDENCE_LISTS) {
+    const list = a[key];
+    if (!Array.isArray(list)) continue;
+    const kept = list.filter((line) => typeof (line as Json)?.id === 'string' && permitted.metadata.has((line as Json).id as string));
+    withheld += list.length - kept.length;
+    out[key] = kept;
+  }
+  const claims = a.supportedChanges;
+  if (Array.isArray(claims)) {
+    const kept = claims.filter((claim) => {
+      const refs = (claim as Json)?.sourceArticleIds;
+      return Array.isArray(refs) && refs.length > 0 && refs.every((id) => typeof id === 'string' && permitted.aiInput.has(id));
+    });
+    withheld += claims.length - kept.length;
+    out.supportedChanges = kept;
+  }
+  return withheld === 0 ? assessment : { ...out, withheld: { reason: 'SOURCE_RIGHTS', count: withheld } };
 }

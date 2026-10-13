@@ -14,7 +14,7 @@ function makeConfigService(overrides: {
       maxArticleChars: 1200,
       timeoutMs: 20000,
       cacheTtlSeconds: 300,
-      openAiModel: 'gpt-4o-mini',
+      rightsAudience: 'TEST_FIXTURE' as const, openAiModel: 'gpt-4o-mini',
       retryAttempts: 2,
       retryBaseDelayMs: 300,
       ...overrides,

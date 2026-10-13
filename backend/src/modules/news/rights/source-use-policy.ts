@@ -164,6 +164,24 @@ export function partitionByRights<T extends UseInput>(
   return { allowed, excluded, pending };
 }
 
+/**
+ * MASTER CTO R47 / E1-R46 §5 (#93) — THE EXTERNAL-READER POLICY: A POSITIVE RECORDED BASIS ONLY.
+ *
+ * `record` mode lets a GNews-origin row through as PROVIDER_PENDING_REVIEW ("counted, not
+ * contained"). For anything an EXTERNAL reader receives — every Ask reader is external: anonymous,
+ * guest and ordinary signed-in alike (CTO R47; no privileged internal-tester role exists in code) —
+ * and for anything that reaches the model, only a positive basis counts: FEED_CLEARED,
+ * PROVIDER_CLEARED, or FEED_METADATA_ONLY for METADATA. That is exactly `enforce`, passed HERE, at
+ * the response and prompt-assembly sinks only: the default of `sourceUseDecision` stays `record`,
+ * nothing reads the environment, and no stored row is changed, deleted or migrated.
+ */
+export const EXTERNAL_READER_POLICY: PolicyOptions = { enforcement: 'enforce' };
+
+/** May this item reach an external reader (METADATA) or the model (AI_INPUT)? Positive basis only. */
+export function sourceUsePermittedForReader(input: UseInput, use: EvidenceUse): boolean {
+  return sourceUseDecision(input, use, EXTERNAL_READER_POLICY).allowed;
+}
+
 export function summarizeExclusions(
   excluded: ReadonlyArray<{ readonly sourceId: string; readonly reason: RightsExclusionReason }>,
 ): RightsExclusionSummary | undefined {
