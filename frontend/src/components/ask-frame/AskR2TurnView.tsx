@@ -10,6 +10,8 @@ import { askFormatDate, isolatedAuto, isolatedLtr } from '@/lib/ask/askDirection
 import type { StoryContext } from '@globalnews-ai/shared';
 import { AskCompactResult } from '@/components/ask/AskCompactResult';
 import { AskIntelligenceBasis } from './AskIntelligenceBasis';
+import { AskEvidencePlaces } from './AskEvidencePlaces';
+import { askR32Strings } from '@/lib/ask/askR32Strings';
 import { askGovernedConversation } from '@/lib/ask/askGovernedConversation';
 import { askR2View, failedTurnCopy, type AskR2View } from '@/lib/ask/askR2View';
 import { openFullAnalysisHref, type AskR2Turn } from '@/lib/ask/useAskR2Conversation';
@@ -140,6 +142,8 @@ export function AskR2TurnView({
   onRefresh,
   reopenedAt,
   onRetry,
+  onStageDraft,
+  onOpenJobs,
 }: {
   readonly turn: AskR2Turn;
   readonly locale: DisplayLocale;
@@ -173,6 +177,13 @@ export function AskR2TurnView({
   readonly reopenedAt?: string | null;
   /** ASK DESIGN AUTHORITY R3 — Design D2 "Try again": resend this (latest, failed) question. */
   readonly onRetry?: () => void;
+  /**
+   * MASTER CTO R32 — stages an UNSENT draft in the composer (the reader's own unsent words are
+   * kept): "Ask about <place>" under the cited reports. Absent → listed without the action.
+   */
+  readonly onStageDraft?: (draft: string) => void;
+  /** MASTER CTO R32 — opens the job sheet from an answer the router read as a job decision. */
+  readonly onOpenJobs?: () => void;
 }): JSX.Element {
   const s = askShellStrings(locale).askR2Strings;
   const r = s.read;
@@ -417,6 +428,18 @@ export function AskR2TurnView({
             ? s.r3.continuationJobNote
             : s.continuationNote}
         </p>
+      )}
+      {/* MASTER CTO R32 · J01 — a job decision continues into the SAME job sheet (role and place
+          editable, truthful "not connected" outcome); opening it runs nothing. */}
+      {payload.continuation?.kind === 'JOB_CONTEXT' && onOpenJobs !== undefined && (
+        <button
+          type="button"
+          data-ask="job-entry"
+          onClick={onOpenJobs}
+          className={`-mt-1 mb-3 inline-flex min-h-[44px] items-center text-[0.8125rem] font-medium text-[var(--ask-read-control-ink,#7cc4f5)] underline underline-offset-2`}
+        >
+          {askR32Strings(locale).findOpportunities}
+        </button>
       )}
       {/* ASK R3 RESEARCH ACTIVITY R1 — the answer position's Search activity RECORD, after the reader's
           words and the continuation note: derived from what the backend recorded about the search,
@@ -913,6 +936,9 @@ export function AskR2TurnView({
         reportingSourceCount={view.sourceCount}
         hideNotes={governed !== null}
       />
+
+      {/* MASTER CTO R32 · D10 — where this answer's cited reports are, country level, no map. */}
+      <AskEvidencePlaces payload={payload} locale={locale} onStageDraft={displayOnly ? undefined : onStageDraft} />
 
       {/*
         ASK DESIGN COMPLETENESS R1 — the Design toolbar after the answer and its footer:

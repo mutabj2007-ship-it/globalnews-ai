@@ -218,7 +218,8 @@ describe('J01 setup → J06-unsupported: truthful, local, and runs nothing', () 
     const outcome = byAsk(root, 'job-outcome')[0]!;
     expect(outcome.props['data-ask-job-outcome']).toBe('UNSUPPORTED');
     const text = textOf(outcome);
-    expect(text).toContain('Ask doesn’t check job sources for Kigali, Rwanda yet.');
+    /* MASTER CTO R32 — the headline says listings are not connected here (never "no jobs") */
+    expect(text).toContain('Job listings for Kigali, Rwanda aren’t connected here yet.');
     expect(text).toContain('This isn’t a “no jobs” result.');
     expect(text).not.toMatch(/no matching listings|\d+ listings?/i);
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -229,12 +230,14 @@ describe('J01 setup → J06-unsupported: truthful, local, and runs nothing', () 
     act(() => listeners.forEach((fn) => fn({ key: 'Escape', stopPropagation: () => undefined } as never)));
     expect(onClose).toHaveBeenCalled();
   });
-  it('"Ask a general question" hands back to the composer; Close closes', () => {
+  it('"Ask a general question" hands an UNSENT draft from the reader’s own role and place to the composer; Close closes', () => {
     const { root, onClose, onAskGeneral } = open();
+    setInput(root, 'job-role', 'accountant');
     setInput(root, 'job-place', 'Warsaw');
     act(() => byAsk(root, 'job-setup')[0]!.props.onSubmit({ preventDefault: () => undefined }));
     act(() => byAsk(root, 'job-ask-general')[0]!.props.onClick());
     expect(onAskGeneral).toHaveBeenCalledTimes(1);
+    expect(onAskGeneral).toHaveBeenCalledWith('What is the job market like for accountant in Warsaw?');
     act(() => byAsk(root, 'job-sheet-close')[0]!.props.onClick());
     expect(onClose).toHaveBeenCalledTimes(1);
   });

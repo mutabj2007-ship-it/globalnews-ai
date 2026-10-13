@@ -341,7 +341,10 @@ export function AskFrameScreen({
     setJobSheetOpen(false);
     /* focus returns to the entry that opened it (the one placement CSS shows) */
     requestAnimationFrame(() => {
-      const entries = Array.from(document.querySelectorAll<HTMLElement>('[data-ask="job-entry"]'));
+      /* MASTER CTO R32 — the entries are the G3 cue (welcome / desktop) and an answer's job-context entry */
+      const entries = Array.from(
+        document.querySelectorAll<HTMLElement>('[data-ask="cue-g3"], [data-ask="job-entry"]'),
+      );
       entries.find((node) => node.offsetParent !== null)?.focus();
     });
   };
@@ -999,6 +1002,8 @@ export function AskFrameScreen({
                       locale={interfaceLocale}
                       context={context}
                       onRunDeeper={guestMode ? undefined : (q) => void r2.runDeeper(q)}
+                      onStageDraft={(draft) => stageGuidedDraft(draft, '')}
+                      onOpenJobs={() => setJobSheetOpen(true)}
                     />
                   </div>
                 ))}
@@ -1013,6 +1018,8 @@ export function AskFrameScreen({
                   context={context}
                   onRunDeeper={guestMode ? undefined : (q) => void r2.runDeeper(q)}
                   onUseQuestion={draftQuestion}
+                  onStageDraft={(draft) => stageGuidedDraft(draft, '')}
+                  onOpenJobs={() => setJobSheetOpen(true)}
                   onRefresh={guestMode ? undefined : (q) => void resubmit(q)}
                   /* Design D2 — the failed turn's own panel resends the kept draft. */
                   onRetry={retryKept && !isPending ? () => void ask() : undefined}
@@ -1329,11 +1336,11 @@ export function AskFrameScreen({
         <AskJobSetupSheet
           locale={interfaceLocale}
           onClose={closeJobSheet}
-          onAskGeneral={() => {
+          onAskGeneral={(draft) => {
             setJobSheetOpen(false);
-            requestAnimationFrame(() =>
-              document.querySelector<HTMLTextAreaElement>('[data-ask="composer-input"]')?.focus(),
-            );
+            /* MASTER CTO R32 · J06 — a general question from the reader's own role and place, STAGED
+               (unsent; a reader's own unsent words are kept). Nothing is searched or sent. */
+            stageGuidedDraft(draft, '');
           }}
         />
       )}

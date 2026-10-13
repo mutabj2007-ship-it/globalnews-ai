@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState, type JSX } from 'react';
 import type { DisplayLocale } from '@globalnews-ai/shared';
 import { askR3FullStrings } from '@/lib/ask/askR3FullStrings';
 import { askDirectionProps } from '@/lib/ask/askDirection';
+import { askR32Strings } from '@/lib/ask/askR32Strings';
 import styles from './askDashboard.module.css';
 
 /**
@@ -33,10 +34,14 @@ export function AskJobSetupSheet({
 }: {
   readonly locale: DisplayLocale;
   readonly onClose: () => void;
-  /** Closes the sheet and focuses the composer, empty: nothing is written or sent. */
-  readonly onAskGeneral: () => void;
+  /**
+   * MASTER CTO R32 · J06 — closes the sheet and STAGES a general question built from the reader's
+   * own role and place ("What is the job market like for … in …?"): unsent, nothing searched.
+   */
+  readonly onAskGeneral: (draft: string) => void;
 }): JSX.Element {
   const s = askR3FullStrings(locale);
+  const r32 = askR32Strings(locale);
   const titleId = useId();
   const helpId = useId();
   const sheet = useRef<HTMLElement>(null);
@@ -159,7 +164,7 @@ export function AskJobSetupSheet({
         ) : (
           <div data-ask="job-outcome" data-ask-job-outcome="UNSUPPORTED" className={styles.r3SheetBody}>
             <div role="status" className={styles.r3Notice}>
-              <p className={styles.r3NoticeTitle}>{s.jobUnsupported(outcomeFor)}</p>
+              <p className={styles.r3NoticeTitle}>{r32.jobNotConnected(outcomeFor)}</p>
               <p>{s.jobNotNoJobs(outcomeFor)}</p>
               <p className={styles.r3Quiet}>{s.jobGeneralHint}</p>
             </div>
@@ -175,7 +180,16 @@ export function AskJobSetupSheet({
               >
                 {s.jobChangePlace}
               </button>
-              <button type="button" data-ask="job-ask-general" onClick={onAskGeneral} className={styles.r3Secondary}>
+              <button
+                type="button"
+                data-ask="job-ask-general"
+                onClick={() =>
+                  onAskGeneral(
+                    role.trim() === '' ? r32.jobGeneralDraftNoRole(outcomeFor) : r32.jobGeneralDraft(role.trim(), outcomeFor),
+                  )
+                }
+                className={styles.r3Secondary}
+              >
                 {s.jobAskGeneral}
               </button>
             </div>

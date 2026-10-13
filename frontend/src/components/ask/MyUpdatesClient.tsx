@@ -18,7 +18,8 @@ import {
   summarizeFollows,
 } from '@/lib/ask/followedQuestions';
 import { askPrimaryNavStrings } from '@/lib/ask/askPrimaryNavStrings';
-import { LATEST_CHECK, checkComparisonHref } from '@/lib/ask/followComparison';
+import { LATEST_CHECK, checkComparisonHref, recordStatus, selectCheck } from '@/lib/ask/followComparison';
+import { AskCheckComparison } from './AskCheckComparison';
 import { followComparisonStrings } from '@/lib/ask/followComparisonStrings';
 import { askFormatLocalDay, askFormatLocalDayCompact, askFormatLocalTime } from '@/lib/ask/askDirection';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
@@ -397,6 +398,17 @@ function FollowedRow({
           <p className="text-[12.5px] text-ink-tertiary">{s.lastChecked(when(latestCheck.checkedAt))}</p>
           {/* ASK R3 · D09 — the change detail of this check: its own Before / Latest, or the truthful
               status when the check recorded no pair. A link only; nothing runs. */}
+          {/* MASTER CTO R32 · D09 — where the latest check recorded a real Before / Latest pair, it is
+              shown HERE, in My updates (two stored-version reads, 0 AI); the link stays for the
+              full-page view and for every check that recorded no pair (its truthful status). */}
+          {(() => {
+            const full = selectCheck(detail, LATEST_CHECK);
+            return full !== null && recordStatus(full) === null ? (
+              <div data-ask="followed-compare-inline" className="mt-1">
+                <AskCheckComparison briefingId={row.id} check={full} locale={locale} />
+              </div>
+            ) : null;
+          })()}
           <Link
             href={checkComparisonHref(row.id, LATEST_CHECK)}
             prefetch={false}
