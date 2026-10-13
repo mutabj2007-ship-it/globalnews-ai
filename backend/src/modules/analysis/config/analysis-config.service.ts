@@ -11,6 +11,15 @@ import {
 export type AnalysisExecutionMode = 'production' | 'development';
 
 export interface AnalysisConfig {
+  /**
+   * MASTER CTO R47 / E1-R46 (#93) — WHO RECEIVES THIS ANALYSIS. Every production caller serves an
+   * EXTERNAL reader (anonymous, guest and ordinary signed-in alike): sources reach the model and the
+   * evidence only on a POSITIVE recorded basis. Absent → EXTERNAL_READER (fails closed). A code
+   * constant below, never read from the environment. 'TEST_FIXTURE' exists only so offline specs
+   * that model retrieval with provider fixtures can opt out explicitly; no production path sets it.
+   */
+  readonly rightsAudience?: 'EXTERNAL_READER' | 'TEST_FIXTURE';
+
   /** Maximum number of articles ever sent to an AI provider for one request. */
   maxArticles: number;
 
@@ -153,6 +162,9 @@ export class AnalysisConfigService {
 
   get(): AnalysisConfig {
     return {
+      /* E1-R46 — production always serves external readers (a constant; no environment read) */
+      rightsAudience: 'EXTERNAL_READER',
+
       maxArticles: this.readPositiveInt('ANALYSIS_MAX_ARTICLES', DEFAULTS.maxArticles),
 
       maxArticleChars: this.readPositiveInt('ANALYSIS_MAX_ARTICLE_CHARS', DEFAULTS.maxArticleChars),

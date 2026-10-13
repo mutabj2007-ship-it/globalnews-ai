@@ -73,7 +73,7 @@ function harness(corpus: NewsArticle[]) {
   const config = {
     get: () => ({
       maxArticles: 8, maxArticleChars: 1200, timeoutMs: 20000, totalBudgetMs: ANALYSIS_TOTAL_BUDGET_MS, cacheTtlSeconds: 0,
-      openAiApiKey: undefined, openAiModel: 'gpt-4o-mini', executionMode: 'development' as const, retryAttempts: 2, retryBaseDelayMs: 300, maxCompletionTokens: 2000,
+      openAiApiKey: undefined, rightsAudience: 'TEST_FIXTURE' as const, openAiModel: 'gpt-4o-mini', executionMode: 'development' as const, retryAttempts: 2, retryBaseDelayMs: 300, maxCompletionTokens: 2000,
     }),
   } as unknown as AnalysisConfigService;
   return { service: new AnalysisService(newsService as never, countryNewsService as never, provider, config), searchCalls, countryCalls, provider };

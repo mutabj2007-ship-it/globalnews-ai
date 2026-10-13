@@ -260,7 +260,7 @@ import {
   type RequestedSource,
 } from '../../news/identity/requested-source.util';
 import { classifyRequestedPublisher } from '../../news/identity/requested-publisher-state.util';
-import { partitionByRights, summarizeExclusions, summarizePending } from '../../news/rights/source-use-policy';
+import { partitionByRights, summarizeExclusions, summarizePending, EXTERNAL_READER_POLICY } from '../../news/rights/source-use-policy';
 import { polishCountryName } from '../query/polish-country-forms.util';
 import { derivePolishRetrievalQuery } from '../language/derive-polish-retrieval-query.util';
 import {
@@ -3911,7 +3911,14 @@ export class AnalysisService {
           reporting exists. Provider-path articles are untouched.
         */
         {
-          const { allowed, excluded, pending } = partitionByRights(articles, 'AI_INPUT');
+          /* MASTER CTO R47 / E1-R46 R46-9 — prompt assembly, upstream of the model, and the evidence
+             every external reader receives: a POSITIVE basis only (PROVIDER_PENDING_REVIEW is not
+             a licence). Excluded items are counted as rights-withheld, never "no reporting". */
+          const { allowed, excluded, pending } = partitionByRights(
+            articles,
+            'AI_INPUT',
+            this.analysisConfig.get().rightsAudience === 'TEST_FIXTURE' ? {} : EXTERNAL_READER_POLICY,
+          );
           /* RETRIEVAL R1 · T1.1 — this gate executed: its counts into the passive trace */
           noteRightsDecisionForTrace(articles.length, allowed.length, pending.length, excluded.length);
           const rightsExcluded = summarizeExclusions(excluded);

@@ -58,6 +58,8 @@ function makeConfigService(
   overrides: Partial<ReturnType<AnalysisConfigService['get']>> = {},
 ): AnalysisConfigService {
   const config = {
+    /* E1-R46 — this suite models retrieval with provider fixtures: the explicit offline opt-out */
+    rightsAudience: 'TEST_FIXTURE' as const,
     maxArticles: 8,
     maxArticleChars: 1200,
     timeoutMs: 20000,
@@ -274,7 +276,7 @@ describe('AnalysisService', () => {
         newsService as never,
         countryNewsService as never,
         provider,
-        makeConfigService({ executionMode: 'production', openAiModel: 'gpt-4o-mini' }),
+        makeConfigService({ executionMode: 'production', rightsAudience: 'TEST_FIXTURE' as const, openAiModel: 'gpt-4o-mini' }),
       );
 
       const response = await service.analyzeNews('test query');

@@ -14,6 +14,20 @@ import { executionContractOf } from './execution-contract';
 import { routeAskR2 } from '../ask-router/ask-r2-route';
 import { specialistRegistryFixture } from '../ask-router/frozen-c/fixtures/specialist-registry.fixture';
 import type { SemanticResolution } from '../ask-router/semantic-ir/semantic-interpreter';
+/*
+  E1-R46 (#93) — this spec exercises its own concern with provider-path (GNews-pending) fixtures. The
+  external-reader positive-basis gate is covered by r46-reader-rights-containment.spec.ts; here, and in
+  this spec ONLY, the reader-sink policy is held at its record semantics. Production has no such switch.
+*/
+jest.mock('../news/rights/source-use-policy', () => {
+  const actual = jest.requireActual('../news/rights/source-use-policy');
+  return {
+    ...actual,
+    EXTERNAL_READER_POLICY: {},
+    sourceUsePermittedForReader: (input: never, use: never) => actual.sourceUseDecision(input, use).allowed,
+  };
+});
+
 
 /**
  * ════════════════════════════════════════════════════════════════════════════

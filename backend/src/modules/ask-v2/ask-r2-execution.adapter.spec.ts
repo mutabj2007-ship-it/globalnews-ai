@@ -17,6 +17,20 @@ import {
   ASK_MODEL_MAX_ATTEMPTS,
   resolveComputeControlsConfig,
 } from '../compute-controls/compute-controls.config';
+/*
+  E1-R46 (#93) — this spec exercises its own concern with provider-path (GNews-pending) fixtures. The
+  external-reader positive-basis gate is covered by r46-reader-rights-containment.spec.ts; here, and in
+  this spec ONLY, the reader-sink policy is held at its record semantics. Production has no such switch.
+*/
+jest.mock('../news/rights/source-use-policy', () => {
+  const actual = jest.requireActual('../news/rights/source-use-policy');
+  return {
+    ...actual,
+    EXTERNAL_READER_POLICY: {},
+    sourceUsePermittedForReader: (input: never, use: never) => actual.sourceUseDecision(input, use).allowed,
+  };
+});
+
 
 /**
  * ASK R2 CONSOLIDATED INTEGRATION R1 · GATE E — the execution adapter, every dependency

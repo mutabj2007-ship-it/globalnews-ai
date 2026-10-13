@@ -19,7 +19,7 @@ function makeConfigService(
       timeoutMs: 5000,
       cacheTtlSeconds: 300,
       openAiApiKey: 'sk-test-key',
-      openAiModel: 'gpt-4o-mini',
+      rightsAudience: 'TEST_FIXTURE' as const, openAiModel: 'gpt-4o-mini',
       executionMode: 'development' as const,
       retryAttempts: 2,
       retryBaseDelayMs: 5, // kept tiny so retry tests stay fast

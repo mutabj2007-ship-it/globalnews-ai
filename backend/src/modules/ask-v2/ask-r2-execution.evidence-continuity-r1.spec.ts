@@ -5,6 +5,20 @@ import type { AskRequest } from './ask-compute.contract';
 import { conversationOf } from './ask-v2.service';
 import { readConversationalTurn } from './conversation/conversation-state';
 import { incompleteTurnArtifact, validateStoredArtifact, type PriorArtifact } from './conversation/conversation-artifact';
+/*
+  E1-R46 (#93) — this spec exercises its own concern with provider-path (GNews-pending) fixtures. The
+  external-reader positive-basis gate is covered by r46-reader-rights-containment.spec.ts; here, and in
+  this spec ONLY, the reader-sink policy is held at its record semantics. Production has no such switch.
+*/
+jest.mock('../news/rights/source-use-policy', () => {
+  const actual = jest.requireActual('../news/rights/source-use-policy');
+  return {
+    ...actual,
+    EXTERNAL_READER_POLICY: {},
+    sourceUsePermittedForReader: (input: never, use: never) => actual.sourceUseDecision(input, use).allowed,
+  };
+});
+
 
 /**
  * ════════════════════════════════════════════════════════════════════════════

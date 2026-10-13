@@ -18,7 +18,7 @@ const config = (over: Record<string, unknown> = {}) =>
   ({
     get: () => ({
       openAiApiKey: 'sk-test',
-      openAiModel: 'gpt-test',
+      rightsAudience: 'TEST_FIXTURE' as const, openAiModel: 'gpt-test',
       timeoutMs: 50,
       retryAttempts: 2,
       retryBaseDelayMs: 1,

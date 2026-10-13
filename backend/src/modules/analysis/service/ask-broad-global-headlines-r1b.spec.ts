@@ -156,7 +156,7 @@ async function services(opts: {
       totalBudgetMs: ANALYSIS_TOTAL_BUDGET_MS,
       cacheTtlSeconds: 0,
       openAiApiKey: undefined,
-      openAiModel: 'fixture',
+      rightsAudience: 'TEST_FIXTURE' as const, openAiModel: 'fixture',
       executionMode: 'development' as const,
       retryAttempts: 1,
       retryBaseDelayMs: 1,

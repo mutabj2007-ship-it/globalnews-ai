@@ -75,7 +75,7 @@ function harness(corpus: Corpus) {
       timeoutMs: 20000,
       totalBudgetMs: 60000,
       cacheTtlSeconds: 0,
-      openAiModel: 'test',
+      rightsAudience: 'TEST_FIXTURE' as const, openAiModel: 'test',
       executionMode: 'development',
       retryAttempts: 0,
       maxCompletionTokens: 2000,

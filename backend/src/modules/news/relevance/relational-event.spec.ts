@@ -152,7 +152,7 @@ function harness(corpus: NewsArticle[] = CORPUS) {
       totalBudgetMs: ANALYSIS_TOTAL_BUDGET_MS,
       cacheTtlSeconds: 0,
       openAiApiKey: undefined,
-      openAiModel: 'x',
+      rightsAudience: 'TEST_FIXTURE' as const, openAiModel: 'x',
       executionMode: 'development' as const,
       retryAttempts: 1,
       retryBaseDelayMs: 1,

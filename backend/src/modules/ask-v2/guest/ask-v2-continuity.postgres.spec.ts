@@ -27,6 +27,20 @@ import { askRequestContext } from '../ask-request-context';
 import { accountPrincipal, guestPrincipal } from './ask-principal';
 import { GuestSessionService } from './guest-session.service';
 import { GuestClaimService } from './guest-claim.service';
+/*
+  E1-R46 (#93) — this spec exercises its own concern with provider-path (GNews-pending) fixtures. The
+  external-reader positive-basis gate is covered by r46-reader-rights-containment.spec.ts; here, and in
+  this spec ONLY, the reader-sink policy is held at its record semantics. Production has no such switch.
+*/
+jest.mock('../../news/rights/source-use-policy', () => {
+  const actual = jest.requireActual('../../news/rights/source-use-policy');
+  return {
+    ...actual,
+    EXTERNAL_READER_POLICY: {},
+    sourceUsePermittedForReader: (input: never, use: never) => actual.sourceUseDecision(input, use).allowed,
+  };
+});
+
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -172,7 +186,7 @@ live(
         totalBudgetMs: ANALYSIS_TOTAL_BUDGET_MS,
         cacheTtlSeconds: 0,
         openAiApiKey: undefined,
-        openAiModel: 'fixture',
+        rightsAudience: 'TEST_FIXTURE' as const, openAiModel: 'fixture',
         executionMode: 'development' as const,
         retryAttempts: 1,
         retryBaseDelayMs: 1,

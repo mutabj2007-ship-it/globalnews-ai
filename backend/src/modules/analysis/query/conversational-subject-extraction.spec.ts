@@ -208,7 +208,7 @@ describe('D2 — ZERO RETAINED EVIDENCE STILL MEANS NO OPENAI CALL', () => {
         totalBudgetMs: ANALYSIS_TOTAL_BUDGET_MS,
         cacheTtlSeconds: 300,
         openAiApiKey: undefined,
-        openAiModel: 'gpt-4o-mini',
+        rightsAudience: 'TEST_FIXTURE' as const, openAiModel: 'gpt-4o-mini',
         executionMode: 'development' as const,
         retryAttempts: 2,
         retryBaseDelayMs: 300,
