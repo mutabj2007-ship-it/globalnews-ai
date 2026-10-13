@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type JSX } from 'react';
 import Link from 'next/link';
 import { COUNTRIES, HOME_REGION_ORDER, getLocalizedCountryName, type DisplayLocale, type HomeRegionId } from '@globalnews-ai/shared';
 import { d01Strings, fillD01 } from '@/lib/ask/d01Strings';
-import { askDiscoverStrings } from '@/lib/ask/askDiscoverStrings';
+import { placeResearchDraft } from '@/lib/ask/d01PlaceDraft';
 import { MY_UPDATES_HREF } from '@/lib/ask/followedQuestions';
 import { browseRegionStories, type PickerSearchResult } from '@/lib/api/storyPickerApi';
 import { PICKER_PUBLISHER_CONTENT } from '@/lib/rights/pickerPublisherContent';
@@ -142,9 +142,9 @@ const NO_SINGLE_COUNTRY_READ = 'Reporting for a single country you do not follow
 
 function PlaceView({ locale, place, onChange }: { readonly locale: DisplayLocale; readonly place: Place; readonly onChange: () => void }): JSX.Element {
   const s = d01Strings(locale);
-  const g = askDiscoverStrings(locale);
   const name = place.kind === 'region' ? regionLabel(place.region, locale) : place.name;
-  const research = `/ask?q=${encodeURIComponent(`${g.draftRegion}${name}`)}`;
+  /* V-02 — a draft Ask can execute (no unsupported "this week" window); see d01PlaceDraft.ts */
+  const research = `/ask?q=${encodeURIComponent(placeResearchDraft(locale, name))}`;
   return (
     <div data-ask="place-view" data-place-kind={place.kind} className={styles.pageInner}>
       <BackToUpdates locale={locale} />
