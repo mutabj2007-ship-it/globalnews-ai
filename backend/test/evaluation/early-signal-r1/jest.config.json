@@ -1,0 +1,7 @@
+{
+  "rootDir": ".",
+  "testEnvironment": "node",
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "testRegex": "early-signal-r1\\.spec\\.ts$",
+  "transform": { "^.+\\.ts$": ["ts-jest", { "tsconfig": "<rootDir>/tsconfig.json" }] }
+}

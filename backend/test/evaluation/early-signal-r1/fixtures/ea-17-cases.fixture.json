@@ -1,0 +1,1415 @@
+{
+  "provenance": {
+    "source": "Claude_Output/REGIONAL-EARLY-SIGNAL-R1/EA/EA-12-CASE-CHRONOLOGICAL-BENCHMARK.json",
+    "sha256": "e13f8f84a21625164c9d22be002d55c0eb5073ab821124b79dba0b751b57de03",
+    "author": "East Africa independent regional validator (not Claude G, not Claude Code)",
+    "status": "PROPOSED_ACCEPTANCE_SET — not a measurement of coverage; not proof of comprehensive coverage; REGIONAL_HOLD remains",
+    "note": "Metadata-only extraction. Timeline URLs omitted; the original is the evidence of record."
+  },
+  "globalRules": [
+    "R-01: Publication time, event time, first-seen time and screenshot or device time are separate fields. None is back-filled from another.",
+    "R-02: Publisher HQ, journalist base, actor nationality, quoted country and office location are not the event location.",
+    "R-03: A bare 'Congo' establishes neither COD nor COG (CTO D5). Goma, Bukavu, Uvira, Kasai and Bulape are DRC localities, but no new gazetteer entries may be added as a shortcut (D-21 HOLD).",
+    "R-04: 'killed', 'wounded', 'killed or wounded', 'missing' and 'casualties' are distinct units. Counts are never summed across sources or events, and successive tolls are UPDATES, not additions.",
+    "R-05: Syndicated or rewritten copies of one report form one reporting chain and give zero independent confirmations.",
+    "R-06: An interested-party statement (government, army, armed group, company, state press agency) is an ATTRIBUTED STATEMENT, not corroboration of its own claims.",
+    "R-07: A new political or military coalition is not a new sovereign state and gets no country code of its own.",
+    "R-08: No numeric probability is shown. Detection confidence, evidence support, impact severity and forecast are separate qualitative fields.",
+    "R-09: Replays use only information available at the cutoff. A leakGuard term must not appear in any query, entity or label used before its availableFrom time.",
+    "R-10: If historic system logs are absent, historic detection time is UNKNOWN. A retrospective search hit is not proof of historic detectability.",
+    "R-11: Access states (ACCESS_LIMITED, RIGHTS_WITHHELD, PROVIDER_FAILED, SEARCH_NOT_RUN, COMPLETED_NO_MATCH) are distinct from claim states, and none of them becomes 'no developments'."
+  ],
+  "coverageSummary": {
+    "cases": 17,
+    "replays": [
+      "EA-ES-01",
+      "EA-ES-03",
+      "EA-ES-05",
+      "EA-ES-07",
+      "EA-ES-08",
+      "EA-ES-09"
+    ],
+    "byCategory": {
+      "conflict": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "15"
+      ],
+      "humanitarian-access": [
+        "06",
+        "07",
+        "15",
+        "17"
+      ],
+      "public-notices": [
+        "07",
+        "08",
+        "10",
+        "11",
+        "12",
+        "17"
+      ],
+      "transport-ports": [
+        "06",
+        "13"
+      ],
+      "energy": [
+        "10",
+        "16"
+      ],
+      "household-economic": [
+        "09",
+        "11",
+        "12",
+        "16"
+      ],
+      "disputed-claims": [
+        "02",
+        "03",
+        "04",
+        "08",
+        "09",
+        "15"
+      ],
+      "false-recycled": [
+        "14"
+      ],
+      "no-change": [
+        "11",
+        "12"
+      ],
+      "inaccessible-or-rights": [
+        "01",
+        "02",
+        "08",
+        "17"
+      ],
+      "cross-border": [
+        "04",
+        "05",
+        "13"
+      ]
+    },
+    "languagesObserved": {
+      "en": 16,
+      "fr": 2,
+      "note": "fr items in EA-ES-03 and EA-ES-14; EA-ES-02 language NOT_ESTABLISHED"
+    },
+    "languageGaps": [
+      "sw (no source located)",
+      "rw (BWIZA edition not read; rights HOLD)",
+      "ln",
+      "am",
+      "so",
+      "Kirundi"
+    ],
+    "countryGaps": [
+      "ERI (no case)",
+      "DJI/ETH (port-related only)"
+    ],
+    "notProof": "17 cases do not demonstrate comprehensive coverage. Recall, latency and precision are NOT MEASURED, because no candidate pipeline exists to run against them and historic logs are absent."
+  },
+  "cases": [
+    {
+      "id": "EA-ES-01",
+      "title": "South Kivu ambush of Vectus Global contractors (2026-09-17), later Reuters exclusive",
+      "replay": true,
+      "categories": [
+        "conflict",
+        "material-development-reported-locally-before-wider-coverage",
+        "repeated-syndicated",
+        "ambiguous-geography"
+      ],
+      "eventCountry": {
+        "value": "COD",
+        "basis": "later reporting names South Kivu, eastern DRC (META_VERIFIED headlines and summaries 2026-10-09/10)",
+        "precision": "province (South Kivu); no locality or coordinates established"
+      },
+      "notEventCountryRoles": {
+        "NZL": "nationality of a deceased contractor; NZ publisher",
+        "USA": "nationality of a wounded contractor; employer HQ",
+        "RWA": "accused actor per two anonymous sources (Reuters); not the event place",
+        "COG": "never; a bare 'Congo' headline must not decide it"
+      },
+      "languages": {
+        "observed": [
+          "en"
+        ],
+        "missing": [
+          "fr",
+          "sw",
+          "rw local reporting NOT located"
+        ]
+      },
+      "claims": [
+        {
+          "claim": "about 20 people killed or wounded",
+          "unit": "KILLED_OR_WOUNDED",
+          "attribution": "two sources working with Congo's government, via Reuters",
+          "state": "ATTRIBUTED_STATEMENT (single reporting chain)"
+        },
+        {
+          "claim": "at least seven Congolese killed",
+          "unit": "KILLED",
+          "attribution": "Reuters / NZ Herald reporting",
+          "state": "ATTRIBUTED_STATEMENT"
+        },
+        {
+          "claim": "one former NZSAS soldier killed",
+          "unit": "KILLED",
+          "attribution": "NZ Herald; NZDF assisting family",
+          "state": "SUPPORTED by two independent NZ outlets plus the NZDF statement as reported; the link to this ambush is ATTRIBUTED"
+        },
+        {
+          "claim": "ambush carried out by the Rwandan military / M23",
+          "unit": null,
+          "attribution": "two anonymous sources (Reuters); other reports say AFC/M23",
+          "state": "DISPUTED/UNCORROBORATED attribution; RWA is never the event country"
+        }
+      ],
+      "replayCutoffs": [
+        {
+          "cutoff": "2026-09-26T00:00Z",
+          "availableEvidence": [
+            "NZ Herald 2026-09-25 (Africa, no country)"
+          ],
+          "expected": {
+            "state": "NEW_SIGNAL at most (NZ-relevance); NOT linked to any EA country",
+            "country": "UNKNOWN",
+            "alert": "none for EA followers"
+          },
+          "leakGuard": [
+            "Congo",
+            "South Kivu",
+            "Vectus",
+            "Erik Prince",
+            "Tim Kennedy",
+            "ambush"
+          ]
+        },
+        {
+          "cutoff": "2026-10-09T12:00Z",
+          "availableEvidence": [
+            "NZ Herald 09-25",
+            "podcast 10-08 (as reported)"
+          ],
+          "expected": {
+            "state": "NEW_SIGNAL / UNVERIFIED social claim",
+            "country": "COD only if a source then available names a DRC locality; otherwise UNKNOWN"
+          },
+          "leakGuard": [
+            "Reuters",
+            "about 20",
+            "seven Congolese"
+          ]
+        },
+        {
+          "cutoff": "2026-10-10T00:00Z",
+          "availableEvidence": [
+            "Reuters chain",
+            "Stripes",
+            "NZ Herald 10-09"
+          ],
+          "expected": {
+            "state": "ATTRIBUTED_STATEMENT; one Reuters chain + NZ Herald (partly independent on the NZ death)",
+            "country": "COD (South Kivu)",
+            "alert": "internal review queue: casualty claim (high impact, anonymous attribution)"
+          },
+          "leakGuard": []
+        }
+      ],
+      "timelineKinds": [
+        {
+          "index": 0,
+          "t": "2026-09-17",
+          "kind": "EVENT_TIME_AS_REPORTED",
+          "verification": "REPORTED_BY_SEARCH"
+        },
+        {
+          "index": 1,
+          "t": "2026-09-25 06:30 (NZ local; timezone not displayed)",
+          "kind": "PUBLICATION",
+          "verification": "META_VERIFIED (page metadata read 2026-10-13)"
+        },
+        {
+          "index": 2,
+          "t": "NOT_ESTABLISHED",
+          "kind": "PUBLICATION",
+          "verification": "META_VERIFIED (no date displayed)"
+        },
+        {
+          "index": 3,
+          "t": "2026-10-01",
+          "kind": "REPORTED_LATER_FACT",
+          "verification": "REPORTED_BY_SEARCH"
+        },
+        {
+          "index": 4,
+          "t": "2026-10-08 (Thursday)",
+          "kind": "PUBLICATION_AS_REPORTED",
+          "verification": "REPORTED_BY_SEARCH (Stars and Stripes 2026-10-09); platform, exact time and authenticity NOT_ESTABLISHED"
+        },
+        {
+          "index": 5,
+          "t": "2026-10-09",
+          "kind": "PUBLICATION",
+          "verification": "REPORTED_BY_SEARCH (date per Stars and Stripes: 'Friday')"
+        },
+        {
+          "index": 6,
+          "t": "2026-10-09 19:56Z",
+          "kind": "PUBLICATION",
+          "verification": "SUPPLIED + stored-row publishedAt from Code's package"
+        },
+        {
+          "index": 7,
+          "t": "2026-10-09",
+          "kind": "PUBLICATION",
+          "verification": "META_VERIFIED (date in URL)"
+        },
+        {
+          "index": 8,
+          "t": "2026-10-09..10",
+          "kind": "SYNDICATION",
+          "verification": "META_VERIFIED for those visible in search"
+        },
+        {
+          "index": 9,
+          "t": "NOT_ESTABLISHED",
+          "kind": "PUBLICATION",
+          "verification": "REPORTED_BY_SEARCH"
+        },
+        {
+          "index": 10,
+          "t": "NOT_ESTABLISHED (article id 39581 precedes 39623 of 2026-10-12)",
+          "kind": "PUBLICATION",
+          "verification": "META_VERIFIED url; date NOT_ESTABLISHED"
+        },
+        {
+          "index": 11,
+          "t": "2026-10-10 14:15Z",
+          "kind": "FIRST_SYSTEM_DETECTION_LOGGED",
+          "verification": null
+        }
+      ],
+      "rightsAccess": {
+        "Reuters": "RIGHTS_WITHHELD (per-use matrix HOLD)",
+        "NZHerald": "premium items NOT cleared; free item not admitted",
+        "historicAccessibility": "UNKNOWN"
+      },
+      "expectedB": {
+        "geography": "COD with province precision; never COG; RWA/USA/NZL only as actor/nationality roles",
+        "dedup": "Reuters copies and rewrites = 1 chain, 1 source-independence unit",
+        "reader": "keep 'killed or wounded' wording; no summed or derived death total; dates labelled"
+      },
+      "baselineA": {
+        "detected": "2026-10-10 14:15Z (Reuters row; fetchedAt)",
+        "country": "CG (wrong) at fetch-time 9aab213; NONE on re-derive at 737c42f (R2-G-1)",
+        "earlierNZSignal": "NOT_ESTABLISHED (no logs; NZ Herald is not an EA-scoped source)",
+        "dedup": "rewrites cluster separately (A-8 HOLD)"
+      },
+      "protects": [
+        "COD/COG identity",
+        "historic CG error (5 rows)",
+        "chain counting",
+        "unit separation",
+        "Reuters vs BWIZA separation"
+      ]
+    },
+    {
+      "id": "EA-ES-02",
+      "title": "BWIZA 2026-10-12 claim of 25 deaths in other October incidents",
+      "replay": false,
+      "categories": [
+        "conflict",
+        "disputed-uncorroborated",
+        "rights-withheld",
+        "language"
+      ],
+      "eventCountry": {
+        "value": "COD as alleged (CTO case text)",
+        "basis": "SUPPLIED; EA has not read the text (BWIZA_RIGHTS_HOLD)",
+        "precision": "Remeka, Pinga, Burora are REPORTED NAMES ONLY; province, district and coordinates NOT_ESTABLISHED; no gazetteer addition"
+      },
+      "notEventCountryRoles": {
+        "RWA": "publisher origin (bwiza.com) only",
+        "COG": "never"
+      },
+      "languages": {
+        "observed": "NOT_ESTABLISHED (edition not read under rights HOLD)",
+        "requiredForms": [
+          "Kinyarwanda forms preserved per BW-EA-G fixtures",
+          "rw request language must not trigger R-11 ISO-code matches"
+        ]
+      },
+      "claims": [
+        {
+          "claim": "25 killed",
+          "unit": "KILLED",
+          "attribution": "BWIZA, single publisher",
+          "state": "NEW_SIGNAL / UNCORROBORATED REPORT; zero confirmations"
+        }
+      ],
+      "replayCutoffs": [],
+      "timelineKinds": [
+        {
+          "index": 0,
+          "t": "October 2026 (dates NOT_ESTABLISHED)",
+          "kind": "EVENT_TIME_AS_ALLEGED",
+          "verification": null
+        },
+        {
+          "index": 1,
+          "t": "2026-10-12",
+          "kind": "PUBLICATION",
+          "verification": "SUPPLIED"
+        }
+      ],
+      "rightsAccess": null,
+      "expectedB": {
+        "separation": "never merged with EA-ES-01; never '45'; never 'about 20-25'; the Reuters chain gives 0 confirmations",
+        "access": "RIGHTS_WITHHELD shown as such; not 'no developments'",
+        "geo": "Pinga/Remeka/Burora -> no country; no typo snap"
+      },
+      "baselineA": "BWIZA live discovery NOT_CHECKED (G). Place names -> no country (probe at 737c42f and Code E2E-5i). Clusters separate only because > 12 h apart (incidental)",
+      "protects": []
+    },
+    {
+      "id": "EA-ES-03",
+      "title": "FRN (Front pour la Refondation de la Nation) announced in Goma, 2026-10-12",
+      "replay": true,
+      "categories": [
+        "supplied-link-investigation",
+        "attributed-statement",
+        "ambiguous-entity",
+        "political-consequence",
+        "language"
+      ],
+      "eventCountry": {
+        "value": "COD",
+        "basis": "announcement location Goma (North Kivu) in supplied screenshot and later reporting",
+        "precision": "city (Goma) for the announcement only"
+      },
+      "notEventCountryRoles": {
+        "RWA": "The New Times is a Rwanda-based publisher",
+        "USA": "AP publisher",
+        "GBR": "Reuters publisher",
+        "COG": "never"
+      },
+      "languages": {
+        "observed": [
+          "fr (supplied screenshot text and strong2kinmoov)",
+          "en"
+        ],
+        "missing": [
+          "sw",
+          "ln",
+          "rw"
+        ]
+      },
+      "claims": [
+        {
+          "claim": "FRN formed in Goma; Kabila heads it",
+          "unit": null,
+          "attribution": null,
+          "state": "ATTRIBUTED_STATEMENT, consistently reported by several outlets; provenance of the X original NOT authenticated"
+        },
+        {
+          "claim": "number of vice-presidents/deputies",
+          "unit": null,
+          "attribution": null,
+          "state": "DISPUTED DETAIL: do not overwrite 3 with 4. One hypothesis (unverified): Makenga is listed separately as ARC chief of staff",
+          "values": {
+            "screenshot": 3,
+            "AP (per CTO)": 4,
+            "Reuters (per search summary)": "4 named deputies: Nangaa, Bisimwa, Kaniki, Makenga"
+          }
+        },
+        {
+          "claim": "AFC/M23 dissolved vs succeeded",
+          "unit": null,
+          "attribution": null,
+          "state": "DISPUTED across sources"
+        },
+        {
+          "claim": "aim to end 'tyranny' by any means including force",
+          "unit": null,
+          "attribution": "coalition adviser, as reported",
+          "state": "ATTRIBUTED_STATEMENT (interested party)"
+        }
+      ],
+      "replayCutoffs": [
+        {
+          "cutoff": "X post time (UNKNOWN) + 0",
+          "availableEvidence": [
+            "supplied screenshot only"
+          ],
+          "expected": {
+            "mode": "B supplied-link",
+            "state": "ATTRIBUTED STATEMENT pending authentication: 'a post shown in a screenshot attributes to …'",
+            "country": "COD (Goma named)",
+            "alert": "internal review queue only (political-military, high impact)"
+          },
+          "leakGuard": [
+            "AP",
+            "Reuters",
+            "four vice-presidents",
+            "Front for the Refoundation"
+          ]
+        },
+        {
+          "cutoff": "2026-10-13T00:00Z",
+          "availableEvidence": [
+            "Reuters",
+            "AP",
+            "fr/RWA/UGA outlets"
+          ],
+          "expected": {
+            "state": "ATTRIBUTED_STATEMENT reported by several outlets; succession/dissolution and deputy count DISPUTED",
+            "alert": "eligible update for COD/East Africa political followers once rights allow"
+          },
+          "leakGuard": []
+        }
+      ],
+      "timelineKinds": [
+        {
+          "index": 0,
+          "t": "2026-10-12 (time NOT_ESTABLISHED)",
+          "kind": "CLAIMED_POST",
+          "verification": "SUPPLIED screenshot IMG_2164.jpeg only; account authenticity, original post time and automatic discovery NOT_ESTABLISHED; the phone screenshot time is not the post time"
+        },
+        {
+          "index": 1,
+          "t": "2026-10-12",
+          "kind": "PUBLICATION",
+          "verification": "SUPPLIED; copies META_VERIFIED (Daily Maverick dated 2026-10-12, Yahoo)"
+        },
+        {
+          "index": 2,
+          "t": "2026-10-12 (per CTO)",
+          "kind": "PUBLICATION",
+          "verification": "SUPPLIED; copies META_VERIFIED (WRAL, ABC News)"
+        },
+        {
+          "index": 3,
+          "t": "2026-10-12",
+          "kind": "PUBLICATION",
+          "verification": "META_VERIFIED (date in URL)"
+        },
+        {
+          "index": 4,
+          "t": "NOT_ESTABLISHED",
+          "kind": "PUBLICATION",
+          "verification": "META_VERIFIED url"
+        },
+        {
+          "index": 5,
+          "t": "NOT_ESTABLISHED",
+          "kind": "PUBLICATION",
+          "verification": "META_VERIFIED url"
+        }
+      ],
+      "rightsAccess": null,
+      "expectedB": {
+        "geo": "Goma -> COD (Code-reported router behaviour at baa9167; EA rerun pending); never COG",
+        "noSovereignState": true,
+        "provenanceLabels": "a direct X observation and a later publisher detection carry different provenance labels"
+      },
+      "baselineA": "NOT_ESTABLISHED: no historic logs, no X connector, mode C dormant",
+      "protects": []
+    },
+    {
+      "id": "EA-ES-04",
+      "title": "AFC/M23 capture of Uvira and announced withdrawal after US request (December 2025)",
+      "replay": false,
+      "categories": [
+        "conflict",
+        "disputed",
+        "attributed-statement",
+        "cross-border-proximity"
+      ],
+      "eventCountry": {
+        "value": "COD",
+        "basis": "Uvira, South Kivu (META_VERIFIED headlines)",
+        "precision": "town"
+      },
+      "notEventCountryRoles": {
+        "USA": "mediator",
+        "RWA": "accused backer; denies",
+        "BDI": "neighbouring (Uvira faces Bujumbura); NO sourced Burundi effect in this set, so risk only"
+      },
+      "languages": null,
+      "claims": [
+        {
+          "claim": "M23 will withdraw unilaterally",
+          "unit": null,
+          "attribution": "M23 leadership",
+          "state": "ATTRIBUTED_STATEMENT (interested party)"
+        },
+        {
+          "claim": "rebels still in Uvira",
+          "unit": null,
+          "attribution": "an Uvira civil-society activist via Reuters",
+          "state": "CONTRADICTING report"
+        },
+        {
+          "claim": "FARDC intent to regain Uvira",
+          "unit": null,
+          "attribution": "army spokesperson",
+          "state": "ATTRIBUTED_STATEMENT"
+        },
+        {
+          "claim": "aggregate",
+          "unit": null,
+          "attribution": null,
+          "state": "DISPUTED: an announcement is not a completed withdrawal"
+        }
+      ],
+      "replayCutoffs": [],
+      "timelineKinds": [
+        {
+          "index": 0,
+          "t": "December 2025 (capture date NOT_ESTABLISHED here; 'less than a week' after the Washington meeting)",
+          "kind": "EVENT_TIME_AS_REPORTED",
+          "verification": "REPORTED_BY_SEARCH"
+        },
+        {
+          "index": 1,
+          "t": "2025-12-17 (allAfrica id 202512170701)",
+          "kind": "PUBLICATION",
+          "verification": "META_VERIFIED url"
+        },
+        {
+          "index": 2,
+          "t": "NOT_ESTABLISHED",
+          "kind": "PUBLICATION",
+          "verification": null
+        },
+        {
+          "index": 3,
+          "t": "NOT_ESTABLISHED",
+          "kind": "PUBLICATION",
+          "verification": null
+        }
+      ],
+      "rightsAccess": null,
+      "expectedB": {
+        "readerTitle": "never 'M23 withdraws from Uvira' as a fact; 'M23 says it will withdraw; local report says fighters remain'",
+        "geo": "COD only; BDI not tagged without an explicit Burundi event"
+      },
+      "baselineA": "NOT_ESTABLISHED (no logs)",
+      "protects": []
+    },
+    {
+      "id": "EA-ES-05",
+      "title": "Shelling into Rubavu (Gisenyi), Rwanda during the Goma fighting, 2025-01-27; successive tolls",
+      "replay": true,
+      "categories": [
+        "cross-border",
+        "conflict",
+        "attributed-statement",
+        "update-not-sum"
+      ],
+      "eventCountry": {
+        "value": "RWA for the impact site (Rubavu District)",
+        "related": "COD (fire reported from the Goma side)",
+        "precision": "district"
+      },
+      "notEventCountryRoles": {},
+      "languages": null,
+      "claims": [
+        {
+          "claim": "5 killed, 25 wounded",
+          "unit": "KILLED / WOUNDED (separate)",
+          "attribution": "Rwandan army (AFP)",
+          "state": "ATTRIBUTED_STATEMENT"
+        },
+        {
+          "claim": "9 then 13 killed",
+          "unit": "KILLED",
+          "attribution": null,
+          "state": "UPDATES superseding 5 (never 5+9+13)"
+        },
+        {
+          "claim": "fired by FARDC with FDLR support",
+          "unit": null,
+          "attribution": "Rwandan outlets/government",
+          "state": "ATTRIBUTED (interested party); no Congolese account in set"
+        }
+      ],
+      "replayCutoffs": [
+        {
+          "cutoff": "2025-01-27T23:59Z",
+          "availableEvidence": [],
+          "expected": {
+            "toll": "5 killed / 25 wounded (attributed)",
+            "country": "RWA (+COD related)"
+          },
+          "leakGuard": [
+            "nine",
+            "13 killed"
+          ]
+        },
+        {
+          "cutoff": "2025-01-29T23:59Z",
+          "availableEvidence": [],
+          "expected": {
+            "toll": "latest 13 killed (attributed), shown as an update to the earlier figures"
+          },
+          "leakGuard": []
+        }
+      ],
+      "timelineKinds": [
+        {
+          "index": 0,
+          "t": "2025-01-27",
+          "kind": "EVENT_TIME_AS_REPORTED",
+          "verification": "REPORTED_BY_SEARCH"
+        },
+        {
+          "index": 1,
+          "t": "2025-01-27",
+          "kind": "PUBLICATION",
+          "verification": "META_VERIFIED (date in URL)"
+        },
+        {
+          "index": 2,
+          "t": "2025-01-28",
+          "kind": "UPDATE",
+          "verification": "REPORTED_BY_SEARCH"
+        },
+        {
+          "index": 3,
+          "t": "2025-01-29",
+          "kind": "UPDATE",
+          "verification": "REPORTED_BY_SEARCH"
+        }
+      ],
+      "rightsAccess": null,
+      "expectedB": {
+        "geo": "Gisenyi/Rubavu -> RWA; Goma -> COD; never COG",
+        "update": "one event, figures superseded with timestamps"
+      },
+      "baselineA": "NOT_ESTABLISHED. G-7 HOLD risks tagging RW from actor mentions in COD-only stories, the inverse error of this case",
+      "protects": []
+    },
+    {
+      "id": "EA-ES-06",
+      "title": "Goma airport closure after M23 seizure; UN call to reopen (2025-02-04)",
+      "replay": false,
+      "categories": [
+        "humanitarian-access",
+        "transport",
+        "public-notice-by-UN",
+        "attributed-statement"
+      ],
+      "eventCountry": {
+        "value": "COD",
+        "precision": "facility (Goma International Airport)"
+      },
+      "notEventCountryRoles": {},
+      "languages": null,
+      "claims": [
+        {
+          "claim": "without the airport, medevac, medical supplies and reinforcements are paralysed",
+          "unit": null,
+          "attribution": "UN official",
+          "state": "ATTRIBUTED_STATEMENT of an observed effect"
+        },
+        {
+          "claim": "M23 rejects a daytime humanitarian-flights proposal",
+          "unit": null,
+          "attribution": null,
+          "state": "ATTRIBUTED (interested party)"
+        }
+      ],
+      "replayCutoffs": [],
+      "timelineKinds": [
+        {
+          "index": 0,
+          "t": "late January 2025",
+          "kind": "EVENT_TIME_AS_REPORTED",
+          "verification": null
+        },
+        {
+          "index": 1,
+          "t": "2025-02-04",
+          "kind": "STATEMENT",
+          "verification": "META_VERIFIED (date in URL)"
+        },
+        {
+          "index": 2,
+          "t": "2025-02-22",
+          "kind": "PUBLICATION",
+          "verification": "META_VERIFIED"
+        }
+      ],
+      "rightsAccess": null,
+      "expectedB": {
+        "impact": "observed effect = closure; mechanism = the UN statement; no inference of food shortage beyond the attributed statement"
+      },
+      "baselineA": "NOT_ESTABLISHED",
+      "protects": []
+    },
+    {
+      "id": "EA-ES-07",
+      "title": "Ebola outbreak, Bulape, Kasai (COD): declared 2025-09-04, last patient discharged 2025-10-19, end declared 2025-12-01",
+      "replay": true,
+      "categories": [
+        "public-notice-with-effective-dates",
+        "humanitarian",
+        "update-not-sum",
+        "geography-not-east"
+      ],
+      "eventCountry": {
+        "value": "COD",
+        "precision": "health zone (Bulape), Kasai province",
+        "note": "a DRC event outside the eastern DRC: COD must not be implicitly 'east'"
+      },
+      "notEventCountryRoles": {},
+      "languages": null,
+      "claims": [
+        {
+          "claim": "final 53 confirmed + 11 probable; 45 deaths",
+          "unit": "CASES / DEATHS",
+          "attribution": null,
+          "state": "UPDATE superseding the 5 Oct figures; sources differ slightly, so keep the attribution and date"
+        }
+      ],
+      "replayCutoffs": [
+        {
+          "cutoff": "2025-09-04T23:59Z",
+          "availableEvidence": [],
+          "expected": {
+            "state": "official declaration (primary notice)"
+          },
+          "leakGuard": [
+            "end of outbreak",
+            "45 deaths",
+            "December"
+          ]
+        },
+        {
+          "cutoff": "2025-10-20T00:00Z",
+          "availableEvidence": [],
+          "expected": {
+            "state": "ongoing; last patient discharged; the 42-day end date is a FORECAST date, not an event"
+          },
+          "leakGuard": [
+            "declared over"
+          ]
+        },
+        {
+          "cutoff": "2025-12-01T23:59Z",
+          "availableEvidence": [],
+          "expected": {
+            "state": "end declared; surveillance window to about 2026-03-01 (computed: +90 days)"
+          },
+          "leakGuard": []
+        }
+      ],
+      "timelineKinds": [
+        {
+          "index": 0,
+          "t": "2025-09-04",
+          "kind": "OFFICIAL_DECLARATION",
+          "verification": "META_VERIFIED url"
+        },
+        {
+          "index": 1,
+          "t": "2025-10-05",
+          "kind": "UPDATE",
+          "verification": "REPORTED_BY_SEARCH"
+        },
+        {
+          "index": 2,
+          "t": "2025-10-19",
+          "kind": "EVENT",
+          "verification": null
+        },
+        {
+          "index": 3,
+          "t": "2025-12-01",
+          "kind": "OFFICIAL_DECLARATION",
+          "verification": "META_VERIFIED (date in URL)"
+        }
+      ],
+      "rightsAccess": null,
+      "expectedB": {
+        "geo": "COD; never COG; Kasai is not an eastern-DRC conflict tag",
+        "noProbability": "no '% chance of resurgence'"
+      },
+      "baselineA": "NOT_ESTABLISHED",
+      "protects": []
+    },
+    {
+      "id": "EA-ES-08",
+      "title": "Tanzania general election 2025-10-29: internet shutdown, Dar es Salaam curfew, disputed casualties",
+      "replay": true,
+      "categories": [
+        "access-limited",
+        "public-notice-with-effective-dates",
+        "disputed-casualties",
+        "language-gap"
+      ],
+      "eventCountry": {
+        "value": "TZA",
+        "precision": "national; curfew Dar es Salaam (city)"
+      },
+      "notEventCountryRoles": {},
+      "languages": {
+        "observed": [
+          "en"
+        ],
+        "missing": [
+          "sw: EA located NO Swahili-language source in this round (search for Mwananchi returned none) -> GAP, not 'no Swahili coverage exists'"
+        ]
+      },
+      "claims": [
+        {
+          "claim": "deaths",
+          "unit": null,
+          "attribution": null,
+          "state": "DISPUTED: never average, never pick a midpoint; show the attributed range",
+          "values": {
+            "UN": "10",
+            "BBC": "500+",
+            "rights groups": "3,000+",
+            "opposition": "3,000–10,000"
+          }
+        },
+        {
+          "claim": "98% presidential vote",
+          "unit": null,
+          "attribution": "electoral commission",
+          "state": "ATTRIBUTED_STATEMENT; observers call the vote flawed"
+        }
+      ],
+      "replayCutoffs": [
+        {
+          "cutoff": "2025-10-29T12:00Z",
+          "availableEvidence": [],
+          "expected": {
+            "accessState": "ACCESS_LIMITED for in-country sources; a missing in-country result is NOT 'no developments'",
+            "state": "NEW_SIGNAL (connectivity drop) + public notice"
+          },
+          "leakGuard": [
+            "curfew lifted",
+            "98 percent",
+            "500"
+          ]
+        },
+        {
+          "cutoff": "2025-11-04T00:00Z",
+          "availableEvidence": [],
+          "expected": {
+            "state": "DISPUTED casualty figures; partial connectivity"
+          },
+          "leakGuard": []
+        }
+      ],
+      "timelineKinds": [
+        {
+          "index": 0,
+          "t": "2025-10-29 (early morning)",
+          "kind": "OBSERVATION",
+          "verification": "REPORTED_BY_SEARCH"
+        },
+        {
+          "index": 1,
+          "t": "2025-10-29",
+          "kind": "PUBLIC_NOTICE",
+          "verification": "META_VERIFIED url"
+        },
+        {
+          "index": 2,
+          "t": "2025-10-30 (allAfrica 202510300016)",
+          "kind": "PUBLICATION",
+          "verification": null
+        },
+        {
+          "index": 3,
+          "t": "NOT_ESTABLISHED (about 5 days after 10-29)",
+          "kind": "UPDATE",
+          "verification": null
+        }
+      ],
+      "rightsAccess": null,
+      "expectedB": {
+        "access": "SEARCH_NOT_RUN / PROVIDER_FAILED / ACCESS_LIMITED kept distinct (D-28, F-1, F-3)",
+        "noProbability": true
+      },
+      "baselineA": "NOT_ESTABLISHED (no logs). Known: GNews coerces sw -> en (G report), so Swahili discovery is not established",
+      "protects": []
+    },
+    {
+      "id": "EA-ES-09",
+      "title": "Kenya Finance Bill 2024: online mobilisation -> 2024-06-25 parliament breach -> withdrawal",
+      "replay": true,
+      "categories": [
+        "household-economic-effects",
+        "social-early-signal",
+        "disputed-casualties",
+        "policy"
+      ],
+      "eventCountry": {
+        "value": "KEN",
+        "precision": "city (Nairobi, Parliament)"
+      },
+      "notEventCountryRoles": {},
+      "languages": null,
+      "claims": [
+        {
+          "claim": "social media mobilisation preceded the street protests",
+          "unit": null,
+          "attribution": null,
+          "state": "SUPPORTED in reporting; specific hashtag/accounts NOT verified by EA"
+        },
+        {
+          "claim": "deaths",
+          "unit": null,
+          "attribution": null,
+          "state": "different scopes (city/day vs a single site count): never sum, never treat as contradiction without scope",
+          "values": {
+            "Wikipedia summary": "19 in Nairobi",
+            "Reuters journalist": "at least 5 bodies counted outside parliament"
+          }
+        }
+      ],
+      "replayCutoffs": [
+        {
+          "cutoff": "2024-06-24T23:59Z",
+          "availableEvidence": [],
+          "expected": {
+            "state": "NEW_SIGNAL: planned protest vs a named bill; impact = proposed tax measures (bread VAT dropped, mobile-money tax dropped per reporting)",
+            "alert": "opt-in early-signal channel only"
+          },
+          "leakGuard": [
+            "storm",
+            "parliament on fire",
+            "withdrawn"
+          ]
+        }
+      ],
+      "timelineKinds": [
+        {
+          "index": 0,
+          "t": "2024-06-18",
+          "kind": "PUBLICATION_AS_REPORTED",
+          "verification": "REPORTED_BY_SEARCH"
+        },
+        {
+          "index": 1,
+          "t": "2024-06-20",
+          "kind": "EVENT",
+          "verification": "REPORTED_BY_SEARCH"
+        },
+        {
+          "index": 2,
+          "t": "2024-06-25 ~15:00 local",
+          "kind": "EVENT",
+          "verification": "META_VERIFIED url"
+        },
+        {
+          "index": 3,
+          "t": "after 2024-06-25",
+          "kind": "OFFICIAL",
+          "verification": "REPORTED_BY_SEARCH"
+        }
+      ],
+      "rightsAccess": null,
+      "expectedB": {
+        "impact": "describe the proposed tax measures as proposals with status; no price-rise claim before enactment"
+      },
+      "baselineA": "NOT_ESTABLISHED; no approved social connector (mode C dormant)",
+      "protects": []
+    },
+    {
+      "id": "EA-ES-10",
+      "title": "Kenya nationwide blackout 2023-08-25 ~22:00; competing cause explanations",
+      "replay": false,
+      "categories": [
+        "energy",
+        "public-notice",
+        "corrected-attribution"
+      ],
+      "eventCountry": {
+        "value": "KEN",
+        "precision": "national"
+      },
+      "notEventCountryRoles": {},
+      "languages": null,
+      "claims": [
+        {
+          "claim": "duration",
+          "unit": null,
+          "attribution": null,
+          "state": "different scope; keep both",
+          "values": {
+            "one report": "about 14 h",
+            "another": "nearly 24 h (most severe areas)"
+          }
+        },
+        {
+          "claim": "cause",
+          "unit": null,
+          "attribution": null,
+          "state": "UPDATED/CORRECTED attribution chain; latest official explanation supersedes but earlier ones stay in history"
+        }
+      ],
+      "replayCutoffs": [],
+      "timelineKinds": [
+        {
+          "index": 0,
+          "t": "2023-08-25 ~22:00 local",
+          "kind": "EVENT_TIME_AS_REPORTED",
+          "verification": null
+        },
+        {
+          "index": 1,
+          "t": "2023-08-25 evening",
+          "kind": "STATEMENT",
+          "verification": null
+        },
+        {
+          "index": 2,
+          "t": "later",
+          "kind": "UPDATE",
+          "verification": null
+        },
+        {
+          "index": 3,
+          "t": "later (date NOT_ESTABLISHED)",
+          "kind": "UPDATE",
+          "verification": null
+        }
+      ],
+      "rightsAccess": null,
+      "expectedB": {
+        "correction": "a correction reaches the same audience and updates the original story"
+      },
+      "baselineA": "NOT_ESTABLISHED",
+      "protects": []
+    },
+    {
+      "id": "EA-ES-11",
+      "title": "EPRA (Kenya) monthly pump-price review: prices unchanged, cycle 2025-10-15 to 2025-11-14",
+      "replay": false,
+      "categories": [
+        "genuine-no-change",
+        "public-notice-with-effective-dates",
+        "household-economic-effects"
+      ],
+      "eventCountry": {
+        "value": "KEN",
+        "precision": "national (Nairobi reference prices)"
+      },
+      "notEventCountryRoles": {},
+      "languages": null,
+      "claims": [
+        {
+          "claim": "Nairobi prices unchanged (super 184.52 / diesel 171.47 / kerosene 154.78 KES per litre)",
+          "unit": null,
+          "attribution": null,
+          "state": "ATTRIBUTED to EPRA via press; regulator notice NOT located"
+        }
+      ],
+      "replayCutoffs": [],
+      "timelineKinds": [
+        {
+          "index": 0,
+          "t": "2025-10-14 (review published, as reported)",
+          "kind": "PUBLIC_NOTICE",
+          "verification": "REPORTED_BY_SEARCH; the regulator's own notice was not located"
+        }
+      ],
+      "rightsAccess": null,
+      "expectedB": {
+        "alert": "NO price-change alert; a 'no change' update only if the user follows Kenyan fuel prices",
+        "falsePositiveGuard": "no 'prices rise' inference from global oil or regional conflict news"
+      },
+      "baselineA": "NOT_ESTABLISHED",
+      "protects": []
+    },
+    {
+      "id": "EA-ES-12",
+      "title": "Bank of Uganda holds Central Bank Rate at 9.75% (MPC 2025-11-10)",
+      "replay": false,
+      "categories": [
+        "genuine-no-change",
+        "public-notice",
+        "household-economic-effects"
+      ],
+      "eventCountry": {
+        "value": "UGA",
+        "precision": "national"
+      },
+      "notEventCountryRoles": {},
+      "languages": null,
+      "claims": [
+        {
+          "claim": "CBR maintained at 9.75%; headline inflation 3.4% (Oct 2025)",
+          "unit": null,
+          "attribution": null,
+          "state": "PRIMARY official statement"
+        }
+      ],
+      "replayCutoffs": [],
+      "timelineKinds": [
+        {
+          "index": 0,
+          "t": "2025-11-10",
+          "kind": "PUBLIC_NOTICE",
+          "verification": "META_VERIFIED url (primary source)"
+        }
+      ],
+      "rightsAccess": null,
+      "expectedB": {
+        "alert": "NO rate-change alert",
+        "precisionGuard": "a headline rounding to '9.7' must not create a 'cut' event"
+      },
+      "baselineA": "NOT_ESTABLISHED",
+      "protects": []
+    },
+    {
+      "id": "EA-ES-13",
+      "title": "Horn/East African port strain: Mombasa congestion since September 2025; Maersk suspends Berbera bookings",
+      "replay": false,
+      "categories": [
+        "transport-ports",
+        "specialist-research",
+        "risk-vs-observed",
+        "ambiguous-entity"
+      ],
+      "eventCountry": {
+        "value": [
+          "KEN (Mombasa)",
+          "SOM (Berbera; Somaliland label is a political entity, not a country code)"
+        ],
+        "related": [
+          "DJI",
+          "ETH (import dependence)"
+        ]
+      },
+      "notEventCountryRoles": {},
+      "languages": null,
+      "claims": [
+        {
+          "claim": "volumes will shift to Djibouti and Mombasa; freight costs likely to rise",
+          "unit": null,
+          "attribution": "analysts",
+          "state": "FORECAST/RISK, not an observed effect"
+        },
+        {
+          "claim": "Djibouti handles ~95% of Ethiopia's imports",
+          "unit": null,
+          "attribution": null,
+          "state": "ATTRIBUTED background statistic"
+        }
+      ],
+      "replayCutoffs": [],
+      "timelineKinds": [
+        {
+          "index": 0,
+          "t": "2025-09 onward",
+          "kind": "OBSERVED_CONDITION_AS_REPORTED",
+          "verification": "REPORTED_BY_SEARCH"
+        },
+        {
+          "index": 1,
+          "t": "NOT_ESTABLISHED",
+          "kind": "CARRIER_NOTICE",
+          "verification": null
+        }
+      ],
+      "rightsAccess": null,
+      "expectedB": {
+        "impact": "observed = carrier booking suspension + reported congestion; risk = cost/transit increase; never 'shortage in Ethiopia' without evidence"
+      },
+      "baselineA": "NOT_ESTABLISHED",
+      "protects": []
+    },
+    {
+      "id": "EA-ES-14",
+      "title": "Recycled and false visual claims about the DRC/M23 conflict",
+      "replay": false,
+      "categories": [
+        "false-recycled",
+        "language",
+        "event-location-trap"
+      ],
+      "eventCountry": null,
+      "notEventCountryRoles": {},
+      "languages": null,
+      "claims": [],
+      "replayCutoffs": [],
+      "timelineKinds": [],
+      "rightsAccess": null,
+      "expectedB": {
+        "state": "CORRECTED/RETRACTED or DISPUTED with the fact-checker named; the original visual's place and date recorded separately from the claimed place and date"
+      },
+      "baselineA": "NOT_ESTABLISHED; no image-provenance capability located",
+      "protects": []
+    },
+    {
+      "id": "EA-ES-15",
+      "title": "Attack on UNMISS helicopter during evacuation from Nasir, Upper Nile, South Sudan (2025-03-07)",
+      "replay": false,
+      "categories": [
+        "humanitarian-access",
+        "conflict",
+        "attributed-casualties"
+      ],
+      "eventCountry": {
+        "value": "SSD",
+        "precision": "town (Nasir); helicopters landed at Malakal (a different place, the destination not the event)"
+      },
+      "notEventCountryRoles": {},
+      "languages": null,
+      "claims": [
+        {
+          "claim": "one crew member killed, two injured",
+          "unit": "KILLED / INJURED",
+          "attribution": "UNMISS",
+          "state": "PRIMARY statement"
+        },
+        {
+          "claim": "SSPDF deaths",
+          "unit": null,
+          "attribution": null,
+          "state": "DISPUTED magnitude; keep the attribution",
+          "values": {
+            "UNMISS": "several, including an injured general",
+            "UN News relaying reports": "more than two dozen"
+          }
+        }
+      ],
+      "replayCutoffs": [],
+      "timelineKinds": [
+        {
+          "index": 0,
+          "t": "2025-02-14",
+          "kind": "EVENT_TIME_AS_REPORTED",
+          "verification": null
+        },
+        {
+          "index": 1,
+          "t": "2025-03-07",
+          "kind": "EVENT",
+          "verification": null
+        }
+      ],
+      "rightsAccess": null,
+      "expectedB": {
+        "geo": "SSD; Nasir ≠ Malakal roles; SDN not inferred from 'Sudan' substrings"
+      },
+      "baselineA": "NOT_ESTABLISHED",
+      "protects": []
+    },
+    {
+      "id": "EA-ES-16",
+      "title": "Burundi fuel queues end in September 2024; transport fares and operator allocations",
+      "replay": false,
+      "categories": [
+        "household-economic-effects",
+        "energy",
+        "local-publisher"
+      ],
+      "eventCountry": {
+        "value": "BDI",
+        "precision": "city (Bujumbura)"
+      },
+      "notEventCountryRoles": {},
+      "languages": null,
+      "claims": [
+        {
+          "claim": "supplies arrived; queues ended; supply still low",
+          "unit": null,
+          "attribution": null,
+          "state": "REPORTED"
+        },
+        {
+          "claim": "50-litre daily allocation per bus operator",
+          "unit": null,
+          "attribution": null,
+          "state": "ATTRIBUTED (operators)"
+        },
+        {
+          "claim": "penalties for excessive fares",
+          "unit": null,
+          "attribution": "Home Affairs Minister",
+          "state": "ATTRIBUTED_STATEMENT"
+        }
+      ],
+      "replayCutoffs": [],
+      "timelineKinds": [
+        {
+          "index": 0,
+          "t": "September 2024 (exact date NOT_ESTABLISHED)",
+          "kind": "PUBLICATION",
+          "verification": null
+        }
+      ],
+      "rightsAccess": null,
+      "expectedB": {
+        "noChangeCaution": "'queues ended' is not 'shortage resolved'; keep 'supplies remain low'"
+      },
+      "baselineA": "NOT_ESTABLISHED",
+      "protects": []
+    },
+    {
+      "id": "EA-ES-17",
+      "title": "Somalia humanitarian access: OCHA access severity overview (2025-12-02) and 2025 incident count",
+      "replay": false,
+      "categories": [
+        "humanitarian-access",
+        "primary-notice",
+        "inaccessible-areas"
+      ],
+      "eventCountry": {
+        "value": "SOM",
+        "precision": "national (regional breakdown not read)"
+      },
+      "notEventCountryRoles": {},
+      "languages": null,
+      "claims": [
+        {
+          "claim": "1.3M of 4.8M people in need live in heavily or very heavily access-restricted areas",
+          "unit": null,
+          "attribution": null,
+          "state": "PRIMARY (OCHA)"
+        },
+        {
+          "claim": "179 access incidents in 2025, a 26% decrease",
+          "unit": null,
+          "attribution": "UNOCHA via EUAA",
+          "state": "ATTRIBUTED"
+        },
+        {
+          "claim": "national drought emergency declared November 2025",
+          "unit": null,
+          "attribution": "IMPACT",
+          "state": "ATTRIBUTED; government notice not located"
+        }
+      ],
+      "replayCutoffs": [],
+      "timelineKinds": [
+        {
+          "index": 0,
+          "t": "2025-12-02",
+          "kind": "PRIMARY_NOTICE",
+          "verification": "META_VERIFIED url"
+        }
+      ],
+      "rightsAccess": null,
+      "expectedB": {
+        "access": "areas held by armed groups = ACCESS_LIMITED, not 'no developments'; a 26% national decrease must not hide regional deterioration"
+      },
+      "baselineA": "NOT_ESTABLISHED",
+      "protects": []
+    }
+  ]
+}

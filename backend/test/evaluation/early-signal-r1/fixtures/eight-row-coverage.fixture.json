@@ -1,0 +1,3902 @@
+{
+  "provenance": {
+    "base": "059cdb7f75f5b60623df66219d096d8b0a726f7f",
+    "admission": {
+      "file": "backend/src/modules/global-reach/data/regional-admission.json",
+      "sha256": "6d98d2ac44d23f4230ec1add22ac7f7e06593f078cfd9cb407bfcb5811ae0c91"
+    },
+    "packs": [
+      "backend/source-packs/east-africa-r1/BDI.json@e81cb7bc38625a7c5fe471b49bbc7b4ca11663cc3bfb1a4be45a60722ebd290c",
+      "backend/source-packs/east-africa-r1/COD.json@c4fbb530c55af1150d07598c7bd91f173ed9faa38bf177eb59c23865bf15bd1b",
+      "backend/source-packs/east-africa-r1/DJI.json@87434ad65faf5ae935dd897e8ca4175a9fb83e6ab3c9fec3bf07fc19a76f2452",
+      "backend/source-packs/east-africa-r1/ERI.json@2505d46f95920ea363be137bd9975c076d2f7655ec63785adc3db45d5e8e6d5e",
+      "backend/source-packs/east-africa-r1/ETH.json@03ec2f40cee134d4d66537776772fb3f0345f99fc962bc8027e6877fec910e76",
+      "backend/source-packs/east-africa-r1/KEN.json@efa65202091f5f0ad160d83a828adc5a2220a9980fd8fd31301c023e1658eddb",
+      "backend/source-packs/east-africa-r1/RWA.json@422f407f395d26fa2485911a706648a6900c2cc260b72ed50d87191e3f6e7756",
+      "backend/source-packs/east-africa-r1/SOM.json@91b1904597fe9045a53083ae69a1871ec1b6d7e05fa0f07d2d7885c412947a4e",
+      "backend/source-packs/east-africa-r1/SSD.json@f5fd5438b01cfe35aef28ae00247501a0b20bb5837696251bef61a30c3861579",
+      "backend/source-packs/east-africa-r1/TZA.json@c872f6b4db2f1c786fc4faed7c65d9283b49a41794dca61618871ccff8ccd8d0",
+      "backend/source-packs/east-africa-r1/UGA.json@86692b0875ea617937037a798f4b0a7ea90f5c15b8d0bbb3d3a9795925a0f70f"
+    ]
+  },
+  "admission": {
+    "candidates": 298,
+    "admittedRecords": 290,
+    "rejected": [
+      {
+        "lane": "N",
+        "manifestPath": "backend/source-packs/east-africa-r1/ERI.json",
+        "manifestSha256": "2505d46f95920ea363be137bd9975c076d2f7655ec63785adc3db45d5e8e6d5e",
+        "originalSourceId": "ea-r1:eri:ministry",
+        "reason": "EXPLICIT_ALIAS_OF:ea-r1:eri:shabait"
+      },
+      {
+        "lane": "N",
+        "manifestPath": "backend/source-packs/east-africa-r1/ETH.json",
+        "manifestSha256": "03ec2f40cee134d4d66537776772fb3f0345f99fc962bc8027e6877fec910e76",
+        "originalSourceId": "ea-r1:eth:ess-current",
+        "reason": "EXPLICIT_ALIAS_OF:ea-r1:eth:ess"
+      },
+      {
+        "lane": "N",
+        "manifestPath": "backend/source-packs/east-africa-r1/KEN.json",
+        "manifestSha256": "efa65202091f5f0ad160d83a828adc5a2220a9980fd8fd31301c023e1658eddb",
+        "originalSourceId": "ea-r1:ken:capital-current",
+        "reason": "EXPLICIT_ALIAS_OF:ea-r1:ken:capital"
+      },
+      {
+        "lane": "N",
+        "manifestPath": "backend/source-packs/east-africa-r1/RWA.json",
+        "manifestSha256": "422f407f395d26fa2485911a706648a6900c2cc260b72ed50d87191e3f6e7756",
+        "originalSourceId": "ea-r1:rwa:nisr-apex",
+        "reason": "EXPLICIT_ALIAS_OF:ea-r1:rwa:nisr"
+      },
+      {
+        "lane": "N",
+        "manifestPath": "backend/source-packs/east-africa-r1/COD.json",
+        "manifestSha256": "c4fbb530c55af1150d07598c7bd91f173ed9faa38bf177eb59c23865bf15bd1b",
+        "originalSourceId": "ea-r1:cod:ocha",
+        "reason": "AMBIGUOUS_PUBLISHER_IDENTITY:host:unocha.org"
+      },
+      {
+        "lane": "N",
+        "manifestPath": "backend/source-packs/east-africa-r1/DJI.json",
+        "manifestSha256": "87434ad65faf5ae935dd897e8ca4175a9fb83e6ab3c9fec3bf07fc19a76f2452",
+        "originalSourceId": "ea-r1:dji:redcrescent",
+        "reason": "AMBIGUOUS_PUBLISHER_IDENTITY:host:ifrc.org"
+      },
+      {
+        "lane": "N",
+        "manifestPath": "backend/source-packs/east-africa-r1/ERI.json",
+        "manifestSha256": "2505d46f95920ea363be137bd9975c076d2f7655ec63785adc3db45d5e8e6d5e",
+        "originalSourceId": "ea-r1:eri:redcross",
+        "reason": "AMBIGUOUS_PUBLISHER_IDENTITY:host:ifrc.org"
+      },
+      {
+        "lane": "N",
+        "manifestPath": "backend/source-packs/east-africa-r1/SSD.json",
+        "manifestSha256": "f5fd5438b01cfe35aef28ae00247501a0b20bb5837696251bef61a30c3861579",
+        "originalSourceId": "ea-r1:ssd:ocha",
+        "reason": "AMBIGUOUS_PUBLISHER_IDENTITY:host:unocha.org"
+      }
+    ]
+  },
+  "eaRegisterRows": [
+    {
+      "sourceId": "ea-r1:bdi:iwacu",
+      "iso3": "BDI",
+      "host": "iwacu-burundi.org",
+      "homepage": "https://www.iwacu-burundi.org/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "INACCESSIBLE",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:18:01.094Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/BDI.json",
+      "manifestSha256": "e81cb7bc38625a7c5fe471b49bbc7b4ca11663cc3bfb1a4be45a60722ebd290c"
+    },
+    {
+      "sourceId": "ea-r1:bdi:sos-medias",
+      "iso3": "BDI",
+      "host": "sosmediasburundi.org",
+      "homepage": "https://www.sosmediasburundi.org/",
+      "feedUrl": "https://www.sosmediasburundi.org/feed/",
+      "duplicateOf": null,
+      "technicalStatus": "HTML_PAGE",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:17:53.957Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/BDI.json",
+      "manifestSha256": "e81cb7bc38625a7c5fe471b49bbc7b4ca11663cc3bfb1a4be45a60722ebd290c"
+    },
+    {
+      "sourceId": "ea-r1:bdi:rtnb",
+      "iso3": "BDI",
+      "host": "rtnb.bi",
+      "homepage": "https://www.rtnb.bi/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "NOT_FETCHED",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:17:52.981Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/BDI.json",
+      "manifestSha256": "e81cb7bc38625a7c5fe471b49bbc7b4ca11663cc3bfb1a4be45a60722ebd290c"
+    },
+    {
+      "sourceId": "ea-r1:bdi:assembly",
+      "iso3": "BDI",
+      "host": "assemblee.bi",
+      "homepage": "https://assemblee.bi/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "NOT_FETCHED",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:17:52.297Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/BDI.json",
+      "manifestSha256": "e81cb7bc38625a7c5fe471b49bbc7b4ca11663cc3bfb1a4be45a60722ebd290c"
+    },
+    {
+      "sourceId": "ea-r1:bdi:insbu",
+      "iso3": "BDI",
+      "host": "insbu.bi",
+      "homepage": "https://www.insbu.bi/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "HTML_PAGE",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:17:54.813Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/BDI.json",
+      "manifestSha256": "e81cb7bc38625a7c5fe471b49bbc7b4ca11663cc3bfb1a4be45a60722ebd290c"
+    },
+    {
+      "sourceId": "ea-r1:bdi:brb",
+      "iso3": "BDI",
+      "host": "brb.bi",
+      "homepage": "https://www.brb.bi/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "INACCESSIBLE",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:17:55.762Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/BDI.json",
+      "manifestSha256": "e81cb7bc38625a7c5fe471b49bbc7b4ca11663cc3bfb1a4be45a60722ebd290c"
+    },
+    {
+      "sourceId": "ea-r1:bdi:redcross",
+      "iso3": "BDI",
+      "host": "croixrouge.bi",
+      "homepage": "https://croixrouge.bi/",
+      "feedUrl": "https://croixrouge.bi/feed/",
+      "duplicateOf": null,
+      "technicalStatus": "VERIFIED_FEED_ENDPOINT",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:21:32.946Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/BDI.json",
+      "manifestSha256": "e81cb7bc38625a7c5fe471b49bbc7b4ca11663cc3bfb1a4be45a60722ebd290c"
+    },
+    {
+      "sourceId": "ea-r1:cod:actualite",
+      "iso3": "COD",
+      "host": "actualite.cd",
+      "homepage": "https://actualite.cd/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "HTML_PAGE",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:17:56.873Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/COD.json",
+      "manifestSha256": "c4fbb530c55af1150d07598c7bd91f173ed9faa38bf177eb59c23865bf15bd1b"
+    },
+    {
+      "sourceId": "ea-r1:cod:7sur7",
+      "iso3": "COD",
+      "host": "7sur7.cd",
+      "homepage": "https://7sur7.cd/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "HTML_PAGE",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:18:01.719Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/COD.json",
+      "manifestSha256": "c4fbb530c55af1150d07598c7bd91f173ed9faa38bf177eb59c23865bf15bd1b"
+    },
+    {
+      "sourceId": "ea-r1:cod:acp",
+      "iso3": "COD",
+      "host": "acp.cd",
+      "homepage": "https://acp.cd/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "TRUNCATED",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:18:04.651Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/COD.json",
+      "manifestSha256": "c4fbb530c55af1150d07598c7bd91f173ed9faa38bf177eb59c23865bf15bd1b"
+    },
+    {
+      "sourceId": "ea-r1:cod:assembly",
+      "iso3": "COD",
+      "host": "assemblee-nationale.cd",
+      "homepage": "https://assemblee-nationale.cd/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "NOT_FETCHED",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:18:07.706Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/COD.json",
+      "manifestSha256": "c4fbb530c55af1150d07598c7bd91f173ed9faa38bf177eb59c23865bf15bd1b"
+    },
+    {
+      "sourceId": "ea-r1:cod:ins",
+      "iso3": "COD",
+      "host": "ins.cd",
+      "homepage": "https://ins.cd/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "NOT_FETCHED",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:18:07.797Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/COD.json",
+      "manifestSha256": "c4fbb530c55af1150d07598c7bd91f173ed9faa38bf177eb59c23865bf15bd1b"
+    },
+    {
+      "sourceId": "ea-r1:cod:bcc",
+      "iso3": "COD",
+      "host": "bcc.cd",
+      "homepage": "https://www.bcc.cd/",
+      "feedUrl": "https://www.bcc.cd/feed.xml",
+      "duplicateOf": null,
+      "technicalStatus": "VERIFIED_FEED_ENDPOINT",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:21:32.947Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/COD.json",
+      "manifestSha256": "c4fbb530c55af1150d07598c7bd91f173ed9faa38bf177eb59c23865bf15bd1b"
+    },
+    {
+      "sourceId": "ea-r1:cod:ocha",
+      "iso3": "COD",
+      "host": "unocha.org",
+      "homepage": "https://www.unocha.org/democratic-republic-congo",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "HTML_PAGE",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:18:08.655Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/COD.json",
+      "manifestSha256": "c4fbb530c55af1150d07598c7bd91f173ed9faa38bf177eb59c23865bf15bd1b"
+    },
+    {
+      "sourceId": "ea-r1:cod:ins-official",
+      "iso3": "COD",
+      "host": "ins.gouv.cd",
+      "homepage": "https://ins.gouv.cd/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "HTML_PAGE",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:21:12.545Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/COD.json",
+      "manifestSha256": "c4fbb530c55af1150d07598c7bd91f173ed9faa38bf177eb59c23865bf15bd1b"
+    },
+    {
+      "sourceId": "ea-r1:dji:human-village",
+      "iso3": "DJI",
+      "host": "human-village.org",
+      "homepage": "https://human-village.org/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "HTML_PAGE",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:18:08.306Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/DJI.json",
+      "manifestSha256": "87434ad65faf5ae935dd897e8ca4175a9fb83e6ab3c9fec3bf07fc19a76f2452"
+    },
+    {
+      "sourceId": "ea-r1:dji:adi",
+      "iso3": "DJI",
+      "host": "adi.dj",
+      "homepage": "https://www.adi.dj/",
+      "feedUrl": "https://www.adi.dj/rss",
+      "duplicateOf": null,
+      "technicalStatus": "RECHECK_FAILED",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:21:32.947Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/DJI.json",
+      "manifestSha256": "87434ad65faf5ae935dd897e8ca4175a9fb83e6ab3c9fec3bf07fc19a76f2452"
+    },
+    {
+      "sourceId": "ea-r1:dji:gazette",
+      "iso3": "DJI",
+      "host": "journalofficiel.dj",
+      "homepage": "https://www.journalofficiel.dj/",
+      "feedUrl": "https://www.journalofficiel.dj/feed/",
+      "duplicateOf": null,
+      "technicalStatus": "EMPTY_FEED",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:21:32.948Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/DJI.json",
+      "manifestSha256": "87434ad65faf5ae935dd897e8ca4175a9fb83e6ab3c9fec3bf07fc19a76f2452"
+    },
+    {
+      "sourceId": "ea-r1:dji:instad",
+      "iso3": "DJI",
+      "host": "instad.dj",
+      "homepage": "https://instad.dj/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "HTML_PAGE",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:18:18.651Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/DJI.json",
+      "manifestSha256": "87434ad65faf5ae935dd897e8ca4175a9fb83e6ab3c9fec3bf07fc19a76f2452"
+    },
+    {
+      "sourceId": "ea-r1:dji:bcd",
+      "iso3": "DJI",
+      "host": "banque-centrale.dj",
+      "homepage": "https://banque-centrale.dj/",
+      "feedUrl": "https://banque-centrale.dj/feed/",
+      "duplicateOf": null,
+      "technicalStatus": "RECHECK_FAILED",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:21:35.182Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/DJI.json",
+      "manifestSha256": "87434ad65faf5ae935dd897e8ca4175a9fb83e6ab3c9fec3bf07fc19a76f2452"
+    },
+    {
+      "sourceId": "ea-r1:dji:redcrescent",
+      "iso3": "DJI",
+      "host": "ifrc.org",
+      "homepage": "https://www.ifrc.org/national-societies-directory/djibouti-red-crescent",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "ACCESS_BLOCKED",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:18:21.421Z",
+      "isDirectoryListing": true,
+      "manifestPath": "backend/source-packs/east-africa-r1/DJI.json",
+      "manifestSha256": "87434ad65faf5ae935dd897e8ca4175a9fb83e6ab3c9fec3bf07fc19a76f2452"
+    },
+    {
+      "sourceId": "ea-r1:eri:erena",
+      "iso3": "ERI",
+      "host": "erena.org",
+      "homepage": "https://erena.org/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "HTML_PAGE",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:18:22.721Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/ERI.json",
+      "manifestSha256": "2505d46f95920ea363be137bd9975c076d2f7655ec63785adc3db45d5e8e6d5e"
+    },
+    {
+      "sourceId": "ea-r1:eri:shabait",
+      "iso3": "ERI",
+      "host": "shabait.com",
+      "homepage": "https://shabait.com/",
+      "feedUrl": "https://shabait.com/feed/",
+      "duplicateOf": null,
+      "technicalStatus": "RECHECK_FAILED",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:21:35.470Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/ERI.json",
+      "manifestSha256": "2505d46f95920ea363be137bd9975c076d2f7655ec63785adc3db45d5e8e6d5e"
+    },
+    {
+      "sourceId": "ea-r1:eri:ministry",
+      "iso3": "ERI",
+      "host": "shabait.com",
+      "homepage": "https://shabait.com/category/local-news/",
+      "feedUrl": "https://shabait.com/feed/",
+      "duplicateOf": "ea-r1:eri:shabait",
+      "technicalStatus": "DUPLICATE_ENDPOINT",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:18:26.394Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/ERI.json",
+      "manifestSha256": "2505d46f95920ea363be137bd9975c076d2f7655ec63785adc3db45d5e8e6d5e"
+    },
+    {
+      "sourceId": "ea-r1:eri:boe",
+      "iso3": "ERI",
+      "host": "boe.gov.er",
+      "homepage": "https://www.boe.gov.er/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "NOT_FETCHED",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:18:33.394Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/ERI.json",
+      "manifestSha256": "2505d46f95920ea363be137bd9975c076d2f7655ec63785adc3db45d5e8e6d5e"
+    },
+    {
+      "sourceId": "ea-r1:eri:redcross",
+      "iso3": "ERI",
+      "host": "ifrc.org",
+      "homepage": "https://www.ifrc.org/national-societies-directory/red-cross-society-eritrea",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "ACCESS_BLOCKED",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:18:27.244Z",
+      "isDirectoryListing": true,
+      "manifestPath": "backend/source-packs/east-africa-r1/ERI.json",
+      "manifestSha256": "2505d46f95920ea363be137bd9975c076d2f7655ec63785adc3db45d5e8e6d5e"
+    },
+    {
+      "sourceId": "ea-r1:eth:addis-standard",
+      "iso3": "ETH",
+      "host": "addisstandard.com",
+      "homepage": "https://addisstandard.com/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "NOT_FETCHED",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:18:28.505Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/ETH.json",
+      "manifestSha256": "03ec2f40cee134d4d66537776772fb3f0345f99fc962bc8027e6877fec910e76"
+    },
+    {
+      "sourceId": "ea-r1:eth:reporter",
+      "iso3": "ETH",
+      "host": "thereporterethiopia.com",
+      "homepage": "https://www.thereporterethiopia.com/",
+      "feedUrl": "https://www.thereporterethiopia.com/feed/",
+      "duplicateOf": null,
+      "technicalStatus": "RECHECK_FAILED",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:21:42.694Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/ETH.json",
+      "manifestSha256": "03ec2f40cee134d4d66537776772fb3f0345f99fc962bc8027e6877fec910e76"
+    },
+    {
+      "sourceId": "ea-r1:eth:ena",
+      "iso3": "ETH",
+      "host": "ena.et",
+      "homepage": "https://www.ena.et/web/eng/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "INACCESSIBLE",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:18:32.275Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/ETH.json",
+      "manifestSha256": "03ec2f40cee134d4d66537776772fb3f0345f99fc962bc8027e6877fec910e76"
+    },
+    {
+      "sourceId": "ea-r1:eth:parliament",
+      "iso3": "ETH",
+      "host": "hopr.gov.et",
+      "homepage": "https://www.hopr.gov.et/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "HTML_PAGE",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:18:36.323Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/ETH.json",
+      "manifestSha256": "03ec2f40cee134d4d66537776772fb3f0345f99fc962bc8027e6877fec910e76"
+    },
+    {
+      "sourceId": "ea-r1:eth:ess",
+      "iso3": "ETH",
+      "host": "statsethiopia.gov.et",
+      "homepage": "https://www.statsethiopia.gov.et/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "NOT_FETCHED",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:18:35.586Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/ETH.json",
+      "manifestSha256": "03ec2f40cee134d4d66537776772fb3f0345f99fc962bc8027e6877fec910e76"
+    },
+    {
+      "sourceId": "ea-r1:eth:nbe",
+      "iso3": "ETH",
+      "host": "nbe.gov.et",
+      "homepage": "https://nbe.gov.et/publications-statistics/statistics/",
+      "feedUrl": "https://nbe.gov.et/feed/",
+      "duplicateOf": null,
+      "technicalStatus": "VERIFIED_FEED_ENDPOINT",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:21:43.144Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/ETH.json",
+      "manifestSha256": "03ec2f40cee134d4d66537776772fb3f0345f99fc962bc8027e6877fec910e76"
+    },
+    {
+      "sourceId": "ea-r1:eth:edr",
+      "iso3": "ETH",
+      "host": "edrmc.gov.et",
+      "homepage": "https://edrmc.gov.et/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "HTML_PAGE",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:18:40.330Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/ETH.json",
+      "manifestSha256": "03ec2f40cee134d4d66537776772fb3f0345f99fc962bc8027e6877fec910e76"
+    },
+    {
+      "sourceId": "ea-r1:eth:ess-current",
+      "iso3": "ETH",
+      "host": "ess.gov.et",
+      "homepage": "https://ess.gov.et/find-statistics/",
+      "feedUrl": "https://ess.gov.et/feed/",
+      "duplicateOf": "ea-r1:eth:ess",
+      "technicalStatus": "VERIFIED_FEED_ENDPOINT",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:22:03.336Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/ETH.json",
+      "manifestSha256": "03ec2f40cee134d4d66537776772fb3f0345f99fc962bc8027e6877fec910e76"
+    },
+    {
+      "sourceId": "ea-r1:ken:standard",
+      "iso3": "KEN",
+      "host": "standardmedia.co.ke",
+      "homepage": "https://www.standardmedia.co.ke/",
+      "feedUrl": "https://www.standardmedia.co.ke/rss/headlines.php",
+      "duplicateOf": null,
+      "technicalStatus": "FEED_SIGNATURE_ONLY",
+      "rightsStatus": "RESTRICTED",
+      "checkedAt": "2026-09-22T16:18:52.724Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/KEN.json",
+      "manifestSha256": "efa65202091f5f0ad160d83a828adc5a2220a9980fd8fd31301c023e1658eddb"
+    },
+    {
+      "sourceId": "ea-r1:ken:nation",
+      "iso3": "KEN",
+      "host": "nation.africa",
+      "homepage": "https://nation.africa/kenya",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "NOT_FETCHED",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:18:43.173Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/KEN.json",
+      "manifestSha256": "efa65202091f5f0ad160d83a828adc5a2220a9980fd8fd31301c023e1658eddb"
+    },
+    {
+      "sourceId": "ea-r1:ken:star",
+      "iso3": "KEN",
+      "host": "the-star.co.ke",
+      "homepage": "https://www.the-star.co.ke/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "BOT_CHALLENGE",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:18:45.676Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/KEN.json",
+      "manifestSha256": "efa65202091f5f0ad160d83a828adc5a2220a9980fd8fd31301c023e1658eddb"
+    },
+    {
+      "sourceId": "ea-r1:ken:capital",
+      "iso3": "KEN",
+      "host": "capitalfm.co.ke",
+      "homepage": "https://www.capitalfm.co.ke/news/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "NOT_FETCHED",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:18:46.629Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/KEN.json",
+      "manifestSha256": "efa65202091f5f0ad160d83a828adc5a2220a9980fd8fd31301c023e1658eddb"
+    },
+    {
+      "sourceId": "ea-r1:ken:kbc",
+      "iso3": "KEN",
+      "host": "kbc.co.ke",
+      "homepage": "https://www.kbc.co.ke/",
+      "feedUrl": "https://www.kbc.co.ke/feed/",
+      "duplicateOf": null,
+      "technicalStatus": "VERIFIED_FEED_ENDPOINT",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:21:43.336Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/KEN.json",
+      "manifestSha256": "efa65202091f5f0ad160d83a828adc5a2220a9980fd8fd31301c023e1658eddb"
+    },
+    {
+      "sourceId": "ea-r1:ken:parliament",
+      "iso3": "KEN",
+      "host": "parliament.go.ke",
+      "homepage": "https://www.parliament.go.ke/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "HTML_PAGE",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:18:48.066Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/KEN.json",
+      "manifestSha256": "efa65202091f5f0ad160d83a828adc5a2220a9980fd8fd31301c023e1658eddb"
+    },
+    {
+      "sourceId": "ea-r1:ken:knbs",
+      "iso3": "KEN",
+      "host": "knbs.or.ke",
+      "homepage": "https://www.knbs.or.ke/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "NOT_FETCHED",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:18:47.931Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/KEN.json",
+      "manifestSha256": "efa65202091f5f0ad160d83a828adc5a2220a9980fd8fd31301c023e1658eddb"
+    },
+    {
+      "sourceId": "ea-r1:ken:cbk",
+      "iso3": "KEN",
+      "host": "centralbank.go.ke",
+      "homepage": "https://www.centralbank.go.ke/",
+      "feedUrl": "https://www.centralbank.go.ke/feed/",
+      "duplicateOf": null,
+      "technicalStatus": "VERIFIED_FEED_ENDPOINT",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:21:45.257Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/KEN.json",
+      "manifestSha256": "efa65202091f5f0ad160d83a828adc5a2220a9980fd8fd31301c023e1658eddb"
+    },
+    {
+      "sourceId": "ea-r1:ken:ndma",
+      "iso3": "KEN",
+      "host": "ndma.go.ke",
+      "homepage": "https://ndma.go.ke/",
+      "feedUrl": "https://ndma.go.ke/feed/",
+      "duplicateOf": null,
+      "technicalStatus": "VERIFIED_FEED_ENDPOINT",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:21:46.396Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/KEN.json",
+      "manifestSha256": "efa65202091f5f0ad160d83a828adc5a2220a9980fd8fd31301c023e1658eddb"
+    },
+    {
+      "sourceId": "ea-r1:ken:redcross",
+      "iso3": "KEN",
+      "host": "redcross.or.ke",
+      "homepage": "https://www.redcross.or.ke/",
+      "feedUrl": "https://redcross.or.ke/feed/",
+      "duplicateOf": null,
+      "technicalStatus": "VERIFIED_FEED_ENDPOINT",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:21:46.694Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/KEN.json",
+      "manifestSha256": "efa65202091f5f0ad160d83a828adc5a2220a9980fd8fd31301c023e1658eddb"
+    },
+    {
+      "sourceId": "ea-r1:ken:treasury",
+      "iso3": "KEN",
+      "host": "treasury.go.ke",
+      "homepage": "https://www.treasury.go.ke/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "HTML_PAGE",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:18:54.614Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/KEN.json",
+      "manifestSha256": "efa65202091f5f0ad160d83a828adc5a2220a9980fd8fd31301c023e1658eddb"
+    },
+    {
+      "sourceId": "ea-r1:ken:capital-current",
+      "iso3": "KEN",
+      "host": "capitalfm.africa",
+      "homepage": "https://capitalfm.africa/",
+      "feedUrl": null,
+      "duplicateOf": "ea-r1:ken:capital",
+      "technicalStatus": "NOT_FETCHED",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:25:11.730Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/KEN.json",
+      "manifestSha256": "efa65202091f5f0ad160d83a828adc5a2220a9980fd8fd31301c023e1658eddb"
+    },
+    {
+      "sourceId": "ea-r1:rwa:ktpress",
+      "iso3": "RWA",
+      "host": "ktpress.rw",
+      "homepage": "https://www.ktpress.rw/",
+      "feedUrl": "https://www.ktpress.rw/feed/",
+      "duplicateOf": null,
+      "technicalStatus": "VERIFIED_FEED_ENDPOINT",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:21:47.476Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/RWA.json",
+      "manifestSha256": "422f407f395d26fa2485911a706648a6900c2cc260b72ed50d87191e3f6e7756"
+    },
+    {
+      "sourceId": "ea-r1:rwa:taarifa",
+      "iso3": "RWA",
+      "host": "taarifa.rw",
+      "homepage": "https://taarifa.rw/",
+      "feedUrl": "https://taarifa.rw/feed/",
+      "duplicateOf": null,
+      "technicalStatus": "VERIFIED_FEED_ENDPOINT",
+      "rightsStatus": "LIMITED_SCOPE_REVIEW",
+      "checkedAt": "2026-09-22T16:21:48.664Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/RWA.json",
+      "manifestSha256": "422f407f395d26fa2485911a706648a6900c2cc260b72ed50d87191e3f6e7756"
+    },
+    {
+      "sourceId": "ea-r1:rwa:igihe",
+      "iso3": "RWA",
+      "host": "en.igihe.com",
+      "homepage": "https://en.igihe.com/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "NOT_FETCHED",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:18:57.703Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/RWA.json",
+      "manifestSha256": "422f407f395d26fa2485911a706648a6900c2cc260b72ed50d87191e3f6e7756"
+    },
+    {
+      "sourceId": "ea-r1:rwa:newtimes",
+      "iso3": "RWA",
+      "host": "newtimes.co.rw",
+      "homepage": "https://www.newtimes.co.rw/",
+      "feedUrl": "https://www.newtimes.co.rw/rssFeed/14",
+      "duplicateOf": null,
+      "technicalStatus": "HTML_PAGE",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:25:00.252Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/RWA.json",
+      "manifestSha256": "422f407f395d26fa2485911a706648a6900c2cc260b72ed50d87191e3f6e7756"
+    },
+    {
+      "sourceId": "ea-r1:rwa:rna",
+      "iso3": "RWA",
+      "host": "rnanews.com",
+      "homepage": "https://www.rnanews.com/",
+      "feedUrl": "https://www.rnanews.com/feed/",
+      "duplicateOf": null,
+      "technicalStatus": "VERIFIED_FEED_ENDPOINT",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:21:50.337Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/RWA.json",
+      "manifestSha256": "422f407f395d26fa2485911a706648a6900c2cc260b72ed50d87191e3f6e7756"
+    },
+    {
+      "sourceId": "ea-r1:rwa:rba",
+      "iso3": "RWA",
+      "host": "rba.co.rw",
+      "homepage": "https://www.rba.co.rw/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "NOT_FETCHED",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:19:10.097Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/RWA.json",
+      "manifestSha256": "422f407f395d26fa2485911a706648a6900c2cc260b72ed50d87191e3f6e7756"
+    },
+    {
+      "sourceId": "ea-r1:rwa:parliament",
+      "iso3": "RWA",
+      "host": "parliament.gov.rw",
+      "homepage": "https://www.parliament.gov.rw/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "NOT_FETCHED",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:25:03.324Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/RWA.json",
+      "manifestSha256": "422f407f395d26fa2485911a706648a6900c2cc260b72ed50d87191e3f6e7756"
+    },
+    {
+      "sourceId": "ea-r1:rwa:nisr",
+      "iso3": "RWA",
+      "host": "statistics.gov.rw",
+      "homepage": "https://www.statistics.gov.rw/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "NOT_FETCHED",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:19:01.418Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/RWA.json",
+      "manifestSha256": "422f407f395d26fa2485911a706648a6900c2cc260b72ed50d87191e3f6e7756"
+    },
+    {
+      "sourceId": "ea-r1:rwa:bnr",
+      "iso3": "RWA",
+      "host": "bnr.rw",
+      "homepage": "https://www.bnr.rw/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "HTML_PAGE",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:19:01.583Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/RWA.json",
+      "manifestSha256": "422f407f395d26fa2485911a706648a6900c2cc260b72ed50d87191e3f6e7756"
+    },
+    {
+      "sourceId": "ea-r1:rwa:minema",
+      "iso3": "RWA",
+      "host": "minema.gov.rw",
+      "homepage": "https://www.minema.gov.rw/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "NOT_FETCHED",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:25:06.725Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/RWA.json",
+      "manifestSha256": "422f407f395d26fa2485911a706648a6900c2cc260b72ed50d87191e3f6e7756"
+    },
+    {
+      "sourceId": "ea-r1:rwa:minecofin",
+      "iso3": "RWA",
+      "host": "minecofin.gov.rw",
+      "homepage": "https://www.minecofin.gov.rw/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "NOT_FETCHED",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:25:09.696Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/RWA.json",
+      "manifestSha256": "422f407f395d26fa2485911a706648a6900c2cc260b72ed50d87191e3f6e7756"
+    },
+    {
+      "sourceId": "ea-r1:rwa:nisr-apex",
+      "iso3": "RWA",
+      "host": "statistics.gov.rw",
+      "homepage": "https://statistics.gov.rw/",
+      "feedUrl": null,
+      "duplicateOf": "ea-r1:rwa:nisr",
+      "technicalStatus": "HTML_PAGE",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:21:30.335Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/RWA.json",
+      "manifestSha256": "422f407f395d26fa2485911a706648a6900c2cc260b72ed50d87191e3f6e7756"
+    },
+    {
+      "sourceId": "ea-r1:som:shabelle",
+      "iso3": "SOM",
+      "host": "shabellemedia.com",
+      "homepage": "https://shabellemedia.com/",
+      "feedUrl": "https://shabellemedia.com/feed/",
+      "duplicateOf": null,
+      "technicalStatus": "VERIFIED_FEED_ENDPOINT",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:21:51.052Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/SOM.json",
+      "manifestSha256": "91b1904597fe9045a53083ae69a1871ec1b6d7e05fa0f07d2d7885c412947a4e"
+    },
+    {
+      "sourceId": "ea-r1:som:goobjoog",
+      "iso3": "SOM",
+      "host": "goobjoog.com",
+      "homepage": "https://goobjoog.com/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "HTML_PAGE",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:19:04.291Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/SOM.json",
+      "manifestSha256": "91b1904597fe9045a53083ae69a1871ec1b6d7e05fa0f07d2d7885c412947a4e"
+    },
+    {
+      "sourceId": "ea-r1:som:sonna",
+      "iso3": "SOM",
+      "host": "sonna.so",
+      "homepage": "https://sonna.so/en/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "BOT_CHALLENGE",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:19:05.725Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/SOM.json",
+      "manifestSha256": "91b1904597fe9045a53083ae69a1871ec1b6d7e05fa0f07d2d7885c412947a4e"
+    },
+    {
+      "sourceId": "ea-r1:som:parliament",
+      "iso3": "SOM",
+      "host": "parliament.gov.so",
+      "homepage": "https://parliament.gov.so/",
+      "feedUrl": "https://parliament.gov.so/feed/",
+      "duplicateOf": null,
+      "technicalStatus": "EMPTY_FEED",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:21:51.396Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/SOM.json",
+      "manifestSha256": "91b1904597fe9045a53083ae69a1871ec1b6d7e05fa0f07d2d7885c412947a4e"
+    },
+    {
+      "sourceId": "ea-r1:som:snbs",
+      "iso3": "SOM",
+      "host": "nbs.gov.so",
+      "homepage": "https://nbs.gov.so/",
+      "feedUrl": "https://nbs.gov.so/feed/",
+      "duplicateOf": null,
+      "technicalStatus": "RECHECK_FAILED",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:21:54.061Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/SOM.json",
+      "manifestSha256": "91b1904597fe9045a53083ae69a1871ec1b6d7e05fa0f07d2d7885c412947a4e"
+    },
+    {
+      "sourceId": "ea-r1:som:cbs",
+      "iso3": "SOM",
+      "host": "centralbank.gov.so",
+      "homepage": "https://centralbank.gov.so/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "ACCESS_BLOCKED",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:19:07.499Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/SOM.json",
+      "manifestSha256": "91b1904597fe9045a53083ae69a1871ec1b6d7e05fa0f07d2d7885c412947a4e"
+    },
+    {
+      "sourceId": "ea-r1:som:sodma",
+      "iso3": "SOM",
+      "host": "sodma.gov.so",
+      "homepage": "https://sodma.gov.so/",
+      "feedUrl": "https://sodma.gov.so/feed/",
+      "duplicateOf": null,
+      "technicalStatus": "INVALID_XML",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:21:54.652Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/SOM.json",
+      "manifestSha256": "91b1904597fe9045a53083ae69a1871ec1b6d7e05fa0f07d2d7885c412947a4e"
+    },
+    {
+      "sourceId": "ea-r1:ssd:eyeradio",
+      "iso3": "SSD",
+      "host": "eyeradio.org",
+      "homepage": "https://www.eyeradio.org/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "HTML_PAGE",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:19:09.045Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/SSD.json",
+      "manifestSha256": "f5fd5438b01cfe35aef28ae00247501a0b20bb5837696251bef61a30c3861579"
+    },
+    {
+      "sourceId": "ea-r1:ssd:tamazuj",
+      "iso3": "SSD",
+      "host": "radiotamazuj.org",
+      "homepage": "https://www.radiotamazuj.org/en/",
+      "feedUrl": "https://www.radiotamazuj.org/en/feed",
+      "duplicateOf": null,
+      "technicalStatus": "VERIFIED_FEED_ENDPOINT",
+      "rightsStatus": "LIMITED_SCOPE_REVIEW",
+      "checkedAt": "2026-09-22T16:21:56.464Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/SSD.json",
+      "manifestSha256": "f5fd5438b01cfe35aef28ae00247501a0b20bb5837696251bef61a30c3861579"
+    },
+    {
+      "sourceId": "ea-r1:ssd:ssbc",
+      "iso3": "SSD",
+      "host": "ssbc.gov.ss",
+      "homepage": "https://ssbc.gov.ss/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "HTML_PAGE",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:19:15.167Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/SSD.json",
+      "manifestSha256": "f5fd5438b01cfe35aef28ae00247501a0b20bb5837696251bef61a30c3861579"
+    },
+    {
+      "sourceId": "ea-r1:ssd:parliament",
+      "iso3": "SSD",
+      "host": "parliament.gov.ss",
+      "homepage": "https://www.parliament.gov.ss/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "NOT_FETCHED",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:19:11.593Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/SSD.json",
+      "manifestSha256": "f5fd5438b01cfe35aef28ae00247501a0b20bb5837696251bef61a30c3861579"
+    },
+    {
+      "sourceId": "ea-r1:ssd:nbs",
+      "iso3": "SSD",
+      "host": "ssnbss.org",
+      "homepage": "https://www.ssnbss.org/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "FEED_SIGNATURE_ONLY",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:19:12.678Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/SSD.json",
+      "manifestSha256": "f5fd5438b01cfe35aef28ae00247501a0b20bb5837696251bef61a30c3861579"
+    },
+    {
+      "sourceId": "ea-r1:ssd:boss",
+      "iso3": "SSD",
+      "host": "boss.gov.ss",
+      "homepage": "https://boss.gov.ss/statistical-bulletin/",
+      "feedUrl": "https://boss.gov.ss/feed/",
+      "duplicateOf": null,
+      "technicalStatus": "VERIFIED_FEED_ENDPOINT",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:21:58.319Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/SSD.json",
+      "manifestSha256": "f5fd5438b01cfe35aef28ae00247501a0b20bb5837696251bef61a30c3861579"
+    },
+    {
+      "sourceId": "ea-r1:ssd:ocha",
+      "iso3": "SSD",
+      "host": "unocha.org",
+      "homepage": "https://www.unocha.org/south-sudan",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "HTML_PAGE",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:19:14.208Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/SSD.json",
+      "manifestSha256": "f5fd5438b01cfe35aef28ae00247501a0b20bb5837696251bef61a30c3861579"
+    },
+    {
+      "sourceId": "ea-r1:tza:citizen",
+      "iso3": "TZA",
+      "host": "thecitizen.co.tz",
+      "homepage": "https://www.thecitizen.co.tz/",
+      "feedUrl": "https://www.thecitizen.co.tz/tanzania/rss.xml",
+      "duplicateOf": null,
+      "technicalStatus": "DEAD_ENDPOINT",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:19:17.112Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/TZA.json",
+      "manifestSha256": "c872f6b4db2f1c786fc4faed7c65d9283b49a41794dca61618871ccff8ccd8d0"
+    },
+    {
+      "sourceId": "ea-r1:tza:ipp",
+      "iso3": "TZA",
+      "host": "ippmedia.com",
+      "homepage": "https://www.ippmedia.com/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "NOT_FETCHED",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:19:18.200Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/TZA.json",
+      "manifestSha256": "c872f6b4db2f1c786fc4faed7c65d9283b49a41794dca61618871ccff8ccd8d0"
+    },
+    {
+      "sourceId": "ea-r1:tza:dailynews",
+      "iso3": "TZA",
+      "host": "dailynews.co.tz",
+      "homepage": "https://dailynews.co.tz/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "NOT_FETCHED",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:19:19.961Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/TZA.json",
+      "manifestSha256": "c872f6b4db2f1c786fc4faed7c65d9283b49a41794dca61618871ccff8ccd8d0"
+    },
+    {
+      "sourceId": "ea-r1:tza:parliament",
+      "iso3": "TZA",
+      "host": "parliament.go.tz",
+      "homepage": "https://www.parliament.go.tz/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "TRUNCATED",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:19:21.023Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/TZA.json",
+      "manifestSha256": "c872f6b4db2f1c786fc4faed7c65d9283b49a41794dca61618871ccff8ccd8d0"
+    },
+    {
+      "sourceId": "ea-r1:tza:nbs",
+      "iso3": "TZA",
+      "host": "nbs.go.tz",
+      "homepage": "https://www.nbs.go.tz/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "HTML_PAGE",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:19:22.754Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/TZA.json",
+      "manifestSha256": "c872f6b4db2f1c786fc4faed7c65d9283b49a41794dca61618871ccff8ccd8d0"
+    },
+    {
+      "sourceId": "ea-r1:tza:bot",
+      "iso3": "TZA",
+      "host": "bot.go.tz",
+      "homepage": "https://www.bot.go.tz/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "HTML_PAGE",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:19:26.105Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/TZA.json",
+      "manifestSha256": "c872f6b4db2f1c786fc4faed7c65d9283b49a41794dca61618871ccff8ccd8d0"
+    },
+    {
+      "sourceId": "ea-r1:tza:pmo",
+      "iso3": "TZA",
+      "host": "pmo.go.tz",
+      "homepage": "https://www.pmo.go.tz/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "INACCESSIBLE",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:19:26.475Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/TZA.json",
+      "manifestSha256": "c872f6b4db2f1c786fc4faed7c65d9283b49a41794dca61618871ccff8ccd8d0"
+    },
+    {
+      "sourceId": "ea-r1:uga:monitor",
+      "iso3": "UGA",
+      "host": "monitor.co.ug",
+      "homepage": "https://www.monitor.co.ug/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "NOT_FETCHED",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:19:26.099Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/UGA.json",
+      "manifestSha256": "86692b0875ea617937037a798f4b0a7ea90f5c15b8d0bbb3d3a9795925a0f70f"
+    },
+    {
+      "sourceId": "ea-r1:uga:observer",
+      "iso3": "UGA",
+      "host": "observer.ug",
+      "homepage": "https://observer.ug/",
+      "feedUrl": "https://observer.ug/feed/",
+      "duplicateOf": null,
+      "technicalStatus": "RECHECK_FAILED",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:21:59.523Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/UGA.json",
+      "manifestSha256": "86692b0875ea617937037a798f4b0a7ea90f5c15b8d0bbb3d3a9795925a0f70f"
+    },
+    {
+      "sourceId": "ea-r1:uga:ubc",
+      "iso3": "UGA",
+      "host": "ubc.go.ug",
+      "homepage": "https://ubc.go.ug/",
+      "feedUrl": "https://ubc.go.ug/feed/",
+      "duplicateOf": null,
+      "technicalStatus": "VERIFIED_FEED_ENDPOINT",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:22:01.163Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/UGA.json",
+      "manifestSha256": "86692b0875ea617937037a798f4b0a7ea90f5c15b8d0bbb3d3a9795925a0f70f"
+    },
+    {
+      "sourceId": "ea-r1:uga:parliament",
+      "iso3": "UGA",
+      "host": "parliament.go.ug",
+      "homepage": "https://www.parliament.go.ug/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "HTML_PAGE",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:19:30.663Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/UGA.json",
+      "manifestSha256": "86692b0875ea617937037a798f4b0a7ea90f5c15b8d0bbb3d3a9795925a0f70f"
+    },
+    {
+      "sourceId": "ea-r1:uga:ubos",
+      "iso3": "UGA",
+      "host": "ubos.org",
+      "homepage": "https://www.ubos.org/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "NOT_FETCHED",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:19:30.781Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/UGA.json",
+      "manifestSha256": "86692b0875ea617937037a798f4b0a7ea90f5c15b8d0bbb3d3a9795925a0f70f"
+    },
+    {
+      "sourceId": "ea-r1:uga:bou",
+      "iso3": "UGA",
+      "host": "bou.or.ug",
+      "homepage": "https://www.bou.or.ug/",
+      "feedUrl": null,
+      "duplicateOf": null,
+      "technicalStatus": "HTML_PAGE",
+      "rightsStatus": "UNRESOLVED",
+      "checkedAt": "2026-09-22T16:19:32.749Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/UGA.json",
+      "manifestSha256": "86692b0875ea617937037a798f4b0a7ea90f5c15b8d0bbb3d3a9795925a0f70f"
+    },
+    {
+      "sourceId": "ea-r1:uga:opm",
+      "iso3": "UGA",
+      "host": "opm.go.ug",
+      "homepage": "https://opm.go.ug/",
+      "feedUrl": "https://opm.go.ug/feed/",
+      "duplicateOf": null,
+      "technicalStatus": "ACCESS_POLICY_REVIEW",
+      "rightsStatus": "RESTRICTION_OR_NOTICE_OBSERVED",
+      "checkedAt": "2026-09-22T16:19:35.904Z",
+      "isDirectoryListing": false,
+      "manifestPath": "backend/source-packs/east-africa-r1/UGA.json",
+      "manifestSha256": "86692b0875ea617937037a798f4b0a7ea90f5c15b8d0bbb3d3a9795925a0f70f"
+    }
+  ],
+  "canonicalIdentities": [
+    {
+      "sourceId": "ea-r1:bdi:assembly",
+      "iso3": "BDI",
+      "canonicalHost": "assemblee.bi",
+      "nameKey": "nationalassemblyburundi",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:bdi:brb",
+      "iso3": "BDI",
+      "canonicalHost": "brb.bi",
+      "nameKey": "bankoftherepublicofburundi",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:bdi:insbu",
+      "iso3": "BDI",
+      "canonicalHost": "insbu.bi",
+      "nameKey": "insbu",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:bdi:iwacu",
+      "iso3": "BDI",
+      "canonicalHost": "iwacu-burundi.org",
+      "nameKey": "iwacu",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:bdi:redcross",
+      "iso3": "BDI",
+      "canonicalHost": "croixrouge.bi",
+      "nameKey": "burundiredcross",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:bdi:rtnb",
+      "iso3": "BDI",
+      "canonicalHost": "rtnb.bi",
+      "nameKey": "rtnb",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:bdi:sos-medias",
+      "iso3": "BDI",
+      "canonicalHost": "sosmediasburundi.org",
+      "nameKey": "sosmediasburundi",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:cod:7sur7",
+      "iso3": "COD",
+      "canonicalHost": "7sur7.cd",
+      "nameKey": "7sur7cd",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:cod:acp",
+      "iso3": "COD",
+      "canonicalHost": "acp.cd",
+      "nameKey": "congolesepressagency",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:cod:actualite",
+      "iso3": "COD",
+      "canonicalHost": "actualite.cd",
+      "nameKey": "actualitecd",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:cod:assembly",
+      "iso3": "COD",
+      "canonicalHost": "assemblee-nationale.cd",
+      "nameKey": "nationalassemblydrc",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:cod:bcc",
+      "iso3": "COD",
+      "canonicalHost": "bcc.cd",
+      "nameKey": "centralbankofcongo",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:cod:ins",
+      "iso3": "COD",
+      "canonicalHost": "ins.cd",
+      "nameKey": "insdrc",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:cod:ins-official",
+      "iso3": "COD",
+      "canonicalHost": "ins.gouv.cd",
+      "nameKey": "insdrcofficialportalcandidate",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:dji:adi",
+      "iso3": "DJI",
+      "canonicalHost": "adi.dj",
+      "nameKey": "djiboutinewsagency",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:dji:bcd",
+      "iso3": "DJI",
+      "canonicalHost": "banque-centrale.dj",
+      "nameKey": "centralbankofdjibouti",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:dji:gazette",
+      "iso3": "DJI",
+      "canonicalHost": "journalofficiel.dj",
+      "nameKey": "officialjournaldjibouti",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:dji:human-village",
+      "iso3": "DJI",
+      "canonicalHost": "human-village.org",
+      "nameKey": "humanvillage",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:dji:instad",
+      "iso3": "DJI",
+      "canonicalHost": "instad.dj",
+      "nameKey": "instad",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:eri:boe",
+      "iso3": "ERI",
+      "canonicalHost": "boe.gov.er",
+      "nameKey": "bankoferitreacandidatehost",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:eri:erena",
+      "iso3": "ERI",
+      "canonicalHost": "erena.org",
+      "nameKey": "radioerenaexile",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:eri:shabait",
+      "iso3": "ERI",
+      "canonicalHost": "shabait.com",
+      "nameKey": "ministryofinformationshabait",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:eth:addis-standard",
+      "iso3": "ETH",
+      "canonicalHost": "addisstandard.com",
+      "nameKey": "addisstandard",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:eth:edr",
+      "iso3": "ETH",
+      "canonicalHost": "edrmc.gov.et",
+      "nameKey": "ethiopiandisasterriskmanagementcommission",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:eth:ena",
+      "iso3": "ETH",
+      "canonicalHost": "ena.et",
+      "nameKey": "ethiopiannewsagency",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:eth:ess",
+      "iso3": "ETH",
+      "canonicalHost": "statsethiopia.gov.et",
+      "nameKey": "ethiopianstatisticalservice",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:eth:nbe",
+      "iso3": "ETH",
+      "canonicalHost": "nbe.gov.et",
+      "nameKey": "nationalbankofethiopia",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:eth:parliament",
+      "iso3": "ETH",
+      "canonicalHost": "hopr.gov.et",
+      "nameKey": "houseofpeoplesrepresentatives",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:eth:reporter",
+      "iso3": "ETH",
+      "canonicalHost": "thereporterethiopia.com",
+      "nameKey": "thereporterethiopia",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:ken:capital",
+      "iso3": "KEN",
+      "canonicalHost": "capitalfm.co.ke",
+      "nameKey": "capitalfmkenya",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:ken:cbk",
+      "iso3": "KEN",
+      "canonicalHost": "centralbank.go.ke",
+      "nameKey": "centralbankofkenya",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:ken:kbc",
+      "iso3": "KEN",
+      "canonicalHost": "kbc.co.ke",
+      "nameKey": "kenyabroadcastingcorporation",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:ken:knbs",
+      "iso3": "KEN",
+      "canonicalHost": "knbs.or.ke",
+      "nameKey": "kenyanationalbureauofstatistics",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:ken:nation",
+      "iso3": "KEN",
+      "canonicalHost": "nation.africa",
+      "nameKey": "nationkenya",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:ken:ndma",
+      "iso3": "KEN",
+      "canonicalHost": "ndma.go.ke",
+      "nameKey": "nationaldroughtmanagementauthority",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:ken:parliament",
+      "iso3": "KEN",
+      "canonicalHost": "parliament.go.ke",
+      "nameKey": "parliamentofkenya",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:ken:redcross",
+      "iso3": "KEN",
+      "canonicalHost": "redcross.or.ke",
+      "nameKey": "kenyaredcross",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:ken:standard",
+      "iso3": "KEN",
+      "canonicalHost": "standardmedia.co.ke",
+      "nameKey": "thestandard",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "RESTRICTED"
+    },
+    {
+      "sourceId": "ea-r1:ken:star",
+      "iso3": "KEN",
+      "canonicalHost": "the-star.co.ke",
+      "nameKey": "thestarkenya",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:ken:treasury",
+      "iso3": "KEN",
+      "canonicalHost": "treasury.go.ke",
+      "nameKey": "nationaltreasurykenya",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:rwa:bnr",
+      "iso3": "RWA",
+      "canonicalHost": "bnr.rw",
+      "nameKey": "nationalbankofrwanda",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:rwa:igihe",
+      "iso3": "RWA",
+      "canonicalHost": "en.igihe.com",
+      "nameKey": "igihe",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:rwa:ktpress",
+      "iso3": "RWA",
+      "canonicalHost": "ktpress.rw",
+      "nameKey": "ktpress",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:rwa:minecofin",
+      "iso3": "RWA",
+      "canonicalHost": "minecofin.gov.rw",
+      "nameKey": "ministryoffinanceandeconomicplanning",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:rwa:minema",
+      "iso3": "RWA",
+      "canonicalHost": "minema.gov.rw",
+      "nameKey": "ministryinchargeofemergencymanagement",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:rwa:newtimes",
+      "iso3": "RWA",
+      "canonicalHost": "newtimes.co.rw",
+      "nameKey": "thenewtimes",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:rwa:nisr",
+      "iso3": "RWA",
+      "canonicalHost": "statistics.gov.rw",
+      "nameKey": "nationalinstituteofstatisticsofrwanda",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:rwa:parliament",
+      "iso3": "RWA",
+      "canonicalHost": "parliament.gov.rw",
+      "nameKey": "parliamentofrwanda",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:rwa:rba",
+      "iso3": "RWA",
+      "canonicalHost": "rba.co.rw",
+      "nameKey": "rwandabroadcastingagency",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:rwa:rna",
+      "iso3": "RWA",
+      "canonicalHost": "rnanews.com",
+      "nameKey": "rwandanewsagency",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:rwa:taarifa",
+      "iso3": "RWA",
+      "canonicalHost": "taarifa.rw",
+      "nameKey": "taarifarwanda",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:som:cbs",
+      "iso3": "SOM",
+      "canonicalHost": "centralbank.gov.so",
+      "nameKey": "centralbankofsomalia",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:som:goobjoog",
+      "iso3": "SOM",
+      "canonicalHost": "goobjoog.com",
+      "nameKey": "goobjoogmedia",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:som:parliament",
+      "iso3": "SOM",
+      "canonicalHost": "parliament.gov.so",
+      "nameKey": "federalparliamentsomalia",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:som:shabelle",
+      "iso3": "SOM",
+      "canonicalHost": "shabellemedia.com",
+      "nameKey": "shabellemedianetwork",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:som:snbs",
+      "iso3": "SOM",
+      "canonicalHost": "nbs.gov.so",
+      "nameKey": "somalinationalbureauofstatistics",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:som:sodma",
+      "iso3": "SOM",
+      "canonicalHost": "sodma.gov.so",
+      "nameKey": "somalidisastermanagementagency",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:som:sonna",
+      "iso3": "SOM",
+      "canonicalHost": "sonna.so",
+      "nameKey": "somalinationalnewsagency",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:ssd:boss",
+      "iso3": "SSD",
+      "canonicalHost": "boss.gov.ss",
+      "nameKey": "bankofsouthsudan",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:ssd:eyeradio",
+      "iso3": "SSD",
+      "canonicalHost": "eyeradio.org",
+      "nameKey": "eyeradio",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:ssd:nbs",
+      "iso3": "SSD",
+      "canonicalHost": "ssnbss.org",
+      "nameKey": "nationalbureauofstatisticssouthsudan",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:ssd:parliament",
+      "iso3": "SSD",
+      "canonicalHost": "parliament.gov.ss",
+      "nameKey": "nationallegislaturesouthsudan",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:ssd:ssbc",
+      "iso3": "SSD",
+      "canonicalHost": "ssbc.gov.ss",
+      "nameKey": "southsudanbroadcastingcorporation",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:ssd:tamazuj",
+      "iso3": "SSD",
+      "canonicalHost": "radiotamazuj.org",
+      "nameKey": "radiotamazujcrossborder",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:tza:bot",
+      "iso3": "TZA",
+      "canonicalHost": "bot.go.tz",
+      "nameKey": "bankoftanzania",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:tza:citizen",
+      "iso3": "TZA",
+      "canonicalHost": "thecitizen.co.tz",
+      "nameKey": "thecitizen",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:tza:dailynews",
+      "iso3": "TZA",
+      "canonicalHost": "dailynews.co.tz",
+      "nameKey": "dailynewstanzania",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:tza:ipp",
+      "iso3": "TZA",
+      "canonicalHost": "ippmedia.com",
+      "nameKey": "ippmedia",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:tza:nbs",
+      "iso3": "TZA",
+      "canonicalHost": "nbs.go.tz",
+      "nameKey": "nationalbureauofstatisticstanzania",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:tza:parliament",
+      "iso3": "TZA",
+      "canonicalHost": "parliament.go.tz",
+      "nameKey": "parliamenttanzania",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:tza:pmo",
+      "iso3": "TZA",
+      "canonicalHost": "pmo.go.tz",
+      "nameKey": "primeministersofficedisastermanagement",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:uga:bou",
+      "iso3": "UGA",
+      "canonicalHost": "bou.or.ug",
+      "nameKey": "bankofuganda",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:uga:monitor",
+      "iso3": "UGA",
+      "canonicalHost": "monitor.co.ug",
+      "nameKey": "dailymonitor",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:uga:observer",
+      "iso3": "UGA",
+      "canonicalHost": "observer.ug",
+      "nameKey": "theobserveruganda",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:uga:opm",
+      "iso3": "UGA",
+      "canonicalHost": "opm.go.ug",
+      "nameKey": "officeoftheprimeministerdisasterpreparedness",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:uga:parliament",
+      "iso3": "UGA",
+      "canonicalHost": "parliament.go.ug",
+      "nameKey": "parliamentuganda",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:uga:ubc",
+      "iso3": "UGA",
+      "canonicalHost": "ubc.go.ug",
+      "nameKey": "ugandabroadcastingcorporation",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "ea-r1:uga:ubos",
+      "iso3": "UGA",
+      "canonicalHost": "ubos.org",
+      "nameKey": "ugandabureauofstatistics",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:at:central-bank",
+      "iso3": "AUT",
+      "canonicalHost": "oenb.at",
+      "nameKey": "oesterreichischenationalbank",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:at:parliament",
+      "iso3": "AUT",
+      "canonicalHost": "parlament.gv.at",
+      "nameKey": "parlamentösterreich",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:at:public-news",
+      "iso3": "AUT",
+      "canonicalHost": "orf.at",
+      "nameKey": "orf",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:at:publisher-1",
+      "iso3": "AUT",
+      "canonicalHost": "derstandard.at",
+      "nameKey": "derstandard",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:at:publisher-2",
+      "iso3": "AUT",
+      "canonicalHost": "diepresse.com",
+      "nameKey": "diepresse",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:at:statistics",
+      "iso3": "AUT",
+      "canonicalHost": "statistik.at",
+      "nameKey": "statistikaustria",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:be:central-bank",
+      "iso3": "BEL",
+      "canonicalHost": "bnb.be",
+      "nameKey": "nationalebankvanbelgiëbanquenationaledebelgique",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:be:parliament",
+      "iso3": "BEL",
+      "canonicalHost": "dekamer.be",
+      "nameKey": "dekamerlachambre",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:be:public-news",
+      "iso3": "BEL",
+      "canonicalHost": "vrt.be",
+      "nameKey": "vrtnws",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:be:publisher-1",
+      "iso3": "BEL",
+      "canonicalHost": "standaard.be",
+      "nameKey": "destandaard",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:be:publisher-2",
+      "iso3": "BEL",
+      "canonicalHost": "lesoir.be",
+      "nameKey": "lesoir",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:be:statistics",
+      "iso3": "BEL",
+      "canonicalHost": "statbel.fgov.be",
+      "nameKey": "statbel",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:bg:central-bank",
+      "iso3": "BGR",
+      "canonicalHost": "bnb.bg",
+      "nameKey": "българсканароднабанка",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:bg:parliament",
+      "iso3": "BGR",
+      "canonicalHost": "parliament.bg",
+      "nameKey": "народносъбрание",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:bg:public-news",
+      "iso3": "BGR",
+      "canonicalHost": "bnr.bg",
+      "nameKey": "българсконационалнорадио",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:bg:publisher-1",
+      "iso3": "BGR",
+      "canonicalHost": "dnevnik.bg",
+      "nameKey": "дневник",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:bg:publisher-2",
+      "iso3": "BGR",
+      "canonicalHost": "mediapool.bg",
+      "nameKey": "медиапул",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:bg:statistics",
+      "iso3": "BGR",
+      "canonicalHost": "nsi.bg",
+      "nameKey": "националенстатистическиинститут",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:cy:central-bank",
+      "iso3": "CYP",
+      "canonicalHost": "centralbank.cy",
+      "nameKey": "centralbankofcyprus",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:cy:parliament",
+      "iso3": "CYP",
+      "canonicalHost": "parliament.cy",
+      "nameKey": "βουλήτωναντιπροσώπων",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:cy:public-news",
+      "iso3": "CYP",
+      "canonicalHost": "riknews.com.cy",
+      "nameKey": "ρικ",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:cy:publisher-1",
+      "iso3": "CYP",
+      "canonicalHost": "politis.com.cy",
+      "nameKey": "πολίτης",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:cy:publisher-2",
+      "iso3": "CYP",
+      "canonicalHost": "cyprus-mail.com",
+      "nameKey": "cyprusmail",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:cy:statistics",
+      "iso3": "CYP",
+      "canonicalHost": "cystat.gov.cy",
+      "nameKey": "στατιστικήυπηρεσία",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:cz:central-bank",
+      "iso3": "CZE",
+      "canonicalHost": "cnb.cz",
+      "nameKey": "českánárodníbanka",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:cz:parliament",
+      "iso3": "CZE",
+      "canonicalHost": "psp.cz",
+      "nameKey": "poslaneckásněmovna",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:cz:public-news",
+      "iso3": "CZE",
+      "canonicalHost": "irozhlas.cz",
+      "nameKey": "českýrozhlas",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:cz:publisher-1",
+      "iso3": "CZE",
+      "canonicalHost": "denikn.cz",
+      "nameKey": "deníkn",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:cz:publisher-2",
+      "iso3": "CZE",
+      "canonicalHost": "seznamzpravy.cz",
+      "nameKey": "seznamzprávy",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:cz:statistics",
+      "iso3": "CZE",
+      "canonicalHost": "csu.gov.cz",
+      "nameKey": "českýstatistickýúřad",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:de:central-bank",
+      "iso3": "DEU",
+      "canonicalHost": "bundesbank.de",
+      "nameKey": "deutschebundesbank",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:de:parliament",
+      "iso3": "DEU",
+      "canonicalHost": "bundestag.de",
+      "nameKey": "deutscherbundestag",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:de:public-news",
+      "iso3": "DEU",
+      "canonicalHost": "tagesschau.de",
+      "nameKey": "tagesschau",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "RESTRICTED"
+    },
+    {
+      "sourceId": "eu27:de:publisher-1",
+      "iso3": "DEU",
+      "canonicalHost": "sueddeutsche.de",
+      "nameKey": "süddeutschezeitung",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:de:publisher-2",
+      "iso3": "DEU",
+      "canonicalHost": "faz.net",
+      "nameKey": "frankfurterallgemeinezeitung",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:de:statistics",
+      "iso3": "DEU",
+      "canonicalHost": "destatis.de",
+      "nameKey": "statistischesbundesamt",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:dk:central-bank",
+      "iso3": "DNK",
+      "canonicalHost": "nationalbanken.dk",
+      "nameKey": "danmarksnationalbank",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:dk:parliament",
+      "iso3": "DNK",
+      "canonicalHost": "ft.dk",
+      "nameKey": "folketinget",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:dk:public-news",
+      "iso3": "DNK",
+      "canonicalHost": "dr.dk",
+      "nameKey": "dr",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:dk:publisher-1",
+      "iso3": "DNK",
+      "canonicalHost": "information.dk",
+      "nameKey": "information",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:dk:publisher-2",
+      "iso3": "DNK",
+      "canonicalHost": "politiken.dk",
+      "nameKey": "politiken",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:dk:statistics",
+      "iso3": "DNK",
+      "canonicalHost": "dst.dk",
+      "nameKey": "danmarksstatistik",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:ee:central-bank",
+      "iso3": "EST",
+      "canonicalHost": "eestipank.ee",
+      "nameKey": "eestipank",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:ee:parliament",
+      "iso3": "EST",
+      "canonicalHost": "riigikogu.ee",
+      "nameKey": "riigikogu",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:ee:public-news",
+      "iso3": "EST",
+      "canonicalHost": "err.ee",
+      "nameKey": "eestirahvusringhääling",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:ee:publisher-1",
+      "iso3": "EST",
+      "canonicalHost": "postimees.ee",
+      "nameKey": "postimees",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:ee:publisher-2",
+      "iso3": "EST",
+      "canonicalHost": "epl.delfi.ee",
+      "nameKey": "eestipäevaleht",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:ee:statistics",
+      "iso3": "EST",
+      "canonicalHost": "stat.ee",
+      "nameKey": "statistikaamet",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:es:central-bank",
+      "iso3": "ESP",
+      "canonicalHost": "bde.es",
+      "nameKey": "bancodeespaña",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:es:parliament",
+      "iso3": "ESP",
+      "canonicalHost": "congreso.es",
+      "nameKey": "congresodelosdiputados",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:es:public-news",
+      "iso3": "ESP",
+      "canonicalHost": "rtve.es",
+      "nameKey": "rtvenoticias",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:es:publisher-1",
+      "iso3": "ESP",
+      "canonicalHost": "elpais.com",
+      "nameKey": "elpaís",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:es:publisher-2",
+      "iso3": "ESP",
+      "canonicalHost": "eldiario.es",
+      "nameKey": "eldiarioes",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:es:statistics",
+      "iso3": "ESP",
+      "canonicalHost": "ine.es",
+      "nameKey": "institutonacionaldeestadística",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:fi:central-bank",
+      "iso3": "FIN",
+      "canonicalHost": "suomenpankki.fi",
+      "nameKey": "suomenpankki",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:fi:parliament",
+      "iso3": "FIN",
+      "canonicalHost": "eduskunta.fi",
+      "nameKey": "eduskunta",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:fi:public-news",
+      "iso3": "FIN",
+      "canonicalHost": "yle.fi",
+      "nameKey": "yle",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:fi:publisher-1",
+      "iso3": "FIN",
+      "canonicalHost": "hs.fi",
+      "nameKey": "helsinginsanomat",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:fi:publisher-2",
+      "iso3": "FIN",
+      "canonicalHost": "hbl.fi",
+      "nameKey": "hufvudstadsbladet",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:fi:statistics",
+      "iso3": "FIN",
+      "canonicalHost": "stat.fi",
+      "nameKey": "tilastokeskus",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:fr:central-bank",
+      "iso3": "FRA",
+      "canonicalHost": "banque-france.fr",
+      "nameKey": "banquedefrance",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:fr:parliament",
+      "iso3": "FRA",
+      "canonicalHost": "assemblee-nationale.fr",
+      "nameKey": "assembléenationale",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:fr:public-news",
+      "iso3": "FRA",
+      "canonicalHost": "franceinfo.fr",
+      "nameKey": "franceinfo",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:fr:publisher-1",
+      "iso3": "FRA",
+      "canonicalHost": "lemonde.fr",
+      "nameKey": "lemonde",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "RESTRICTED"
+    },
+    {
+      "sourceId": "eu27:fr:publisher-2",
+      "iso3": "FRA",
+      "canonicalHost": "mediapart.fr",
+      "nameKey": "mediapart",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:fr:statistics",
+      "iso3": "FRA",
+      "canonicalHost": "insee.fr",
+      "nameKey": "insee",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:gr:central-bank",
+      "iso3": "GRC",
+      "canonicalHost": "bankofgreece.gr",
+      "nameKey": "τράπεζατηςελλάδος",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:gr:parliament",
+      "iso3": "GRC",
+      "canonicalHost": "hellenicparliament.gr",
+      "nameKey": "βουλήτωνελλήνων",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:gr:public-news",
+      "iso3": "GRC",
+      "canonicalHost": "ertnews.gr",
+      "nameKey": "ερτnews",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:gr:publisher-1",
+      "iso3": "GRC",
+      "canonicalHost": "kathimerini.gr",
+      "nameKey": "ηκαθημερινή",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:gr:publisher-2",
+      "iso3": "GRC",
+      "canonicalHost": "efsyn.gr",
+      "nameKey": "εφημερίδατωνσυντακτών",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:gr:statistics",
+      "iso3": "GRC",
+      "canonicalHost": "statistics.gr",
+      "nameKey": "ελληνικήστατιστικήαρχή",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:hr:central-bank",
+      "iso3": "HRV",
+      "canonicalHost": "hnb.hr",
+      "nameKey": "hrvatskanarodnabanka",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:hr:parliament",
+      "iso3": "HRV",
+      "canonicalHost": "sabor.hr",
+      "nameKey": "hrvatskisabor",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:hr:public-news",
+      "iso3": "HRV",
+      "canonicalHost": "vijesti.hrt.hr",
+      "nameKey": "hrvatskaradiotelevizija",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:hr:publisher-1",
+      "iso3": "HRV",
+      "canonicalHost": "index.hr",
+      "nameKey": "indexhr",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:hr:publisher-2",
+      "iso3": "HRV",
+      "canonicalHost": "telegram.hr",
+      "nameKey": "telegram",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:hr:statistics",
+      "iso3": "HRV",
+      "canonicalHost": "dzs.gov.hr",
+      "nameKey": "državnizavodzastatistiku",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:hu:central-bank",
+      "iso3": "HUN",
+      "canonicalHost": "mnb.hu",
+      "nameKey": "magyarnemzetibank",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:hu:parliament",
+      "iso3": "HUN",
+      "canonicalHost": "parlament.hu",
+      "nameKey": "országgyűlés",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:hu:public-news",
+      "iso3": "HUN",
+      "canonicalHost": "hirado.hu",
+      "nameKey": "mtihíradó",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:hu:publisher-1",
+      "iso3": "HUN",
+      "canonicalHost": "telex.hu",
+      "nameKey": "telex",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:hu:publisher-2",
+      "iso3": "HUN",
+      "canonicalHost": "hvg.hu",
+      "nameKey": "hvg",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:hu:statistics",
+      "iso3": "HUN",
+      "canonicalHost": "ksh.hu",
+      "nameKey": "központistatisztikaihivatal",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:ie:central-bank",
+      "iso3": "IRL",
+      "canonicalHost": "centralbank.ie",
+      "nameKey": "centralbankofireland",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:ie:parliament",
+      "iso3": "IRL",
+      "canonicalHost": "oireachtas.ie",
+      "nameKey": "housesoftheoireachtas",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:ie:public-news",
+      "iso3": "IRL",
+      "canonicalHost": "rte.ie",
+      "nameKey": "rté",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:ie:publisher-1",
+      "iso3": "IRL",
+      "canonicalHost": "irishtimes.com",
+      "nameKey": "theirishtimes",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:ie:publisher-2",
+      "iso3": "IRL",
+      "canonicalHost": "thejournal.ie",
+      "nameKey": "thejournal",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:ie:statistics",
+      "iso3": "IRL",
+      "canonicalHost": "cso.ie",
+      "nameKey": "centralstatisticsoffice",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:it:central-bank",
+      "iso3": "ITA",
+      "canonicalHost": "bancaditalia.it",
+      "nameKey": "bancaditalia",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:it:parliament",
+      "iso3": "ITA",
+      "canonicalHost": "camera.it",
+      "nameKey": "cameradeideputati",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:it:public-news",
+      "iso3": "ITA",
+      "canonicalHost": "rainews.it",
+      "nameKey": "rainews",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:it:publisher-1",
+      "iso3": "ITA",
+      "canonicalHost": "corriere.it",
+      "nameKey": "corrieredellasera",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:it:publisher-2",
+      "iso3": "ITA",
+      "canonicalHost": "ilfattoquotidiano.it",
+      "nameKey": "ilfattoquotidiano",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:it:statistics",
+      "iso3": "ITA",
+      "canonicalHost": "istat.it",
+      "nameKey": "istat",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:lt:central-bank",
+      "iso3": "LTU",
+      "canonicalHost": "lb.lt",
+      "nameKey": "lietuvosbankas",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:lt:parliament",
+      "iso3": "LTU",
+      "canonicalHost": "lrs.lt",
+      "nameKey": "seimas",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:lt:public-news",
+      "iso3": "LTU",
+      "canonicalHost": "lrt.lt",
+      "nameKey": "lietuvosnacionalinisradijasirtelevizija",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:lt:publisher-1",
+      "iso3": "LTU",
+      "canonicalHost": "15min.lt",
+      "nameKey": "15min",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:lt:publisher-2",
+      "iso3": "LTU",
+      "canonicalHost": "delfi.lt",
+      "nameKey": "delfilietuva",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:lt:statistics",
+      "iso3": "LTU",
+      "canonicalHost": "vda.lrv.lt",
+      "nameKey": "valstybėsduomenųagentūra",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:lu:central-bank",
+      "iso3": "LUX",
+      "canonicalHost": "bcl.lu",
+      "nameKey": "banquecentraleduluxembourg",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:lu:parliament",
+      "iso3": "LUX",
+      "canonicalHost": "chd.lu",
+      "nameKey": "chambredesdéputés",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:lu:public-news",
+      "iso3": "LUX",
+      "canonicalHost": "100komma7.lu",
+      "nameKey": "radio1007",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:lu:publisher-1",
+      "iso3": "LUX",
+      "canonicalHost": "wort.lu",
+      "nameKey": "luxemburgerwort",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:lu:publisher-2",
+      "iso3": "LUX",
+      "canonicalHost": "reporter.lu",
+      "nameKey": "reporterlu",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:lu:statistics",
+      "iso3": "LUX",
+      "canonicalHost": "statistiques.public.lu",
+      "nameKey": "statec",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:lv:central-bank",
+      "iso3": "LVA",
+      "canonicalHost": "bank.lv",
+      "nameKey": "latvijasbanka",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:lv:parliament",
+      "iso3": "LVA",
+      "canonicalHost": "saeima.lv",
+      "nameKey": "saeima",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:lv:public-news",
+      "iso3": "LVA",
+      "canonicalHost": "lsm.lv",
+      "nameKey": "latvijassabiedriskaismedijs",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:lv:publisher-1",
+      "iso3": "LVA",
+      "canonicalHost": "delfi.lv",
+      "nameKey": "delfilatvija",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:lv:publisher-2",
+      "iso3": "LVA",
+      "canonicalHost": "ir.lv",
+      "nameKey": "ir",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:lv:statistics",
+      "iso3": "LVA",
+      "canonicalHost": "csb.gov.lv",
+      "nameKey": "centrālāstatistikaspārvalde",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:mt:central-bank",
+      "iso3": "MLT",
+      "canonicalHost": "centralbankmalta.org",
+      "nameKey": "centralbankofmalta",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:mt:parliament",
+      "iso3": "MLT",
+      "canonicalHost": "parlament.mt",
+      "nameKey": "parlamenttamalta",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:mt:public-news",
+      "iso3": "MLT",
+      "canonicalHost": "tvmnews.mt",
+      "nameKey": "tvmnews",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:mt:publisher-1",
+      "iso3": "MLT",
+      "canonicalHost": "timesofmalta.com",
+      "nameKey": "timesofmalta",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:mt:publisher-2",
+      "iso3": "MLT",
+      "canonicalHost": "maltatoday.com.mt",
+      "nameKey": "maltatoday",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:mt:statistics",
+      "iso3": "MLT",
+      "canonicalHost": "nso.gov.mt",
+      "nameKey": "nationalstatisticsoffice",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:nl:central-bank",
+      "iso3": "NLD",
+      "canonicalHost": "dnb.nl",
+      "nameKey": "denederlandschebank",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:nl:parliament",
+      "iso3": "NLD",
+      "canonicalHost": "tweedekamer.nl",
+      "nameKey": "tweedekamer",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:nl:public-news",
+      "iso3": "NLD",
+      "canonicalHost": "nos.nl",
+      "nameKey": "nos",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:nl:publisher-1",
+      "iso3": "NLD",
+      "canonicalHost": "nrc.nl",
+      "nameKey": "nrc",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:nl:publisher-2",
+      "iso3": "NLD",
+      "canonicalHost": "volkskrant.nl",
+      "nameKey": "devolkskrant",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:nl:statistics",
+      "iso3": "NLD",
+      "canonicalHost": "cbs.nl",
+      "nameKey": "centraalbureauvoordestatistiek",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:pl:central-bank",
+      "iso3": "POL",
+      "canonicalHost": "nbp.pl",
+      "nameKey": "narodowybankpolski",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:pl:parliament",
+      "iso3": "POL",
+      "canonicalHost": "sejm.gov.pl",
+      "nameKey": "sejmrzeczypospolitejpolskiej",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:pl:public-news",
+      "iso3": "POL",
+      "canonicalHost": "polskieradio.pl",
+      "nameKey": "polskieradio",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "RESTRICTED"
+    },
+    {
+      "sourceId": "eu27:pl:publisher-1",
+      "iso3": "POL",
+      "canonicalHost": "wiadomosci.wp.pl",
+      "nameKey": "wirtualnapolskawiadomości",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:pl:publisher-2",
+      "iso3": "POL",
+      "canonicalHost": "oko.press",
+      "nameKey": "okopress",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:pl:statistics",
+      "iso3": "POL",
+      "canonicalHost": "stat.gov.pl",
+      "nameKey": "głównyurządstatystyczny",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:pt:central-bank",
+      "iso3": "PRT",
+      "canonicalHost": "bportugal.pt",
+      "nameKey": "bancodeportugal",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:pt:parliament",
+      "iso3": "PRT",
+      "canonicalHost": "parlamento.pt",
+      "nameKey": "assembleiadarepública",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:pt:public-news",
+      "iso3": "PRT",
+      "canonicalHost": "rtp.pt",
+      "nameKey": "rtpnotícias",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:pt:publisher-1",
+      "iso3": "PRT",
+      "canonicalHost": "publico.pt",
+      "nameKey": "público",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:pt:publisher-2",
+      "iso3": "PRT",
+      "canonicalHost": "observador.pt",
+      "nameKey": "observador",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:pt:statistics",
+      "iso3": "PRT",
+      "canonicalHost": "ine.pt",
+      "nameKey": "institutonacionaldeestatística",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:ro:central-bank",
+      "iso3": "ROU",
+      "canonicalHost": "bnr.ro",
+      "nameKey": "bancanaționalăaromâniei",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:ro:parliament",
+      "iso3": "ROU",
+      "canonicalHost": "cdep.ro",
+      "nameKey": "cameradeputaților",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:ro:public-news",
+      "iso3": "ROU",
+      "canonicalHost": "romania-actualitati.ro",
+      "nameKey": "radioromâniaactualități",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:ro:publisher-1",
+      "iso3": "ROU",
+      "canonicalHost": "hotnews.ro",
+      "nameKey": "hotnews",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:ro:publisher-2",
+      "iso3": "ROU",
+      "canonicalHost": "recorder.ro",
+      "nameKey": "recorder",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:ro:statistics",
+      "iso3": "ROU",
+      "canonicalHost": "insse.ro",
+      "nameKey": "institutulnaționaldestatistică",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:se:central-bank",
+      "iso3": "SWE",
+      "canonicalHost": "riksbank.se",
+      "nameKey": "sverigesriksbank",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:se:parliament",
+      "iso3": "SWE",
+      "canonicalHost": "riksdagen.se",
+      "nameKey": "sverigesriksdag",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:se:public-news",
+      "iso3": "SWE",
+      "canonicalHost": "sverigesradio.se",
+      "nameKey": "sverigesradio",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:se:publisher-1",
+      "iso3": "SWE",
+      "canonicalHost": "dn.se",
+      "nameKey": "dagensnyheter",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:se:publisher-2",
+      "iso3": "SWE",
+      "canonicalHost": "svd.se",
+      "nameKey": "svenskadagbladet",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:se:statistics",
+      "iso3": "SWE",
+      "canonicalHost": "scb.se",
+      "nameKey": "statistiskacentralbyrån",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:si:central-bank",
+      "iso3": "SVN",
+      "canonicalHost": "bsi.si",
+      "nameKey": "bankaslovenije",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:si:parliament",
+      "iso3": "SVN",
+      "canonicalHost": "dz-rs.si",
+      "nameKey": "državnizbor",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:si:public-news",
+      "iso3": "SVN",
+      "canonicalHost": "rtvslo.si",
+      "nameKey": "rtvslovenija",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:si:publisher-1",
+      "iso3": "SVN",
+      "canonicalHost": "delo.si",
+      "nameKey": "delo",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:si:publisher-2",
+      "iso3": "SVN",
+      "canonicalHost": "dnevnik.si",
+      "nameKey": "dnevnik",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:si:statistics",
+      "iso3": "SVN",
+      "canonicalHost": "stat.si",
+      "nameKey": "statističniuradrepublikeslovenije",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:sk:central-bank",
+      "iso3": "SVK",
+      "canonicalHost": "nbs.sk",
+      "nameKey": "národnábankaslovenska",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:sk:parliament",
+      "iso3": "SVK",
+      "canonicalHost": "nrsr.sk",
+      "nameKey": "národnáradaslovenskejrepubliky",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:sk:public-news",
+      "iso3": "SVK",
+      "canonicalHost": "stvr.sk",
+      "nameKey": "stvr",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:sk:publisher-1",
+      "iso3": "SVK",
+      "canonicalHost": "dennikn.sk",
+      "nameKey": "denníkn",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:sk:publisher-2",
+      "iso3": "SVK",
+      "canonicalHost": "sme.sk",
+      "nameKey": "sme",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "eu27:sk:statistics",
+      "iso3": "SVK",
+      "canonicalHost": "slovak.statistics.sk",
+      "nameKey": "štatistickýúradslovenskejrepubliky",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:are:fcsc",
+      "iso3": "ARE",
+      "canonicalHost": "fcsc.gov.ae",
+      "nameKey": "federalcompetitivenessandstatisticscentre",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:are:national",
+      "iso3": "ARE",
+      "canonicalHost": "thenationalnews.com",
+      "nameKey": "thenational",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:are:wam",
+      "iso3": "ARE",
+      "canonicalHost": "wam.ae",
+      "nameKey": "emiratesnewsagencywam",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:bhr:bna",
+      "iso3": "BHR",
+      "canonicalHost": "bna.bh",
+      "nameKey": "bahrainnewsagency",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:bhr:gdn",
+      "iso3": "BHR",
+      "canonicalHost": "gdnonline.com",
+      "nameKey": "gulfdailynewsgdnonline",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:bhr:iga",
+      "iso3": "BHR",
+      "canonicalHost": "iga.gov.bh",
+      "nameKey": "informationegovernmentauthoritystatisticspopulation",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:egy:ahram",
+      "iso3": "EGY",
+      "canonicalHost": "english.ahram.org.eg",
+      "nameKey": "alahramahramonline",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:egy:almasry",
+      "iso3": "EGY",
+      "canonicalHost": "almasryalyoum.com",
+      "nameKey": "almasryalyoum",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:egy:capmas",
+      "iso3": "EGY",
+      "canonicalHost": "capmas.gov.eg",
+      "nameKey": "centralagencyforpublicmobilizationandstatistics",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:irn:bbc-persian",
+      "iso3": "IRN",
+      "canonicalHost": "bbc.com",
+      "nameKey": "bbcpersianservice",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:irn:irna",
+      "iso3": "IRN",
+      "canonicalHost": "irna.ir",
+      "nameKey": "islamicrepublicnewsagencyirna",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:irn:isna",
+      "iso3": "IRN",
+      "canonicalHost": "isna.ir",
+      "nameKey": "iranianstudentsnewsagencyisna",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:irn:sci",
+      "iso3": "IRN",
+      "canonicalHost": "amar.org.ir",
+      "nameKey": "statisticalcentreofiran",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:irq:cosit",
+      "iso3": "IRQ",
+      "canonicalHost": "cosit.gov.iq",
+      "nameKey": "statisticsandgeographicinformationsystemsauthority",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:irq:ina",
+      "iso3": "IRQ",
+      "canonicalHost": "ina.iq",
+      "nameKey": "iraqinewsagencyinaواع",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:irq:rudaw",
+      "iso3": "IRQ",
+      "canonicalHost": "rudaw.net",
+      "nameKey": "rudaw",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:isr:cbs",
+      "iso3": "ISR",
+      "canonicalHost": "cbs.gov.il",
+      "nameKey": "centralbureauofstatisticsisrael",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:isr:toi",
+      "iso3": "ISR",
+      "canonicalHost": "timesofisrael.com",
+      "nameKey": "thetimesofisrael",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:isr:ynet",
+      "iso3": "ISR",
+      "canonicalHost": "ynet.co.il",
+      "nameKey": "ynet",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:jor:dos",
+      "iso3": "JOR",
+      "canonicalHost": "dosweb.dos.gov.jo",
+      "nameKey": "departmentofstatisticsjordan",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:jor:jordan-times",
+      "iso3": "JOR",
+      "canonicalHost": "jordantimes.com",
+      "nameKey": "thejordantimesjordanpressfoundation",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:jor:petra",
+      "iso3": "JOR",
+      "canonicalHost": "petra.gov.jo",
+      "nameKey": "jordannewsagencypetra",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:kwt:csb",
+      "iso3": "KWT",
+      "canonicalHost": "csb.gov.kw",
+      "nameKey": "centralstatisticalbureaukuwait",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:kwt:kuna",
+      "iso3": "KWT",
+      "canonicalHost": "kuna.net.kw",
+      "nameKey": "kuwaitnewsagencykuna",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:kwt:kuwait-times",
+      "iso3": "KWT",
+      "canonicalHost": "kuwaittimes.com",
+      "nameKey": "kuwaittimes",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:lbn:cas",
+      "iso3": "LBN",
+      "canonicalHost": "cas.gov.lb",
+      "nameKey": "centraladministrationofstatisticslebanon",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:lbn:nna",
+      "iso3": "LBN",
+      "canonicalHost": "nna-leb.gov.lb",
+      "nameKey": "nationalnewsagencylebanon",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:lbn:orient-today",
+      "iso3": "LBN",
+      "canonicalHost": "today.lorientlejour.com",
+      "nameKey": "lorientlejourlorienttoday",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:omn:ncsi",
+      "iso3": "OMN",
+      "canonicalHost": "ncsi.gov.om",
+      "nameKey": "nationalcentreforstatisticsandinformationoman",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:omn:ona",
+      "iso3": "OMN",
+      "canonicalHost": "omannews.gov.om",
+      "nameKey": "omannewsagency",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:omn:times-oman",
+      "iso3": "OMN",
+      "canonicalHost": "timesofoman.com",
+      "nameKey": "timesofoman",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:pse:maan",
+      "iso3": "PSE",
+      "canonicalHost": "maannews.net",
+      "nameKey": "maannewsagencymaannetwork",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:pse:ocha-opt",
+      "iso3": "PSE",
+      "canonicalHost": "ochaopt.org",
+      "nameKey": "unitednationsochaoccupiedpalestinianterritory",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:pse:pcbs",
+      "iso3": "PSE",
+      "canonicalHost": "pcbs.gov.ps",
+      "nameKey": "palestiniancentralbureauofstatistics",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:pse:wafa",
+      "iso3": "PSE",
+      "canonicalHost": "wafa.ps",
+      "nameKey": "palestinenewsandinformationagencywafa",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:qat:aljazeera",
+      "iso3": "QAT",
+      "canonicalHost": "aljazeera.net",
+      "nameKey": "aljazeeramedianetworkaljazeeraarabic",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:qat:npc",
+      "iso3": "QAT",
+      "canonicalHost": "npc.qa",
+      "nameKey": "nationalplanningcouncilnationalstatisticscenterqatar",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:qat:qna",
+      "iso3": "QAT",
+      "canonicalHost": "qna.org.qa",
+      "nameKey": "qatarnewsagency",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:sau:arab-news",
+      "iso3": "SAU",
+      "canonicalHost": "arabnews.com",
+      "nameKey": "arabnews",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:sau:gastat",
+      "iso3": "SAU",
+      "canonicalHost": "stats.gov.sa",
+      "nameKey": "generalauthorityforstatisticssaudiarabia",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:sau:spa",
+      "iso3": "SAU",
+      "canonicalHost": "spa.gov.sa",
+      "nameKey": "saudipressagency",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:syr:cbs-bank",
+      "iso3": "SYR",
+      "canonicalHost": "cb.gov.sy",
+      "nameKey": "centralbankofsyria",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:syr:enab",
+      "iso3": "SYR",
+      "canonicalHost": "enabbaladi.net",
+      "nameKey": "enabbaladi",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:syr:sana",
+      "iso3": "SYR",
+      "canonicalHost": "sana.sy",
+      "nameKey": "syrianarabnewsagencysana",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:tur:anadolu",
+      "iso3": "TUR",
+      "canonicalHost": "aa.com.tr",
+      "nameKey": "anadoluagency",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:tur:bianet",
+      "iso3": "TUR",
+      "canonicalHost": "bianet.org",
+      "nameKey": "bianet",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:tur:tuik",
+      "iso3": "TUR",
+      "canonicalHost": "tuik.gov.tr",
+      "nameKey": "turkishstatisticalinstitutetuik",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:yem:cby",
+      "iso3": "YEM",
+      "canonicalHost": "cby-ye.com",
+      "nameKey": "centralbankofyemencbyyecompublication",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:yem:saba-sabanew",
+      "iso3": "YEM",
+      "canonicalHost": "sabanew.net",
+      "nameKey": "sabasabanewnetpublication",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    },
+    {
+      "sourceId": "me-r1:yem:saba-ye",
+      "iso3": "YEM",
+      "canonicalHost": "saba.ye",
+      "nameKey": "sabasabayepublication",
+      "transport": "NONE",
+      "activationStatus": "DISABLED",
+      "rightsStanding": "UNKNOWN"
+    }
+  ]
+}
