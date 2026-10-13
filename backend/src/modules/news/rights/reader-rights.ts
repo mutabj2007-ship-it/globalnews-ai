@@ -187,11 +187,35 @@ export function withholdAskPayload<T>(payload: T, feeds: readonly FeedSourceEntr
   const unclearedSources = sources.filter((s) => isRecord(s) && !clearedIds.has(String(s.articleId)));
   const unclearedArticles = articles.filter(uncleared);
   const answerWithheld = unclearedArticles.length + unclearedSources.length + recordedWithheld;
+  /*
+    CTO R53 — the stored CONVERSATION ARTIFACT of a sourced answer carries source-derived claim
+    points (`components`) and the evidence URLs / refs (`evidenceUrls`, `evidenceRefs`); the reader
+    interceptor does not recognise those strings as articles. Fail closed: a SOURCED artifact (or any
+    artifact naming evidence) survives only when every URL and ref it names is a CLEARED article of
+    this same payload; one naming none cannot be verified and is withheld. An unsourced
+    (general-knowledge / reasoning) artifact is untouched. The stored row is never changed.
+  */
+  const artifact = isRecord(payload.artifact) ? payload.artifact : null;
+  const strings = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
+  const artifactUrls = strings(artifact?.evidenceUrls);
+  const artifactRefs = strings(artifact?.evidenceRefs);
+  const sourcedArtifact =
+    artifact !== null && (artifact.provenance === 'SOURCED_REPORTING' || artifactUrls.length > 0 || artifactRefs.length > 0);
+  const clearedUrls = new Set(
+    articles.filter((a) => isRecord(a) && !uncleared(a)).map((a) => String((a as Record<string, unknown>).url)),
+  );
+  const artifactCleared =
+    !sourcedArtifact ||
+    (artifactUrls.length + artifactRefs.length > 0 &&
+      artifactUrls.every((url) => clearedUrls.has(url)) &&
+      artifactRefs.every((ref) => clearedIds.has(ref)));
   if (answerWithheld > 0) {
-    const { analysis: _a, comparisonTable: _c, recentReporting: _r, ...rest } = payload;
+    /* the artifact is derived from the withheld answer: it goes with it, whatever it names */
+    const { analysis: _a, comparisonTable: _c, recentReporting: _r, artifact: _art, ...rest } = payload;
     void _a;
     void _c;
     void _r;
+    void _art;
     const answer = isRecord(payload.answer) ? payload.answer : {};
     return {
       payload: {
@@ -205,6 +229,13 @@ export function withholdAskPayload<T>(payload: T, feeds: readonly FeedSourceEntr
   }
   /* no answer evidence was withheld: still strip any uncleared item elsewhere (recentReporting, …) */
   const deep = withholdThirdPartyArticles(payload, feeds);
+  if (!artifactCleared) {
+    /* CTO R53 — a sourced artifact naming uncleared (or no verifiable) evidence is withheld alone */
+    const { artifact: _art, ...rest } = deep.value as Record<string, unknown>;
+    void _art;
+    const withheld = deep.withheld + 1;
+    return { payload: { ...rest, sourceRightsWithheld: { count: withheld } } as T, withheld };
+  }
   return { payload: deep.value, withheld: deep.withheld };
 }
 

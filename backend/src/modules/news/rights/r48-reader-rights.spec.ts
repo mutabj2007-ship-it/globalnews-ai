@@ -377,3 +377,66 @@ describe('R52 · E1 P-11 — every public news route, in JSON, route by route, w
     expect(analysis).toContain("@Post('news')");
   });
 });
+
+describe('R53 · the stored conversation artifact of a sourced answer is withheld with it (components, evidenceUrls, evidenceRefs)', () => {
+  const CLAIM = 'Fuel prices in Kigali rose 4% this week, the report says';
+  const g = article('ga', 'gnews-pub');
+  const c = article('ca', CLEARED);
+  const sourcedArtifact = (a: NewsArticle) => ({
+    kind: 'SOURCED_ANSWER',
+    label: 'Kigali fuel prices',
+    components: [CLAIM, 'Transport fares followed'],
+    provenance: 'SOURCED_REPORTING',
+    citable: false,
+    evidenceUrls: [a.url],
+    evidenceRefs: [a.id],
+  });
+  const answered = (a: NewsArticle) => ({
+    schema: 'ask-r2-result/1',
+    answer: { state: 'CURRENT_REPORTING', basis: 'REQUIRED_EVIDENCE_OBTAINED', missingRoles: [] },
+    analysis: { articles: [a], analysis: { summary: CLAIM, sources: [{ articleId: a.id, publisher: 'P', title: 'T', url: a.url }] } },
+    artifact: sourcedArtifact(a),
+  });
+  it('a historical GNews-sourced answer: no claim point, evidence URL or ref survives; the stored payload is not mutated', () => {
+    const stored = answered(g);
+    const before = JSON.stringify(stored);
+    const { payload, withheld } = withholdAskPayload(stored);
+    const json = JSON.stringify(payload);
+    expect(withheld).toBeGreaterThan(0);
+    expect(json).not.toContain(CLAIM);
+    expect(json).not.toContain('Transport fares followed');
+    expect(json).not.toContain(g.url);
+    expect((payload as Record<string, unknown>).artifact).toBeUndefined();
+    expect(JSON.stringify(stored)).toBe(before);
+  });
+  it('a sourced artifact left on a payload whose analysis is gone is withheld alone and counted (so prior-work reuse stops)', () => {
+    const stored = { schema: 'ask-r2-result/1', answer: { state: 'CURRENT_REPORTING', basis: 'REQUIRED_EVIDENCE_OBTAINED', missingRoles: [] }, analysis: null, artifact: sourcedArtifact(g) };
+    const { payload, withheld } = withholdAskPayload(stored);
+    expect(withheld).toBe(1);
+    expect(JSON.stringify(payload)).not.toContain(CLAIM);
+    expect((payload as Record<string, unknown>).sourceRightsWithheld).toEqual({ count: 1 });
+  });
+  it('a SOURCED artifact naming no evidence cannot be verified and is withheld', () => {
+    const { artifact } = answered(g);
+    const stored = { schema: 'ask-r2-result/1', answer: { state: 'CURRENT_REPORTING' }, analysis: null, artifact: { ...artifact, evidenceUrls: [], evidenceRefs: [] } };
+    expect(withholdAskPayload(stored).withheld).toBe(1);
+  });
+  it('preserved: an unsourced general-knowledge answer and its reasoning artifact are returned unchanged', () => {
+    const general = {
+      schema: 'ask-r2-result/1',
+      answer: { state: 'REFERENCE_BACKGROUND', basis: 'PLAN_NO_REQUIRED_EVIDENCE', missingRoles: [] },
+      analysis: null,
+      background: { text: 'Kigali is the capital of Rwanda.' },
+      artifact: { kind: 'EXPLANATION', label: 'Kigali', components: ['capital of Rwanda'], provenance: 'MODEL_REASONING', citable: false },
+    };
+    const { payload, withheld } = withholdAskPayload(general);
+    expect(withheld).toBe(0);
+    expect(payload).toEqual(general);
+  });
+  it('positive control: a CLEARED-feed sourced answer keeps its artifact, claims and evidence URL', () => {
+    const { payload, withheld } = withholdAskPayload(answered(c));
+    expect(withheld).toBe(0);
+    expect(JSON.stringify(payload)).toContain(CLAIM);
+    expect((payload as { artifact: { evidenceUrls: string[] } }).artifact.evidenceUrls).toEqual([c.url]);
+  });
+});
