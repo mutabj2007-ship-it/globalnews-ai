@@ -1,5 +1,24 @@
 import { resolveCountryByAnyIdentifier, type NewsArticle } from '@globalnews-ai/shared';
 import { resolvePrimaryCountry } from '../../news/country/country-relevance.util';
+import { congoReadingOf } from '../anchor/event-anchor.util';
+
+/*
+  EA R20 B-1 (GEO-E2E-D1b) — for a Congo scope, the project's own REVIEWED Congo reading
+  (`congoReadingOf`, the rule G-1's detectLocation correction already applies) is also a positive
+  contradiction when it names the OTHER Congo. `resolvePrimaryCountry` returns nothing for texts such
+  as "Brazzaville awards new oil blocks … The Republic of the Congo signed …" (the C-05 recall gap), so
+  such a report reached a DR Congo answer unlabelled. Only an unambiguous reading of the other Congo
+  excludes: AMBIGUOUS (qualifiers of both, e.g. an office in Brazzaville inside an eastern DRC
+  incident) and no reading (a bare "Congo") never exclude. No keyword, city or threshold is added; no
+  D-21 change.
+*/
+const OTHER_CONGO: Readonly<Record<string, 'COD' | 'COG'>> = { CD: 'COG', CG: 'COD' };
+
+function readsAsTheOtherCongo(article: Pick<NewsArticle, 'title' | 'summary'>, scopeIso2: string): boolean {
+  const other = OTHER_CONGO[scopeIso2];
+  if (other === undefined) return false;
+  return congoReadingOf(`${article.title ?? ''} ${article.summary ?? ''}`) === other;
+}
 
 /**
  * MASTER CTO R5 · GEO-E2E-D1 (#89) — A TOP-UP REPORT MUST NOT CONTRADICT THE ONE COUNTRY IT IS ADMITTED FOR.
@@ -32,7 +51,8 @@ export function articleContradictsCountryScope(
   scopeIso2: string,
 ): boolean {
   const own = resolvePrimaryCountry(article);
-  return own !== undefined && own.countryCode !== scopeIso2;
+  if (own !== undefined && own.countryCode !== scopeIso2) return true;
+  return readsAsTheOtherCongo(article, scopeIso2);
 }
 
 const iso2Of = (code: string | undefined | null): string | undefined =>
