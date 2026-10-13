@@ -231,8 +231,11 @@ describe('ER1 T2 · EA 17 real cases — structural rules only (not a system sco
       expect(codes).not.toContain('COG');
       for (const code of codes) expect(['FRN', 'AFC', 'ARC']).not.toContain(code);
     });
-    it(`${c.id} · casualty units are typed, never summed`, () => {
-      for (const k of c.claims) if (k.unit) expect(CASUALTY_UNITS as readonly string[]).toContain(k.unit);
+    it(`${c.id} · quantity units are typed; a compound unit is separate units, never one combined figure`, () => {
+      for (const k of c.claims)
+        if (k.unit)
+          for (const part of String(k.unit).replace(/\(separate\)/i, '').split('/').map((s: string) => s.trim()).filter(Boolean))
+            expect(CASUALTY_UNITS as readonly string[]).toContain(part);
     });
     if (c.replay)
       it(`${c.id} · replay protocol: every cutoff present; leak guard list well formed`, () => {

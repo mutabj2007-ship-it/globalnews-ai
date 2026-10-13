@@ -69,8 +69,22 @@ export type DerivableChangeState = (typeof DERIVABLE_CHANGE_STATES)[number];
 export const ALERT_TRUTH_STATES = ['NOT_ASSESSED', 'NO_CHANGE_YET', 'CHANGED', 'NO_RETAINED_EVIDENCE'] as const;
 export type AlertTruthState = (typeof ALERT_TRUTH_STATES)[number];
 
-/** EA R-04 — casualty units are distinct and never summed. */
-export const CASUALTY_UNITS = ['KILLED', 'WOUNDED', 'KILLED_OR_WOUNDED', 'MISSING', 'CASUALTIES', 'DISPLACED'] as const;
+/**
+ * EA R-04 — reported-quantity units are distinct and never summed or equated. EA's own case set uses
+ * INJURED (≠ WOUNDED, kept as reported), DEATHS (non-violent, e.g. outbreak; ≠ KILLED) and CASES
+ * (disease cases), so they are first-class units rather than silently mapped.
+ */
+export const CASUALTY_UNITS = [
+  'KILLED',
+  'WOUNDED',
+  'INJURED',
+  'KILLED_OR_WOUNDED',
+  'DEATHS',
+  'MISSING',
+  'CASUALTIES',
+  'DISPLACED',
+  'CASES',
+] as const;
 export type CasualtyUnit = (typeof CASUALTY_UNITS)[number];
 
 /** EA R-02 — place roles. Only EVENT_PLACE may key a regional case. */
