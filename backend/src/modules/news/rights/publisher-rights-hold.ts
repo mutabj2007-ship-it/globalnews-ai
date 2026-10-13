@@ -46,6 +46,8 @@ export const PUBLISHER_RIGHTS_HOLDS: readonly PublisherRightsHold[] = Object.fre
   syntactically a URL scheme ("www.reuters.com:").
 */
 const BARE_HOST_START = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}\.?(?::\d{1,5})?(?:[/?#]|$)/i;
+/** A URL scheme at the START of the string (RFC 3986 scheme + "://"); never searched for elsewhere. */
+const HAS_SCHEME_PREFIX = /^[a-z][a-z0-9+.-]*:\/\//i;
 
 /**
  * The URL's canonical host (lowercase, no trailing dot), or undefined when it is not an http(s) URL.
@@ -62,7 +64,9 @@ export function canonicalUrlHostOf(url: string | null | undefined): string | und
   if (trimmed === '') return undefined;
   const candidate = trimmed.startsWith('//')
     ? `https:${trimmed}`
-    : BARE_HOST_START.test(trimmed) && !trimmed.includes('://')
+    : /* E1 C-86-1 — test the PREFIX for a scheme, never the whole string: a `://` inside a query
+         parameter (redirect / tracking URLs) must not disable the scheme-less repair (fail-open). */
+      BARE_HOST_START.test(trimmed) && !HAS_SCHEME_PREFIX.test(trimmed)
       ? `https://${trimmed}`
       : trimmed;
   let parsed: URL;
