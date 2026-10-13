@@ -1346,9 +1346,17 @@ export function AskFrameScreen({
             requestAnimationFrame(() => document.querySelector<HTMLButtonElement>('[data-ask="cue-g2"]')?.focus());
           }}
           onStageDraft={(draft) => {
-            /* G2-7 — stage only; the reader sends (G2-8) */
+            /* G2-7 — stage only; the reader sends (G2-8). An unsent question already in the composer
+               is kept (stageGuidedDraft sets the draft only when the composer is empty). */
             setStoryPickerOpen(false);
             stageGuidedDraft(draft, '');
+          }}
+          /* CTO R23 — the picker shows that an unsent question will be kept, and offers an explicit
+             replace. Both only fill and focus the composer; neither sends. */
+          existingDraft={question}
+          onReplaceDraft={(draft) => {
+            setStoryPickerOpen(false);
+            draftQuestion(draft);
           }}
         />
       )}

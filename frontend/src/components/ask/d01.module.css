@@ -243,6 +243,17 @@
   text-decoration: none;
   cursor: pointer;
 }
+/* CTO R23 — the reader's own words, quoted under the "Ask a question" action, one line, never wider than the sheet */
+.continueText {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  opacity: 0.85;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .primary {
   border: 0;
   background: var(--ad-accent, #6c93ff);

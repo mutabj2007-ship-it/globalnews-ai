@@ -8,6 +8,7 @@ import { searchPickerStories, type PickerSearchResult, type PickerStory } from '
 import { readStoryBrief } from '@/lib/api/storyBriefApi';
 import type { BriefResult, StoredBriefContent, StoryBriefView } from '@/lib/storyBrief/storyBriefView';
 import { askDirectionProps, askFormatLocalDayCompact } from '@/lib/ask/askDirection';
+import { r23PickerStrings } from '@/lib/ask/r23PickerStrings';
 import tokens from '../account/settingsTokens.module.css';
 import styles from './d01.module.css';
 
@@ -39,17 +40,47 @@ type View =
 
 type BriefLoad = { readonly kind: 'loading' } | { readonly kind: 'done'; readonly result: BriefResult<StoryBriefView> };
 
+/**
+ * CTO R23 (PO phone defect) — on a phone the on-screen keyboard shrinks the VISUAL viewport, not the
+ * layout viewport the fixed backdrop fills, so the sheet's bottom (and its action) sat under the
+ * keyboard. The backdrop follows window.visualViewport when the browser has one (the same API
+ * AskAiDock already uses); without it (desktop, tests) nothing changes.
+ */
+function useVisualViewportBox(): { readonly top: number; readonly height: number; readonly bottom: 'auto' } | undefined {
+  const [box, setBox] = useState<{ readonly top: number; readonly height: number } | null>(null);
+  useEffect(() => {
+    const viewport = typeof window === 'undefined' ? null : window.visualViewport;
+    if (viewport === null || viewport === undefined) return undefined;
+    const update = () => setBox({ top: viewport.offsetTop, height: viewport.height });
+    update();
+    viewport.addEventListener('resize', update);
+    viewport.addEventListener('scroll', update);
+    return () => {
+      viewport.removeEventListener('resize', update);
+      viewport.removeEventListener('scroll', update);
+    };
+  }, []);
+  return box === null ? undefined : { top: box.top, height: box.height, bottom: 'auto' };
+}
+
 export function StoryPicker({
   locale,
   onClose,
   onStageDraft,
+  existingDraft = '',
+  onReplaceDraft,
 }: {
   readonly locale: DisplayLocale;
   readonly onClose: () => void;
-  /** Stages the composer draft; never submits. */
+  /** Stages the composer draft; never submits. The parent keeps a reader's unsent question. */
   readonly onStageDraft: (draft: string) => void;
+  /** CTO R23 — the reader's unsent composer text, so the picker can say it will be kept. */
+  readonly existingDraft?: string;
+  /** CTO R23 — an explicit choice to replace that unsent text with the search words. Never submits. */
+  readonly onReplaceDraft?: (draft: string) => void;
 }): JSX.Element {
   const titleId = useId();
+  const viewportBox = useVisualViewportBox();
   const [view, setView] = useState<View>({ kind: 'search' });
   /* The query and its result live HERE, not in the search view, so "‹ Explain a story" from a story
      returns to the same results (S05 → S02) without a second request. */
@@ -68,7 +99,12 @@ export function StoryPicker({
   }, [q]);
 
   return (
-    <div className={`${tokens.settingsScope} ${styles.backdrop}`} data-ask="story-picker-backdrop" onClick={onClose}>
+    <div
+      className={`${tokens.settingsScope} ${styles.backdrop}`}
+      data-ask="story-picker-backdrop"
+      onClick={onClose}
+      style={viewportBox}
+    >
       <section
         role="dialog"
         aria-modal="true"
@@ -110,6 +146,9 @@ export function StoryPicker({
             result={result}
             onClose={onClose}
             onOpen={(story) => setView({ kind: 'story', story })}
+            existingDraft={existingDraft}
+            onContinue={onStageDraft}
+            onReplaceDraft={onReplaceDraft}
           />
         ) : (
           <PickerStoryView
@@ -147,6 +186,9 @@ function PickerSearch({
   result,
   onClose,
   onOpen,
+  existingDraft,
+  onContinue,
+  onReplaceDraft,
 }: {
   readonly locale: DisplayLocale;
   readonly titleId: string;
@@ -155,9 +197,26 @@ function PickerSearch({
   readonly result: PickerSearchResult;
   readonly onClose: () => void;
   readonly onOpen: (story: PickerStory) => void;
+  readonly existingDraft: string;
+  readonly onContinue: (draft: string) => void;
+  readonly onReplaceDraft?: (draft: string) => void;
 }): JSX.Element {
   const s = d01Strings(locale);
+  const r23 = r23PickerStrings(locale);
   const input = useRef<HTMLInputElement | null>(null);
+  /*
+    CTO R23 — the way back into Ask, always present (empty or typed, any search state, including the
+    rights HOLD where no row can ever appear). It only STAGES: the reader's exact words go to the Ask
+    composer UNSENT; the composer's own Send is the only submit. A search term is not evidence that a
+    story is held, so nothing here invents a story, title or link.
+      · empty search         → "Ask a question": close, focus the composer, no text invented
+      · typed, composer empty → the typed words become the unsent draft
+      · typed, composer has unsent words → those are KEPT (the parent's stageGuidedDraft rule) and
+        the conflict is shown, with an explicit choice to use the search words instead
+  */
+  const typed = q.trim();
+  const kept = existingDraft.trim();
+  const conflict = typed.length > 0 && kept.length > 0 && kept !== typed && onReplaceDraft !== undefined;
 
   useEffect(() => input.current?.focus(), []);
 
@@ -189,6 +248,42 @@ function PickerSearch({
         <p className={styles.small}>{s.pickerNote}</p>
         <PickerResults result={result} q={q} locale={locale} onOpen={onOpen} />
       </div>
+      <footer className={styles.foot} data-ask="picker-continue-foot">
+        {conflict && (
+          <p role="status" data-ask="picker-draft-kept" className={styles.small} style={{ textAlign: 'center' }}>
+            {r23.keptDraft}
+          </p>
+        )}
+        <button
+          type="button"
+          data-ask="picker-continue"
+          data-staged={!conflict && typed.length > 0 ? 'typed' : 'none'}
+          onClick={() => onContinue(conflict ? '' : typed)}
+          className={styles.primary}
+          style={{ flexDirection: 'column', gap: 2, padding: '6px 16px' }}
+        >
+          <span>{r23.askLabel}</span>
+          {!conflict && typed.length > 0 && (
+            <span dir="auto" data-ask="picker-continue-text" className={styles.continueText}>
+              “{typed}”
+            </span>
+          )}
+        </button>
+        {conflict && onReplaceDraft !== undefined && (
+          <button
+            type="button"
+            data-ask="picker-replace-draft"
+            onClick={() => onReplaceDraft(typed)}
+            className={styles.secondary}
+            style={{ flexDirection: 'column', gap: 2, padding: '6px 16px' }}
+          >
+            <span>{r23.useSearchText}</span>
+            <span dir="auto" className={styles.continueText}>
+              “{typed}”
+            </span>
+          </button>
+        )}
+      </footer>
     </>
   );
 }
