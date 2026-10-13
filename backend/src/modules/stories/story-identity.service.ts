@@ -13,6 +13,7 @@ import {
 import { PrismaService } from '../../database/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
 import { articleRefMatchesUrl, computeArticleRef, isArticleRef } from '../news/identity/article-ref.util';
+import { isGeoQuarantined, isGeoQuarantinedRef } from '../news/geo-quarantine/geo-identity-quarantine';
 import { readPublishedAtBasis } from '../news/persistence/published-at-basis.util';
 import { isPublisherRightsHeld, withoutPublisherRightsHeld } from '../news/rights/publisher-rights-hold';
 import { isWriteConflict } from '../follows/follows.service';
@@ -204,13 +205,19 @@ export class StoryIdentityService {
    */
   async ensureStoryForArticle(input: { articleRef: string; url: string }): Promise<{ story: CanonicalStory; outcome: EnsureOutcome }> {
     if (!articleRefMatchesUrl(input.articleRef, input.url)) throw new BadRequestException('REF_URL_MISMATCH');
-    /* MASTER CTO R4 · P0 #86 — no story (which carries the headline) for a held publisher host */
+    /* MASTER CTO R4 · P0 #86 — no story (which carries the headline) for a held publisher host.
+       Checked first: the host hold is the wider rights rule. */
     if (isPublisherRightsHeld({ url: input.url })) throw new UnprocessableEntityException('PUBLISHER_RIGHTS_HOLD');
+    /* MASTER CTO P0 #85 — a report under the location hold is never made a story (it is an entry
+       point into the same story context Ask refuses): fail closed, before any read or write. */
+    if (isGeoQuarantinedRef(input.articleRef)) throw new UnprocessableEntityException('LOCATION_UNDER_REVIEW');
     const existing = await this.resolveByArticleRef(input.articleRef);
     if (existing) return { story: existing, outcome: 'EXISTING' };
 
     const row = await this.findRetained(input.url);
     if (row === null) throw new NotFoundException('NOT_RETAINED');
+    /* MASTER CTO P0 #85 — the stored row itself (a held id under another URL spelling) */
+    if (isGeoQuarantined(row)) throw new UnprocessableEntityException('LOCATION_UNDER_REVIEW');
     const outcome = await this.placeArticle(input.articleRef, row, 'explicit');
     const story = await this.resolveByArticleRef(input.articleRef);
     if (!story) throw new ConflictException('STORY_PLACEMENT_FAILED');
@@ -244,6 +251,8 @@ export class StoryIdentityService {
     const rows = await this.prisma.article.findMany({ where: { url: { in: urls } }, select: ARTICLE_FIELDS, orderBy: { id: 'asc' } });
     /* P0 #86 — a held publisher host is never placed in a story */
     for (const row of withoutPublisherRightsHeld(rows)) {
+      /* MASTER CTO P0 #85 — a held report is never placed into a story by observation */
+      if (isGeoQuarantined(row)) continue;
       const ref = computeArticleRef(row.url);
       out.set(ref, (await this.placeArticle(ref, row, 'observe')) as ObserveOutcome);
     }
@@ -271,7 +280,10 @@ export class StoryIdentityService {
 
   private async placeArticle(articleRef: string, row: ArticleRow, mode: PlacementMode): Promise<EnsureOutcome | ObserveOutcome> {
     const article = toArticle(row);
-    const candidates = (await this.rung3Candidates(row)).map((c) => ({ article: toArticle(c), ref: computeArticleRef(c.url) }));
+    /* MASTER CTO P0 #85 — a held report is never a join candidate either */
+    const candidates = (await this.rung3Candidates(row))
+      .filter((c) => !isGeoQuarantined(c))
+      .map((c) => ({ article: toArticle(c), ref: computeArticleRef(c.url) }));
     const host = sourceHostOf(row.url);
 
     return this.atomic(async (tx) => {
@@ -467,8 +479,9 @@ export class StoryIdentityService {
     let existing = 0;
     let skipped = 0;
     for (const row of rows) {
-      /* P0 #86 — a held publisher host is never placed in a story */
-      if (!row.url?.trim() || isPublisherRightsHeld(row)) {
+      /* P0 #86 — a held publisher host is never placed in a story; MASTER CTO P0 #85 — nor a
+         report under the location hold (by backfill) */
+      if (!row.url?.trim() || isPublisherRightsHeld(row) || isGeoQuarantined(row)) {
         skipped++;
         continue;
       }

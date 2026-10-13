@@ -70,6 +70,7 @@ import { ComputeMeterService } from '../compute-controls/compute-meter.service';
 import { OperationalSwitchService } from '../compute-controls/operational-switch.service';
 import { withComparisonTable } from './comparison-table';
 import { withheldForSourceRights } from './source-rights-withholding';
+import { withHeldGeographyWithdrawn } from './held-geography-on-reopen';
 import { isSemanticFirstLanguage } from '../ask-router/semantic-ir/semantic-first';
 import {
   dayBucket,
@@ -881,7 +882,8 @@ export class AskV2Service {
                 id: result.id,
                 /* R2-S1 — the evidence-linked comparison table, projected on read (no AI). */
                 /* E1 §8.2 step 3 — withheld at read time, stored record unchanged */
-                payload: withheldForSourceRights(withComparisonTable(result.payload)),
+                /* MASTER CTO P0 #85 (E1 M-1) — the location hold, same predicate as computation */
+                payload: withHeldGeographyWithdrawn(withheldForSourceRights(withComparisonTable(result.payload))),
                 evidenceRevision: result.evidenceRevision,
                 expiresAt: result.expiresAt,
                 expired: result.expiresAt.getTime() <= Date.now(),

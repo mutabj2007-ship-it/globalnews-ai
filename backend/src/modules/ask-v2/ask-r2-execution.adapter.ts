@@ -1781,8 +1781,13 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
            same fact as a search that found nothing: it is UNAVAILABLE, said as such.
            RETRIEVAL R1 · D-28 — and so is a search where SOME sources failed (op 4f585f99: GNews
            and GDELT rate-limited, a third lane empty): it did not complete, so it is never
-           "no verified current findings". Only a completed search with nothing admitted is. */
-        noEvidence && !retrievalIncomplete(response) ? 'NO_EVIDENCE' : 'UNAVAILABLE',
+           "no verified current findings". Only a completed search with nothing admitted is.
+           MASTER CTO P0 #85 — reporting withheld by the geo-identity hold is not "nothing found"
+           either. (#87 F-1: a rights-withheld completed search stays on the NO_EVIDENCE branch,
+           where the REPORTING WITHHELD rule is chosen instead of NO CURRENT FINDINGS.) */
+        noEvidence && !retrievalIncomplete(response) && (response?.retrievalContext?.geoIdentityHeld?.count ?? 0) === 0
+          ? 'NO_EVIDENCE'
+          : 'UNAVAILABLE',
         undefined,
         contract.stableQuestion ?? undefined,
         /* ASK R3 RESEARCH ACTIVITY R1 — the search that ran is recorded, not dropped; a call that

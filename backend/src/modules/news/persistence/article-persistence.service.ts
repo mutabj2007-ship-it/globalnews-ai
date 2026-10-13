@@ -6,6 +6,7 @@ import { PrismaService } from '../../../database/prisma.service';
 import { stripUnresolvedTemplatePlaceholders } from '../article-metadata-hygiene.util';
 import { admittedStoredSourceWhere, storedRowAdmissible, storedRowExclusionReason } from '../rights/source-use-policy';
 import { partitionPublisherRightsHeld } from '../rights/publisher-rights-hold';
+import { isGeoQuarantined, withoutHeldGeography } from '../geo-quarantine/geo-identity-quarantine';
 import { RETAINED_ARTICLE_OBSERVER, type RetainedArticleObserver } from './retained-article-observer.port';
 import { currentRetrievalTrace, traceSafely } from '../retrieval-trace/retrieval-trace';
 
@@ -163,10 +164,13 @@ export class ArticlePersistenceService {
       and no update over a row already stored (E1 B-5: those rows are RESTRICTED — retained as-is,
       never back-filled or rewritten). Counts only are logged; never the URL or title.
     */
-    const { kept: articles, held } = partitionPublisherRightsHeld(incoming);
+    const { kept: rightsKept, held } = partitionPublisherRightsHeld(incoming);
     if (held.length > 0) {
       this.logger.debug(`persistence withheld ${held.length} article(s) under a publisher rights hold`);
     }
+    /* MASTER CTO P0 #85 — a held identity is never written: its stored row (including the unsupported
+       country) stays exactly as it is, and a re-fetched copy cannot overwrite it. */
+    const articles = rightsKept.filter((article) => !isGeoQuarantined(article));
     if (articles.length === 0) {
       return NO_OBSERVATIONS;
     }
@@ -328,7 +332,9 @@ export class ArticlePersistenceService {
     }
   }
 
-  async persistCountryRelations(relations: ArticleCountryRelationInput[]): Promise<void> {
+  async persistCountryRelations(incoming: ArticleCountryRelationInput[]): Promise<void> {
+    /* MASTER CTO P0 #85 — no country relation is ever created for a held identity */
+    const relations = incoming.filter((relation) => !isGeoQuarantined({ id: relation.articleId }));
     if (relations.length === 0) {
       return;
     }
@@ -433,7 +439,10 @@ export class ArticlePersistenceService {
         (row) => row.article.sourceId,
         /* P0 #86 — held rows are kept only for a counting caller (retainPublisherRightsHeld) */
         (row) => (retainPublisherRightsHeld === true ? undefined : row.article.url),
-      ).map((row) => ({
+      )
+        /* MASTER CTO P0 #85 — a held identity is never served BY its (unsupported) country */
+        .filter((row) => !isGeoQuarantined(row.article))
+        .map((row) => ({
         securityCountryAttribution: {
           countryCode: row.countryCode,
           relevanceScore: row.relevanceScore,
@@ -567,11 +576,13 @@ export class ArticlePersistenceService {
         take: fetchLimit,
       });
 
+      /* P0 #86 — held-host rows are kept only for a counting caller (retainPublisherRightsHeld).
+         MASTER CTO P0 #85 — a held identity stays readable but carries no stored country. */
       return this.admissibleRows(
         rows,
         (row) => row.sourceId,
         (row) => (retainPublisherRightsHeld === true ? undefined : row.url),
-      ).map((row) => ({
+      ).map((row) => withoutHeldGeography({
         id: row.id,
         title: row.title,
         summary: stripUnresolvedTemplatePlaceholders(row.summary),
@@ -633,6 +644,8 @@ export class ArticlePersistenceService {
       if (!row || !storedRowAdmissible(row.sourceId, undefined, row.url)) {
         return null;
       }
+      /* MASTER CTO P0 #85 — a held identity is not obtainable as a selected story or anchor */
+      if (isGeoQuarantined(row)) return null;
 
       return {
         id: row.id,
@@ -688,6 +701,8 @@ export class ArticlePersistenceService {
         include: { countries: { where: { isRelevant: true }, select: { countryCode: true } } },
       });
       if (!row || !storedRowAdmissible(row.sourceId, undefined, row.url)) return null;
+      /* MASTER CTO P0 #85 — a held identity is not obtainable as a selected story */
+      if (isGeoQuarantined(row)) return null;
 
       return {
         article: {

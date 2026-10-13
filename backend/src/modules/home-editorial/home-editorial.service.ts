@@ -1,3 +1,4 @@
+import { isGeoQuarantined } from '../news/geo-quarantine/geo-identity-quarantine';
 import { Injectable, Logger } from '@nestjs/common';
 import {
   COUNTRIES,
@@ -137,8 +138,12 @@ export class HomeEditorialService {
       orderBy: { publishedAt: 'desc' },
       take: 2000,
     });
-    /* P0 #86 — the exact host predicate on every row (the query half is a cap-saver, not the authority) */
-    const rows = withoutPublisherRightsHeld(articles).map((a) => this.toRow(a));
+    /* P0 #86 — the exact host predicate on every row (the query half is a cap-saver, not the authority).
+       MASTER CTO P0 #85 — not reachable today (Home rows need a relevant ArticleCountry row, and the
+       held reports have none); excluded so it stays true if one is ever written. Both holds apply. */
+    const rows = withoutPublisherRightsHeld(articles)
+      .filter((a) => !isGeoQuarantined(a))
+      .map((a) => this.toRow(a));
     const { storyIdByUrl, discussion } = await this.identityAndDiscussion(rows, now);
     this.cache = { at: now.getTime(), rows, storyIdByUrl, discussion };
     return this.cache;
@@ -236,17 +241,21 @@ export class HomeEditorialService {
 
     let relaxed = false;
     const eligibleOnly = input.scope === 'HOME_ELIGIBLE';
-    /* P0 #86 — the exact host predicate on every returned row */
-    let rows = withoutPublisherRightsHeld(await run(terms)).map((a) => this.toRow(a));
+    /* P0 #86 — the exact host predicate on every returned row.
+       MASTER CTO P0 #85 (EA Q-4 / P10) — a report under the location hold is not listed at all: its
+       card is an entry point into the story context Ask refuses (direct read, so excluded here). */
+    let rows = withoutPublisherRightsHeld(await run(terms))
+      .filter((a) => !isGeoQuarantined(a))
+      .map((a) => this.toRow(a));
     /* Sensible tolerance without fuzzy indexes: when the exact words leave NOTHING in scope (raw hits
        may all be out of scope, e.g. "refineri" ⊂ "refineries" in a sport report), retry on word stems
        (first 5 letters). */
     const inScope = (rs: RetainedRow[]): number => (eligibleOnly ? candidatesOf(rs, now, true).length : rs.length);
     if (inScope(rows) === 0 && terms.some((t) => t.length >= 6)) {
       relaxed = true;
-      rows = withoutPublisherRightsHeld(await run(terms.map((t) => (t.length >= 6 ? t.slice(0, 5) : t)))).map((a) =>
-        this.toRow(a),
-      );
+      rows = withoutPublisherRightsHeld(await run(terms.map((t) => (t.length >= 6 ? t.slice(0, 5) : t))))
+        .filter((a) => !isGeoQuarantined(a))
+        .map((a) => this.toRow(a));
     }
     let candidates = candidatesOf(rows, now, eligibleOnly);
     if (!eligibleOnly) {

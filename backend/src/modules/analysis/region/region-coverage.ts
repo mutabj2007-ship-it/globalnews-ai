@@ -1,3 +1,4 @@
+import { isGeoQuarantined } from '../../news/geo-quarantine/geo-identity-quarantine';
 import type { CountryMeta, NewsArticle, RequestedRegionScope, RetrievalOutcome } from '@globalnews-ai/shared';
 
 /**
@@ -54,7 +55,11 @@ export function memberIso3WithEvidence(
   members: readonly CountryMeta[],
 ): Set<string> {
   const present = new Set(
-    articles.map((article) => (article.countryCode ?? '').toUpperCase()).filter((code) => code !== ''),
+    articles
+      /* MASTER CTO P0 #85 — a held identity never counts a member as covered */
+      .filter((article) => !isGeoQuarantined(article))
+      .map((article) => (article.countryCode ?? '').toUpperCase())
+      .filter((code) => code !== ''),
   );
 
   return new Set(

@@ -705,4 +705,59 @@ live('R2B — canonical Ask V2 context envelope on PostgreSQL', () => {
     expect(await planOf(follow.operationId)).not.toHaveProperty('context');
     expect(readPinned).toHaveBeenCalledTimes(1);
   });
+
+  /* ── MASTER CTO P0 #85 · the location hold through the real lifecycle ─────────────── */
+  const HELD_ID = 'gnews-914413795';
+  const HELD_REF = '96bdb3466a6c214045fef7f675d4ba66463ff366de3261ecd3ade84299683330';
+
+  it('#85 E1 M-3 · STORY (by id, by ref) and SELECTION with a held report are refused before any operation, model or meter', async () => {
+    const before = await counts();
+    expect(await refusal(send(Q, { kind: 'STORY', articleId: HELD_ID }))).toBe('ASK_CONTEXT_STORY_LOCATION_UNDER_REVIEW');
+    expect(await refusal(send(Q, { kind: 'STORY', articleRef: HELD_REF, url: `https://r2b-${RUN}.example/any` }))).toBe(
+      'ASK_CONTEXT_STORY_LOCATION_UNDER_REVIEW',
+    );
+    expect(
+      await refusal(
+        send('Compare the selected stories', {
+          kind: 'SELECTION',
+          action: 'COMPARE',
+          stories: [{ articleRef: HELD_REF, url: `https://r2b-${RUN}.example/any` }, { articleRef: REF(URL_A), url: URL_A }],
+        }),
+      ),
+    ).toBe('ASK_CONTEXT_STORY_LOCATION_UNDER_REVIEW');
+    /* no new operation, turn or reservation: no stored answer can be created carrying it */
+    expect(await counts()).toEqual(before);
+    expect(analyzeNews).not.toHaveBeenCalled();
+    expect(findArticleById).not.toHaveBeenCalled();
+  });
+
+  it("#85 E1 M-1 · reopen (GET /operations/:id) withdraws a held report's stored country; the stored record is unchanged; a control keeps its own", async () => {
+    /* the historical shape: an answer stored before the hold, citing a held report as CG */
+    analyzeNews.mockImplementation(async (...args: unknown[]) => {
+      (args[6] as { usageSink?: (u: { promptTokens: number; completionTokens: number }) => void }).usageSink?.({
+        promptTokens: 2000,
+        completionTokens: 400,
+      });
+      return {
+        analysis: {},
+        articles: [
+          { id: HELD_ID, url: `https://r2b-${RUN}.example/held`, sourceId: 'example-wire', countryCode: 'CG', countryName: 'Congo', geographicPrecision: 'country' },
+          { id: 'ke-1', url: `https://r2b-${RUN}.example/ke`, sourceId: 'example-wire', countryCode: 'KE', countryName: 'Kenya', geographicPrecision: 'country' },
+        ],
+        retrievalContext: {},
+      };
+    });
+    const res = await send('What is the latest reporting?');
+    expect(res.status).toBe('COMPLETED');
+    const reopened = await askRequestContext.run(who(), () => service.getOperation(accountPrincipal(userId), res.operationId));
+    const shown = (reopened.result?.payload as { analysis: { articles: Array<Record<string, unknown>> } }).analysis.articles;
+    expect(reopened.result?.displayOnly).toBe(true);
+    expect(shown[0]).not.toHaveProperty('countryCode');
+    expect(shown[0]).not.toHaveProperty('countryName');
+    expect(shown[0].geographicPrecision).toBe('unknown');
+    expect(shown[1].countryCode).toBe('KE');
+    /* display only: the stored record is exactly as it was written */
+    const storedRow = await db.storedResult.findUniqueOrThrow({ where: { id: (await op(res.operationId)).storedResultId! } });
+    expect((storedRow.payload as { analysis: { articles: Array<{ countryCode?: string }> } }).analysis.articles[0].countryCode).toBe('CG');
+  });
 });

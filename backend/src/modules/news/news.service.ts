@@ -61,6 +61,7 @@ import {
   type EventFamilyId,
 } from './relevance/relational-event';
 import { collapseCrossProviderDuplicates } from './cross-provider-dedup.util';
+import { isGeoQuarantined, withoutHeldGeography } from './geo-quarantine/geo-identity-quarantine';
 import { collapseDuplicateStories } from './identity/article-identity.util';
 import { resolveProviderFailureKind, type ProviderFailureKind } from './providers/gnews.provider';
 /*
@@ -2443,6 +2444,9 @@ export class NewsService {
   */
   private resolveArticleCountries(articles: NewsArticle[], language?: string): NewsArticle[] {
     return articles.map((article) => {
+      /* MASTER CTO P0 #85 — a held identity is never re-geolocated from its own text (the text is
+         what produced the wrong country): it keeps no country, live or cached. */
+      if (isGeoQuarantined(article)) return withDerivedEvidenceFields(withoutHeldGeography(article));
       try {
         const primary = resolvePrimaryCountry(article, language as LanguageCode | undefined);
 

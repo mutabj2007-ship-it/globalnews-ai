@@ -15,6 +15,7 @@ import { NewsService, attachProviderFailures, readProviderFailures } from '../ne
 import { scoreArticleConfidence } from '../analysis/article-confidence.util';
 import { ArticlePersistenceService } from '../persistence/article-persistence.service';
 import { deduplicateArticles } from './deduplicate-articles.util';
+import { isGeoQuarantined } from '../geo-quarantine/geo-identity-quarantine';
 import { publishedInsideWindow } from '../relevance/publication-window.util';
 import {
   articleMentionsCity,
@@ -279,9 +280,12 @@ export class CountryNewsService {
     // relevance scoring/sorting so every downstream step (persistence,
     // category filtering, dedup) already operates on a language-pure
     // set.
+    /* MASTER CTO P0 #85 — a held identity is never served as reporting FOR a country: its text is
+       what produced the unsupported country, so it is not re-scored against one. */
+    const unheld = searchResponse.articles.filter((article) => !isGeoQuarantined(article));
     const languageFilteredArticles = lang
-      ? searchResponse.articles.filter((article) => article.sourceLanguage === lang)
-      : searchResponse.articles;
+      ? unheld.filter((article) => article.sourceLanguage === lang)
+      : unheld;
 
     const scoredEntries = languageFilteredArticles
       .map((article) => ({
@@ -629,7 +633,9 @@ export class CountryNewsService {
     });
 
     const cityStored = cityStoredCandidates.filter(
-      (article) => inWindow(article) && scoreCountryRelevance(article, country).isRelevant,
+      (article) =>
+        /* MASTER CTO P0 #85 — never re-scored against a country (see above) */
+        !isGeoQuarantined(article) && inWindow(article) && scoreCountryRelevance(article, country).isRelevant,
     );
 
     return deduplicateArticles([...cityStored, ...countryStored]).slice(0, limit);

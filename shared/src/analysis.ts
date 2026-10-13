@@ -948,6 +948,16 @@ export interface AnalysisRetrievalContext {
   };
 
   /**
+   * MASTER CTO P0 #85 — internal diagnostic. Reports a search or retained read DID return that were
+   * withheld from this answer because their stored location is under review (an identity-based hold,
+   * backend geo-identity-quarantine.ts). Never a relevance judgement, never a rights decision and
+   * never evidence that no reporting exists.
+   */
+  geoIdentityHeld?: {
+    readonly count: number;
+  };
+
+  /**
    * P0 NEWS R1 (Claude G, G-ASK-4) — the reader named a publisher. The verdict of
    * classifyRequestedPublisher(): CARRIED (searched), RECOGNISED_NOT_CARRIED (a known masthead
    * with no ingest right: not searched), UNRECOGNISED (no publisher identity established). The

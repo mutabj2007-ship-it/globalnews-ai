@@ -53,6 +53,8 @@ export const OBSERVED_RETRIEVAL_OUTCOMES: ReadonlySet<string> = new Set([
   /* MASTER CTO R4 · #87 F-1 — every found item withheld for source-use rights (ask-v2/retrieval-outcome.ts
      already emits it; outside this set it was stored as NULL). TEXT column: no migration. */
   'RIGHTS_WITHHELD',
+  /* MASTER CTO P0 #85 — every candidate withheld by the geo-identity hold */
+  'GEO_IDENTITY_HELD',
 ]);
 
 /*
