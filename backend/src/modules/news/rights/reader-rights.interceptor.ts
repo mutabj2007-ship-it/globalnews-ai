@@ -31,6 +31,14 @@ export class ReaderRightsInterceptor implements NestInterceptor {
         if (withheld > 0) {
           if (response?.headersSent !== true) response?.setHeader?.('X-Source-Rights-Withheld', String(withheld));
           this.logger.warn(`source-rights containment: withheld=${withheld} path=${path}`);
+          /*
+            CTO R52 · E1 P-5 — a withheld list must never read as a completed "no news" result: an
+            object response carries its own truthful reason in the JSON (an additive field; existing
+            fields are unchanged). Array responses keep the header only.
+          */
+          if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+            return { ...(value as Record<string, unknown>), sourceRightsWithheld: { count: withheld, reason: 'SOURCE_RIGHTS_WITHHELD' } };
+          }
         }
         return value;
       }),

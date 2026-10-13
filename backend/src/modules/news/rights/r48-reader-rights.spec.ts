@@ -260,7 +260,8 @@ describe('R48-P4 · reader JSON on every public route (/news/*, /analysis/news, 
     const out = await lastValueFrom(
       new ReaderRightsInterceptor().intercept(ctx('/news/search?q=kenya', headers), { handle: () => of({ articles: [article('g1', 'gnews-pub')] }) }),
     );
-    expect(out).toEqual({ articles: [] });
+    /* R52 · P-5 — the JSON says why the list is empty: never a completed no-match */
+    expect(out).toEqual({ articles: [], sourceRightsWithheld: { count: 1, reason: 'SOURCE_RIGHTS_WITHHELD' } });
     expect(headers['X-Source-Rights-Withheld']).toBe('1');
   });
   it('internal admin routes are not reader surfaces and are left unchanged', async () => {
@@ -324,5 +325,55 @@ describe('R52 · U-1 imageUrl zero-leak (E1 M-18): no third-party image survives
     };
     const json = JSON.stringify(withholdAskPayload(payload).payload);
     expect(json).not.toMatch(/img\.example\/g(9|11)/);
+  });
+});
+
+describe('R52 · E1 P-11 — every public news route, in JSON, route by route, with the CLEARED control', () => {
+  const g = article('gx', 'gnews-pub');
+  const c = article('cx', CLEARED);
+  const at = '2026-10-13T00:00:00.000Z';
+  const route = (path: string) =>
+    ({
+      getType: () => 'http',
+      switchToHttp: () => ({ getRequest: () => ({ originalUrl: path }), getResponse: () => ({ setHeader: () => undefined }) }),
+    }) as never;
+  const bodies: Array<[string, () => Record<string, unknown>]> = [
+    ['/news/search?q=kenya', () => ({ articles: [g, c], totalResults: 2, providers: ['gnews'], dataMode: 'live', generatedAt: at })],
+    ['/news/top-headlines?country=ke', () => ({ articles: [g, c], totalResults: 2, providers: ['gnews'], dataMode: 'live', generatedAt: at })],
+    ['/news/top-headlines/retained', () => ({ articles: [g, c], totalResults: 2, providers: [], dataMode: 'cached', generatedAt: at })],
+    ['/news/category/world', () => ({ articles: [g, c], totalResults: 2, providers: ['gnews'], dataMode: 'live', generatedAt: at })],
+    ['/news/country/KE', () => ({ articles: [g, c], countryCode: 'KE', countryName: 'Kenya', feedTier: 'delayed', generatedAt: at })],
+    [
+      '/analysis/news',
+      () => ({
+        articles: [g, c],
+        analysis: { summary: 'x', sources: [{ articleId: 'gx', publisher: 'P', title: 'G', url: g.url }, { articleId: 'cx', publisher: 'P', title: 'C', url: c.url }] },
+        retrievalContext: { dataMode: 'live' },
+      }),
+    ],
+  ];
+  it.each(bodies)('%s: the GNews item (headline, snippet, publisher, link, image) is gone, the CLEARED item stays, the reason is in the JSON', async (path, make) => {
+    const out = (await lastValueFrom(new ReaderRightsInterceptor().intercept(route(path), { handle: () => of(make()) }))) as Record<string, unknown>;
+    const json = JSON.stringify(out);
+    for (const leak of [g.url, g.imageUrl as string, g.title, 'news.example/gx']) expect(json).not.toContain(leak);
+    expect(json).toContain(c.url);
+    expect(json).toContain(c.imageUrl as string);
+    expect((out.articles as NewsArticle[]).map((a) => a.id)).toEqual(['cx']);
+    expect(out.sourceRightsWithheld).toEqual({ count: expect.any(Number), reason: 'SOURCE_RIGHTS_WITHHELD' });
+  });
+  it('a response with nothing to withhold is returned unchanged (no reason field added)', async () => {
+    const body = { articles: [c], totalResults: 1 };
+    const out = await lastValueFrom(new ReaderRightsInterceptor().intercept(route('/news/search?q=x'), { handle: () => of(body) }));
+    expect(out).toBe(body);
+  });
+  it('the routes under test are the real public controller routes', () => {
+    const { readFileSync } = jest.requireActual('fs') as typeof import('fs');
+    const { join } = jest.requireActual('path') as typeof import('path');
+    const news = readFileSync(join(__dirname, '..', 'news.controller.ts'), 'utf8');
+    for (const r of ["@Get('search')", "@Get('top-headlines')", "@Get('top-headlines/retained')", "@Get('category/:category')"]) expect(news).toContain(r);
+    expect(readFileSync(join(__dirname, '..', 'country', 'country-news.controller.ts'), 'utf8')).toContain("@Controller('news/country')");
+    const analysis = readFileSync(join(__dirname, '..', '..', 'analysis', 'controller', 'analysis.controller.ts'), 'utf8');
+    expect(analysis).toContain("@Controller('analysis')");
+    expect(analysis).toContain("@Post('news')");
   });
 });
