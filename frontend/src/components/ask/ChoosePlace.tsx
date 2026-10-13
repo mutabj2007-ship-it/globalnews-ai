@@ -140,6 +140,21 @@ function Notice({ kind, children }: { readonly kind: string; readonly children: 
 /** EN source; not in the D0.1 copy deck. Flagged for Design/Claude L with the NEEDS_BACKEND item. */
 const NO_SINGLE_COUNTRY_READ = 'Reporting for a single country you do not follow is not available yet.';
 
+/**
+ * CTO R25 — V-02 country research FAILS CLOSED for the two Congos until the COD/COG-safe backend
+ * (combined geography candidate, EA REGIONAL_HOLD) is live on Alpha. The live Alpha backend 059cdb7
+ * can still read "Congo - Kinshasa" as COG at Analysis and Polish "Demokratyczna Republika Konga" as
+ * Tonga (EA-GEO-R1 G-1/G-2), so a staged research draft for either Congo could execute against the
+ * wrong country. The action is simply not offered for COD / COG (no new copy, nothing claimed); every
+ * other place, the follow control and the read-only rows are unchanged. Remove this set when the safe
+ * backend is live and verified on Alpha.
+ */
+const PLACE_RESEARCH_HELD_ISO3: ReadonlySet<string> = new Set(['COD', 'COG']);
+
+export function placeResearchHeld(place: Place): boolean {
+  return place.kind === 'country' && PLACE_RESEARCH_HELD_ISO3.has(place.iso3);
+}
+
 function PlaceView({ locale, place, onChange }: { readonly locale: DisplayLocale; readonly place: Place; readonly onChange: () => void }): JSX.Element {
   const s = d01Strings(locale);
   const name = place.kind === 'region' ? regionLabel(place.region, locale) : place.name;
@@ -156,12 +171,14 @@ function PlaceView({ locale, place, onChange }: { readonly locale: DisplayLocale
       </div>
       {place.kind === 'country' && <FollowControl locale={locale} iso3={place.iso3} name={name} />}
       <PlaceRows locale={locale} place={place} />
-      <div className={styles.foot} style={{ paddingInline: 0, marginTop: 16 }}>
-        <Link href={research} prefetch={false} data-ask="place-research" className={styles.secondary}>
-          {s.research}
-        </Link>
-        <p className={styles.small} style={{ textAlign: 'center' }}>{s.researchNote}</p>
-      </div>
+      {placeResearchHeld(place) ? null : (
+        <div className={styles.foot} style={{ paddingInline: 0, marginTop: 16 }}>
+          <Link href={research} prefetch={false} data-ask="place-research" className={styles.secondary}>
+            {s.research}
+          </Link>
+          <p className={styles.small} style={{ textAlign: 'center' }}>{s.researchNote}</p>
+        </div>
+      )}
     </div>
   );
 }
