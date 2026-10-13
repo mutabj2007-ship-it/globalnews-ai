@@ -75,10 +75,20 @@ const NAMED_WINDOWS: Readonly<Record<string, number>> = {
   'the past week': 168,
 };
 
+/* R7 X1 (#92) — the PL mirror of the HOURS window only ("w ciągu ostatnich 48 godzin"). PL day / week
+   windows are deliberately NOT added here: they are a separate, pre-existing gap with their own
+   review. Same MAX_WINDOW_HOURS bound as English. */
+const PL_RELATIVE_HOURS = /^(?:w\s+)?(?:ci[ąa]gu\s+|przeci[ąa]gu\s+)?ostatnich\s+(\d{1,3})\s+godzin[ay]?$/iu;
+
 /** Hours of a supported relative window, or null when the phrase is not one. */
 export function supportedWindowHours(statedPeriod: string): number | null {
   const named = NAMED_WINDOWS[statedPeriod.trim().replace(/\s+/g, ' ').toLowerCase()];
   if (named !== undefined) return named;
+  const plHours = statedPeriod.trim().replace(/\s+/g, ' ').match(PL_RELATIVE_HOURS);
+  if (plHours?.[1] !== undefined) {
+    const n = Number(plHours[1]);
+    return Number.isInteger(n) && n >= 1 && n <= MAX_WINDOW_HOURS ? n : null;
+  }
   const match = statedPeriod.trim().replace(/\s+/g, ' ').match(RELATIVE_WINDOW);
   if (!match?.[1] || !match[2]) return null;
   const raw = match[1].toLowerCase();

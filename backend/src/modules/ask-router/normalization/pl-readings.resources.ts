@@ -584,6 +584,16 @@ export interface FallbackPeriodRule {
 }
 
 export const EN_FALLBACK_PERIOD_RULES: readonly FallbackPeriodRule[] = [
+  /* R7 X1 (#92) — "in / over / during / within the last / past N hours" was read as NO period (the rule
+     below knows days … quarters only), so the strict window reporting-window.ts already supports for
+     hours (≤ MAX_WINDOW_HOURS) never engaged and 60–96 h old reports answered a "last 48 hours"
+     question. The period read is the reader's whole phrase, which reporting-window.ts parses as-is.
+     Only past-reaching wording: "the next 48 hours" and "a 48-hour flight" are not matched. */
+  {
+    pattern: /\b(?:(?:in|over|during|within)\s+)?(?:the\s+)?(?:last|past)\s+\d{1,3}\s+hours?\b/i,
+    anchor: 'RELATIVE_TO_ASK',
+    mirrors: 'last N hours',
+  },
   {
     pattern: /\b(?:in\s+the\s+)?(?:last|past)\s+\w+\s+(?:days?|weeks?|months?|years?|quarters?)\b/i,
     anchor: 'RELATIVE_TO_ASK',
@@ -615,6 +625,12 @@ export const EN_FALLBACK_PERIOD_RULES: readonly FallbackPeriodRule[] = [
 ];
 
 export const PL_FALLBACK_PERIOD_RULES: readonly FallbackPeriodRule[] = [
+  /* R7 X1 (#92) — the PL mirror: "w ciągu ostatnich 48 godzin" (hours) */
+  {
+    pattern: rx(`${S}(?:w\\s+)?(?:ci[ąa]gu\\s+|przeci[ąa]gu\\s+)?ostatnich\\s+\\d{1,3}\\s+godzin[ay]?${W}`),
+    anchor: 'RELATIVE_TO_ASK',
+    mirrors: 'last N hours',
+  },
   {
     pattern: rx(
       `${S}(?:w\\s+)?(?:ci[ąa]gu\\s+|przeci[ąa]gu\\s+)?ostatnich\\s+[\\p{L}\\p{N}]+\\s+(?:dni|tygodni|miesi[ęe]cy|lat|kwarta[łl][óo]w)${W}`,

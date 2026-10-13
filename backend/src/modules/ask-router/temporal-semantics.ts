@@ -87,9 +87,13 @@ const CONTEMPORARY: Readonly<Record<Lang, RegExp>> = {
   ),
 };
 const REPORTING_WINDOW: Readonly<Record<Lang, RegExp>> = {
-  en: /\b(?:this\s+(?:week|month|quarter|year|morning|weekend)|last\s+(?:week|month|quarter|weekend|night)|yesterday|(?:the\s+)?(?:past|last)\s+\d{1,3}\s+(?:days|weeks|months)|\d{1,3}\s+(?:days|weeks|months)\s+ago)\b/i,
+  /* R7 X1 (#92) — "the last / past 48 hours" is a bounded window reaching now, exactly like "the last
+     7 days": HOURS were missing, so the question read no window at all. Only past-reaching phrasing
+     (past / last / … ago); "the next 48 hours" (a forecast) and "a 48-hour flight" (a duration) are
+     not windows and stay unmatched. */
+  en: /\b(?:this\s+(?:week|month|quarter|year|morning|weekend)|last\s+(?:week|month|quarter|weekend|night)|yesterday|(?:the\s+)?(?:past|last)\s+\d{1,3}\s+(?:hours|days|weeks|months)|\d{1,3}\s+(?:hours|days|weeks|months)\s+ago)\b/i,
   pl: plTolerant(
-    /(?:^|[\s,])(?:w\s+tym\s+(?:tygodniu|miesiącu|kwartale|roku)|w\s+zeszłym\s+(?:tygodniu|miesiącu)|wczoraj|(?:w\s+)?ostatnich\s+\d{1,3}\s+(?:dni|tygodni|miesięcy)|\d{1,3}\s+(?:dni|tygodni|miesięcy)\s+temu)(?=$|[\s,.?!])/iu,
+    /(?:^|[\s,])(?:w\s+tym\s+(?:tygodniu|miesiącu|kwartale|roku)|w\s+zeszłym\s+(?:tygodniu|miesiącu)|wczoraj|(?:w\s+)?(?:ciągu\s+)?ostatnich\s+\d{1,3}\s+(?:godzin|dni|tygodni|miesięcy)|\d{1,3}\s+(?:godzin|dni|tygodni|miesięcy)\s+temu)(?=$|[\s,.?!])/iu,
   ),
 };
 const SINCE_PRESENT: Readonly<Record<Lang, RegExp>> = {

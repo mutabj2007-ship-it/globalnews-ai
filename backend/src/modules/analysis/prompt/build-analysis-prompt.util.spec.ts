@@ -1,8 +1,19 @@
 import {
   buildAnalysisMessages as buildMessagesR1,
   buildEvidenceStateInstruction,
+  buildLiveEvidenceFreshnessInstruction,
   describeNewestEvidence,
+  TRUTHFUL_ABSENCE_RULE,
 } from './build-analysis-prompt.util';
+
+/* R7 X2 (#92) — the ONE block a live prompt with a freshness fact adds to the no-state prompt: the
+   live freshness sentence, inserted immediately before the X3 base absence rule. Everything else is
+   byte-identical (the exact pin below is preserved, extended by exactly this block). */
+const withLiveFreshness = (
+  base: string,
+  fact: Parameters<typeof buildLiveEvidenceFreshnessInstruction>[1],
+): string =>
+  base.replace(TRUTHFUL_ABSENCE_RULE, buildLiveEvidenceFreshnessInstruction('live', fact) + TRUTHFUL_ABSENCE_RULE);
 import { newestEvidenceFreshness } from '../service/analysis.service';
 import type { NewsArticle } from '@globalnews-ai/shared';
 import {
@@ -833,14 +844,16 @@ describe('PR #40 BLOCKER 1 — basis-aware evidence freshness', () => {
     expect(describeNewestEvidence(undefined)).toBe('');
   });
 
-  it('live evidence stays byte-identical whatever the freshness fact says', () => {
+  /* R7 X2 (#92) — the live evidence-STATE block is still empty for every basis; the live prompt now
+     differs from the no-state prompt by EXACTLY the one freshness block (deliberate; E1 wording). */
+  it('live evidence: the state block stays empty; R7 X2 adds exactly one freshness block, nothing else', () => {
     expect(buildEvidenceStateInstruction('live', { timestamp: T, basis: 'observed' })).toBe('');
     expect(
       buildMessagesR1('q', [], 500, undefined, 'en', undefined, undefined, undefined, 'live', {
         timestamp: T,
         basis: 'publisher',
       }).system,
-    ).toBe(buildMessagesR1('q', [], 500).system);
+    ).toBe(withLiveFreshness(buildMessagesR1('q', [], 500).system, { timestamp: T, basis: 'publisher' }));
   });
 
   describe('newestEvidenceFreshness — the one derivation', () => {
@@ -975,7 +988,9 @@ describe('PR #40 R2 F2 — full buildAnalysisMessages() timestamp basis', () => 
     });
   });
 
-  it('live prompt keeps the exact pre-R2 serialization for every basis', () => {
+  /* R7 X2 (#92) — the user prompt (the per-article serialization this test guards) is byte-identical;
+     the system prompt differs by exactly the one live freshness block. */
+  it('live prompt keeps the exact pre-R2 serialization for every basis (system: + exactly the R7 X2 block)', () => {
     const articles = [
       item('obs', OBS, 'observed'),
       item('unk', UNK),
@@ -994,7 +1009,7 @@ describe('PR #40 R2 F2 — full buildAnalysisMessages() timestamp basis', () => 
       newestEvidenceFreshness(articles),
     );
     const legacy = buildMessagesR1('q', articles, 500);
-    expect(live.system).toBe(legacy.system);
+    expect(live.system).toBe(withLiveFreshness(legacy.system, newestEvidenceFreshness(articles)));
     expect(live.user).toBe(legacy.user);
     expect(live.user).toContain(`\u2014 Outlet unk (${UNK})`);
     expect(live.user).toContain(`\u2014 Outlet obs (${OBS})`);

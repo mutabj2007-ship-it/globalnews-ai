@@ -412,13 +412,8 @@ const bounded = (o: Observed) => {
 };
 
 describe('R7 · characterization at bf202a4 (what the live code does today)', () => {
-  it('C-1 the router reads NO stated period for "in the last 48 hours" (Q1) or "over the last 48 hours" (Q2)', () => {
-    expect(q1.route.statedPeriod).toBeNull();
-    expect(q1.route.reportingWindow).toBeNull();
-    expect(q2.route.statedPeriod).toBeNull();
-    expect(q2.route.reportingWindow).toBeNull();
-    expect(q2.policyWindow).toBeNull();
-  });
+  /* C-1 RETIRED by R7 C1 (X1): it pinned the defect "no stated period for 'the last 48 hours'".
+     R7-D1 / R7-D1b below now assert the repaired behaviour as plain `it`. */
   it('C-2 Q1 "Kenya and Rwanda": the route types ONLY Kenya (Rwanda is not in the envelope)', () => {
     expect(q1.route.geo).toEqual(['TYPED_GEOGRAPHY:KEN']);
   });
@@ -428,20 +423,22 @@ describe('R7 · characterization at bf202a4 (what the live code does today)', ()
     expect(q1.counts.model).toBe(0);
     bounded(q1);
   });
-  it('C-4 Q2 reproduces the field defect: a CURRENT_REPORTING answer built from evidence 60–96 h old, no window applied', () => {
-    expect(q2.answerState).toBe('CURRENT_REPORTING');
-    expect(q2.evidenceAgesHours.length).toBeGreaterThan(0);
-    expect(Math.min(...q2.evidenceAgesHours)).toBeGreaterThan(48);
-    expect(q2.counts.model).toBe(1);
+  /* C-4 REWRITTEN by R7 C1 (X1): at bf202a4 / 2c7eead, Q2 answered CURRENT_REPORTING from evidence
+     60–96 h old (1 search, 1 answering model call, 1 interpreter call — measured at 2c7eead).
+     With the 48 h window applied the stale reports are excluded and the turn takes the EXISTING
+     no-evidence path: the same single search, and NO answering model or interpreter call. */
+  it('C-4 (R7 C1) Q2: the 48 h window excludes the 60–96 h reports → existing no-evidence path, no extra call', () => {
+    expect(q2.evidenceAgesHours).toEqual([]);
+    expect(q2.answerState).not.toBe('CURRENT_REPORTING');
+    expect(q2.counts.search).toBe(1);
+    expect(q2.counts.model).toBe(0);
+    expect(q2.counts.background).toBe(0);
+    expect(q2.counts.interpreter).toBe(0);
     bounded(q2);
   });
-  it('C-5 Q2B (no stated period) live evidence state: the analysis prompt carries NO newest-evidence / freshness sentence', () => {
-    expect(q2b.prompt!.system).not.toMatch(/newest report in this evidence set/i);
-    expect(q2b.prompt!.system).not.toMatch(/REPORTING WINDOW \(authoritative\)/);
-  });
-  it('C-6 WP6 OFF as on Alpha: the analysis prompt has no presentation block; the base prompt has no rule against inferring absence', () => {
+  /* C-5 RETIRED by R7 C1 (X2): it pinned "no newest-evidence sentence for live evidence"; see R7-D3. */
+  it('C-6 WP6 OFF as on Alpha: the analysis prompt has no presentation block (the absence rule is now a base rule: R7-D4)', () => {
     expect(q2b.prompt!.system).not.toContain('ANSWER PRESENTATION');
-    expect(q2b.prompt!.system).not.toMatch(/never state that an event did not happen because no report was found/i);
   });
   it('C-7 Q2B WP6 ON (test config only): the presentation block reaches the SAME single prompt; no extra model call by construction', () => {
     expect(q2b.promptWp6!.system).toContain(WP6_PRESENTATION_RULES);
@@ -465,23 +462,25 @@ describe('R7 · characterization at bf202a4 (what the live code does today)', ()
 });
 
 describe('R7 · DESIRED behaviour (it.failing = defect present at bf202a4)', () => {
-  it.failing('R7-D1 "in/over the last 48 hours" is read as a stated period and becomes a 48 h reporting window (Q1 and Q2)', () => {
+  /* R7 C1 — D1 / D1b / D3 / D4 now pass: flipped to `it`, assertions unchanged. */
+  it('R7-D1 "in/over the last 48 hours" is read as a stated period and becomes a 48 h reporting window (Q1 and Q2)', () => {
     /* the envelope's statedPeriod records only CONSTRAINT periods; an honoured window rides on reportingWindow */
     expect((q1.route.reportingWindow as { statedPeriod?: string } | null)?.statedPeriod).toMatch(/48 hours/);
     expect((q1.route.reportingWindow as { hours?: number } | null)?.hours).toBe(48);
     expect((q2.route.reportingWindow as { statedPeriod?: string } | null)?.statedPeriod).toMatch(/48 hours/);
     expect((q2.route.reportingWindow as { hours?: number } | null)?.hours).toBe(48);
   });
-  it.failing('R7-D1b Q2: evidence published more than 48 h before the request is not presented as the answer (excluded by the window)', () => {
+  it('R7-D1b Q2: evidence published more than 48 h before the request is not presented as the answer (excluded by the window)', () => {
     expect(q2.evidenceAgesHours.every((h) => h <= 48)).toBe(true);
   });
-  it.failing('R7-D2 Q1: both named countries reach the route (KEN and RWA)', () => {
+  /* X5 — OUT OF SCOPE for R7 (multi-country routing / topic conjunction; EA + CTO). Stays a sentinel. */
+  it.failing('R7-D2 [X5] Q1: both named countries reach the route (KEN and RWA)', () => {
     expect(q1.route.geo).toEqual(expect.arrayContaining(['TYPED_GEOGRAPHY:KEN', 'TYPED_GEOGRAPHY:RWA']));
   });
-  it.failing('R7-D3 a "current / latest" answer from live evidence tells the model how old the newest report is', () => {
+  it('R7-D3 a "current / latest" answer from live evidence tells the model how old the newest report is', () => {
     expect(q2b.prompt!.system).toMatch(/newest report in this evidence set was published at/i);
   });
-  it.failing('R7-D4 the prompt Alpha actually sends forbids inferring that nothing happened from the absence of reports', () => {
+  it('R7-D4 the prompt Alpha actually sends forbids inferring that nothing happened from the absence of reports', () => {
     expect(q2b.prompt!.system).toMatch(/never state that an event did not happen because no report was found/i);
   });
   it.failing('R7-D5 Q3 background: illustrative numbers must be labelled illustrative; no arbitrary probability', () => {
