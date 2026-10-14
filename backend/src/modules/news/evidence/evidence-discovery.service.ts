@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FEED_SOURCES, resolveActiveFeedSources } from '../providers/feed-source-registry';
 import type { EvidenceCandidate } from './evidence-candidate';
+import { providerAdmission } from '../rights/provider-admission';
 import {
   SocialLaneError,
   type SocialSearchOptions,
@@ -74,6 +75,10 @@ export class EvidenceDiscoveryService {
       this.social.map(async (provider) => {
         if (!provider.configured()) {
           throw new SocialLaneError(provider.id, 'not-configured', 'not configured');
+        }
+        /* MASTER CTO R62/R64 · #96 GATE A — no recorded per-use right: never started, named unavailable */
+        if (!providerAdmission({ id: provider.id }).admitted) {
+          throw new SocialLaneError(provider.id, 'unavailable', 'no recorded per-use right');
         }
         return provider.search(query, options);
       }),

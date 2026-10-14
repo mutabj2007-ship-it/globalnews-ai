@@ -14,6 +14,7 @@ import {
   type ActiveFeedSelection,
   type FeedSourceEntry,
 } from './feed-source-registry';
+import { admittedFeedSources } from '../rights/provider-admission';
 
 /**
  * S1 — A GENERIC RSS/ATOM CONNECTOR OVER A CURATED PUBLISHER REGISTRY.
@@ -122,7 +123,9 @@ export class RssFeedProvider implements NewsProvider {
       );
     }
 
-    return selection.sources;
+    /* MASTER CTO R62/R64 · #96 GATE A — each feed is fetched only on its OWN registry entry's
+       CLEARED right; an activated feed without one ("rightsUnresolved") is never requested. */
+    return admittedFeedSources(selection.sources);
   }
 
   async topHeadlines(options?: NewsSearchOptions): Promise<NewsArticle[]> {
