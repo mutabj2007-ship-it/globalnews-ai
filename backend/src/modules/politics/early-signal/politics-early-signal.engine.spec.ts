@@ -68,6 +68,7 @@ describe('R66 T3 · named reader states (one synthetic fixture each, for the fro
     const d = run(STATE_FIXTURES.DISPUTED).developments[0];
     expect(d.disputed).toEqual([{ claimKeys: ['deputies-3', 'deputies-4'], derivedBy: 'HUMAN_REVIEW', reviewedAt: '2026-01-10T11:00:00Z' }]);
     expect(d.claims.map((c) => c.claimKey)).toEqual(['deputies-3', 'deputies-4']);
+    expect(d.statementStatus).toBe('ATTRIBUTED'); // a recorded dispute blocks corroboration
   });
   it('CORRECTED: original kept as CORRECTED, correction CURRENT, corrected flag set, no summing', () => {
     const d = run(STATE_FIXTURES.CORRECTED).developments[0];
@@ -212,6 +213,97 @@ describe('R66 T3 · negatives', () => {
     const m = run({ observations: [syn('pa')], evaluation: evaluation({ access: 'PARTIAL', previousCompletedAt: null }) });
     expect(m.absence).toEqual({ state: 'PARTIAL', wordingCode: 'SEARCH_INCOMPLETE_SOME_SOURCES_UNAVAILABLE' });
     expect(m.evaluation.lastEvaluatedAt).toBeNull();
+  });
+});
+
+describe('R66 T3 · EA preliminary review findings on e9b77ce (P-1..P-5, E1 note) — regression', () => {
+  const tza = [{ iso3: 'TZA', locality: null, precision: 'COUNTRY' as const, role: 'EVENT_PLACE' as const, basis: 'OBSERVED_PRIMARY' as const }];
+  it('EA P-1 an aggregator-OBSERVED or UNPROVEN time is never the earliest PUBLICATION time', () => {
+    const d = run({ observations: [
+      syn('p1a', { clocks: { publishedAt: '2026-10-12T10:00:00Z', publishedAtBasis: 'publisher' } }),
+      syn('p1b', { clocks: { publishedAt: '2026-10-12T06:00:00Z', publishedAtBasis: 'observed' } }),
+      syn('p1c', { clocks: { publishedAt: '2026-10-12T05:00:00Z', publishedAtBasis: 'UNPROVEN' } }),
+    ], evaluation: evaluation() }).developments[0];
+    expect(d.timeline.earliestPublishedAt).toBe('2026-10-12T10:00:00Z');
+  });
+  it('EA P-1 control: only observed times → earliestPublishedAt null (not established), never borrowed', () => {
+    const d = run({ observations: [syn('p1o', { clocks: { publishedAt: '2026-10-12T06:00:00Z', publishedAtBasis: 'observed' } })], evaluation: evaluation() }).developments[0];
+    expect(d.timeline.earliestPublishedAt).toBeNull();
+  });
+  it('EA P-2 times with UTC offsets compare as instants (06:30+12:00 is earlier than 20:00Z the previous day)', () => {
+    const d = run({ observations: [
+      syn('p2a', { clocks: { publishedAt: '2026-09-24T20:00:00Z' } }),
+      syn('p2b', { clocks: { publishedAt: '2026-09-25T06:30:00+12:00' } }),
+    ], evaluation: evaluation() }).developments[0];
+    expect(d.timeline.earliestPublishedAt).toBe('2026-09-25T06:30:00+12:00');
+  });
+  it('EA P-2 event-time overlap uses instants: offset timestamps on the same instant merge; disjoint ones do not', () => {
+    const t = (id: string, from: string) => syn(id, { claim: { eventTime: { from, to: from, basis: 'AS_REPORTED' } } });
+    expect(run({ observations: [t('o1', '2026-09-24T18:30:00Z'), t('o2', '2026-09-25T06:30:00+12:00')], evaluation: evaluation() }).developments).toHaveLength(1);
+    expect(run({ observations: [t('o3', '2026-09-24T18:30:00Z'), t('o4', '2026-09-25T06:31:00+12:00')], evaluation: evaluation() }).developments).toHaveLength(2);
+  });
+  it('EA P-3 one interested party\'s statement relayed by three outlets is NOT corroborated and not an observed effect', () => {
+    const relay = (id: string) => syn(id, { claim: { predicate: 'ROUTE_DISRUPTED', speakerRole: 'OFFICIAL_BODY', interestedParty: true } });
+    const d = run({ observations: [relay('m1'), relay('m2'), relay('m3')], evaluation: evaluation() }).developments[0];
+    expect(d.sourceChainCount).toBe(3);
+    expect(d.statementStatus).toBe('ATTRIBUTED');
+    expect(d.impact.evidenceClass).toBe('SUGGESTS_RISK_ONLY');
+  });
+  it('EA P-3 a non-interested official statement relayed by three outlets counts as ONE unit (still not corroborated)', () => {
+    const relay = (id: string) => syn(id, { claim: { speakerRole: 'OFFICIAL_BODY', interestedParty: false } });
+    expect(run({ observations: [relay('o1'), relay('o2'), relay('o3')], evaluation: evaluation() }).developments[0].statementStatus).toBe('ATTRIBUTED');
+  });
+  it('EA P-3 an INTERESTED official statement plus one independent journalist is NOT corroborated (EA R-06)', () => {
+    const d = run({ observations: [syn('io1', { claim: { speakerRole: 'OFFICIAL_BODY', interestedParty: true } }), syn('jr2')], evaluation: evaluation() }).developments[0];
+    expect(d.statementStatus).toBe('ATTRIBUTED');
+  });
+  it('EA P-3 an interested outlet (state press on its own government) plus one independent journalist is NOT corroborated', () => {
+    const d = run({ observations: [syn('sp1', { claim: { speakerRole: 'JOURNALIST', interestedParty: true } }), syn('jr3')], evaluation: evaluation() }).developments[0];
+    expect(d.statementStatus).toBe('ATTRIBUTED');
+  });
+  it('EA P-3 control: an official notice plus one independent journalist chain MAY corroborate', () => {
+    const d = run({ observations: [syn('of1', { claim: { speakerRole: 'OFFICIAL_BODY' } }), syn('jr1')], evaluation: evaluation() }).developments[0];
+    expect(d.statementStatus).toBe('CORROBORATED');
+  });
+  it('EA P-4 conflicting casualty figures (10 vs ~300 KILLED) are never CORROBORATED; both kept, never summed', () => {
+    const d = run({ observations: [
+      syn('un', { places: tza, claim: { claimKey: 'k-un', predicate: 'CASUALTIES_REPORTED', quantity: { value: 10, unit: 'KILLED', qualifier: 'EXACT' }, speakerRole: 'JOURNALIST' } }),
+      syn('j2', { places: tza, claim: { claimKey: 'k-j2', predicate: 'CASUALTIES_REPORTED', quantity: { value: 300, unit: 'KILLED', qualifier: 'ABOUT' }, speakerRole: 'JOURNALIST' } }),
+    ], evaluation: evaluation() }).developments[0];
+    expect(d.statementStatus).toBe('ATTRIBUTED');
+    expect(d.claims.map((c) => c.quantity?.value).sort((a, b) => (a ?? 0) - (b ?? 0))).toEqual([10, 300]);
+  });
+  it('EA P-4 control: different units (KILLED vs WOUNDED) are not a conflict', () => {
+    const d = run({ observations: [
+      syn('u1', { claim: { quantity: { value: 3, unit: 'KILLED', qualifier: 'EXACT' } } }),
+      syn('u2', { claim: { quantity: { value: 9, unit: 'WOUNDED', qualifier: 'EXACT' } } }),
+    ], evaluation: evaluation() }).developments[0];
+    expect(d.statementStatus).toBe('CORROBORATED');
+  });
+  it('EA P-5 COMPLETED access with no source actually checked → SEARCH_NOT_RUN, lastEvaluatedAt not set', () => {
+    for (const perSource of [[], [{ publisherId: 'p', reason: 'not-configured' as const }, { publisherId: 'q', reason: 'not-attempted' as const }]]) {
+      const m = run({ observations: [], evaluation: evaluation({ access: 'COMPLETED_NO_MATCH', perSource }) });
+      expect(m.absence?.state).toBe('SEARCH_NOT_RUN');
+      expect(m.evaluation.lastEvaluatedAt).toBeNull();
+      expect(m.evaluation.lastAttempt.access).toBe('SEARCH_NOT_RUN');
+    }
+  });
+  it('EA P-5b COMPLETED access while a source failed or was rate-limited → PARTIAL, never complete', () => {
+    for (const reason of ['failed', 'rate-limited'] as const) {
+      const m = run({ observations: [syn('x')], evaluation: evaluation({ access: 'COMPLETED_NO_MATCH', perSource: [{ publisherId: 'p', reason: 'checked' }, { publisherId: 'q', reason }] }) });
+      expect(m.absence?.state).toBe('PARTIAL');
+      expect(m.developments).toEqual([]);
+    }
+  });
+  it('EA P-5c control: all sources checked, nothing matched → COMPLETED_NO_MATCH with the evaluation time', () => {
+    const m = run({ observations: [], evaluation: evaluation({ access: 'COMPLETED_NO_MATCH' }) });
+    expect(m.absence?.state).toBe('COMPLETED_NO_MATCH');
+    expect(m.evaluation.lastEvaluatedAt).toBe('2026-01-10T12:00:00Z');
+  });
+  it('E1 note: naming the source is a use — LINK_AND_SOURCE_NAME not CLEAR ⇒ withheld even if RETENTION is clear', () => {
+    const m = run({ observations: [syn('nm', { rights: { ...SYNTHETIC_RIGHTS_HELD, RETENTION: 'CLEAR_FOR_EXACT_USE' } })], evaluation: evaluation() });
+    expect(m.absence?.state).toBe('RIGHTS_WITHHELD');
+    expect(m.withheld.reasons).toEqual({ RIGHTS_NOT_CLEARED: 1 });
   });
 });
 

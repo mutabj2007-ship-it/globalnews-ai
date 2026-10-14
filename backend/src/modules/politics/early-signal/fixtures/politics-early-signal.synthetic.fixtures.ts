@@ -69,7 +69,8 @@ export function syn(id: string, over: DeepPartial<PoliticsEsObservationInput> = 
 }
 
 export function evaluation(over: Partial<PoliticsEsEvaluationInput> = {}): PoliticsEsEvaluationInput {
-  return { attemptedAt: '2026-01-10T12:00:00Z', access: 'COMPLETED_MATCH', previousCompletedAt: null, perSource: [], baseline: null, ...over };
+  // A completed access must be evidenced by at least one source actually checked (EA P-5).
+  return { attemptedAt: '2026-01-10T12:00:00Z', access: 'COMPLETED_MATCH', previousCompletedAt: null, perSource: [{ publisherId: 'syn:all', reason: 'checked' }], baseline: null, ...over };
 }
 
 const indep = (id: string, extra: DeepPartial<PoliticsEsObservationInput> = {}) => syn(id, { chain: { originSelf: true }, ...extra });

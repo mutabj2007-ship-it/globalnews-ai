@@ -76,7 +76,23 @@ export function withholdReason(o: PoliticsEsObservationInput): PoliticsEsWithhol
   if (o.artefactKind === 'SCREENSHOT' || o.artefactKind === 'REPOST') return 'DERIVATIVE_ARTEFACT_REFUSED';
   if (o.deliveredByProviderId === null || o.deliveredByProviderId.trim() === '') return 'UNKNOWN_PROVENANCE';
   if (o.rights.RETENTION !== 'CLEAR_FOR_EXACT_USE') return 'RIGHTS_NOT_CLEARED';
+  // The read model renders the publisher id, so naming the source is itself a use (EA/E1 note on e9b77ce).
+  if (o.rights.LINK_AND_SOURCE_NAME !== 'CLEAR_FOR_EXACT_USE') return 'RIGHTS_NOT_CLEARED';
   return null;
+}
+
+/**
+ * EA P-5 — a "completed" access must be EVIDENCED by the per-source record, never just asserted:
+ *   no source actually checked (empty, or only not-configured / not-attempted) ⇒ SEARCH_NOT_RUN
+ *   any source failed or rate-limited                                         ⇒ PARTIAL
+ * Non-completed access states pass through unchanged.
+ */
+export function effectiveAccess(ev: PoliticsEsEvaluationInput): PoliticsEsAccessState {
+  if (!accessCompleted(ev.access)) return ev.access;
+  const reasons = ev.perSource.map((p) => p.reason);
+  if (!reasons.some((r) => r === 'checked' || r === 'rights-withheld')) return 'SEARCH_NOT_RUN';
+  if (reasons.some((r) => r === 'failed' || r === 'rate-limited')) return 'PARTIAL';
+  return ev.access;
 }
 
 /* ── 3. reporting chain (host is never an input to the decision) ──────────── */
@@ -89,6 +105,40 @@ export function reportingChainOf(o: PoliticsEsObservationInput): { chainId: stri
   if (c.similarityClusterId) return { chainId: `cluster:${c.similarityClusterId}`, basis: 'TEXT_SIMILARITY_CLUSTER' };
   if (c.originSelf) return { chainId: `origin:${o.publisherId}`, basis: 'ORIGIN_SELF' };
   return { chainId: null, basis: 'NOT_ESTABLISHED' };
+}
+
+/* ── 3b. corroboration (independent evidence, not repetition) ─────────────── */
+
+/**
+ * CORROBORATED only when ALL hold:
+ *   - every live item has an established chain (an unknown chain might be the same wire);
+ *   - at least two INDEPENDENT units agree, where a unit is
+ *       · one reporting chain of first-hand reporting (JOURNALIST or ANONYMOUS_SOURCES, not an interested party), or
+ *       · at most ONE unit in total for non-interested official statements (the speaker is one source,
+ *         however many outlets relay it);
+ *     interested-party statements and relayed analyst/social/party claims count ZERO (EA P-3, EA R-06);
+ *   - no two live claims carry DIFFERENT values in the same quantity unit (EA P-4): conflicting
+ *     figures are two attributed statements, never a corroborated development.
+ */
+export function corroborationHolds(live: readonly PoliticsEsObservationInput[]): boolean {
+  if (live.some((o) => reportingChainOf(o).chainId === null)) return false;
+  const units = new Set<string>();
+  for (const o of live) {
+    if (o.claim.interestedParty) continue;
+    const role = o.claim.speakerRole;
+    if (role === 'JOURNALIST' || role === 'ANONYMOUS_SOURCES') units.add(`chain:${reportingChainOf(o).chainId}`);
+    else if (role === 'OFFICIAL_BODY') units.add('official-statement');
+  }
+  if (units.size < 2) return false;
+  const valuesByUnit = new Map<string, Set<number>>();
+  for (const o of live) {
+    const q = o.claim.quantity;
+    if (!q) continue;
+    const set = valuesByUnit.get(q.unit) ?? new Set<number>();
+    set.add(q.value);
+    valuesByUnit.set(q.unit, set);
+  }
+  return ![...valuesByUnit.values()].some((s) => s.size > 1);
 }
 
 /* ── 5. development grouping ─────────────────────────────────────────────── */
@@ -112,9 +162,13 @@ export function sameDevelopment(a: PoliticsEsObservationInput, b: PoliticsEsObse
   const ta = a.claim.eventTime;
   const tb = b.claim.eventTime;
   if (ta.basis === 'NOT_ESTABLISHED' || tb.basis === 'NOT_ESTABLISHED' || !ta.from || !tb.from) return false;
-  const aTo = ta.to ?? ta.from;
-  const bTo = tb.to ?? tb.from;
-  if (ta.from > bTo || tb.from > aTo) return false;
+  // EA P-2: compare instants, never strings (mixed UTC offsets order wrongly as text).
+  const aFrom = instant(ta.from);
+  const bFrom = instant(tb.from);
+  const aTo = instant(ta.to ?? ta.from);
+  const bTo = instant(tb.to ?? tb.from);
+  if (aFrom === null || bFrom === null || aTo === null || bTo === null) return false;
+  if (aFrom > bTo || bFrom > aTo) return false;
   return a.claim.incidentKey !== null && a.claim.incidentKey === b.claim.incidentKey;
 }
 
@@ -301,24 +355,41 @@ export function forbiddenKeyPaths(value: unknown, path = '$'): string[] {
 
 /* ── the engine ──────────────────────────────────────────────────────────── */
 
-const minIso = (xs: readonly (string | null)[]): string | null => {
-  const v = xs.filter((x): x is string => typeof x === 'string').sort();
-  return v.length ? v[0] : null;
+/** A timestamp or date as an instant (ms). Unparseable ⇒ null (treated as not established). */
+export function instant(s: string): number | null {
+  const t = Date.parse(s);
+  return Number.isFinite(t) ? t : null;
+}
+
+/**
+ * The earliest of several timestamps, compared as INSTANTS (EA P-2). Returns the original string of
+ * the earliest value so the producer's stated offset is preserved; unparseable values are ignored.
+ */
+export const minIso = (xs: readonly (string | null)[]): string | null => {
+  let best: { s: string; t: number } | null = null;
+  for (const s of xs) {
+    if (typeof s !== 'string') continue;
+    const t = instant(s);
+    if (t === null) continue;
+    if (best === null || t < best.t) best = { s, t };
+  }
+  return best ? best.s : null;
 };
 
 export function runPoliticsEarlySignal(input: PoliticsEsEngineInput): PoliticsEsReadModelV1 {
   const ev = input.evaluation;
-  const completed = accessCompleted(ev.access);
+  const access = effectiveAccess(ev);
+  const completed = accessCompleted(access);
   const lastEvaluatedAt = completed ? ev.attemptedAt : ev.previousCompletedAt;
   const base = {
     contractVersion: POLITICS_ES_CONTRACT_VERSION,
     producedBy: 'POLITICS_OFFLINE_ENGINE' as const,
-    evaluation: { lastEvaluatedAt, lastAttempt: { at: ev.attemptedAt, access: ev.access }, perSource: ev.perSource },
+    evaluation: { lastEvaluatedAt, lastAttempt: { at: ev.attemptedAt, access }, perSource: ev.perSource },
   };
 
-  // 1. Access: an evaluation that did not complete yields no developments and names why.
+  // 1. Access: an evaluation that did not (evidently) complete yields no developments and names why.
   if (!completed) {
-    return { ...base, dataOrigin: 'NONE', withheld: { count: 0, reasons: {} }, absence: { state: ev.access, wordingCode: absenceWordingCode(ev.access) }, developments: [] };
+    return { ...base, dataOrigin: 'NONE', withheld: { count: 0, reasons: {} }, absence: { state: access, wordingCode: absenceWordingCode(access) }, developments: [] };
   }
 
   // 2. Admission.
@@ -385,7 +456,10 @@ export function runPoliticsEarlySignal(input: PoliticsEsEngineInput): PoliticsEs
     const live = members.filter((o) => statusOf(o) === 'CURRENT' && o.mutation.kind !== 'RETRACTED');
     const chains = [...new Set(live.map((o) => reportingChainOf(o).chainId).filter((c): c is string => c !== null))].sort();
     const unestablished = live.filter((o) => reportingChainOf(o).chainId === null).length;
-    const corroborated = chains.length >= 2 && unestablished === 0;
+    const memberClaimKeys = new Set(members.map((o) => o.claim.claimKey));
+    const devDisputes = disputes.filter((d) => memberClaimKeys.has(d.claimKeyA) && memberClaimKeys.has(d.claimKeyB));
+    // A human-recorded dispute inside the development also blocks corroboration.
+    const corroborated = devDisputes.length === 0 && corroborationHolds(live);
     const retracted = live.length === 0;
     const corrected = members.some((o) => o.mutation.kind === 'CORRECTED');
     const country = countryOf(members);
@@ -399,7 +473,6 @@ export function runPoliticsEarlySignal(input: PoliticsEsEngineInput): PoliticsEs
         : chains.some((c) => !baselineChains.includes(c))
           ? 'NEW_EVIDENCE'
           : 'NO_MATERIAL_CHANGE';
-    const claimKeys = new Set(members.map((o) => o.claim.claimKey));
     const eventTimes = live.length ? live : members;
     const timed = eventTimes.filter((o) => o.claim.eventTime.basis === 'AS_REPORTED' && o.claim.eventTime.from);
     return {
@@ -414,13 +487,12 @@ export function runPoliticsEarlySignal(input: PoliticsEsEngineInput): PoliticsEs
       change,
       corrected,
       retracted,
-      disputed: disputes
-        .filter((d) => claimKeys.has(d.claimKeyA) && claimKeys.has(d.claimKeyB))
-        .map((d) => ({ claimKeys: [d.claimKeyA, d.claimKeyB] as [string, string], derivedBy: 'HUMAN_REVIEW' as const, reviewedAt: d.reviewedAt })),
+      disputed: devDisputes.map((d) => ({ claimKeys: [d.claimKeyA, d.claimKeyB] as [string, string], derivedBy: 'HUMAN_REVIEW' as const, reviewedAt: d.reviewedAt })),
       requiresHumanReview: members.some((o) => PREDICATE_RULES[o.claim.predicate]?.highImpact === true),
       claims,
       timeline: {
-        earliestPublishedAt: minIso(members.map((o) => o.clocks.publishedAt)),
+        // EA P-1: only a PUBLISHER-asserted time is a publication time; observed/UNPROVEN times are not.
+        earliestPublishedAt: minIso(members.filter((o) => o.clocks.publishedAtBasis === 'publisher').map((o) => o.clocks.publishedAt)),
         earliestFirstSeenAt: minIso(members.map((o) => o.clocks.firstSeenAt)),
         eventTime: timed.length
           ? { from: minIso(timed.map((o) => o.claim.eventTime.from)), to: minIso(timed.map((o) => o.claim.eventTime.to ?? o.claim.eventTime.from)), basis: 'AS_REPORTED' }
