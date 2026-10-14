@@ -8,7 +8,12 @@
     "at": "2026-01-10T12:00:00Z",
     "access": "COMPLETED_MATCH"
    },
-   "perSource": []
+   "perSource": [
+    {
+     "publisherId": "syn:all",
+     "reason": "checked"
+    }
+   ]
   },
   "dataOrigin": "SYNTHETIC_FIXTURE",
   "withheld": {
@@ -128,7 +133,12 @@
     "at": "2026-01-10T12:00:00Z",
     "access": "COMPLETED_NO_MATCH"
    },
-   "perSource": []
+   "perSource": [
+    {
+     "publisherId": "syn:all",
+     "reason": "checked"
+    }
+   ]
   },
   "dataOrigin": "NONE",
   "withheld": {
@@ -150,7 +160,12 @@
     "at": "2026-01-10T12:00:00Z",
     "access": "COMPLETED_MATCH"
    },
-   "perSource": []
+   "perSource": [
+    {
+     "publisherId": "syn:all",
+     "reason": "checked"
+    }
+   ]
   },
   "dataOrigin": "NONE",
   "withheld": {
@@ -174,7 +189,12 @@
     "at": "2026-01-10T12:00:00Z",
     "access": "SEARCH_NOT_RUN"
    },
-   "perSource": []
+   "perSource": [
+    {
+     "publisherId": "syn:all",
+     "reason": "checked"
+    }
+   ]
   },
   "dataOrigin": "NONE",
   "withheld": {
@@ -196,7 +216,12 @@
     "at": "2026-01-10T12:00:00Z",
     "access": "COMPLETED_MATCH"
    },
-   "perSource": []
+   "perSource": [
+    {
+     "publisherId": "syn:all",
+     "reason": "checked"
+    }
+   ]
   },
   "dataOrigin": "SYNTHETIC_FIXTURE",
   "withheld": {
@@ -302,7 +327,12 @@
     "at": "2026-01-10T12:00:00Z",
     "access": "PROVIDER_FAILED"
    },
-   "perSource": []
+   "perSource": [
+    {
+     "publisherId": "syn:all",
+     "reason": "checked"
+    }
+   ]
   },
   "dataOrigin": "NONE",
   "withheld": {
@@ -324,7 +354,12 @@
     "at": "2026-01-10T12:00:00Z",
     "access": "COMPLETED_MATCH"
    },
-   "perSource": []
+   "perSource": [
+    {
+     "publisherId": "syn:all",
+     "reason": "checked"
+    }
+   ]
   },
   "dataOrigin": "SYNTHETIC_FIXTURE",
   "withheld": {
@@ -342,7 +377,7 @@
      "precision": "COUNTRY",
      "basis": "OBSERVED_PRIMARY"
     },
-    "statementStatus": "CORROBORATED",
+    "statementStatus": "ATTRIBUTED",
     "sourceChainCount": 2,
     "sourceChains": [
      "origin:syn:pub-dp-a",
@@ -437,7 +472,12 @@
     "at": "2026-01-10T12:00:00Z",
     "access": "COMPLETED_MATCH"
    },
-   "perSource": []
+   "perSource": [
+    {
+     "publisherId": "syn:all",
+     "reason": "checked"
+    }
+   ]
   },
   "dataOrigin": "SYNTHETIC_FIXTURE",
   "withheld": {

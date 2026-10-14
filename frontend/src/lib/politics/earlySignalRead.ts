@@ -2,7 +2,7 @@ import { POLITICS_ES_CONTRACT_VERSION, type PoliticsEsReadModelV1 } from '@globa
 
 /**
  * MASTER CTO R66 · #90 — the frontend side of the Politics read adapter (`politics-early-signal-adapter/v1`,
- * backend `politics-early-signal.read-adapter.ts` at Politics e9b77ce). The adapter's PUBLIC result is
+ * backend `politics-early-signal.read-adapter.ts` at Politics d071d96, unchanged since e9b77ce). The adapter's PUBLIC result is
  * mirrored here exactly; there is no HTTP route, so nothing is fetched.
  *
  * THE PUBLIC STATE IS A CODE LITERAL: `DISABLED / RELEASE_GATES_NOT_MET`, the same literal the backend

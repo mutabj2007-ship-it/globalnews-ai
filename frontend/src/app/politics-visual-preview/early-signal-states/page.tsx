@@ -14,7 +14,7 @@ import { EarlySignalModelView } from '@/components/politics/EarlySignalPanel';
  * "Demo fixtures strictly test/dev": under any production build (Alpha, Production) this route is
  * notFound() before anything is read, and the fixture file is NOT imported, so no synthetic data is in
  * any production bundle. Under `next dev` it reads the eight synthetic read models produced by the
- * Politics offline engine at e9b77ce (STATE_FIXTURES) and renders each one stamped as synthetic.
+ * Politics offline engine at d071d96 (STATE_FIXTURES) and renders each one stamped as synthetic.
  */
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 export const dynamic = 'force-dynamic';
@@ -22,7 +22,7 @@ export const dynamic = 'force-dynamic';
 export default async function EarlySignalStatesPreview(): Promise<JSX.Element> {
   if (process.env.NODE_ENV !== 'development') notFound();
   const locale = requestedDisplayLocale() as PolLocale;
-  const raw = await readFile(join(process.cwd(), 'src/lib/politics/__fixtures__/es-states.v1.e9b77ce.json'), 'utf8');
+  const raw = await readFile(join(process.cwd(), 'src/lib/politics/__fixtures__/es-states.v1.d071d96.json'), 'utf8');
   const states = JSON.parse(raw) as Record<string, PoliticsEsReadModelV1>;
   return (
     <main data-es="states-preview" className="mx-auto flex min-h-screen max-w-[720px] flex-col gap-[24px] bg-sp-bg p-[16px] text-sp-ink">

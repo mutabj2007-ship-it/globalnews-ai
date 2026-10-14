@@ -5,11 +5,11 @@ import { EarlySignalModelView, EarlySignalPanel, EarlySignalStatusLine } from '.
 import { PoliticsScreen } from './PoliticsScreen';
 import { PoliticsCompactScreen } from './PoliticsCompactScreen';
 import { POLITICS_EARLY_SIGNAL_PUBLIC_READ, publicReadOf } from '@/lib/politics/earlySignalRead';
-import STATES from '@/lib/politics/__fixtures__/es-states.v1.e9b77ce.json';
+import STATES from '@/lib/politics/__fixtures__/es-states.v1.d071d96.json';
 
 /*
   MASTER CTO R66 · #90 — the Politics early-signal frontend against contract politics-early-signal/v1.
-  The eight models are the Politics OFFLINE ENGINE's own output at e9b77ce over its STATE_FIXTURES
+  The eight models are the Politics OFFLINE ENGINE's own output at d071d96 over its STATE_FIXTURES
   (synthetic, test/dev only), not hand-written UI data. Rules: Politics' 10-FE-CONTRACT-FOR-MAIN.md.
 */
 const models = STATES as unknown as Record<string, PoliticsEsReadModelV1>;
@@ -148,7 +148,7 @@ describe('R66 · fixtures are test/dev only', () => {
       for (const name of readdirSync(dir)) {
         const p = join(dir, name);
         if (statSync(p).isDirectory()) walk(p);
-        else if (/\.(ts|tsx)$/.test(name) && !/\.spec\.tsx?$/.test(name) && readFileSync(p, 'utf8').includes('es-states.v1.e9b77ce.json')) offenders.push(p);
+        else if (/\.(ts|tsx)$/.test(name) && !/\.spec\.tsx?$/.test(name) && readFileSync(p, 'utf8').includes('es-states.v1.d071d96.json')) offenders.push(p);
       }
     };
     walk(root);
