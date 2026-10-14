@@ -1,0 +1,560 @@
+{
+ "EVIDENCE": {
+  "contractVersion": "politics-early-signal/v1",
+  "producedBy": "POLITICS_OFFLINE_ENGINE",
+  "evaluation": {
+   "lastEvaluatedAt": "2026-01-10T12:00:00Z",
+   "lastAttempt": {
+    "at": "2026-01-10T12:00:00Z",
+    "access": "COMPLETED_MATCH"
+   },
+   "perSource": []
+  },
+  "dataOrigin": "SYNTHETIC_FIXTURE",
+  "withheld": {
+   "count": 0,
+   "reasons": {}
+  },
+  "absence": null,
+  "developments": [
+   {
+    "developmentKey": "syn-incident-1",
+    "region": "EAST_AFRICA",
+    "regionalReview": "EA_VALIDATOR_REVIEW_PENDING",
+    "country": {
+     "iso3": "KEN",
+     "precision": "COUNTRY",
+     "basis": "OBSERVED_PRIMARY"
+    },
+    "statementStatus": "CORROBORATED",
+    "sourceChainCount": 2,
+    "sourceChains": [
+     "origin:syn:pub-ev-a",
+     "origin:syn:pub-ev-b"
+    ],
+    "unestablishedChainItems": 0,
+    "change": null,
+    "corrected": false,
+    "retracted": false,
+    "disputed": [],
+    "requiresHumanReview": false,
+    "claims": [
+     {
+      "claimKey": "claim-ev-a",
+      "predicate": "FACILITY_CLOSED",
+      "quantity": null,
+      "attribution": {
+       "publisherId": "syn:pub-ev-a",
+       "speakerRole": "JOURNALIST",
+       "interestedParty": false
+      },
+      "chainId": "origin:syn:pub-ev-a",
+      "status": "CURRENT",
+      "supersededBy": null
+     },
+     {
+      "claimKey": "claim-ev-b",
+      "predicate": "FACILITY_CLOSED",
+      "quantity": null,
+      "attribution": {
+       "publisherId": "syn:pub-ev-b",
+       "speakerRole": "JOURNALIST",
+       "interestedParty": false
+      },
+      "chainId": "origin:syn:pub-ev-b",
+      "status": "CURRENT",
+      "supersededBy": null
+     }
+    ],
+    "timeline": {
+     "earliestPublishedAt": "2026-01-10T08:00:00Z",
+     "earliestFirstSeenAt": "2026-01-10T09:00:00Z",
+     "eventTime": {
+      "from": "2026-01-10",
+      "to": "2026-01-10",
+      "basis": "AS_REPORTED"
+     }
+    },
+    "impact": {
+     "evidenceClass": "OBSERVED_EFFECT",
+     "hypotheses": [
+      {
+       "domain": "TRANSPORT",
+       "mechanismCode": "FACILITY_UNAVAILABLE",
+       "rationaleCode": "FACILITY_CLOSED:CORROBORATED_EFFECT",
+       "horizon": "OBSERVED_NOW",
+       "competingHypothesisCodes": [
+        "PARTIAL_OR_BRIEF_CLOSURE"
+       ],
+       "disconfirmerCodes": [
+        "REOPENING_NOTICE"
+       ],
+       "nextCheck": {
+        "conditionCode": "OPERATOR_OR_AUTHORITY_REOPENING_NOTICE",
+        "notBefore": "2026-01-11T00:00:00.000Z",
+        "basis": "RULE_INTERVAL_FROM_LAST_EVALUATION",
+        "scheduled": false
+       }
+      },
+      {
+       "domain": "HUMANITARIAN_ACCESS",
+       "mechanismCode": "RELIEF_ROUTE_INTERRUPTED",
+       "rationaleCode": "FACILITY_CLOSED:CORROBORATED_EFFECT",
+       "horizon": "OBSERVED_NOW",
+       "competingHypothesisCodes": [
+        "ALTERNATIVE_ROUTE_IN_USE"
+       ],
+       "disconfirmerCodes": [
+        "LOGISTICS_CLUSTER_REPORTS_NORMAL_FLOW"
+       ],
+       "nextCheck": {
+        "conditionCode": "LOGISTICS_OR_HUMANITARIAN_NOTICE",
+        "notBefore": "2026-01-11T00:00:00.000Z",
+        "basis": "RULE_INTERVAL_FROM_LAST_EVALUATION",
+        "scheduled": false
+       }
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "ABSENCE_NO_MATCH": {
+  "contractVersion": "politics-early-signal/v1",
+  "producedBy": "POLITICS_OFFLINE_ENGINE",
+  "evaluation": {
+   "lastEvaluatedAt": "2026-01-10T12:00:00Z",
+   "lastAttempt": {
+    "at": "2026-01-10T12:00:00Z",
+    "access": "COMPLETED_NO_MATCH"
+   },
+   "perSource": []
+  },
+  "dataOrigin": "NONE",
+  "withheld": {
+   "count": 0,
+   "reasons": {}
+  },
+  "absence": {
+   "state": "COMPLETED_NO_MATCH",
+   "wordingCode": "SEARCH_COMPLETED_NO_MATCHING_REPORTS"
+  },
+  "developments": []
+ },
+ "RIGHTS_WITHHELD": {
+  "contractVersion": "politics-early-signal/v1",
+  "producedBy": "POLITICS_OFFLINE_ENGINE",
+  "evaluation": {
+   "lastEvaluatedAt": "2026-01-10T12:00:00Z",
+   "lastAttempt": {
+    "at": "2026-01-10T12:00:00Z",
+    "access": "COMPLETED_MATCH"
+   },
+   "perSource": []
+  },
+  "dataOrigin": "NONE",
+  "withheld": {
+   "count": 2,
+   "reasons": {
+    "RIGHTS_NOT_CLEARED": 2
+   }
+  },
+  "absence": {
+   "state": "RIGHTS_WITHHELD",
+   "wordingCode": "SOURCE_WORDING_NOT_AVAILABLE_TO_US"
+  },
+  "developments": []
+ },
+ "NOT_CHECKED": {
+  "contractVersion": "politics-early-signal/v1",
+  "producedBy": "POLITICS_OFFLINE_ENGINE",
+  "evaluation": {
+   "lastEvaluatedAt": null,
+   "lastAttempt": {
+    "at": "2026-01-10T12:00:00Z",
+    "access": "SEARCH_NOT_RUN"
+   },
+   "perSource": []
+  },
+  "dataOrigin": "NONE",
+  "withheld": {
+   "count": 0,
+   "reasons": {}
+  },
+  "absence": {
+   "state": "SEARCH_NOT_RUN",
+   "wordingCode": "NO_SEARCH_HAS_RUN"
+  },
+  "developments": []
+ },
+ "NO_CHANGE": {
+  "contractVersion": "politics-early-signal/v1",
+  "producedBy": "POLITICS_OFFLINE_ENGINE",
+  "evaluation": {
+   "lastEvaluatedAt": "2026-01-10T12:00:00Z",
+   "lastAttempt": {
+    "at": "2026-01-10T12:00:00Z",
+    "access": "COMPLETED_MATCH"
+   },
+   "perSource": []
+  },
+  "dataOrigin": "SYNTHETIC_FIXTURE",
+  "withheld": {
+   "count": 0,
+   "reasons": {}
+  },
+  "absence": null,
+  "developments": [
+   {
+    "developmentKey": "syn-incident-1",
+    "region": "EAST_AFRICA",
+    "regionalReview": "EA_VALIDATOR_REVIEW_PENDING",
+    "country": {
+     "iso3": "KEN",
+     "precision": "COUNTRY",
+     "basis": "OBSERVED_PRIMARY"
+    },
+    "statementStatus": "ATTRIBUTED",
+    "sourceChainCount": 1,
+    "sourceChains": [
+     "origin:syn:pub-nc-a"
+    ],
+    "unestablishedChainItems": 0,
+    "change": "NO_MATERIAL_CHANGE",
+    "corrected": false,
+    "retracted": false,
+    "disputed": [],
+    "requiresHumanReview": false,
+    "claims": [
+     {
+      "claimKey": "claim-nc-a",
+      "predicate": "FACILITY_CLOSED",
+      "quantity": null,
+      "attribution": {
+       "publisherId": "syn:pub-nc-a",
+       "speakerRole": "JOURNALIST",
+       "interestedParty": false
+      },
+      "chainId": "origin:syn:pub-nc-a",
+      "status": "CURRENT",
+      "supersededBy": null
+     }
+    ],
+    "timeline": {
+     "earliestPublishedAt": "2026-01-10T08:00:00Z",
+     "earliestFirstSeenAt": "2026-01-10T09:00:00Z",
+     "eventTime": {
+      "from": "2026-01-10",
+      "to": "2026-01-10",
+      "basis": "AS_REPORTED"
+     }
+    },
+    "impact": {
+     "evidenceClass": "SUGGESTS_RISK_ONLY",
+     "hypotheses": [
+      {
+       "domain": "TRANSPORT",
+       "mechanismCode": "FACILITY_UNAVAILABLE",
+       "rationaleCode": "FACILITY_CLOSED:ATTRIBUTED_REPORT_ONLY",
+       "horizon": "UNSPECIFIED",
+       "competingHypothesisCodes": [
+        "PARTIAL_OR_BRIEF_CLOSURE"
+       ],
+       "disconfirmerCodes": [
+        "REOPENING_NOTICE"
+       ],
+       "nextCheck": {
+        "conditionCode": "OPERATOR_OR_AUTHORITY_REOPENING_NOTICE",
+        "notBefore": "2026-01-11T00:00:00.000Z",
+        "basis": "RULE_INTERVAL_FROM_LAST_EVALUATION",
+        "scheduled": false
+       }
+      },
+      {
+       "domain": "HUMANITARIAN_ACCESS",
+       "mechanismCode": "RELIEF_ROUTE_INTERRUPTED",
+       "rationaleCode": "FACILITY_CLOSED:ATTRIBUTED_REPORT_ONLY",
+       "horizon": "UNSPECIFIED",
+       "competingHypothesisCodes": [
+        "ALTERNATIVE_ROUTE_IN_USE"
+       ],
+       "disconfirmerCodes": [
+        "LOGISTICS_CLUSTER_REPORTS_NORMAL_FLOW"
+       ],
+       "nextCheck": {
+        "conditionCode": "LOGISTICS_OR_HUMANITARIAN_NOTICE",
+        "notBefore": "2026-01-11T00:00:00.000Z",
+        "basis": "RULE_INTERVAL_FROM_LAST_EVALUATION",
+        "scheduled": false
+       }
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "PROVIDER_FAILURE": {
+  "contractVersion": "politics-early-signal/v1",
+  "producedBy": "POLITICS_OFFLINE_ENGINE",
+  "evaluation": {
+   "lastEvaluatedAt": "2026-01-09T12:00:00Z",
+   "lastAttempt": {
+    "at": "2026-01-10T12:00:00Z",
+    "access": "PROVIDER_FAILED"
+   },
+   "perSource": []
+  },
+  "dataOrigin": "NONE",
+  "withheld": {
+   "count": 0,
+   "reasons": {}
+  },
+  "absence": {
+   "state": "PROVIDER_FAILED",
+   "wordingCode": "SEARCH_COULD_NOT_BE_COMPLETED"
+  },
+  "developments": []
+ },
+ "DISPUTED": {
+  "contractVersion": "politics-early-signal/v1",
+  "producedBy": "POLITICS_OFFLINE_ENGINE",
+  "evaluation": {
+   "lastEvaluatedAt": "2026-01-10T12:00:00Z",
+   "lastAttempt": {
+    "at": "2026-01-10T12:00:00Z",
+    "access": "COMPLETED_MATCH"
+   },
+   "perSource": []
+  },
+  "dataOrigin": "SYNTHETIC_FIXTURE",
+  "withheld": {
+   "count": 0,
+   "reasons": {}
+  },
+  "absence": null,
+  "developments": [
+   {
+    "developmentKey": "syn-incident-1",
+    "region": "EAST_AFRICA",
+    "regionalReview": "EA_VALIDATOR_REVIEW_PENDING",
+    "country": {
+     "iso3": "KEN",
+     "precision": "COUNTRY",
+     "basis": "OBSERVED_PRIMARY"
+    },
+    "statementStatus": "CORROBORATED",
+    "sourceChainCount": 2,
+    "sourceChains": [
+     "origin:syn:pub-dp-a",
+     "origin:syn:pub-dp-b"
+    ],
+    "unestablishedChainItems": 0,
+    "change": null,
+    "corrected": false,
+    "retracted": false,
+    "disputed": [
+     {
+      "claimKeys": [
+       "deputies-3",
+       "deputies-4"
+      ],
+      "derivedBy": "HUMAN_REVIEW",
+      "reviewedAt": "2026-01-10T11:00:00Z"
+     }
+    ],
+    "requiresHumanReview": false,
+    "claims": [
+     {
+      "claimKey": "deputies-3",
+      "predicate": "COALITION_ANNOUNCED",
+      "quantity": null,
+      "attribution": {
+       "publisherId": "syn:pub-dp-a",
+       "speakerRole": "JOURNALIST",
+       "interestedParty": false
+      },
+      "chainId": "origin:syn:pub-dp-a",
+      "status": "CURRENT",
+      "supersededBy": null
+     },
+     {
+      "claimKey": "deputies-4",
+      "predicate": "COALITION_ANNOUNCED",
+      "quantity": null,
+      "attribution": {
+       "publisherId": "syn:pub-dp-b",
+       "speakerRole": "JOURNALIST",
+       "interestedParty": false
+      },
+      "chainId": "origin:syn:pub-dp-b",
+      "status": "CURRENT",
+      "supersededBy": null
+     }
+    ],
+    "timeline": {
+     "earliestPublishedAt": "2026-01-10T08:00:00Z",
+     "earliestFirstSeenAt": "2026-01-10T09:00:00Z",
+     "eventTime": {
+      "from": "2026-01-10",
+      "to": "2026-01-10",
+      "basis": "AS_REPORTED"
+     }
+    },
+    "impact": {
+     "evidenceClass": "SUGGESTS_RISK_ONLY",
+     "hypotheses": [
+      {
+       "domain": "PEOPLE",
+       "mechanismCode": "POLITICAL_PROCESS_DISRUPTION",
+       "rationaleCode": "COALITION_ANNOUNCED:ATTRIBUTED_REPORT_ONLY",
+       "horizon": "UNSPECIFIED",
+       "competingHypothesisCodes": [
+        "TALKS_CONTINUE_UNCHANGED",
+        "ANNOUNCEMENT_WITHOUT_OPERATIONAL_CHANGE"
+       ],
+       "disconfirmerCodes": [
+        "MEDIATOR_CONFIRMS_PROCESS_CONTINUES",
+        "RETRACTION_OR_DENIAL_BY_NAMED_PARTIES"
+       ],
+       "nextCheck": {
+        "conditionCode": "MEDIATOR_OR_GOVERNMENT_STATEMENT_ON_TALKS",
+        "notBefore": "2026-01-12T12:00:00.000Z",
+        "basis": "RULE_INTERVAL_FROM_LAST_EVALUATION",
+        "scheduled": false
+       }
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "CORRECTED": {
+  "contractVersion": "politics-early-signal/v1",
+  "producedBy": "POLITICS_OFFLINE_ENGINE",
+  "evaluation": {
+   "lastEvaluatedAt": "2026-01-10T12:00:00Z",
+   "lastAttempt": {
+    "at": "2026-01-10T12:00:00Z",
+    "access": "COMPLETED_MATCH"
+   },
+   "perSource": []
+  },
+  "dataOrigin": "SYNTHETIC_FIXTURE",
+  "withheld": {
+   "count": 0,
+   "reasons": {}
+  },
+  "absence": null,
+  "developments": [
+   {
+    "developmentKey": "syn-incident-1",
+    "region": "EAST_AFRICA",
+    "regionalReview": "EA_VALIDATOR_REVIEW_PENDING",
+    "country": {
+     "iso3": "KEN",
+     "precision": "COUNTRY",
+     "basis": "OBSERVED_PRIMARY"
+    },
+    "statementStatus": "ATTRIBUTED",
+    "sourceChainCount": 1,
+    "sourceChains": [
+     "origin:syn:pub-co-a"
+    ],
+    "unestablishedChainItems": 0,
+    "change": null,
+    "corrected": true,
+    "retracted": false,
+    "disputed": [],
+    "requiresHumanReview": true,
+    "claims": [
+     {
+      "claimKey": "claim-co-a",
+      "predicate": "CASUALTIES_REPORTED",
+      "quantity": {
+       "value": 12,
+       "unit": "KILLED",
+       "qualifier": "ABOUT"
+      },
+      "attribution": {
+       "publisherId": "syn:pub-co-a",
+       "speakerRole": "JOURNALIST",
+       "interestedParty": false
+      },
+      "chainId": "origin:syn:pub-co-a",
+      "status": "CORRECTED",
+      "supersededBy": "co-b"
+     },
+     {
+      "claimKey": "claim-co-b",
+      "predicate": "CASUALTIES_REPORTED",
+      "quantity": {
+       "value": 9,
+       "unit": "KILLED",
+       "qualifier": "EXACT"
+      },
+      "attribution": {
+       "publisherId": "syn:pub-co-a",
+       "speakerRole": "JOURNALIST",
+       "interestedParty": false
+      },
+      "chainId": "origin:syn:pub-co-a",
+      "status": "CURRENT",
+      "supersededBy": null
+     }
+    ],
+    "timeline": {
+     "earliestPublishedAt": "2026-01-10T08:00:00Z",
+     "earliestFirstSeenAt": "2026-01-10T09:00:00Z",
+     "eventTime": {
+      "from": "2026-01-10",
+      "to": "2026-01-10",
+      "basis": "AS_REPORTED"
+     }
+    },
+    "impact": {
+     "evidenceClass": "SUGGESTS_RISK_ONLY",
+     "hypotheses": [
+      {
+       "domain": "PEOPLE",
+       "mechanismCode": "VIOLENCE_EXPOSURE_OF_RESIDENTS",
+       "rationaleCode": "CASUALTIES_REPORTED:ATTRIBUTED_REPORT_ONLY",
+       "horizon": "UNSPECIFIED",
+       "competingHypothesisCodes": [
+        "ISOLATED_INCIDENT",
+        "DIFFERENT_INCIDENT_OR_DATE"
+       ],
+       "disconfirmerCodes": [
+        "OFFICIAL_OR_LOCAL_DENIAL_WITH_EVIDENCE",
+        "INCIDENT_PLACE_DIFFERENT"
+       ],
+       "nextCheck": {
+        "conditionCode": "LOCAL_OR_OFFICIAL_REPORT_NAMING_THE_PLACE",
+        "notBefore": "2026-01-11T12:00:00.000Z",
+        "basis": "RULE_INTERVAL_FROM_LAST_EVALUATION",
+        "scheduled": false
+       }
+      },
+      {
+       "domain": "HUMANITARIAN_ACCESS",
+       "mechanismCode": "SECURITY_CONSTRAINT_ON_ACCESS",
+       "rationaleCode": "CASUALTIES_REPORTED:ATTRIBUTED_REPORT_ONLY",
+       "horizon": "UNSPECIFIED",
+       "competingHypothesisCodes": [
+        "ACCESS_UNCHANGED"
+       ],
+       "disconfirmerCodes": [
+        "HUMANITARIAN_ACCESS_NOTICE_UNCHANGED"
+       ],
+       "nextCheck": {
+        "conditionCode": "HUMANITARIAN_ACCESS_NOTICE_FOR_THE_AREA",
+        "notBefore": "2026-01-11T12:00:00.000Z",
+        "basis": "RULE_INTERVAL_FROM_LAST_EVALUATION",
+        "scheduled": false
+       }
+      }
+     ]
+    }
+   }
+  ]
+ }
+}

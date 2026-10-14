@@ -12,6 +12,9 @@ import {
 } from '@/lib/politics/politicsSubject';
 import { Absent, Field, POL_MICRO, Panel, Region } from './PolParts';
 import { safeExternalHref } from '@globalnews-ai/shared';
+import { EarlySignalModelView, EarlySignalStatusLine } from './EarlySignalPanel';
+import { POLITICS_EARLY_SIGNAL_PUBLIC_READ, type PoliticsEsPublicRead } from '@/lib/politics/earlySignalRead';
+import { resolveEarlySignalStrings } from '@/lib/politics/earlySignalStrings';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -46,7 +49,7 @@ import { safeExternalHref } from '@globalnews-ai/shared';
  * below is allowed to wrap.
  */
 
-type Sheet = 'PROVENANCE' | 'READINESS';
+type Sheet = 'PROVENANCE' | 'READINESS' | 'EARLY_SIGNALS';
 
 interface View { readonly sheet: Sheet | null; readonly selected: string | null }
 type Action =
@@ -66,13 +69,23 @@ const reducer = (s: View, a: Action): View => {
  * at HALF too, because it is three lines; a FULL sheet for three lines is a sheet that
  * looks broken. Replacement only: the reducer holds ONE sheet, so a second cannot stack.
  */
-const DETENT_VH: Readonly<Record<Sheet, number>> = { PROVENANCE: 55, READINESS: 42 };
+/* R66 — early signals carry several sections: the FULL detent */
+const DETENT_VH: Readonly<Record<Sheet, number>> = { PROVENANCE: 55, READINESS: 42, EARLY_SIGNALS: 88 };
 
 function provenancePublisher(observation: RetainedPoliticsObservation): string | null {
   return observation.provenance.institution ?? observation.provenance.providerId ?? null;
 }
 
-export function PoliticsCompactScreen({ locale, read }: { locale: PolLocale; read: PoliticsReadResponse }): JSX.Element {
+export function PoliticsCompactScreen({
+  locale,
+  read,
+  /* MASTER CTO R66 · #90 — the early-signal public read; DISABLED (code literal) until its release gates */
+  earlySignals = POLITICS_EARLY_SIGNAL_PUBLIC_READ,
+}: {
+  locale: PolLocale;
+  read: PoliticsReadResponse;
+  earlySignals?: PoliticsEsPublicRead;
+}): JSX.Element {
   const [view, dispatch] = useReducer(reducer, {
     sheet: null,
     selected: read.observations[0]?.observationKey ?? null,
@@ -240,6 +253,10 @@ export function PoliticsCompactScreen({ locale, read }: { locale: PolLocale; rea
               {selected ? selected.publishedAt : <Absent label={t.labels.awaitingData} />}
             </Field>
             <Field label={t.labels.ask}><Absent label={t.labels.awaitingData} /></Field>
+            {/* MASTER CTO R66 — early signals: one line here, the full view in the sheet */}
+            <Field label={resolveEarlySignalStrings(locale).strings.title}>
+              <EarlySignalStatusLine locale={locale} read={earlySignals} onOpen={() => dispatch({ k: 'OPEN', v: 'EARLY_SIGNALS' })} />
+            </Field>
           </div>
         </Region>
 
@@ -261,12 +278,12 @@ export function PoliticsCompactScreen({ locale, read }: { locale: PolLocale; rea
       */}
       {view.sheet !== null && (
         <section data-pol="compact-sheet" data-pol-detent={view.sheet} role="region"
-          aria-label={view.sheet === 'PROVENANCE' ? t.labels.showProvenance : t.labels.developerDetail}
+          aria-label={view.sheet === 'PROVENANCE' ? t.labels.showProvenance : view.sheet === 'EARLY_SIGNALS' ? resolveEarlySignalStrings(locale).strings.title : t.labels.developerDetail}
           style={{ height: `${DETENT_VH[view.sheet]}vh` }}
           className="flex shrink-0 flex-col gap-[12px] overflow-auto border-t border-sp-line bg-sp-panel p-[14px]">
           <div className="flex items-center justify-between gap-[10px]">
             <h2 className={`${POL_MICRO} text-sp-ink-2`}>
-              {view.sheet === 'PROVENANCE' ? t.labels.showProvenance : t.labels.developerDetail}
+              {view.sheet === 'PROVENANCE' ? t.labels.showProvenance : view.sheet === 'EARLY_SIGNALS' ? resolveEarlySignalStrings(locale).strings.title : t.labels.developerDetail}
             </h2>
             <button type="button" data-pol="sheet-close" onClick={() => dispatch({ k: 'CLOSE' })}
               className={`${POL_MICRO} min-h-[44px] border border-sp-line px-[14px] text-sp-ink-2`}>
@@ -311,6 +328,10 @@ export function PoliticsCompactScreen({ locale, read }: { locale: PolLocale; rea
                 </div>
               ))}
             </div>
+          )}
+
+          {view.sheet === 'EARLY_SIGNALS' && earlySignals.status === 'OK' && (
+            <EarlySignalModelView locale={locale} model={earlySignals.model} />
           )}
 
           {view.sheet === 'READINESS' && (

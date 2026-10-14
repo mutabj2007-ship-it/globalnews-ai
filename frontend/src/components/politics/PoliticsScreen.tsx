@@ -13,6 +13,9 @@ import {
 import { POLITICS_EVENT_KINDS } from '@/lib/politics/politicsDomain';
 import { Absent, Chip, Field, POL_MICRO, Panel, Region, Well } from './PolParts';
 import { safeExternalHref } from '@globalnews-ai/shared';
+import { EarlySignalModelView, EarlySignalStatusLine } from './EarlySignalPanel';
+import { POLITICS_EARLY_SIGNAL_PUBLIC_READ, type PoliticsEsPublicRead } from '@/lib/politics/earlySignalRead';
+import { resolveEarlySignalStrings } from '@/lib/politics/earlySignalStrings';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -48,7 +51,7 @@ import { safeExternalHref } from '@globalnews-ai/shared';
  * those, and a guard asserts the first of them against the rendered text.
  */
 
-type Drawer = 'PROVENANCE' | 'READINESS';
+type Drawer = 'PROVENANCE' | 'READINESS' | 'EARLY_SIGNALS';
 
 interface View { readonly drawer: Drawer | null; readonly selected: string | null }
 type Action =
@@ -111,7 +114,16 @@ function provenancePublisher(observation: RetainedPoliticsObservation): string |
   return observation.provenance.institution ?? observation.provenance.providerId ?? null;
 }
 
-export function PoliticsScreen({ locale, read }: { locale: PolLocale; read: PoliticsReadResponse }): JSX.Element {
+export function PoliticsScreen({
+  locale,
+  read,
+  /* MASTER CTO R66 · #90 — the early-signal public read; DISABLED (code literal) until its release gates */
+  earlySignals = POLITICS_EARLY_SIGNAL_PUBLIC_READ,
+}: {
+  locale: PolLocale;
+  read: PoliticsReadResponse;
+  earlySignals?: PoliticsEsPublicRead;
+}): JSX.Element {
   const [view, dispatch] = useReducer(reducer, {
     drawer: null,
     selected: read.observations[0]?.observationKey ?? null,
@@ -390,6 +402,10 @@ export function PoliticsScreen({ locale, read }: { locale: PolLocale; read: Poli
                 </Field>
                 <Field label={t.labels.ask}><Absent label={t.labels.awaitingData} /></Field>
                 <Field label={t.labels.deepAnalysis}><Absent label={t.labels.awaitingData} /></Field>
+                {/* MASTER CTO R66 — early signals: one line here, the full view in the drawer */}
+                <Field label={resolveEarlySignalStrings(locale).strings.title}>
+                  <EarlySignalStatusLine locale={locale} read={earlySignals} onOpen={() => dispatch({ k: 'OPEN', v: 'EARLY_SIGNALS' })} />
+                </Field>
               </div>
             </Region>
 
@@ -433,12 +449,22 @@ export function PoliticsScreen({ locale, read }: { locale: PolLocale; read: Poli
           popup-on-popup, no sheet-on-sheet, one sustained panel at a time."*
         */
         <div data-pol="drawer" data-pol-drawer-open={view.drawer} role="region"
-          aria-label={view.drawer === 'PROVENANCE' ? t.labels.showProvenance : t.labels.developerDetail}
+          aria-label={
+            view.drawer === 'PROVENANCE'
+              ? t.labels.showProvenance
+              : view.drawer === 'EARLY_SIGNALS'
+                ? resolveEarlySignalStrings(locale).strings.title
+                : t.labels.developerDetail
+          }
           className="relative flex flex-1 flex-col gap-[16px] overflow-auto p-[20px]"
           style={{ maxWidth: `${PROSE_CH + 18}ch` }}>
           <div className="flex items-center justify-between gap-[12px]">
             <h2 className={`${POL_MICRO} text-sp-ink-2`}>
-              {view.drawer === 'PROVENANCE' ? t.labels.showProvenance : t.labels.developerDetail}
+              {view.drawer === 'PROVENANCE'
+                ? t.labels.showProvenance
+                : view.drawer === 'EARLY_SIGNALS'
+                  ? resolveEarlySignalStrings(locale).strings.title
+                  : t.labels.developerDetail}
             </h2>
             <button type="button" data-pol="drawer-close" onClick={() => dispatch({ k: 'CLOSE' })}
               className={`${POL_MICRO} min-h-[44px] border border-sp-line px-[14px] text-sp-ink-2`}>
@@ -481,6 +507,10 @@ export function PoliticsScreen({ locale, read }: { locale: PolLocale; read: Poli
                 </Field>
               ))}
             </div>
+          )}
+
+          {view.drawer === 'EARLY_SIGNALS' && earlySignals.status === 'OK' && (
+            <EarlySignalModelView locale={locale} model={earlySignals.model} />
           )}
 
           {view.drawer === 'READINESS' && (
