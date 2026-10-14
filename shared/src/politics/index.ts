@@ -1088,3 +1088,6 @@ export const PROTEST_EVENT_PRODUCER_FACTS: Readonly<Record<string, string>> = {
   UCDP_GED: 'ORGANIZED-VIOLENCE EVENTS ONLY — Conflict-domain data, not political mobilisation.',
   P0_SET: 'NO PROTEST EVENT PRODUCER. No source in the P0 study supplies a protest called, held or escalated.',
 };
+
+/** R66 T3 — versioned early-signal read contract (offline engine; not a runtime feature). */
+export * from './early-signal';
