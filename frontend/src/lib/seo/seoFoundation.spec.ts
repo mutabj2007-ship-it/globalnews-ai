@@ -660,7 +660,14 @@ describe('N10/N11/N12 — routing, product contracts and providers are untouched
        Choose a place. The page declares noindex itself and classify() gives it /saved/updates'
        entry by prefix (noindex, absent from the sitemap), so no registry entry is added; no
        dynamic segment, so N5 holds. */
-    expect(pages).toHaveLength(62);
+    /* MASTER CTO R66 · #90 — sixty-three: /politics-visual-preview/early-signal-states, the Politics
+       early-signal STATE PREVIEW. DEVELOPMENT-ONLY: the page calls notFound() under any non-development
+       build before reading anything (asserted in r66.earlySignal.spec.ts), declares robots noindex,
+       has no home card and is absent from the sitemap; no dynamic segment, so N5 holds. A route nobody
+       can reach in Alpha or Production still moves this number, because a human decided it. */
+    expect(pages).toHaveLength(63);
+    expect(pages).toContain('/politics-visual-preview/early-signal-states');
+    expect(sitemapRoutes().map((entry) => entry.path)).not.toContain('/politics-visual-preview/early-signal-states');
     expect(pages).toContain('/saved/updates');
     expect(classify('/saved/updates').indexability).toBe('noindex');
     expect(pages).toContain('/saved/updates/place');
