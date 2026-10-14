@@ -496,3 +496,54 @@ describe('E2E-7 · persisted and live evidence', () => {
     bounded(o);
   });
 });
+
+describe('E2E-8 · GEO-LC-1 (EA R47, CTO R63A): lower-case "congo - kinshasa" is the DRC end to end', () => {
+  /* Before the fix (4627963 and every earlier tree EA measured): the lower-case question was typed COG, its scope
+     was COG and the stored Brazzaville report was the evidence of a CURRENT_REPORTING answer. */
+  it('E2E-8a LC-1 "congo - kinshasa budget talks" → route COD; nothing outside COD; no Brazzaville report admitted', async () => {
+    const o = await ask('8a-lc-kinshasa', 'What are the latest developments in congo - kinshasa budget talks?', 'en');
+    expect(routeCountries(o)).toEqual(['COD']);
+    expect(o.typedCountry).toBe('COD');
+    expect(outside(allScope(o), ['COD'])).toEqual([]);
+    expect(o.evidenceIds).not.toContain('live-cog-brazza');
+    expect(o.evidenceIds).not.toContain('ret-cog-brazza');
+    expect(o.modelEvidenceIds).not.toContain('live-cog-brazza');
+    expect(o.modelEvidenceIds).not.toContain('ret-cog-brazza');
+    bounded(o);
+  });
+  it.each([
+    ['8b-cap', 'What are the latest developments in Congo - Kinshasa budget talks?'],
+    ['8d-nohyphen', 'what are the latest developments in congo kinshasa budget talks?'],
+  ])('E2E-%s "%s" → nothing outside COD; no Brazzaville report admitted', async (id, q) => {
+    const o = await ask(id, q, 'en');
+    expect(routeCountries(o)).toEqual(['COD']);
+    expect(outside(allScope(o), ['COD'])).toEqual([]);
+    expect(o.evidenceIds).not.toContain('live-cog-brazza');
+    expect(o.evidenceIds).not.toContain('ret-cog-brazza');
+    bounded(o);
+  });
+  /* DEFECT GEO-LC-2 (found by this case; pre-existing at 4627963; NOT the Congo qualifier): in an ALL-CAPS
+     question the Analysis text reading takes common words for ISO codes ("ARE" → ARE, "IN" → IND). It then
+     disputes the route's COD (reconcileTypedCountry → none), retrieval falls back to the ordinary search, and
+     the stored Brazzaville report becomes the evidence of a COD question. it.failing until a scoped fix. */
+  it.failing('E2E-8c [GEO-LC-2 OPEN] all-caps "CONGO - KINSHASA" question → nothing outside COD', async () => {
+    const o = await ask('8c-upper', 'WHAT ARE THE LATEST DEVELOPMENTS IN CONGO - KINSHASA BUDGET TALKS?', 'en');
+    expect(routeCountries(o)).toEqual(['COD']);
+    expect(outside(allScope(o), ['COD'])).toEqual([]);
+    expect(o.evidenceIds).not.toContain('ret-cog-brazza');
+  });
+  it('E2E-8e lower-case "congo - brazzaville budget talks" → COG, never COD', async () => {
+    const o = await ask('8e-lc-brazzaville', 'What are the latest developments in congo - brazzaville budget talks?', 'en');
+    expect(routeCountries(o)).toEqual(['COG']);
+    expect(outside(allScope(o), ['COG'])).toEqual([]);
+    expect(o.evidenceIds).not.toContain('live-cod-goma');
+    expect(o.evidenceIds).not.toContain('live-cod-kinshasa');
+    bounded(o);
+  });
+  it('E2E-8f a bare lower-case "congo" still names neither country (fail-closed, unchanged)', async () => {
+    const o = await ask('8f-lc-bare', 'What are the latest developments in congo?', 'en');
+    expect(routeCountries(o).filter((c) => c === 'COD' || c === 'COG')).toEqual([]);
+    expect(allScope(o).filter((c) => c === 'COD' || c === 'COG')).toEqual([]);
+    bounded(o);
+  });
+});

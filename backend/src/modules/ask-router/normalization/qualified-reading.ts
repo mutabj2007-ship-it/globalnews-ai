@@ -603,16 +603,21 @@ export function normalizeAskQuestion(req: NormalizationRequest): NormalizationOu
        "security developments in kenya" named nothing on /ask while the Map dock (the landed
        COUNTRY_CONTEXT_PATTERN) read Kenya. Same pattern here: a governed country NAME after a
        place preposition, never an ISO code ("in it", "in us") and never a lowercase
-       homograph ("in turkey"). */
+       homograph ("in turkey").
+       EA GEO-LC-1 (CTO R63A) — a SPACED hyphen joins the words of one name, as in the capitalised
+       "Congo - Kinshasa" the canonical resolver already reads: lower-case "congo - kinshasa" read
+       only "congo" (the capture stopped at "-") and landed COG. It is now read as "congo kinshasa",
+       which the shared identifier names (COD), and "congo - brazzaville" as COG. No name, alias or
+       place is added; a bare "congo" is unchanged (still CONTESTED below). */
     const m =
-      /\b(?:in|from|about|across|inside|within)\s+((?:the\s+)?[a-z][a-z'-]*(?:\s+[a-z][a-z'-]*){0,2})/i.exec(
+      /\b(?:in|from|about|across|inside|within)\s+((?:the\s+)?[a-z][a-z'-]*(?:\s+(?:-\s+)?[a-z][a-z'-]*){0,2})/i.exec(
         text,
       );
     const words =
       m?.[1]
         ?.toLowerCase()
         .replace(/^the\s+/, '')
-        .split(/\s+/) ?? [];
+        .split(/\s+(?:-\s+)?/) ?? [];
     for (let k = words.length; k >= 1; k -= 1) {
       const candidate = words.slice(0, k).join(' ');
       if (candidate.length < 4 || LOWERCASE_HOMOGRAPHS.has(candidate)) continue;
