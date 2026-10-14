@@ -1722,10 +1722,28 @@ export class AnalysisService {
           planned paths keep their own trace.
         */
         const genericAttempts: SentQueryAttempt[] = [];
+        /*
+          MASTER CTO R60 S2 — VETO 1 OF 2: A PEER'S OUTAGE IS NOT THE PRIMARY'S FAILURE.
+
+          Measured (R38/R42): GNews PRIMARY answered HTTP 200 with zero relevant articles while the
+          GDELT DOC fallback peer timed out. Because this predicate counted EVERY recorded failure,
+          the primary attempt's own sent-outcome became SENT_PROVIDER_FAILED, and decideFallback then
+          refused the one bounded broader GNews request on the strength of someone else's timeout.
+
+          The attempt's outcome is now decided by the tier that actually served it: a failure from a
+          provider in the configured FALLBACK tier (NewsService.isFallbackTierProvider — the existing
+          public tier authority, no new list) does not make the PRIMARY attempt a failed send. A GNews
+          401/403/429/auth/timeout is a primary-tier failure and still reads SENT_PROVIDER_FAILED, so
+          R47's "do not retry after GNews primary's own refusal" is unchanged and still enforced here.
+          The peer's failure is NOT discarded: it stays in the trace, the lane history, the reader
+          disclosure and the persisted aggregate (A4/M6 below).
+        */
         const sentOutcomeOf = (response: NewsResponse) =>
           response.articles.length > 0
             ? ('SENT_RESULTS' as const)
-            : readProviderFailures(response).length > 0
+            : readProviderFailures(response).some(
+                  (failure) => !this.isFallbackTierFailure(failure.providerId),
+                )
               ? ('SENT_PROVIDER_FAILED' as const)
               : ('SENT_ZERO_RESULTS' as const);
         /*
@@ -3576,7 +3594,25 @@ export class AnalysisService {
                 }
               };
 
-              if (searchResponse.articles.length === 0 && primaryFailures.length > 0) {
+              /*
+                MASTER CTO R60 S2 — VETO 2 OF 2: THE SECOND, INDEPENDENT VETO.
+
+                The branch above records the sent-outcome; THIS branch decides whether the bounded
+                second request is attempted at all, and it conflated the tiers in exactly the same
+                way: a GDELT timeout beside a healthy GNews OK+ZERO took the refusal path, so the one
+                permitted broader GNews query was never even considered. Both vetoes had to be lifted
+                — lifting either alone leaves the other one blocking.
+
+                A primary-tier failure (GNews bad-request / auth / rate-limited / quota / timeout /
+                unavailable) keeps the refusal path exactly as before: no second provider call, the
+                bounded LOCAL retained rescue instead. Only a FALLBACK-tier peer's failure no longer
+                decides it. The budget is unchanged (decideFallback, budgetRemaining: 1), so the turn
+                still sends at most two GNews requests in total (R47).
+              */
+              const primaryTierFailures = primaryFailures.filter(
+                (failure) => !this.isFallbackTierFailure(failure.providerId),
+              );
+              if (searchResponse.articles.length === 0 && primaryTierFailures.length > 0) {
                 /* A4 — the refusal suppressed the fallback: recorded as not sent, never as a zero */
                 if (!compoundPlan) genericAttempts.push(recordSkipped('FALLBACK', 'SKIPPED_PROVIDER_INELIGIBLE'));
                 await rescueAfterRefusal(primaryFailures);
@@ -3626,24 +3662,131 @@ export class AnalysisService {
                       SEARCH_POOL_SIZE,
                       genericMode,
                     );
+                    /*
+                      THE FALLBACK ATTEMPT'S OWN FAILURES, taken BEFORE anything is carried onto the
+                      response. R63 keeps the already-correct per-attempt records: this attempt's
+                      sent-outcome, its lane statuses and its own refusal test must describe what
+                      THIS request did. A peer that timed out on the PRIMARY attempt and answered
+                      empty on this one must not be recorded as having failed here.
+                    */
+                    const fallbackOwnFailures = readProviderFailures(searchResponse);
                     genericAttempts.push(recordDispatched('FALLBACK', fallbackSent, sentOutcomeOf(searchResponse)));
                     genericAttemptLanes.set('FALLBACK', laneStatusOf(searchResponse));
                     /* R3 — a refused fallback is a limited search, never "no reporting". */
-                    const fallbackFailures = readProviderFailures(searchResponse);
-                    if (searchResponse.articles.length === 0 && fallbackFailures.length > 0) {
-                      await rescueAfterRefusal([...primaryFailures, ...fallbackFailures]);
+                    if (searchResponse.articles.length === 0 && fallbackOwnFailures.length > 0) {
+                      await rescueAfterRefusal([...primaryFailures, ...fallbackOwnFailures]);
                     }
+                    /*
+                      MASTER CTO R63 / M6 — CARRY THE PRIMARY ATTEMPT'S FAILURES FORWARD, HERE.
+
+                      This replacement is the one place a successful broader request erased a
+                      DIFFERENT provider's failure: everything after this point (the retrieval
+                      context, lanesUnavailable, retrievalIncomplete() and the reader's wording)
+                      reads the failure channel of whatever response ended up in searchResponse, and
+                      a GDELT timeout on attempt 1 was simply not on attempt 2's response. The carry
+                      therefore happens once, at the replacement, instead of being re-derived by
+                      every later reader.
+
+                      AFTER the per-attempt records above, deliberately: the carry describes the TURN,
+                      not this request. attachProviderFailures() is the SAME exported writer
+                      NewsService itself uses, so this is the real channel and not a copied shape,
+                      and it returns the response untouched for an empty list — a turn with no
+                      failure at all is byte-identical. Deduplicated by provider id with the first
+                      kind kept, exactly as toRetrievalContext does it.
+                    */
+                    searchResponse = attachProviderFailures(searchResponse, (() => {
+                      const seen = new Set<string>();
+                      const carried: ProviderFailure[] = [];
+                      for (const failure of [...fallbackOwnFailures, ...primaryFailures]) {
+                        if (seen.has(failure.providerId)) continue;
+                        seen.add(failure.providerId);
+                        carried.push(failure);
+                      }
+                      return carried;
+                    })());
                   }
                 }
               }
 
               articles = searchResponse.articles;
               retrievalContext = contextOf(searchResponse);
+              /*
+                MASTER CTO R61 — M6: THE FULL TURN OUTCOME, NOT JUST THE PERSISTED AGGREGATE.
+
+                EA's R60 screenshot: with A4 corrected, the READER/turn result could still show a
+                timed-out GDELT lane as COMPLETED_NO_MATCH. The reason is that the final retrieval
+                context is built from the LAST response alone (toRetrievalContext reads that response's
+                failure channel), and the allowed broader GNews request replaces searchResponse. When
+                that second request legitimately returns empty with no failure of its own, the peer's
+                timeout was no longer anywhere in the facts the reader side reads — so
+                observedRetrievalOf() saw failures 0 / answered 1 and said the search COMPLETED, and
+                retrievalIncomplete() agreed. Absence was claimed from a search that never completed.
+
+                Every attempt's provider failure is now carried onto the final context, deduplicated
+                the same way toRetrievalContext does it (one entry per provider id, first kind kept),
+                and pushed into the one convergence collector so the branch-independent 'provider-error'
+                rule sees it too. Nothing is invented: these are failures this turn actually recorded.
+
+                THIS IS A SECOND MECHANISM ON PURPOSE, not a duplicate of the R63 carry above. The
+                carry writes the real failure channel onto the fallback RESPONSE, which is what every
+                reader of that response needs. But the bounded retained rescue rebuilds the response
+                with an object spread, and the channel is a NON-ENUMERABLE symbol property, so a
+                spread does not copy it: on that path the carry alone would be lost again. This net
+                is computed from the attempt variables themselves and therefore survives any
+                rebuilding of the response object.
+                Downstream, with no new code: lanesAttempted names the peer, lanesSucceeded still
+                excludes it, lanesUnavailable carries its reason ('timeout' via laneFailureReason),
+                coverageIncomplete is true, retrievalIncomplete() is true, and observedRetrievalOf()
+                returns PARTIAL_NO_MATCH instead of COMPLETED_NO_MATCH (PARTIAL when evidence was
+                admitted). A healthy turn with no failure at all is byte-identical to before.
+              */
+              const everyAttemptFailure = [...primaryFailures, ...readProviderFailures(searchResponse)];
+              const knownFailedProviders = new Set(
+                (retrievalContext.providerFailures ?? []).map((failure) => failure.providerId),
+              );
+              /* MAIN R65 integration: typed as the channel it joins (G's patch typed kind as string; tsc rejects it) */
+              const carriedFailures: ProviderFailure[] = [];
+              for (const failure of everyAttemptFailure) {
+                if (knownFailedProviders.has(failure.providerId)) continue;
+                knownFailedProviders.add(failure.providerId);
+                carriedFailures.push({ providerId: failure.providerId, kind: failure.kind });
+              }
+              if (carriedFailures.length > 0) {
+                retrievalFailures.push(...carriedFailures);
+                retrievalContext = {
+                  ...retrievalContext,
+                  providerFailures: [...(retrievalContext.providerFailures ?? []), ...carriedFailures],
+                };
+              }
               if (genericOutcome !== undefined) {
                 retrievalContext = { ...retrievalContext, outcome: genericOutcome };
               } else if (
-                articles.length > 0 &&
-                readProviderFailures(searchResponse).length > 0 &&
+                /*
+                  MASTER CTO R61/R63 — ZERO EVIDENCE BESIDE AN ATTEMPTED FAILURE IS DEGRADED, NOT
+                  "NO RELEVANT EVIDENCE".
+
+                  Measured while qualifying this slice (analysis.country-economy-policy-r2, the
+                  6a379561 shape): GNews answered, every item was gated out, GDELT timed out. With the
+                  refusal path no longer taken for a fallback-tier peer, nothing set a disclosure for a
+                  ZERO-article turn, so resolveEvidenceState() read 'no-relevant-evidence' — which is
+                  the "no matching reporting" claim that ruling forbids, from a search that did not
+                  complete. The existing 'provider-error' disclosure is set here instead, which keeps
+                  evidenceState 'degraded-fallback' exactly as before. It is set ONLY when this turn
+                  really recorded a failure for a reason other than a lane not being configured, and
+                  never over an outcome a branch already decided.
+                */
+                (articles.length === 0
+                  ? (retrievalContext.providerFailures ?? []).some(
+                      (failure) => failure.kind !== 'not-configured',
+                    )
+                  : true) &&
+                /*
+                  R60 — BOTH ATTEMPTS' FAILURE HISTORY REACHES THE READER. When the bounded second
+                  request went out, searchResponse is the FALLBACK response and the primary attempt's
+                  failures are no longer on it, so an answer built after a peer outage read as fully
+                  live. The union is what decides the disclosure.
+                */
+                [...primaryFailures, ...readProviderFailures(searchResponse)].length > 0 &&
                 retrievalContext.fallbackReason === undefined
               ) {
                 /*
@@ -4122,7 +4265,18 @@ export class AnalysisService {
                       say "zero" while admitted evidence exists.
                     */
                     aggregateOutcome:
-                      articles.length > 0 ? 'RETRIEVAL_CANDIDATES' : deriveRetrievalOutcome(lanesFor(finalRole)),
+                      /*
+                        MASTER CTO R47/R60 — A4: THE AGGREGATE IS OVER EVERY ATTEMPT, NOT THE LAST ONE.
+                        Aggregating only the final role could persist RETRIEVAL_ZERO_ALL_LANES_ANSWERED
+                        after a PRIMARY attempt whose GDELT lane failed — a completed empty search that
+                        never happened. The union keeps the existing per-attempt records, provenance and
+                        reader disclosures untouched; only this one derived aggregate changes, and a
+                        lane that did not answer now holds it at
+                        RETRIEVAL_PARTIAL_SOME_LANES_UNAVAILABLE.
+                      */
+                      articles.length > 0
+                        ? 'RETRIEVAL_CANDIDATES'
+                        : deriveRetrievalOutcome([...lanesFor('PRIMARY'), ...lanesFor('FALLBACK')]),
                   };
                 })()
               : {}),
@@ -6276,6 +6430,26 @@ export class AnalysisService {
     );
 
     return collapseDuplicateStories(perMember.flat());
+  }
+
+  /**
+   * MASTER CTO R60 S2 — THE TIER AUTHORITY, ASKED SAFELY.
+   *
+   * NewsService.isFallbackTierProvider() is the EXISTING public tier authority (news.service.ts),
+   * not a new list, and the composed runtime always provides it. Eighteen existing fixtures build a
+   * minimal NewsService object literal instead, and R60 forbids churning unrelated paths: when the
+   * method is absent this answers "not a fallback-tier provider", which is exactly the pre-R60
+   * reading of every failure, so those fixtures stay byte-identical in behaviour. Only a real
+   * NewsService can therefore distinguish the tiers — which is the only place the distinction
+   * exists.
+   */
+  private isFallbackTierFailure(providerId: string): boolean {
+    const newsService = this.newsService as unknown as {
+      isFallbackTierProvider?: (id: string) => boolean;
+    };
+    return typeof newsService.isFallbackTierProvider === 'function'
+      ? newsService.isFallbackTierProvider(providerId)
+      : false;
   }
 
   private toRetrievalContext(

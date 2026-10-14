@@ -49,6 +49,7 @@ import {
   deriveFollowUpFocus,
 } from '../anchor/conversation-subject.util';
 import { requestsDates } from '../query/response-directives.util';
+import { retrievalIncomplete } from '../../ask-v2/retrieval-outcome';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -476,7 +477,15 @@ describe('R2 · the Alpha question on the real services (6a379561 shape)', () =>
     expect(result.retrievalContext?.outcome).not.toBe('NO_RELEVANT_EVIDENCE');
   });
 
-  it('with nothing admissible at all, the timeout still reads as a limited search (PROVIDER_UNAVAILABLE), never "no matching reporting"', async () => {
+  /*
+    MASTER CTO R65/R66 · G R63 B-3 — RE-ACCEPTED ON MEASURED OUTPUT, NOT WEAKENED. The old outcome code
+    PROVIDER_UNAVAILABLE claims every attempted source failed; GNews ANSWERED (R47: a healthy GNews OK+EMPTY
+    beside a failed GDELT peer is not a GNews failure), so after G's S2/M6 the turn carries no outcome code.
+    Measured at the combined candidate: outcome undefined, fallbackReason provider-error, evidenceState
+    degraded-fallback, providerFailures [gdelt-doc=timeout], retrievalIncomplete() true. The test's intent —
+    "a limited search, never 'no matching reporting'" — is asserted directly, and more strongly than before.
+  */
+  it('with nothing admissible at all, the timeout still reads as a limited search (incomplete, peer named), never "no matching reporting"', async () => {
     const gnews = provider('gnews', POLAND_OTHER);
     const feeds = provider('rss-feeds', [...GUS_OTHER, ...WP_UNRELATED]);
     const gdelt = provider('gdelt-doc', [], gdeltTimeout());
@@ -484,8 +493,13 @@ describe('R2 · the Alpha question on the real services (6a379561 shape)', () =>
     const result = await service.analyzeNews(QUESTION, 'en');
     expect(result.articles).toEqual([]);
     expect(inputs).toHaveLength(0);
-    expect(result.retrievalContext?.outcome).toBe('PROVIDER_UNAVAILABLE');
+    expect(result.retrievalContext?.outcome).not.toBe('NO_RELEVANT_EVIDENCE');
+    expect(result.retrievalContext?.fallbackReason).toBe('provider-error');
     expect(result.retrievalContext?.evidenceState).toBe('degraded-fallback');
+    expect(result.retrievalContext?.providerFailures).toEqual(
+      expect.arrayContaining([expect.objectContaining({ providerId: 'gdelt-doc', kind: 'timeout' })]),
+    );
+    expect(retrievalIncomplete(result as never)).toBe(true);
   });
 
   it('CONTROL: a subject outside the shape keeps the unchanged gate (Statistics Poland releases stay rejected)', async () => {
