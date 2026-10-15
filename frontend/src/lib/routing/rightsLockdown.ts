@@ -42,6 +42,13 @@ export const LOCKED_PREFIXES: readonly string[] = [
   /* account-scoped reads that return stored article rows */
   '/api/users/me/saved/stories',
   '/api/users/me/intelligence',
+  /* E1 R85 C-2 — proxied data families whose output could not be shown free of third-party article
+     material (economy classifies REPORTING_ON_ECONOMY as a NEWS_PROVIDER source class; geo references
+     article-shaped fields). Locked rather than assumed clean while the backend is fail-open. */
+  '/geo',
+  '/economy',
+  '/market-data',
+  '/conflict-data',
 ];
 
 /**
@@ -49,17 +56,31 @@ export const LOCKED_PREFIXES: readonly string[] = [
  * backslashes as slashes, duplicate slashes collapsed, dot segments resolved, lower-cased (the
  * comparison only — a case variant is either the same route or no route), trailing slash removed.
  */
+/** E1 R85 C-1 — a path the normaliser cannot fully decode is UNCERTAIN, and uncertainty locks. */
+const NUL = String.fromCharCode(0);
+export const LOCKDOWN_UNDECODABLE = `/${NUL}undecodable`;
+
 export function normaliseLockdownPath(pathname: string): string {
   let p = pathname;
-  for (let i = 0; i < 3; i += 1) {
+  let settled = false;
+  for (let i = 0; i < 4; i += 1) {
+    let next: string;
     try {
-      const next = decodeURIComponent(p);
-      if (next === p) break;
-      p = next;
+      next = decodeURIComponent(p);
     } catch {
+      /* malformed escape (e.g. "/news%", "/news%zz"): fail CLOSED, never "less normalised" */
+      return LOCKDOWN_UNDECODABLE;
+    }
+    if (next === p) {
+      settled = true;
       break;
     }
+    p = next;
   }
+  /* still changing after the cap (deeper encoding than any real request): fail CLOSED */
+  if (!settled) return LOCKDOWN_UNDECODABLE;
+  /* a NUL anywhere is never a legitimate route: fail CLOSED */
+  if (p.includes(NUL)) return LOCKDOWN_UNDECODABLE;
   p = p.replace(/\\/g, '/').replace(/\/{2,}/g, '/');
   const out: string[] = [];
   for (const seg of p.split('/')) {
@@ -72,6 +93,7 @@ export function normaliseLockdownPath(pathname: string): string {
 
 export function lockdownBlocks(pathname: string): boolean {
   const p = normaliseLockdownPath(pathname);
+  if (p === LOCKDOWN_UNDECODABLE) return true;
   return LOCKED_PREFIXES.some((prefix) => p === prefix || p.startsWith(`${prefix}/`));
 }
 

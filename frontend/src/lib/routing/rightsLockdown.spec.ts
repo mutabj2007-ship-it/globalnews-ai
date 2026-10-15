@@ -4,6 +4,7 @@ import { NextRequest } from 'next/server';
 import { config, middleware } from '@/middleware';
 import {
   LOCKDOWN_CODE,
+  LOCKDOWN_UNDECODABLE,
   LOCKED_PREFIXES,
   lockdownBlocks,
   normaliseLockdownPath,
@@ -62,6 +63,11 @@ const LOCKED_SAMPLES = [
   '/api/discussion/articles/a1',
   '/api/users/me/saved/stories',
   '/api/users/me/intelligence/feed',
+  /* E1 R85 C-2: proxied data families locked rather than assumed clean */
+  '/geo/map-feed',
+  '/economy/country/POL',
+  '/market-data/quotes',
+  '/conflict-data/events',
 ];
 const OPEN_SAMPLES = [
   '/',
@@ -75,8 +81,9 @@ const OPEN_SAMPLES = [
   '/api/follows',
   '/api/support/tickets',
   '/api/admin/me',
-  '/geo/map-feed',
   '/newsletter',
+  '/geography-guide',
+  '/economyx',
   '/newsroom-guide',
   '/manifest.webmanifest',
 ];
@@ -144,6 +151,17 @@ describe('ACTIVE: bypass variants of a locked path are still answered by the loc
     expect(lockdownBlocks('/newsletter')).toBe(false);
     expect(lockdownBlocks('/api/analysisx')).toBe(false);
     expect(LOCKED_PREFIXES).toContain('/api/ask-v2');
+  });
+});
+
+describe('E1 R85 C-1: an undecodable or over-encoded path fails CLOSED, never open', () => {
+  it.each(['/news%', '/news%zz', '/news%00', '/%2525256eews', '/anything%', '/x%00y'])('%s is locked', (path) => {
+    expect(lockdownBlocks(path)).toBe(true);
+    expect(normaliseLockdownPath(path)).toBe(LOCKDOWN_UNDECODABLE);
+  });
+  it('an ordinary path containing a space is not treated as undecodable', () => {
+    expect(lockdownBlocks('/ask/a b')).toBe(false);
+    expect(lockdownBlocks('/ask/a%20b')).toBe(false);
   });
 });
 
