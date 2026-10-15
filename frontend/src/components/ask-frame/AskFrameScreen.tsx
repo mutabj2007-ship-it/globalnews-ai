@@ -276,6 +276,8 @@ export function AskFrameScreen({
   const [cueHint, setCueHint] = useState<string | null>(null);
   /* ASK D0.1 · D1 — the G2 story picker (zero compute; stages a draft only). */
   const [storyPickerOpen, setStoryPickerOpen] = useState(false);
+  /* MASTER CTO R98 — the story form's words, restored after a refused ask when the Ask box was taken */
+  const [storyPickerReturn, setStoryPickerReturn] = useState('');
   /* IA R2 02 decision 4 — compact is width < 360 OR height < 640; wide is >= 1024. */
   /* R38 U-1 — `short`: the visible height is under 460 px (a small phone with the keyboard up, landscape). */
   const [frameSize, setFrameSize] = useState<{ compact: boolean; wide: boolean; short: boolean }>({
@@ -537,11 +539,7 @@ export function AskFrameScreen({
       the server cannot resolve runs nothing and keeps the draft (never a silent generic Ask).
     */
     setAskUnavailable(false);
-    const compareRef = compareContext === undefined ? undefined : await askCompareRef(compareContext);
-    const outcome = await r2.submit(
-      draft,
-      compareRef ?? moduleContext?.ref ?? askContextRefOf(context, undefined),
-    );
+    const outcome = await sendCaptured(draft);
     if (outcome === 'context-unavailable') setQuestion(draft);
     else if (outcome === 'legacy') {
       setAskUnavailable(true);
@@ -553,6 +551,50 @@ export function AskFrameScreen({
     else if (outcome === 'failed') {
       setQuestion(draft);
       setRetryKept(true);
+    }
+  }
+  /*
+    MASTER CTO R98 — THE ONE SUBMISSION STEP. The composer's Ask and the story form's one-tap ask
+    both send the text they CAPTURED (never `setQuestion(draft); ask()` in one tick) through this:
+    the same context, the same r2.submit, so the same session, quota, refusal and retry handling.
+  */
+  async function sendCaptured(draft: string) {
+    const compareRef = compareContext === undefined ? undefined : await askCompareRef(compareContext);
+    return r2.submit(draft, compareRef ?? moduleContext?.ref ?? askContextRefOf(context, undefined));
+  }
+  /*
+    MASTER CTO R98 (PO iPhone proof) — "Explain a story": ONE explicit tap asks the reader's exact
+    words. A second tap while it starts is ignored (`storySubmitting`), so a rapid double tap sends
+    once. The Ask box is not touched when the ask starts, so an unsent question already in it is
+    kept. Refused or failed, the words come back where they can be retried: into the Ask box when it
+    is free, otherwise into the story form, reopened. Nothing is ever dropped.
+  */
+  const storySubmitting = useRef(false);
+  async function askStory(draft: string) {
+    if (isPending || storySubmitting.current || !draft.trim()) return;
+    storySubmitting.current = true;
+    try {
+      const boxTaken = question.trim().length > 0;
+      const keep = () => {
+        if (boxTaken) {
+          setStoryPickerReturn(draft);
+          setStoryPickerOpen(true);
+        } else setQuestion(draft);
+      };
+      setRetryKept(false);
+      followNext.current = true;
+      setAskUnavailable(false);
+      const outcome = await sendCaptured(draft);
+      if (outcome === 'legacy') {
+        setAskUnavailable(true);
+        keep();
+      } else if (outcome === 'context-unavailable' || outcome === 'signed-out' || outcome === 'kept') keep();
+      else if (outcome === 'failed') {
+        keep();
+        if (!boxTaken) setRetryKept(true);
+      }
+    } finally {
+      storySubmitting.current = false;
     }
   }
   /*
@@ -1366,8 +1408,16 @@ export function AskFrameScreen({
       {storyPickerOpen && (
         <StoryPicker
           locale={interfaceLocale}
+          initialDescribed={storyPickerReturn}
+          /* MASTER CTO R98 — one explicit tap asks the reader's words, through the one submission step */
+          onAsk={(asked) => {
+            setStoryPickerOpen(false);
+            setStoryPickerReturn('');
+            void askStory(asked);
+          }}
           onClose={() => {
             setStoryPickerOpen(false);
+            setStoryPickerReturn('');
             /* G2-10 — close keeps nothing staged and returns focus to the cue that opened it */
             requestAnimationFrame(() => document.querySelector<HTMLButtonElement>('[data-ask="cue-g2"]')?.focus());
           }}

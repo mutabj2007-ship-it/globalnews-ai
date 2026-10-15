@@ -71,6 +71,8 @@ export function StoryPicker({
   onStageDraft,
   existingDraft = '',
   onReplaceDraft,
+  onAsk,
+  initialDescribed = '',
 }: {
   readonly locale: DisplayLocale;
   readonly onClose: () => void;
@@ -80,6 +82,14 @@ export function StoryPicker({
   readonly existingDraft?: string;
   /** CTO R23 — an explicit choice to replace that unsent text with the search words. Never submits. */
   readonly onReplaceDraft?: (draft: string) => void;
+  /**
+   * MASTER CTO R98 (PO iPhone proof) — when given, the held form's primary action ASKS: one explicit
+   * tap submits the reader's exact words through the parent's ordinary Ask submission. Opening,
+   * typing, focus, Enter and Close still issue nothing. Without it the action only stages (R23).
+   */
+  readonly onAsk?: (question: string) => void;
+  /** R98 — the reader's words, restored when an ask from this form was refused and Ask's box was taken. */
+  readonly initialDescribed?: string;
 }): JSX.Element {
   const titleId = useId();
   const viewportBox = useVisualViewportBox();
@@ -155,6 +165,8 @@ export function StoryPicker({
             existingDraft={existingDraft}
             onStageDraft={onStageDraft}
             onReplaceDraft={onReplaceDraft}
+            onAsk={onAsk}
+            initialDescribed={initialDescribed}
           />
         ) : view.kind === 'search' ? (
           <PickerSearch
@@ -320,6 +332,8 @@ function PickerDescribe({
   existingDraft,
   onStageDraft,
   onReplaceDraft,
+  onAsk,
+  initialDescribed = '',
 }: {
   readonly locale: DisplayLocale;
   readonly titleId: string;
@@ -327,13 +341,15 @@ function PickerDescribe({
   readonly existingDraft: string;
   readonly onStageDraft: (draft: string) => void;
   readonly onReplaceDraft?: (draft: string) => void;
+  readonly onAsk?: (question: string) => void;
+  readonly initialDescribed?: string;
 }): JSX.Element {
   const s = d01Strings(locale);
   const r23 = r23PickerStrings(locale);
   const r38 = askR38Strings(locale);
   const input = useRef<HTMLInputElement | null>(null);
   const noticeId = useId();
-  const [described, setDescribed] = useState('');
+  const [described, setDescribed] = useState(initialDescribed);
   const typed = described.trim();
   const draft = typed.length > 0 ? r38.storyDraft(typed) : '';
   const kept = existingDraft.trim();
@@ -375,15 +391,33 @@ function PickerDescribe({
             {r23.keptDraft}
           </p>
         )}
-        <button
-          type="button"
-          data-ask="picker-continue"
-          onClick={() => onStageDraft(conflict ? '' : draft)}
-          data-staged={!conflict && typed.length > 0 ? 'typed' : 'none'}
-          className={styles.primary}
-        >
-          {typed.length > 0 && !conflict ? r38.storyAskAbout : r23.askLabel}
-        </button>
+        {/*
+          MASTER CTO R98 — with words typed and an ask handler, ONE explicit tap asks: the reader's exact
+          words (no "Explain this story:" prefix, no story id: nothing is stored or cleared here). An
+          unsent question already in the Ask box is never touched by this (the kept-draft line says so).
+          Empty, the action stays the way back into Ask and spends nothing.
+        */}
+        {onAsk !== undefined && typed.length > 0 ? (
+          <button
+            type="button"
+            data-ask="picker-continue"
+            data-staged="ask"
+            onClick={() => onAsk(typed)}
+            className={styles.primary}
+          >
+            {r38.storyAskAbout}
+          </button>
+        ) : (
+          <button
+            type="button"
+            data-ask="picker-continue"
+            onClick={() => onStageDraft(conflict ? '' : draft)}
+            data-staged={!conflict && typed.length > 0 ? 'typed' : 'none'}
+            className={styles.primary}
+          >
+            {typed.length > 0 && !conflict ? r38.storyAskAbout : r23.askLabel}
+          </button>
+        )}
         {conflict && onReplaceDraft !== undefined && (
           <button
             type="button"
