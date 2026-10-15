@@ -54,6 +54,7 @@ import { loadActionIsOffered } from '@/lib/map/retrieval/countryReadRequest';
 import type { CountryReadPresentation } from '@/lib/map/retrieval/countryReadPresentation';
 import { ChangeStrip } from '@/components/map/shell/monetization/ChangeStrip';
 import { ActionDeck, type DeckAction } from '@/components/map/shell/monetization/ActionDeck';
+import { accountSignInUrl } from '@/lib/api/accountLinks';
 import { AnalysisCostPrompt } from '@/components/map/shell/monetization/AnalysisCostPrompt';
 import { AnalysisWorkspace } from '@/components/map/shell/monetization/AnalysisWorkspace';
 import {
@@ -868,7 +869,8 @@ export function MobileSpatialShell({
                     sensitivityLabel={spatial.monetization.composer.sensitivities[watchSensitivity]}
                     capability={capability}
                     labels={spatial.monetization.activation}
-                    signInHref="/account/sign-in?next=%2Fmap"
+                    /* CTO R110 §6 — '/account/sign-in' is not a route (404); the one sign-in entry, back to the map */
+                    signInHref={accountSignInUrl('/map')}
                     onFollowInstead={
                       follow === null || follow === undefined
                         ? undefined
