@@ -23,6 +23,8 @@ import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 import { askLocaleForLegacyCatalogue } from '@/lib/ask/askLocale';
 import { askSevenStrings } from '@/lib/ask/askSevenStrings';
 import { buildBriefTelemetry } from '@/components/analysis-frame/briefModel';
+import { rightsRefusedOnly } from '@/components/search/evidenceDisplay';
+import { askRightsRefusalStrings } from '@/lib/ask/askRightsRefusal';
 
 /**
  * ASK R2 CONSOLIDATED INTEGRATION R1 · GATE G — ONE ASK R2 TURN, AS D25 DRAWS IT.
@@ -270,6 +272,10 @@ export function AskR2TurnView({
   const guidanceKind = payload.guidance?.kind ?? null;
   /* The SAME array the inline citations number against, so item n is always [n]. */
   const answerSources = payload.analysis?.analysis?.sources ?? [];
+  /* CTO R115 (G-1) — every reporting lane refused for rights before any network call */
+  const refusedForRights =
+    payload.analysis?.retrievalContext != null &&
+    rightsRefusedOnly(payload.analysis.retrievalContext, payload.analysis.articles?.length ?? 0);
   /*
     ASK DESIGN COMPLETENESS R1 — THE FOOTER LINE (Design B1): "Based on N cited reports from M
     publishers. Newest report <date>." Counted from this answer's own source records only —
@@ -750,7 +756,10 @@ export function AskR2TurnView({
           )}
           {/* CTO R3 ruling 8 — nothing verified vs search incomplete: the difference is kept. */}
           {view.badge === 'insuf' && view.searchLimited && (
-            <p data-ask="search-incomplete">{r.searchIncomplete}</p>
+            /* CTO R115 (G-1) — every lane refused for rights is said as that, not as an outage */
+            <p data-ask="search-incomplete" data-ask-rights-refused={refusedForRights ? 'true' : undefined}>
+              {refusedForRights ? askRightsRefusalStrings(locale).notSearched : r.searchIncomplete}
+            </p>
           )}
           {/* ASK FIRST-ANSWER RETRIEVAL R3 — an answer standing on reachable reporting says so. */}
           {view.badge !== 'insuf' && view.searchLimited && (

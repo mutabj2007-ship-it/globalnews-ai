@@ -82,7 +82,10 @@ describe('ruling 6 — legacy hand-offs are More rows, not cards', () => {
 describe('ruling 8 — nothing verified vs search incomplete', () => {
   it('one reader sentence, and the incomplete-search line only when the search was limited', () => {
     expect(turn).toContain('{r.noReportingTitle}');
-    expect(turn).toMatch(/view\.badge === 'insuf' && view\.searchLimited && \(\s*<p data-ask="search-incomplete">/);
+    /* CTO R115 (G-1) — SUPERSEDED, NOT DELETED: was /…&& \(\s*<p data-ask="search-incomplete">/. The same line
+       under the same condition; it now carries a rights-refused marker and says "not cleared" instead of
+       an outage when every lane was refused for rights. */
+    expect(turn).toMatch(/view\.badge === 'insuf' && view\.searchLimited && \(\s*(?:\/\*[\s\S]*?\*\/\s*)?<p data-ask="search-incomplete"/);
   });
 });
 

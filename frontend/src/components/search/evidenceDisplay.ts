@@ -91,6 +91,28 @@ export function someLaneAnswered(context: AnalysisRetrievalContext): boolean {
   return (context.providers ?? []).some((p) => !failed.has(p));
 }
 
+/**
+ * CTO R115 / Politics R115 live control (G-1) — EVERY reporting lane was refused for source-use rights
+ * BEFORE any network call, none answered, nothing was admitted. The backend still records this as a
+ * provider error with dataMode 'unavailable' (bc13149 README §5 residual), so without this rule the
+ * reader is told "live reporting is temporarily unavailable — try again", which is false: waiting
+ * cannot lift a rights restriction. Mirrors askSearchActivity's refusedOnly (and the backend's
+ * everyLaneRefused): every recorded reason is 'rights-not-cleared' and every listed provider is one of
+ * the refused lanes. Any genuine outage reason makes it false (R-8).
+ */
+export function rightsRefusedOnly(context: AnalysisRetrievalContext, articleCount?: number): boolean {
+  const count = articleCount ?? context.articlesRetrieved ?? 0;
+  if (count > 0) return false;
+  const reasons = [
+    ...(context.retrievalTrace?.lanesUnavailable ?? []).map((u) => ({ lane: u.lane as string | undefined, reason: u.reason as string | undefined })),
+    ...(context.providerFailures ?? []).map((f) => ({ lane: f.providerId as string | undefined, reason: (f as { kind?: string }).kind })),
+  ];
+  if (reasons.length === 0 || reasons.some((r) => r.reason !== 'rights-not-cleared')) return false;
+  const refused = new Set(reasons.map((r) => r.lane));
+  if ((context.retrievalTrace?.lanesSucceeded ?? []).length > 0) return false;
+  return (context.providers ?? []).every((p) => refused.has(p));
+}
+
 /** True only when NO live lane answered and nothing usable was served: a real outage. */
 export function reportingWhollyUnavailable(
   context: AnalysisRetrievalContext,

@@ -5,6 +5,8 @@ import { askRelativeTime } from '@/lib/ask/askRelativeTime';
 import { formatRelativeTime, formatUtcClock } from '@/lib/formatRelativeTime';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { displayRetrievalContext } from '@/components/search/evidenceDisplay';
+import { rightsRefusedOnly } from '@/components/search/evidenceDisplay';
+import { askRightsRefusalStrings } from '@/lib/ask/askRightsRefusal';
 
 interface RetrievalContextStatusProps {
   retrievalContext: AnalysisRetrievalContext;
@@ -112,9 +114,10 @@ export function resolveRetrievalContextText(
       ? `${formatCityForDisplay(city)}, ${countryName}`
       : countryName;
 
-  const label = locationLabel
-    ? `${BADGE_LABEL[dataMode]} \u00b7 ${locationLabel}`
-    : BADGE_LABEL[dataMode];
+  /* CTO R115 (G-1) — refused for rights is not "live data unavailable" */
+  const refused = rightsRefusedOnly(rawRetrievalContext, articleCount);
+  const badge = refused ? askRightsRefusalStrings(locale ?? language).chip : BADGE_LABEL[dataMode];
+  const label = locationLabel ? `${badge} \u00b7 ${locationLabel}` : badge;
 
   const explanation =
     dataMode === 'cached'
