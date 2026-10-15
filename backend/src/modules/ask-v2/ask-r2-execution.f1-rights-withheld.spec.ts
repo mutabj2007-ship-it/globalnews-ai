@@ -54,7 +54,7 @@ const RESPONSES: Record<Mode, () => unknown> = {
     retrievalContext: {
       dataMode: 'live',
       providers: ['gnews', 'gdelt-doc'],
-      rightsExcluded: { count: 3, reasons: { PUBLISHER_RIGHTS_HOLD: 3 }, sourceIds: ['reuters'] },
+      rightsExcluded: { count: 3, reasons: { PUBLISHER_RIGHTS_HOLD: 3 } }, /* CTO R102 W-2: sourceIds removed from the reader context type */
       retrievalTrace: { candidatesSeen: 3, candidatesAdmitted: 0, lanesUnavailable: [] },
     },
   }),
@@ -65,7 +65,7 @@ const RESPONSES: Record<Mode, () => unknown> = {
       dataMode: 'live',
       providers: ['gnews'],
       providerFailures: [{ providerId: 'gdelt-doc', kind: 'rate-limited' }],
-      rightsExcluded: { count: 2, reasons: { PUBLISHER_RIGHTS_HOLD: 2 }, sourceIds: ['reuters'] },
+      rightsExcluded: { count: 2, reasons: { PUBLISHER_RIGHTS_HOLD: 2 } }, /* CTO R102 W-2: sourceIds removed from the reader context type */
     },
   }),
   /* some items withheld, other reporting admitted: an ordinary sourced answer */
@@ -79,7 +79,7 @@ const RESPONSES: Record<Mode, () => unknown> = {
     retrievalContext: {
       dataMode: 'live',
       providers: ['gnews'],
-      rightsExcluded: { count: 1, reasons: { PUBLISHER_RIGHTS_HOLD: 1 }, sourceIds: ['reuters'] },
+      rightsExcluded: { count: 1, reasons: { PUBLISHER_RIGHTS_HOLD: 1 } }, /* CTO R102 W-2: sourceIds removed from the reader context type */
     },
   }),
 };

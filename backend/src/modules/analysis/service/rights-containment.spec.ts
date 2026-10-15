@@ -82,7 +82,7 @@ describe('rights containment at the Ask evidence point', () => {
     expect(r.retrievalContext.rightsExcluded).toEqual({
       count: 4,
       reasons: { RIGHTS_NOT_CLEARED_FOR_AI: 1, RIGHTS_RESTRICTED: 1, RIGHTS_PROHIBITED: 1, UNKNOWN_PROVENANCE: 1 },
-      sourceIds: ['<none>', 'feed:standardmedia-ke', 'feed:taarifa-rw', 'feed:wp-pl'],
+      /* CTO R102 W-2 — SUPERSEDED, NOT DELETED: was sourceIds: ['<none>', 'feed:standardmedia-ke', 'feed:taarifa-rw', 'feed:wp-pl']; withheld publishers' identifiers no longer reach reader JSON (server log only) */
     });
     expect(r.retrievalContext.articlesRetrieved).toBe(1);
   });

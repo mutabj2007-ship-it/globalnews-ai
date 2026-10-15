@@ -329,7 +329,7 @@ describe('RULED · RIGHTS CONTAINMENT R1 — B2 on the real registry', () => {
     expect(response.retrievalContext?.rightsExcluded).toEqual({
       count: 1,
       reasons: { RIGHTS_NOT_CLEARED_FOR_AI: 1 },
-      sourceIds: ['feed:ktpress-rw'],
+      /* CTO R102 W-2 — SUPERSEDED, NOT DELETED: was sourceIds: ['feed:ktpress-rw']; withheld publishers' identifiers no longer reach reader JSON (server log only) */
     });
     expect(response.retrievalContext?.outcome).not.toBe('NO_RELEVANT_EVIDENCE');
   });

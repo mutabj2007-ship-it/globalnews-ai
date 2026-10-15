@@ -428,7 +428,7 @@ describe('R2 · the Alpha question on the real services (6a379561 shape)', () =>
     expect(result.retrievalContext?.rightsExcluded).toEqual({
       count: 6,
       reasons: { RIGHTS_NOT_CLEARED_FOR_AI: 4, RIGHTS_PROHIBITED: WP_ECONOMIC.length },
-      sourceIds: ['feed:gus-pl', 'feed:wp-pl'],
+      /* CTO R102 W-2 — SUPERSEDED, NOT DELETED: was sourceIds: ['feed:gus-pl', 'feed:wp-pl']; withheld publishers' identifiers no longer reach reader JSON (server log only) */
     });
     expect(result.retrievalContext?.fallbackReason).toBe('provider-error');
     expect(result.retrievalContext?.evidenceState).toBe('degraded-fallback');
@@ -463,7 +463,7 @@ describe('R2 · the Alpha question on the real services (6a379561 shape)', () =>
     expect(result.retrievalContext?.rightsExcluded).toEqual({
       count: WP_ECONOMIC.length,
       reasons: { RIGHTS_PROHIBITED: WP_ECONOMIC.length },
-      sourceIds: ['feed:wp-pl'],
+      /* CTO R102 W-2 — SUPERSEDED, NOT DELETED: was sourceIds: ['feed:wp-pl']; withheld publishers' identifiers no longer reach reader JSON (server log only) */
     });
     for (const a of [...GUS_OTHER, ...WP_UNRELATED, ...POLAND_OTHER]) {
       expect(result.articles.map((x) => x.id)).not.toContain(a.id);

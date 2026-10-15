@@ -543,7 +543,7 @@ describe('R2B · discovery lanes in the Ask (Flydubai, social configured)', () =
     expect(result.retrievalContext?.rightsExcluded).toEqual({
       count: 2,
       reasons: { SOCIAL_RIGHTS_NOT_REVIEWED: 2 },
-      sourceIds: ['social:x:100', 'social:x:200'],
+      /* CTO R102 W-2 — SUPERSEDED, NOT DELETED: was sourceIds: ['social:x:100', 'social:x:200']; withheld publishers' identifiers no longer reach reader JSON (server log only) */
     });
     const trace = result.retrievalContext!.retrievalTrace!;
     expect(trace.lanesSucceeded).toEqual(expect.arrayContaining(['gnews', 'x']));

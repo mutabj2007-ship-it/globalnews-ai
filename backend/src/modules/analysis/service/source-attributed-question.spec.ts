@@ -538,7 +538,7 @@ describe('RULED · RIGHTS CONTAINMENT R1 — the publisher\'s RSS items are with
     expect(response.retrievalContext?.rightsExcluded).toEqual({
       count: 1,
       reasons: { RIGHTS_NOT_CLEARED_FOR_AI: 1 },
-      sourceIds: ['feed:gus-pl'],
+      /* CTO R102 W-2 — SUPERSEDED, NOT DELETED: was sourceIds: ['feed:gus-pl']; withheld publishers' identifiers no longer reach reader JSON (server log only) */
     });
     expect(response.retrievalContext?.outcome).not.toBe('NO_RELEVANT_EVIDENCE');
   });
@@ -554,7 +554,8 @@ describe('RULED · RIGHTS CONTAINMENT R1 — the publisher\'s RSS items are with
     expect(ids).not.toContain('wp-1');
     expect(response.articles.every((a) => !a.sourceId.startsWith('feed:'))).toBe(true);
     const excluded = response.retrievalContext?.rightsExcluded;
-    expect(excluded?.sourceIds).toEqual(expect.arrayContaining(['feed:gus-pl', 'feed:wp-pl']));
+    /* CTO R102 W-2 — SUPERSEDED, NOT DELETED: was expect(excluded?.sourceIds).toEqual(arrayContaining(['feed:gus-pl','feed:wp-pl'])); withheld publishers' identifiers no longer reach reader JSON (server log only) */
+    expect(excluded).not.toHaveProperty('sourceIds');
     expect(excluded?.reasons).toEqual(
       expect.objectContaining({ RIGHTS_NOT_CLEARED_FOR_AI: 1, RIGHTS_PROHIBITED: 1 }),
     );
