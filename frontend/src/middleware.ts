@@ -1,6 +1,17 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { standaloneAskRoot } from '@/lib/ask/standaloneRoot';
 import { routeGateDecision } from '@/lib/routing/standaloneRouteGate';
+import { LOCKDOWN_BODY, lockdownBlocks, rightsLockdownMode } from '@/lib/routing/rightsLockdown';
+
+/*
+  The path set the standalone gate has always run on (the former matcher: not /api/…, not /_next/…,
+  and no dot anywhere). Kept exactly, so widening the matcher for the lockdown changes nothing about
+  the route gate.
+*/
+function routeGateApplies(pathname: string): boolean {
+  const rest = pathname.slice(1);
+  return !rest.startsWith('api/') && !rest.startsWith('_next/') && !pathname.includes('.');
+}
 
 /**
  * PRODUCTION PLATFORM ROUTE SEPARATION R2I — ONE CENTRAL SERVER-SIDE ROUTE GATE.
@@ -14,6 +25,18 @@ import { routeGateDecision } from '@/lib/routing/standaloneRouteGate';
  * header, the query, cookies, the body or any client state.
  */
 export function middleware(request: NextRequest): NextResponse {
+  /*
+    CTO R84 — DORMANT RIGHTS LOCKDOWN (lib/routing/rightsLockdown.ts). OFF unless the deployment sets
+    GNA_RIGHTS_LOCKDOWN. When ACTIVE, every method on a locked proxy path is answered here with a
+    typed 503 BEFORE any rewrite reaches the backend; nothing is proxied, nothing is run.
+  */
+  if (rightsLockdownMode(process.env.GNA_RIGHTS_LOCKDOWN) === 'ACTIVE' && lockdownBlocks(request.nextUrl.pathname)) {
+    return NextResponse.json(LOCKDOWN_BODY, {
+      status: 503,
+      headers: { 'Cache-Control': 'no-store', 'Retry-After': '300', 'X-Rights-Lockdown': 'active' },
+    });
+  }
+  if (!routeGateApplies(request.nextUrl.pathname)) return NextResponse.next();
   /* Explicit static read: the one variable, through the one predicate. */
   const standalone = standaloneAskRoot({ GNA_PUBLIC_ROOT: process.env.GNA_PUBLIC_ROOT });
   if (routeGateDecision(standalone, request.nextUrl.pathname) === 'PASS') {
@@ -41,5 +64,8 @@ export function middleware(request: NextRequest): NextResponse {
  * exemptions (and adds the public proxy families) as defence in depth.
  */
 export const config = {
-  matcher: ['/((?!api/|_next/|.*\\..*).*)'],
+  /* CTO R84 — every request except Next's own static assets, so the lockdown sees /api/…, /news/… and
+     every encoded or dotted variant; the route gate itself still runs only where it always did
+     (routeGateApplies). */
+  matcher: ['/((?!_next/static/|_next/image/).*)'],
 };

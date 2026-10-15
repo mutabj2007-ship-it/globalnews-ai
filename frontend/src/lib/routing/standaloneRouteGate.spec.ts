@@ -225,13 +225,17 @@ describe('zero compute and no client gate', () => {
     return seen;
   }
 
-  it('the middleware graph is four pure files: no fetch, no Ask/analysis client, no storage', () => {
+  /* CTO R84 — SUPERSEDED, NOT DELETED: "four pure files". The dormant rights lockdown adds ONE pure
+     file (lib/routing/rightsLockdown.ts, no I/O); the property — no fetch, no Ask/analysis client, no
+     storage — is asserted unchanged on every file. */
+  it('the middleware graph is five pure files: no fetch, no Ask/analysis client, no storage', () => {
     const files = graph(join(SRC, 'middleware.ts'));
     expect(
       [...files.keys()].map((f) => f.slice(SRC.length + 1).replace(/\\/g, '/')).sort(),
     ).toEqual([
       'lib/admin/adminRoutes.ts',
       'lib/ask/standaloneRoot.ts',
+      'lib/routing/rightsLockdown.ts',
       'lib/routing/standaloneRouteGate.ts',
       'middleware.ts',
     ]);
