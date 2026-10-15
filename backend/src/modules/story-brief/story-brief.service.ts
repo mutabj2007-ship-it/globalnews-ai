@@ -2,6 +2,8 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
 import { StoryIdentityService, type CanonicalStory } from '../stories/story-identity.service';
+import { sourceUsePermittedForReader } from '../news/rights/source-use-policy';
+import { readerRightsEnforced } from '../news/rights/rights-enforcement';
 import {
   STORY_BRIEF_GENERATOR,
   type StoryBriefGenerator,
@@ -68,6 +70,8 @@ export interface StoryBriefView {
   } | null;
   /** False while no governed generator is bound: surfaces must not offer Read Brief. */
   readonly generationAvailable: boolean;
+  /** CTO R81 — the stored Brief rests on sources without a positive basis: withheld, never "no Brief". */
+  readonly withheld?: { readonly reason: 'SOURCE_RIGHTS'; readonly count: number };
 }
 
 type VersionRow = {
@@ -178,11 +182,19 @@ export class StoryBriefService {
       now,
     });
     const shown = forCurrent ?? latest;
+    /*
+      CTO R81 / E1 D2 (derived content) — a stored Brief is our model-written text built FROM its
+      evidence. A reader receives it only when every evidence reference resolves to a stored source
+      with a positive AI_INPUT basis (the same rule as a briefing version read, R46-6). Otherwise the
+      Brief is withheld at read time and that is said; the stored version is never changed.
+    */
+    const withheldCount = shown === null ? 0 : await this.briefSourcesWithheld(shown.evidenceRefs);
     return {
+      ...(withheldCount > 0 ? { withheld: { reason: 'SOURCE_RIGHTS' as const, count: withheldCount } } : {}),
       storyId: story.storyId,
       state,
       currentEvidenceRevision: revision,
-      brief: shown === null ? null : versionView(shown),
+      brief: shown === null || withheldCount > 0 ? null : versionView(shown),
       versions,
       changedSince:
         forCurrent === null && latest !== null
@@ -200,6 +212,18 @@ export class StoryBriefService {
             },
       generationAvailable: this.generator.available,
     };
+  }
+
+  /** CTO R81 — how many of a Brief's evidence refs lack a positive AI_INPUT basis (an unresolvable ref counts). */
+  private async briefSourcesWithheld(evidenceRefs: unknown): Promise<number> {
+    const ids = (Array.isArray(evidenceRefs) ? (evidenceRefs as Array<{ id?: unknown }>) : [])
+      .map((ref) => ref?.id)
+      .filter((id): id is string => typeof id === 'string');
+    /* the one switch: always on in a running service; off only in fixture-mode Jest suites */
+    if (ids.length === 0 || !readerRightsEnforced()) return 0;
+    const rows = await this.prisma.article.findMany({ where: { id: { in: [...new Set(ids)] } }, select: { id: true, sourceId: true, url: true } });
+    const permitted = new Set(rows.filter((r) => sourceUsePermittedForReader(r, 'AI_INPUT')).map((r) => r.id));
+    return ids.filter((id) => !permitted.has(id)).length;
   }
 
   /** The explicit Read Brief. The ONLY path that may call the generator. */

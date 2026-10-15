@@ -260,6 +260,37 @@ describe('AR-5 — an UNRESOLVED feed named in RSS_FEED_SOURCES is refused (Alph
   });
 });
 
+describe('derived content — a stored story Brief resting on an uncleared source is withheld at read time', () => {
+  const brief = (refs: string[]) => ({
+    id: 'v1', storyId: 's1', version: 1, state: 'SUPPORTED', evidenceRevision: 'r1', materialVersion: 1,
+    blocks: { summary: 'MODEL PROSE FROM SOURCES' }, evidenceRefs: refs.map((id) => ({ id })), coverageGaps: [], uncertainty: [],
+    asOf: new Date('2026-10-15T00:00:00Z'), generatedAt: new Date('2026-10-15T00:00:00Z'), sourceOperationId: null, createdAt: new Date(),
+  });
+  const service = (refs: string[], rows: Array<{ id: string; sourceId: string; url: string }>) => {
+    const prisma = {
+      storyBriefVersion: { findFirst: jest.fn(async () => brief(refs)), count: jest.fn(async () => 1) },
+      storyBriefAttempt: { findFirst: jest.fn(async () => null) },
+      article: { findMany: jest.fn(async () => rows) },
+      storyArticle: { findMany: jest.fn(async () => [{ articleRef: 'a', articleUrl: 'https://x' }]) },
+    };
+    const identity = { describe: jest.fn(async () => ({ storyId: 's1', aliasIds: ['s1'], briefVersion: 1 })) };
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { StoryBriefService } = require('../../story-brief/story-brief.service');
+    return new StoryBriefService(prisma as never, identity as never, { available: true, generate: jest.fn() } as never);
+  };
+  it('a Brief built from a GNews-origin stored row: no prose reaches the reader; withheld is said', async () => {
+    const view = await service(['g1'], [{ id: 'g1', sourceId: 'reuters', url: 'https://reuters.example/a' }]).read('s1');
+    expect(view.brief).toBeNull();
+    expect(view.withheld).toEqual({ reason: 'SOURCE_RIGHTS', count: 1 });
+    expect(JSON.stringify(view)).not.toContain('MODEL PROSE');
+  });
+  it('positive control: a Brief resting only on a CLEARED feed row is shown', async () => {
+    const view = await service(['c1'], [{ id: 'c1', sourceId: CLEARED, url: 'https://cleared.example/a' }]).read('s1');
+    expect(view.brief?.blocks).toEqual({ summary: 'MODEL PROSE FROM SOURCES' });
+    expect(view.withheld).toBeUndefined();
+  });
+});
+
 describe('AR-7 — general-knowledge Ask still succeeds with every gate on, and no provider executes', () => {
   it('the economics concept question: one background answer, zero news calls', async () => {
     expect(readerRightsEnforced()).toBe(true);
