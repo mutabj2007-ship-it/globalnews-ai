@@ -177,8 +177,19 @@ describe('GEOGRAPHY · the measured country defect, pinned as it stands', () => 
      * answer-layer decision and not this lane's to take. A later lane closing
      * it must invert this expectation deliberately.
      */
-    expect(resolveGeography('Congo').candidates[0]?.country?.iso3).toBe('COG');
-    expect(resolveGeography('Eric Prince in Congo').candidates[0]?.country?.iso3).toBe('COG');
+    /*
+     * F1 (EA_F1_FIX_PASS scoped, 1da3945) — INVERTED DELIBERATELY, as this pin asked. SUPERSEDED, NOT
+     * DELETED: the two lines were
+     *   expect(resolveGeography('Congo').candidates[0]?.country?.iso3).toBe('COG');
+     *   expect(resolveGeography('Eric Prince in Congo').candidates[0]?.country?.iso3).toBe('COG');
+     * A bare "Congo" is now neither country by fiat: it is CONTESTED between COD and COG (disclosed,
+     * never rendered as one), which is the honest outcome this comment called for.
+     */
+    for (const text of ['Congo', 'Eric Prince in Congo']) {
+      const r = resolveGeography(text);
+      expect(r.provenance).toBe('CONTESTED');
+      expect(r.candidates.map((c) => c.country.iso3).sort()).toEqual(['COD', 'COG']);
+    }
   });
 
   it('the qualified forms resolve correctly, so the fix is disclosure not remapping', () => {
