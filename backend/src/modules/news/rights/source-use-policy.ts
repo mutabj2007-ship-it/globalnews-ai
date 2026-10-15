@@ -205,6 +205,33 @@ export function summarizeExclusions(
   return { count: excluded.length, reasons, sourceIds: [...new Set(excluded.map((e) => e.sourceId))].sort() };
 }
 
+/*
+  E1 R102 S-3 (E1_R102_W2_SOURCEIDS_HOLD) — NO READER REASON CLASS MAY IDENTIFY A PUBLISHER.
+  PUBLISHER_RIGHTS_HOLD has exactly one governed host, RIGHTS_PROHIBITED and RIGHTS_RESTRICTED exactly
+  one registry row each, and the tables are public: a histogram keyed by them is a one-step lookup to a
+  named publisher. Those, and RIGHTS_NOT_CLEARED_FOR_AI, are folded into ONE reader class. The
+  provider / provenance classes stay (provider ids are reader-visible by design). The full breakdown
+  stays in the server log only (S-2). Pure; the input is not mutated.
+*/
+export const READER_SOURCE_RIGHTS_NOT_CLEARED = 'SOURCE_RIGHTS_NOT_CLEARED' as const;
+const PUBLISHER_IDENTIFYING_REASONS: ReadonlySet<string> = new Set([
+  'PUBLISHER_RIGHTS_HOLD',
+  'RIGHTS_PROHIBITED',
+  'RIGHTS_RESTRICTED',
+  'RIGHTS_NOT_CLEARED_FOR_AI',
+]);
+export function readerRightsReasons(
+  reasons: Readonly<Record<string, number | undefined>> | null | undefined,
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [key, n] of Object.entries(reasons ?? {})) {
+    if (typeof n !== 'number' || n <= 0) continue;
+    const readerKey = PUBLISHER_IDENTIFYING_REASONS.has(key) ? READER_SOURCE_RIGHTS_NOT_CLEARED : key;
+    out[readerKey] = (out[readerKey] ?? 0) + n;
+  }
+  return out;
+}
+
 export function summarizePending(pending: readonly string[]): RightsPendingSummary | undefined {
   if (pending.length === 0) return undefined;
   const providers: Record<string, number> = {};

@@ -61,7 +61,9 @@ const RIGHTS_EXCLUSION_REASONS = [
   'UNKNOWN_PROVENANCE',
   /* MASTER CTO R4 · P0 #86 */
   'PUBLISHER_RIGHTS_HOLD',
-] as const satisfies readonly RightsExclusionReason[];
+  /* E1 R102 S-3 — the reader class the four publisher-identifying classes fold into */
+  'SOURCE_RIGHTS_NOT_CLEARED',
+] as const satisfies readonly (RightsExclusionReason | 'SOURCE_RIGHTS_NOT_CLEARED')[];
 
 const ATTEMPT_OUTCOMES = [
   'SUCCESS',

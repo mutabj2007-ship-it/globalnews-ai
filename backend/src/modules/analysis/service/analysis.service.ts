@@ -263,7 +263,7 @@ import {
   type RequestedSource,
 } from '../../news/identity/requested-source.util';
 import { classifyRequestedPublisher } from '../../news/identity/requested-publisher-state.util';
-import { partitionByRights, summarizeExclusions, summarizePending, EXTERNAL_READER_POLICY } from '../../news/rights/source-use-policy';
+import { partitionByRights, summarizeExclusions, summarizePending, readerRightsReasons, EXTERNAL_READER_POLICY } from '../../news/rights/source-use-policy';
 import { polishCountryName } from '../query/polish-country-forms.util';
 import { derivePolishRetrievalQuery } from '../language/derive-polish-retrieval-query.util';
 import {
@@ -3993,7 +3993,11 @@ export class AnalysisService {
             );
             articles = allowed;
             /* CTO R102 W-2 — publisher identifiers stay in the log line above, never in reader JSON */
-            const { sourceIds: _withheldPublishers, ...readerRightsExcluded } = rightsExcluded;
+            /* E1 R102 S-3 — and its reason classes never identify a publisher */
+            const readerRightsExcluded = {
+              count: rightsExcluded.count,
+              reasons: readerRightsReasons(rightsExcluded.reasons),
+            };
             retrievalContext = {
               ...retrievalContext,
               articlesRetrieved: allowed.length,

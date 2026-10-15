@@ -1,5 +1,9 @@
 import { FEED_SOURCES, type FeedSourceEntry } from '../providers/feed-source-registry';
-import { sourceUseDecision } from './source-use-policy';
+import { readerRightsReasons, sourceUseDecision } from './source-use-policy';
+
+/* E1 R102 S-3 — does a reason histogram carry a class that could identify a publisher? */
+const PUBLISHER_CLASSES = ['PUBLISHER_RIGHTS_HOLD', 'RIGHTS_PROHIBITED', 'RIGHTS_RESTRICTED', 'RIGHTS_NOT_CLEARED_FOR_AI'];
+const hasPublisherClass = (map: Record<string, unknown>): boolean => PUBLISHER_CLASSES.some((k) => k in map);
 export { __setReaderRightsFixtureModeForTests, readerRightsEnforced } from './rights-enforcement';
 import { __setRightsTestFeeds } from './rights-enforcement';
 
@@ -168,7 +172,17 @@ export function withholdThirdPartyArticles<T>(
         if (key === 'rightsExcluded' && isRecord(child) && 'sourceIds' in child) {
           const { sourceIds: _withheldPublishers, ...rest } = child;
           scrubbed = true;
-          out[key] = walk(rest, depth + 1);
+          out[key] = walk(isRecord(rest.reasons) ? { ...rest, reasons: readerRightsReasons(rest.reasons as Record<string, number>) } : rest, depth + 1);
+          continue;
+        }
+        /*
+          E1 R102 S-3 — a reason histogram (reader context or stored diagnostics) never names a publisher
+          class. Applies to rightsExcluded.reasons, analysisStages.rightsAiInput.reasons and
+          storedRightsDrops wherever they appear; a no-op when already folded.
+        */
+        if ((key === 'reasons' || key === 'storedRightsDrops') && isRecord(child) && hasPublisherClass(child)) {
+          scrubbed = true;
+          out[key] = readerRightsReasons(child as Record<string, number>);
           continue;
         }
         out[key] = walk(child, depth + 1);

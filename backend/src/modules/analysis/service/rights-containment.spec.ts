@@ -81,7 +81,8 @@ describe('rights containment at the Ask evidence point', () => {
     expect(modelArticles(h).map((a) => a.id)).toEqual(['provider']);
     expect(r.retrievalContext.rightsExcluded).toEqual({
       count: 4,
-      reasons: { RIGHTS_NOT_CLEARED_FOR_AI: 1, RIGHTS_RESTRICTED: 1, RIGHTS_PROHIBITED: 1, UNKNOWN_PROVENANCE: 1 },
+      /* E1 R102 S-3 — SUPERSEDED, NOT DELETED: was reasons: { RIGHTS_NOT_CLEARED_FOR_AI: 1, RIGHTS_RESTRICTED: 1, RIGHTS_PROHIBITED: 1, UNKNOWN_PROVENANCE: 1 }; the classes that could identify a publisher fold into one reader class (count conserved) */
+      reasons: { SOURCE_RIGHTS_NOT_CLEARED: 3, UNKNOWN_PROVENANCE: 1 },
       /* CTO R102 W-2 — SUPERSEDED, NOT DELETED: was sourceIds: ['<none>', 'feed:standardmedia-ke', 'feed:taarifa-rw', 'feed:wp-pl']; withheld publishers' identifiers no longer reach reader JSON (server log only) */
     });
     expect(r.retrievalContext.articlesRetrieved).toBe(1);
@@ -110,7 +111,8 @@ describe('rights containment at the Ask evidence point', () => {
       const h = harness([PROVIDER, TAARIFA]);
       const r = await h.service.analyzeNews('Give any reports about Eric Prince please.');
       expect(modelArticles(h).map((a) => a.id)).toEqual(['provider']);
-      expect(r.retrievalContext.rightsExcluded?.reasons).toEqual({ RIGHTS_NOT_CLEARED_FOR_AI: 1 });
+      /* E1 R102 S-3 — SUPERSEDED, NOT DELETED: was expect(r.retrievalContext.rightsExcluded?.reasons).toEqual({ RIGHTS_NOT_CLEARED_FOR_AI: 1 });; the classes that could identify a publisher fold into one reader class (count conserved) */
+      expect(r.retrievalContext.rightsExcluded?.reasons).toEqual({ SOURCE_RIGHTS_NOT_CLEARED: 1 });
       expect(r.retrievalContext.rightsPending).toEqual({ count: 1, providers: { gnews: 1 } });
     } finally {
       if (before === undefined) delete process.env.ASK_PROVIDER_RIGHTS_ENFORCEMENT;

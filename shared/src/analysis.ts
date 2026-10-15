@@ -940,7 +940,9 @@ export interface AnalysisRetrievalContext {
           | 'SOCIAL_RIGHTS_NOT_REVIEWED'
           | 'UNKNOWN_PROVENANCE'
           /* MASTER CTO R4 · P0 #86 — the article's own URL host is under a publisher rights hold */
-          | 'PUBLISHER_RIGHTS_HOLD',
+          | 'PUBLISHER_RIGHTS_HOLD'
+          /* E1 R102 S-3 — what a reader receives: the four classes that could identify a publisher, folded */
+          | 'SOURCE_RIGHTS_NOT_CLEARED',
           number
         >
       >

@@ -1,5 +1,6 @@
 import { GLOBAL_REACH_SOURCE_PACKS } from '../../global-reach/source-pack.registry';
 import { FEED_SOURCES, resolveActiveFeedSources } from '../providers/feed-source-registry';
+import { readerRightsReasons } from '../rights/source-use-policy';
 import {
   RETRIEVAL_DIAGNOSTICS_SCHEMA,
   type AttemptOutcome,
@@ -322,7 +323,8 @@ export function buildRetrievalDiagnostics(
     searchesTruncated: snapshot.searchesTruncated,
     retainedReads: snapshot.retainedReads,
     retainedReadsTruncated: snapshot.retainedReadsTruncated,
-    storedRightsDrops: snapshot.storedRightsDrops,
+    /* E1 R102 S-3 — reason classes never identify a publisher */
+    storedRightsDrops: readerRightsReasons(snapshot.storedRightsDrops),
     rightsDecisions: snapshot.rightsDecisions,
     rightsUses: rightsUsesOf(snapshot.rightsDecisions),
     analysisStages: {
@@ -535,7 +537,12 @@ export function finalizeAnalysisDiagnostics(
     },
     {
       /* E1 R96 W-4 — the internal, unrestricted count (never the rights-restricted reader field) */
-      windowExcludedOutsideWindow: excludedOutsideWindowRetrievedOf(context.reportingWindow),
+      /*
+        E1 bab464c C-1 — this envelope ships in the Ask payload, so it carries the RIGHTS-RESTRICTED reader
+        count. The unrestricted count stays server-side only (the operation log's outsideWindowRetrieved=),
+        so no reader-visible pair of numbers lets a rights-held total be computed by subtraction.
+      */
+      windowExcludedOutsideWindow: context.reportingWindow?.excludedOutsideWindow ?? null,
       anchorGate:
         context.questionAnchorGate === undefined
           ? null

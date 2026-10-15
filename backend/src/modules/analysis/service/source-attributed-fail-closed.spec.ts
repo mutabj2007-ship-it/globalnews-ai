@@ -568,7 +568,8 @@ describe('RULED · RIGHTS CONTAINMENT R1 — the curated RSS publishers are with
     expect(response.articles).toEqual([]);
     expect(response.retrievalContext?.rightsExcluded).toEqual({
       count: 1,
-      reasons: { RIGHTS_NOT_CLEARED_FOR_AI: 1 },
+      /* E1 R102 S-3 — SUPERSEDED, NOT DELETED: was reasons: { RIGHTS_NOT_CLEARED_FOR_AI: 1 }; the classes that could identify a publisher fold into one reader class (count conserved) */
+      reasons: { SOURCE_RIGHTS_NOT_CLEARED: 1 },
       /* CTO R102 W-2 — SUPERSEDED, NOT DELETED: was sourceIds: [anchored ? 'feed:ktpress-rw' : requestedSourceId]; withheld publishers' identifiers no longer reach reader JSON (server log only) */
     });
     expect(response.retrievalContext?.outcome).not.toBe('NO_RELEVANT_EVIDENCE');

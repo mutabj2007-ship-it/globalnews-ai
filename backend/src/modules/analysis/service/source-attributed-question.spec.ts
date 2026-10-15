@@ -537,7 +537,8 @@ describe('RULED · RIGHTS CONTAINMENT R1 — the publisher\'s RSS items are with
     expect(response.articles).toEqual([]);
     expect(response.retrievalContext?.rightsExcluded).toEqual({
       count: 1,
-      reasons: { RIGHTS_NOT_CLEARED_FOR_AI: 1 },
+      /* E1 R102 S-3 — SUPERSEDED, NOT DELETED: was reasons: { RIGHTS_NOT_CLEARED_FOR_AI: 1 }; the classes that could identify a publisher fold into one reader class (count conserved) */
+      reasons: { SOURCE_RIGHTS_NOT_CLEARED: 1 },
       /* CTO R102 W-2 — SUPERSEDED, NOT DELETED: was sourceIds: ['feed:gus-pl']; withheld publishers' identifiers no longer reach reader JSON (server log only) */
     });
     expect(response.retrievalContext?.outcome).not.toBe('NO_RELEVANT_EVIDENCE');
@@ -557,7 +558,8 @@ describe('RULED · RIGHTS CONTAINMENT R1 — the publisher\'s RSS items are with
     /* CTO R102 W-2 — SUPERSEDED, NOT DELETED: was expect(excluded?.sourceIds).toEqual(arrayContaining(['feed:gus-pl','feed:wp-pl'])); withheld publishers' identifiers no longer reach reader JSON (server log only) */
     expect(excluded).not.toHaveProperty('sourceIds');
     expect(excluded?.reasons).toEqual(
-      expect.objectContaining({ RIGHTS_NOT_CLEARED_FOR_AI: 1, RIGHTS_PROHIBITED: 1 }),
+      /* E1 R102 S-3 — SUPERSEDED, NOT DELETED: was expect.objectContaining({ RIGHTS_NOT_CLEARED_FOR_AI: 1, RIGHTS_PROHIBITED: 1 }); the classes that could identify a publisher fold into one reader class (count conserved) */
+      expect.objectContaining({ SOURCE_RIGHTS_NOT_CLEARED: 2 }),
     );
   });
 });

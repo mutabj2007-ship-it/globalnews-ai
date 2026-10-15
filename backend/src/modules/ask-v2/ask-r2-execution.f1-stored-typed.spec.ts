@@ -158,7 +158,7 @@ const TYPED_NO_MATCH: Shape = { search: { articles: [], dataMode: 'live', provid
 describe('#86 follow-up / #87 F-1 · stored-only and typed-country held results (real Analysis → real executor)', () => {
   it('retained-only, all held → Analysis counts PUBLISHER_RIGHTS_HOLD and the executor selects REPORTING WITHHELD', async () => {
     const t = await ask(RETAINED_ALL_HELD, GENERIC_Q);
-    expect(t.analysisResults[0]?.retrievalContext?.rightsExcluded?.reasons?.PUBLISHER_RIGHTS_HOLD).toBe(2);
+    expect(t.analysisResults[0]?.retrievalContext?.rightsExcluded?.reasons?.SOURCE_RIGHTS_NOT_CLEARED).toBe(2); /* E1 R102 S-3 — SUPERSEDED, NOT DELETED: was reasons?.PUBLISHER_RIGHTS_HOLD).toBe(2); the classes that could identify a publisher fold into one reader class (count conserved) */
     expect(t.backgroundCalls).toHaveLength(1);
     for (const r of rulesOf(t.backgroundCalls)) {
       expect(r).toContain(RIGHTS_WITHHELD_RULE);
@@ -170,7 +170,7 @@ describe('#86 follow-up / #87 F-1 · stored-only and typed-country held results 
 
   it('typed-country feed, all held (no-evidence answer path) → counted, recorded RIGHTS_WITHHELD, memory never "no qualifying reporting"', async () => {
     const t = await ask(TYPED_ALL_HELD, TYPED_Q);
-    expect(t.analysisResults[0]?.retrievalContext?.rightsExcluded?.reasons?.PUBLISHER_RIGHTS_HOLD).toBe(2);
+    expect(t.analysisResults[0]?.retrievalContext?.rightsExcluded?.reasons?.SOURCE_RIGHTS_NOT_CLEARED).toBe(2); /* E1 R102 S-3 — SUPERSEDED, NOT DELETED: was reasons?.PUBLISHER_RIGHTS_HOLD).toBe(2); the classes that could identify a publisher fold into one reader class (count conserved) */
     /* this question shape answers with the executor's no-evidence answer (no background call), exactly as
        its no-match control does — so no rule is chosen; the stored facts must still say "withheld" */
     expect(t.backgroundCalls).toHaveLength(0);
@@ -184,7 +184,7 @@ describe('#86 follow-up / #87 F-1 · stored-only and typed-country held results 
 
   it('typed-country feed, all held (background path) → REPORTING WITHHELD (never "no findings")', async () => {
     const t = await ask(TYPED_ALL_HELD, TYPED_GUIDANCE_Q);
-    expect(t.analysisResults[0]?.retrievalContext?.rightsExcluded?.reasons?.PUBLISHER_RIGHTS_HOLD).toBe(2);
+    expect(t.analysisResults[0]?.retrievalContext?.rightsExcluded?.reasons?.SOURCE_RIGHTS_NOT_CLEARED).toBe(2); /* E1 R102 S-3 — SUPERSEDED, NOT DELETED: was reasons?.PUBLISHER_RIGHTS_HOLD).toBe(2); the classes that could identify a publisher fold into one reader class (count conserved) */
     expect(t.backgroundCalls).toHaveLength(1);
     for (const r of rulesOf(t.backgroundCalls)) {
       expect(r).toContain(RIGHTS_WITHHELD_RULE);
@@ -201,7 +201,7 @@ describe('#86 follow-up / #87 F-1 · stored-only and typed-country held results 
     expect(t.backgroundCalls).toHaveLength(0);
     expect(t.payload.answer.basis ?? '').not.toMatch(/^PARTIAL_CURRENT_/);
     expect(JSON.stringify(t.payload)).not.toContain('reuters.com');
-    expect(t.analysisResults[0]?.retrievalContext?.rightsExcluded?.reasons?.PUBLISHER_RIGHTS_HOLD).toBe(2);
+    expect(t.analysisResults[0]?.retrievalContext?.rightsExcluded?.reasons?.SOURCE_RIGHTS_NOT_CLEARED).toBe(2); /* E1 R102 S-3 — SUPERSEDED, NOT DELETED: was reasons?.PUBLISHER_RIGHTS_HOLD).toBe(2); the classes that could identify a publisher fold into one reader class (count conserved) */
   });
 
   it('control: a genuine stored no-match stays NO CURRENT FINDINGS', async () => {

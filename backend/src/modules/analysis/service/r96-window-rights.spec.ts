@@ -13,6 +13,8 @@ import { ArticlePersistenceService } from '../../news/persistence/article-persis
 import { observedRetrievalOf, retrievalIncomplete } from '../../ask-v2/retrieval-outcome';
 import { __setReaderRightsFixtureModeForTests, __setReaderRightsTestFeeds } from '../../news/rights/reader-rights';
 import { FEED_SOURCES, type FeedSourceEntry } from '../../news/providers/feed-source-registry';
+import { readRetrievalDiagnostics } from '../../news/retrieval-trace/retrieval-diagnostics';
+import { serializeRetrievalDiagnostics } from '../../news/retrieval-trace/retrieval-diagnostics-envelope';
 jest.setTimeout(180000);
 /*
   E1 R96 (E1_R96_WINDOW_COUNT_HOLD) W-5 — the window count is rights-partitioned at the sink.
@@ -129,5 +131,44 @@ describe('E1 R96 W-5 — the reader window count is rights-partitioned; a rights
     /* no excluded report id is serialised (rightsExcluded.sourceIds is E1-R96-W-2, tracked separately) */
     expect(o.json).not.toContain('"u-out"');
     expect(o.unevaluated).toBe(false); /* every exclusion here had an article object */
+  });
+});
+
+/*
+  E1 bab464c C-1 and E1 R102 S-3 / F-2 — asserted over what ACTUALLY ships to a reader: the whole
+  analysis response JSON and the serialised diagnostics envelope the Ask adapter stores in the payload.
+  The MIXED fixture is the one where the restricted and unrestricted window counts differ (on an
+  all-admissible fixture they coincide and a check passes vacuously).
+*/
+describe('E1 C-1 / F-2 — no reader-visible field lets a rights-held total or a publisher be inferred', () => {
+  const runFull = async (arts: NewsArticle[]) => {
+    const service = await svc([stub('gnews', arts)]);
+    const r = await service.analyzeNews('fuel prices', 'en', undefined, undefined, undefined, undefined,
+      { reportingWindow: WINDOW } as never);
+    const diagnostics = readRetrievalDiagnostics(r);
+    return { r, json: JSON.stringify(r), diagnostics, envelope: diagnostics === undefined ? undefined : JSON.stringify(serializeRetrievalDiagnostics(diagnostics)) };
+  };
+
+  it('C-1 MIXED: the Ask diagnostics envelope carries the RESTRICTED window count (1), never the unrestricted one (2)', async () => {
+    const o = await runFull([cleared('c-out', OUT_DAY), uncleared('u-out', OUT_DAY)]);
+    expect(o.r.retrievalContext?.reportingWindow?.excludedOutsideWindow).toBe(1);
+    expect(o.envelope).toBeDefined(); /* not vacuous: the envelope exists */
+    const env = JSON.parse(o.envelope!) as { analysisStages?: { windowExcludedOutsideWindow?: number | null } };
+    expect(env.analysisStages?.windowExcludedOutsideWindow).toBe(1);
+    expect(o.envelope).not.toMatch(/"windowExcludedOutsideWindow":2/);
+  });
+
+  it('F-2: an all-withheld response never names a publisher-identifying class, in the reader JSON or the envelope', async () => {
+    const o = await runFull([uncleared('u-out-1', OUT_DAY), uncleared('u-out-2', OUT_DAY)]);
+    expect(o.r.retrievalContext?.rightsExcluded?.count).toBe(2); /* the withholding is still stated */
+    for (const text of [o.json, o.envelope ?? '']) {
+      expect(text).not.toMatch(/PUBLISHER_RIGHTS_HOLD|RIGHTS_PROHIBITED|RIGHTS_RESTRICTED|RIGHTS_NOT_CLEARED_FOR_AI|sourceIds/);
+    }
+  });
+
+  it('F-1 POSITIVE CONTROL: admitted CLEARED reporting carries no rightsExcluded at all', async () => {
+    const o = await runFull([cleared('c-in', IN_DAY)]);
+    expect(o.r.articles.map((a) => a.id)).toEqual(['c-in']);
+    expect(o.r.retrievalContext?.rightsExcluded).toBeUndefined();
   });
 });

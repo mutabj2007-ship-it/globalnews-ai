@@ -83,7 +83,10 @@ describe('#86 · the analysis evidence point', () => {
     expect(ids).not.toContain('gnews-r1');
     expect(ids).not.toContain('gnews-r2');
     expect(ids).toEqual(expect.arrayContaining(['gnews-b1', 'gnews-s1']));
-    expect(result.retrievalContext.rightsExcluded).toMatchObject({ count: 2, reasons: { PUBLISHER_RIGHTS_HOLD: 2 } });
+    /* E1 R102 S-3 — SUPERSEDED, NOT DELETED: was toMatchObject({ count: 2, reasons: { PUBLISHER_RIGHTS_HOLD: 2 } }); the classes that could identify a publisher fold into one reader class (count conserved) */
+    expect(result.retrievalContext.rightsExcluded).toMatchObject({ count: 2, reasons: { SOURCE_RIGHTS_NOT_CLEARED: 2 } });
+    /* E1 R102 F-2 — the reader JSON never names the held publisher class or host */
+    expect(JSON.stringify(result.retrievalContext)).not.toMatch(/PUBLISHER_RIGHTS_HOLD|reuters/i);
     for (const call of analyze.mock.calls) {
       const sent = JSON.stringify(call);
       expect(sent).not.toContain('reuters.com');
@@ -100,7 +103,10 @@ describe('#86 · the analysis evidence point', () => {
     expect(result.articles).toHaveLength(0);
     expect(result.analysis).toBeNull();
     expect(analyze).not.toHaveBeenCalled();
-    expect(result.retrievalContext.rightsExcluded).toMatchObject({ count: 2, reasons: { PUBLISHER_RIGHTS_HOLD: 2 } });
+    /* E1 R102 S-3 — SUPERSEDED, NOT DELETED: was toMatchObject({ count: 2, reasons: { PUBLISHER_RIGHTS_HOLD: 2 } }); the classes that could identify a publisher fold into one reader class (count conserved) */
+    expect(result.retrievalContext.rightsExcluded).toMatchObject({ count: 2, reasons: { SOURCE_RIGHTS_NOT_CLEARED: 2 } });
+    /* E1 R102 F-2 — the reader JSON never names the held publisher class or host */
+    expect(JSON.stringify(result.retrievalContext)).not.toMatch(/PUBLISHER_RIGHTS_HOLD|reuters/i);
     /* the same provider-call shape as a genuinely empty search: nothing added, nothing retried */
     expect(providerCalls(news)).toBe(providerCalls(control.news));
   });

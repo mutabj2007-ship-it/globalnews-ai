@@ -427,7 +427,8 @@ describe('R2 · the Alpha question on the real services (6a379561 shape)', () =>
     */
     expect(result.retrievalContext?.rightsExcluded).toEqual({
       count: 6,
-      reasons: { RIGHTS_NOT_CLEARED_FOR_AI: 4, RIGHTS_PROHIBITED: WP_ECONOMIC.length },
+      /* E1 R102 S-3 — SUPERSEDED, NOT DELETED: was reasons: { RIGHTS_NOT_CLEARED_FOR_AI: 4, RIGHTS_PROHIBITED: WP_ECONOMIC.length }; the classes that could identify a publisher fold into one reader class (count conserved) */
+      reasons: { SOURCE_RIGHTS_NOT_CLEARED: 4 + WP_ECONOMIC.length },
       /* CTO R102 W-2 — SUPERSEDED, NOT DELETED: was sourceIds: ['feed:gus-pl', 'feed:wp-pl']; withheld publishers' identifiers no longer reach reader JSON (server log only) */
     });
     expect(result.retrievalContext?.fallbackReason).toBe('provider-error');
@@ -462,7 +463,8 @@ describe('R2 · the Alpha question on the real services (6a379561 shape)', () =>
     expect(result.articles.some((a) => a.sourceId === 'feed:wp-pl')).toBe(false);
     expect(result.retrievalContext?.rightsExcluded).toEqual({
       count: WP_ECONOMIC.length,
-      reasons: { RIGHTS_PROHIBITED: WP_ECONOMIC.length },
+      /* E1 R102 S-3 — SUPERSEDED, NOT DELETED: was reasons: { RIGHTS_PROHIBITED: WP_ECONOMIC.length }; the classes that could identify a publisher fold into one reader class (count conserved) */
+      reasons: { SOURCE_RIGHTS_NOT_CLEARED: WP_ECONOMIC.length },
       /* CTO R102 W-2 — SUPERSEDED, NOT DELETED: was sourceIds: ['feed:wp-pl']; withheld publishers' identifiers no longer reach reader JSON (server log only) */
     });
     for (const a of [...GUS_OTHER, ...WP_UNRELATED, ...POLAND_OTHER]) {
