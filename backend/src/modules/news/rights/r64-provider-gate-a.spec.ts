@@ -153,9 +153,10 @@ describe('GA-1 · Ask / POST /analysis/news: retrieval reaches the gated NewsSer
     expect(result.analysisError).toMatch(/^Current reporting was not searched: no news source is cleared for use here./);
     expect(result.analysisError).not.toMatch(/No related articles/);
     expect(result.retrievalContext.evidenceState).toBe('degraded-fallback');
-    /* the provider was not searched: recorded as unavailable (incomplete), never a completed zero */
+    /* the provider was not searched: recorded (incomplete), never a completed zero.
+       R96 F6 — its kind names the refusal ('rights-not-cleared'), no longer 'unavailable' */
     expect((result.retrievalContext as { providerFailures?: unknown[] }).providerFailures ?? []).toEqual(
-      expect.arrayContaining([expect.objectContaining({ providerId: 'gnews', kind: 'unavailable' })]),
+      expect.arrayContaining([expect.objectContaining({ providerId: 'gnews', kind: 'rights-not-cleared' })]),
     );
   });
 });

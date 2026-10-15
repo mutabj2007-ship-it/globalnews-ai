@@ -115,7 +115,14 @@ export interface ConversationArtifact {
 
 /* MASTER CTO R4 · #87 F-1 — RIGHTS_WITHHELD: the search completed and found reporting, all of it
    withheld for source-use rights (never "no qualifying reporting", never "incomplete") */
-export type NoEvidenceReason = 'SEARCH_INCOMPLETE' | 'NO_QUALIFYING_REPORTING' | 'RIGHTS_WITHHELD';
+/* R96 F7 (E1 R-3 pre-approved shape) — SOURCE_RIGHTS_NOT_CLEARED: current reporting was NOT SEARCHED,
+   every lane being refused because its use is not cleared. The search is still incomplete (what
+   current reporting says is not known); only the reason differs — never "unavailable", never "none" */
+export type NoEvidenceReason =
+  | 'SEARCH_INCOMPLETE'
+  | 'NO_QUALIFYING_REPORTING'
+  | 'RIGHTS_WITHHELD'
+  | 'SOURCE_RIGHTS_NOT_CLEARED';
 
 /** The artifact as it is handed to a later turn: with the turn that produced it. */
 export interface PriorArtifact extends ConversationArtifact {
@@ -208,7 +215,9 @@ export function validateStoredArtifact(candidate: unknown): ConversationArtifact
     c.currentFindings === 'NONE' &&
     (c.noEvidenceReason === 'SEARCH_INCOMPLETE' ||
       c.noEvidenceReason === 'NO_QUALIFYING_REPORTING' ||
-      c.noEvidenceReason === 'RIGHTS_WITHHELD')
+      c.noEvidenceReason === 'RIGHTS_WITHHELD' ||
+      /* R96 F7 (E1 R-4 failure mode) — admitted here in the same commit as its emitter */
+      c.noEvidenceReason === 'SOURCE_RIGHTS_NOT_CLEARED')
       ? { noEvidenceReason: c.noEvidenceReason as NoEvidenceReason }
       : {}),
     ...(server && c.incomplete === true ? { incomplete: true as const } : {}),
@@ -331,7 +340,10 @@ export function priorEvidenceGap(
   const sourced = artifact.provenance === 'SOURCED_REPORTING';
   if (sourced && (artifact.evidenceRefs ?? []).length > 0) return null;
   if (!sourced && artifact.currentFindings !== 'NONE') return null;
-  return artifact.incomplete === true || artifact.noEvidenceReason === 'SEARCH_INCOMPLETE'
+  /* R96 F7 — a not-searched record is incomplete too: never read back as "completed, found nothing" */
+  return artifact.incomplete === true ||
+    artifact.noEvidenceReason === 'SEARCH_INCOMPLETE' ||
+    artifact.noEvidenceReason === 'SOURCE_RIGHTS_NOT_CLEARED'
     ? 'UNAVAILABLE'
     : 'NO_EVIDENCE';
 }
@@ -341,7 +353,11 @@ export function noEvidenceReasonText(
   gap: 'UNAVAILABLE' | 'NO_EVIDENCE',
   /** #87 F-1 — the record's reporting was withheld for source-use rights (E1 WORDING REVIEW REQUIRED) */
   rightsWithheld = false,
+  /** R96 F7 — the record's search was never started: every lane's use is not cleared */
+  notPermitted = false,
 ): string {
+  if (gap === 'UNAVAILABLE' && notPermitted)
+    return 'current reporting was not searched, because no news source is cleared for use here, so what current reporting says is not known';
   if (gap === 'NO_EVIDENCE' && rightsWithheld)
     return 'the search found reporting, but it could not be used because permission to use those sources has not been established';
   return gap === 'UNAVAILABLE'
@@ -357,7 +373,7 @@ export function artifactPromptBlock(artifact: ConversationArtifact): string {
   const gap = sourced ? priorEvidenceGap(artifact) : null;
   const header =
     gap !== null
-      ? `your own earlier answer; its search returned NO verified reports because ${noEvidenceReasonText(gap, artifact.noEvidenceReason === 'RIGHTS_WITHHELD')}; it holds no findings, is NOT evidence and NOT a current fact`
+      ? `your own earlier answer; its search returned NO verified reports because ${noEvidenceReasonText(gap, artifact.noEvidenceReason === 'RIGHTS_WITHHELD', artifact.noEvidenceReason === 'SOURCE_RIGHTS_NOT_CLEARED')}; it holds no findings, is NOT evidence and NOT a current fact`
       : sourced
         ? 'your own earlier answer, which summarised sourced reporting retrieved at that time; this summary is NOT evidence and NOT a current fact'
         : 'your own earlier model reasoning; NOT evidence, NOT a source, NOT a current fact';

@@ -124,10 +124,22 @@ interface GNewsApiResponse {
  * timeout is timeout, malformed is malformed. `bad-request` and `unavailable`
  * are backend-only Analysis decision labels retained for Main compatibility;
  * they are never written into the shared provider-health/data contract.
+ *
+ * R96 F6 (E1 R96 R-1) — `rights-not-cleared` and `budget-cut` are backend-only labels too, for a
+ * lane that was NEVER STARTED: Gate A refused it (no recorded per-use right) or the retrieval budget
+ * ran out. Nothing happened at the provider, so they never enter the shared ProviderFailureKind or
+ * provider health, and a provider's own error can never claim them (NewsService.callProviderSet
+ * records a thrown one as 'unavailable'; GNewsProviderError drops it to 'unknown').
  */
-export type ProviderFailureKind = UpstreamProviderFailureKind | 'bad-request' | 'unavailable';
+export type ProviderFailureKind = UpstreamProviderFailureKind | AnalysisOnlyFailureKind;
 
-type AnalysisOnlyFailureKind = 'bad-request' | 'unavailable';
+type AnalysisOnlyFailureKind = 'bad-request' | 'unavailable' | 'rights-not-cleared' | 'budget-cut';
+
+/** R96 F6 — the two not-started labels: produced by NewsService's own skip bookkeeping only. */
+export const NOT_STARTED_FAILURE_KINDS: ReadonlySet<ProviderFailureKind> = new Set<ProviderFailureKind>([
+  'rights-not-cleared',
+  'budget-cut',
+]);
 
 const PROVIDER_FAILURE_KINDS = new Set<ProviderFailureKind>([
   'auth',
@@ -139,6 +151,8 @@ const PROVIDER_FAILURE_KINDS = new Set<ProviderFailureKind>([
   'unknown',
   'bad-request',
   'unavailable',
+  'rights-not-cleared',
+  'budget-cut',
 ]);
 
 function isProviderFailureKind(value: unknown): value is ProviderFailureKind {
@@ -169,6 +183,9 @@ export class GNewsProviderError extends Error {
     if (kind === 'bad-request' || kind === 'unavailable') {
       this.kind = 'unknown';
       this.analysisKind = kind;
+    } else if (kind === 'rights-not-cleared' || kind === 'budget-cut') {
+      /* R96 F6 — a provider error is never a not-started lane */
+      this.kind = 'unknown';
     } else {
       this.kind = kind;
     }

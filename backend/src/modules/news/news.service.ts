@@ -63,7 +63,7 @@ import {
 } from './relevance/relational-event';
 import { collapseCrossProviderDuplicates } from './cross-provider-dedup.util';
 import { collapseDuplicateStories } from './identity/article-identity.util';
-import { resolveProviderFailureKind, type ProviderFailureKind } from './providers/gnews.provider';
+import { NOT_STARTED_FAILURE_KINDS, resolveProviderFailureKind, type ProviderFailureKind } from './providers/gnews.provider';
 /*
  * R4 P3 — a pure, dependency-free utility import. resolve-retrieval-language
  * declares which GNews endpoint supports which language and has no Nest
@@ -2400,7 +2400,9 @@ export class NewsService {
         /* ASK R2 LIVE-GATE REPAIR (P0-3) — a lane cut by the retrieval budget is named, never
            shown as checked: not started → unavailable; started but not awaited → timed out. The
            public fallbackReason (failedProviderIds) is unchanged. */
-        if (budgetSkipped.has(provider.id) || rightsSkipped.has(provider.id)) failures.push({ providerId: provider.id, kind: 'unavailable' });
+        /* R96 F6 — the two skips are different facts, each named (never 'unavailable'); Gate A first */
+        if (rightsSkipped.has(provider.id)) failures.push({ providerId: provider.id, kind: 'rights-not-cleared' });
+        else if (budgetSkipped.has(provider.id)) failures.push({ providerId: provider.id, kind: 'budget-cut' });
         else if (exhausted === RETRIEVAL_BUDGET_EXHAUSTED) failures.push({ providerId: provider.id, kind: 'timeout' });
         continue;
       }
@@ -2413,7 +2415,10 @@ export class NewsService {
       failedProviderIds.push(provider.id);
 
       /* The reason was already in hand here and was being thrown away. */
-      const kind = resolveProviderFailureKind(outcome.error);
+      const resolved = resolveProviderFailureKind(outcome.error);
+      /* R96 F6 (E1 check 1) — a provider that RAN cannot report a not-started lane: the skips above
+         are the only producers of 'rights-not-cleared' and 'budget-cut' */
+      const kind = NOT_STARTED_FAILURE_KINDS.has(resolved) ? 'unavailable' : resolved;
       failures.push({ providerId: provider.id, kind });
 
       logWithRequestId(
@@ -3015,6 +3020,16 @@ export class NewsService {
   notAdmittedProviderIds(): string[] {
     const blocked = this.providers.filter((provider) => !providerAdmission(provider).admitted).map((provider) => provider.id);
     return this.providers.length > 0 && blocked.length === this.providers.length ? blocked : [];
+  }
+
+  /**
+   * R96 F6–F8 / EA-FIND-1 — every configured provider Gate A refuses, WHETHER OR NOT another one is
+   * admitted. notAdmittedProviderIds() above answers "is acquisition closed?" (the /news/search
+   * acquisition block, unchanged); this answers "which lanes were never started?", so a path that
+   * does not carry the per-provider skip forward (the country feed) can still name them.
+   */
+  rightsRefusedProviderIds(): string[] {
+    return this.providers.filter((provider) => !providerAdmission(provider).admitted).map((provider) => provider.id);
   }
 
   private hasRealProviderConfigured(): boolean {

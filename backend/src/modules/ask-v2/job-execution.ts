@@ -163,6 +163,27 @@ export const EARLIER_RIGHTS_WITHHELD_REASON =
   'sources has not been established (which is not evidence that nothing happened)';
 
 /**
+ * R96 F7 — E1 WORDING REVIEW REQUIRED (proposal; W-1…W-6, consistent with the approved
+ * SOURCE_NOT_SEARCHED_MESSAGE). Every news lane was refused by Gate A: current reporting was NOT
+ * SEARCHED. That is not an outage (nothing was down, rate-limited or unavailable — W-1), not "not
+ * configured" (W-2), and not "nothing found" (nothing was searched — W-3). The model says what was
+ * not done and why, names no publisher (W-4) and gives no count (W-6).
+ */
+export const SOURCES_NOT_PERMITTED_RULE =
+  'NOT SEARCHED: current reporting was not searched for this question, because no news source is ' +
+  'cleared for use here. Say so plainly in your first sentence. Do not say that no reporting or no ' +
+  'findings exist, and do not describe this as a technical failure, an outage or a temporary ' +
+  'problem, and do not suggest trying again. Do not name or characterise any publisher or source. ' +
+  'Do not name, list, date or describe any recent development, event, notice, figure or disruption ' +
+  'as if it happened, and never fill a requested table of developments. Then answer ONLY the ' +
+  'general or advisory part of the question, clearly as general guidance; if none exists, stop.';
+
+/** R96 F7 — E1 WORDING REVIEW REQUIRED: the same fact, said of an EARLIER turn's search. */
+export const EARLIER_NOT_PERMITTED_REASON =
+  'current reporting was not searched in the earlier turn, because no news source is cleared for ' +
+  'use here, so it is not known what current reporting says';
+
+/**
  * ASK EVIDENCE CONTINUITY R1 (Production op 9713f8ee) — the reader's turn rests on the earlier
  * turn's reports ("Based on those reports…"), but that turn obtained NO verified reports. The model
  * says so first, attributes nothing to "reports", and keeps any general background labelled as
@@ -172,10 +193,14 @@ export function earlierReportsUnverifiedRule(
   gap: 'UNAVAILABLE' | 'NO_EVIDENCE',
   /** MASTER CTO R4 · #87 F-1 — the earlier search's reporting was withheld for source-use rights */
   rightsWithheld = false,
+  /** R96 F7 — the earlier search was never started: every lane's use is not cleared */
+  notPermitted = false,
 ): string {
   const why =
     gap === 'UNAVAILABLE'
-      ? 'the earlier search did not complete (a news source was unavailable or rate-limited), so it is not known what current reporting says'
+      ? notPermitted
+        ? EARLIER_NOT_PERMITTED_REASON
+        : 'the earlier search did not complete (a news source was unavailable or rate-limited), so it is not known what current reporting says'
       : rightsWithheld
         ? EARLIER_RIGHTS_WITHHELD_REASON
         : 'the earlier search completed and found no qualifying reporting (which is not evidence that nothing happened)';

@@ -101,6 +101,7 @@ import {
   type ProviderFailure,
   type RelevanceMode,
 } from '../../news/news.service';
+import { NOT_STARTED_FAILURE_KINDS } from '../../news/providers/gnews.provider';
 import { flightIdentifiersIn } from '../../news/relevance/event-frame-relevance.util';
 import { publishedInsideWindow } from '../../news/relevance/publication-window.util';
 import { deriveEventFrame, type EventFrame } from '../query/event-frame.util';
@@ -1716,10 +1717,11 @@ export class AnalysisService {
                 ? 'LANE_RATE_LIMITED'
                 : failure.kind === 'timeout'
                   ? 'LANE_TIMED_OUT'
-                  : failure.kind === 'unavailable'
+                  : failure.kind === 'unavailable' || NOT_STARTED_FAILURE_KINDS.has(failure.kind)
                     ? 'LANE_UNAVAILABLE'
                     : 'LANE_FAILED') as LaneOutcome,
-              reason: String(failure.kind),
+              /* R96 F6 — a not-started lane keeps the outcome it had; its reason is the mapped one */
+              reason: NOT_STARTED_FAILURE_KINDS.has(failure.kind) ? laneFailureReason(failure.kind) : String(failure.kind),
             })),
           ];
         };
@@ -4009,6 +4011,40 @@ export class AnalysisService {
         }
 
         /*
+          MASTER CTO R62/R64 · #96 GATE A — no configured news provider may run (none has a recorded
+          per-use right), so nothing was searched. Some paths (the country feed) do not carry the
+          per-provider skip forward; the turn is therefore marked here, once: every configured
+          provider is named as not searched, the evidence state is degraded, and the reader is told
+          it was not searched — never "no related articles".
+          R96 F6–F8 — the mark is 'rights-not-cleared' (never 'unavailable'), and it is made BEFORE the
+          trace below, so the lanes and the coverage notice say the same as the outcome (R-3b).
+          EA-FIND-1 — also when only SOME providers are refused (a CLEARED feed answered empty): the
+          refused lanes are named and the turn stays incomplete. O-F6F8-a — a turn that asked no
+          provider (retrievalAttempted false) records no lane at all.
+        */
+        const notSearched = articles.length === 0 ? (this.newsService.notAdmittedProviderIds?.() ?? []) : [];
+        const rightsRefused =
+          articles.length === 0 && retrievalContext.retrievalAttempted !== false
+            ? (this.newsService.rightsRefusedProviderIds?.() ?? [])
+            : [];
+        if (rightsRefused.length > 0) {
+          /* a refused provider was never started: whatever was recorded for it is the refusal */
+          const recorded = (retrievalContext.providerFailures ?? []).map((f) =>
+            rightsRefused.includes(f.providerId) ? { providerId: f.providerId, kind: 'rights-not-cleared' as const } : f,
+          );
+          retrievalContext = {
+            ...retrievalContext,
+            fallbackReason: 'provider-error',
+            providerFailures: [
+              ...recorded,
+              ...rightsRefused
+                .filter((providerId) => !recorded.some((f) => f.providerId === providerId))
+                .map((providerId) => ({ providerId, kind: 'rights-not-cleared' as const })),
+            ],
+          };
+        }
+
+        /*
           ASK TRUTHFUL RETRIEVAL R2A — WHAT WAS CHECKED, AND WHAT EACH CLAIM RESTS ON.
           CTO ALPHA CONTENT-INTEGRITY R1 (D) — built AFTER the question-anchor gate (it ran before it):
           the trace, the lanes and the claim states now describe the evidence actually admitted and
@@ -4022,7 +4058,34 @@ export class AnalysisService {
           search with no window left no trace at all, so "searched and found nothing" and "never
           searched" read the same. Every other path is unchanged.
         */
-        if (plannedTrace !== undefined || reportingWindow !== undefined || genericAttempts.length > 0) {
+        /* R96 F8 (G rows 4–6) — a turn whose lanes were refused is traced too, so the refused lanes
+           are named on every path, never only in providerFailures */
+        if (
+          plannedTrace !== undefined ||
+          reportingWindow !== undefined ||
+          genericAttempts.length > 0 ||
+          rightsRefused.length > 0
+        ) {
+          /* R96 F8 — a planned list never hides a failure the response carries: plan ∪ every failed
+             lane that the plan neither named nor saw answer (a lane that answered another query is
+             not unavailable) */
+          const plannedUnavailable =
+            plannedTrace === undefined
+              ? undefined
+              : [
+                  ...plannedTrace.lanesUnavailable,
+                  ...[
+                    ...new Map(
+                      (retrievalContext.providerFailures ?? [])
+                        .filter(
+                          (f) =>
+                            !plannedTrace.lanesUnavailable.some((u) => u.lane === f.providerId) &&
+                            !plannedTrace.lanesSucceeded.includes(f.providerId),
+                        )
+                        .map((f) => [f.providerId, laneFailureReason(f.kind)] as const),
+                    ),
+                  ].map(([lane, reason]) => ({ lane, reason })),
+                ];
           const trace: AnalysisRetrievalTrace = {
             queryVariants: plannedTrace?.queryVariants ?? [...sentQueryVariants(genericAttempts)],
             ...(plannedTrace === undefined && genericAttempts.length > 0
@@ -4080,7 +4143,7 @@ export class AnalysisService {
                 (id) => !(retrievalContext.providerFailures ?? []).some((f) => f.providerId === id),
               ),
             lanesUnavailable:
-              plannedTrace?.lanesUnavailable ??
+              plannedUnavailable ??
               ((retrievalContext.providerFailures ?? []).length > 0
                 ? (retrievalContext.providerFailures ?? []).map((f) => ({
                     lane: f.providerId,
@@ -4149,28 +4212,6 @@ export class AnalysisService {
           retrievalContext.fallbackReason === undefined
         ) {
           retrievalContext = { ...retrievalContext, fallbackReason: 'provider-error' };
-        }
-
-        /*
-          MASTER CTO R62/R64 · #96 GATE A — no configured news provider may run (none has a recorded
-          per-use right), so nothing was searched. Some paths (the country feed) do not carry the
-          per-provider skip forward; the turn is therefore marked here, once: every configured
-          provider is named as not searched (unavailable), the evidence state is degraded, and the
-          reader is told it was not searched — never "no related articles".
-        */
-        const notSearched = articles.length === 0 ? (this.newsService.notAdmittedProviderIds?.() ?? []) : [];
-        if (notSearched.length > 0) {
-          const recorded = retrievalContext.providerFailures ?? [];
-          retrievalContext = {
-            ...retrievalContext,
-            fallbackReason: 'provider-error',
-            providerFailures: [
-              ...recorded,
-              ...notSearched
-                .filter((providerId) => !recorded.some((f) => f.providerId === providerId))
-                .map((providerId) => ({ providerId, kind: 'unavailable' as const })),
-            ],
-          };
         }
 
         const sourceCoverage = this.sourceCoverageFor(
@@ -5091,7 +5132,8 @@ export class AnalysisService {
     const unavailable = new Map<string, string>();
     for (const failure of failures) {
       if (!succeeded.includes(failure.providerId))
-        unavailable.set(failure.providerId, failure.kind);
+        /* R96 R-2 — the reader-visible reason is the mapped one, never the raw provider kind */
+        unavailable.set(failure.providerId, laneFailureReason(failure.kind));
     }
     const trace: PlannedSearchTrace = {
       queryVariants: sent,
@@ -5172,7 +5214,8 @@ export class AnalysisService {
     const failureKinds = new Set(failures.map((failure) => failure.kind));
     const lanesUnavailable = failures.map((failure) => ({
       lane: failure.providerId,
-      reason: failure.kind,
+      /* R96 R-2 — the mapped reason, never the raw provider kind */
+      reason: laneFailureReason(failure.kind),
     }));
     const lanesAttempted = [
       ...new Set([...live.providers, ...failures.map((failure) => failure.providerId)]),
@@ -6681,6 +6724,9 @@ export class AnalysisService {
  * ASK RETRIEVAL / CONVERSATION R2 — the reader-facing reason for a failed lane. Rate limit, spent
  * allowance, timeout and refused access stay distinct (contract §4); everything else is
  * "unavailable" rather than a guess.
+ * R96 F6 (E1 Q1) — a lane Gate A refused is named 'rights-not-cleared' (our clearance position about
+ * our provider; never a publisher, source id, licence state or count). A budget cut stays
+ * 'unavailable' to the reader, as before.
  */
 export function laneFailureReason(kind: string): string {
   switch (kind) {
@@ -6688,6 +6734,7 @@ export function laneFailureReason(kind: string): string {
     case 'quota':
     case 'timeout':
     case 'auth':
+    case 'rights-not-cleared':
       return kind;
     default:
       return 'unavailable';

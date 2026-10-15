@@ -62,6 +62,7 @@ import {
   NO_CURRENT_FINDINGS_RULE,
   RECHECK_UNVERIFIED_RULE,
   RIGHTS_WITHHELD_RULE,
+  SOURCES_NOT_PERMITTED_RULE,
   SOURCES_UNAVAILABLE_RULE,
 } from './job-execution';
 import type { BoundedConversationState } from '../ask-router/semantic-ir/interpret-turn';
@@ -143,7 +144,7 @@ import { contextIdentityToken, type ResolvedAskContext } from './context/resolve
 import { isSameHeadline } from '../news/identity/headline-identity.util';
 import { AskObservationService } from '../ask-observability/ask-observation.service';
 import { questionAnchorsOf, sameMessageSubject, stableClauseNeedsMessage } from '../analysis/query/question-anchors.util';
-import { observedRetrievalOf, retrievalIncomplete, retrievalRightsWithheld } from './retrieval-outcome';
+import { observedRetrievalOf, retrievalIncomplete, retrievalNotPermitted, retrievalRightsWithheld } from './retrieval-outcome';
 import { researchRecordOf, type ResearchFacts } from './research-record';
 import { productMetaAnswer, readProductMeta } from './product-meta';
 import { checkWrittenArithmetic } from '../analysis/providers/arithmetic-check.util';
@@ -329,6 +330,9 @@ const NO_QUALIFYING_REPORTING =
 /** MASTER CTO R4 · #87 F-1 — E1 WORDING REVIEW REQUIRED: reporting was found and withheld for
     source-use rights (a record point; bounded to 80 characters). */
 const RIGHTS_WITHHELD_RECORD = 'Reporting was found but withheld: its source-use rights are not established.';
+/** R96 F7 — E1 WORDING REVIEW REQUIRED: every lane was refused by Gate A; nothing was searched
+    (a record point, bounded to 80 characters; consistent with SOURCE_NOT_SEARCHED_MESSAGE). */
+const SOURCE_RIGHTS_NOT_CLEARED_RECORD = 'Current reporting was not searched: no news source is cleared for use here.';
 const SEARCH_INCOMPLETE = [
   'The search did not complete (a news source was unavailable or rate-limited).',
   'No verified reports were obtained for this question.',
@@ -351,13 +355,21 @@ function noEvidenceMarker(
   incomplete: boolean,
   /** #87 F-1 — a completed search whose reporting was all withheld for source-use rights */
   rightsWithheld = false,
+  /** R96 F7 — the search was never started: every lane's use is not cleared (still incomplete, E1 R-3) */
+  notPermitted = false,
 ): {
   currentFindings: 'NONE';
   noEvidenceReason: NoEvidenceReason;
 } {
   return {
     currentFindings: 'NONE',
-    noEvidenceReason: incomplete ? 'SEARCH_INCOMPLETE' : rightsWithheld ? 'RIGHTS_WITHHELD' : 'NO_QUALIFYING_REPORTING',
+    noEvidenceReason: incomplete
+      ? notPermitted
+        ? 'SOURCE_RIGHTS_NOT_CLEARED'
+        : 'SEARCH_INCOMPLETE'
+      : rightsWithheld
+        ? 'RIGHTS_WITHHELD'
+        : 'NO_QUALIFYING_REPORTING',
   };
 }
 
@@ -372,6 +384,8 @@ function answerMemory(
   partialCurrent: 'UNAVAILABLE' | 'NO_EVIDENCE' | null = null,
   /** #87 F-1 — the search completed, found reporting, and all of it was withheld for rights */
   rightsWithheld = false,
+  /** R96 F7 — the search was never started: every lane's use is not cleared */
+  notPermitted = false,
 ): ConversationArtifact | null {
   /*
     ASK RETRIEVAL / CONVERSATION R2 (§7) — a search that RAN and found nothing is an outcome the
@@ -438,11 +452,15 @@ function answerMemory(
         provenance: 'SOURCED_REPORTING',
         label,
         components: [
-          ...(incomplete ? SEARCH_INCOMPLETE : [withheld ? RIGHTS_WITHHELD_RECORD : NO_QUALIFYING_REPORTING]),
+          ...(incomplete
+            ? notPermitted
+              ? [SOURCE_RIGHTS_NOT_CLEARED_RECORD]
+              : SEARCH_INCOMPLETE
+            : [withheld ? RIGHTS_WITHHELD_RECORD : NO_QUALIFYING_REPORTING]),
           ...(backgroundText === null ? [] : leadingSentences(backgroundText, 2)),
         ],
         scope,
-        ...noEvidenceMarker(incomplete, withheld),
+        ...noEvidenceMarker(incomplete, withheld, incomplete && notPermitted),
       });
     }
     const points =
@@ -474,7 +492,9 @@ function answerMemory(
       components: leadingSentences(backgroundText, 4),
       scope,
       /* R2 §7 — reasoning beside a current part that found no verified reporting */
-      ...(partialCurrent === null ? {} : noEvidenceMarker(partialCurrent === 'UNAVAILABLE', rightsWithheld)),
+      ...(partialCurrent === null
+        ? {}
+        : noEvidenceMarker(partialCurrent === 'UNAVAILABLE', rightsWithheld, partialCurrent === 'UNAVAILABLE' && notPermitted)),
     });
   if (partialCurrent === 'NO_EVIDENCE')
     return serverArtifact({
@@ -2723,7 +2743,12 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       recheckUnverified ? RECHECK_UNVERIFIED_RULE : '',
       earlierGap === null
         ? ''
-        : earlierReportsUnverifiedRule(earlierGap, request.priorArtifact?.noEvidenceReason === 'RIGHTS_WITHHELD'),
+        : earlierReportsUnverifiedRule(
+            earlierGap,
+            request.priorArtifact?.noEvidenceReason === 'RIGHTS_WITHHELD',
+            /* R96 F7 — the earlier turn searched nothing: said as such, never "unavailable" */
+            request.priorArtifact?.noEvidenceReason === 'SOURCE_RIGHTS_NOT_CLEARED',
+          ),
       /* ASK FINANCE INTEGRITY R1 (Production op b3924ff0) — APR / effective-rate explanations
          state their cash-flow assumptions; '' for every other question (byte-identical prompt) */
       financialRateRuleFor(request.question),
@@ -2733,7 +2758,10 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
       partialCurrent === undefined
         ? ''
         : partialCurrent === 'UNAVAILABLE'
-          ? SOURCES_UNAVAILABLE_RULE
+          ? /* R96 F7 (W-1) — every lane refused: "not searched", never "rate-limited or unavailable" */
+            retrievalNotPermitted(retrieval as Parameters<typeof retrievalNotPermitted>[0])
+            ? SOURCES_NOT_PERMITTED_RULE
+            : SOURCES_UNAVAILABLE_RULE
           : /* MASTER CTO R4 · #87 F-1 — reporting was found and all of it withheld for source-use
                rights: neither "no findings" nor "sources unavailable" (E1 WORDING REVIEW REQUIRED) */
             retrievalRightsWithheld(retrieval as Parameters<typeof retrievalRightsWithheld>[0])
@@ -3333,6 +3361,10 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
               /* #87 F-1 */
               retrievalRightsWithheld(
                 (researchSource === undefined ? analysis : researchSource) as Parameters<typeof retrievalRightsWithheld>[0],
+              ),
+              /* R96 F7 */
+              retrievalNotPermitted(
+                (researchSource === undefined ? analysis : researchSource) as Parameters<typeof retrievalNotPermitted>[0],
               ),
             );
             return memory === null ? {} : { artifact: memory };

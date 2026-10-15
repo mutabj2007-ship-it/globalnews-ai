@@ -254,7 +254,8 @@ describe('ASK R2 · P0-3 — budget spent ⇒ providers are not even started (no
     }, 100);
     expect(gnews.state.calls).toBe(0);
     expect(response.articles).toHaveLength(0);
-    expect(readProviderFailures(response)).toEqual([{ providerId: 'gnews', kind: 'unavailable' }]);
+    /* R96 F6 — the budget skip is named for what it is ('budget-cut', backend-only), no longer 'unavailable' */
+    expect(readProviderFailures(response)).toEqual([{ providerId: 'gnews', kind: 'budget-cut' }]);
   }, 20000);
 });
 

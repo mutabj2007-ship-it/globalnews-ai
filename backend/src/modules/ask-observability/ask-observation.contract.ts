@@ -53,6 +53,10 @@ export const OBSERVED_RETRIEVAL_OUTCOMES: ReadonlySet<string> = new Set([
   /* MASTER CTO R4 · #87 F-1 — every found item withheld for source-use rights (ask-v2/retrieval-outcome.ts
      already emits it; outside this set it was stored as NULL). TEXT column: no migration. */
   'RIGHTS_WITHHELD',
+  /* R96 F7 (E1 R-4) — every lane refused by Gate A, nothing started: added in the SAME commit as its
+     emitter (retrieval-outcome.ts), or the refusal would be stored as NULL ("retrieval never ran").
+     TEXT column: no migration. */
+  'NOT_PERMITTED',
 ]);
 
 /*

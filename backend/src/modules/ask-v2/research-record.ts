@@ -19,6 +19,8 @@
                  COMPLETED_NO_MATCH | ALL_FILTERED  the search completed; nothing usable
                  PARTIAL | PARTIAL_NO_MATCH         some sources could not be reached
                  PROVIDER_FAILED                    the search could not be completed
+                 RIGHTS_WITHHELD                    reporting found, all withheld for source-use rights
+                 NOT_PERMITTED                      not searched: every lane's use is not cleared (R96 F7)
                  OUTCOME_UNAVAILABLE                the call was made but returned no typed outcome
                                                     (never guessed as "no match" or "success")
       reused     a follow-up re-read the earlier answer's evidence; no new search was made

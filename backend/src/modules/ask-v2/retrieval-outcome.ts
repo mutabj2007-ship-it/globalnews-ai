@@ -17,6 +17,11 @@
  *   RIGHTS_WITHHELD     the search returned items, and every one was withheld because its source's
  *                       reuse rights are not cleared (MASTER CTO P0 RIGHTS CONTAINMENT R1.1) — never
  *                       "nothing relevant", never "no reporting exists"
+ *   NOT_PERMITTED       no provider was started: every lane was refused by Gate A because its use is
+ *                       not cleared (R96 F7, E1 Q2 C1). Never "failed" (nothing broke), never "no
+ *                       match" (nothing was searched). A refusal beside a real outage or budget cut
+ *                       stays PROVIDER_FAILED; beside an answering lane it is PARTIAL / PARTIAL_NO_MATCH;
+ *                       items found and withheld keep RIGHTS_WITHHELD (E1 R-7).
  *
  * Production FJ-1 (A4): 48 zero-item answers in 14 days could not be told apart. These codes are
  * what separates "the sources failed" from "our query or gate found nothing".
@@ -29,7 +34,11 @@ export type RetrievalOutcomeCode =
   | 'MATCHED'
   | 'ALL_FILTERED'
   | 'COMPLETED_NO_MATCH'
-  | 'RIGHTS_WITHHELD';
+  | 'RIGHTS_WITHHELD'
+  | 'NOT_PERMITTED';
+
+/** R96 F6 (E1 Q1) — the lane / failure reason of a provider Gate A never started. */
+export const RIGHTS_NOT_CLEARED_REASON = 'rights-not-cleared';
 
 export interface ObservedRetrieval {
   readonly retrievalOutcome: RetrievalOutcomeCode | null;
@@ -95,6 +104,29 @@ export function retrievalIncomplete(response: RetrievalFacts | null | undefined)
   );
 }
 
+/**
+ * R96 F7 — WAS EVERY LANE REFUSED FOR SOURCE-USE RIGHTS, AND NOTHING ELSE?
+ * True only when at least one failure or unavailable lane is recorded, EVERY one of them is
+ * 'rights-not-cleared', and no provider outside them answered. A genuine outage, a budget cut, the
+ * 'news-providers' aggregate or an answering lane makes it false (E1 R-8: never every empty
+ * retrieval). Reads only the facts the response already carries.
+ */
+function everyLaneRefused(ctx: NonNullable<RetrievalFacts['retrievalContext']>): boolean {
+  const reasons = [
+    ...(ctx.providerFailures ?? []).map((f) => ({
+      lane: (f as { providerId?: unknown } | null)?.providerId,
+      reason: (f as { kind?: unknown } | null)?.kind,
+    })),
+    ...(ctx.retrievalTrace?.lanesUnavailable ?? []).map((l) => ({
+      lane: (l as { lane?: unknown } | null)?.lane,
+      reason: (l as { reason?: unknown } | null)?.reason,
+    })),
+  ];
+  if (reasons.length === 0 || reasons.some((r) => r.reason !== RIGHTS_NOT_CLEARED_REASON)) return false;
+  const refused = new Set(reasons.map((r) => r.lane));
+  return (ctx.providers ?? []).every((id) => refused.has(id));
+}
+
 const count = (v: unknown): number | null =>
   typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : null;
 
@@ -118,7 +150,14 @@ export function observedRetrievalOf(response: RetrievalFacts | null | undefined)
       ((ctx.providerFailures ?? []).length > 0 ||
         ctx.fallbackReason === 'provider-error' ||
         ctx.dataMode === 'unavailable'));
-  if (allFailed && admitted === 0) return { retrievalOutcome: 'PROVIDER_FAILED', ...observedCounts };
+  if (allFailed && admitted === 0) {
+    /* R96 F7 — nothing was started because every lane was refused: not a failure. E1 R-7 — only
+       when nothing was found and withheld (RIGHTS_WITHHELD keeps precedence; an all-failed search
+       with a withheld item stays PROVIDER_FAILED, as before). */
+    if ((ctx.rightsExcluded?.count ?? 0) === 0 && everyLaneRefused(ctx))
+      return { retrievalOutcome: 'NOT_PERMITTED', ...observedCounts };
+    return { retrievalOutcome: 'PROVIDER_FAILED', ...observedCounts };
+  }
 
   const partial = failures > 0 && answered > 0;
   if (admitted > 0) {
@@ -151,6 +190,15 @@ export function observedRetrievalOf(response: RetrievalFacts | null | undefined)
     return { retrievalOutcome: 'ALL_FILTERED', ...observedCounts };
   }
   return { retrievalOutcome: 'COMPLETED_NO_MATCH', ...observedCounts };
+}
+
+/**
+ * R96 F7 — was this search never started because every lane's use is not cleared? (The outcome
+ * NOT_PERMITTED, as a predicate.) retrievalIncomplete() stays TRUE for it (E1 R-3): what current
+ * reporting says is not known; only the wording differs ("not searched", never "unavailable").
+ */
+export function retrievalNotPermitted(response: RetrievalFacts | null | undefined): boolean {
+  return observedRetrievalOf(response).retrievalOutcome === 'NOT_PERMITTED';
 }
 
 /**
