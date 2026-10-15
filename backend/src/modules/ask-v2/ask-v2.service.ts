@@ -65,6 +65,7 @@ import {
 } from './conversation/conversation-artifact';
 import { isSubjectFollowUp } from '../analysis/anchor/conversation-subject.util';
 import { isAnaphoricFollowUp } from '../analysis/anchor/event-anchor.util';
+import { asksForUnnamedExample } from './conversation/example-continuation';
 import { loanContinuationAnchor } from './computation/cash-flow-rate';
 import { ComputeMeterService } from '../compute-controls/compute-meter.service';
 import { OperationalSwitchService } from '../compute-controls/operational-switch.service';
@@ -115,10 +116,16 @@ export function anchorQuestionOf(question: string, newestFirst: readonly string[
      the executor asks for the missing input. Every other question is decided below, unchanged. */
   const loanAnchor = loanContinuationAnchor(question, newestFirst);
   if (loanAnchor !== undefined) return loanAnchor;
-  if (!isSubjectFollowUp(question) && !isAnaphoricFollowUp(question)) return null;
+  if (!continuesEarlierSubject(question)) return null;
   if (newestFirst.length === 0) return null;
-  const anchor = newestFirst.find((q) => !isSubjectFollowUp(q) && !isAnaphoricFollowUp(q));
+  const anchor = newestFirst.find((q) => !continuesEarlierSubject(q));
   return anchor ?? newestFirst[0];
+}
+
+/* The landed follow-up detectors, plus (R74 #95) a request for an example that names no subject
+   ("Give me a practical example involving a small shop owner…"): conversation/example-continuation. */
+function continuesEarlierSubject(question: string): boolean {
+  return isSubjectFollowUp(question) || isAnaphoricFollowUp(question) || asksForUnnamedExample(question);
 }
 
 /**
@@ -388,7 +395,7 @@ export class AskV2Service {
     /* A RECOGNISED follow-up ("Why did this happen?", "How does this affect X?") already
        continues the prior SUBJECT through the anchor question (ASK R3 CONTINUITY) — a richer
        continuation than a country. Only the turns those detectors miss inherit the place. */
-    if (isSubjectFollowUp(question) || isAnaphoricFollowUp(question)) return undefined;
+    if (continuesEarlierSubject(question)) return undefined;
     const earlier = await this.atomic(async (tx) => {
       await this.thread(tx, p, threadId);
       return tx.askTurn.findMany({

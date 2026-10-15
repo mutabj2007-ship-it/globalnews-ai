@@ -337,6 +337,33 @@ const IN_PROGRESS: Readonly<Record<'en' | 'pl', RegExp>> = {
   pl: /(?!)/u,
 };
 
+/*
+  R74 (#95, Alpha PO test 15 Oct) — "How can prices rise even when an economy is growing?" was read
+  as a trend in progress and the conceptual question was asked for a place and period. A progressive
+  whose SUBJECT is an indefinite generic noun phrase ("when an economy is growing", "if a currency
+  is falling") describes a hypothetical case, not a particular trend: the generic-use rule of
+  STATE_NOUN, applied to the change readers. English only (Polish has no articles). A definite, bare
+  or named subject ("Why is the dollar falling?", "Why are prices rising?", "Kenya's economy is
+  growing") and an auxiliary-first question ("Is a war escalating…?") keep their current reading.
+*/
+const EN_GENERIC_SUBJECT_BEFORE = /(?:^|[\s,(])(?:a|an|any)\s+(?:[\p{L}'’-]+\s+){0,2}$/iu;
+function particularProgressive(
+  readers: Readonly<Record<'en' | 'pl', RegExp>>,
+  text: string,
+  lang: 'en' | 'pl',
+): boolean {
+  const re = readers[lang];
+  if (lang !== 'en') return re.test(text);
+  for (const m of text.matchAll(new RegExp(re.source, `${re.flags.replace('g', '')}g`))) {
+    if (!EN_GENERIC_SUBJECT_BEFORE.test(text.slice(0, m.index))) return true;
+  }
+  return false;
+}
+const changing = (text: string, lang: 'en' | 'pl'): boolean =>
+  particularProgressive(CHANGING, text, lang);
+const inProgress = (text: string, lang: 'en' | 'pl'): boolean =>
+  particularProgressive(IN_PROGRESS, text, lang);
+
 /** The current edition / requirements of a named standard or rule: an official reference. */
 const OFFICIAL_REFERENCE =
   /\b(?:IEC|ISO|IEEE|EN|ANSI|ASTM|NFPA|UL|RFC|ETSI|ITU-T)\s*[\d-]|\b(?:standard|regulation|directive|code|specification)\b.*\b(?:latest|current\s+edition|current\s+version|in\s+force|require[sd]?|specif(?:y|ies))\b/i;
@@ -484,7 +511,7 @@ export function deriveKnowledgeRequirement(
   const fresh =
     assertsFreshness(freshText) ||
     FRESHNESS[lang].test(freshText) ||
-    CHANGING[lang].test(freshText) ||
+    changing(freshText, lang) ||
     SINCE_PRESENT[lang].test(freshText) ||
     anchoredState(freshText, lang, place, requestYear) ||
     temporallyCurrent(freshText, lang, requestYear) ||
@@ -524,7 +551,7 @@ export function deriveKnowledgeRequirement(
     !fresh &&
     explanatory &&
     !(lang === 'pl' ? PL_PUBLIC_EVENT : EN_PUBLIC_EVENT).test(text) &&
-    !IN_PROGRESS[lang].test(text) &&
+    !inProgress(text, lang) &&
     readAdvisory(text, lang, requestYear) === null
   ) {
     return {
@@ -583,7 +610,7 @@ export function deriveKnowledgeRequirement(
   const clauseFresh = (c: string): boolean =>
     assertsFreshness(c) ||
     FRESHNESS[lang].test(c) ||
-    CHANGING[lang].test(c) ||
+    changing(c, lang) ||
     CHANGED[lang].test(c) ||
     anchoredState(c, lang, false, requestYear) ||
     temporallyCurrent(c, lang, requestYear) ||
@@ -631,7 +658,7 @@ export function clauseFreshSignal(clause: string, language: string, requestYear?
   return (
     assertsFreshness(clause) ||
     FRESHNESS[lang].test(clause) ||
-    CHANGING[lang].test(clause) ||
+    changing(clause, lang) ||
     CHANGED[lang].test(clause) ||
     anchoredState(clause, lang, false, requestYear) ||
     temporallyCurrent(clause, lang, requestYear) ||
@@ -663,7 +690,7 @@ export function freshnessSources(
     hasExplicitTime(t, lang, requestYear) ||
     temporallyCurrent(t, lang, requestYear) ||
     NEWS_REQUEST[lang].test(t) ||
-    CHANGING[lang].test(t) ||
+    changing(t, lang) ||
     CHANGED[lang].test(t) ||
     assertsFreshness(t) ||
     FRESHNESS[lang].test(t) ||
@@ -676,7 +703,7 @@ export function freshnessSources(
 /** Does the text ask about something IN PROGRESS ("Why are prices rising")? */
 export function inProgressSignal(text: string, language: string): boolean {
   const lang: 'en' | 'pl' = language === 'pl' ? 'pl' : 'en';
-  return IN_PROGRESS[lang].test(text) || CHANGING[lang].test(text);
+  return inProgress(text, lang) || changing(text, lang);
 }
 
 /**
@@ -695,7 +722,7 @@ export function genuineFreshness(text: string, language: string, requestYear?: n
     hasExplicitTime(freshText, lang, requestYear) ||
     temporallyCurrent(freshText, lang, requestYear) ||
     NEWS_REQUEST[lang].test(freshText) ||
-    CHANGING[lang].test(freshText) ||
+    changing(freshText, lang) ||
     assertsFreshness(freshText) ||
     (!pastOnly && SPECIFIC_EVENT[lang].test(freshText)) ||
     CHANGED[lang].test(freshText)
