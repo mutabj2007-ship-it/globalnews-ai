@@ -106,7 +106,9 @@ describe('1 · country resolution across language directions', () => {
    */
   it.each([
     ['fr', 110, 165],
-    ['es', 117, 160],
+    /* F1 (CTO R110 #99: a bare "Congo" is never COG STATED; EA F1-READER-IMPACT) — SUPERSEDED, NOT DELETED: was ['es', 117, 160]. The Spanish surface name of COG is the bare
+       "Congo", which no longer resolves to a STATED COG: one fewer exact match, by design. */
+    ['es', 116, 160],
     ['pl', 94, 170],
     ['sw', 121, 165],
     ['ar', 0, 180],

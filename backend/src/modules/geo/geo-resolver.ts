@@ -6,6 +6,7 @@ import {
   type GeoFuzzyMatch,
 } from '@globalnews-ai/shared';
 import { isRoutingFunctionWord } from '../analysis/query/routing-function-words.util';
+import { congoReadingOf } from '../analysis/anchor/event-anchor.util';
 import { findSupranationalSpans, maskSupranationalSpans } from './supranational-regions';
 import {
   candidateRuns,
@@ -1168,6 +1169,67 @@ function resolveFuzzy(
  * the same text it returns the same answer for ever, which is what lets its
  * output be cached, compared and audited.
  */
+/*
+ * F1 — CONGO, DECIDED BY THE REVIEWED READING, NEVER BY THE GAZETTEER NAME ALONE.
+ *
+ * The country index maps the bare name "Congo" to the Republic of the Congo (COG), so the resolver
+ * used to answer "Congo" and "eastern Congo" with COUNTRY COG, provenance STATED — and the map feed
+ * plotted "M23 rebels advance in eastern Congo" in Congo-Brazzaville, Ask applied a COG chip to
+ * "What is happening in eastern Congo?" and a corridor "into Congo" became [COG, …] (EA measured,
+ * R106-D10-D11-MAP/EA/F1-READER-IMPACT). When the scan's COG comes from a bare "Congo", the existing
+ * reviewed reading (congoReadingOf — the same patterns Gate F and the anchor use) decides:
+ *   COD signals (DR Congo / DRC / RDC / Kinshasa / eastern Congo / Kivu / Goma / M23 …) → COD;
+ *   COG signals (Brazzaville / Republic of the Congo / Pointe-Noire)                   → COG, unchanged;
+ *   neither, or both                                                                   → BOTH, so the
+ *     existing "several countries named" path answers CONTESTED and every caller's ambiguity
+ *     handling applies (Ask asks "Which Congo?", the corridor drops it, the map does not render).
+ * Text with no "Congo" at all, or a scan without COG, is untouched.
+ */
+const BARE_CONGO_RUNS: ReadonlySet<string> = new Set(['congo', 'kongo', 'konga', 'kongu']);
+
+/* EA F1 note (c) — in ARTICLE text an armed group or Lake Kivu is never by itself a DRC locality (CTO
+   policy: actors and the lake are not independently decisive). Questions keep the reviewed reading. */
+const ACTOR_OR_LAKE = /(^|[^\p{L}])(?:afc\/m23|m23|fardc|monusco|lake\s+kivu)(?=$|[^\p{L}])/giu;
+/* EA F1 note (b) — Polish (and German) bare forms read as the bare name */
+const KONGO_FORMS = /(^|[^\p{L}])kong[oau](?=$|[^\p{L}])/giu;
+
+interface CongoDecision {
+  readonly countries: readonly CountryMeta[];
+  /** COD was INFERRED (from a locality or the caller's context), not named — provenance INTERPRETED */
+  readonly interpretedCod: boolean;
+}
+
+function disambiguateCongo(
+  countries: readonly CountryMeta[],
+  text: string,
+  governedRuns: readonly string[],
+  articleMode: boolean,
+  contextIso3: string | undefined,
+): CongoDecision {
+  const unchanged: CongoDecision = { countries, interpretedCod: false };
+  const cogAt = countries.findIndex((c) => c.iso3 === 'COG');
+  if (cogAt < 0) return unchanged;
+  /* Only a BARE name is undecided. A qualified run the scan itself matched in any language ("republic
+     of the congo", "república del congo", "congo-brazzaville", "republika konga") already names ONE
+     country and is left exactly as the scan resolved it. */
+  const congoRuns = governedRuns.filter((r) => /(?:^|[^\p{L}])[ck]ong[oau]/iu.test(r));
+  if (congoRuns.length === 0 || congoRuns.some((r) => !BARE_CONGO_RUNS.has(r))) return unchanged;
+  const readable = (articleMode ? text.replace(ACTOR_OR_LAKE, '$1 ') : text).replace(KONGO_FORMS, '$1Congo');
+  const reading = congoReadingOf(readable);
+  if (reading === 'COG') return unchanged;
+  const cod = resolveCountryByAnyIdentifier('COD');
+  if (cod === undefined) return unchanged;
+  const withoutCog = countries.filter((_, i) => i !== cogAt);
+  const withCod = withoutCog.some((c) => c.iso3 === 'COD') ? withoutCog : [...withoutCog.slice(0, cogAt), cod, ...withoutCog.slice(cogAt)];
+  if (reading === 'COD') return { countries: withCod, interpretedCod: true };
+  /* EA F1 note (d) — the caller's own country corroborates a bare name: COD → COD (inferred) */
+  if (contextIso3?.toUpperCase() === 'COD') return { countries: withCod, interpretedCod: true };
+  if (contextIso3?.toUpperCase() === 'COG') return unchanged;
+  /* undecided or both — both candidates, never a pick: the "several countries" path → CONTESTED */
+  const both = countries.some((c) => c.iso3 === 'COD') ? countries : [...countries.slice(0, cogAt), cod, ...countries.slice(cogAt)];
+  return { countries: both, interpretedCod: false };
+}
+
 export function resolveGeography(rawText: string, options: GeoResolveOptions = {}): GeoResolution {
   /*
    * SUPRANATIONAL PHRASES ARE MASKED BEFORE ANYTHING ELSE RUNS.
@@ -1231,7 +1293,15 @@ export function resolveGeography(rawText: string, options: GeoResolveOptions = {
     options.requireGeographicContext === true,
     segmentStarts(text),
   );
-  const namedCountries = scan.countries;
+  /* F1 (EA R106 F1-READER-IMPACT) — an unqualified "Congo" never settles COG on its own. */
+  const congo = disambiguateCongo(
+    scan.countries,
+    rawText ?? '',
+    scan.governedRuns,
+    options.requireGeographicContext !== true,
+    options.contextCountryIso3,
+  );
+  const namedCountries = congo.countries;
   const contextCountry = options.contextCountryIso3
     ? resolveCountryByAnyIdentifier(options.contextCountryIso3)
     : undefined;
@@ -1955,15 +2025,19 @@ export function resolveGeography(rawText: string, options: GeoResolveOptions = {
     if (recovered) return recovered;
 
     const place = toPlaceFromCountry(namedCountries[0]);
+    /* F1 — DR Congo decided from a locality or the caller's context was INFERRED, not named */
+    const inferredCod = congo.interpretedCod && namedCountries[0].iso3 === 'COD';
 
     return {
       precision: 'COUNTRY',
-      provenance: 'STATED',
+      provenance: inferredCod ? 'INTERPRETED' : 'STATED',
       place,
       candidates: [place],
       matchedText: foldPlaceName(namedCountries[0].name),
       reason: 'COUNTRY_ONLY',
-      detail: `"${namedCountries[0].name}" named with no finer place resolved`,
+      detail: inferredCod
+        ? 'an unqualified "Congo" read as DR Congo from a stated DRC locality or the caller\'s own country'
+        : `"${namedCountries[0].name}" named with no finer place resolved`,
     };
   }
 

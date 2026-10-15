@@ -142,10 +142,16 @@ describe('Stage-A exact entity identity — COD versus COG', () => {
     ['Democratic Republic of the Congo', 'CD'],
     ['Congo-Kinshasa', 'CD'],
     ['Republic of Congo', 'CG'],
-    ['Congo', 'CG'],
+    /* F1 (CTO R110 #99: a bare "Congo" is never COG STATED; EA F1-READER-IMPACT) — SUPERSEDED, NOT DELETED: was ['Congo', 'CG']. A bare "Congo" names neither country; it
+       is asserted below as CONTESTED with both candidates. */
     ['Congo-Brazzaville', 'CG'],
   ])('"%s" is %s', (text, iso2) => {
     expect(iso2Of(text)).toBe(iso2);
+  });
+  it('a bare "Congo" is CONTESTED between CD and CG — never a STATED pick', () => {
+    const r = resolveGeography('Congo');
+    expect(r.provenance).toBe('CONTESTED');
+    expect(r.candidates.map((c) => c.country.iso2).sort()).toEqual(['CD', 'CG']);
   });
 
   it('"Congolese" stays UNRESOLVED — the demonym does not choose between the two', () => {

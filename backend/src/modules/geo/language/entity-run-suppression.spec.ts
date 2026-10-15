@@ -211,8 +211,10 @@ describe('G-GEO-D14-B1-RUNG · acceptance', () => {
         if (id && id.startsWith(`country:${c.iso3}`)) correct += 1;
       }
     }
-    /* Measured 1066 with this change, 1065 on the base commit. It may rise; it must not fall. */
-    expect(correct).toBeGreaterThanOrEqual(1066);
+    /* Measured 1066 with this change, 1065 on the base commit. It may rise; it must not fall.
+       F1 (CTO R110 #99: a bare "Congo" is never COG STATED; EA F1-READER-IMPACT) — SUPERSEDED, NOT DELETED: was toBeGreaterThanOrEqual(1066). "Report from Congo." in the
+       locales whose COG name is the bare "Congo" is no longer a STATED COG: 1065, by design. */
+    expect(correct).toBeGreaterThanOrEqual(1065);
   });
 
   it('F2 · suppression cannot reach the FR-3 gain shape at all', () => {
