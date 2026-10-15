@@ -17,7 +17,10 @@ describe('withheldForSourceRights', () => {
     'an answer citing %s is withheld: no text, no analysis, no memory; the reason is stated',
     (sourceId) => {
       const out = withheldForSourceRights(stored([sourceId])) as Record<string, unknown>;
-      expect(out.answer).toEqual({ state: 'INSUFFICIENT', basis: WITHHELD_BASIS, missingRoles: [] });
+      /* CTO R81 (b3e1744, R54 C-96 allowlist) — SUPERSEDED, NOT DELETED: was toEqual({ state, basis,
+         missingRoles: [] }). The withheld answer is now REBUILT from codes (no spread of the stored answer)
+         and carries an empty candidates list; the reader-visible state and basis are unchanged. */
+      expect(out.answer).toEqual({ state: 'INSUFFICIENT', basis: WITHHELD_BASIS, missingRoles: [], candidates: [] });
       expect(out.analysis).toBeNull();
       expect(out.background).toBeNull();
       expect(out.artifact).toBeNull();
@@ -52,8 +55,11 @@ describe('withheldForSourceRights', () => {
       recentReporting: { items: [{ sourceId: 'bbc', providerId: 'gnews' }, { sourceId: 'feed:wp-pl' }, { sourceId: 'feed:taarifa-rw' }] },
     };
     const out = withheldForSourceRights(payload) as { recentReporting: { items: Array<{ sourceId: string }> } };
-    /* E1-R46 — a GNews-pending item has no positive METADATA basis; Taarifa's recorded metadata grant stays */
-    expect(out.recentReporting.items.map((i) => i.sourceId)).toEqual(['feed:taarifa-rw']);
+    /* E1-R46 — a GNews-pending item has no positive METADATA basis.
+       E1 R81 C-1 — SUPERSEDED, NOT DELETED: was toEqual(['feed:taarifa-rw']) ("Taarifa's recorded metadata
+       grant stays"). The state-keyed LIMITED_SCOPE_REVIEW metadata basis is removed (Taarifa parked):
+       no item below CLEARED is listed. */
+    expect(out.recentReporting.items.map((i) => i.sourceId)).toEqual([]);
   });
 
   it.each([null, undefined, 'x', 3, []])('non-object payload %p passes through', (v) => {

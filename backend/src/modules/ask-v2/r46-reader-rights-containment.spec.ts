@@ -149,7 +149,10 @@ describe('E1-R46 · the external-reader containment (positive basis only)', () =
       { sourceId: 'bbc', providerId: 'gnews', title: 'listed fresh', url: 'https://example.invalid/l2', sourceName: 'BBC', publishedAt: BASE.publishedAt },
       { sourceId: 'feed:taarifa-rw', title: 'listed metadata-only feed', url: 'https://example.invalid/l3', sourceName: 'Taarifa', publishedAt: BASE.publishedAt },
     ])) as { recentReporting: { items: Array<{ title: string }> } };
-    expect(out.recentReporting.items.map((i) => i.title)).toEqual(['listed metadata-only feed']);
+    /* E1 R81 C-1 — SUPERSEDED, NOT DELETED: was toEqual(['listed metadata-only feed']) (the Taarifa
+       LIMITED_SCOPE_REVIEW metadata-only row). The state-keyed metadata basis is removed: nothing below
+       CLEARED is listed. */
+    expect(out.recentReporting.items.map((i) => i.title)).toEqual([]);
   });
 
   it('R46-3 (frontend sink) a headline is never link text: the withheld JSON carries no title to anchor a link', () => {
