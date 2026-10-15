@@ -157,3 +157,20 @@ describe('F1 — EA F1-R2-1/2/3 ("democratic" in any language, the inferred labe
     expect(m.place?.label).not.toBe('Congo');
   });
 });
+
+describe('F1 — EA F1-R3-1 (Republican / Congress is never Congo)', () => {
+  it.each([
+    ['Republikańscy kongresmeni blokują budżet'],
+    ['Republikanische Kongressabgeordnete stimmen dagegen'],
+    ['Demokratyczni i republikańscy kongresmeni'],
+    ['Republikanie Kongresu USA głosowali przeciw'],
+    ['Demokratyczni kongresmeni w Kongresie'],
+  ])('%s → no Congo', (text) => {
+    const isos = resolveGeography(text).candidates.map((c) => c.country.iso3);
+    expect(isos).not.toContain('COG');
+    expect(isos).not.toContain('COD');
+  });
+  it('"Republikanie Kongresu USA" keeps USA', () => {
+    expect(resolveGeography('Republikanie Kongresu USA głosowali przeciw').candidates.map((c) => c.country.iso3)).toContain('USA');
+  });
+});

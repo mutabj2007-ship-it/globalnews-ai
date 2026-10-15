@@ -1222,12 +1222,15 @@ function disambiguateCongo(
     /* EA F1-R2-1 — "democratic" in ANY language and either order names DR Congo: PL "Demokratyczna
        Republika Konga", DE "Demokratische Republik Kongo", CS "Demokratická republika Kongo", SV
        "Demokratiska republiken Kongo", ID "Republik Demokratik Kongo". Only a republic run with NO
-       democratic word attached is the Republic of the Congo. Both named → both (EA F1-R2-3). */
-    const codRun = /demo[ck]rat\p{L}*\s+republi\p{L}*\s+kong\p{L}*|republi\p{L}*\s+demo[ck]rat\p{L}*\s+kong\p{L}*/giu;
+       democratic word attached is the Republic of the Congo. Both named → both (EA F1-R2-3).
+       EA F1-R3-1 — the Congo token is a Congo FORM (kongo/konga/kongu/kongiem), never "Kongress" /
+       "kongresmeni", so "Republikańscy kongresmeni" names no country. */
+    const codRun =
+      /demo[ck]rat\p{L}*\s+republi\p{L}*\s+kong(?:o|a|u|iem)(?!\p{L})|republi\p{L}*\s+demo[ck]rat\p{L}*\s+kong(?:o|a|u|iem)(?!\p{L})/giu;
     const named: string[] = [];
     if (codRun.test(text)) named.push('COD');
     codRun.lastIndex = 0;
-    if (/republi\p{L}*\s+kong\p{L}*/iu.test(text.replace(codRun, ' '))) named.push('COG');
+    if (/republi\p{L}*\s+kong(?:o|a|u|iem)(?!\p{L})/iu.test(text.replace(codRun, ' '))) named.push('COG');
     const metas = named
       .map((iso) => resolveCountryByAnyIdentifier(iso))
       .filter((m): m is CountryMeta => m !== undefined);
@@ -1237,7 +1240,7 @@ function disambiguateCongo(
   const bareKongo =
     !countries.some((c) => c.iso3 === 'COD' || c.iso3 === 'COG') &&
     KONGO_FORMS.test(text) &&
-    !/republi\p{L}*\s+kong\p{L}*/iu.test(text);
+    !/republi\p{L}*\s+kong(?:o|a|u|iem)(?!\p{L})/iu.test(text);
   KONGO_FORMS.lastIndex = 0;
   const cog = bareKongo ? resolveCountryByAnyIdentifier('COG') : undefined;
   const scanned = cog === undefined ? countries : [...countries, cog];
