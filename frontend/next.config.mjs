@@ -18,6 +18,24 @@
  */
 export const FIRST_PARTY_PROXY_TIMEOUT_MS = 120_000;
 
+/**
+ * R76 (E1_B_NAME_PRIVACY_CONDITIONAL, C-4) — My Intelligence dev fixtures greet an anonymous
+ * visitor as "Anna" with fixture stories presented as theirs. `NEXT_PUBLIC_MI_DEV_FIXTURES` is a
+ * PUBLIC, build-time variable, so the guarantee that it is off in Alpha / Production is a build
+ * check, not a convention: a production build (or any Railway build) with it set to 'true' fails.
+ * `next dev` (NODE_ENV=development) and local test runs are unaffected.
+ */
+export function assertNoDevFixturesInPublicBuild(env = process.env) {
+  const publicBuild = env.NODE_ENV === 'production' || Boolean(env.RAILWAY_ENVIRONMENT_NAME ?? env.RAILWAY_ENVIRONMENT);
+  if (publicBuild && env.NEXT_PUBLIC_MI_DEV_FIXTURES === 'true') {
+    throw new Error(
+      'NEXT_PUBLIC_MI_DEV_FIXTURES=true is refused in a production / Railway build (E1-B C-4): ' +
+        'fixture accounts must never reach a public build.',
+    );
+  }
+}
+assertNoDevFixturesInPublicBuild();
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,

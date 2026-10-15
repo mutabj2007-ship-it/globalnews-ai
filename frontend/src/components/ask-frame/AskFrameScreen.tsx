@@ -876,8 +876,9 @@ export function AskFrameScreen({
                     {signedInReader && (
                       <p data-ask="welcome-greeting" className={styles.emptyLead}>
                         {/* R3.1 GOOGLE PROFILE PERSONALIZATION — a time-appropriate, localised
-                            greeting by name (saved name, else the Google / verified-email name);
-                            no honorific, never an address. No usable name → the neutral line. */}
+                            greeting by name (R76 E1-B: the reader's SAVED name only — no Google /
+                            email source); no honorific, never an address. No saved name → the
+                            neutral line. */}
                         {nav?.displayName != null
                           ? askGreetingStrings(interfaceLocale).greet[askDayPart(new Date())](nav.displayName)
                           : r3.welcomeBack}

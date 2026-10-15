@@ -4,6 +4,10 @@ import type { DisplayLocale } from '@globalnews-ai/shared';
  * R3.1 GOOGLE PROFILE PERSONALIZATION (PO/CTO, 2026-10-11) — the signed-in greeting and the
  * Settings identity row.
  *
+ * R76 (E1_B_NAME_PRIVACY_CONDITIONAL) — the only name is the one the reader SAVED in Settings
+ * (no Google / email source: `fromGoogle` / `fromEmail` are removed). C-3: the saved name is also
+ * the PUBLIC author label on story comments, so the editor hint and the identity row say so.
+ *
  * A signed-in reader is greeted by name with a time-appropriate, localised greeting; a reader
  * with no usable name keeps the existing neutral "Welcome back"; a signed-out reader is not
  * greeted. NO HONORIFIC is ever inferred (no Mr / Ms / Pan / Pani / Herr / Frau / Sr / Sra / سيد),
@@ -22,10 +26,10 @@ export interface AskGreetingStrings {
   readonly change: string;
   readonly cancel: string;
   readonly notSet: string;
-  readonly fromGoogle: string;
-  readonly fromEmail: string;
   readonly chosenByYou: string;
-  /** The editor hint now that a blank name falls back to the Google / email name. */
+  /** R76 E1 C-3 — under a saved name: it is also the PUBLIC author label on comments. */
+  readonly publicNote: string;
+  /** R76 E1 C-3 — the editor hint: greeting use, public comment label, neutral when empty. */
   readonly editHint: string;
 }
 
@@ -42,10 +46,9 @@ const CATALOGUE: Record<DisplayLocale, AskGreetingStrings> = {
     change: 'Change',
     cancel: 'Cancel',
     notSet: 'Not set',
-    fromGoogle: 'From your Google account',
-    fromEmail: 'From your email address',
     chosenByYou: 'Chosen by you',
-    editHint: 'The name Ask uses to greet you. Leave it empty to use the name from your Google account.',
+    publicNote: "Also shown publicly on your comments",
+    editHint: "The name Ask uses to greet you. It is also shown publicly as your author name on comments you post. Leave it empty for a neutral greeting.",
   },
   pl: {
     greet: {
@@ -57,10 +60,9 @@ const CATALOGUE: Record<DisplayLocale, AskGreetingStrings> = {
     change: 'Zmień',
     cancel: 'Anuluj',
     notSet: 'Nie ustawiono',
-    fromGoogle: 'Z Twojego konta Google',
-    fromEmail: 'Z Twojego adresu e-mail',
     chosenByYou: 'Wybrane przez Ciebie',
-    editHint: 'Imię, którym Ask się do Ciebie zwraca. Zostaw puste, aby używać imienia z konta Google.',
+    publicNote: "Widoczne też publicznie przy Twoich komentarzach",
+    editHint: "Imię, którym Ask się do Ciebie zwraca. Jest też widoczne publicznie jako podpis komentarzy, które publikujesz. Zostaw puste, aby otrzymać neutralne powitanie.",
   },
   fr: {
     greet: {
@@ -72,10 +74,9 @@ const CATALOGUE: Record<DisplayLocale, AskGreetingStrings> = {
     change: 'Modifier',
     cancel: 'Annuler',
     notSet: 'Non défini',
-    fromGoogle: 'De votre compte Google',
-    fromEmail: 'De votre adresse e-mail',
     chosenByYou: 'Choisi par vous',
-    editHint: 'Le nom qu’Ask utilise pour vous saluer. Laissez vide pour utiliser le nom de votre compte Google.',
+    publicNote: "Également affiché publiquement sur vos commentaires",
+    editHint: "Le nom qu’Ask utilise pour vous saluer. Il est aussi affiché publiquement comme nom d’auteur des commentaires que vous publiez. Laissez vide pour un accueil neutre.",
   },
   de: {
     greet: {
@@ -87,10 +88,9 @@ const CATALOGUE: Record<DisplayLocale, AskGreetingStrings> = {
     change: 'Ändern',
     cancel: 'Abbrechen',
     notSet: 'Nicht festgelegt',
-    fromGoogle: 'Aus Ihrem Google-Konto',
-    fromEmail: 'Aus Ihrer E-Mail-Adresse',
     chosenByYou: 'Von Ihnen gewählt',
-    editHint: 'Der Name, mit dem Ask Sie begrüßt. Leer lassen, um den Namen aus Ihrem Google-Konto zu verwenden.',
+    publicNote: "Auch öffentlich bei Ihren Kommentaren sichtbar",
+    editHint: "Der Name, mit dem Ask Sie begrüßt. Er wird auch öffentlich als Autorenname Ihrer veröffentlichten Kommentare angezeigt. Leer lassen für eine neutrale Begrüßung.",
   },
   es: {
     greet: {
@@ -102,10 +102,9 @@ const CATALOGUE: Record<DisplayLocale, AskGreetingStrings> = {
     change: 'Cambiar',
     cancel: 'Cancelar',
     notSet: 'Sin definir',
-    fromGoogle: 'De tu cuenta de Google',
-    fromEmail: 'De tu dirección de correo',
     chosenByYou: 'Elegido por ti',
-    editHint: 'El nombre con el que Ask te saluda. Déjalo vacío para usar el nombre de tu cuenta de Google.',
+    publicNote: "También visible públicamente en tus comentarios",
+    editHint: "El nombre con el que Ask te saluda. También se muestra públicamente como autor de los comentarios que publiques. Déjalo vacío para un saludo neutro.",
   },
   pt: {
     greet: {
@@ -117,10 +116,9 @@ const CATALOGUE: Record<DisplayLocale, AskGreetingStrings> = {
     change: 'Alterar',
     cancel: 'Cancelar',
     notSet: 'Não definido',
-    fromGoogle: 'Da sua conta Google',
-    fromEmail: 'Do seu endereço de e-mail',
     chosenByYou: 'Escolhido por você',
-    editHint: 'O nome que o Ask usa para cumprimentar você. Deixe em branco para usar o nome da sua conta Google.',
+    publicNote: "Também visível publicamente nos seus comentários",
+    editHint: "O nome que o Ask usa para cumprimentar você. Ele também aparece publicamente como autor dos comentários que você publicar. Deixe em branco para uma saudação neutra.",
   },
   ar: {
     greet: {
@@ -132,10 +130,9 @@ const CATALOGUE: Record<DisplayLocale, AskGreetingStrings> = {
     change: 'تغيير',
     cancel: 'إلغاء',
     notSet: 'غير محدد',
-    fromGoogle: 'من حسابك على Google',
-    fromEmail: 'من عنوان بريدك الإلكتروني',
     chosenByYou: 'اخترته أنت',
-    editHint: 'الاسم الذي يحيّيك به Ask. اتركه فارغًا لاستخدام الاسم من حسابك على Google.',
+    publicNote: "يظهر أيضًا للعموم في تعليقاتك",
+    editHint: "الاسم الذي يحيّيك به Ask. ويظهر أيضًا للعموم كاسم الكاتب في التعليقات التي تنشرها. اتركه فارغًا لتحية محايدة.",
   },
 };
 

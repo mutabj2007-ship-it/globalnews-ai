@@ -119,8 +119,11 @@ describe('1 · drawer top row: Close · identity · Settings gear', () => {
        through the same shared rule: */
     expect(head).toContain('shownAccountName(user)');
     expect(read('lib', 'account', 'accountName.ts')).toContain(
-      /* R3.1 profile personalization: the alias is superseded by the sign-in greeting name */
-      'addressableName(user.displayName) ?? addressableName(user.greetingName ?? null)',
+      /* R3.1 profile personalization: the alias is superseded by the sign-in greeting name.
+         SUPERSEDED, NOT DELETED (R76, E1_B_NAME_PRIVACY_CONDITIONAL C-1/C-2): the greeting-name
+         rung is removed — the saved name is the only source. Was:
+         'addressableName(user.displayName) ?? addressableName(user.greetingName ?? null)' */
+      'return addressableName(user.displayName);',
     );
     expect(head).not.toMatch(/\.email/);
     expect(head).toContain('data-ask-nav="drawer-sign-in"');

@@ -10,13 +10,8 @@ export interface AccountUser {
   id: string;
   email: string;
   displayName: string | null;
-  /**
-   * R3.1 GOOGLE PROFILE PERSONALIZATION — the greeting name stored at sign-in (Google given name,
-   * else a verified-email first name) and its source. Optional: today's backend omits them, and
-   * the reader's saved displayName always wins. (Supersedes the R3.1 FIX 4 `accountAlias`.)
-   */
-  greetingName?: string | null;
-  greetingNameSource?: string | null;
+  /* R76 (E1-B C-1/C-2) — no second name source: the R3.1 `greetingName` / `greetingNameSource`
+     fields (Google given name, email-derived first name) are removed; the backend never sent them. */
 }
 
 /**

@@ -144,6 +144,8 @@ export const homeR1Pl: HomeR1Dictionary = {
     tooLong: 'Komentarz może mieć do {n} znaków.',
     signInToComment: 'Zaloguj się, aby komentować',
     signInNote: 'Czytać może każdy. Twój szkic zostanie zachowany podczas logowania.',
+    /* R76 E1-B C-3 — zapisane w Ustawieniach imię jest PUBLICZNYM podpisem */
+    authorNote: 'Inni widzą Twój komentarz pod imieniem zapisanym w Ustawieniach, a jeśli go nie zapisano — jako „Czytelnik”.',
     readOnly: 'Komentowanie jest teraz niedostępne. Czytanie pozostaje otwarte.',
     notEvidence: 'Komentarze czytelników nigdy nie są źródłem ani dowodem dla Zapytaj GlobalNewsAI.',
     publisherLink: 'Przeczytaj artykuł wydawcy',

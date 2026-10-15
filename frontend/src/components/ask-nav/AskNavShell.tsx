@@ -330,8 +330,9 @@ export function AskNavShell({
   /* ASK DESIGN COMPLETENESS R1 — publish what the one session read found (no second read). */
   useEffect(() => {
     setAccount(isLoading ? 'pending' : user === null ? 'signed-out' : 'signed-in');
-    /* REASON TO RETURN R1 · G6 — null for a guest. R3.1 FIX 4 — the reader's own saved name, or
-       the automatic account alias when they saved none (never the address). */
+    /* REASON TO RETURN R1 · G6 — null for a guest. R76 E1-B — the reader's own saved name only
+       (never the address, never a Google / email-derived name). Sign-out sets user to null, so the
+       shown name is cleared with it (E1 C-6). */
     setDisplayName(shownAccountName(user));
   }, [isLoading, user, setAccount, setDisplayName]);
   const [accountOpen, setAccountOpen] = useState(false);

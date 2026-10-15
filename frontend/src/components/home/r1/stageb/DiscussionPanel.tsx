@@ -251,12 +251,16 @@ export function DiscussionPanel({
                 <p className="text-[12px] text-[var(--gt-ink2)]">{t.signInNote}</p>
               </div>
             ) : (
+              <>
+              {/* R76 E1-B C-3 — before posting: the saved name is the public author label */}
+              <p data-discussion-author-note="" className="mt-1 text-[11.5px] text-[var(--gt-ink3)]">{t.authorNote}</p>
               <div className="mt-2 flex items-center justify-between gap-2">
                 <span className="text-[11.5px] text-[var(--gt-ink3)]">{draft.length > 0 ? `${t.draftLabel} · ${draft.trim().length}/${MAX}` : ''}</span>
                 <button type="submit" disabled={posting || draft.trim().length === 0 || signedIn === null} className="min-h-[44px] rounded-full bg-[var(--gt-act)] px-5 text-[14px] font-semibold text-white disabled:opacity-50">
                   {posting ? t.posting : t.post}
                 </button>
               </div>
+              </>
             )}
           </form>
         )}

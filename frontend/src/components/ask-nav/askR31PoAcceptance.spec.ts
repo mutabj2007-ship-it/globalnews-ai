@@ -185,17 +185,26 @@ describe('FIX 3 — the drawer holds only Close · identity · gear · New quest
   alias is not used for display. What the old cases protected (never blank when a name is known,
   never an address, the saved name always wins, an older backend behaves as before) is asserted
   below against the revised design.
+
+  SUPERSEDED AGAIN, NOT DELETED — R76 (E1_B_NAME_PRIVACY_CONDITIONAL, C-1/C-2; CTO R76 #93): there is
+  no Google given name (scope stays `openid email`) and never an email-derived name. The ordered
+  rule is the saved name, else neutral. Each case below keeps what it protected (the saved name
+  wins, never an address, never blank when a name is saved) with the greeting-name rung removed;
+  the replaced expectation is quoted beside it. Full R76 conditions: r76NamePrivacy.spec.ts.
 */
 describe('FIX 4 (revised) — Google profile personalization', () => {
-  it('saved name > greeting name > nothing; never an address; a guest has none', () => {
-    expect(shownAccountName({ displayName: 'Amina K.', greetingName: 'Amina', greetingNameSource: 'GOOGLE_PROFILE' })).toBe('Amina K.');
-    expect(shownAccountName({ displayName: null, greetingName: 'Amina', greetingNameSource: 'GOOGLE_PROFILE' })).toBe('Amina');
+  it('saved name > nothing (R76: no greeting-name rung); never an address; a guest has none', () => {
+    const legacy = (u: Record<string, unknown>) => u as never;
+    expect(shownAccountName(legacy({ displayName: 'Amina K.', greetingName: 'Amina', greetingNameSource: 'GOOGLE_PROFILE' }))).toBe('Amina K.');
+    /* R76 — was .toBe('Amina'): a Google given name is no longer a source */
+    expect(shownAccountName(legacy({ displayName: null, greetingName: 'Amina', greetingNameSource: 'GOOGLE_PROFILE' }))).toBeNull();
     expect(shownAccountName({ displayName: null })).toBeNull();
-    expect(shownAccountName({ displayName: null, greetingName: 'amina@example.com' })).toBeNull();
+    expect(shownAccountName(legacy({ displayName: null, greetingName: 'amina@example.com' }))).toBeNull();
     expect(shownAccountName(null)).toBeNull();
-    expect(accountNameSource({ displayName: 'Amina K.', greetingName: 'Amina', greetingNameSource: 'EMAIL' })).toBe('CHOSEN');
-    expect(accountNameSource({ displayName: null, greetingName: 'Amina', greetingNameSource: 'EMAIL' })).toBe('EMAIL');
-    expect(accountNameSource({ displayName: null, greetingName: 'Amina', greetingNameSource: 'GOOGLE_PROFILE' })).toBe('GOOGLE_PROFILE');
+    expect(accountNameSource(legacy({ displayName: 'Amina K.', greetingName: 'Amina', greetingNameSource: 'EMAIL' }))).toBe('CHOSEN');
+    /* R76 — were .toBe('EMAIL') and .toBe('GOOGLE_PROFILE'): neither source exists */
+    expect(accountNameSource(legacy({ displayName: null, greetingName: 'Amina', greetingNameSource: 'EMAIL' }))).toBeNull();
+    expect(accountNameSource(legacy({ displayName: null, greetingName: 'Amina', greetingNameSource: 'GOOGLE_PROFILE' }))).toBeNull();
     expect(accountNameSource({ displayName: null })).toBeNull();
   });
 
@@ -213,22 +222,25 @@ describe('FIX 4 (revised) — Google profile personalization', () => {
     return r;
   };
   it('Settings DISPLAYS the identity and its source, with an optional Change — no open form', () => {
-    const r = renderIdentity({ displayName: null, greetingName: 'Amina', greetingNameSource: 'GOOGLE_PROFILE' });
+    /* R76 — was a Google greeting name shown as 'Amina' / 'From your Google account'; now a SAVED name */
+    const r = renderIdentity({ displayName: 'Amina' });
     expect(textOf(by(r.root, 'data-account', 'identity-name')[0]!)).toBe('Amina');
-    expect(textOf(by(r.root, 'data-account', 'identity-source')[0]!)).toBe('From your Google account');
+    expect(textOf(by(r.root, 'data-account', 'identity-source')[0]!)).toBe('Chosen by you');
     expect(r.root.findAll((n) => n.type === 'input')).toHaveLength(0);
     act(() => by(r.root, 'data-account', 'identity-change')[0]!.props.onClick());
     const input = r.root.findByType('input');
     expect(input.props.value).toBe('Amina');
-    expect(textOf(r.root.findByProps({ id: 'display-name-hint' }))).toContain('Leave it empty to use the name from your Google account');
+    /* R76 E1 C-3 — was 'Leave it empty to use the name from your Google account' (no such fallback now) */
+    expect(textOf(r.root.findByProps({ id: 'display-name-hint' }))).toContain('Leave it empty for a neutral greeting');
     act(() => by(r.root, 'data-account', 'display-name-cancel')[0]!.props.onClick());
     expect(r.root.findAll((n) => n.type === 'input')).toHaveLength(0);
     act(() => r.unmount());
   });
-  it('a saved name reads "Chosen by you"; an email-derived name says so; no name reads "Not set"', () => {
+  it('a saved name reads "Chosen by you"; an email-derived name is never shown (R76); no name reads "Not set"', () => {
     for (const [user, name, source] of [
       [{ displayName: 'Amina K.', greetingName: 'Amina', greetingNameSource: 'GOOGLE_PROFILE' }, 'Amina K.', 'Chosen by you'],
-      [{ displayName: null, greetingName: 'Amina', greetingNameSource: 'EMAIL' }, 'Amina', 'From your email address'],
+      /* R76 — was 'Amina' / 'From your email address': an email-derived name is never a source */
+      [{ displayName: null, greetingName: 'Amina', greetingNameSource: 'EMAIL' }, 'Not set', null],
       [{ displayName: null }, 'Not set', null],
     ] as const) {
       const r = renderIdentity(user);

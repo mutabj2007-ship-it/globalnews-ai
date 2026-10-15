@@ -10,9 +10,9 @@ import styles from './accountSettings.module.css';
 
 /**
  * R3.1 GOOGLE PROFILE PERSONALIZATION (PO/CTO, 2026-10-11) — Settings › Account shows the
- * reader's identity instead of a prominent name-entry form: the name Ask uses, where it came from
- * ("From your Google account", "From your email address", "Chosen by you"), and an optional
- * Change action that opens the existing editor. Nothing is typed unless the reader asks to.
+ * reader's identity instead of a prominent name-entry form: the name Ask uses ("Chosen by you" —
+ * R76: the saved name is the only source), that it is also public on comments (R76 E1 C-3), and an
+ * optional Change action that opens the existing editor. Nothing is typed unless the reader asks to.
  * No email address here — the Email row below is the only place it appears.
  */
 export function AccountIdentity({
@@ -29,8 +29,8 @@ export function AccountIdentity({
   const changeRef = useRef<HTMLButtonElement | null>(null);
   const name = shownAccountName(user);
   const source = accountNameSource(user);
-  const sourceLine =
-    source === 'CHOSEN' ? t.chosenByYou : source === 'GOOGLE_PROFILE' ? t.fromGoogle : source === 'EMAIL' ? t.fromEmail : null;
+  /* R76 E1 C-2 — the saved name is the only source there is */
+  const sourceLine = source === 'CHOSEN' ? t.chosenByYou : null;
   const close = (): void => {
     setEditing(false);
     /* focus returns to Change once the editor has unmounted */
@@ -66,6 +66,12 @@ export function AccountIdentity({
         {sourceLine !== null && (
           <span data-account="identity-source" className="text-xs text-ink-tertiary">
             {sourceLine}
+          </span>
+        )}
+        {/* R76 E1 C-3 — a saved name is also the public author label on comments */}
+        {name !== null && (
+          <span data-account="identity-public" className="text-xs text-ink-tertiary">
+            {t.publicNote}
           </span>
         )}
       </span>

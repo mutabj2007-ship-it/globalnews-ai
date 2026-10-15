@@ -1,40 +1,34 @@
 import { addressableName } from '@globalnews-ai/shared';
 
 /**
- * R3.1 GOOGLE PROFILE PERSONALIZATION (PO/CTO, 2026-10-11) — THE NAME SHOWN FOR A SIGNED-IN
- * ACCOUNT, and where it came from.
+ * THE NAME SHOWN FOR A SIGNED-IN ACCOUNT, and where it came from.
  *
- *   1. the reader's own saved name (`displayName`, written only by the reader);
- *   2. the greeting name the backend stored at sign-in (`greetingName`): the Google given name,
- *      else a first name from a VERIFIED email;
- *   3. null — the neutral greeting.
+ * R76 (E1_B_NAME_PRIVACY_CONDITIONAL, C-1 / C-2; CTO R76 #93/#95) — the ORDERED name-source rule
+ * has exactly ONE rung:
  *
- * Both pass the shared display-name rule, so neither can render an address, markup or a
- * bidirectional override. A backend that sends no `greetingName` (today's Alpha backend) gives
- * exactly the earlier behaviour: the saved name or nothing.
+ *   1. the reader's own saved name (`displayName`, written only by the reader in Settings);
+ *   →  otherwise null: the neutral greeting.
  *
- * SUPERSEDED (R3.1 FIX 4 first proposal): the automatic `accountAlias` ("amina.k-4821") is no
- * longer used for display — the revised purpose is a natural greeting, not a handle. See the
- * R3.1 profile personalization proposal (doc 02) for the decision on backend 1c79d36.
+ * No other source is read here: no Google profile name (the OAuth scope is `openid email`, and E1
+ * recommends against widening it), no name taken from an email address or its local part, no
+ * avatar, no token claim, no other reader's content. The shared rule `addressableName` re-validates
+ * the saved value on the way out, so a stored address, markup or bidi override shows NEUTRAL.
+ * `accountName.spec.ts` fails if a second source is added without being ranked here.
+ *
+ * SUPERSEDED (R3.1, 2026-10-11): the `greetingName` / `greetingNameSource` rung (Google given name,
+ * else an email-derived first name). No backend ever sent it; E1 R76 closes it.
  */
 export interface AccountNameFields {
   readonly displayName: string | null;
-  readonly greetingName?: string | null;
-  readonly greetingNameSource?: string | null;
 }
 
-export type AccountNameSource = 'CHOSEN' | 'GOOGLE_PROFILE' | 'EMAIL';
+export type AccountNameSource = 'CHOSEN';
 
 export function shownAccountName(user: AccountNameFields | null): string | null {
   if (user === null) return null;
-  return addressableName(user.displayName) ?? addressableName(user.greetingName ?? null);
+  return addressableName(user.displayName);
 }
 
 export function accountNameSource(user: AccountNameFields | null): AccountNameSource | null {
-  if (user === null) return null;
-  if (addressableName(user.displayName) !== null) return 'CHOSEN';
-  if (addressableName(user.greetingName ?? null) === null) return null;
-  if (user.greetingNameSource === 'EMAIL') return 'EMAIL';
-  if (user.greetingNameSource === 'GOOGLE_PROFILE') return 'GOOGLE_PROFILE';
-  return null;
+  return shownAccountName(user) === null ? null : 'CHOSEN';
 }

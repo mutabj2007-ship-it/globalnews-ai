@@ -150,6 +150,8 @@ export const homeR1En = {
     tooLong: 'Comments can be up to {n} characters.',
     signInToComment: 'Sign in to comment',
     signInNote: 'Reading is open to everyone. Your draft is kept while you sign in.',
+    /* R76 E1-B C-3 — the saved Settings name is the PUBLIC author label */
+    authorNote: 'Others see your comment under the name you saved in Settings, or as “Reader” if you saved none.',
     readOnly: 'Commenting is not available right now. Reading stays open.',
     notEvidence: 'Reader comments are never used as sources or evidence by Ask GlobalNewsAI.',
     publisherLink: 'Read the publisher article',

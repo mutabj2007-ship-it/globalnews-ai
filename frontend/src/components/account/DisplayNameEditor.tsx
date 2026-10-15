@@ -12,8 +12,9 @@ import { followStrings } from '@/lib/ask/followStrings';
  * R3.1 GOOGLE PROFILE PERSONALIZATION (PO/CTO, 2026-10-11) — this form is no longer the prominent
  * thing in Settings › Account: the account's name is DISPLAYED (AccountIdentity) and this editor
  * opens only from its optional Change action, pre-filled with the name currently shown. An empty
- * save clears the saved name, and Ask falls back to the Google profile / verified-email greeting
- * name (`hint` says so). It writes ONLY the preferred name (PATCH /users/me).
+ * save clears the saved name, and Ask uses the neutral greeting (R76: there is no Google / email
+ * fallback). `hint` also discloses that the name is the PUBLIC comment author label (E1 C-3).
+ * It writes ONLY the preferred name (PATCH /users/me).
  * SUPERSEDED: the R3.1 FIX 4 alias pre-fill and alias hint (the alias is not used for display).
  */
 export function DisplayNameEditor({
