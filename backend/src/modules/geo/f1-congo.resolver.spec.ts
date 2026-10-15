@@ -1,4 +1,5 @@
 import { resolveGeography } from './geo-resolver';
+import { toMapEvidenceGeography } from './map-feed.contract';
 
 /*
   F1 (EA R106 F1-READER-IMPACT, measured at 8ec1f4a): an unqualified "Congo" must never settle the
@@ -122,5 +123,37 @@ describe('F1 — EA F1-FIX-1/2/3 (Polish/German bare forms, ISO2 context, matche
   });
   it('F1-FIX-3 an inferred country never reports a matched text the reader did not write ("dr congo")', () => {
     expect(isos('Clashes in eastern Congo leave dozens dead').r.matchedText).toBe('congo');
+  });
+});
+
+describe('F1 — EA F1-R2-1/2/3 ("democratic" in any language, the inferred label, both named)', () => {
+  it.each([
+    ['Kämpfe in der Demokratischen Republik Kongo'],
+    ['Demokratische Republik Kongo: Wahlen'],
+    ['Demokratická republika Kongo: boje u Gomy'],
+    ['Demokratiska republiken Kongo'],
+    ['Republik Demokratik Kongo'],
+  ])('F1-R2-1 %s → COD STATED, never COG', (text) => {
+    const r = resolveGeography(text, { contextCountryIso3: 'COG' });
+    const isos = r.candidates.map((c) => c.country.iso3);
+    expect(isos).toContain('COD');
+    expect(isos).not.toContain('COG');
+    expect(r.provenance).not.toBe('INTERPRETED');
+  });
+  it('F1-R2-1 "Republik Kongo … Brazzaville" stays COG', () => {
+    const r = resolveGeography('Republik Kongo: Proteste in Brazzaville');
+    expect(r.candidates.map((c) => c.country.iso3)).toContain('COG');
+    expect(r.candidates.map((c) => c.country.iso3)).not.toContain('COD');
+  });
+  it('F1-R2-3 both named → both countries, neither dropped', () => {
+    const isos = resolveGeography('Republika Konga i Demokratyczna Republika Konga').candidates.map((c) => c.country.iso3);
+    expect(isos).toEqual(expect.arrayContaining(['COD', 'COG']));
+  });
+  it('F1-R2-2 an inferred COD keeps matchedText "congo" but is LABELLED by its own name', () => {
+    const r = resolveGeography('Clashes in eastern Congo leave dozens dead');
+    expect(r.matchedText).toBe('congo');
+    const m = toMapEvidenceGeography(r);
+    expect(m.place?.label).toBe(m.place?.canonicalName);
+    expect(m.place?.label).not.toBe('Congo');
   });
 });

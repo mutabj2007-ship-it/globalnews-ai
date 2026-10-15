@@ -1219,13 +1219,20 @@ function disambiguateCongo(
   /* The QUALIFIED Polish forms are not in the country index either, and fuzzy turned "Republika Konga"
      into Tonga: name them here as the countries they are (named, so not inferred). */
   if (!countries.some((c) => c.iso3 === 'COD' || c.iso3 === 'COG')) {
-    const named = /demokratyczn\p{L}*\s+republi\p{L}*\s+kong\p{L}*/iu.test(text)
-      ? 'COD'
-      : /republi\p{L}*\s+kong\p{L}*/iu.test(text)
-        ? 'COG'
-        : undefined;
-    const meta = named === undefined ? undefined : resolveCountryByAnyIdentifier(named);
-    if (meta !== undefined) return { countries: [...countries.filter((c) => c.iso3 !== 'TON'), meta], interpretedCod: false };
+    /* EA F1-R2-1 — "democratic" in ANY language and either order names DR Congo: PL "Demokratyczna
+       Republika Konga", DE "Demokratische Republik Kongo", CS "Demokratická republika Kongo", SV
+       "Demokratiska republiken Kongo", ID "Republik Demokratik Kongo". Only a republic run with NO
+       democratic word attached is the Republic of the Congo. Both named → both (EA F1-R2-3). */
+    const codRun = /demo[ck]rat\p{L}*\s+republi\p{L}*\s+kong\p{L}*|republi\p{L}*\s+demo[ck]rat\p{L}*\s+kong\p{L}*/giu;
+    const named: string[] = [];
+    if (codRun.test(text)) named.push('COD');
+    codRun.lastIndex = 0;
+    if (/republi\p{L}*\s+kong\p{L}*/iu.test(text.replace(codRun, ' '))) named.push('COG');
+    const metas = named
+      .map((iso) => resolveCountryByAnyIdentifier(iso))
+      .filter((m): m is CountryMeta => m !== undefined);
+    if (metas.length > 0)
+      return { countries: [...countries.filter((c) => c.iso3 !== 'TON'), ...metas], interpretedCod: false };
   }
   const bareKongo =
     !countries.some((c) => c.iso3 === 'COD' || c.iso3 === 'COG') &&

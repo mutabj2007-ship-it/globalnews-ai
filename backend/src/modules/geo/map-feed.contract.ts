@@ -534,14 +534,15 @@ function toMapGeography(
  * slightly different opinions about what a contested record looks like.
  */
 export function toMapEvidenceGeography(resolution: GeoResolution): MapEvidenceGeography {
-  const candidates = resolution.candidates.map((place) =>
-    toMapGeography(resolution.precision, place, resolution.matchedText),
-  );
+  /* EA F1-R2-2 — an INFERRED country was not named by the reader: the ambiguous word read ("congo")
+     stays as matchedText for the audit, but the visible label is the country's own name ("DR Congo"),
+     so the label never undoes the disambiguation. A named place keeps the reader's spelling. */
+  const labelText =
+    resolution.provenance === 'INTERPRETED' && resolution.precision === 'COUNTRY' ? undefined : resolution.matchedText;
+  const candidates = resolution.candidates.map((place) => toMapGeography(resolution.precision, place, labelText));
 
   const contested = resolution.provenance === 'CONTESTED';
-  const place = resolution.place
-    ? toMapGeography(resolution.precision, resolution.place, resolution.matchedText)
-    : undefined;
+  const place = resolution.place ? toMapGeography(resolution.precision, resolution.place, labelText) : undefined;
 
   const unresolvable: MapUnresolvableReason | undefined =
     place === undefined && !contested
