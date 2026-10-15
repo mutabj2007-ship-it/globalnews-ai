@@ -945,7 +945,8 @@ export interface AnalysisRetrievalContext {
         >
       >
     >;
-    readonly sourceIds: readonly string[];
+    /* CTO R102 W-2 (E1-R96-W-2) — the withheld publishers' identifiers are NOT part of the reader
+       contract: they stay in the server log only. Count and reasons remain. */
   };
 
   /**

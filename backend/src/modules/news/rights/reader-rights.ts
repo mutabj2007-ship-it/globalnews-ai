@@ -104,6 +104,8 @@ export function withholdThirdPartyArticles<T>(
   feeds: readonly FeedSourceEntry[] = activeFeeds(),
 ): { readonly value: T; readonly withheld: number } {
   let withheld = 0;
+  /* CTO R102 W-2 — set when a stored or legacy `rightsExcluded.sourceIds` was removed */
+  let scrubbed = false;
   /* A reference without its own sourceId (a cited AnalysisSourceRef: articleId) is cleared only when
      it points at an article in the SAME response that is itself cleared. Everything else fails closed. */
   const clearedIds = new Set<string>();
@@ -159,6 +161,16 @@ export function withholdThirdPartyArticles<T>(
           withheld += 1;
           continue;
         }
+        /*
+          CTO R102 W-2 (E1-R96-W-2) — the identifiers of withheld publishers never reach a reader, also
+          from an answer stored before the source stopped writing them. Count and reasons stay.
+        */
+        if (key === 'rightsExcluded' && isRecord(child) && 'sourceIds' in child) {
+          const { sourceIds: _withheldPublishers, ...rest } = child;
+          scrubbed = true;
+          out[key] = walk(rest, depth + 1);
+          continue;
+        }
         out[key] = walk(child, depth + 1);
       }
       return out;
@@ -166,5 +178,5 @@ export function withholdThirdPartyArticles<T>(
     return node;
   };
   const next = walk(value, 0) as T;
-  return { value: withheld > 0 ? next : value, withheld };
+  return { value: withheld > 0 || scrubbed ? next : value, withheld };
 }

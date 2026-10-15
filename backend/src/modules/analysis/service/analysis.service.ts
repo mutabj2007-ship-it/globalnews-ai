@@ -3992,10 +3992,12 @@ export class AnalysisService {
               `ask rights exclusion count=${rightsExcluded.count} reasons=${JSON.stringify(rightsExcluded.reasons)} sources=${rightsExcluded.sourceIds.join(',')}`,
             );
             articles = allowed;
+            /* CTO R102 W-2 — publisher identifiers stay in the log line above, never in reader JSON */
+            const { sourceIds: _withheldPublishers, ...readerRightsExcluded } = rightsExcluded;
             retrievalContext = {
               ...retrievalContext,
               articlesRetrieved: allowed.length,
-              rightsExcluded,
+              rightsExcluded: readerRightsExcluded,
               /* nothing retained remains to be served: never labelled as a retained answer */
               ...(allowed.length === 0 && retrievalContext.outcome === 'RETAINED_ONLY' ? { outcome: undefined } : {}),
             };
