@@ -1,3 +1,4 @@
+import { RIGHTS_REFUSAL } from './askSearchActivity';
 import { congoClarificationOf } from './askCongoClarification';
 import { askFormatUtcInstant } from './askDirection';
 import type { AskAnswerState, AskPlanChip, AskR2Payload } from '@/lib/api/askV2Api';
@@ -529,6 +530,11 @@ function verificationOf(
      claim. An open question with nothing admitted is told so by its answer state; an incomplete
      search is still disclosed, without calling the question a claim (existing seven-locale copy). */
   const hasClaims = (retrieval.claimAssessments ?? []).length > 0;
+  /* F6–F8 (E1 R-5, W-1) — when every unreached lane was REFUSED (no source cleared for the use), the
+     coverage notice says so instead of calling the lanes "unavailable"; any genuine outage keeps it. */
+  const unreachedReasons = trace?.lanesUnavailable.map((u) => u.reason) ?? [];
+  const refusedOnly = unreachedReasons.length > 0 && unreachedReasons.every((r) => r === RIGHTS_REFUSAL);
+  const coverage = refusedOnly ? s.verification.coverageNotSearched : s.verification.coverageIncomplete;
   const notice =
     retrieval.verificationNotice === undefined
       ? null
@@ -538,10 +544,10 @@ function verificationOf(
           retrievalOwnsIncompleteLine
           ? null
           : retrieval.verificationNotice === 'COVERAGE_INCOMPLETE'
-            ? s.verification.coverageIncomplete
+            ? coverage
             : null
         : retrieval.verificationNotice === 'COVERAGE_INCOMPLETE'
-          ? `${s.verification.notVerified} ${s.verification.coverageIncomplete}`
+          ? `${s.verification.notVerified} ${coverage}`
           : s.verification.notVerified;
   if (notice === null && trace === undefined && retrieval.claimAssessments === undefined)
     return null;
@@ -555,11 +561,22 @@ function verificationOf(
             ok: true,
             status: s.verification.available,
           })),
-          ...trace.lanesUnavailable.map((u) => ({
-            label: label(u.lane),
-            ok: false,
-            status: `${s.verification.unavailable} (${s.verification.reasons[u.reason] ?? u.reason})`,
-          })),
+          ...trace.lanesUnavailable
+            .filter((u) => u.reason !== RIGHTS_REFUSAL)
+            .map((u) => ({
+              label: label(u.lane),
+              ok: false,
+              status: `${s.verification.unavailable} (${s.verification.reasons[u.reason] ?? u.reason})`,
+            })),
+          /* F6–F8 — refused lanes: "not searched", under the publisher-feed or the aggregate news-provider
+             label (never a raw provider id or the raw reason token), one row per label */
+          ...Array.from(
+            new Set(
+              trace.lanesUnavailable
+                .filter((u) => u.reason === RIGHTS_REFUSAL)
+                .map((u) => (u.lane === 'rss-feeds' ? label('rss-feeds') : label('news-providers'))),
+            ),
+          ).map((l) => ({ label: l, ok: false, status: s.verification.notSearched })),
         ];
   const claims = (retrieval.claimAssessments ?? []).map((c) => ({
     text: c.text,

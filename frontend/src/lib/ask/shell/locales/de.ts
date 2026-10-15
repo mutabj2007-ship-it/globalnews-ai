@@ -628,12 +628,14 @@ export const deShellOverlay: ShellLocaleOverlay = {
       verification: {
         available: "geprüft",
         claims: "Status der Aussage",
+        coverageNotSearched: "Die Prüfung blieb unvollständig, weil einige Quellen für diese Nutzung nicht freigegeben sind und nicht durchsucht wurden.",
         coverageIncomplete: "Die Prüfung blieb unvollständig, weil einige Quellenkanäle nicht verfügbar waren.",
         lanes: {
           "news-providers": "Nachrichtenanbieter",
           "rss-feeds": "Verlags-Feeds",
         },
         notVerified: "Diese Aussage konnte aus den erfolgreich geprüften Quellen nicht bestätigt werden.",
+        notSearched: "nicht durchsucht",
         reasons: {
           auth: "Zugriff verweigert",
           "not-configured": "nicht konfiguriert",

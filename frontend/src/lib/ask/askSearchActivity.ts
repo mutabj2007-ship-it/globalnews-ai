@@ -11,6 +11,7 @@
               PARTIAL / PARTIAL_NO_MATCH             ! Some sources searched (+ which not reached)
               PROVIDER_FAILED                        × Could not finish searching sources
               OUTCOME_UNAVAILABLE                    – Search attempted; detailed retrieval outcome unavailable.
+              NOT_PERMITTED (F6–F8)                  – Not searched: no source is cleared for this use.
               reused                                 ✓ Earlier sources reviewed (no new search)
               not performed                          → no record at all
     ANSWER  from the stored answer state — a completed REQUEST is not a verified ANSWER:
@@ -30,7 +31,7 @@
 */
 import type { AskR2Payload, AskResearchOutcome } from '@/lib/api/askV2Api';
 
-export type SearchStepStatus = 'completed' | 'partial' | 'failed' | 'unknown';
+export type SearchStepStatus = 'completed' | 'partial' | 'failed' | 'unknown' | 'not-searched';
 export type SearchStepKind = 'SEARCH' | 'REUSED' | 'ANSWER';
 export type AnswerOutcome = 'SOURCED' | 'PARTLY_SOURCED' | 'COMPLETED_UNVERIFIED' | 'NOT_PRODUCED';
 
@@ -63,9 +64,14 @@ type LegacyContext = {
   retrievalOutcome?: string;
   fallbackReason?: string;
   providers?: readonly string[];
-  providerFailures?: readonly { providerId?: string }[];
-  retrievalTrace?: { candidatesSeen?: number; lanesUnavailable?: readonly { lane?: string }[] } | null;
+  providerFailures?: readonly { providerId?: string; kind?: string }[];
+  retrievalTrace?: { candidatesSeen?: number; lanesUnavailable?: readonly { lane?: string; reason?: string }[] } | null;
 } | null;
+
+/** F6–F8 — the backend's lane reason / failure kind for a lane refused because no source is cleared for the use */
+export const RIGHTS_REFUSAL = 'rights-not-cleared';
+
+const ATTEMPTED_UNKNOWN: SearchStep = { kind: 'SEARCH', status: 'unknown' };
 
 /* the backend classifier (retrieval-outcome.ts observedRetrievalOf) — for a STORED pre-R1 trace only */
 function classifyLegacyTrace(articles: readonly unknown[] | undefined, ctx: NonNullable<LegacyContext>): Facts {
@@ -83,8 +89,17 @@ function classifyLegacyTrace(articles: readonly unknown[] | undefined, ctx: NonN
     (answered === 0 && ((ctx.providerFailures ?? []).length > 0 || ctx.fallbackReason === 'provider-error' || ctx.dataMode === 'unavailable'));
   const partial = unreached.length > 0 && answered > 0;
   const seen = ctx.retrievalTrace?.candidatesSeen;
+  /* F6–F8 (E1 R-6) — a POST-fix stored trace where EVERY unreached lane was refused for rights is "not
+     searched"; a pre-fix trace ("unavailable") or any genuine outage keeps its existing reading (R-8). */
+  const refusals = [
+    ...(ctx.retrievalTrace?.lanesUnavailable ?? []).map((u) => u.reason),
+    ...(ctx.providerFailures ?? []).map((f) => f.kind),
+  ];
+  const refusedOnly = refusals.length > 0 && refusals.every((r) => r === RIGHTS_REFUSAL);
   const outcome: AskResearchOutcome =
-    allFailed && admitted === 0
+    refusedOnly && answered === 0 && admitted === 0
+      ? 'NOT_PERMITTED'
+      : allFailed && admitted === 0
       ? 'PROVIDER_FAILED'
       : admitted > 0
         ? partial
@@ -128,10 +143,13 @@ function searchStep({ outcome, unreached }: Facts): SearchStep {
       return { kind: 'SEARCH', status: 'failed', unreached };
     case 'OUTCOME_UNAVAILABLE':
       return { kind: 'SEARCH', status: 'unknown' };
+    case 'NOT_PERMITTED':
+      return { kind: 'SEARCH', status: 'not-searched' };
+    /* EA-FIND-4 (R-4 ordering) — an outcome code this build does not know never yields an undefined step */
+    default:
+      return ATTEMPTED_UNKNOWN;
   }
 }
-
-const ATTEMPTED_UNKNOWN: SearchStep = { kind: 'SEARCH', status: 'unknown' };
 
 /** A completed request is not a verified answer: the stored answer state decides which. */
 export function answerStep(payload: AskR2Payload): SearchStep {

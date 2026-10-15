@@ -104,6 +104,8 @@ export function AskSearchActivity({
   const tag = (status: SearchStepStatus): { glyph: string; word: string; color: string } =>
     status === 'unknown'
       ? { glyph: '–', word: s.outcomeUnavailable, color: 'var(--ask-read-ink2,#9fb4cc)' }
+      : status === 'not-searched'
+      ? { glyph: '–', word: s.notSearched, color: 'var(--ask-read-ink2,#9fb4cc)' }
       : status === 'completed'
       ? { glyph: '✓', word: s.completed, color: 'var(--ask-read-rule-current,#5abff5)' }
       : status === 'partial'
@@ -131,7 +133,13 @@ export function AskSearchActivity({
             const t = tag(step.status);
             return (
               <li key={i} data-ask="search-step" data-ask-step={step.kind} data-ask-step-status={step.status} className="flex flex-col gap-0.5 text-[0.8125rem] leading-[1.45]">
-                {step.kind === 'SEARCH' && step.status === 'unknown' ? (
+                {step.kind === 'SEARCH' && step.status === 'not-searched' ? (
+                  /* F6–F8 (E1 R-6) — a refusal is not an attempt and not a failure: one plain sentence, no check */
+                  <span>
+                    <span aria-hidden="true" className="font-semibold" style={{ color: t.color }}>{`${t.glyph} `}</span>
+                    {s.searchNotPermitted}
+                  </span>
+                ) : step.kind === 'SEARCH' && step.status === 'unknown' ? (
                   /* R1.1 (CTO) — nothing is claimed beyond the attempt: one plain sentence, no check */
                   <span>
                     <span aria-hidden="true" className="font-semibold" style={{ color: t.color }}>{`${t.glyph} `}</span>

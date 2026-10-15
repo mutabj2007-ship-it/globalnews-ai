@@ -37,6 +37,9 @@ export interface AskProgressStrings {
   /* R1.1 (CTO review) — an attempted search with no typed outcome; a completed request ≠ a verified answer */
   readonly searchAttemptedUnknown: string;
   readonly outcomeUnavailable: string;
+  /** F6–F8 (E1 R-6) — no lane was searched because no source is cleared for the use: never "failed", never "attempted" */
+  readonly notSearched: string;
+  readonly searchNotPermitted: string;
   readonly requestCompleted: string;
   readonly noVerifiedAnswer: string;
   readonly noAnswerProduced: string;
@@ -66,6 +69,8 @@ const EN: AskProgressStrings = {
   withheldAnswer: 'This earlier answer is withheld while the rights to reuse its sources are reviewed.',
   searchAttemptedUnknown: 'Search attempted; detailed retrieval outcome unavailable.',
   outcomeUnavailable: 'Outcome unavailable',
+  notSearched: "Not searched",
+  searchNotPermitted: "No sources were searched: no source is cleared for this use yet.",
   requestCompleted: 'Request completed',
   noVerifiedAnswer: 'No verified answer from current reporting.',
   noAnswerProduced: 'No answer was produced',
@@ -94,6 +99,8 @@ const PL: AskProgressStrings = {
   withheldAnswer: 'Ta wcześniejsza odpowiedź jest wstrzymana do czasu weryfikacji praw do ponownego użycia jej źródeł.',
   searchAttemptedUnknown: 'Podjęto wyszukiwanie; szczegółowy wynik wyszukiwania jest niedostępny.',
   outcomeUnavailable: 'Wynik niedostępny',
+  notSearched: "Nie przeszukano",
+  searchNotPermitted: "Nie przeszukano żadnych źródeł: żadne źródło nie jest jeszcze dopuszczone do tego użycia.",
   requestCompleted: 'Zapytanie zakończone',
   noVerifiedAnswer: 'Brak zweryfikowanej odpowiedzi na podstawie bieżących doniesień.',
   noAnswerProduced: 'Nie powstała odpowiedź',
@@ -122,6 +129,8 @@ const DE: AskProgressStrings = {
   withheldAnswer: 'Diese frühere Antwort ist zurückgehalten, solange die Rechte zur Weiterverwendung ihrer Quellen geprüft werden.',
   searchAttemptedUnknown: 'Suche versucht; das genaue Suchergebnis ist nicht verfügbar.',
   outcomeUnavailable: 'Ergebnis nicht verfügbar',
+  notSearched: "Nicht durchsucht",
+  searchNotPermitted: "Es wurden keine Quellen durchsucht: Noch ist keine Quelle für diese Nutzung freigegeben.",
   requestCompleted: 'Anfrage abgeschlossen',
   noVerifiedAnswer: 'Keine verifizierte Antwort aus aktueller Berichterstattung.',
   noAnswerProduced: 'Es wurde keine Antwort erstellt',
@@ -150,6 +159,8 @@ const FR: AskProgressStrings = {
   withheldAnswer: 'Cette réponse antérieure est suspendue pendant l’examen des droits de réutilisation de ses sources.',
   searchAttemptedUnknown: 'Recherche tentée ; le résultat détaillé de la recherche n’est pas disponible.',
   outcomeUnavailable: 'Résultat indisponible',
+  notSearched: "Non consulté",
+  searchNotPermitted: "Aucune source n’a été consultée : aucune source n’est encore autorisée pour cet usage.",
   requestCompleted: 'Demande traitée',
   noVerifiedAnswer: 'Aucune réponse vérifiée à partir d’articles récents.',
   noAnswerProduced: 'Aucune réponse n’a été produite',
@@ -178,6 +189,8 @@ const ES: AskProgressStrings = {
   withheldAnswer: 'Esta respuesta anterior está retenida mientras se revisan los derechos de reutilización de sus fuentes.',
   searchAttemptedUnknown: 'Se intentó la búsqueda; el resultado detallado de la búsqueda no está disponible.',
   outcomeUnavailable: 'Resultado no disponible',
+  notSearched: "No consultado",
+  searchNotPermitted: "No se consultó ninguna fuente: todavía ninguna fuente está autorizada para este uso.",
   requestCompleted: 'Solicitud completada',
   noVerifiedAnswer: 'No hay una respuesta verificada a partir de informes actuales.',
   noAnswerProduced: 'No se produjo ninguna respuesta',
@@ -206,6 +219,8 @@ const PT: AskProgressStrings = {
   withheldAnswer: 'Esta resposta anterior está retida enquanto os direitos de reutilização das suas fontes são revistos.',
   searchAttemptedUnknown: 'Pesquisa tentada; o resultado detalhado da pesquisa não está disponível.',
   outcomeUnavailable: 'Resultado indisponível',
+  notSearched: "Não pesquisado",
+  searchNotPermitted: "Nenhuma fonte foi pesquisada: ainda nenhuma fonte está autorizada para este uso.",
   requestCompleted: 'Pedido concluído',
   noVerifiedAnswer: 'Não há resposta verificada a partir de notícias atuais.',
   noAnswerProduced: 'Nenhuma resposta foi produzida',
@@ -234,6 +249,8 @@ const AR: AskProgressStrings = {
   withheldAnswer: 'هذه الإجابة السابقة محجوبة ريثما تُراجَع حقوق إعادة استخدام مصادرها.',
   searchAttemptedUnknown: 'جرت محاولة البحث؛ النتيجة التفصيلية للبحث غير متاحة.',
   outcomeUnavailable: 'النتيجة غير متاحة',
+  notSearched: "لم يُبحث",
+  searchNotPermitted: "لم يُبحث في أي مصدر: لا يوجد بعد مصدر مُجاز لهذا الاستخدام.",
   requestCompleted: 'اكتمل الطلب',
   noVerifiedAnswer: 'لا توجد إجابة موثَّقة من التقارير الحالية.',
   noAnswerProduced: 'لم تُنتَج أي إجابة',

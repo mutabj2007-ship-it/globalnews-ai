@@ -83,6 +83,10 @@ export interface AskR2Strings {
     readonly sourcesChecked: string;
     readonly available: string;
     readonly unavailable: string;
+    /** F6–F8 (E1 R-5, W-1) — a lane refused because no source is cleared for the use: not searched, never "unavailable" */
+    readonly notSearched: string;
+    /** F6–F8 — the coverage notice when every unreached lane was a refusal, not an outage */
+    readonly coverageNotSearched: string;
     readonly claims: string;
     readonly lanes: Readonly<Record<string, string>>;
     readonly reasons: Readonly<Record<string, string>>;
@@ -518,6 +522,8 @@ const EN: AskR2Strings = {
     sourcesChecked: 'Sources checked',
     available: 'checked',
     unavailable: 'unavailable',
+    notSearched: "not searched",
+    coverageNotSearched: "Verification was incomplete because some sources are not cleared for this use and were not searched.",
     claims: 'Claim status',
     lanes: {
       gnews: 'GNews',
@@ -867,6 +873,8 @@ const PL: AskR2Strings = {
   verification: {
     notVerified: 'Nie udało się zweryfikować tej informacji w pomyślnie sprawdzonych źródłach.',
     coverageIncomplete: 'Weryfikacja była niepełna, ponieważ część źródeł była niedostępna.',
+    notSearched: "nie przeszukano",
+    coverageNotSearched: "Weryfikacja była niepełna, ponieważ części źródeł nie przeszukano: nie są jeszcze dopuszczone do tego użycia.",
     sourcesChecked: 'Sprawdzone źródła',
     available: 'sprawdzono',
     unavailable: 'niedostępne',
