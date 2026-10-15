@@ -6,7 +6,8 @@ import type { DisplayLocale } from '@globalnews-ai/shared';
   copy appeared ("Some source channels were unavailable", "Live data unavailable", "Live reporting is
   temporarily unavailable. Please try again in a moment."). Waiting cannot fix a rights restriction,
   so no "try again" advice. No source, publisher or count is named (W-2 / S-3 / C-1).
-  EN is the CTO's wording; PL / FR / DE / ES / PT / AR are integrator drafts PENDING Claude L.
+  EN is the CTO's wording; PL / FR / DE / ES / PT / AR are qualified by Claude L (L_R115_CHANGES: fr
+  "sources d’actualité", es "fuentes de noticias"; the other ten values approved as drafted).
 */
 export interface AskRightsRefusalStrings {
   /** the one sentence, in place of the outage sentence */
@@ -25,7 +26,7 @@ const STRINGS: Record<DisplayLocale, AskRightsRefusalStrings> = {
     chip: 'Nie przeszukano: źródła niedopuszczone',
   },
   fr: {
-    notSearched: 'Les sources d’information ne sont pas autorisées pour cette recherche, je ne peux donc pas vérifier les derniers développements.',
+    notSearched: 'Les sources d’actualité ne sont pas autorisées pour cette recherche, je ne peux donc pas vérifier les derniers développements.',
     chip: 'Non consulté : sources non autorisées',
   },
   de: {
@@ -33,7 +34,7 @@ const STRINGS: Record<DisplayLocale, AskRightsRefusalStrings> = {
     chip: 'Nicht durchsucht: Quellen nicht freigegeben',
   },
   es: {
-    notSearched: 'Las fuentes informativas no están autorizadas para esta búsqueda, así que no puedo verificar los últimos acontecimientos.',
+    notSearched: 'Las fuentes de noticias no están autorizadas para esta búsqueda, así que no puedo verificar los últimos acontecimientos.',
     chip: 'No consultado: fuentes no autorizadas',
   },
   pt: {
