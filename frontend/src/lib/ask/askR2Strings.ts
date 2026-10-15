@@ -874,7 +874,7 @@ const PL: AskR2Strings = {
     notVerified: 'Nie udało się zweryfikować tej informacji w pomyślnie sprawdzonych źródłach.',
     coverageIncomplete: 'Weryfikacja była niepełna, ponieważ część źródeł była niedostępna.',
     notSearched: "nie przeszukano",
-    coverageNotSearched: "Weryfikacja była niepełna, ponieważ części źródeł nie przeszukano: nie są jeszcze dopuszczone do tego użycia.",
+    coverageNotSearched: "Weryfikacja była niepełna, ponieważ niektóre źródła nie są dopuszczone do tego użycia i nie zostały przeszukane.",
     sourcesChecked: 'Sprawdzone źródła',
     available: 'sprawdzono',
     unavailable: 'niedostępne',

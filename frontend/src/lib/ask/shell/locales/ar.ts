@@ -672,7 +672,7 @@ export const arShellOverlay: ShellLocaleOverlay = {
       verification: {
         available: "فُحصت",
         claims: "حالة الادعاء",
-        coverageNotSearched: "بقي التحقق غير مكتمل لأن بعض المصادر غير مُجازة لهذا الاستخدام ولم يُبحث فيها.",
+        coverageNotSearched: "بقي التحقق ناقصًا لأن بعض المصادر غير مُجازة لهذا الاستخدام ولم يُبحث فيها.",
         coverageIncomplete: "بقي التحقق ناقصًا لأن بعض مسارات المصادر كانت غير متوفرة.",
         lanes: {
           "news-providers": "مزوّدو الأخبار",
