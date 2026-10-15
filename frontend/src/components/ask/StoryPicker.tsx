@@ -432,7 +432,11 @@ function PickerDescribe({
             </span>
           </button>
         )}
-        <p className={styles.small}>{r38.storyNothingSent}</p>
+        {/*
+          MASTER CTO R104 — "Nothing is sent until you press Send" is true only where the action STAGES an
+          unsent draft. On the one-tap ask path the tap sends, so that claim would be false: it is not shown.
+        */}
+        {!(onAsk !== undefined && typed.length > 0) && <p className={styles.small}>{r38.storyNothingSent}</p>}
       </div>
     </>
   );
