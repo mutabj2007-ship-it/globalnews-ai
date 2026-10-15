@@ -1,6 +1,24 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import type { ConfigService } from '@nestjs/config';
+/*
+  E1-TAA-1 / CTO R1 ruling — the activation, gate, health and failure-counting MECHANICS below are
+  exercised against a SYNTHETIC registry: the real rows, with every state below CLEARED marked
+  CLEARED (no live row is CLEARED today, so a real registry activates nothing). RESTRICTED and
+  PROHIBITED rows keep their real states, so the refusal assertions here stay real. The real governed
+  states (every live feed refused) are asserted in feed-rights-gate.spec.ts.
+*/
+jest.mock('./feed-source-registry', () => {
+  const actual = jest.requireActual('./feed-source-registry');
+  return {
+    ...actual,
+    FEED_SOURCES: actual.FEED_SOURCES.map((row: { rights: { state: string } }) =>
+      row.rights.state === 'RESTRICTED' || row.rights.state === 'PROHIBITED'
+        ? row
+        : { ...row, rights: { ...row.rights, state: 'CLEARED' } },
+    ),
+  };
+});
 import { parseFeed } from './parse-feed.util';
 import { RssFeedProvider, isRssFeedsEnabled } from './rss-feed.provider';
 import {

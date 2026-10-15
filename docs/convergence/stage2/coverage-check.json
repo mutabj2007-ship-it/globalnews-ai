@@ -39,10 +39,34 @@
   "feedRightsGate": {
     "refused": [
       {
+        "sourceId": "feed:ktpress-rw",
+        "reason": "RIGHTS_NOT_CLEARED",
+        "rightsState": "UNRESOLVED",
+        "evidence": "backend/source-packs/east-africa-r1/RWA.json ea-r1:rwa:ktpress rights.status UNRESOLVED (ownership/integrity review; RIGHTS_NOT_CLEARED)."
+      },
+      {
+        "sourceId": "feed:taarifa-rw",
+        "reason": "RIGHTS_NOT_CLEARED",
+        "rightsState": "LIMITED_SCOPE_REVIEW",
+        "evidence": "backend/source-packs/east-africa-r1/RWA.json ea-r1:rwa:taarifa rights.status LIMITED_SCOPE_REVIEW (terms allow links/short attributed excerpts; full-text ingestion unestablished)."
+      },
+      {
         "sourceId": "feed:standardmedia-ke",
         "reason": "RIGHTS_RESTRICTED",
         "rightsState": "RESTRICTED",
         "evidence": "backend/source-packs/east-africa-r1/KEN.json ea-r1:ken:standard rights.status RESTRICTED (terms §§11-12 restrict automated collection and republication); G R10 ACTIVATION PROHIBITED."
+      },
+      {
+        "sourceId": "feed:cbk-ke",
+        "reason": "RIGHTS_NOT_CLEARED",
+        "rightsState": "UNRESOLVED",
+        "evidence": "backend/source-packs/east-africa-r1/KEN.json ea-r1:ken:cbk rights.status UNRESOLVED (no product reuse grant established)."
+      },
+      {
+        "sourceId": "feed:gus-pl",
+        "reason": "RIGHTS_NOT_CLEARED",
+        "rightsState": "UNREVIEWED",
+        "evidence": "backend/src/modules/source-packs/eu27/countries/PL.json statistics candidate rightsStatus UNREVIEWED (canonical eu27:pl:statistics)."
       },
       {
         "sourceId": "feed:wp-pl",
@@ -51,24 +75,7 @@
         "evidence": "G R10 ruling: ACTIVATION PROHIBITED on current published terms (recorded in b5ProviderDormancy.spec.ts); canonical eu27:pl:publisher-1 rightsStatus UNREVIEWED. The stricter recorded state is kept."
       }
     ],
-    "activatableWithUnresolvedRights": [
-      {
-        "sourceId": "feed:ktpress-rw",
-        "rightsState": "UNRESOLVED"
-      },
-      {
-        "sourceId": "feed:taarifa-rw",
-        "rightsState": "LIMITED_SCOPE_REVIEW"
-      },
-      {
-        "sourceId": "feed:cbk-ke",
-        "rightsState": "UNRESOLVED"
-      },
-      {
-        "sourceId": "feed:gus-pl",
-        "rightsState": "UNREVIEWED"
-      }
-    ]
+    "activatableWithUnresolvedRights": []
   },
   "totals": {
     "governedCountries": 54,
