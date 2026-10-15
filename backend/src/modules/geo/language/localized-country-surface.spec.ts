@@ -192,7 +192,11 @@ describe('2 · the rung fills gaps and can never override an answer', () => {
       reduction += withoutLanguage - withLanguage;
     }
 
-    expect(reduction).toBe(6);
+    /* F1 (CTO R110 #99) — SUPERSEDED, NOT DELETED: was toBe(6). One of the six wrong countries the evidence
+       language used to remove (a bare Polish "Konga" fuzzy-corrected to Tonga) is no longer produced by the
+       base resolver at all, so there is one fewer to remove. Wrong countries did not rise: the per-language
+       assertion above (with <= without) still holds for every language. */
+    expect(reduction).toBe(5);
   });
 
   it('an existing city resolution is not displaced by a country name in the same text', () => {

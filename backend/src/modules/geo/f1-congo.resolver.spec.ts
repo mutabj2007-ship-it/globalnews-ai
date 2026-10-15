@@ -84,3 +84,43 @@ describe('F1 — EA pre-commit notes (a)–(d)', () => {
     expect(r.provenance).toBe('INTERPRETED');
   });
 });
+
+describe('F1 — EA F1-FIX-1/2/3 (Polish/German bare forms, ISO2 context, matched text)', () => {
+  const isos = (text: string, options: Parameters<typeof resolveGeography>[1] = {}) => {
+    const r = resolveGeography(text, options);
+    return { r, set: r.candidates.map((c) => c.country.iso3).sort() };
+  };
+  it.each([['Co się dzieje w Kongo?'], ['Powódź w Kongo'], ['Walki we wschodnim Kongo'], ['Was passiert im Kongo?'], ['Kämpfe im Osten des Kongo']])(
+    'F1-FIX-1 bare form never becomes a single COG or Tonga — %s',
+    (text) => {
+      const { r, set } = isos(text);
+      expect(set).not.toContain('TON');
+      expect(r.provenance === 'CONTESTED' ? true : !(set.length === 1 && set[0] === 'COG')).toBe(true);
+    },
+  );
+  it('F1-FIX-1 bare "Kongo" with no other signal is CONTESTED [COD, COG] (not rendered)', () => {
+    const { r, set } = isos('Co się dzieje w Kongo?');
+    expect(r.provenance).toBe('CONTESTED');
+    expect(set).toEqual(['COD', 'COG']);
+  });
+  it('F1-FIX-1 "Kongo" + a NAMED DRC city (Goma) → COD (the city itself is stated)', () => {
+    const { set } = isos('Walki w pobliżu Gomy w Kongo — Goma');
+    expect(set).toEqual(['COD']);
+  });
+  it('F1-FIX-1 qualified PL "Republika Konga" → COG (named), never Tonga', () => {
+    const { r, set } = isos('Republika Konga: wybory');
+    expect(set).toEqual(['COG']);
+    expect(r.provenance).toBe('STATED');
+  });
+  it('P-08 "Demokratyczna Republika Konga" stays COD', () => {
+    expect(isos('Wybory w Demokratycznej Republice Konga', {}).set).toEqual(['COD']);
+  });
+  it('F1-FIX-2 an ISO2 context "CD" corroborates exactly like "COD"', () => {
+    const { r, set } = isos('Congo election results', { contextCountryIso3: 'CD' });
+    expect(set).toEqual(['COD']);
+    expect(r.provenance).toBe('INTERPRETED');
+  });
+  it('F1-FIX-3 an inferred country never reports a matched text the reader did not write ("dr congo")', () => {
+    expect(isos('Clashes in eastern Congo leave dozens dead').r.matchedText).toBe('congo');
+  });
+});

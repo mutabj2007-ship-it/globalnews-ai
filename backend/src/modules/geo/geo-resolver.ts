@@ -1197,6 +1197,8 @@ interface CongoDecision {
   readonly countries: readonly CountryMeta[];
   /** COD was INFERRED (from a locality or the caller's context), not named — provenance INTERPRETED */
   readonly interpretedCod: boolean;
+  /** COG was INFERRED (a bare Kongo form read with a COG locality, or the caller's COG context) */
+  readonly interpretedCog?: boolean;
 }
 
 function disambiguateCongo(
@@ -1207,24 +1209,52 @@ function disambiguateCongo(
   contextIso3: string | undefined,
 ): CongoDecision {
   const unchanged: CongoDecision = { countries, interpretedCod: false };
-  const cogAt = countries.findIndex((c) => c.iso3 === 'COG');
+  /* EA F1-FIX-2 — the caller's context may be ISO2 ('CD') or ISO3 ('COD') */
+  const context = contextIso3 === undefined ? undefined : resolveCountryByAnyIdentifier(contextIso3)?.iso3;
+  /* EA F1-FIX-1 — a bare Polish/German "Kongo"/"Konga"/"Kongu" is not in the country index, so the
+     scan names no country and fuzzy correction used to turn it into COG ("Kongo") or Tonga ("Konga").
+     It is the same bare, undecided name: treat it as a scan COG here, BEFORE the fuzzy tier ever runs.
+     A qualified form ("Demokratyczna Republika Konga", "Republika Konga") is a run of its own and is
+     left exactly as resolved. */
+  /* The QUALIFIED Polish forms are not in the country index either, and fuzzy turned "Republika Konga"
+     into Tonga: name them here as the countries they are (named, so not inferred). */
+  if (!countries.some((c) => c.iso3 === 'COD' || c.iso3 === 'COG')) {
+    const named = /demokratyczn\p{L}*\s+republi\p{L}*\s+kong\p{L}*/iu.test(text)
+      ? 'COD'
+      : /republi\p{L}*\s+kong\p{L}*/iu.test(text)
+        ? 'COG'
+        : undefined;
+    const meta = named === undefined ? undefined : resolveCountryByAnyIdentifier(named);
+    if (meta !== undefined) return { countries: [...countries.filter((c) => c.iso3 !== 'TON'), meta], interpretedCod: false };
+  }
+  const bareKongo =
+    !countries.some((c) => c.iso3 === 'COD' || c.iso3 === 'COG') &&
+    KONGO_FORMS.test(text) &&
+    !/republi\p{L}*\s+kong\p{L}*/iu.test(text);
+  KONGO_FORMS.lastIndex = 0;
+  const cog = bareKongo ? resolveCountryByAnyIdentifier('COG') : undefined;
+  const scanned = cog === undefined ? countries : [...countries, cog];
+  const cogAt = scanned.findIndex((c) => c.iso3 === 'COG');
   if (cogAt < 0) return unchanged;
   /* Only a BARE name is undecided. A qualified run the scan itself matched in any language ("republic
      of the congo", "república del congo", "congo-brazzaville", "republika konga") already names ONE
      country and is left exactly as the scan resolved it. */
-  const congoRuns = governedRuns.filter((r) => /(?:^|[^\p{L}])[ck]ong[oau]/iu.test(r));
-  if (congoRuns.length === 0 || congoRuns.some((r) => !BARE_CONGO_RUNS.has(r))) return unchanged;
+  if (!bareKongo) {
+    const congoRuns = governedRuns.filter((r) => /(?:^|[^\p{L}])[ck]ong[oau]/iu.test(r));
+    if (congoRuns.length === 0 || congoRuns.some((r) => !BARE_CONGO_RUNS.has(r))) return unchanged;
+  }
+  countries = scanned;
   const readable = (articleMode ? text.replace(ACTOR_OR_LAKE, '$1 ') : text).replace(KONGO_FORMS, '$1Congo');
   const reading = congoReadingOf(readable);
-  if (reading === 'COG') return unchanged;
+  if (reading === 'COG') return { countries, interpretedCod: false, interpretedCog: bareKongo };
   const cod = resolveCountryByAnyIdentifier('COD');
   if (cod === undefined) return unchanged;
   const withoutCog = countries.filter((_, i) => i !== cogAt);
   const withCod = withoutCog.some((c) => c.iso3 === 'COD') ? withoutCog : [...withoutCog.slice(0, cogAt), cod, ...withoutCog.slice(cogAt)];
   if (reading === 'COD') return { countries: withCod, interpretedCod: true };
   /* EA F1 note (d) — the caller's own country corroborates a bare name: COD → COD (inferred) */
-  if (contextIso3?.toUpperCase() === 'COD') return { countries: withCod, interpretedCod: true };
-  if (contextIso3?.toUpperCase() === 'COG') return unchanged;
+  if (context === 'COD') return { countries: withCod, interpretedCod: true };
+  if (context === 'COG') return { countries, interpretedCod: false, interpretedCog: true };
   /* undecided or both — both candidates, never a pick: the "several countries" path → CONTESTED */
   const both = countries.some((c) => c.iso3 === 'COD') ? countries : [...countries.slice(0, cogAt), cod, ...countries.slice(cogAt)];
   return { countries: both, interpretedCod: false };
@@ -2026,14 +2056,17 @@ export function resolveGeography(rawText: string, options: GeoResolveOptions = {
 
     const place = toPlaceFromCountry(namedCountries[0]);
     /* F1 — DR Congo decided from a locality or the caller's context was INFERRED, not named */
-    const inferredCod = congo.interpretedCod && namedCountries[0].iso3 === 'COD';
+    const inferredCod =
+      (congo.interpretedCod && namedCountries[0].iso3 === 'COD') ||
+      (congo.interpretedCog === true && namedCountries[0].iso3 === 'COG');
 
     return {
       precision: 'COUNTRY',
       provenance: inferredCod ? 'INTERPRETED' : 'STATED',
       place,
       candidates: [place],
-      matchedText: foldPlaceName(namedCountries[0].name),
+      /* EA F1-FIX-3 — an inferred country was not named: the matched text is the bare word read */
+      matchedText: inferredCod ? 'congo' : foldPlaceName(namedCountries[0].name),
       reason: 'COUNTRY_ONLY',
       detail: inferredCod
         ? 'an unqualified "Congo" read as DR Congo from a stated DRC locality or the caller\'s own country'

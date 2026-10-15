@@ -200,7 +200,9 @@ describe('G-GEO-D14-B1-RUNG · acceptance', () => {
      * same way while total correctness dropped, and the old literal could not
      * tell anyone which had happened.
      */
-    expect(gains).toBe(450);
+    /* F1 (CTO R110 #99) — SUPERSEDED, NOT DELETED: was toBe(450). The Polish/German surface name of COG is the
+       bare "Kongo", which no longer resolves to a single COG (it is CONTESTED [COD, COG] by design). */
+    expect(gains).toBe(449);
 
     let correct = 0;
     for (const lang of ['en', 'fr', 'es', 'pl', 'sw', 'ar']) {
@@ -214,7 +216,8 @@ describe('G-GEO-D14-B1-RUNG · acceptance', () => {
     /* Measured 1066 with this change, 1065 on the base commit. It may rise; it must not fall.
        F1 (CTO R110 #99: a bare "Congo" is never COG STATED; EA F1-READER-IMPACT) — SUPERSEDED, NOT DELETED: was toBeGreaterThanOrEqual(1066). "Report from Congo." in the
        locales whose COG name is the bare "Congo" is no longer a STATED COG: 1065, by design. */
-    expect(correct).toBeGreaterThanOrEqual(1065);
+    /* … and the Polish/German bare "Kongo" ("Report from Kongo.") is CONTESTED by the same rule: 1064. */
+    expect(correct).toBeGreaterThanOrEqual(1064);
   });
 
   it('F2 · suppression cannot reach the FR-3 gain shape at all', () => {
