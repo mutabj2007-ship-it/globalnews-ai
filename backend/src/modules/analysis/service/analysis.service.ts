@@ -4021,12 +4021,13 @@ export class AnalysisService {
           EA-FIND-1 — also when only SOME providers are refused (a CLEARED feed answered empty): the
           refused lanes are named and the turn stays incomplete. O-F6F8-a — a turn that asked no
           provider (retrievalAttempted false) records no lane at all.
+          EA BE-REVIEW C-1 (E1 L-1) — also when the cleared lane ADMITTED reporting: the refused lanes
+          are still named (the answer is partial, never "complete"); the evidence state is degraded
+          only when nothing was admitted.
         */
         const notSearched = articles.length === 0 ? (this.newsService.notAdmittedProviderIds?.() ?? []) : [];
         const rightsRefused =
-          articles.length === 0 && retrievalContext.retrievalAttempted !== false
-            ? (this.newsService.rightsRefusedProviderIds?.() ?? [])
-            : [];
+          retrievalContext.retrievalAttempted !== false ? (this.newsService.rightsRefusedProviderIds?.() ?? []) : [];
         if (rightsRefused.length > 0) {
           /* a refused provider was never started: whatever was recorded for it is the refusal */
           const recorded = (retrievalContext.providerFailures ?? []).map((f) =>
@@ -4034,7 +4035,7 @@ export class AnalysisService {
           );
           retrievalContext = {
             ...retrievalContext,
-            fallbackReason: 'provider-error',
+            ...(articles.length === 0 ? { fallbackReason: 'provider-error' as const } : {}),
             providerFailures: [
               ...recorded,
               ...rightsRefused

@@ -187,3 +187,112 @@ describe('R96 F7 · the record and the follow-up wording (E1 R-3 alternative, R-
     expect(SOURCES_UNAVAILABLE_RULE).toMatch(/rate-limited, timed out or unavailable/);
   });
 });
+
+/* ═════════ EA BE-REVIEW 796aad6 · C-1 (E1 L-1): the cleared lane ADMITS reporting, the others are refused ═════════ */
+describe('R96 C-1 · a partial answer never reads "complete": refused lanes are named even when reporting was admitted', () => {
+  const FEED_ID = 'feed:r96-c1-test-cleared';
+  const CLEARED = [{ sourceId: FEED_ID, rights: { state: 'CLEARED' } }];
+  const feedArticle = (q: string) => ({
+    id: 'feed-1', title: `${q} — Kenya fuel prices rise in Nairobi`, summary: 'Kenya fuel prices rose this week in Nairobi, the regulator said.',
+    url: 'https://feed.example/kenya-fuel', sourceId: FEED_ID, sourceName: 'Example Feed', category: 'world', sourcesCount: 1,
+    countryCode: 'KE', publishedAt: new Date().toISOString(), publishedAtBasis: 'publisher',
+  });
+  const answering = (id: string, calls: string[], articles: (q: string) => unknown[]): NewsProvider =>
+    ({
+      id, displayName: id, isMock: false, capabilities: ['search', 'topHeadlines', 'category'],
+      search: async (q: string) => { calls.push(id); return articles(q); },
+      topHeadlines: async () => { calls.push(id); return articles(''); },
+      category: async () => { calls.push(id); return articles(''); },
+      async health() { return { providerId: id, displayName: id, status: 'ok' as const, checkedAt: '' }; },
+    }) as unknown as NewsProvider;
+
+  async function analysisOf(calls: string[], onlyFeed = false) {
+    /* eslint-disable @typescript-eslint/no-var-requires, global-require */
+    const { CountryNewsService } = require('../news/country/country-news.service');
+    const { AnalysisService } = require('../analysis/service/analysis.service');
+    const { ANALYSIS_TOTAL_BUDGET_MS } = require('@globalnews-ai/shared');
+    /* eslint-enable @typescript-eslint/no-var-requires, global-require */
+    const gnews = answering('gnews', calls, () => []);
+    const gdelt = answering('gdelt-doc', calls, () => []);
+    const feeds = answering('rss-feeds', calls, (q) => [feedArticle(q)]);
+    const all = onlyFeed ? [feeds] : [gnews, gdelt, feeds];
+    const persistence = {
+      persistMany: jest.fn().mockResolvedValue(new Map()), findRecent: jest.fn().mockResolvedValue([]),
+      findById: jest.fn().mockResolvedValue(null), findRetainedByUrl: jest.fn().mockResolvedValue(null),
+      findRecentByCountry: jest.fn().mockResolvedValue([]), persistCountryRelations: jest.fn().mockResolvedValue(undefined),
+    };
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        NewsService, CountryNewsService,
+        { provide: ConfigService, useValue: { get: () => undefined } },
+        { provide: NEWS_PROVIDERS, useValue: all }, { provide: ALL_NEWS_PROVIDERS, useValue: all },
+        { provide: FALLBACK_NEWS_PROVIDERS, useValue: onlyFeed ? [feeds] : [gdelt, feeds] },
+        { provide: ArticlePersistenceService, useValue: persistence },
+      ],
+    }).compile();
+    const model = {
+      id: 'openai', displayName: 'Fixture model', isMock: false,
+      analyzeNews: async () => ({ headline: 'h', summary: 'x', keyFacts: [], keyPoints: [], sentiment: 'neutral', topics: [] }),
+    };
+    const config = {
+      get: () => ({
+        maxArticles: 8, maxArticleChars: 1200, timeoutMs: 20000, totalBudgetMs: ANALYSIS_TOTAL_BUDGET_MS, cacheTtlSeconds: 0,
+        openAiApiKey: undefined, openAiModel: 'fixture', executionMode: 'development' as const, retryAttempts: 1, retryBaseDelayMs: 1, maxCompletionTokens: 2000,
+      }),
+    };
+    return new AnalysisService(moduleRef.get(NewsService), moduleRef.get(CountryNewsService), model, config);
+  }
+
+  /* eslint-disable @typescript-eslint/no-var-requires, global-require */
+  const enforcement = require('../news/rights/rights-enforcement') as {
+    __setReaderRightsFixtureModeForTests: (on: boolean) => void;
+    __setRightsTestFeeds: (f: unknown) => void;
+  };
+  const admission = require('../news/rights/provider-admission') as { __setProviderAdmissionTestFeeds: (f: unknown) => void };
+  /* eslint-enable @typescript-eslint/no-var-requires, global-require */
+  afterEach(() => {
+    admission.__setProviderAdmissionTestFeeds(null);
+    enforcement.__setRightsTestFeeds(null);
+    enforcement.__setReaderRightsFixtureModeForTests(true);
+  });
+
+  it.each([
+    ['country route (EA MIXED-article-country-kenya)', 'What fuel price changes were reported in Kenya this week?'],
+    ['generic search', 'What is the latest on Kenya fuel prices?'],
+  ])('%s → reporting admitted, outcome PARTIAL, incomplete, gnews + gdelt-doc named rights-not-cleared', async (_label, q) => {
+    enforcement.__setReaderRightsFixtureModeForTests(false);
+    admission.__setProviderAdmissionTestFeeds(CLEARED);
+    enforcement.__setRightsTestFeeds(CLEARED);
+    const calls: string[] = [];
+    const r = await (await analysisOf(calls)).analyzeNews(q, 'en');
+    const ctx = r.retrievalContext as {
+      fallbackReason?: string;
+      providerFailures?: { providerId: string; kind: string }[];
+      retrievalTrace?: { lanesUnavailable?: { lane: string; reason: string }[] };
+    };
+    expect(calls).toEqual(['rss-feeds']);
+    expect(r.articles.length).toBeGreaterThan(0);
+    expect(observedRetrievalOf(r as never).retrievalOutcome).toBe('PARTIAL');
+    expect(retrievalIncomplete(r as never)).toBe(true);
+    const refusedLanes = (ctx.retrievalTrace?.lanesUnavailable ?? []).filter((l) => l.lane !== 'rss-feeds');
+    expect(refusedLanes.map((l) => l.lane).sort()).toEqual(['gdelt-doc', 'gnews']);
+    for (const l of refusedLanes) expect(l.reason).toBe('rights-not-cleared');
+    expect((ctx.providerFailures ?? []).filter((f) => f.kind === 'rights-not-cleared').map((f) => f.providerId).sort()).toEqual([
+      'gdelt-doc',
+      'gnews',
+    ]);
+  });
+
+  it('control: enforcement ON, the cleared feed is the only configured provider → nothing refused, no lane invented, MATCHED', async () => {
+    enforcement.__setReaderRightsFixtureModeForTests(false);
+    admission.__setProviderAdmissionTestFeeds(CLEARED);
+    enforcement.__setRightsTestFeeds(CLEARED);
+    const calls: string[] = [];
+    const r = await (await analysisOf(calls, true)).analyzeNews('What fuel price changes were reported in Kenya this week?', 'en');
+    const ctx = r.retrievalContext as { providerFailures?: { kind: string }[] };
+    expect(calls).toEqual(['rss-feeds']);
+    expect(r.articles.length).toBeGreaterThan(0);
+    expect((ctx.providerFailures ?? []).some((f) => f.kind === 'rights-not-cleared')).toBe(false);
+    expect(observedRetrievalOf(r as never).retrievalOutcome).toBe('MATCHED');
+  });
+});
