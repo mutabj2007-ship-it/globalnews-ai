@@ -213,3 +213,51 @@ describe('rights-withheld research record', () => {
     expect(askProgressStrings(locale).rightsWithheld(2)).toContain('2');
   });
 });
+
+/*
+  BETA-ASK-005 (CTO R80, R96) — "No qualifying reports were verified within your requested period" only
+  when the permitted search COMPLETED and the reader's period was applied and set reports aside. Every
+  other state keeps its own wording: genuine no-match, relevance-filtered, partial, failed, rights-held.
+*/
+describe('BETA-ASK-005 — a completed search whose reports all fell outside the reader period', () => {
+  const windowed = (excludedOutsideWindow: number | null) =>
+    ({ retrievalContext: { reportingWindow: excludedOutsideWindow === null ? null : { excludedOutsideWindow } } }) as never;
+  const lines = (p: AskR2Payload) => {
+    let r!: ReturnType<typeof create>;
+    act(() => {
+      r = create(createElement(AskSearchActivity, { locale: 'en', activity: searchActivityOf(p)!, laneLabel: (l: string) => l }));
+    });
+    act(() => byAsk(r.root, 'search-activity')[0]!.props.onClick());
+    return byAsk(r.root, 'search-step').map(textOf);
+  };
+
+  it('ALL_FILTERED + window excluded reports → the period wording, never "no matching reports"', () => {
+    const p = payload({ research: record({ outcome: 'ALL_FILTERED' }), analysis: windowed(2) });
+    expect(steps(p)![0]).toEqual(['SEARCH', 'completed', 'OUTSIDE_WINDOW']);
+    const text = lines(p).join(' ');
+    expect(text).toContain('No qualifying reports were verified within your requested period.');
+    expect(text).not.toMatch(/No matching reports were found|none matched the question/);
+  });
+  it('NEGATIVE: ALL_FILTERED by the relevance gate (no window) keeps "none matched the question"', () => {
+    expect(steps(payload({ research: record({ outcome: 'ALL_FILTERED' }), analysis: windowed(null) }))![0]).toEqual(['SEARCH', 'completed', 'FILTERED']);
+    expect(steps(payload({ research: record({ outcome: 'ALL_FILTERED' }), analysis: windowed(0) }))![0]).toEqual(['SEARCH', 'completed', 'FILTERED']);
+  });
+  it('NEGATIVE: a genuine completed no-match stays "No matching reports were found." even with a window', () => {
+    expect(steps(payload({ research: record({ outcome: 'COMPLETED_NO_MATCH' }), analysis: windowed(0) }))![0]).toEqual(['SEARCH', 'completed', 'NO_MATCH']);
+  });
+  it('NEGATIVE: partial and failed searches never get the period wording', () => {
+    const lanes = { attempted: ['gnews', 'gdelt-doc'], succeeded: ['gnews'], unavailable: [{ lane: 'gdelt-doc', reason: 'timeout' }] };
+    expect(steps(payload({ research: record({ outcome: 'PARTIAL_NO_MATCH', lanes }), analysis: windowed(3) }))![0]).toEqual(['SEARCH', 'partial', 'NO_MATCH']);
+    expect(steps(payload({ research: record({ outcome: 'PROVIDER_FAILED' }), analysis: windowed(3) }))![0]).toEqual(['SEARCH', 'failed', null]);
+  });
+  it('PRECEDENCE: rights-withheld drops the period claim and states the withholding', () => {
+    const step = searchActivityOf(payload({ research: record({ outcome: 'ALL_FILTERED', rightsWithheld: 2 } as never), analysis: windowed(3) }))!.steps[0];
+    expect(step.found).toBeUndefined();
+    expect(step.rightsWithheld).toBe(2);
+  });
+  it.each(ASK_PROGRESS_LOCALES)('%s carries its own period wording', (locale) => {
+    const s = askProgressStrings(locale).outsideWindow;
+    expect(s.length).toBeGreaterThan(20);
+    if (locale !== 'en') expect(s).not.toBe(askProgressStrings('en').outsideWindow);
+  });
+});

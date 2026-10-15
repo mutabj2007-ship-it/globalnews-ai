@@ -38,7 +38,7 @@ export interface SearchStep {
   readonly kind: SearchStepKind;
   readonly status: SearchStepStatus;
   /** SEARCH: what a completed / partial search found. */
-  readonly found?: 'EVIDENCE' | 'NO_MATCH' | 'FILTERED';
+  readonly found?: 'EVIDENCE' | 'NO_MATCH' | 'FILTERED' | 'OUTSIDE_WINDOW';
   /** SEARCH: lanes that could not be reached, as recorded. */
   readonly unreached?: readonly string[];
   /** MASTER CTO P0 RIGHTS CONTAINMENT R1 — found but withheld for rights (never "no match") */
@@ -105,7 +105,7 @@ function classifyLegacyTrace(articles: readonly unknown[] | undefined, ctx: NonN
 function withRights(step: SearchStep, withheld: number | undefined): SearchStep {
   if (withheld === undefined || withheld <= 0) return step;
   const { found, ...rest } = step;
-  return { ...rest, ...(found === 'NO_MATCH' || found === 'FILTERED' ? {} : found === undefined ? {} : { found }), rightsWithheld: withheld };
+  return { ...rest, ...(found === 'NO_MATCH' || found === 'FILTERED' || found === 'OUTSIDE_WINDOW' ? {} : found === undefined ? {} : { found }), rightsWithheld: withheld };
 }
 
 function searchStep({ outcome, unreached }: Facts): SearchStep {
@@ -159,6 +159,24 @@ function legacySearch(payload: AskR2Payload): { step: SearchStep; basis: SearchA
   return attempted ? { step: ATTEMPTED_UNKNOWN, basis: 'LEGACY_ATTEMPTED' } : null;
 }
 
+/*
+  BETA-ASK-005 (CTO R80) — "No qualifying reports were verified within your requested period" ONLY when
+  the search COMPLETED (ALL_FILTERED: not partial, not failed, not rights-withheld — those keep their
+  own wording) AND the reader's period was actually applied and set reports aside.
+*/
+function windowExcluded(payload: AskR2Payload): boolean {
+  const ctx = (payload.analysis as unknown as { retrievalContext?: { reportingWindow?: { excludedOutsideWindow?: unknown } | null } } | null)
+    ?.retrievalContext;
+  const n = ctx?.reportingWindow?.excludedOutsideWindow;
+  return typeof n === 'number' && n > 0;
+}
+
+function inWindowTerms(step: SearchStep, payload: AskR2Payload): SearchStep {
+  return step.status === 'completed' && step.found === 'FILTERED' && windowExcluded(payload)
+    ? { ...step, found: 'OUTSIDE_WINDOW' }
+    : step;
+}
+
 export function searchActivityOf(payload: AskR2Payload | null | undefined): SearchActivity | null {
   if (payload == null) return null;
   const record = payload.research;
@@ -167,7 +185,13 @@ export function searchActivityOf(payload: AskR2Payload | null | undefined): Sear
     if (!record.performed || record.outcome === null) return null;
     return {
       basis: 'RECORD',
-      steps: [withRights(searchStep({ outcome: record.outcome, unreached: record.lanes.unavailable.map((u) => u.lane) }), record.rightsWithheld), answerStep(payload)],
+      steps: [
+        withRights(
+          inWindowTerms(searchStep({ outcome: record.outcome, unreached: record.lanes.unavailable.map((u) => u.lane) }), payload),
+          record.rightsWithheld,
+        ),
+        answerStep(payload),
+      ],
     };
   }
   if (payload.priorAnswer?.evidence === 'REUSED')

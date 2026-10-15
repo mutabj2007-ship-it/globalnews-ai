@@ -91,7 +91,13 @@ export function AskSearchActivity({
   const notes = (step: SearchStep): string[] => [
     ...(step.kind === 'REUSED' ? [s.noNewSearch] : []),
     ...(step.answer === 'COMPLETED_UNVERIFIED' ? [s.noVerifiedAnswer] : step.answer === 'PARTLY_SOURCED' ? [s.someEvidenceMissing] : []),
-    ...(step.found === 'NO_MATCH' ? [s.noMatch] : step.found === 'FILTERED' ? [s.filtered] : []),
+    ...(step.found === 'NO_MATCH'
+      ? [s.noMatch]
+      : step.found === 'FILTERED'
+        ? [s.filtered]
+        : step.found === 'OUTSIDE_WINDOW'
+          ? [s.outsideWindow]
+          : []),
     ...(step.rightsWithheld !== undefined && step.rightsWithheld > 0 ? [s.rightsWithheld(step.rightsWithheld)] : []),
     ...(step.unreached !== undefined && step.unreached.length > 0 ? [s.unreached(step.unreached.map(laneLabel).join(', '))] : []),
   ];

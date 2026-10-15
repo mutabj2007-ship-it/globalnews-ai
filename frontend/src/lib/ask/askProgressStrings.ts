@@ -27,6 +27,8 @@ export interface AskProgressStrings {
   readonly noNewSearch: string;
   readonly noMatch: string;
   readonly filtered: string;
+  /** BETA-ASK-005 (CTO R80) — a completed search whose reports all fell outside the reader's period */
+  readonly outsideWindow: string;
   readonly unreached: (lanes: string) => string;
   /** MASTER CTO P0 RIGHTS CONTAINMENT R1 */
   readonly rightsWithheld: (n: number) => string;
@@ -58,6 +60,7 @@ const EN: AskProgressStrings = {
   noNewSearch: 'No new search was made.',
   noMatch: 'No matching reports were found.',
   filtered: 'Reports were found, but none matched the question closely enough.',
+  outsideWindow: "No qualifying reports were verified within your requested period.",
   unreached: (l) => `Not reached: ${l}.`,
   rightsWithheld: (n) => `${n} item${n === 1 ? '' : 's'} found ${n === 1 ? 'was' : 'were'} not used because the source’s reuse rights are not cleared.`,
   withheldAnswer: 'This earlier answer is withheld while the rights to reuse its sources are reviewed.',
@@ -85,6 +88,7 @@ const PL: AskProgressStrings = {
   noNewSearch: 'Nie wykonano nowego wyszukiwania.',
   noMatch: 'Nie znaleziono pasujących doniesień.',
   filtered: 'Znaleziono doniesienia, ale żadne nie odpowiadało wystarczająco pytaniu.',
+  outsideWindow: "W podanym przez Ciebie okresie nie zweryfikowano żadnych kwalifikujących się doniesień.",
   unreached: (l) => `Niedostępne: ${l}.`,
   rightsWithheld: (n) => `Nie wykorzystano ${n} znalezionych pozycji, ponieważ prawa do ich ponownego użycia nie zostały potwierdzone.`,
   withheldAnswer: 'Ta wcześniejsza odpowiedź jest wstrzymana do czasu weryfikacji praw do ponownego użycia jej źródeł.',
@@ -112,6 +116,7 @@ const DE: AskProgressStrings = {
   noNewSearch: 'Es wurde keine neue Suche durchgeführt.',
   noMatch: 'Es wurden keine passenden Berichte gefunden.',
   filtered: 'Es wurden Berichte gefunden, aber keiner passte genau genug zur Frage.',
+  outsideWindow: "Für den von Ihnen angegebenen Zeitraum wurden keine passenden Berichte bestätigt.",
   unreached: (l) => `Nicht erreicht: ${l}.`,
   rightsWithheld: (n) => `${n} gefundene Einträge wurden nicht verwendet, weil die Weiterverwendungsrechte der Quelle nicht geklärt sind.`,
   withheldAnswer: 'Diese frühere Antwort ist zurückgehalten, solange die Rechte zur Weiterverwendung ihrer Quellen geprüft werden.',
@@ -139,6 +144,7 @@ const FR: AskProgressStrings = {
   noNewSearch: 'Aucune nouvelle recherche n’a été effectuée.',
   noMatch: 'Aucun article correspondant n’a été trouvé.',
   filtered: 'Des articles ont été trouvés, mais aucun ne correspondait assez à la question.',
+  outsideWindow: "Aucun article admissible n’a été vérifié pour la période demandée.",
   unreached: (l) => `Non joignables : ${l}.`,
   rightsWithheld: (n) => `${n} élément(s) trouvé(s) n’ont pas été utilisés, car les droits de réutilisation de la source ne sont pas confirmés.`,
   withheldAnswer: 'Cette réponse antérieure est suspendue pendant l’examen des droits de réutilisation de ses sources.',
@@ -166,6 +172,7 @@ const ES: AskProgressStrings = {
   noNewSearch: 'No se hizo una nueva búsqueda.',
   noMatch: 'No se encontraron informes coincidentes.',
   filtered: 'Se encontraron informes, pero ninguno coincidía lo suficiente con la pregunta.',
+  outsideWindow: "No se verificó ningún informe válido dentro del período que indicaste.",
   unreached: (l) => `Sin respuesta: ${l}.`,
   rightsWithheld: (n) => `${n} elemento(s) encontrado(s) no se usaron porque los derechos de reutilización de la fuente no están confirmados.`,
   withheldAnswer: 'Esta respuesta anterior está retenida mientras se revisan los derechos de reutilización de sus fuentes.',
@@ -193,6 +200,7 @@ const PT: AskProgressStrings = {
   noNewSearch: 'Nenhuma nova pesquisa foi feita.',
   noMatch: 'Nenhuma notícia correspondente foi encontrada.',
   filtered: 'Foram encontradas notícias, mas nenhuma correspondia o suficiente à pergunta.',
+  outsideWindow: "Nenhuma notícia qualificada foi verificada dentro do período que você pediu.",
   unreached: (l) => `Sem resposta: ${l}.`,
   rightsWithheld: (n) => `${n} item(ns) encontrado(s) não foram usados porque os direitos de reutilização da fonte não estão confirmados.`,
   withheldAnswer: 'Esta resposta anterior está retida enquanto os direitos de reutilização das suas fontes são revistos.',
@@ -220,6 +228,7 @@ const AR: AskProgressStrings = {
   noNewSearch: 'لم يُجرَ بحث جديد.',
   noMatch: 'لم يُعثر على تقارير مطابقة.',
   filtered: 'عُثر على تقارير، لكن لم يطابق أيٌّ منها السؤال بما يكفي.',
+  outsideWindow: "لم يُتحقَّق من أي تقارير مؤهَّلة ضمن الفترة التي طلبتها.",
   unreached: (l) => `تعذّر الوصول: ${l}.`,
   rightsWithheld: (n) => `لم تُستخدم ${n} من النتائج لأن حقوق إعادة استخدام المصدر غير مؤكدة.`,
   withheldAnswer: 'هذه الإجابة السابقة محجوبة ريثما تُراجَع حقوق إعادة استخدام مصادرها.',
