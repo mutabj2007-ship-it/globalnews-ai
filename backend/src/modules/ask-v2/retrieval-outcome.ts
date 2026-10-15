@@ -48,6 +48,8 @@ interface RetrievalFacts {
     readonly providers?: readonly string[];
     readonly providerFailures?: readonly unknown[];
     readonly rightsExcluded?: { readonly count: number };
+    /** BETA-ASK-005 — present only when a reader-stated period was applied to the evidence */
+    readonly reportingWindow?: { readonly excludedOutsideWindow?: number } | null;
     readonly retrievalTrace?: {
       readonly candidatesSeen?: number;
       readonly candidatesAdmitted?: number;
@@ -126,6 +128,17 @@ export function observedRetrievalOf(response: RetrievalFacts | null | undefined)
   if ((ctx.rightsExcluded?.count ?? 0) > 0) return { retrievalOutcome: 'RIGHTS_WITHHELD', ...observedCounts };
   if (partial) return { retrievalOutcome: 'PARTIAL_NO_MATCH', ...observedCounts };
   if (seen !== null && seen > 0) return { retrievalOutcome: 'ALL_FILTERED', ...observedCounts };
+  /*
+    BETA-ASK-005 / G R76-F1 (CTO R80, R96) — the search completed and the reader's period was applied,
+    but every report it returned was set aside because no publisher-stated time fell inside that
+    period (an unknown date never qualifies). That is "found, none qualified", never "found nothing".
+    Classified from the window fact the response already carries; no count is added to the trace, so
+    nothing new about an uncleared source reaches the reader. Rights-withheld, partial and failed
+    searches are decided above and keep precedence.
+  */
+  if ((count(ctx.reportingWindow?.excludedOutsideWindow) ?? 0) > 0) {
+    return { retrievalOutcome: 'ALL_FILTERED', ...observedCounts };
+  }
   return { retrievalOutcome: 'COMPLETED_NO_MATCH', ...observedCounts };
 }
 
