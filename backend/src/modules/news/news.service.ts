@@ -436,13 +436,36 @@ export function readWindowExcluded(response: NewsResponse): readonly string[] {
 }
 
 /**
+ * E1 R96 W-1 — the rights inputs (source id, provider id, URL: never title or text) of each
+ * report a search() set aside for the window, so the caller can rights-evaluate exclusions it
+ * never received as articles. Same non-enumerable side channel: no JSON, no shared contract.
+ */
+export interface WindowExcludedSource {
+  readonly id: string;
+  readonly sourceId?: string;
+  readonly providerId?: string;
+  readonly url?: string;
+}
+const WINDOW_EXCLUDED_SOURCES = Symbol('globalnews.windowExcludedSources');
+export function readWindowExcludedSources(response: NewsResponse): readonly WindowExcludedSource[] {
+  const carried = (response as unknown as Record<symbol, unknown>)[WINDOW_EXCLUDED_SOURCES];
+  return Array.isArray(carried) ? (carried as WindowExcludedSource[]) : [];
+}
+const windowExcludedSourceOf = (article: NewsArticle, providerId?: string): WindowExcludedSource => ({
+  id: article.id,
+  ...(article.sourceId === undefined ? {} : { sourceId: article.sourceId }),
+  ...((article.providerId ?? providerId) === undefined ? {} : { providerId: article.providerId ?? providerId }),
+  ...(article.url === undefined ? {} : { url: article.url }),
+});
+
+/**
  * ASK TRUTHFUL RETRIEVAL R2A — how many provider candidates a search() saw BEFORE its relevance
  * gate, on the same non-enumerable side channel as the failures (no JSON, no shared contract).
  */
 function withCandidatesSeen(
   count: number,
   response: NewsResponse,
-  windowExcluded: ReadonlySet<string> = new Set(),
+  windowExcluded: ReadonlyMap<string, WindowExcludedSource> = new Map(),
 ): NewsResponse {
   Object.defineProperty(response, CANDIDATES_SEEN, {
     value: count,
@@ -451,7 +474,12 @@ function withCandidatesSeen(
   });
   if (windowExcluded.size > 0) {
     Object.defineProperty(response, WINDOW_EXCLUDED, {
-      value: [...windowExcluded],
+      value: [...windowExcluded.keys()],
+      enumerable: false,
+      configurable: true,
+    });
+    Object.defineProperty(response, WINDOW_EXCLUDED_SOURCES, {
+      value: [...windowExcluded.values()],
       enumerable: false,
       configurable: true,
     });
@@ -979,7 +1007,7 @@ export class NewsService {
      */
     let failures = providerCall.failures;
     let candidatesSeen = 0;
-    const windowExcluded = new Set<string>();
+    const windowExcluded = new Map<string, WindowExcludedSource>();
 
     // G-ALPHA-1 — the accumulated provider evidence for THIS request. Mutable
     // only because the bounded rescue below may add exactly one provider set's
@@ -1041,7 +1069,7 @@ export class NewsService {
             providerId,
             articles: articles.filter((article) => {
               const keep = inWindow(article);
-              if (!keep) windowExcluded.add(article.id);
+              if (!keep) windowExcluded.set(article.id, windowExcludedSourceOf(article, providerId));
               return keep;
             }),
           }))
@@ -1316,7 +1344,7 @@ export class NewsService {
     if (inWindow) {
       cachedArticles = cachedArticles.filter((article) => {
         const keep = inWindow(article);
-        if (!keep) windowExcluded.add(article.id);
+        if (!keep) windowExcluded.set(article.id, windowExcludedSourceOf(article));
         return keep;
       });
     }

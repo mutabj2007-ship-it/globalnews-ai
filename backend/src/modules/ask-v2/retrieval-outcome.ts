@@ -49,7 +49,7 @@ interface RetrievalFacts {
     readonly providerFailures?: readonly unknown[];
     readonly rightsExcluded?: { readonly count: number };
     /** BETA-ASK-005 — present only when a reader-stated period was applied to the evidence */
-    readonly reportingWindow?: { readonly excludedOutsideWindow?: number } | null;
+    readonly reportingWindow?: { readonly excludedOutsideWindow?: number; readonly exclusionsUnevaluated?: true } | null;
     readonly retrievalTrace?: {
       readonly candidatesSeen?: number;
       readonly candidatesAdmitted?: number;
@@ -83,6 +83,9 @@ export function retrievalIncomplete(response: RetrievalFacts | null | undefined)
     (failures.length > 0 || ctx.fallbackReason === 'provider-error' || ctx.dataMode === 'unavailable')
   )
     return true;
+  /* E1 R96 W-2 — the window set aside reports whose rights state could not be evaluated and nothing
+     was admitted: what current reporting says is not established (UNMEASURED, never a pass) */
+  if ((response.articles?.length ?? 0) === 0 && ctx.reportingWindow?.exclusionsUnevaluated === true) return true;
   const configured = (reason: unknown) => reason !== 'not-configured';
   return (
     failures.some((f) => configured((f as { kind?: unknown } | null)?.kind)) ||
@@ -127,6 +130,14 @@ export function observedRetrievalOf(response: RetrievalFacts | null | undefined)
   }
   if ((ctx.rightsExcluded?.count ?? 0) > 0) return { retrievalOutcome: 'RIGHTS_WITHHELD', ...observedCounts };
   if (partial) return { retrievalOutcome: 'PARTIAL_NO_MATCH', ...observedCounts };
+  /*
+    E1 R96 W-2 — the window also set aside reports known only by id, whose rights state was never
+    evaluated. No period-specific reason (and no absence claim) may be asserted: there is no typed
+    outcome, which the research record states as "outcome unavailable", and retrievalIncomplete()
+    gives the broader "not established" wording. Not RIGHTS_WITHHELD either: that is a rights fact
+    nobody established.
+  */
+  if (ctx.reportingWindow?.exclusionsUnevaluated === true) return { retrievalOutcome: null, ...observedCounts };
   if (seen !== null && seen > 0) return { retrievalOutcome: 'ALL_FILTERED', ...observedCounts };
   /*
     BETA-ASK-005 / G R76-F1 (CTO R80, R96) — the search completed and the reader's period was applied,

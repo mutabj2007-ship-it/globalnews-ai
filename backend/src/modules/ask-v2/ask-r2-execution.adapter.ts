@@ -1,4 +1,5 @@
 import {
+  excludedOutsideWindowRetrievedOf,
   localCoverageFor,
   notAskedDiagnostics,
   readRetrievalDiagnostics,
@@ -3195,7 +3196,8 @@ export class AskR2ExecutionAdapter implements AskExecutionPort {
           `admitted=${retrieval.retrievalTrace?.candidatesAdmitted ?? analysis?.articles?.length ?? 0} ` +
           `clusters=${retrieval.retrievalTrace?.independentClusters ?? 'n/a'} ` +
           `windowH=${retrieval.reportingWindow === undefined ? 'none' : Math.round((Date.parse(retrieval.reportingWindow.to) - Date.parse(retrieval.reportingWindow.from)) / 3_600_000)} ` +
-          `outsideWindow=${retrieval.reportingWindow?.excludedOutsideWindow ?? 0}`,
+          `outsideWindow=${retrieval.reportingWindow?.excludedOutsideWindow ?? 0} ` +
+          `outsideWindowRetrieved=${excludedOutsideWindowRetrievedOf(retrieval.reportingWindow) ?? 'n/a'}`,
       );
     } catch {
       /* the record is best-effort; the answer is not */

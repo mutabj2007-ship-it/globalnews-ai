@@ -491,6 +491,21 @@ function countCitedIds(value: unknown, into: Set<string>, depth = 0): void {
   }
 }
 
+/**
+ * E1 R96 W-4 — the UNRESTRICTED number of retrieved reports the reader's window set aside (any
+ * rights state, including id-only exclusions). A real retrieval fact E1 needs, kept server-side:
+ * it rides on the reportingWindow object under a symbol key, which JSON never serialises, so the
+ * reader only ever sees the rights-restricted `excludedOutsideWindow` (W-1). Two names, never one
+ * field redefined in place.
+ */
+export const EXCLUDED_OUTSIDE_WINDOW_RETRIEVED = Symbol('globalnews.excludedOutsideWindowRetrieved');
+
+export function excludedOutsideWindowRetrievedOf(window: unknown): number | null {
+  if (window === null || typeof window !== 'object') return null;
+  const v = (window as Record<symbol, unknown>)[EXCLUDED_OUTSIDE_WINDOW_RETRIEVED];
+  return typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : null;
+}
+
 interface AnalysisResponseLike {
   analysis?: unknown;
   articles?: readonly unknown[];
@@ -519,7 +534,8 @@ export function finalizeAnalysisDiagnostics(
         response.analysis === null || response.analysis === undefined ? snapshot.cited : cited.size,
     },
     {
-      windowExcludedOutsideWindow: context.reportingWindow?.excludedOutsideWindow ?? null,
+      /* E1 R96 W-4 — the internal, unrestricted count (never the rights-restricted reader field) */
+      windowExcludedOutsideWindow: excludedOutsideWindowRetrievedOf(context.reportingWindow),
       anchorGate:
         context.questionAnchorGate === undefined
           ? null

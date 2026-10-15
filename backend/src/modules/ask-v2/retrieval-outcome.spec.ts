@@ -1,5 +1,5 @@
 import { OBSERVED_RETRIEVAL_OUTCOMES } from '../ask-observability/ask-observation.contract';
-import { observedRetrievalOf } from './retrieval-outcome';
+import { observedRetrievalOf, retrievalIncomplete } from './retrieval-outcome';
 
 describe('REASON TO RETURN R1 · §5 — retrieval outcome codes (FJ-1)', () => {
   const trace = (seen: number, admitted: number, lanesUnavailable: unknown[] = []) => ({
@@ -116,6 +116,30 @@ describe('REASON TO RETURN R1 · §5 — retrieval outcome codes (FJ-1)', () => 
 
     it('PRECEDENCE: admitted in-window reporting stays MATCHED (mixed dates)', () => {
       expect(observedRetrievalOf({ ...windowed(2), articles: [{}] }).retrievalOutcome).toBe('MATCHED');
+    });
+
+    /* E1 R96 W-2 — exclusions whose rights state could not be evaluated: no period-specific reason */
+    it('W-2: unevaluated exclusions → no typed outcome (never ALL_FILTERED, never COMPLETED_NO_MATCH) and the search reads incomplete', () => {
+      const r = windowed(0, { reportingWindow: { excludedOutsideWindow: 0, exclusionsUnevaluated: true } });
+      expect(observedRetrievalOf(r).retrievalOutcome).toBeNull();
+      expect(retrievalIncomplete(r)).toBe(true);
+      /* with an admissible period exclusion as well, still no period-specific claim */
+      const both = windowed(2, { reportingWindow: { excludedOutsideWindow: 2, exclusionsUnevaluated: true } });
+      expect(observedRetrievalOf(both).retrievalOutcome).toBeNull();
+    });
+
+    it('W-2 NEGATIVE: an established rights withholding stays RIGHTS_WITHHELD (not invented, not hidden)', () => {
+      const r = windowed(0, {
+        rightsExcluded: { count: 1 },
+        reportingWindow: { excludedOutsideWindow: 0, exclusionsUnevaluated: true },
+      });
+      expect(observedRetrievalOf(r).retrievalOutcome).toBe('RIGHTS_WITHHELD');
+    });
+
+    it('W-2 NEGATIVE: admitted reporting is unaffected by unevaluated exclusions', () => {
+      const r = { ...windowed(0, { reportingWindow: { excludedOutsideWindow: 0, exclusionsUnevaluated: true } }), articles: [{}] };
+      expect(observedRetrievalOf(r).retrievalOutcome).toBe('MATCHED');
+      expect(retrievalIncomplete(r)).toBe(false);
     });
 
     it('PRECEDENCE: no provider was asked → no search outcome at all', () => {

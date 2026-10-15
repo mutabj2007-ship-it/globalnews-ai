@@ -865,7 +865,18 @@ export interface AnalysisRetrievalContext {
     from: string;
     to: string;
     basis: 'PUBLICATION_TIME';
+    /**
+     * E1 R96 W-1 — reports set aside by the window whose source the reader policy ADMITS. A
+     * rights-inadmissible out-of-window report is counted as rights-withheld instead (never as a
+     * date filter). The unrestricted retrieval count stays server-side (W-4).
+     */
     excludedOutsideWindow: number;
+    /**
+     * E1 R96 W-2 — true when the window also set aside reports known only by id (an upstream or
+     * planned lane), whose rights state could not be evaluated. The turn then asserts NO
+     * period-specific reason. Absent otherwise (additive, optional).
+     */
+    exclusionsUnevaluated?: true;
   };
 
   /**

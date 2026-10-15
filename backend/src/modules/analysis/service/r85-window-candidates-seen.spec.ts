@@ -101,7 +101,8 @@ describe('R85 2(a) — a window that excludes everything must not read as a comp
   it('C1 — only publisher-dated out-of-window matches', async () => {
     const o = await run([OUT1, OUT2]);
     expect(o.ids).toEqual([]);
-    expect(o.excluded).toBe(2);                 /* truthful today: the exclusion IS recorded */
+    /* E1 R96 W-1 — SUPERSEDED, NOT DELETED: was excluded 2. These fixture items are UNCLEARED (provider slug), so the out-of-window ones are rights-withheld, not a date filter; the reader count holds admissible ones only. */
+    expect(o.excluded).toBe(0);
     expect(o.basis).toBe('PUBLICATION_TIME');
     /* MAIN R96 — G's PENDING "expected 2" is deliberately NOT adopted: these items are uncleared, and
        the trace reaches the reader, so the fix classifies from the window fact the response already
@@ -109,7 +110,8 @@ describe('R85 2(a) — a window that excludes everything must not read as a comp
     expect(o.seen).toBe(0);
     /* MAIN R96 — WAS PENDING (expected COMPLETED_NO_MATCH at b3e1744): now ALL_FILTERED. The reader
        wording ("No qualifying reports were verified within your requested period") is the FE half. */
-    expect(o.observed).toBe('ALL_FILTERED');
+    /* E1 R96 W-1 — SUPERSEDED, NOT DELETED: was observed ALL_FILTERED (4de7dfa). These fixture items are UNCLEARED (provider slug), so the out-of-window ones are rights-withheld, not a date filter; the reader count holds admissible ones only. */
+    expect(o.observed).toBe('RIGHTS_WITHHELD');
     expect(o.incomplete).toBe(false);
   });
 
@@ -130,18 +132,21 @@ describe('R85 2(a) — a window that excludes everything must not read as a comp
 
   it('C4 — mixed in-window and out-of-window', async () => {
     const o = await run([IN1, OUT1, OUT2]);
-    expect(o.excluded).toBe(2);                 /* exactly the out-of-window pair */
+    /* E1 R96 W-1 — SUPERSEDED, NOT DELETED: was excluded 2. These fixture items are UNCLEARED (provider slug), so the out-of-window ones are rights-withheld, not a date filter; the reader count holds admissible ones only. */
+    expect(o.excluded).toBe(0);
     expect(o.observed).toBe('RIGHTS_WITHHELD'); /* NOT_EXERCISED as a window outcome: see header */
   });
 
   it('C5 — an unknown publisher date is excluded, and that is not an empty search', async () => {
     const o = await run([NODATE]);
-    expect(o.excluded).toBe(1);                 /* strict: only a publisher-stated time qualifies */
+    /* E1 R96 W-1 — SUPERSEDED, NOT DELETED: was excluded 1. These fixture items are UNCLEARED (provider slug), so the out-of-window ones are rights-withheld, not a date filter; the reader count holds admissible ones only. */
+    expect(o.excluded).toBe(0);
     expect(o.ids).toEqual([]);
     expect(o.seen).toBe(0);                     /* MAIN R96 — G's PENDING "expected 1" not adopted: see C1 */
     /* MAIN R96 — WAS PENDING (expected COMPLETED_NO_MATCH at b3e1744): an item was retrieved and set
        aside for an UNKNOWN date, so the period is not reported as searched-and-empty. */
-    expect(o.observed).toBe('ALL_FILTERED');
+    /* E1 R96 W-1 — SUPERSEDED, NOT DELETED: was observed ALL_FILTERED (4de7dfa). These fixture items are UNCLEARED (provider slug), so the out-of-window ones are rights-withheld, not a date filter; the reader count holds admissible ones only. */
+    expect(o.observed).toBe('RIGHTS_WITHHELD');
   });
 
   it('C6 — a partial provider failure beside a window stays incomplete', async () => {

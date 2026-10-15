@@ -7,6 +7,7 @@ import {
 import {
   attachRetrievalDiagnostics,
   finalizeAnalysisDiagnostics,
+  EXCLUDED_OUTSIDE_WINDOW_RETRIEVED,
   readRetrievalDiagnostics,
   withReuse,
   type RetrievalDiagnostics,
@@ -95,6 +96,8 @@ import {
   readCandidatesSeen,
   readProviderFailures,
   readWindowExcluded,
+  readWindowExcludedSources,
+  type WindowExcludedSource,
   type ProviderFailure,
   type RelevanceMode,
 } from '../../news/news.service';
@@ -287,10 +290,15 @@ import {
 } from '../relevance/relationship-evidence.util';
 
 /** ASK R2 INTEGRATION R1 · GATE E — see `analyzeNews(…, executionPolicy)`. */
+/** E1 R96 W-1 — a window exclusion as the rights policy reads it (article or carried inputs). */
+type UseInputWithId = { readonly id: string; readonly sourceId?: string | null; readonly providerId?: string | null; readonly url?: string | null };
+
 /** ASK TRUTHFUL RETRIEVAL R2A — the runner's part of the retrieval trace. */
 type PlannedSearchTrace = Omit<AnalysisRetrievalTrace, 'timeWindow' | 'independentClusters'> & {
   /** BETA-ASK-005 — distinct candidate ids NewsService excluded for falling outside the window. */
   readonly windowExcludedIds: readonly string[];
+  /** E1 R96 W-1 — the rights inputs of those candidates (no title or text), for the reader count. */
+  readonly windowExcludedSources?: readonly WindowExcludedSource[];
 };
 
 export interface AnalysisExecutionPolicy {
@@ -1720,6 +1728,8 @@ export class AnalysisService {
         let broadCoverage: BroadHeadlinesCoverage | undefined;
         /* BETA-ASK-005 — candidates excluded by window BEFORE dedup, so the disclosure is honest. */
         const upstreamWindowExcluded = new Set<string>();
+        /* E1 R96 W-1 — and their rights inputs, so each can be rights-evaluated for the reader count */
+        const upstreamWindowExcludedSources = new Map<string, WindowExcludedSource>();
         // Milestone #40 (authoritative-context correction): set ONLY when
         // the M37 relational branch below matches — undefined for country/
         // city retrieval and for ordinary M35/M36 generic queries. This is
@@ -3374,6 +3384,7 @@ export class AnalysisService {
                   { from: window.from, to: window.to },
                 );
                 for (const id of readWindowExcluded(searchResponse)) upstreamWindowExcluded.add(id);
+                for (const source of readWindowExcludedSources(searchResponse)) upstreamWindowExcludedSources.set(source.id, source);
               }
               /* A4 — the ordinary generic search records exactly what it sent and how it ended */
               if (route.kind === 'generic') {
@@ -3615,25 +3626,57 @@ export class AnalysisService {
           (no model call).
         */
         const reportingWindow = executionPolicy?.reportingWindow;
+        /*
+          E1 R96 (E1_R96_WINDOW_COUNT_HOLD) W-1…W-4 — the window keeps operating on the FULL retrieved
+          set (W-3: no reordering, the rights partition still runs below); only how its exclusions are
+          REPORTED is partitioned, against the same reader policy:
+            · admissible out-of-window reports → the reader's `excludedOutsideWindow` (W-1);
+            · inadmissible ones → carried into the rights exclusion below, so RIGHTS_WITHHELD fires and a
+              rights withholding is never re-labelled as a date filter (W-1);
+            · ids that arrive without an article (upstream / planned lanes) cannot be rights-evaluated →
+              `exclusionsUnevaluated`, and no period-specific reason is asserted (W-2);
+            · the unrestricted count stays server-side under its own name (W-4).
+        */
+        let windowRightsExcluded: ReturnType<typeof partitionByRights>['excluded'] = [];
         if (reportingWindow !== undefined) {
           const inWindow = articles.filter((article) =>
             publishedInsideWindow(article, reportingWindow.from, reportingWindow.to),
           );
-          const excluded = new Set([
-            ...upstreamWindowExcluded,
-            ...(plannedTrace?.windowExcludedIds ?? []),
-            ...articles.filter((a) => !inWindow.includes(a)).map((a) => a.id),
+          const outside = articles.filter((a) => !inWindow.includes(a));
+          const outsideIds = new Set(outside.map((a) => a.id));
+          /* exclusions made upstream (NewsService) arrive as ids, with their rights inputs when carried */
+          const carried = new Map<string, WindowExcludedSource>([
+            ...upstreamWindowExcludedSources,
+            ...(plannedTrace?.windowExcludedSources ?? []).map((source) => [source.id, source] as const),
           ]);
+          const upstreamIds = [
+            ...new Set([...upstreamWindowExcluded, ...(plannedTrace?.windowExcludedIds ?? [])]),
+          ].filter((id) => !outsideIds.has(id));
+          const evaluable = upstreamIds.flatMap((id) => {
+            const source = carried.get(id);
+            return source === undefined ? [] : [source];
+          });
+          const idOnly = new Set(upstreamIds.filter((id) => !carried.has(id)));
+          const outsideRights = partitionByRights<UseInputWithId>(
+            [...outside, ...evaluable],
+            'AI_INPUT',
+            this.analysisConfig.get().rightsAudience === 'TEST_FIXTURE' ? {} : EXTERNAL_READER_POLICY,
+          );
+          windowRightsExcluded = outsideRights.excluded;
+          const retrieved = new Set([...upstreamIds, ...outsideIds]);
+          const window = {
+            statedPeriod: reportingWindow.statedPeriod,
+            from: reportingWindow.from,
+            to: reportingWindow.to,
+            basis: 'PUBLICATION_TIME' as const,
+            excludedOutsideWindow: outsideRights.allowed.length,
+            ...(idOnly.size > 0 ? { exclusionsUnevaluated: true as const } : {}),
+          };
+          (window as Record<symbol, unknown>)[EXCLUDED_OUTSIDE_WINDOW_RETRIEVED] = retrieved.size;
           retrievalContext = {
             ...retrievalContext,
             articlesRetrieved: inWindow.length,
-            reportingWindow: {
-              statedPeriod: reportingWindow.statedPeriod,
-              from: reportingWindow.from,
-              to: reportingWindow.to,
-              basis: 'PUBLICATION_TIME',
-              excludedOutsideWindow: excluded.size,
-            },
+            reportingWindow: window,
           };
           articles = inWindow;
         }
@@ -3937,7 +3980,8 @@ export class AnalysisService {
           );
           /* RETRIEVAL R1 · T1.1 — this gate executed: its counts into the passive trace */
           noteRightsDecisionForTrace(articles.length, allowed.length, pending.length, excluded.length);
-          const rightsExcluded = summarizeExclusions(excluded);
+          /* E1 R96 W-1 — inadmissible reports the window set aside are rights-withheld too */
+          const rightsExcluded = summarizeExclusions([...excluded, ...windowRightsExcluded]);
           /* provider items allowed only pending E1 (record mode): counted, never called cleared */
           const rightsPending = summarizePending(pending);
           if (rightsPending !== undefined) {
@@ -4995,6 +5039,7 @@ export class AnalysisService {
     let fallbackAfterRefusal = false;
     let candidatesSeen = 0;
     const windowExcludedIds = new Set<string>();
+    const windowExcludedSources = new Map<string, WindowExcludedSource>();
     for (const search of searches) {
       const q = makeProviderSafeNewsQuery(search.q);
       if (q === undefined) continue;
@@ -5017,6 +5062,7 @@ export class AnalysisService {
       languages.add(search.lang ?? 'reader');
       candidatesSeen += readCandidatesSeen(response);
       for (const id of readWindowExcluded(response)) windowExcludedIds.add(id);
+      for (const source of readWindowExcludedSources(response)) windowExcludedSources.set(source.id, source);
       for (const failure of readProviderFailures(response)) {
         if (
           ['rate-limited', 'auth', 'bad-request'].includes(failure.kind) &&
@@ -5050,6 +5096,7 @@ export class AnalysisService {
       candidatesSeen,
       candidatesAdmitted: articles.length,
       windowExcludedIds: [...windowExcludedIds],
+      windowExcludedSources: [...windowExcludedSources.values()],
     };
     this.logger.log(
       `Planned retrieval ${label}: ${searches.length} planned, ${sent.length} sent, ` +
@@ -5318,6 +5365,13 @@ export class AnalysisService {
       candidatesAdmitted: articles.length,
       windowExcludedIds: [
         ...new Set([...first.trace.windowExcludedIds, ...rescue.trace.windowExcludedIds]),
+      ],
+      windowExcludedSources: [
+        ...new Map(
+          [...(first.trace.windowExcludedSources ?? []), ...(rescue.trace.windowExcludedSources ?? [])].map(
+            (source) => [source.id, source] as const,
+          ),
+        ).values(),
       ],
     };
     return {
