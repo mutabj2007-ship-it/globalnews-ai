@@ -261,12 +261,12 @@ describe('AR-5 — an UNRESOLVED feed named in RSS_FEED_SOURCES is refused (Alph
 });
 
 describe('derived content — a stored story Brief resting on an uncleared source is withheld at read time', () => {
-  const brief = (refs: string[]) => ({
+  const brief = (refs: unknown) => ({
     id: 'v1', storyId: 's1', version: 1, state: 'SUPPORTED', evidenceRevision: 'r1', materialVersion: 1,
-    blocks: { summary: 'MODEL PROSE FROM SOURCES' }, evidenceRefs: refs.map((id) => ({ id })), coverageGaps: [], uncertainty: [],
+    blocks: { summary: 'MODEL PROSE FROM SOURCES' }, evidenceRefs: Array.isArray(refs) && refs.every((r) => typeof r === 'string') ? (refs as string[]).map((id) => ({ id })) : refs, coverageGaps: [], uncertainty: [],
     asOf: new Date('2026-10-15T00:00:00Z'), generatedAt: new Date('2026-10-15T00:00:00Z'), sourceOperationId: null, createdAt: new Date(),
   });
-  const service = (refs: string[], rows: Array<{ id: string; sourceId: string; url: string }>) => {
+  const service = (refs: unknown, rows: Array<{ id: string; sourceId: string; url: string }>) => {
     const prisma = {
       storyBriefVersion: { findFirst: jest.fn(async () => brief(refs)), count: jest.fn(async () => 1) },
       storyBriefAttempt: { findFirst: jest.fn(async () => null) },
@@ -283,6 +283,24 @@ describe('derived content — a stored story Brief resting on an uncleared sourc
     expect(view.brief).toBeNull();
     expect(view.withheld).toEqual({ reason: 'SOURCE_RIGHTS', count: 1 });
     expect(JSON.stringify(view)).not.toContain('MODEL PROSE');
+  });
+  /* CTO R82 — a model-written Brief whose evidence cannot be verified never reaches a reader */
+  it.each([
+    ['absent', undefined],
+    ['null', null],
+    ['empty', []],
+    ['malformed (no ids)', [{ ref: 'x' }, { id: 7 }, 'loose']],
+    ['not an array', { id: 'c1' }],
+  ])('evidence refs %s → the Brief is withheld (unverifiable prose)', async (_label, refs) => {
+    const view = await service(refs, [{ id: 'c1', sourceId: CLEARED, url: 'https://cleared.example/a' }]).read('s1');
+    expect(view.brief).toBeNull();
+    expect(view.withheld?.reason).toBe('SOURCE_RIGHTS');
+    expect(JSON.stringify(view)).not.toContain('MODEL PROSE');
+  });
+  it('a CLEARED ref beside a malformed one does not let the Brief through', async () => {
+    const view = await service([{ id: 'c1' }, { id: 7 }], [{ id: 'c1', sourceId: CLEARED, url: 'https://cleared.example/a' }]).read('s1');
+    expect(view.brief).toBeNull();
+    expect(view.withheld).toEqual({ reason: 'SOURCE_RIGHTS', count: 1 });
   });
   it('positive control: a Brief resting only on a CLEARED feed row is shown', async () => {
     const view = await service(['c1'], [{ id: 'c1', sourceId: CLEARED, url: 'https://cleared.example/a' }]).read('s1');

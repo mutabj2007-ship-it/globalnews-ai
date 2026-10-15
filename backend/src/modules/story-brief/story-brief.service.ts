@@ -214,16 +214,26 @@ export class StoryBriefService {
     };
   }
 
-  /** CTO R81 — how many of a Brief's evidence refs lack a positive AI_INPUT basis (an unresolvable ref counts). */
+  /**
+   * CTO R81 — how many of a Brief's evidence refs lack a positive AI_INPUT basis (an unresolvable ref
+   * counts). CTO R82 — FAIL CLOSED on unverifiable evidence: a model-written Brief whose evidence refs
+   * are absent, empty, not a list, or contain an entry without a string id cannot be shown to rest on
+   * permitted sources, so each malformed entry counts as withheld and a Brief with NO verifiable ref
+   * is withheld as a whole (count ≥ 1). Only a Brief whose every ref resolves to a positive basis is
+   * shown. The stored version is never changed.
+   */
   private async briefSourcesWithheld(evidenceRefs: unknown): Promise<number> {
-    const ids = (Array.isArray(evidenceRefs) ? (evidenceRefs as Array<{ id?: unknown }>) : [])
-      .map((ref) => ref?.id)
-      .filter((id): id is string => typeof id === 'string');
     /* the one switch: always on in a running service; off only in fixture-mode Jest suites */
-    if (ids.length === 0 || !readerRightsEnforced()) return 0;
+    if (!readerRightsEnforced()) return 0;
+    const entries: unknown[] = Array.isArray(evidenceRefs) ? evidenceRefs : [];
+    const ids = entries
+      .map((ref) => (ref !== null && typeof ref === 'object' ? (ref as { id?: unknown }).id : undefined))
+      .filter((id): id is string => typeof id === 'string' && id.length > 0);
+    const malformed = entries.length - ids.length;
+    if (ids.length === 0) return Math.max(malformed, 1);
     const rows = await this.prisma.article.findMany({ where: { id: { in: [...new Set(ids)] } }, select: { id: true, sourceId: true, url: true } });
     const permitted = new Set(rows.filter((r) => sourceUsePermittedForReader(r, 'AI_INPUT')).map((r) => r.id));
-    return ids.filter((id) => !permitted.has(id)).length;
+    return malformed + ids.filter((id) => !permitted.has(id)).length;
   }
 
   /** The explicit Read Brief. The ONLY path that may call the generator. */
