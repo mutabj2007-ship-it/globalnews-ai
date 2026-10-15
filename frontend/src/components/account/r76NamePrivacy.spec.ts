@@ -38,6 +38,8 @@ import { askGreetingStrings } from '@/lib/ask/askGreetingStrings';
 import { SELECTABLE_LOCALES } from '@/lib/i18n/languages';
 // eslint-disable-next-line import/first
 import { getDictionary } from '@/lib/i18n/dictionaries';
+// eslint-disable-next-line import/first
+import { COMMENT_AUTHOR_NOTE_LOCALES, commentAuthorNote } from '@/lib/stories/commentAuthorNote';
 
 const SRC = join(__dirname, '..', '..');
 const read = (...p: string[]) => readFileSync(join(SRC, ...p), 'utf8');
@@ -136,8 +138,17 @@ describe('C-3 — the saved name is disclosed as PUBLIC before it is saved or po
     expect(line).toMatch(/^[؀-ۿ]/);
   });
   it('the comment composer tells a signed-in reader who sees their name, before Post', () => {
-    expect(getDictionary('en').homeR1.discussion.authorNote).toMatch(/name you saved in Settings/);
-    expect(getDictionary('pl').homeR1.discussion.authorNote).toMatch(/Ustawieniach/);
+    /* R77 — all seven locales, Arabic right-to-left */
+    for (const locale of SELECTABLE_LOCALES) {
+      const note = commentAuthorNote(locale);
+      expect(note.lang).toBe(locale);
+      expect(note.text.length).toBeGreaterThan(30);
+    }
+    expect(new Set(SELECTABLE_LOCALES.map((l) => commentAuthorNote(l).text)).size).toBe(SELECTABLE_LOCALES.length);
+    expect(COMMENT_AUTHOR_NOTE_LOCALES).toHaveLength(7);
+    expect(commentAuthorNote('en').text).toMatch(/name you saved in Settings/);
+    expect(commentAuthorNote('ar').dir).toBe('rtl');
+    expect(getDictionary('en').homeR1.discussion.reader).toBe('Reader');
     const panel = read('components', 'home', 'r1', 'stageb', 'DiscussionPanel.tsx');
     const note = panel.indexOf('data-discussion-author-note');
     expect(note).toBeGreaterThan(0);
