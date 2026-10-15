@@ -10,7 +10,7 @@
     `feed:<id>`  collected by this product's RSS lane → that row's rights state in the governed feed
                  registry (FEED_SOURCES). Being stored, or once enabled, is not permission.
                    CLEARED               → AI_INPUT and METADATA
-                   LIMITED_SCOPE_REVIEW  → METADATA only (its recorded grant: links + short excerpts)
+                   LIMITED_SCOPE_REVIEW  → neither (E1 R81 C-1: no state-keyed metadata grant)
                    RESTRICTED            → neither (RIGHTS_RESTRICTED)
                    PROHIBITED            → neither (RIGHTS_PROHIBITED)
                    any other state       → neither (RIGHTS_NOT_CLEARED_FOR_AI): no recorded grant
@@ -63,7 +63,7 @@ export type ProviderEnforcement = 'record' | 'enforce';
 export type SourceUseDecision =
   | {
       readonly allowed: true;
-      readonly basis: 'PROVIDER_CLEARED' | 'PROVIDER_PENDING_REVIEW' | 'FEED_CLEARED' | 'FEED_METADATA_ONLY';
+      readonly basis: 'PROVIDER_CLEARED' | 'PROVIDER_PENDING_REVIEW' | 'FEED_CLEARED';
       /** the provider whose recorded rights decided it (provider path only) */
       readonly provider?: string;
     }
@@ -124,7 +124,12 @@ export function sourceUseDecision(input: UseInput, use: EvidenceUse, options: Po
     if (state === 'PROHIBITED') return { allowed: false, reason: 'RIGHTS_PROHIBITED' };
     if (state === 'RESTRICTED') return { allowed: false, reason: 'RIGHTS_RESTRICTED' };
     if (state === 'CLEARED') return { allowed: true, basis: 'FEED_CLEARED' };
-    if (state === 'LIMITED_SCOPE_REVIEW' && use === 'METADATA') return { allowed: true, basis: 'FEED_METADATA_ONLY' };
+    /*
+      E1 R81 C-1 (BLOCKING, resolved by removal) — the former LIMITED_SCOPE_REVIEW → METADATA admission
+      keyed reader-visible metadata to a STATE VALUE, not to a recorded per-publisher grant, and its only
+      live row (feed:taarifa-rw) is under a parked order. Removed: a feed below CLEARED gives no use at
+      all until E1 records a per-publisher metadata grant (then an explicit per-sourceId allowlist).
+    */
     return { allowed: false, reason: 'RIGHTS_NOT_CLEARED_FOR_AI' };
   }
 
@@ -180,7 +185,7 @@ export function partitionByRights<T extends UseInput>(
  * contained"). For anything an EXTERNAL reader receives — every Ask reader is external: anonymous,
  * guest and ordinary signed-in alike (CTO R47; no privileged internal-tester role exists in code) —
  * and for anything that reaches the model, only a positive basis counts: FEED_CLEARED,
- * PROVIDER_CLEARED, or FEED_METADATA_ONLY for METADATA. That is exactly `enforce`, passed HERE, at
+ * PROVIDER_CLEARED (E1 R81 C-1 removed the state-keyed metadata-only basis). That is exactly `enforce`, passed HERE, at
  * the response and prompt-assembly sinks only: the default of `sourceUseDecision` stays `record`,
  * nothing reads the environment, and no stored row is changed, deleted or migrated.
  */

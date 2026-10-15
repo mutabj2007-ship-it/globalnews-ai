@@ -39,8 +39,8 @@ function activeFeeds(): readonly FeedSourceEntry[] {
   CTO R81 / E1 D2 P-4 — ONE AUTHORITY. On the Alpha lineage the reader-rights decision is not a
   second rule: it IS the source-use policy's external-reader decision (`enforce`, METADATA — what a
   reader is shown), the same function the model gate and the Ask payload gate call with AI_INPUT.
-  Under `enforce` the only affirmative bases are FEED_CLEARED, PROVIDER_CLEARED (none recorded) and,
-  for display only, FEED_METADATA_ONLY (E1's recorded links-and-excerpt grant). PROVIDER_PENDING_REVIEW,
+  Under `enforce` the only affirmative bases are FEED_CLEARED and PROVIDER_CLEARED (none recorded);
+  the state-keyed FEED_METADATA_ONLY display basis was removed (E1 R81 C-1). PROVIDER_PENDING_REVIEW,
   unknown provenance, social items and a publisher-host hold are withheld.
 */
 export type ReaderRightsDecision =

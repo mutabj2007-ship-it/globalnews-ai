@@ -29,7 +29,9 @@ describe('RSS rows — decided by the feed registry', () => {
 
   it('Taarifa (LIMITED_SCOPE_REVIEW, recorded grant: links + short excerpts) → metadata only', () => {
     expect(sourceUseDecision({ sourceId: 'feed:taarifa-rw' }, 'AI_INPUT', RECORD)).toEqual({ allowed: false, reason: 'RIGHTS_NOT_CLEARED_FOR_AI' });
-    expect(sourceUseDecision({ sourceId: 'feed:taarifa-rw' }, 'METADATA', RECORD)).toEqual({ allowed: true, basis: 'FEED_METADATA_ONLY' });
+    /* E1 R81 C-1 — SUPERSEDED, NOT DELETED: was { allowed: true, basis: 'FEED_METADATA_ONLY' } (a
+       metadata admission keyed to the LIMITED_SCOPE_REVIEW state value). Removed: no use below CLEARED. */
+    expect(sourceUseDecision({ sourceId: 'feed:taarifa-rw' }, 'METADATA', RECORD)).toEqual({ allowed: false, reason: 'RIGHTS_NOT_CLEARED_FOR_AI' });
   });
 
   it.each(['feed:ktpress-rw', 'feed:cbk-ke', 'feed:gus-pl'])(
