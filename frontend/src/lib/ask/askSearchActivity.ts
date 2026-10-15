@@ -92,12 +92,19 @@ function classifyLegacyTrace(articles: readonly unknown[] | undefined, ctx: NonN
   /* F6–F8 (E1 R-6) — a POST-fix stored trace where EVERY unreached lane was refused for rights is "not
      searched"; a pre-fix trace ("unavailable") or any genuine outage keeps its existing reading (R-8). */
   const refusals = [
-    ...(ctx.retrievalTrace?.lanesUnavailable ?? []).map((u) => u.reason),
-    ...(ctx.providerFailures ?? []).map((f) => f.kind),
+    ...(ctx.retrievalTrace?.lanesUnavailable ?? []).map((u) => ({ lane: u.lane, reason: u.reason })),
+    ...(ctx.providerFailures ?? []).map((f) => ({ lane: f.providerId, reason: f.kind })),
   ];
-  const refusedOnly = refusals.length > 0 && refusals.every((r) => r === RIGHTS_REFUSAL);
+  /* EA C-2 — mirrors the backend's everyLaneRefused (retrieval-outcome.ts): on the per-side path the
+     backend also lists the refused providers in `providers`, so a listed provider counts as answered
+     only when it is NOT one of the refused lanes. */
+  const refusedLanes = new Set(refusals.map((r) => r.lane));
+  const refusedOnly =
+    refusals.length > 0 &&
+    refusals.every((r) => r.reason === RIGHTS_REFUSAL) &&
+    (ctx.providers ?? []).every((id) => refusedLanes.has(id));
   const outcome: AskResearchOutcome =
-    refusedOnly && answered === 0 && admitted === 0
+    refusedOnly && admitted === 0
       ? 'NOT_PERMITTED'
       : allFailed && admitted === 0
       ? 'PROVIDER_FAILED'

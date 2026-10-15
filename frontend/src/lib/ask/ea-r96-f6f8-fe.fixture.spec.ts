@@ -166,3 +166,22 @@ describe.each(LOCALES)('EA-F6F8 9 · R-5/W-7 · %s', (locale) => {
     expect(lane?.status).toContain(s.verification.unavailable);
   });
 });
+
+/* ═════════════════════ Main addition · EA C-2 (BE 796aad6 review) ═════════════════════ */
+describe('EA C-2 — per-side stored copy: refused providers also listed in `providers`', () => {
+  it('[AFTER] every listed provider is a refused lane → not-searched, never "failed"', () => {
+    notSearchedShape(searchOf(withContext({
+      dataMode: 'live', providers: ['gnews', 'gdelt-doc'], fallbackReason: 'provider-error',
+      providerFailures: [{ providerId: 'gnews', kind: RIGHTS }, { providerId: 'gdelt-doc', kind: RIGHTS }],
+      retrievalTrace: trace([], [{ lane: 'gnews', reason: RIGHTS }, { lane: 'gdelt-doc', reason: RIGHTS }]),
+    })));
+  });
+  it('[HOLDS] a listed provider that was NOT refused keeps the mixed reading (partial)', () => {
+    const step = searchOf(withContext({
+      dataMode: 'live', providers: ['rss-feeds', 'gnews'],
+      providerFailures: [{ providerId: 'gnews', kind: RIGHTS }],
+      retrievalTrace: trace(['rss-feeds'], [{ lane: 'gnews', reason: RIGHTS }]),
+    }));
+    expect(step?.status).toBe('partial');
+  });
+});
