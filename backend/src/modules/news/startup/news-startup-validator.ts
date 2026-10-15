@@ -2,6 +2,8 @@ import { describeUnusableCredential } from '../../../security/placeholder-creden
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { isUsableGNewsApiKey } from '../providers/provider.tokens';
+import { readerRightsEnforced } from '../rights/reader-rights';
+import { providerAdmission } from '../rights/provider-admission';
 
 /**
  * Thrown when the application is running in production (NODE_ENV=production)
@@ -72,6 +74,25 @@ export class NewsStartupValidator implements OnApplicationBootstrap {
 
     const gnewsApiKey = this.config.get<string>('GNEWS_API_KEY');
 
+    /*
+      MASTER CTO R62/R64 · #96 GATE A — BOOT NO LONGER DEPENDS ON THE FREE GNEWS KEY. The guard
+      above existed so a production process could never serve MockNewsProvider's synthetic
+      articles as live reporting. Gate A now refuses to START any provider without a recorded
+      per-use right (provider-admission.ts), the mock included, so that risk is closed at the
+      provider itself. A production process with no usable key therefore boots in the
+      no-permitted-news mode: health, stored (read-time withheld) answers and general-knowledge
+      Ask are served; news is "not searched", with zero provider requests. Outside enforcement
+      (the Jest fixture mode only) the original refusal is kept unchanged.
+    */
+    if (!isUsableGNewsApiKey(gnewsApiKey) && readerRightsEnforced()) {
+      const reason = describeUnusableCredential('GNEWS_API_KEY', gnewsApiKey);
+      this.logger.warn(
+        `NODE_ENV=production: GNEWS_API_KEY is not usable (${reason}). Booting with NO news provider ` +
+          'admitted: news is not searched and no mock news is served (Gate A, provider-admission.ts).',
+      );
+      return;
+    }
+
     if (!isUsableGNewsApiKey(gnewsApiKey)) {
       const reason = describeUnusableCredential('GNEWS_API_KEY', gnewsApiKey);
 
@@ -87,7 +108,9 @@ export class NewsStartupValidator implements OnApplicationBootstrap {
     }
 
     this.logger.log(
-      'NODE_ENV=production: GNEWS_API_KEY is configured — live news retrieval is enabled.',
+      providerAdmission({ id: 'gnews' }).admitted
+        ? 'NODE_ENV=production: GNEWS_API_KEY is configured — live news retrieval is enabled.'
+        : 'NODE_ENV=production: GNEWS_API_KEY is configured but GNews is NOT admitted (no recorded per-use right, Gate A): it is never called.',
     );
   }
 }

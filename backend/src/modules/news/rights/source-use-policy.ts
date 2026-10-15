@@ -32,11 +32,19 @@
   provenance are always enforced.
 
   A rights exclusion is never "not relevant" and never evidence that no reporting exists.
+
+  CTO R81 / E1 D2 (J-10: YES) — SUPERSEDES the record-mode default above for every running service.
+  The default enforcement is the ONE switch in rights-enforcement.ts: `enforce` in any running
+  service (PROVIDER_PENDING_REVIEW is WITHHELD — never admitted and counted), `record` only inside
+  fixture-mode Jest suites that test other behaviour with GNews-shaped fixtures. Stored reads no
+  longer pass `record` explicitly. reader-rights.ts delegates its decision here, so the model gate,
+  the Ask payload gate, stored reads and the reader response interceptor share one polarity.
 */
 import { FEED_SOURCES, type FeedSourceEntry } from '../providers/feed-source-registry';
 import { heldPublisherHostOf, publisherRightsHoldWhere } from './publisher-rights-hold';
 import { INTERNATIONAL_NEWS_SOURCES } from '../../global-reach/source-coverage.authority';
 import type { Prisma } from '../../../generated/prisma/client';
+import { readerRightsEnforced, rightsTestFeeds } from './rights-enforcement';
 
 export type EvidenceUse = 'AI_INPUT' | 'METADATA';
 
@@ -94,10 +102,11 @@ const SOCIAL_ID = /^social:(?:x|youtube):\S{1,200}$/;
 const STORED_PROVIDER_UNVERIFIED = 'stored-provider-unverified';
 
 export function sourceUseDecision(input: UseInput, use: EvidenceUse, options: PolicyOptions = {}): SourceUseDecision {
-  const feeds = options.feeds ?? FEED_SOURCES;
+  /* CTO R81 — the one feed table every gate reads (a test-only table replaces it in specs) */
+  const feeds = options.feeds ?? rightsTestFeeds() ?? FEED_SOURCES;
   const providers = options.providers ?? INTERNATIONAL_NEWS_SOURCES;
-  /* 'enforce' is reachable only through an explicit code-level option, never from the environment */
-  const enforcement = options.enforcement ?? 'record';
+  /* CTO R81 — never from the environment: an explicit code option, else the one enforcement switch */
+  const enforcement = options.enforcement ?? (readerRightsEnforced() ? 'enforce' : 'record');
   const id = (input.sourceId ?? '').trim();
 
   /*
@@ -213,7 +222,11 @@ export function admittedStoredSourceWhere(
   return {
     AND: [
       { NOT: { sourceId: '' } },
-      { OR: [{ NOT: { sourceId: { startsWith: FEED_PREFIX } } }, { sourceId: { in: clearedFeedIds } }] },
+      /* CTO R81 — enforced: only a CLEARED feed row is obtainable (provider rows have no positive
+         basis); fixture mode keeps the earlier query (provider slugs pass, feeds only when CLEARED) */
+      readerRightsEnforced()
+        ? { sourceId: { in: clearedFeedIds } }
+        : { OR: [{ NOT: { sourceId: { startsWith: FEED_PREFIX } } }, { sourceId: { in: clearedFeedIds } }] },
       /* P0 #86 — a held publisher host is not obtainable either (query half; the exact host predicate
          runs again on every returned row in the repository) */
       ...(publisherHold ? [publisherRightsHoldWhere()] : []),
@@ -242,6 +255,7 @@ export function storedRowExclusionReason(
   /* P0 #86 — the stored row's URL, so a held publisher host is withheld by absence too */
   url?: string | null,
 ): RightsExclusionReason | null {
-  const decision = sourceUseDecision({ sourceId, url }, 'AI_INPUT', { enforcement: 'record', feeds });
+  /* CTO R81 — no explicit `record`: the stored read follows the one enforcement switch */
+  const decision = sourceUseDecision({ sourceId, url }, 'AI_INPUT', { feeds });
   return decision.allowed ? null : decision.reason;
 }

@@ -38,15 +38,52 @@ export function withheldForSourceRights(payload: unknown): unknown {
     ).allowed;
     if (items.length !== (recent.items as unknown[]).length) out = { ...out, recentReporting: { ...recent, items } };
   }
-  if (excluded.length === 0) return out;
+  if (excluded.length === 0) return withheldUnverifiableArtifact(out, p);
   return withheldPayload(out, p, excluded.length);
 }
 
-function withheldPayload(out: Json, p: Json, count: number): Json {
-  const answer = (p.answer as Json | undefined) ?? {};
+/*
+  CTO R81 / E1 D2 (forward-adapted from Production CTO R53) — the stored CONVERSATION ARTIFACT of a
+  sourced answer carries source-derived claim points (`components`) and the evidence URLs / refs it
+  rests on; no reader-JSON walk recognises those strings as articles. Fail closed: a SOURCED artifact
+  (or any artifact naming evidence) survives only when every URL and ref it names is an article of
+  this same payload that the external-reader AI_INPUT decision admits; one naming none cannot be
+  verified and is withheld. An unsourced (general-knowledge / reasoning) artifact is untouched, and
+  the stored row is never changed. The answer itself is NOT marked withheld for this (it is not).
+*/
+function withheldUnverifiableArtifact(out: Json, p: Json): Json {
+  const artifact = p.artifact as Json | null | undefined;
+  if (artifact === null || artifact === undefined || typeof artifact !== 'object') return out;
+  const strings = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
+  const urls = strings(artifact.evidenceUrls);
+  const refs = strings(artifact.evidenceRefs);
+  const sourced = artifact.provenance === 'SOURCED_REPORTING' || urls.length > 0 || refs.length > 0;
+  if (!sourced) return out;
+  const admitted = partitionByRights(articlesOf(p), 'AI_INPUT', EXTERNAL_READER_POLICY).allowed as Array<{ id?: unknown; url?: unknown }>;
+  const admittedUrls = new Set(admitted.map((a) => String(a.url)));
+  const admittedIds = new Set(admitted.map((a) => String(a.id)));
+  const verified = urls.length + refs.length > 0 && urls.every((u) => admittedUrls.has(u)) && refs.every((r) => admittedIds.has(r));
+  if (verified) return out;
+  return { ...out, artifact: null, sourceRightsWithheld: { count: 1, scope: 'ARTIFACT' } };
+}
+
+/*
+  CTO R81 / E1 D2 (forward-adapted from Production CTO R54 · C-96) — a withheld answer is an EXPLICIT
+  ALLOWLIST, never a spread of the stored payload: every field that is or could be derived from the
+  withheld sources (guidance, verification, continuation, research, contributions, any future field,
+  and the answer object's own prose) is dropped by default. Kept: the payload's identity and the
+  reader's own words and scope, and the run's facts. The answer decision is rebuilt from codes. The
+  Alpha shape the reader surface renders (state INSUFFICIENT, basis WITHHELD_SOURCE_RIGHTS,
+  `withheld`) is unchanged.
+*/
+export const WITHHELD_PAYLOAD_ALLOWLIST = ['schema', 'route', 'chips', 'checkedAt', 'aiExecuted', 'modelPriorCitable'] as const;
+
+function withheldPayload(_out: Json, p: Json, count: number): Json {
+  const kept: Json = {};
+  for (const key of WITHHELD_PAYLOAD_ALLOWLIST) if (key in p) kept[key] = p[key];
   return {
-    ...out,
-    answer: { ...answer, state: 'INSUFFICIENT', basis: WITHHELD_BASIS, missingRoles: [] },
+    ...kept,
+    answer: { state: 'INSUFFICIENT', basis: WITHHELD_BASIS, missingRoles: [], candidates: [] },
     analysis: null,
     background: null,
     recentReporting: null,

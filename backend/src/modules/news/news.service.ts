@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { ProviderExecutionRegistry } from './telemetry/provider-execution.registry';
 import { logWithRequestId } from '../../observability/log-with-request-id';
+import { providerAdmission } from './rights/provider-admission';
 import {
   MIN_PROVIDER_START_MS,
   RETRIEVAL_BUDGET_EXHAUSTED,
@@ -2190,6 +2191,8 @@ export class NewsService {
     let sealed = false;
     /* ASK R2 LIVE-GATE REPAIR (P0-3) — providers this call did not start for lack of budget */
     const budgetSkipped = new Set<string>();
+    /* MASTER CTO R62/R64 · #96 GATE A — providers this call did not start: no recorded right */
+    const rightsSkipped = new Set<string>();
 
     let firstAdmittedProviderId: string | undefined;
     let graceStartedAt: number | undefined;
@@ -2243,6 +2246,18 @@ export class NewsService {
       /* ASK R2 LIVE-GATE REPAIR (P0-3) — with too little of this analysis's retrieval budget
          left, the provider is not started at all (no call, no quota spent): it is left without an
          outcome, i.e. "not awaited", and logged as a budget skip — never a provider failure. */
+      /* MASTER CTO R62/R64 · #96 GATE A — FIRST, before the budget, the counter and the network: a
+         provider with no recorded per-use right (provider-admission.ts) is never started. No request,
+         no quota, no execution counted; named as not searched (unavailable), never as "no results". */
+      if (!providerAdmission(provider).admitted) {
+        logWithRequestId(
+          this.logger,
+          'log',
+          `provider-attempt provider=${provider.id} capability=${capability} result=rights-skip`,
+        );
+        rightsSkipped.add(provider.id);
+        return;
+      }
       const remaining = remainingRetrievalMs();
       if (remaining !== undefined && remaining < MIN_PROVIDER_START_MS) {
         logWithRequestId(
@@ -2357,7 +2372,7 @@ export class NewsService {
         /* ASK R2 LIVE-GATE REPAIR (P0-3) — a lane cut by the retrieval budget is named, never
            shown as checked: not started → unavailable; started but not awaited → timed out. The
            public fallbackReason (failedProviderIds) is unchanged. */
-        if (budgetSkipped.has(provider.id)) failures.push({ providerId: provider.id, kind: 'unavailable' });
+        if (budgetSkipped.has(provider.id) || rightsSkipped.has(provider.id)) failures.push({ providerId: provider.id, kind: 'unavailable' });
         else if (exhausted === RETRIEVAL_BUDGET_EXHAUSTED) failures.push({ providerId: provider.id, kind: 'timeout' });
         continue;
       }
@@ -2573,6 +2588,13 @@ export class NewsService {
 
     const dataMode = this.resolveDataMode(successfulProviderIds);
 
+    /* MASTER CTO R62/R64 · #96 GATE A — when no configured provider may run, the response says the
+       news was NOT SEARCHED because no source is cleared (additive field; existing fields unchanged),
+       so an empty list never reads as a completed "no news" search. */
+    const notSearched = this.notAdmittedProviderIds();
+    const acquisition: { acquisition?: { readonly state: 'SOURCE_RIGHTS_UNCLEARED'; readonly notSearched: string[] } } =
+      results.length === 0 && notSearched.length > 0 ? { acquisition: { state: 'SOURCE_RIGHTS_UNCLEARED', notSearched } } : {};
+
     return {
       articles: this.resolveArticleCountries(capped, language),
       totalResults: capped.length,
@@ -2582,6 +2604,7 @@ export class NewsService {
         dataMode === 'unavailable' ? this.resolveFallbackReason(failedProviderIds) : undefined,
       generatedAt: new Date().toISOString(),
       ...extra,
+      ...acquisition,
     };
   }
 
@@ -2956,6 +2979,16 @@ export class NewsService {
     return failedRealProvider ? 'provider-error' : 'no-live-results';
   }
 
+  /**
+   * MASTER CTO R62/R64 · #96 GATE A — the configured providers, when NONE of them may run (no
+   * recorded per-use right, provider-admission.ts): news acquisition is closed for this process.
+   * Empty when at least one provider is admitted, or none is configured.
+   */
+  notAdmittedProviderIds(): string[] {
+    const blocked = this.providers.filter((provider) => !providerAdmission(provider).admitted).map((provider) => provider.id);
+    return this.providers.length > 0 && blocked.length === this.providers.length ? blocked : [];
+  }
+
   private hasRealProviderConfigured(): boolean {
     return this.providers.some((provider) => !provider.isMock);
   }
@@ -2980,7 +3013,12 @@ export class NewsService {
       return successfulProviders.some((provider) => !provider.isMock) ? 'live' : 'mock';
     }
 
-    if (this.providers.length > 0 && this.providers.every((provider) => provider.isMock)) {
+    if (
+      this.providers.length > 0 &&
+      this.providers.every((provider) => provider.isMock) &&
+      /* MASTER CTO R62/R64 · #96 GATE A — a mock that is not admitted produced nothing: never "mock" */
+      this.providers.some((provider) => providerAdmission(provider).admitted)
+    ) {
       return 'mock';
     }
 

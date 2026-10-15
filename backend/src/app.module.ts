@@ -30,6 +30,7 @@ import { AuthSecretsStartupValidator } from './security/auth-secrets.config';
 import { EgressDeclarationReporter } from './security/egress-declaration';
 import { LoggingInterceptor } from './observability/logging.interceptor';
 import { PublisherImageWithholdingInterceptor } from './security/publisher-image-withholding.interceptor';
+import { ReaderRightsInterceptor } from './modules/news/rights/reader-rights.interceptor';
 import { GlobalExceptionFilter } from './observability/global-exception.filter';
 import { RequestIdMiddleware } from './observability/request-id.middleware';
 import { AuthModule } from './modules/auth/auth.module';
@@ -299,10 +300,19 @@ import {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
+    // CTO R81 / E1 D2 P-2 (forward-adapted from Production R48 / R54 C-2) — reader source-use
+    // containment: a third-party article object without an affirmative per-use basis never reaches a
+    // reader on ANY route (/news/*, Home, country, analysis, Ask, briefings, saved, alerts, …); admin,
+    // health and readiness exempt. Registered FIRST of the global interceptors, so it is the OUTERMOST:
+    // it sees the final response body after every other interceptor has run, and nothing runs after it.
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ReaderRightsInterceptor,
+    },
     // U-1 B-1 — no publisher image URL leaves the server, on any route,
     // live or stored (security/publisher-image-withholding.interceptor.ts).
-    // Registered first, so it is the outermost interceptor and sees the
-    // final response body of every other interceptor.
+    // Registered directly inside the reader-rights interceptor (R81), so it
+    // still sees the final body of every other interceptor.
     {
       provide: APP_INTERCEPTOR,
       useClass: PublisherImageWithholdingInterceptor,

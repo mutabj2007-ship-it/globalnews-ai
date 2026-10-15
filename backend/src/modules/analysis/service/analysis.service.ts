@@ -632,10 +632,26 @@ const PROVIDER_FAILURE_MESSAGE: Partial<Record<LanguageCode, string>> = {
   pl: 'Nie udało się wiarygodnie połączyć z dostawcami wiadomości, a żadne zapisane doniesienia nie kwalifikowały się do tego pytania.',
 };
 
+/* MASTER CTO R48 / #96 (forward-adapted, CTO R81) — reporting WAS retrieved but has no recorded right to be used: never "no reporting". */
+const SOURCE_RIGHTS_WITHHELD_MESSAGE: Partial<Record<LanguageCode, string>> = {
+  en: 'Reporting was found, but it cannot be shown or used here because its source-use rights are not established. Nothing has been inferred from it.',
+  pl: 'Znaleziono doniesienia, ale nie można ich tu pokazać ani wykorzystać, ponieważ prawa do korzystania ze źródeł nie zostały ustalone. Niczego z nich nie wywnioskowano.',
+};
+
+/* MASTER CTO R62/R64 · #96 GATE A — no news provider may run: nothing was searched, never "no reporting". */
+const SOURCE_NOT_SEARCHED_MESSAGE: Partial<Record<LanguageCode, string>> = {
+  en: 'Current reporting was not searched: no news source is cleared for use here. Questions that do not need current reporting still work.',
+  pl: 'Nie przeszukano bieżących doniesień: żadne źródło wiadomości nie jest tu dopuszczone do użycia. Pytania, które nie wymagają bieżących doniesień, nadal działają.',
+};
+
 function resolveNoEvidenceMessage(
   language: LanguageCode,
   evidenceState: AnalysisEvidenceState = 'no-relevant-evidence',
+  rightsWithheld = false,
+  notSearched = false,
 ): string {
+  if (rightsWithheld) return SOURCE_RIGHTS_WITHHELD_MESSAGE[language] ?? SOURCE_RIGHTS_WITHHELD_MESSAGE.en!;
+  if (notSearched) return SOURCE_NOT_SEARCHED_MESSAGE[language] ?? SOURCE_NOT_SEARCHED_MESSAGE.en!;
   const table =
     evidenceState === 'degraded-fallback' ? PROVIDER_FAILURE_MESSAGE : NO_EVIDENCE_MESSAGE;
   return table[language] ?? table.en!;
@@ -4085,6 +4101,28 @@ export class AnalysisService {
           retrievalContext = { ...retrievalContext, fallbackReason: 'provider-error' };
         }
 
+        /*
+          MASTER CTO R62/R64 · #96 GATE A — no configured news provider may run (none has a recorded
+          per-use right), so nothing was searched. Some paths (the country feed) do not carry the
+          per-provider skip forward; the turn is therefore marked here, once: every configured
+          provider is named as not searched (unavailable), the evidence state is degraded, and the
+          reader is told it was not searched — never "no related articles".
+        */
+        const notSearched = articles.length === 0 ? (this.newsService.notAdmittedProviderIds?.() ?? []) : [];
+        if (notSearched.length > 0) {
+          const recorded = retrievalContext.providerFailures ?? [];
+          retrievalContext = {
+            ...retrievalContext,
+            fallbackReason: 'provider-error',
+            providerFailures: [
+              ...recorded,
+              ...notSearched
+                .filter((providerId) => !recorded.some((f) => f.providerId === providerId))
+                .map((providerId) => ({ providerId, kind: 'unavailable' as const })),
+            ],
+          };
+        }
+
         const sourceCoverage = this.sourceCoverageFor(
           retrievalContext.countryCode,
           articles,
@@ -4116,6 +4154,9 @@ export class AnalysisService {
             analysisError: resolveNoEvidenceMessage(
               requestedLanguage,
               retrievalContext.evidenceState,
+              /* CTO R81 — Alpha records the rights exclusion as rightsExcluded (source-use-policy) */
+              (retrievalContext.rightsExcluded?.count ?? 0) > 0,
+              notSearched.length > 0,
             ),
             retrievalContext,
             sourceEntities: buildSourceEntities([]),

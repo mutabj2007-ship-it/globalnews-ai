@@ -12,6 +12,7 @@ import {
   SIGNAL_PROVIDERS,
   isGdeltEnabled,
 } from './providers/provider.tokens';
+import { providerAdmission } from '../news/rights/provider-admission';
 import type { SignalProvider } from './interfaces';
 
 /**
@@ -103,13 +104,15 @@ import type { SignalProvider } from './interfaces';
       ): SignalProvider[] => {
         const providers: SignalProvider[] = [];
 
+        /* MASTER CTO R62/R64 · #96 GATE A — a switch and a key are not a per-use right: a signal
+           provider runs only when admitted (provider-admission.ts); none is today. */
         const gdeltEnabled = isGdeltEnabled(config.get<string>('GDELT_ENABLED'));
-        if (gdeltEnabled) providers.push(gdeltProvider);
+        if (gdeltEnabled && providerAdmission(gdeltProvider).admitted) providers.push(gdeltProvider);
 
         const eventRegistryEnabled =
           isEventRegistryEnabled(config.get<string>('EVENT_REGISTRY_ENABLED')) &&
           isUsableEventRegistryApiKey(config.get<string>('EVENT_REGISTRY_API_KEY'));
-        if (eventRegistryEnabled) providers.push(eventRegistryProvider);
+        if (eventRegistryEnabled && providerAdmission(eventRegistryProvider).admitted) providers.push(eventRegistryProvider);
 
         return providers;
       },
