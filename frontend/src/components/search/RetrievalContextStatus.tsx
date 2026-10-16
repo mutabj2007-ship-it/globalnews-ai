@@ -119,8 +119,11 @@ export function resolveRetrievalContextText(
   const badge = refused ? askRightsRefusalStrings(locale ?? language).chip : BADGE_LABEL[dataMode];
   const label = locationLabel ? `${badge} \u00b7 ${locationLabel}` : badge;
 
-  const explanation =
-    dataMode === 'cached'
+  /* WAVE 1b (P0, live Alpha 0e95cd0) — a rights refusal has no outage explanation either: nothing was
+     attempted, so "could not be reached" is false. The chip and the turn's notSearched sentence say it. */
+  const explanation = refused
+    ? undefined
+    : dataMode === 'cached'
       ? fallbackReason === 'provider-error'
         ? t.liveUnavailableStoredUsed
         : fallbackReason === 'no-live-results'
