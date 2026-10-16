@@ -358,13 +358,12 @@ export function askR2View(
     freshness = basis in s.unavailableBecause ? s.noAnswer : s.unavailable;
   else if (badge === 'insuf')
     /* WAVE 1c — every lane refused for rights (the turn's and the chip's own predicate): nothing was
-       searched, so neither "temporarily unavailable" nor "0 matching reports"; the qualified rights chip
-       stands in the checked line's {sources} place. Any outage in play keeps freshness.limited. */
+       searched, so neither "temporarily unavailable" nor "0 matching reports". E1 W1C-F1: never
+       freshness.checked either (its verb asserts a check, its {sources} names checked sources) — the time,
+       " · ", the qualified rights chip. Any outage in play keeps freshness.limited. */
     freshness =
       retrieval != null && rightsRefusedOnly(retrieval, sourceCount)
-        ? s.freshness.checked
-            .replace('{when}', checkedAt ?? '—')
-            .replace('{sources}', askRightsRefusalStrings(locale).chip)
+        ? `${checkedAt ?? '—'} · ${askRightsRefusalStrings(locale).chip}`
         : fill(searchLimited ? s.freshness.limited : s.freshness.zero, checkedAt);
   else if (badge === 'rec') freshness = s.freshness.retainedRecord;
   else if (badge === 'calc') freshness = s.freshness.computed;
