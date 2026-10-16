@@ -16,8 +16,8 @@ import { rightsRefusedOnly } from '@/components/search/evidenceDisplay';
 
   Rule (Main W1c ruling, CTO may overturn): on a refused-only turn — the SAME predicate the turn and the
   status chip use, rightsRefusedOnly(retrieval, articles), no new rule — the INSUFFICIENT status line is
-  "Checked <when> · <askRightsRefusalStrings(locale).chip>", composed from already-qualified strings
-  (freshness.checked with {sources} := the chip) in all 7 locales. Never 'zero' / "0 matching reports":
+  "<when> · <askRightsRefusalStrings(locale).chip>" in all 7 locales (re-ruled by E1 W1C-F1, below; at
+  6c3b23b it was "Checked <when> · <chip>", freshness.checked with {sources} := the chip). Never 'zero' / "0 matching reports":
   nothing was searched. The emitter sweep found one more reachable outage sentence on a refused-only turn:
   limitedNote ("A news source was temporarily unavailable. This answer uses the reporting that could be
   reached.") under a non-INSUFFICIENT answer and on the Sources sheet; it reads the turn's existing
@@ -104,19 +104,40 @@ describe('W1c · the fixtures are what they claim', () => {
   });
 });
 
-describe('W1c · a refused-only INSUFFICIENT turn: "Checked <when> · <chip>", in every locale', () => {
-  it.each(LOCALES)('%s: the status line is freshness.checked with the not-searched chip, never the outage line', (locale) => {
+/*
+  E1 W1C-F1 (E1-W1C-6c3b23b-VERDICT) + Main's ruling — the 6c3b23b composition "Checked <when> · <chip>"
+  asserted a check that did not happen (six locales read "verified"), and put the refusal in the slot that
+  names CHECKED sources. The refused line is now "<when> · <chip>": the time without any verb, and never
+  freshness.checked. The two rows below are re-ruled by name (R70); the controls are unchanged.
+*/
+/** the time as askR2View formats it for this locale, read back from an outage turn's limited line */
+const whenOf = (locale: DisplayLocale): string => {
+  const [before, after] = s(locale).freshness.limited.split('{when}');
+  const line = view(OUTAGE, locale).freshness;
+  return line.slice(before.length, line.indexOf(after));
+};
+const checkedVerb = (locale: DisplayLocale) => s(locale).freshness.checked.split('{when}')[0].trim();
+
+describe('W1c · a refused-only INSUFFICIENT turn: "<when> · <chip>", in every locale', () => {
+  /* W1C-F1 — SUPERSEDED, NOT DELETED: this row was "%s: the status line is freshness.checked with the
+     not-searched chip, never the outage line" and asserted startsWith(freshness.checked's "Checked"/
+     "Geprüft"/… prefix) at 6c3b23b. Re-ruled: the time, " · ", the chip; no verb. */
+  it.each(LOCALES)('%s: the status line is "<when> · <chip>" (no check verb), never the outage line', (locale) => {
     const v = view(REFUSED, locale);
     const chip = askRightsRefusalStrings(locale).chip;
-    const [before] = s(locale).freshness.checked.split('{when}');
-    expect(v.freshness.startsWith(before)).toBe(true);
-    expect(v.freshness).toContain(` · ${chip}`);
+    expect(v.freshness.startsWith(`${whenOf(locale)} · ${chip}`)).toBe(true);
     expect(v.freshness).not.toContain(limitedSuffix(locale));
     /* nothing was searched: never the zero-matches line */
     expect(v.freshness).not.toContain(s(locale).freshness.zero.split('{when}')[1].trim());
   });
-  it('EN reads exactly "Checked 16 Oct 2026, 09:39 UTC · Not searched: sources not cleared" (+ the stated window)', () => {
-    expect(view(REFUSED, 'en').freshness.startsWith('Checked 16 Oct 2026, 09:39 UTC · Not searched: sources not cleared')).toBe(true);
+  it.each(LOCALES)('%s: no locale\'s freshness.checked verb ("Checked", "Sprawdzono", "Geprüft", …) appears in the line', (locale) => {
+    const line = view(REFUSED, locale).freshness;
+    for (const other of LOCALES) expect(line).not.toContain(checkedVerb(other));
+  });
+  /* W1C-F1 — SUPERSEDED, NOT DELETED: was 'EN reads exactly "Checked 16 Oct 2026, 09:39 UTC · Not searched:
+     sources not cleared" (+ the stated window)' at 6c3b23b. */
+  it('EN reads exactly "16 Oct 2026, 09:39 UTC · Not searched: sources not cleared" (+ the stated window)', () => {
+    expect(view(REFUSED, 'en').freshness.startsWith('16 Oct 2026, 09:39 UTC · Not searched: sources not cleared')).toBe(true);
   });
   it.each(['en', 'de'] as const)('%s: the rendered turn carries no outage words anywhere', (locale) => {
     const r = renderTurn(payload(REFUSED), locale);
