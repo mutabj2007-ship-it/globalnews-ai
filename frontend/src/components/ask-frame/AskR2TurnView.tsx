@@ -276,6 +276,9 @@ export function AskR2TurnView({
   const refusedForRights =
     payload.analysis?.retrievalContext != null &&
     rightsRefusedOnly(payload.analysis.retrievalContext, payload.analysis.articles?.length ?? 0);
+  /* WAVE 1c — the limited note ("a news source was temporarily unavailable") under an answer and on the
+     Sources sheet: a rights refusal reads its own notSearched sentence; any outage keeps limitedNote */
+  const limitedNote = refusedForRights ? askRightsRefusalStrings(locale).notSearched : s.limitedNote;
   /*
     ASK DESIGN COMPLETENESS R1 — THE FOOTER LINE (Design B1): "Based on N cited reports from M
     publishers. Newest report <date>." Counted from this answer's own source records only —
@@ -764,7 +767,7 @@ export function AskR2TurnView({
           {/* ASK FIRST-ANSWER RETRIEVAL R3 — an answer standing on reachable reporting says so. */}
           {view.badge !== 'insuf' && view.searchLimited && (
             <p data-ask="search-limited" className="text-[13px] leading-[1.45] text-[var(--ask-read-deep-ink,#c9b27a)]">
-              {s.limitedNote}
+              {limitedNote}
             </p>
           )}
           {/*
@@ -972,7 +975,7 @@ export function AskR2TurnView({
         canSave={canSave}
         sources={answerSources}
         opening={opening}
-        note={view.searchLimited ? s.limitedNote : null}
+        note={view.searchLimited ? limitedNote : null}
         about={about}
         onRefresh={onRefresh}
         /* CTO R3 ruling 6 — the legacy hand-offs are More rows, not cards in the reading flow. */

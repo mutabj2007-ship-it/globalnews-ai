@@ -1,4 +1,6 @@
 import { RIGHTS_REFUSAL } from './askSearchActivity';
+import { askRightsRefusalStrings } from './askRightsRefusal';
+import { rightsRefusedOnly } from '@/components/search/evidenceDisplay';
 import { congoClarificationOf } from './askCongoClarification';
 import { askFormatUtcInstant } from './askDirection';
 import type { AskAnswerState, AskPlanChip, AskR2Payload } from '@/lib/api/askV2Api';
@@ -355,7 +357,15 @@ export function askR2View(
   else if (badge === 'unavail')
     freshness = basis in s.unavailableBecause ? s.noAnswer : s.unavailable;
   else if (badge === 'insuf')
-    freshness = fill(searchLimited ? s.freshness.limited : s.freshness.zero, checkedAt);
+    /* WAVE 1c — every lane refused for rights (the turn's and the chip's own predicate): nothing was
+       searched, so neither "temporarily unavailable" nor "0 matching reports"; the qualified rights chip
+       stands in the checked line's {sources} place. Any outage in play keeps freshness.limited. */
+    freshness =
+      retrieval != null && rightsRefusedOnly(retrieval, sourceCount)
+        ? s.freshness.checked
+            .replace('{when}', checkedAt ?? '—')
+            .replace('{sources}', askRightsRefusalStrings(locale).chip)
+        : fill(searchLimited ? s.freshness.limited : s.freshness.zero, checkedAt);
   else if (badge === 'rec') freshness = s.freshness.retainedRecord;
   else if (badge === 'calc') freshness = s.freshness.computed;
   else if (badge === 'part' && payload.verification?.asOf != null)
