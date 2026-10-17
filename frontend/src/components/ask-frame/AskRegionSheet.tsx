@@ -9,7 +9,9 @@ import {
   ASK_EXPLORE_HREF,
   ASK_REGIONS,
   askRegion,
+  countryDisplayName,
   eventMapHref,
+  placeTitle,
   readerDate,
   regionEvents,
   regionMapHref,
@@ -183,7 +185,15 @@ export function AskRegionSheet({
                           <span className={ex.exploreRowTitle}>
                             <time dateTime={event.eventDate}>{readerDate(event.eventDate, locale)}</time>
                             {' · '}
-                            <span dir="auto">{event.iso3 === 'COD' ? x.drCongo : event.place}</span>
+                            {/* OUR localized name from the shared ISO3 authority; UCDP's own label stays
+                                reachable as the title when it differs (E1 R135 add. 02 §5). */}
+                            <span
+                              dir="auto"
+                              data-ask="region-event-place"
+                              title={placeTitle(event, locale, x.drCongo)}
+                            >
+                              {countryDisplayName(event.iso3, locale, x.drCongo) ?? event.place}
+                            </span>
                           </span>
                           {event.reportedBy.length > 0 && (
                             <span className={styles.r3Small} dir="auto">

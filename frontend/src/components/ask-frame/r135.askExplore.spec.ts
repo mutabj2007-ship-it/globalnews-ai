@@ -1,11 +1,13 @@
 import { createElement } from 'react';
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
-import type { ConflictObservation, MarketRetainedProcurementNotice } from '@globalnews-ai/shared';
+import { getLocalizedCountryName, type ConflictObservation, type MarketRetainedProcurementNotice } from '@globalnews-ai/shared';
 import { reviewedObservations } from '@/lib/conflict/retained';
 import {
   ASK_EXPLORE_DRAWER,
   ASK_EXPLORE_HREF,
   askRegion,
+  countryDisplayName,
+  placeTitle,
   regionEvents,
   regionMapHref,
   regionMemberNames,
@@ -349,5 +351,58 @@ describe('R135 · Claude L qualified copy (L_R135_ASK_EXPLORE_RETURN)', () => {
     expect(askExploreStrings('de').regionDraft('Naher Osten')).toBe('Was hat sich in den letzten 7 Tagen in der Region Naher Osten verändert?');
     expect(askExploreStrings('pt').regionDraft('Europa')).toBe('O que mudou na região Europa nos últimos 7 dias?');
     expect(askExploreStrings('pl').drCongo).toBe('DR Konga');
+  });
+});
+
+describe('R143 D1 · event country names are OUR localized rendering; UCDP\'s own label stays reachable', () => {
+  const renderIn = (locale: 'en' | 'fr' | 'ar', initialRegion: 'middle-east' | 'east-africa') => {
+    let r!: ReactTestRenderer;
+    act(() => {
+      r = create(
+        createElement(
+          AskPlatformPagesProvider,
+          { value: true },
+          createElement(AskRegionSheet, { locale, initialRegion, onClose: jest.fn(), onAskRegion: jest.fn() }),
+        ),
+      );
+    });
+    return r;
+  };
+  const places = (r: ReactTestRenderer) =>
+    byAsk(r.root, 'region-event-place').map((n) => ({ shown: text(n), title: n.props.title as string | undefined }));
+
+  it.each(['fr', 'ar'] as const)('%s: Yemen and Syria read in the reader\'s language, never UCDP\'s English label', async (locale) => {
+    const r = renderIn(locale, 'middle-east');
+    await flush();
+    const got = places(r);
+    expect(got).toHaveLength(2);
+    expect(got.map((p) => p.shown).sort()).toEqual(
+      [getLocalizedCountryName('YE', locale), getLocalizedCountryName('SY', locale)].sort(),
+    );
+    for (const p of got) expect(p.shown).not.toMatch(/Yemen|Syria|North/);
+  });
+  it('the source-stated label is kept as the title where it differs — "Yemen (North Yemen)" is not lost or restated', async () => {
+    const r = renderIn('fr', 'middle-east');
+    await flush();
+    const yem = places(r).find((p) => p.shown === getLocalizedCountryName('YE', 'fr'));
+    expect(yem?.title).toBe('Yemen (North Yemen)');
+    expect(yem?.shown).not.toMatch(/Nord|North/);
+  });
+  it('COD keeps the explicit DR Congo label in every locale, with UCDP\'s "DR Congo (Zaire)" as the title', async () => {
+    for (const locale of ['en', 'fr', 'ar'] as const) {
+      const r = renderIn(locale, 'east-africa');
+      await flush();
+      const cod = places(r).find((p) => p.shown === askExploreStrings(locale).drCongo);
+      expect(cod?.title).toBe('DR Congo (Zaire)');
+    }
+  });
+  it('control: no title when our name equals the source label (en Syria / Ethiopia)', async () => {
+    const r = renderIn('en', 'east-africa');
+    await flush();
+    expect(places(r).find((p) => p.shown === 'Ethiopia')?.title).toBeUndefined();
+  });
+  it('an unknown ISO3 falls back to the source label, never an empty name', () => {
+    expect(countryDisplayName('XXX', 'fr', 'RD Congo')).toBeNull();
+    expect(placeTitle({ key: 'k', eventDate: '2026-08-30', place: 'Somewhere', iso3: 'XXX', reportedBy: [] }, 'fr', 'RD Congo')).toBeUndefined();
   });
 });

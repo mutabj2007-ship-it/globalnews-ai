@@ -251,10 +251,24 @@ export function tenderRows(
  * explicit "DR Congo" label (EA R135 ruling 3: never bare "Congo", never "Congo - Kinshasa").
  */
 export function regionMemberNames(region: AskRegion, locale: string, drCongo: string): readonly string[] {
-  const out = Array.from(region.iso3).map((iso3) => {
-    if (iso3 === 'COD') return drCongo;
-    const iso2 = findCountryByIso3(iso3)?.iso2;
-    return (iso2 !== undefined ? getLocalizedCountryName(iso2, locale as Parameters<typeof getLocalizedCountryName>[1]) : undefined) ?? findCountryByIso3(iso3)?.name ?? iso3;
-  });
+  const out = Array.from(region.iso3).map((iso3) => countryDisplayName(iso3, locale, drCongo) ?? iso3);
   return out.sort((a, b) => a.localeCompare(b, locale));
+}
+
+/**
+ * OUR display name for a country, in the reader's language, from the shared ISO3 authority — or null
+ * when the code is unknown. COD is the caller's "DR Congo" label (EA R135 ruling 3). This is the
+ * application's rendering, never the source's own words (E1 R135 addendum 02 §5).
+ */
+export function countryDisplayName(iso3: string, locale: string, drCongo: string): string | null {
+  if (iso3 === 'COD') return drCongo;
+  const country = findCountryByIso3(iso3);
+  if (country === undefined) return null;
+  return getLocalizedCountryName(country.iso2, locale as Parameters<typeof getLocalizedCountryName>[1]) ?? country.name;
+}
+
+/** UCDP's own country label for an event row, kept reachable when our display name differs from it. */
+export function placeTitle(event: RegionEvent, locale: string, drCongo: string): string | undefined {
+  const shown = countryDisplayName(event.iso3, locale, drCongo);
+  return shown !== null && event.place !== '' && shown !== event.place ? event.place : undefined;
 }

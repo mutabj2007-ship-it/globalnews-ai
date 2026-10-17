@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import type { HomeEditorialResponse, HomeRegionId, HomeStoryCard } from '@globalnews-ai/shared';
 import { homeR1Gates } from '@/lib/platform/homeR1Gates';
 import { visualEn } from '@/lib/i18n/dictionaries/visualEn';
+import { withheldReportingLine } from '@/lib/news/withheldReporting';
 import { VisualHomePage } from '../VisualHomePage';
 
 jest.mock('next/navigation', () => ({
@@ -54,19 +55,25 @@ const render = (editorial: HomeEditorialResponse | null, gates = homeR1Gates({})
 const t = visualEn.home;
 
 describe('R135 · /visual renders the editorial as the reader-rights interceptor delivers it', () => {
-  it('withheld hero and rows (gates off): renders, the hero reads UNAVAILABLE, never the empty-store wording', () => {
+  /* R143 / E1 R135-V1 (addendum 02 §4) — CHANGED ASSERTION (R70): was `toContain(t.w60Unavailable)`.
+     A rights withholding is not a service failure; it reads L's qualified withheld line. */
+  it('withheld hero and rows (gates off): renders, the hero reads WITHHELD (L), never "service problem" nor the empty-store wording', () => {
     const html = render(WITHHELD);
     expect(html).toContain('data-visual-home');
-    expect(html).toContain(t.w60Unavailable);
+    expect(html).toContain(withheldReportingLine('en'));
+    expect(html).not.toContain(t.w60Unavailable);
+    expect(html).not.toMatch(/service problem/);
     expect(html).not.toContain(t.w60Empty);
     expect(html).not.toContain('data-home-w60-lead');
   });
   it('withheld (Alpha gates on, StageBHost mounted): renders', () => {
     expect(() => render(WITHHELD, ALL_GATES_ON)).not.toThrow();
   });
-  it('a row whose every card was withheld reads UNAVAILABLE, never "3 in the last 72 hours" with no card', () => {
+  /* R143 / E1 R135-V1 — CHANGED ASSERTION (R70): was `split(t.rowUnavailable)` = 3. */
+  it('a row whose every card was withheld reads WITHHELD (L), never "3 in the last 72 hours" with no card', () => {
     const html = render(WITHHELD);
-    expect(html.split(t.rowUnavailable).length - 1).toBe(3);
+    expect(html.split(withheldReportingLine('en')).length - 1).toBe(4);
+    expect(html).not.toContain(t.rowUnavailable);
     expect(html).not.toContain('3 in the last 72 hours');
     expect(html).not.toContain(t.rowEmpty);
   });
@@ -81,5 +88,24 @@ describe('R135 · /visual renders the editorial as the reader-rights interceptor
     const html = render(null);
     expect(html).toContain(t.w60Unavailable);
     expect(html.split(t.rowUnavailable).length - 1).toBe(3);
+  });
+  it('R143 negative: the same emptied shape WITHOUT the server sourceRightsWithheld keeps the unavailable wording', () => {
+    const { sourceRightsWithheld: _drop, ...unstated } = WITHHELD as unknown as Record<string, unknown>;
+    const html = render(unstated as unknown as HomeEditorialResponse);
+    expect(html).toContain(t.w60Unavailable);
+    expect(html.split(t.rowUnavailable).length - 1).toBe(3);
+    expect(html).not.toContain(withheldReportingLine('en'));
+  });
+  it('R143 negative: a failed read (degraded, nothing withheld stated) is still a service failure', () => {
+    const html = render({ ...FULL, hero: null, regions: FULL.regions.map((r) => ({ ...r, state: 'UNAVAILABLE' as const, stories: [] })), degraded: true });
+    expect(html).toContain(t.w60Unavailable);
+    expect(html).not.toContain(withheldReportingLine('en'));
+  });
+  it('R143: the withheld line is L exact value in each locale (byte-equal to sourceStatus.ts at b7309c3)', () => {
+    expect(withheldReportingLine('fr')).toBe('Des reportages ont été trouvés, mais leurs sources ne sont pas autorisées à l’affichage ici.');
+    expect(withheldReportingLine('ar')).toBe('عُثر على تقارير، لكن مصادرها غير مُجازة للعرض هنا.');
+    expect(withheldReportingLine('xx')).toBe(withheldReportingLine('en'));
+    const fr = renderToStaticMarkup(createElement(VisualHomePage, { language: 'fr', gates: homeR1Gates({}), editorial: WITHHELD, examples: ['q'], theme: 'system' }));
+    expect(fr).toContain(withheldReportingLine('fr'));
   });
 });

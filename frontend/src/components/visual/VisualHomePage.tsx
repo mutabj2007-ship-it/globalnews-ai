@@ -73,7 +73,7 @@ export function VisualHomePage({
               <AuthErrorBanner language={language} />
               <div className="mt-3 flex flex-col gap-7 min-[600px]:mt-4 min-[600px]:gap-9">
                 <HomeHeroSection editorial={editorial} language={language} discussionRead={gates.discussionRead} />
-                <HomeRegionRows rows={rows} language={language} discussionRead={gates.discussionRead} />
+                <HomeRegionRows rows={rows} language={language} discussionRead={gates.discussionRead} withheldRows={editorial?.rightsWithheld.rows} />
                 <HomeAskSection language={language} examples={examples} />
               </div>
             </div>

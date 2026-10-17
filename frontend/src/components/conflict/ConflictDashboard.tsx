@@ -27,12 +27,12 @@ import {
   conflictPlaceLabel,
   reviewedObservations,
   observationMapRecord,
-  sourceHref,
 } from '@/lib/conflict/retained';
 import { conflictStrings } from '@/lib/conflict/strings';
 import { readConflictEvidenceDetail } from '@/lib/conflict/evidenceDetail';
 import type { AttentionQueue } from '@/lib/specialist/attentionQueue';
 import { AskAboutRecordLink } from '@/components/ask/AskAboutRecordLink';
+import { ConflictSourceField } from './ConflictSourceField';
 import './conflict.css';
 
 export const CONFLICT_DETENTS = { peek: 54, half: 0.5, full: 0.9 } as const;
@@ -319,29 +319,7 @@ export function ConflictDashboard({
           </dd>
         </div>
       )}
-      <div>
-        <dt>{t.source}</dt>
-        <dd>{row.sourceReference.citation ?? row.identity.authority}</dd>
-        {row.sourceReference.reportingOffice && <dd>{row.sourceReference.reportingOffice}</dd>}
-        {sourceHref(row.sourceReference.sourceUrl) && (
-          <dd>
-            <a
-              href={sourceHref(row.sourceReference.sourceUrl)!}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sp-cyan underline"
-            >
-              {t.source}
-            </a>
-          </dd>
-        )}
-      </div>
-      {evidenceDetail?.sourceHeadline && (
-        <div>
-          <dt>{t.sourceHeadline}</dt>
-          <dd>{evidenceDetail.sourceHeadline}</dd>
-        </div>
-      )}
+      <ConflictSourceField row={row} sourceLabel={t.source} />
       {evidenceDetail?.sourceOriginal && (
         <div>
           <dt>{t.sourceOriginal}</dt>

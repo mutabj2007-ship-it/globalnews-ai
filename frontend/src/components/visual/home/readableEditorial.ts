@@ -1,4 +1,5 @@
 import type { HomeEditorialResponse, HomeRegionRow, HomeStoryCard } from '@globalnews-ai/shared';
+import { rightsWithheldStated } from '@/lib/news/withheldReporting';
 import { degradedRows } from './degradedRows';
 
 /**
@@ -17,16 +18,34 @@ import { degradedRows } from './degradedRows';
  *
  * Pure: nothing is fetched, nothing is shown that the response did not carry.
  */
-export function readableEditorial(editorial: HomeEditorialResponse | null): HomeEditorialResponse | null {
+export interface ReadableEditorial extends HomeEditorialResponse {
+  /**
+   * R135-V1 — set only when the RESPONSE states reader-rights withholding (`sourceRightsWithheld`):
+   * the hero / rows emptied by it then read as WITHHELD (L's qualified line), not as a service
+   * failure. Without that statement an emptied hero or row keeps the existing unavailable wording.
+   */
+  readonly rightsWithheld: { readonly hero: boolean; readonly rows: ReadonlySet<HomeRegionRow['id']> };
+}
+
+export function readableEditorial(editorial: HomeEditorialResponse | null): ReadableEditorial | null {
   if (editorial === null || typeof editorial !== 'object') return null;
+  const stated = rightsWithheldStated(editorial);
   const hero = editorial.hero ?? null;
   const heroWithheld = hero !== null && !isCard(hero.story);
-  const regions = Array.isArray(editorial.regions) ? editorial.regions.map(readableRow) : degradedRows();
+  const emptied = new Set<HomeRegionRow['id']>();
+  const regions = Array.isArray(editorial.regions)
+    ? editorial.regions.map((row) => {
+        const readable = readableRow(row);
+        if (readable.state !== row.state) emptied.add(row.id);
+        return readable;
+      })
+    : degradedRows();
   return {
     ...editorial,
     hero: hero === null || heroWithheld ? null : { ...hero, more: (Array.isArray(hero.more) ? hero.more : []).filter(isCard) },
     regions,
     degraded: editorial.degraded === true || heroWithheld || !Array.isArray(editorial.regions),
+    rightsWithheld: { hero: stated && heroWithheld, rows: stated ? emptied : new Set() },
   };
 }
 
