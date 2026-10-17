@@ -16,6 +16,7 @@ import { HomeRegionRows } from './home/HomeRegionRows';
 import { HomeAskSection } from './home/HomeAskSection';
 import { OwnerAccessBar } from './home/OwnerAccessBar';
 import { degradedRows } from './home/degradedRows';
+import { readableEditorial } from './home/readableEditorial';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -40,7 +41,7 @@ import { degradedRows } from './home/degradedRows';
 export function VisualHomePage({
   language,
   gates,
-  editorial,
+  editorial: delivered,
   examples,
   theme,
 }: {
@@ -51,6 +52,8 @@ export function VisualHomePage({
   readonly theme: ThemePreference;
 }): JSX.Element {
   const t = getDictionary(language).visual.home;
+  /* R135 — as delivered after reader-rights withholding (a hero can arrive without its story) */
+  const editorial = readableEditorial(delivered);
   const rows = editorial?.regions ?? degradedRows();
   const visibleCards: HomeStoryCard[] = [
     ...(editorial?.hero ? [editorial.hero.story, ...editorial.hero.more] : []),
