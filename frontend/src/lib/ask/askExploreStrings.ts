@@ -38,6 +38,7 @@ export interface AskExploreStrings {
   readonly tenderClosed: (date: string) => string;
   readonly tenderOpen: string;
   readonly tendersAll: string;
+  readonly tendersShow: string;
   readonly tendersNone: string;
   readonly storyExploreLead: string;
   readonly storyOpenRegions: string;
@@ -75,6 +76,7 @@ const EN: AskExploreStrings = {
   tenderClosed: (date) => `Closed ${date}`,
   tenderOpen: 'Open on TED',
   tendersAll: 'See all tenders',
+  tendersShow: 'Show open public tenders',
   tendersNone: 'No tender notices are held right now.',
   storyExploreLead: 'While story lists are held, you can open the records we already hold:',
   storyOpenRegions: 'Latest recorded events by region',
@@ -126,6 +128,7 @@ const PL: AskExploreStrings = {
   tenderClosed: (date) => `Zamknięto ${date}`,
   tenderOpen: 'Otwórz w TED',
   tendersAll: 'Zobacz wszystkie przetargi',
+  tendersShow: 'Pokaż otwarte przetargi publiczne',
   tendersNone: 'Obecnie nie mamy żadnych ogłoszeń o przetargach.',
   storyExploreLead: 'Dopóki listy historii są wstrzymane, możesz otworzyć rekordy, które już mamy:',
   storyOpenRegions: 'Najnowsze odnotowane zdarzenia według regionu',
@@ -177,6 +180,7 @@ const FR: AskExploreStrings = {
   tenderClosed: (date) => `Clos le ${date}`,
   tenderOpen: 'Ouvrir sur TED',
   tendersAll: 'Voir tous les appels d’offres',
+  tendersShow: 'Afficher les appels d’offres publics ouverts',
   tendersNone: 'Aucun avis d’appel d’offres n’est détenu pour le moment.',
   storyExploreLead: 'Tant que les listes d’articles sont suspendues, vous pouvez ouvrir les enregistrements déjà détenus :',
   storyOpenRegions: 'Derniers événements enregistrés par région',
@@ -228,6 +232,7 @@ const DE: AskExploreStrings = {
   tenderClosed: (date) => `Geschlossen ${date}`,
   tenderOpen: 'Auf TED öffnen',
   tendersAll: 'Alle Ausschreibungen ansehen',
+  tendersShow: 'Offene öffentliche Ausschreibungen anzeigen',
   tendersNone: 'Derzeit sind keine Ausschreibungen gespeichert.',
   storyExploreLead: 'Solange Artikellisten zurückgehalten werden, können Sie die bereits gespeicherten Datensätze öffnen:',
   storyOpenRegions: 'Zuletzt erfasste Ereignisse nach Region',
@@ -279,6 +284,7 @@ const ES: AskExploreStrings = {
   tenderClosed: (date) => `Cerrado el ${date}`,
   tenderOpen: 'Abrir en TED',
   tendersAll: 'Ver todas las licitaciones',
+  tendersShow: 'Mostrar licitaciones públicas abiertas',
   tendersNone: 'Ahora no tenemos anuncios de licitación.',
   storyExploreLead: 'Mientras las listas de noticias estén retenidas, puedes abrir los registros que ya tenemos:',
   storyOpenRegions: 'Últimos eventos registrados por región',
@@ -330,6 +336,7 @@ const PT: AskExploreStrings = {
   tenderClosed: (date) => `Encerrado a ${date}`,
   tenderOpen: 'Abrir no TED',
   tendersAll: 'Ver todos os concursos',
+  tendersShow: 'Mostrar concursos públicos abertos',
   tendersNone: 'Neste momento não temos anúncios de concursos.',
   storyExploreLead: 'Enquanto as listas de notícias estão retidas, pode abrir os registos que já temos:',
   storyOpenRegions: 'Últimos eventos registados por região',
@@ -381,6 +388,7 @@ const AR: AskExploreStrings = {
   tenderClosed: (date) => `أُغلق في ${date}`,
   tenderOpen: 'افتح على TED',
   tendersAll: 'اعرض كل المناقصات',
+  tendersShow: 'اعرض المناقصات العامة المفتوحة',
   tendersNone: 'لا توجد لدينا إعلانات مناقصات حالياً.',
   storyExploreLead: 'ما دامت قوائم القصص معلّقة، يمكنك فتح السجلات التي نحتفظ بها:',
   storyOpenRegions: 'أحدث الأحداث المسجّلة حسب المنطقة',

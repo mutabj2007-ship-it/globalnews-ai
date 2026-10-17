@@ -19,6 +19,7 @@ import {
 import { reviewedObservations } from '@/lib/conflict/retained';
 import { usePlatformPages } from './AskExploreContext';
 import styles from './askDashboard.module.css';
+import ex from './askExplore.module.css';
 
 /** How many of the newest events the sheet lists per region. */
 export const REGION_SHEET_EVENT_LIMIT = 6;
@@ -147,8 +148,8 @@ export function AskRegionSheet({
             ))}
           </div>
 
-          <section aria-labelledby={`${titleId}-events`} data-ask="region-events" className={styles.exploreBlock}>
-            <h3 id={`${titleId}-events`} className={styles.exploreHeading}>
+          <section aria-labelledby={`${titleId}-events`} data-ask="region-events" className={ex.exploreBlock}>
+            <h3 id={`${titleId}-events`} className={ex.exploreHeading}>
               {x.eventsTitle(regionName)}
             </h3>
             {status === 'loading' && (
@@ -170,7 +171,7 @@ export function AskRegionSheet({
               </p>
             )}
             {status === 'ready' && events.latest.length > 0 && (
-              <ol data-ask="region-events-list" className={styles.exploreList}>
+              <ol data-ask="region-events-list" className={ex.exploreList}>
                 {events.latest.map((event) => (
                   <li key={event.key}>
                     {/* Platform: the row opens THIS record on the conflict map (selected, view over the
@@ -178,7 +179,7 @@ export function AskRegionSheet({
                     {(() => {
                       const body = (
                         <>
-                          <span className={styles.exploreRowTitle}>
+                          <span className={ex.exploreRowTitle}>
                             <time dateTime={event.eventDate}>{readerDate(event.eventDate, locale)}</time>
                             {' · '}
                             <span dir="auto">{event.iso3 === 'COD' ? x.drCongo : event.place}</span>
@@ -191,11 +192,11 @@ export function AskRegionSheet({
                         </>
                       );
                       return platformPages ? (
-                        <a href={eventMapHref(region, event.key)} data-ask="region-event" className={styles.exploreLink}>
+                        <a href={eventMapHref(region, event.key)} data-ask="region-event" className={ex.exploreLink}>
                           {body}
                         </a>
                       ) : (
-                        <div data-ask="region-event" className={styles.exploreRow}>
+                        <div data-ask="region-event" className={ex.exploreRow}>
                           {body}
                         </div>
                       );
@@ -205,18 +206,18 @@ export function AskRegionSheet({
               </ol>
             )}
             <p className={styles.r3Small}>{x.eventsSourceNote}</p>
-            <details data-ask="region-members" className={styles.exploreMembers}>
+            <details data-ask="region-members" className={ex.exploreMembers}>
               <summary>{x.membersLabel}</summary>
               <p className={styles.r3Small}>{regionMemberNames(region, locale, x.drCongo).join(', ')}</p>
             </details>
           </section>
 
           {platformPages && (
-            <section aria-labelledby={`${titleId}-more`} data-ask="region-pages" className={styles.exploreBlock}>
-              <h3 id={`${titleId}-more`} className={styles.exploreHeading}>
+            <section aria-labelledby={`${titleId}-more`} data-ask="region-pages" className={ex.exploreBlock}>
+              <h3 id={`${titleId}-more`} className={ex.exploreHeading}>
                 {x.moreForRegion}
               </h3>
-              <ul className={styles.exploreList}>
+              <ul className={ex.exploreList}>
                 {region.pages.map((page) => {
                   const href = page === 'conflict' ? regionMapHref(region) : ASK_EXPLORE_HREF[page];
                   const label = page === 'conflict' ? x.openOnMap(regionName) : x.page[page].label;
@@ -224,8 +225,8 @@ export function AskRegionSheet({
                     page === 'conflict' ? x.mapNote : page === 'humanitarian' ? x.allRegions : x.page[page].detail;
                   return (
                     <li key={page}>
-                      <a href={href} data-ask={`region-page-${page}`} className={styles.exploreLink}>
-                        <span className={styles.exploreRowTitle}>{label}</span>
+                      <a href={href} data-ask={`region-page-${page}`} className={ex.exploreLink}>
+                        <span className={ex.exploreRowTitle}>{label}</span>
                         <span className={styles.r3Small}>{detail}</span>
                       </a>
                     </li>

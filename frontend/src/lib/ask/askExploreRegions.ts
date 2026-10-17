@@ -3,6 +3,7 @@ import {
   EAST_AFRICA_MEMBERS,
   MIDDLE_EAST_MEMBERS,
   findCountryByIso3,
+  getLocalizedCountryName,
   type ConflictObservation,
   type MarketRetainedProcurementNotice,
 } from '@globalnews-ai/shared';
@@ -240,16 +241,10 @@ export function tenderRows(
  * explicit "DR Congo" label (EA R135 ruling 3: never bare "Congo", never "Congo - Kinshasa").
  */
 export function regionMemberNames(region: AskRegion, locale: string, drCongo: string): readonly string[] {
-  let names: Intl.DisplayNames | null = null;
-  try {
-    names = new Intl.DisplayNames([locale], { type: 'region' });
-  } catch {
-    names = null;
-  }
   const out = Array.from(region.iso3).map((iso3) => {
     if (iso3 === 'COD') return drCongo;
     const iso2 = findCountryByIso3(iso3)?.iso2;
-    return (iso2 !== undefined ? names?.of(iso2) : undefined) ?? iso3;
+    return (iso2 !== undefined ? getLocalizedCountryName(iso2, locale as Parameters<typeof getLocalizedCountryName>[1]) : undefined) ?? findCountryByIso3(iso3)?.name ?? iso3;
   });
   return out.sort((a, b) => a.localeCompare(b, locale));
 }

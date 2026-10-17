@@ -1,6 +1,6 @@
 import { createElement } from 'react';
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
-import type { MarketRetainedProcurementNotice } from '@globalnews-ai/shared';
+import type { ConflictObservation, MarketRetainedProcurementNotice } from '@globalnews-ai/shared';
 import { reviewedObservations } from '@/lib/conflict/retained';
 import {
   ASK_EXPLORE_DRAWER,
@@ -30,6 +30,7 @@ import TED from './r135.tedFixture.json';
  * the only reads are those two GETs; nothing is POSTed, no model, provider or quota.
  */
 jest.mock('./askDashboard.module.css', () => new Proxy({}, { get: (_t, k) => String(k) }));
+jest.mock('./askExplore.module.css', () => new Proxy({}, { get: (_t, k) => String(k) }));
 jest.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(''),
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
@@ -90,6 +91,16 @@ const flush = async (): Promise<void> => {
 };
 
 describe('R135 · region data (pure)', () => {
+  it('EA OBS-2: a record whose source-stated country is COG (UCDP "Congo") never appears under East Africa', () => {
+    const cog = JSON.parse(JSON.stringify(CONFLICT[0]));
+    cog.observationKey = 'cfl:test:COG';
+    cog.geography.countryIso3 = 'COG';
+    cog.geography.sourceCountryName = 'Congo';
+    /* appended AFTER validation: the filter itself must exclude COG, whatever the validator lets through */
+    const withCog = [...reviewedObservations(CONFLICT), cog as ConflictObservation];
+    expect(regionEvents(withCog, askRegion('east-africa'), 50).latest.some((e) => e.iso3 === 'COG')).toBe(false);
+    expect(regionEvents(withCog, askRegion('middle-east'), 50).latest.some((e) => e.iso3 === 'COG')).toBe(false);
+  });
   const rows = reviewedObservations(CONFLICT);
   it('East Africa lists only source-stated East African countries; COD is in, COG/Brazzaville never', () => {
     const ea = regionEvents(rows, askRegion('east-africa'), 10);
@@ -213,6 +224,10 @@ describe('R135 · jobs sheet tenders, drawer Explore, welcome and story picker e
     act(() => {
       r = create(createElement(AskPlatformPagesProvider, { value: true }, createElement(AskTendersBlock, { locale: 'en' })));
     });
+    await flush();
+    /* R38 U-3 — the sheet opens with zero network; the reader's tap is the only read. */
+    expect(calls).toHaveLength(0);
+    act(() => byAsk(r.root, 'job-tenders-show')[0]?.props.onClick());
     await flush();
     expect(calls).toEqual([{ method: 'GET', url: '/market-data/procurement' }]);
     expect(byAsk(r.root, 'job-tender').length).toBeGreaterThan(0);

@@ -57,16 +57,17 @@ export default function AskPage(): JSX.Element {
   /* TRUST R1 — the column is also the theme scope (AskThemedPage), rendered from the cookie. */
   const theme = parseAskThemePreference(cookies().get(THEME_COOKIE_NAME)?.value);
   return (
+    /* R135 ASK EXPLORE R1 — Ask links the platform pages only where this deployment serves them.
+       The provider renders no element, so the D25 column geometry below is unchanged. */
+    <AskPlatformPagesProvider value={!standaloneAskRoot()}>
     <AskThemedPage theme={theme}>
-      {/* R135 ASK EXPLORE R1 — Ask links the platform pages only where this deployment serves them. */}
-      <AskPlatformPagesProvider value={!standaloneAskRoot()}>
       <AskNavProvider>
         <AskNavShell language={chrome} selected={locale} theme={theme} surface="reading" />
         <Suspense fallback={<main className="min-h-0 flex-1 bg-void" />}>
           <AskShellFrame locale={locale} />
         </Suspense>
       </AskNavProvider>
-      </AskPlatformPagesProvider>
     </AskThemedPage>
+    </AskPlatformPagesProvider>
   );
 }

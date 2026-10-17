@@ -6,6 +6,7 @@ import { askExploreStrings } from '@/lib/ask/askExploreStrings';
 import { ASK_EXPLORE_DRAWER, ASK_EXPLORE_HREF } from '@/lib/ask/askExploreRegions';
 import { usePlatformPages } from './AskExploreContext';
 import styles from './askDashboard.module.css';
+import ex from './askExplore.module.css';
 
 /**
  * R135 ASK EXPLORE R1 — the drawer's Explore list: every page already built on this deployment,
@@ -24,13 +25,13 @@ export function AskExploreLinks({
   if (!platformPages) return null;
   const x = askExploreStrings(locale);
   return (
-    <nav aria-label={x.exploreTitle} data-ask-nav="explore" className={styles.exploreBlock}>
-      <h3 className={styles.exploreHeading}>{x.exploreTitle}</h3>
-      <ul className={styles.exploreList}>
+    <nav aria-label={x.exploreTitle} data-ask-nav="explore" className={ex.exploreBlock}>
+      <h3 className={ex.exploreHeading}>{x.exploreTitle}</h3>
+      <ul className={ex.exploreList}>
         {ASK_EXPLORE_DRAWER.map((page) => (
           <li key={page}>
-            <a href={ASK_EXPLORE_HREF[page]} data-ask-nav-explore={page} onClick={onNavigate} className={styles.exploreLink}>
-              <span className={styles.exploreRowTitle}>{x.page[page].label}</span>
+            <a href={ASK_EXPLORE_HREF[page]} data-ask-nav-explore={page} onClick={onNavigate} className={ex.exploreLink}>
+              <span className={ex.exploreRowTitle}>{x.page[page].label}</span>
               <span className={styles.r3Small}>{x.page[page].detail}</span>
             </a>
           </li>

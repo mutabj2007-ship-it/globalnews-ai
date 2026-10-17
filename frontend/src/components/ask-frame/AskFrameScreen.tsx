@@ -347,7 +347,7 @@ export function AskFrameScreen({
     locale: interfaceLocale,
     enabled: entryState,
     compact,
-    suspended: nav?.open === true || jobSheetOpen || regionSheet !== null || r2.signInRequired !== null || r2.deepQuote !== null,
+    suspended: nav?.open === true || jobSheetOpen || r2.signInRequired !== null || r2.deepQuote !== null,
   });
   /*
     R3.1 PRODUCT OWNER ACCEPTANCE · FIX 1 — SUPERSEDED: the welcome's Resume / Continue rows and

@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState, type JSX } from 'react';
+import { useState, type JSX } from 'react';
 import type { DisplayLocale } from '@globalnews-ai/shared';
 import { askExploreStrings } from '@/lib/ask/askExploreStrings';
 import { ASK_EXPLORE_HREF, readerDate, tenderRows, type TenderRow } from '@/lib/ask/askExploreRegions';
 import { readMarketProcurement } from '@/lib/market/mktProcurementRead';
 import { usePlatformPages } from './AskExploreContext';
 import styles from './askDashboard.module.css';
+import ex from './askExplore.module.css';
 
 export const TENDERS_BLOCK_LIMIT = 3;
 
@@ -19,35 +20,45 @@ export const TENDERS_BLOCK_LIMIT = 3;
  * not job vacancies" — with the buyer, the publication date, and the stated deadline (or "Closed"
  * when that day has passed; an unknown deadline is never called open).
  *
- * READS: the same public `/market-data/procurement` proxy /market uses, once, when the sheet opens.
- * No model, no provider, no quota. Renders nothing until the read succeeds with at least one notice.
+ * READS: nothing until the reader taps "Show open public tenders" — the J01 sheet still opens with
+ * zero network (R38 U-3 pin). The tap reads the same public `/market-data/procurement` proxy /market
+ * uses, once. No model, no provider, no quota.
  */
-export function AskTendersBlock({ locale }: { readonly locale: DisplayLocale }): JSX.Element | null {
+export function AskTendersBlock({ locale }: { readonly locale: DisplayLocale }): JSX.Element {
   const x = askExploreStrings(locale);
   const platformPages = usePlatformPages();
-  const [rows, setRows] = useState<readonly TenderRow[] | null>(null);
+  const [state, setState] = useState<'idle' | 'loading' | 'done'>('idle');
+  const [rows, setRows] = useState<readonly TenderRow[]>([]);
 
-  useEffect(() => {
-    let live = true;
+  const load = (): void => {
+    if (state !== 'idle') return;
+    setState('loading');
     void readMarketProcurement().then((result) => {
-      if (!live) return;
       setRows(result.kind === 'PROCUREMENT' ? tenderRows(result.notices, locale, new Date(), TENDERS_BLOCK_LIMIT).latest : []);
+      setState('done');
     });
-    return () => {
-      live = false;
-    };
-  }, [locale]);
-
-  if (rows === null || rows.length === 0) return null;
+  };
 
   return (
-    <section data-ask="job-tenders" className={styles.exploreBlock}>
-      <h3 className={styles.exploreHeading}>{x.tendersTitle}</h3>
+    <section data-ask="job-tenders" className={ex.exploreBlock}>
+      <h3 className={ex.exploreHeading}>{x.tendersTitle}</h3>
       <p className={styles.r3Small}>{x.tendersNote}</p>
-      <ul className={styles.exploreList}>
+      {state === 'idle' && (
+        <button type="button" data-ask="job-tenders-show" onClick={load} className={styles.r3Secondary}>
+          {x.tendersShow}
+        </button>
+      )}
+      {state === 'loading' && (
+        <p role="status" className={styles.r3Small}>
+          {x.eventsLoading}
+        </p>
+      )}
+      {state === 'done' && rows.length === 0 && <p className={styles.r3Small}>{x.tendersNone}</p>}
+      {state === 'done' && rows.length > 0 && (
+      <ul className={ex.exploreList}>
         {rows.map((row) => (
-          <li key={row.key} data-ask="job-tender" className={styles.exploreRow}>
-            <span className={styles.exploreRowTitle} dir="auto">
+          <li key={row.key} data-ask="job-tender" className={ex.exploreRow}>
+            <span className={ex.exploreRowTitle} dir="auto">
               {row.title}
             </span>
             {row.buyer !== null && (
@@ -66,6 +77,7 @@ export function AskTendersBlock({ locale }: { readonly locale: DisplayLocale }):
           </li>
         ))}
       </ul>
+      )}
       {platformPages && (
         <a href={ASK_EXPLORE_HREF.market} data-ask="job-tenders-all" className={styles.r3TextButton}>
           {x.tendersAll}

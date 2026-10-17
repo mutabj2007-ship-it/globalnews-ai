@@ -9,6 +9,7 @@ import { askExploreStrings } from '@/lib/ask/askExploreStrings';
 import { ASK_REGIONS, type AskRegionId } from '@/lib/ask/askExploreRegions';
 import { AskDiscoverIcon } from './AskDiscoverIcon';
 import styles from './askDashboard.module.css';
+import ex from './askExplore.module.css';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -115,7 +116,7 @@ export function AskWelcomeEntries({
         </p>
       ) : (
         /* R135 — the three coverage regions, each a 44 px button opening the region sheet. */
-        <div role="group" aria-label={s.coverageFocusLabel} data-ask="coverage-focus" data-ask-regions="buttons" className={styles.exploreRegionButtons}>
+        <div role="group" aria-label={s.coverageFocusLabel} data-ask="coverage-focus" data-ask-regions="buttons" className={ex.exploreRegionButtons}>
           <AskDiscoverIcon name="g4" size={16} className={styles.iaGlobe} />
           {ASK_REGIONS.map((region) => (
             <button
