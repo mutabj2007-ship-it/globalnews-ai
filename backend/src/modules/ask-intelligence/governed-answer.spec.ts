@@ -334,21 +334,37 @@ describe('C — Conflict records as concise structured observations (evidence un
     snapshotContentAddress: 'a'.repeat(64),
   };
 
-  it('date · place · parties · headline · cited outlets — never the raw concatenated citation as text', () => {
+  /* R143 / E1-CONF-1 + E1-CONF-2 — CHANGED ASSERTIONS (R70): label was the source headline,
+     detail.headline was the source headline, citedOutlets were the verbatim "outlet,date,headline"
+     pieces, licence was null. The recorded headline is the reporting outlet's expression; UCDP's
+     CC BY 4.0 does not license it (E1 R135 addendum 02 §2). */
+  it('date · place · parties · outlet NAMES — never the recorded headline, never the raw citation', () => {
     const o = conflictObservation(conflictRow('k1', citation), detail);
     expect(o.period).toBe('2026-08-31');
-    expect(o.label).toBe('Attack near Beni');
-    expect(o.label).not.toContain(';');
+    expect(o.label).toBeNull();
     expect(o.detail).toEqual({
       place: 'Beni territory, North Kivu',
       parties: ['ADF', 'Civilians'],
-      headline: 'Attack near Beni',
-      citedOutlets: [
-        'Radio Okapi,2026-08-31,"Attack near Beni"',
-        'Actualite.cd,2026-09-01,Other',
-        'AFP,2026-09-01,X',
-      ],
+      headline: null,
+      citedOutlets: ['Radio Okapi', 'Actualite.cd', 'AFP'],
     });
+    expect(o.source.licence).toBe('CC BY 4.0');
+    expect(JSON.stringify(o)).not.toContain('Attack near Beni');
+  });
+
+  it('E1-CONF-1: the governed model prompt carries no recorded headline from a Conflict record', () => {
+    const o = conflictObservation(conflictRow('k1', citation), detail);
+    const g = governedPrompt(set([contribution({ observations: [o], disclosures: ['SEVERITY_NOT_ASSESSED'] })]));
+    expect(g.data).not.toContain('Attack near Beni');
+    expect(g.rules).not.toContain('Attack near Beni');
+    /* the event facts still reach the model */
+    expect(g.data).toContain('Beni territory, North Kivu');
+    expect(g.data).toContain('ADF');
+  });
+
+  it('outlet names drop handles, dates and duplicates; only the first three pieces are read', () => {
+    expect(citedOutletsOf('A,2026-01-01,x;A,2026-01-02,y;@someone on X;D,2026,z')).toEqual(['A']);
+    expect(citedOutletsOf('Radio Okapi;BBC,2026-09-01,headline')).toEqual(['Radio Okapi', 'BBC']);
   });
 
   it('without retained detail the record is unchanged in substance: no label is invented', () => {

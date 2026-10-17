@@ -12,6 +12,7 @@ import { EconomyObservationReadService } from '../economy/economy-observation.re
 import { readRetainedImihigo } from './imihigo-retained.reader';
 import { nisrDistricts } from '../geo/rwanda-nisr.authority';
 import { selectContributors } from './contributor-selection';
+import { outletNamesOf } from './cited-outlets';
 import type {
   AskContribution,
   AskContributionObservation,
@@ -547,14 +548,22 @@ export class AskSpecialistReadCoordinator {
   }
 }
 
-/** The publisher's own citation, split on its record separator only — each piece verbatim. */
+/**
+ * The outlet NAMES a UCDP citation cites. Each ';'-piece is "outlet,date,headline": only the first
+ * field is the outlet (UCDP's own datum, E1 R135 Q1). The date and the publisher's headline are
+ * dropped — UCDP's CC BY 4.0 does not license that expression (E1 R135 addendum 02, R143).
+ */
 export function citedOutletsOf(citation: string | undefined): string[] {
-  return (citation ?? '')
+  const pieces = (citation ?? '')
     .split(';')
     .map((piece) => piece.trim())
     .filter((piece) => piece.length > 0)
     .slice(0, 3);
+  return outletNamesOf(pieces);
 }
+
+/** UCDP GED's own licence (E1-CONF-2): the slot carried null for a CC BY 4.0 source. */
+export const UCDP_LICENCE_NAME = 'CC BY 4.0';
 
 export function conflictObservation(
   row: ConflictObservation,
@@ -563,9 +572,10 @@ export function conflictObservation(
   return {
     reference: row.observationKey,
     kind: row.eventType,
-    /* LIVE ACCEPTANCE REPAIR R1 (C) — the label is the source headline when one exists; the raw
-       concatenated citation now travels split, as cited outlets, never as the row's text. */
-    label: detail?.sourceHeadline ?? null,
+    /* E1-CONF-1 (E1 R135 addendum 02 §2) — no label: the recorded source headline is the reporting
+       outlet's expression, AI_INPUT without a rights decision. The event facts (period, kind, place,
+       parties) carry the record. Stored data is untouched; this is the serve/prompt boundary. */
+    label: null,
     value: null,
     unit: null,
     period: row.temporal.eventStartedAt.slice(0, 10),
@@ -573,13 +583,14 @@ export function conflictObservation(
     source: {
       name: 'UCDP — Uppsala Conflict Data Program',
       url: row.sourceReference.sourceUrl ?? null,
-      licence: null,
+      licence: UCDP_LICENCE_NAME,
     },
     retainedAt: row.temporal.ingestedAt,
     detail: {
       place: detail?.whereDescription ?? null,
       parties: detail?.sourceParties ?? [],
-      headline: detail?.sourceHeadline ?? null,
+      /* withheld at the serve boundary, as the label (E1-CONF-1) */
+      headline: null,
       citedOutlets: citedOutletsOf(row.sourceReference.citation),
     },
   };

@@ -4,6 +4,7 @@ import type {
   AskContributionObservation,
 } from '../../ask-intelligence/ask-contribution.contract';
 import type { BriefingIntelligence } from './briefing-snapshot';
+import { outletNamesOf } from '../../ask-intelligence/cited-outlets';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -81,7 +82,29 @@ function relevant(c: AskContribution): boolean {
   return c.applicability !== 'CONTEXT' && c.contributorId !== 'GEOGRAPHY';
 }
 
-export function structuredFingerprint(o: AskContributionObservation): string {
+/**
+ * R143 / E1-CONF-1 — a Conflict record no longer carries the recorded source headline (label,
+ * detail.headline) and cites outlet NAMES only. Saved baselines still hold the earlier shape, so the
+ * fingerprint compares Conflict records WITHOUT those fields on both sides: withholding them is not a
+ * change in the record, and must never read as "content changed".
+ */
+function comparable(o: AskContributionObservation): AskContributionObservation {
+  if (!o.reference.startsWith('cfl:')) return o;
+  return {
+    ...o,
+    label: null,
+    detail: o.detail
+      ? {
+          ...o.detail,
+          headline: null,
+          citedOutlets: outletNamesOf(o.detail.citedOutlets),
+        }
+      : o.detail,
+  };
+}
+
+export function structuredFingerprint(observation: AskContributionObservation): string {
+  const o = comparable(observation);
   const content = {
     kind: o.kind,
     label: o.label,
