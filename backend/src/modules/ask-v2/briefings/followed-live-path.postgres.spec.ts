@@ -62,7 +62,7 @@ live('followed question — fresh manual check through normal Ask execution (liv
     askRequestContext.run({ accountId: userId, ipScope: 'ip:v4:198.51.100.77' }, work);
 
   /* the SAME synthetic-candidate path the Conflict live suite uses: an ADMITTED, COMPLETE capture */
-  const ucdpRow = (id: string, date: string) => {
+  const ucdpRow = (id: string, date: string, extra: Record<string, string> = {}) => {
     const v: Record<string, string> = {
       ...Object.fromEntries(UCDP_CANDIDATE_CSV_HEADERS.map((k) => [k, ''])),
       id,
@@ -75,6 +75,7 @@ live('followed question — fresh manual check through normal Ask execution (liv
       date_prec: '1',
       date_start: `${date} 00:00:00.000`,
       date_end: `${date} 00:00:00.000`,
+      ...extra,
     };
     return UCDP_CANDIDATE_CSV_HEADERS.map((k) => v[k]).join(',');
   };
@@ -123,7 +124,7 @@ live('followed question — fresh manual check through normal Ask execution (liv
     await producer.admitRetained(retrievalId, 'live-path');
   }
 
-  async function ask(): Promise<{ turnId: string; payload: Record<string, unknown> }> {
+  async function ask(): Promise<{ turnId: string; payload: Record<string, unknown>; storedId: string }> {
     const thread = await service.createThread(accountPrincipal(userId), { idempotencyKey: randomUUID(), language: 'en' });
     const op = await run(() =>
       service.submit(accountPrincipal(userId), thread.id, {
@@ -136,7 +137,7 @@ live('followed question — fresh manual check through normal Ask execution (liv
     expect(op.status).toBe('COMPLETED');
     const turn = await db.askTurn.findFirstOrThrow({ where: { operationId: op.operationId } });
     const stored = await db.storedResult.findUniqueOrThrow({ where: { id: op.storedResultId as string } });
-    return { turnId: turn.id, payload: stored.payload as Record<string, unknown> };
+    return { turnId: turn.id, payload: stored.payload as Record<string, unknown>, storedId: stored.id };
   }
 
   const conflictRefs = (payload: Record<string, unknown>): string[] => {
@@ -273,5 +274,51 @@ live('followed question — fresh manual check through normal Ask execution (liv
     expect((check.assessment as { structured: { unassessed: string[] } }).structured.unassessed[0]).toMatch(/^CONFLICT:COD:DEGRADED$/);
     expect(check.resultingVersion).toBeNull();
     expect(await db.briefingVersion.count({ where: { briefingId: followed.id } })).toBe(1);
+  });
+
+  /* R143 / E1-CONF-1 — CTO R144: "Saved-briefing first-change invariant needs a Postgres replay".
+     A briefing saved BEFORE the containment holds the old Conflict shape (label + detail.headline =
+     the recorded source headline; citedOutlets = verbatim "outlet,date,headline" pieces). A fresh
+     check on the SAME records with the contained code must read UNCHANGED, never "content changed".
+     Synthetic strings only. */
+  it('R143 replay: a baseline saved in the pre-containment shape → fresh check on the same records is UNCHANGED', async () => {
+    const HEADLINE = 'Synthetic recorded headline (test)';
+    await admit([
+      ucdpRow(eventId(), '2026-08-14', { source_headline: HEADLINE, source_article: 'Synthetic Wire', source_office: 'Synthetic Wire' }),
+      ucdpRow(eventId(), '2026-08-15', { source_headline: HEADLINE, source_article: 'Other Wire', source_office: 'Other Wire' }),
+    ]);
+    const first = await ask();
+    expect(conflictRefs(first.payload).length).toBeGreaterThanOrEqual(2);
+    /* the contained code wrote no headline into the stored result */
+    expect(JSON.stringify(first.payload)).not.toContain(HEADLINE);
+
+    /* rewrite the stored baseline turn into the shape bc13149 wrote */
+    const stored = await db.storedResult.findUniqueOrThrow({ where: { id: first.storedId } });
+    const old = JSON.parse(JSON.stringify(stored.payload)) as {
+      intelligence: { contributions: { contributorId: string; observations: { label: unknown; detail: { headline: unknown; citedOutlets: string[] } | null }[] }[] };
+    };
+    let rewritten = 0;
+    for (const c of old.intelligence.contributions) {
+      if (c.contributorId !== 'CONFLICT') continue;
+      for (const o of c.observations) {
+        o.label = HEADLINE;
+        if (o.detail) {
+          o.detail.headline = HEADLINE;
+          o.detail.citedOutlets = o.detail.citedOutlets.map((name) => `${name},2026-08-14,"${HEADLINE}"`);
+        }
+        rewritten++;
+      }
+    }
+    expect(rewritten).toBeGreaterThanOrEqual(2);
+    await db.storedResult.update({ where: { id: stored.id }, data: { payload: old as never } });
+    const followed = await briefings.create(userId, { turnId: first.turnId });
+
+    const second = await ask();
+    expect(JSON.stringify(second.payload)).not.toContain(HEADLINE);
+    const check = await briefings.recordCheck(userId, followed.id, second.turnId);
+    const structured = (check.assessment as { structured: { contentChanged: unknown[] } }).structured;
+    expect(structured.contentChanged).toEqual([]);
+    expect(check.outcome).toBe('UNCHANGED');
+    expect(check.resultingVersion).toBeNull();
   });
 });
