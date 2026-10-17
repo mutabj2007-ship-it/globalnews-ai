@@ -12,7 +12,7 @@ import {
   reportingOutlets,
   tenderRows,
 } from '@/lib/ask/askExploreRegions';
-import { askExploreStrings } from '@/lib/ask/askExploreStrings';
+import { ASK_EXPLORE_QUALIFIED_UNCHANGED, askExploreStrings } from '@/lib/ask/askExploreStrings';
 import { AskRegionSheet } from './AskRegionSheet';
 import { AskTendersBlock } from './AskTendersBlock';
 import { AskExploreLinks } from './AskExploreLinks';
@@ -307,5 +307,47 @@ describe('R135 · jobs sheet tenders, drawer Explore, welcome and story picker e
     act(() => open?.props.onClick());
     expect(onOpenRegions).toHaveBeenCalledTimes(1);
     expect(calls).toHaveLength(0);
+  });
+});
+
+describe('R135 · Claude L qualified copy (L_R135_ASK_EXPLORE_RETURN)', () => {
+  const leaves = (v: unknown, path = ''): [string, string][] =>
+    typeof v === 'string'
+      ? [[path, v]]
+      : typeof v === 'function'
+        ? [[path, String((v as (a: string) => string)('§'))]]
+        : v !== null && typeof v === 'object'
+          ? Object.entries(v).flatMap(([k, c]) => leaves(c, path === '' ? k : `${path}.${k}`))
+          : [];
+  const en = new Map(leaves(askExploreStrings('en')));
+
+  it('a value identical to English is exactly one L declared (FR "Europe" and four more), nothing else', () => {
+    for (const locale of ['pl', 'fr', 'de', 'es', 'pt', 'ar']) {
+      const same = leaves(askExploreStrings(locale))
+        .filter(([path, value]) => en.get(path) === value)
+        .map(([path]) => path)
+        .sort();
+      expect({ locale, same }).toEqual({ locale, same: [...(ASK_EXPLORE_QUALIFIED_UNCHANGED[locale] ?? [])].sort() });
+    }
+  });
+  it('every locale has the same keys as English (62), and no direction-control character', () => {
+    for (const locale of ['pl', 'fr', 'de', 'es', 'pt', 'ar']) {
+      const l = leaves(askExploreStrings(locale));
+      expect(l.map(([p]) => p).sort()).toEqual([...en.keys()].sort());
+      expect(l.filter(([, v]) => /[‎‏‪-‮⁦-⁩]/.test(v))).toEqual([]);
+    }
+  });
+  it('pt says licitação (a tender), never "concurso" (a civil-service exam in Brazil); BR forms', () => {
+    const pt = leaves(askExploreStrings('pt'));
+    expect(pt.filter(([, v]) => /concurso/i.test(v))).toEqual([]);
+    expect(askExploreStrings('pt').tendersTitle).toBe('Licitações públicas para consultar');
+    expect(askExploreStrings('pt').regionName['middle-east']).toBe('Oriente Médio');
+    expect(pt.filter(([, v]) => /registos|A carregar|em direto/.test(v))).toEqual([]);
+  });
+  it('region names stay uninflected for the router (fr/de/pt use a "region" scaffold; PL unchanged)', () => {
+    expect(askExploreStrings('fr').regionDraft('Moyen-Orient')).toBe('Qu’est-ce qui a changé dans la région Moyen-Orient au cours des 7 derniers jours ?');
+    expect(askExploreStrings('de').regionDraft('Naher Osten')).toBe('Was hat sich in den letzten 7 Tagen in der Region Naher Osten verändert?');
+    expect(askExploreStrings('pt').regionDraft('Europa')).toBe('O que mudou na região Europa nos últimos 7 dias?');
+    expect(askExploreStrings('pl').drCongo).toBe('DR Konga');
   });
 });

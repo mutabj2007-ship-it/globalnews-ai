@@ -13,6 +13,7 @@ import {
 } from '../shell/askShellQualifiedUnchanged';
 import { askCountryName } from '../askCountryName';
 import { askDictionary } from '../shell/askDictionary';
+import { ASK_EXPLORE_QUALIFIED_UNCHANGED, askExploreStrings } from '../askExploreStrings';
 
 /** The countries the fixtures name: in each locale their CLDR name is DATA (a proper noun). */
 export const FIXTURE_COUNTRIES = ['KEN', 'RWA', 'COD', 'COG', 'TZA', 'POL'];
@@ -55,6 +56,13 @@ export function declaredUnchanged(locale: DisplayLocale): Set<string> {
   const shell = askShellStrings(locale);
   for (const path of qualifiedUnchangedFor(locale)) {
     const v = valueAt(shell, path);
+    if (typeof v === 'string') out.add(v.trim());
+  }
+  /* L R135 §1 (CTO R139 FR_EUROPE_IDENTICAL_ALLOWED): the Ask Explore values L delivered
+     identical to English for THIS locale, and only those */
+  const explore = askExploreStrings(locale);
+  for (const path of ASK_EXPLORE_QUALIFIED_UNCHANGED[locale] ?? []) {
+    const v = valueAt(explore, path);
     if (typeof v === 'string') out.add(v.trim());
   }
   return out;
