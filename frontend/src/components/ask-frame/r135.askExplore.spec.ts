@@ -209,6 +209,22 @@ describe('R135 · region sheet inside Ask', () => {
     expect(byAsk(off.r.root, 'region-event')).toHaveLength(2);
     expect(byAsk(off.r.root, 'region-event').every((n) => n.type === 'div')).toBe(true);
   });
+  it('E1 R135-C1: the UCDP note names the licence and links its URI on platform AND Standalone', async () => {
+    for (const platform of [true, false]) {
+      const { r } = render(platform);
+      await flush();
+      const licence = byAsk(r.root, 'region-events-licence');
+      expect(licence).toHaveLength(1);
+      expect(licence[0]?.type).toBe('a');
+      expect(licence[0]?.props.href).toBe('https://creativecommons.org/licenses/by/4.0/');
+      expect(licence[0]?.props.rel).toBe('noopener noreferrer');
+      const note = byAsk(r.root, 'region-events-source')[0];
+      expect(note).toBeDefined();
+      const noteText = (note?.findAll(() => true) ?? []).flatMap((n) => n.children).filter((c) => typeof c === 'string').join('');
+      expect(noteText).toContain('UCDP');
+      expect(noteText).toContain('CC BY 4.0');
+    }
+  });
   it('a failed read says so and offers one retry; an empty region says it is a gap, not "nothing happened"', async () => {
     conflictStatus = 500;
     const { r } = render(false);

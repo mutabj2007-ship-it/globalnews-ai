@@ -14,6 +14,7 @@ import {
   regionEvents,
   regionMapHref,
   regionMemberNames,
+  UCDP_LICENCE,
   type AskRegionId,
 } from '@/lib/ask/askExploreRegions';
 import { reviewedObservations } from '@/lib/conflict/retained';
@@ -205,7 +206,20 @@ export function AskRegionSheet({
                 ))}
               </ol>
             )}
-            <p className={styles.r3Small}>{x.eventsSourceNote}</p>
+            <p data-ask="region-events-source" className={styles.r3Small}>
+              {x.eventsSourceNote}{' '}
+              <a
+                href={UCDP_LICENCE.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-ask="region-events-licence"
+                lang="en"
+                dir="ltr"
+                className={styles.r3TextButton}
+              >
+                {UCDP_LICENCE.name}
+              </a>
+            </p>
             <details data-ask="region-members" className={ex.exploreMembers}>
               <summary>{x.membersLabel}</summary>
               <p className={styles.r3Small}>{regionMemberNames(region, locale, x.drCongo).join(', ')}</p>

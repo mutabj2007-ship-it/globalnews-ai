@@ -104,6 +104,16 @@ export const ASK_REGIONS: readonly AskRegion[] = [
   },
 ];
 
+/**
+ * The UCDP GED licence (E1 R135-C1): CC BY 4.0 requires attribution wherever the data is presented,
+ * so the sheet names the licence and links its URI on every deployment, Standalone included. The
+ * licence name is an identifier, the same in every language (as the map's GeoNames notice).
+ */
+export const UCDP_LICENCE = {
+  name: 'CC BY 4.0',
+  href: 'https://creativecommons.org/licenses/by/4.0/',
+} as const;
+
 export function askRegion(id: AskRegionId): AskRegion {
   const region = ASK_REGIONS.find((r) => r.id === id);
   if (region === undefined) throw new Error(`UNKNOWN_ASK_REGION ${id}`);
