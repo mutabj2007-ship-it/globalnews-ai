@@ -189,10 +189,14 @@ describe('R135 · region sheet inside Ask', () => {
     expect(text(on.r)).toContain('Conflict map: opens over East Africa');
     expect(text(on.r)).toContain('Records worldwide');
     expect(byAsk(on.r.root, 'region-page-imihigo')).toHaveLength(1);
+    const firstEvent = byAsk(on.r.root, 'region-event')[0];
+    expect(firstEvent?.type).toBe('a');
+    expect(String(firstEvent?.props.href).startsWith('/conflict?cam=3.2/36/2&observation=cfl%3A')).toBe(true);
     const off = render(false);
     await flush();
     expect(byAsk(off.r.root, 'region-pages')).toHaveLength(0);
     expect(byAsk(off.r.root, 'region-event')).toHaveLength(2);
+    expect(byAsk(off.r.root, 'region-event').every((n) => n.type === 'div')).toBe(true);
   });
   it('a failed read says so and offers one retry; an empty region says it is a gap, not "nothing happened"', async () => {
     conflictStatus = 500;

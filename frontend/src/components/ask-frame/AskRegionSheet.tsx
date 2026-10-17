@@ -9,6 +9,7 @@ import {
   ASK_EXPLORE_HREF,
   ASK_REGIONS,
   askRegion,
+  eventMapHref,
   readerDate,
   regionEvents,
   regionMapHref,
@@ -171,17 +172,34 @@ export function AskRegionSheet({
             {status === 'ready' && events.latest.length > 0 && (
               <ol data-ask="region-events-list" className={styles.exploreList}>
                 {events.latest.map((event) => (
-                  <li key={event.key} data-ask="region-event" className={styles.exploreRow}>
-                    <span className={styles.exploreRowTitle}>
-                      <time dateTime={event.eventDate}>{readerDate(event.eventDate, locale)}</time>
-                      {' · '}
-                      <span dir="auto">{event.iso3 === 'COD' ? x.drCongo : event.place}</span>
-                    </span>
-                    {event.reportedBy.length > 0 && (
-                      <span className={styles.r3Small} dir="auto">
-                        {x.reportedBy(event.reportedBy.join(', '))}
-                      </span>
-                    )}
+                  <li key={event.key}>
+                    {/* Platform: the row opens THIS record on the conflict map (selected, view over the
+                        region). Standalone: the same row, not a link (the map route is not served). */}
+                    {(() => {
+                      const body = (
+                        <>
+                          <span className={styles.exploreRowTitle}>
+                            <time dateTime={event.eventDate}>{readerDate(event.eventDate, locale)}</time>
+                            {' · '}
+                            <span dir="auto">{event.iso3 === 'COD' ? x.drCongo : event.place}</span>
+                          </span>
+                          {event.reportedBy.length > 0 && (
+                            <span className={styles.r3Small} dir="auto">
+                              {x.reportedBy(event.reportedBy.join(', '))}
+                            </span>
+                          )}
+                        </>
+                      );
+                      return platformPages ? (
+                        <a href={eventMapHref(region, event.key)} data-ask="region-event" className={styles.exploreLink}>
+                          {body}
+                        </a>
+                      ) : (
+                        <div data-ask="region-event" className={styles.exploreRow}>
+                          {body}
+                        </div>
+                      );
+                    })()}
                   </li>
                 ))}
               </ol>

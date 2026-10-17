@@ -1,4 +1,11 @@
-import type { ConflictObservation, MarketRetainedProcurementNotice } from '@globalnews-ai/shared';
+import {
+  COUNTRIES,
+  EAST_AFRICA_MEMBERS,
+  MIDDLE_EAST_MEMBERS,
+  findCountryByIso3,
+  type ConflictObservation,
+  type MarketRetainedProcurementNotice,
+} from '@globalnews-ai/shared';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -12,8 +19,9 @@ import type { ConflictObservation, MarketRetainedProcurementNotice } from '@glob
  * already-built Alpha pages belong to it.
  *
  * Membership is a list of countries, not a claim of coverage: a region with no retained record says
- * so. East Africa = East African Community members + the Horn of Africa (EA lane to confirm, see
- * Claude_Output/R135-ASK-EXPLORE/EA-REGION-RULING.md).
+ * so. Memberships are READ from the shared authorities, never restated (EA R135 ruling): East Africa
+ * = the product-governed EAST_AFRICA_MEMBERS (11, COD yes, COG no), Middle East = MIDDLE_EAST_MEMBERS
+ * (16), Europe = the shared country catalogue's region 'Europe' (not the EU-27).
  */
 export type AskRegionId = 'europe' | 'east-africa' | 'middle-east';
 
@@ -77,27 +85,19 @@ export const ASK_EXPLORE_DRAWER: readonly AskExplorePageId[] = [
 export const ASK_REGIONS: readonly AskRegion[] = [
   {
     id: 'europe',
-    iso3: new Set([
-      'ALB', 'AND', 'ARM', 'AUT', 'AZE', 'BEL', 'BGR', 'BIH', 'BLR', 'CHE', 'CYP', 'CZE', 'DEU', 'DNK',
-      'ESP', 'EST', 'FIN', 'FRA', 'GBR', 'GEO', 'GRC', 'HRV', 'HUN', 'IRL', 'ISL', 'ITA', 'XKX', 'LIE',
-      'LTU', 'LUX', 'LVA', 'MCO', 'MDA', 'MKD', 'MLT', 'MNE', 'NLD', 'NOR', 'POL', 'PRT', 'ROU', 'RUS',
-      'SMR', 'SRB', 'SVK', 'SVN', 'SWE', 'UKR', 'VAT',
-    ]),
+    iso3: new Set(COUNTRIES.filter((c) => c.region === 'Europe').map((c) => c.iso3)),
     camera: '2.8/12/52',
     pages: ['conflict', 'market', 'humanitarian'],
   },
   {
     id: 'east-africa',
-    iso3: new Set(['BDI', 'COD', 'DJI', 'ERI', 'ETH', 'KEN', 'RWA', 'SOM', 'SSD', 'TZA', 'UGA']),
+    iso3: new Set(EAST_AFRICA_MEMBERS),
     camera: '3.2/36/2',
     pages: ['conflict', 'imihigo', 'humanitarian'],
   },
   {
     id: 'middle-east',
-    iso3: new Set([
-      'ARE', 'BHR', 'EGY', 'IRN', 'IRQ', 'ISR', 'JOR', 'KWT', 'LBN', 'OMN', 'PSE', 'QAT', 'SAU', 'SYR',
-      'TUR', 'YEM',
-    ]),
+    iso3: new Set(MIDDLE_EAST_MEMBERS),
     camera: '3.0/44/28',
     pages: ['conflict', 'humanitarian'],
   },
@@ -112,6 +112,11 @@ export function askRegion(id: AskRegionId): AskRegion {
 /** The conflict map opened at the region. */
 export function regionMapHref(region: AskRegion): string {
   return `${ASK_EXPLORE_HREF.conflict}?cam=${region.camera}`;
+}
+
+/** One recorded event opened on the conflict map (the record selected, the view over the region). */
+export function eventMapHref(region: AskRegion, observationKey: string): string {
+  return `${regionMapHref(region)}&observation=${encodeURIComponent(observationKey)}`;
 }
 
 export interface RegionEvent {
@@ -230,18 +235,6 @@ export function tenderRows(
   };
 }
 
-/** ISO3 → ISO2, only for the region members above (Intl.DisplayNames speaks ISO2). */
-const ISO2: Readonly<Record<string, string>> = {
-  ALB: 'AL', AND: 'AD', ARM: 'AM', AUT: 'AT', AZE: 'AZ', BEL: 'BE', BGR: 'BG', BIH: 'BA', BLR: 'BY', CHE: 'CH',
-  CYP: 'CY', CZE: 'CZ', DEU: 'DE', DNK: 'DK', ESP: 'ES', EST: 'EE', FIN: 'FI', FRA: 'FR', GBR: 'GB', GEO: 'GE',
-  GRC: 'GR', HRV: 'HR', HUN: 'HU', IRL: 'IE', ISL: 'IS', ITA: 'IT', XKX: 'XK', LIE: 'LI', LTU: 'LT', LUX: 'LU',
-  LVA: 'LV', MCO: 'MC', MDA: 'MD', MKD: 'MK', MLT: 'MT', MNE: 'ME', NLD: 'NL', NOR: 'NO', POL: 'PL', PRT: 'PT',
-  ROU: 'RO', RUS: 'RU', SMR: 'SM', SRB: 'RS', SVK: 'SK', SVN: 'SI', SWE: 'SE', UKR: 'UA', VAT: 'VA',
-  BDI: 'BI', COD: 'CD', DJI: 'DJ', ERI: 'ER', ETH: 'ET', KEN: 'KE', RWA: 'RW', SOM: 'SO', SSD: 'SS', TZA: 'TZ', UGA: 'UG',
-  ARE: 'AE', BHR: 'BH', EGY: 'EG', IRN: 'IR', IRQ: 'IQ', ISR: 'IL', JOR: 'JO', KWT: 'KW', LBN: 'LB', OMN: 'OM',
-  PSE: 'PS', QAT: 'QA', SAU: 'SA', SYR: 'SY', TUR: 'TR', YEM: 'YE',
-};
-
 /**
  * The region's member countries in the reader's language, sorted. COD is ALWAYS the caller's
  * explicit "DR Congo" label (EA R135 ruling 3: never bare "Congo", never "Congo - Kinshasa").
@@ -255,7 +248,7 @@ export function regionMemberNames(region: AskRegion, locale: string, drCongo: st
   }
   const out = Array.from(region.iso3).map((iso3) => {
     if (iso3 === 'COD') return drCongo;
-    const iso2 = ISO2[iso3];
+    const iso2 = findCountryByIso3(iso3)?.iso2;
     return (iso2 !== undefined ? names?.of(iso2) : undefined) ?? iso3;
   });
   return out.sort((a, b) => a.localeCompare(b, locale));
