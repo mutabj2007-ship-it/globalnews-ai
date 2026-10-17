@@ -232,18 +232,16 @@ export function askIntelligenceView(
     rows: c.observations.slice(0, MAX_ROWS).map((o) => ({
       reference: o.reference,
       period: o.period,
-      /* A Conflict record reads as what happened (its event type), then its own headline. */
-      label:
-        c.contributorId === 'CONFLICT'
-          ? [s.eventKind[o.kind] ?? o.kind, o.detail?.headline ?? null].filter(Boolean).join(' — ')
-          : (o.label ?? s.eventKind[o.kind] ?? o.kind),
+      /* A Conflict record reads as what happened: its event type. Never the recorded headline —
+         that is the reporting outlet's expression, which UCDP's CC BY 4.0 does not license
+         (E1 R135 addendum 02, E1-CONF-1 / R135-C2 family; R143). */
+      label: c.contributorId === 'CONFLICT' ? (s.eventKind[o.kind] ?? o.kind) : (o.label ?? s.eventKind[o.kind] ?? o.kind),
       value: o.value === null ? null : o.unit === null ? o.value : `${o.value} ${o.unit}`,
       sourceName: o.source.name,
       sourceUrl: o.source.url,
       place: o.detail?.place ?? null,
       parties: o.detail && o.detail.parties.length > 0 ? o.detail.parties.join(' vs ') : null,
-      cited:
-        o.detail && o.detail.citedOutlets.length > 0 ? o.detail.citedOutlets.join(' · ') : null,
+      cited: citedOutletNames(o.detail?.citedOutlets ?? []),
     })),
   }));
   const notes: string[] = [];
@@ -307,4 +305,17 @@ function retainedLead(c: AskContribution, s: AskIntelligenceStrings): string[] {
     default:
       return [];
   }
+}
+
+/**
+ * R143 — the outlet NAMES a record cites. A UCDP citation piece is "outlet,date,headline": only the
+ * first field is the outlet (UCDP's own datum, E1 R135 Q1); the date and headline are dropped, as are
+ * social handles. Null when no name is left.
+ */
+export function citedOutletNames(pieces: readonly string[]): string | null {
+  const names = pieces
+    .map((piece) => piece.split(',')[0]?.trim() ?? '')
+    .filter((name) => name.length > 0 && !name.startsWith('@') && !/\bon X\b/i.test(name));
+  const unique = Array.from(new Set(names));
+  return unique.length > 0 ? unique.join(' · ') : null;
 }
