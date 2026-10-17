@@ -38,15 +38,22 @@ describe('R143 D3 · /conflict source field', () => {
     expect(out).toMatch(/data-conflict="source-licence"[^>]*>CC BY 4\.0</);
     expect(out).toMatch(/<a href="https:\/\/creativecommons\.org\/licenses\/by\/4\.0\/" target="_blank" rel="noopener noreferrer" lang="en" dir="ltr"/);
   });
-  it('keeps the outlet NAME (reportingOffice) — UCDP\'s own datum, E1 R135 Q1', () => {
-    const row = rows.find((r) => r.sourceReference.reportingOffice);
+  it('keeps the outlet NAMES (reportingOffice) — UCDP\'s own datum, E1 R135 Q1', () => {
+    const row = rows.find((r) => r.sourceReference.reportingOffice?.startsWith('The New Times'));
     expect(row).toBeDefined();
-    expect(html(row!)).toContain(row!.sourceReference.reportingOffice!.replace(/&/g, '&amp;'));
+    expect(html(row!)).toContain('The New Times, Actualite.cd, Kivu Morning Post');
+  });
+  it('CTO R144: a social handle in reportingOffice (a person\'s account) is never shown', () => {
+    const row = rows.find((r) => /@\w+ on X/.test(r.sourceReference.reportingOffice ?? ''));
+    expect(row).toBeDefined();
+    expect(html(row!)).not.toMatch(/@\w+|on X/);
   });
   it('ConflictDashboard renders the source through this field and has no headline or citation render left', () => {
     const src = readFileSync(join(__dirname, 'ConflictDashboard.tsx'), 'utf8');
     expect(src).toContain('<ConflictSourceField row={row} sourceLabel={t.source} />');
     expect(src).not.toMatch(/evidenceDetail\??\.sourceHeadline/);
     expect(src).not.toMatch(/sourceReference\.citation/);
+    /* CTO R144: UCDP source_original is unreviewed free text — not rendered until E1 rules */
+    expect(src).not.toMatch(/evidenceDetail\??\.sourceOriginal/);
   });
 });
