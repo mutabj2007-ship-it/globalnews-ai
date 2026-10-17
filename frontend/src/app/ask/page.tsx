@@ -9,6 +9,8 @@ import { AskThemedPage } from '@/components/ask-nav/AskThemedPage';
 import { THEME_COOKIE_NAME } from '@/lib/theme/theme';
 import { askThemeColor, parseAskThemePreference } from '@/lib/ask/askTheme';
 import { surfaceLocale } from '@/lib/i18n/displayLocale.server';
+import { standaloneAskRoot } from '@/lib/ask/standaloneRoot';
+import { AskPlatformPagesProvider } from '@/components/ask-frame/AskExploreContext';
 export const metadata: Metadata = {
   /* R4 · CTO brand ruling — one canonical product name, never an authored variant */
   title: ASK_PRODUCT_NAME,
@@ -56,12 +58,15 @@ export default function AskPage(): JSX.Element {
   const theme = parseAskThemePreference(cookies().get(THEME_COOKIE_NAME)?.value);
   return (
     <AskThemedPage theme={theme}>
+      {/* R135 ASK EXPLORE R1 — Ask links the platform pages only where this deployment serves them. */}
+      <AskPlatformPagesProvider value={!standaloneAskRoot()}>
       <AskNavProvider>
         <AskNavShell language={chrome} selected={locale} theme={theme} surface="reading" />
         <Suspense fallback={<main className="min-h-0 flex-1 bg-void" />}>
           <AskShellFrame locale={locale} />
         </Suspense>
       </AskNavProvider>
+      </AskPlatformPagesProvider>
     </AskThemedPage>
   );
 }

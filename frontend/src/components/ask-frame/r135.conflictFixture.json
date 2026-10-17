@@ -1,0 +1,287 @@
+[
+ {
+  "observationKey": "cfl:1:8:UCDP_GED:6:639146",
+  "identity": {
+   "authority": "UCDP_GED",
+   "upstreamEventId": "639146"
+  },
+  "eventType": "EVENT_TYPE_NOT_CLASSIFIED",
+  "owner": "CONFLICT",
+  "actors": [
+   {
+    "kind": "ACTOR_UNIDENTIFIED"
+   }
+  ],
+  "geography": {
+   "crs": "EPSG:4326",
+   "origin": "SOURCE_NATIVE",
+   "precision": "CITY",
+   "denotation": "EVENT_LOCATION",
+   "coordinates": {
+    "type": "Point",
+    "coordinates": [
+     29.386667,
+     -0.682222
+    ]
+   },
+   "countryIso3": "COD",
+   "geometryKind": "POINT",
+   "countryIso3Basis": "SOURCE_COUNTRY_NAME_NORMALIZED",
+   "sourceCountryName": "DR Congo (Zaire)",
+   "locationProvenance": "STATED"
+  },
+  "temporal": {
+   "ingestedAt": "2026-09-24T16:21:18.547Z",
+   "eventEndedAt": "2026-08-31",
+   "eventStartedAt": "2026-08-31",
+   "temporalProvenance": "EVENT_DATED_BY_SOURCE"
+  },
+  "severity": {
+   "kind": "UNAVAILABLE",
+   "reason": "NO_ACCEPTED_DERIVATION_RULE"
+  },
+  "sourceReference": {
+   "citation": "\"The New Times,2026-09-01,FDLR kills four civilians, injures 10 in Rutshuru\";\"Actualite.cd,2026-09-02,Rutshuru: Four farmers killed and many injured in Ndwali attack\";\"Kivu Morning Post,2026-09-01,AFC/M23 accuses FDLR of killing four civilians near Vitsumbi\";\"@LawrenceKanyuka on X  ,2026-09-01,UPDATE ON THE WAR IMPOSED BY THE KINSHASA REGIME   SEPTEMBER 1, 2026  \"",
+   "reportingOffice": "The New Times;Actualite.cd;Kivu Morning Post;@LawrenceKanyuka on X"
+  },
+  "acquisition": {
+   "runId": "ALPHA-DESIGN-NATIVE-DATA-CONVERGENCE-R1",
+   "snapshotRetrievalId": "ucdp-candidate:26.0.8:2ad6e0b2bfdbaa31873716a3455096923a8539519d69d96aeeea2d0f44a34593",
+   "snapshotAdmissibility": "ADMITTED"
+  },
+  "revision": {
+   "recordedAt": "2026-09-24T16:21:18.547Z",
+   "revisionOrdinal": 0,
+   "upstreamVersion": "26.0.8",
+   "supersedesRevisionOrdinal": null
+  }
+ },
+ {
+  "observationKey": "cfl:1:8:UCDP_GED:6:639645",
+  "identity": {
+   "authority": "UCDP_GED",
+   "upstreamEventId": "639645"
+  },
+  "eventType": "EVENT_TYPE_NOT_CLASSIFIED",
+  "owner": "CONFLICT",
+  "actors": [
+   {
+    "kind": "ACTOR_UNIDENTIFIED"
+   }
+  ],
+  "geography": {
+   "crs": "EPSG:4326",
+   "origin": "SOURCE_NATIVE",
+   "precision": "DISTRICT",
+   "denotation": "EVENT_LOCATION",
+   "coordinates": {
+    "type": "Point",
+    "coordinates": [
+     34.76878,
+     8.78133
+    ]
+   },
+   "countryIso3": "ETH",
+   "geometryKind": "POINT",
+   "countryIso3Basis": "SOURCE_COUNTRY_NAME_NORMALIZED",
+   "sourceCountryName": "Ethiopia",
+   "locationProvenance": "STATED"
+  },
+  "temporal": {
+   "ingestedAt": "2026-09-24T16:21:18.547Z",
+   "eventEndedAt": "2026-08-31",
+   "eventStartedAt": "2026-08-29",
+   "temporalProvenance": "EVENT_DATE_RANGE_BY_SOURCE"
+  },
+  "severity": {
+   "kind": "UNAVAILABLE",
+   "reason": "NO_ACCEPTED_DERIVATION_RULE"
+  },
+  "sourceReference": {
+   "citation": "\"My views on news,2026-08-31,Ethiopian Military Airlifts a Fano Commander | Dangerous News from Oromia\"",
+   "reportingOffice": "My views on news"
+  },
+  "acquisition": {
+   "runId": "ALPHA-DESIGN-NATIVE-DATA-CONVERGENCE-R1",
+   "snapshotRetrievalId": "ucdp-candidate:26.0.8:2ad6e0b2bfdbaa31873716a3455096923a8539519d69d96aeeea2d0f44a34593",
+   "snapshotAdmissibility": "ADMITTED"
+  },
+  "revision": {
+   "recordedAt": "2026-09-24T16:21:18.547Z",
+   "revisionOrdinal": 0,
+   "upstreamVersion": "26.0.8",
+   "supersedesRevisionOrdinal": null
+  }
+ },
+ {
+  "observationKey": "cfl:1:8:UCDP_GED:6:639359",
+  "identity": {
+   "authority": "UCDP_GED",
+   "upstreamEventId": "639359"
+  },
+  "eventType": "EVENT_TYPE_NOT_CLASSIFIED",
+  "owner": "CONFLICT",
+  "actors": [
+   {
+    "kind": "ACTOR_UNIDENTIFIED"
+   }
+  ],
+  "geography": {
+   "crs": "EPSG:4326",
+   "origin": "SOURCE_NATIVE",
+   "precision": "EXACT",
+   "denotation": "EVENT_LOCATION",
+   "coordinates": {
+    "type": "Point",
+    "coordinates": [
+     48.672436,
+     15.905545
+    ]
+   },
+   "countryIso3": "YEM",
+   "geometryKind": "POINT",
+   "countryIso3Basis": "SOURCE_COUNTRY_NAME_NORMALIZED",
+   "sourceCountryName": "Yemen (North Yemen)",
+   "locationProvenance": "STATED"
+  },
+  "temporal": {
+   "ingestedAt": "2026-09-24T16:21:18.547Z",
+   "eventEndedAt": "2026-08-31",
+   "eventStartedAt": "2026-08-31",
+   "temporalProvenance": "EVENT_DATED_BY_SOURCE"
+  },
+  "severity": {
+   "kind": "UNAVAILABLE",
+   "reason": "NO_ACCEPTED_DERIVATION_RULE"
+  },
+  "sourceReference": {
+   "citation": "\"Xinhua News Agency,2026-09-01,Yemen says IS spokesman killed in joint anti-terror operation\";\"al sahil,2026-09-02,A joint security operation eliminates ISIS spokesman in Seiyun\"",
+   "reportingOffice": "Xinhua News Agency;al sahil"
+  },
+  "acquisition": {
+   "runId": "ALPHA-DESIGN-NATIVE-DATA-CONVERGENCE-R1",
+   "snapshotRetrievalId": "ucdp-candidate:26.0.8:2ad6e0b2bfdbaa31873716a3455096923a8539519d69d96aeeea2d0f44a34593",
+   "snapshotAdmissibility": "ADMITTED"
+  },
+  "revision": {
+   "recordedAt": "2026-09-24T16:21:18.547Z",
+   "revisionOrdinal": 0,
+   "upstreamVersion": "26.0.8",
+   "supersedesRevisionOrdinal": null
+  }
+ },
+ {
+  "observationKey": "cfl:1:8:UCDP_GED:6:638814",
+  "identity": {
+   "authority": "UCDP_GED",
+   "upstreamEventId": "638814"
+  },
+  "eventType": "EVENT_TYPE_NOT_CLASSIFIED",
+  "owner": "CONFLICT",
+  "actors": [
+   {
+    "kind": "ACTOR_UNIDENTIFIED"
+   }
+  ],
+  "geography": {
+   "crs": "EPSG:4326",
+   "origin": "SOURCE_NATIVE",
+   "precision": "DISTRICT",
+   "denotation": "EVENT_LOCATION",
+   "coordinates": {
+    "type": "Point",
+    "coordinates": [
+     36.12293,
+     34.80419
+    ]
+   },
+   "countryIso3": "SYR",
+   "geometryKind": "POINT",
+   "countryIso3Basis": "SOURCE_COUNTRY_NAME_NORMALIZED",
+   "sourceCountryName": "Syria",
+   "locationProvenance": "STATED"
+  },
+  "temporal": {
+   "ingestedAt": "2026-09-24T16:21:18.547Z",
+   "eventEndedAt": "2026-08-30",
+   "eventStartedAt": "2026-08-30",
+   "temporalProvenance": "EVENT_DATED_BY_SOURCE"
+  },
+  "severity": {
+   "kind": "UNAVAILABLE",
+   "reason": "NO_ACCEPTED_DERIVATION_RULE"
+  },
+  "sourceReference": {
+   "citation": "\"SOHR,2026-08-30,After monitoring his movements | Former commander of former regime exec*uted in Tartus countryside\"",
+   "reportingOffice": "SOHR"
+  },
+  "acquisition": {
+   "runId": "ALPHA-DESIGN-NATIVE-DATA-CONVERGENCE-R1",
+   "snapshotRetrievalId": "ucdp-candidate:26.0.8:2ad6e0b2bfdbaa31873716a3455096923a8539519d69d96aeeea2d0f44a34593",
+   "snapshotAdmissibility": "ADMITTED"
+  },
+  "revision": {
+   "recordedAt": "2026-09-24T16:21:18.547Z",
+   "revisionOrdinal": 0,
+   "upstreamVersion": "26.0.8",
+   "supersedesRevisionOrdinal": null
+  }
+ },
+ {
+  "observationKey": "cfl:1:8:UCDP_GED:6:642271",
+  "identity": {
+   "authority": "UCDP_GED",
+   "upstreamEventId": "642271"
+  },
+  "eventType": "EVENT_TYPE_NOT_CLASSIFIED",
+  "owner": "CONFLICT",
+  "actors": [
+   {
+    "kind": "ACTOR_UNIDENTIFIED"
+   }
+  ],
+  "geography": {
+   "crs": "EPSG:4326",
+   "origin": "SOURCE_NATIVE",
+   "precision": "EXACT",
+   "denotation": "EVENT_LOCATION",
+   "coordinates": {
+    "type": "Point",
+    "coordinates": [
+     5.377564,
+     43.294211
+    ]
+   },
+   "countryIso3": "FRA",
+   "geometryKind": "POINT",
+   "countryIso3Basis": "SOURCE_COUNTRY_NAME_NORMALIZED",
+   "sourceCountryName": "France",
+   "locationProvenance": "STATED"
+  },
+  "temporal": {
+   "ingestedAt": "2026-09-24T16:21:18.547Z",
+   "eventEndedAt": "2026-08-30",
+   "eventStartedAt": "2026-08-30",
+   "temporalProvenance": "EVENT_DATED_BY_SOURCE"
+  },
+  "severity": {
+   "kind": "UNAVAILABLE",
+   "reason": "NO_ACCEPTED_DERIVATION_RULE"
+  },
+  "sourceReference": {
+   "citation": "\"ACTU.fr,2026-08-30,Horrific scene in Marseille: shooting leaves one dead and four injured in a shisha bar\"",
+   "reportingOffice": "ACTU.fr"
+  },
+  "acquisition": {
+   "runId": "ALPHA-DESIGN-NATIVE-DATA-CONVERGENCE-R1",
+   "snapshotRetrievalId": "ucdp-candidate:26.0.8:2ad6e0b2bfdbaa31873716a3455096923a8539519d69d96aeeea2d0f44a34593",
+   "snapshotAdmissibility": "ADMITTED"
+  },
+  "revision": {
+   "recordedAt": "2026-09-24T16:21:18.547Z",
+   "revisionOrdinal": 0,
+   "upstreamVersion": "26.0.8",
+   "supersedesRevisionOrdinal": null
+  }
+ }
+]

@@ -36,6 +36,7 @@ import styles from './askNav.module.css';
 import { askProductName, askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 import { askDirectionProps } from '@/lib/ask/askDirection';
 import { AskConversations } from '@/components/ask-frame/AskConversations';
+import { AskExploreLinks } from '@/components/ask-frame/AskExploreLinks';
 import { AskEmblemMark } from '@/components/ask-frame/AskEmblem';
 import { AskSettingsGlyph } from '@/components/ask-frame/AskSettingsGlyph';
 import { AskSettingsSheet } from '@/components/account/AskSettingsSheet';
@@ -798,6 +799,11 @@ export function AskNavShell({
               onNavigate={() => setOpen(false)}
               showTitle={false}
             />
+          </div>
+
+          {/* R135 ASK EXPLORE R1 — every built page, reachable from Ask (platform deployments only). */}
+          <div className={styles.drawerGroup} data-ask-nav="explore-group">
+            <AskExploreLinks locale={selected ?? displayLocaleOf(language)} onNavigate={() => setOpen(false)} />
           </div>
 
           {/*

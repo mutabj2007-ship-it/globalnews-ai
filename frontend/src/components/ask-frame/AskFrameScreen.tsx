@@ -45,6 +45,8 @@ import { AskDeepConfirm } from './AskDeepConfirm';
 import { AskJobSetupSheet } from './AskJobSetupSheet';
 import { StoryPicker } from '@/components/ask/StoryPicker';
 import { AskWelcomeEntries } from './AskWelcomeEntries';
+import { AskRegionSheet } from './AskRegionSheet';
+import type { AskRegionId } from '@/lib/ask/askExploreRegions';
 import { askDayPart, askGreetingStrings } from '@/lib/ask/askGreetingStrings';
 import { AskPrimaryNav } from '@/components/ask-nav/AskPrimaryNav';
 import { askR3FullStrings } from '@/lib/ask/askR3FullStrings';
@@ -136,6 +138,8 @@ export function AskFrameScreen({
   const persistentRail = wide && shellMenu === undefined;
   /* R3 FULL DESIGN · J01 — the optional job setup sheet (opening it runs nothing). */
   const [jobSheetOpen, setJobSheetOpen] = useState(false);
+  /* R135 ASK EXPLORE R1 — the region sheet, open on one region, or closed. */
+  const [regionSheet, setRegionSheet] = useState<AskRegionId | null>(null);
 
   const reader = useRef<HTMLDivElement>(null);
   const layout = useRef<HTMLDivElement>(null);
@@ -343,7 +347,7 @@ export function AskFrameScreen({
     locale: interfaceLocale,
     enabled: entryState,
     compact,
-    suspended: nav?.open === true || jobSheetOpen || r2.signInRequired !== null || r2.deepQuote !== null,
+    suspended: nav?.open === true || jobSheetOpen || regionSheet !== null || r2.signInRequired !== null || r2.deepQuote !== null,
   });
   /*
     R3.1 PRODUCT OWNER ACCEPTANCE · FIX 1 — SUPERSEDED: the welcome's Resume / Continue rows and
@@ -943,6 +947,7 @@ export function AskFrameScreen({
                     compact={frameSize.compact}
                     onOpenJobs={() => setJobSheetOpen(true)}
                     onOpenStoryPicker={() => setStoryPickerOpen(true)}
+                    onOpenRegion={setRegionSheet}
                     placement="welcome"
                   />
                 </div>
@@ -1356,6 +1361,7 @@ export function AskFrameScreen({
               compact={frameSize.compact}
               onOpenJobs={() => setJobSheetOpen(true)}
               onOpenStoryPicker={() => setStoryPickerOpen(true)}
+              onOpenRegion={setRegionSheet}
               placement="desktop"
             />
           )}
@@ -1405,10 +1411,30 @@ export function AskFrameScreen({
           }}
         />
       )}
+      {regionSheet !== null && (
+        <AskRegionSheet
+          locale={interfaceLocale}
+          initialRegion={regionSheet}
+          onClose={() => {
+            setRegionSheet(null);
+            requestAnimationFrame(() => document.querySelector<HTMLButtonElement>('[data-ask="cue-g1"]')?.focus());
+          }}
+          onAskRegion={(draft) => {
+            /* R135 — STAGED, like every guided cue: unsent; a reader's own unsent words are kept. */
+            setRegionSheet(null);
+            stageGuidedDraft(draft, '');
+          }}
+        />
+      )}
       {storyPickerOpen && (
         <StoryPicker
           locale={interfaceLocale}
           initialDescribed={storyPickerReturn}
+          onOpenRegions={() => {
+            setStoryPickerOpen(false);
+            setStoryPickerReturn('');
+            setRegionSheet('east-africa');
+          }}
           /* MASTER CTO R98 — one explicit tap asks the reader's words, through the one submission step */
           onAsk={(asked) => {
             setStoryPickerOpen(false);
