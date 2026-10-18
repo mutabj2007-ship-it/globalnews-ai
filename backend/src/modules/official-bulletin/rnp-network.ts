@@ -1,6 +1,9 @@
 import { buildSafeFetchPolicy } from '../official-data/official-data.boot';
 import type { SafeFetchPolicy } from '../official-data/official-artifact-safe-fetch';
-import type { AddressBoundConnector, AddressResolver } from '../official-data/official-artifact-safe-fetch';
+import type {
+  AddressBoundConnector,
+  AddressResolver,
+} from '../official-data/official-artifact-safe-fetch';
 import { makeSafeWireFetch } from '../official-data/safe-wire-fetch.node';
 import type { WireFetch } from '../official-data/official-data-transport.node';
 import { RNP_HOST } from './rnp-listing.parser';
@@ -21,6 +24,9 @@ import { RNP_PROVIDER_ID } from './rnp-listing.reader';
 */
 export const RNP_ALLOWED_HOSTS: readonly string[] = Object.freeze([RNP_HOST]);
 export const RNP_WIRE_BYTE_CAP = 1024 * 1024;
+/** The identified User-Agent (E1 ADDENDUM-02 §3): every police.gov.rw request names the service and where to reach it. */
+export const RNP_USER_AGENT =
+  'GlobalNewsAI-OfficialBulletin/1.0 (+https://github.com/mutabj2007-ship-it/globalnews-ai)';
 
 export const rnpHostResolver = (providerId: string): string | undefined =>
   providerId === RNP_PROVIDER_ID ? RNP_HOST : undefined;

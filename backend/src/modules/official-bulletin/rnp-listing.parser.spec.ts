@@ -7,8 +7,11 @@ import { rnpHeadlineCountry } from './rnp-headline-country';
 */
 const SENTINEL = 'ZZ-SENTINEL-RNP-TITLE';
 const item = (slug: string, date: string | null, title: string, href?: string): string => {
-  const link = href ?? `media/news-detail/news/${slug}/?tx_news_pi1%5Bcontroller%5D=News&amp;tx_news_pi1%5Baction%5D=detail&amp;cHash=0123456789abcdef0123456789abcdef`;
-  const time = date === null ? '' : `<time itemprop="datePublished" datetime="${date}">${date}</time>`;
+  const link =
+    href ??
+    `media/news-detail/news/${slug}/?tx_news_pi1%5Bcontroller%5D=News&amp;tx_news_pi1%5Baction%5D=detail&amp;cHash=0123456789abcdef0123456789abcdef`;
+  const time =
+    date === null ? '' : `<time itemprop="datePublished" datetime="${date}">${date}</time>`;
   return `<div id="latest-news-1" class="single-news "><div class="news-head overlay"><a href="${link}"><img class="img-responsive" src="x.jpg" alt="x" /></a>
     <ul class="news-meta"><li class="author"><a href="#">Admin</a></li><li class="date">${time}</li></ul></div>
     <div class="news-body"><div class="news-content"><h3 class="news-title"><a href="${link}">${title} ${SENTINEL}</a></h3>
@@ -19,12 +22,33 @@ const page = (...items: string[]): string =>
 
 describe('RNP listing parser — permitted fields only', () => {
   const html = page(
-    item('officers-complete-course', '2026-10-16', 'Rwanda National Police officers complete a commanders course'),
-    item('officers-complete-course', '2026-10-16', 'Rwanda National Police officers complete a commanders course'),
-    item('medical-care-abroad', '2026-10-15', 'RNP provides medical care to 940 people in South Sudan'),
-    item('environment-day', '2026-10-17', 'Rwanda National Police joins community environmental work'),
+    item(
+      'officers-complete-course',
+      '2026-10-16',
+      'Rwanda National Police officers complete a commanders course',
+    ),
+    item(
+      'officers-complete-course',
+      '2026-10-16',
+      'Rwanda National Police officers complete a commanders course',
+    ),
+    item(
+      'medical-care-abroad',
+      '2026-10-15',
+      'RNP provides medical care to 940 people in South Sudan',
+    ),
+    item(
+      'environment-day',
+      '2026-10-17',
+      'Rwanda National Police joins community environmental work',
+    ),
     item('no-date', null, 'Undated item in Kenya'),
-    item('foreign', '2026-10-14', 'Foreign link in Uganda', 'https://example.org/media/news-detail/news/foreign/'),
+    item(
+      'foreign',
+      '2026-10-14',
+      'Foreign link in Uganda',
+      'https://example.org/media/news-detail/news/foreign/',
+    ),
   );
   const out = parseRnpListing(html);
 
@@ -34,7 +58,9 @@ describe('RNP listing parser — permitted fields only', () => {
       ['officers-complete-course', '2026-10-16'],
       ['medical-care-abroad', '2026-10-15'],
     ]);
-    expect(out.items[0].url).toMatch(/^https:\/\/police\.gov\.rw\/media\/news-detail\/news\/environment-day\/\?/);
+    expect(out.items[0].url).toMatch(
+      /^https:\/\/police\.gov\.rw\/media\/news-detail\/news\/environment-day\/\?/,
+    );
     expect(out.dropped).toBe(2);
     expect(out.listingMarkup).toBe(true);
   });
@@ -47,13 +73,21 @@ describe('RNP listing parser — permitted fields only', () => {
 
   it('NEG-1: publisher is not location — the South Sudan item is SSD, the others are NOT stated (never RWA)', () => {
     const geo = Object.fromEntries(out.items.map((i) => [i.slug, i.geography]));
-    expect(geo['medical-care-abroad']).toEqual({ outcome: 'MATCHED', iso3: 'SSD', rule: 'RNP-GEO-R1' });
+    expect(geo['medical-care-abroad']).toEqual({
+      outcome: 'MATCHED',
+      iso3: 'SSD',
+      rule: 'RNP-GEO-R1',
+    });
     expect(geo['environment-day'].outcome).toBe('NOT_STATED');
     expect(geo['officers-complete-course'].iso3).toBeNull();
   });
 
   it(`keeps at most ${RNP_MAX_ITEMS} items`, () => {
-    const many = page(...Array.from({ length: 14 }, (_, n) => item(`s-${n}`, `2026-10-${String(n + 1).padStart(2, '0')}`, 'x')));
+    const many = page(
+      ...Array.from({ length: 14 }, (_, n) =>
+        item(`s-${n}`, `2026-10-${String(n + 1).padStart(2, '0')}`, 'x'),
+      ),
+    );
     expect(parseRnpListing(many).items).toHaveLength(RNP_MAX_ITEMS);
     expect(parseRnpListing(many).items[0].publishedOn).toBe('2026-10-14');
   });

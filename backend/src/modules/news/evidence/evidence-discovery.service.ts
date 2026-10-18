@@ -2,6 +2,10 @@ import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FEED_SOURCES, resolveActiveFeedSources } from '../providers/feed-source-registry';
 import type { EvidenceCandidate } from './evidence-candidate';
+import {
+  OfficialBulletinCollector,
+  type OfficialBulletinItem,
+} from '../../official-bulletin/official-bulletin.collector';
 import { providerAdmission } from '../rights/provider-admission';
 import {
   SocialLaneError,
@@ -10,6 +14,23 @@ import {
 } from '../social/social-search.providers';
 
 export const SOCIAL_SEARCH_PROVIDERS = Symbol('SOCIAL_SEARCH_PROVIDERS');
+
+/** CTO R155 states, plus the two NOT_SEARCHED_* states for a lane that is off or has not yet had its first read. */
+export interface OfficialBulletinResult {
+  readonly sourceName: string | null;
+  readonly state:
+    | 'SEARCHED_MATCH'
+    | 'SEARCHED_NO_MATCH'
+    | 'RIGHTS_NOT_ADMITTED'
+    | 'UPSTREAM_FAILED'
+    | 'NOT_SEARCHED_LANE_OFF'
+    | 'NOT_SEARCHED_NOT_DUE';
+  readonly reason: string | null;
+  readonly checkedAt: string | null;
+  readonly items: readonly OfficialBulletinItem[];
+  /** Listing items the source does not place in any country: reported, never counted as coverage. */
+  readonly unknownCountryCount: number;
+}
 
 export interface DiscoveryLaneStatus {
   readonly lane: string;
@@ -44,6 +65,8 @@ export class EvidenceDiscoveryService {
     private readonly social: readonly SocialSearchProvider[] = [],
     @Optional()
     private readonly config?: ConfigService,
+    @Optional()
+    private readonly officialBulletin?: OfficialBulletinCollector,
   ) {}
 
   /**
@@ -57,6 +80,48 @@ export class EvidenceDiscoveryService {
       this.config?.get<string>('RSS_FEED_SOURCES'),
     ).sources;
     return active.some((feed) => iso2s.includes(feed.countryCode));
+  }
+
+  /**
+   * CTO R158 — official-bulletin METADATA for these countries (ISO3), from the collector's last snapshot. Makes no
+   * request. Only items the source places IN one of these countries are returned: an item with an unknown country is
+   * never counted as coverage, and is reported only as a count. Link, date, source name and checked-at time only.
+   */
+  officialBulletins(iso3s: readonly string[]): OfficialBulletinResult {
+    const snapshot = this.officialBulletin?.current();
+    if (snapshot === undefined) {
+      return {
+        sourceName: null,
+        state: 'NOT_SEARCHED_LANE_OFF',
+        reason: 'LANE_NOT_REGISTERED',
+        checkedAt: null,
+        items: [],
+        unknownCountryCount: 0,
+      };
+    }
+    const base = {
+      sourceName: snapshot.sourceName,
+      reason: snapshot.reason,
+      checkedAt: snapshot.checkedAt,
+    };
+    if (snapshot.state !== 'SEARCHED') {
+      const state =
+        snapshot.state === 'RIGHTS_NOT_ADMITTED' || snapshot.state === 'UPSTREAM_FAILED'
+          ? snapshot.state
+          : snapshot.state === 'OFF' || snapshot.state === 'MISCONFIGURED'
+            ? 'NOT_SEARCHED_LANE_OFF'
+            : 'NOT_SEARCHED_NOT_DUE';
+      return { ...base, state, items: [], unknownCountryCount: 0 };
+    }
+    const items = snapshot.items.filter(
+      (item) => item.eventCountry !== null && iso3s.includes(item.eventCountry),
+    );
+    return {
+      ...base,
+      state: items.length > 0 ? 'SEARCHED_MATCH' : 'SEARCHED_NO_MATCH',
+      items,
+      unknownCountryCount: snapshot.items.filter((item) => item.eventCountry === null).length,
+    };
   }
 
   /** Every registered non-news lane and whether it can run. */

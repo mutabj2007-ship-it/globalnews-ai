@@ -21,7 +21,11 @@ export const RNP_GEO_RULE = 'RNP-GEO-R1';
 
 export type RnpGeography =
   | { readonly outcome: 'MATCHED'; readonly iso3: string; readonly rule: typeof RNP_GEO_RULE }
-  | { readonly outcome: 'AMBIGUOUS' | 'NOT_STATED'; readonly iso3: null; readonly rule: typeof RNP_GEO_RULE };
+  | {
+      readonly outcome: 'AMBIGUOUS' | 'NOT_STATED';
+      readonly iso3: null;
+      readonly rule: typeof RNP_GEO_RULE;
+    };
 
 /** C-2 — the publisher's own name in every form it uses, removed before any country is looked for. */
 const PUBLISHER_NAMES: readonly string[] = ['rwanda national police', 'rnp'];

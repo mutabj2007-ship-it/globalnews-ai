@@ -63,11 +63,24 @@ export class RnpListingReader {
     this.firstReadDueAt = now() + RNP_POLL_INTERVAL_MS;
   }
 
+  /** False during the no-read-on-boot quarantine, so a collector never claims a window it cannot use. */
+  due(): boolean {
+    return this.now() >= this.firstReadDueAt;
+  }
+
   read(): Promise<RnpRead> {
     const t = this.now();
-    if (t < this.firstReadDueAt) return Promise.resolve(this.failed('NOT_YET_DUE', 'FIRST_READ_NOT_DUE'));
-    if (this.circuit !== null) return Promise.resolve(this.failed(this.circuit.startsWith('ROBOTS') ? 'RIGHTS_NOT_ADMITTED' : 'UPSTREAM_FAILED', this.circuit));
-    if (this.cached !== null && t - this.cached.at < RNP_POLL_INTERVAL_MS) return Promise.resolve(this.cached.read);
+    if (t < this.firstReadDueAt)
+      return Promise.resolve(this.failed('NOT_YET_DUE', 'FIRST_READ_NOT_DUE'));
+    if (this.circuit !== null)
+      return Promise.resolve(
+        this.failed(
+          this.circuit.startsWith('ROBOTS') ? 'RIGHTS_NOT_ADMITTED' : 'UPSTREAM_FAILED',
+          this.circuit,
+        ),
+      );
+    if (this.cached !== null && t - this.cached.at < RNP_POLL_INTERVAL_MS)
+      return Promise.resolve(this.cached.read);
     if (this.inFlight === null) {
       this.inFlight = this.readOnce(t).finally(() => {
         this.inFlight = null;
@@ -77,7 +90,11 @@ export class RnpListingReader {
   }
 
   private async readOnce(t: number): Promise<RnpRead> {
-    if (this.robotsDueNow || this.robotsCheckedAt === null || t - this.robotsCheckedAt >= RNP_ROBOTS_RECHECK_MS) {
+    if (
+      this.robotsDueNow ||
+      this.robotsCheckedAt === null ||
+      t - this.robotsCheckedAt >= RNP_ROBOTS_RECHECK_MS
+    ) {
       const robots = await this.robots();
       if (robots !== null) return this.remember(t, this.open(robots, 'RIGHTS_NOT_ADMITTED'));
       this.robotsCheckedAt = t;
@@ -88,7 +105,13 @@ export class RnpListingReader {
     let validators: boolean;
     try {
       const response = await this.wireFetch(
-        { providerId: RNP_PROVIDER_ID, endpointId: 'listing', url: RNP_LISTING_URL, accept: 'text/html', query: {} },
+        {
+          providerId: RNP_PROVIDER_ID,
+          endpointId: 'listing',
+          url: RNP_LISTING_URL,
+          accept: 'text/html',
+          query: {},
+        },
         AbortSignal.timeout(RNP_DEADLINE_MS),
       );
       status = response.status;
@@ -96,14 +119,22 @@ export class RnpListingReader {
       validators = Object.keys(response.headers).some((h) => /^(etag|last-modified)$/i.test(h));
     } catch (error) {
       const kind = error instanceof OfficialDataTransportFailure ? error.kind : 'CONNECT_FAILURE';
-      if (/REDIRECT/.test(kind) || kind === 'ADDRESS_REFUSED') return this.remember(t, this.open(`LISTING_${kind}`, 'UPSTREAM_FAILED'));
+      if (/REDIRECT/.test(kind) || kind === 'ADDRESS_REFUSED')
+        return this.remember(t, this.open(`LISTING_${kind}`, 'UPSTREAM_FAILED'));
       return this.remember(t, this.failed('UPSTREAM_FAILED', `LISTING_${kind}`));
     }
-    if (status === 200 && validators) return this.remember(t, this.open('LISTING_VALIDATORS_NOT_HONOURED', 'UPSTREAM_FAILED'));
+    if (status === 200 && validators)
+      return this.remember(t, this.open('LISTING_VALIDATORS_NOT_HONOURED', 'UPSTREAM_FAILED'));
     if (status === 200) {
       const parsed = parseRnpListing(body);
-      if (!parsed.listingMarkup) return this.remember(t, this.failed('UPSTREAM_FAILED', 'LISTING_UNPARSEABLE'));
-      return this.remember(t, { state: 'SEARCHED', reason: null, items: parsed.items, retrievedAt: new Date(t).toISOString() });
+      if (!parsed.listingMarkup)
+        return this.remember(t, this.failed('UPSTREAM_FAILED', 'LISTING_UNPARSEABLE'));
+      return this.remember(t, {
+        state: 'SEARCHED',
+        reason: null,
+        items: parsed.items,
+        retrievedAt: new Date(t).toISOString(),
+      });
     }
     if (status >= 400 && status < 500) {
       /* ADDENDUM-04 §3.2: robots is re-read immediately after any 4xx — on the next process start, the circuit
@@ -118,7 +149,13 @@ export class RnpListingReader {
   private async robots(): Promise<string | null> {
     try {
       const response = await this.wireFetch(
-        { providerId: RNP_PROVIDER_ID, endpointId: 'robots', url: RNP_ROBOTS_URL, accept: 'text/plain', query: {} },
+        {
+          providerId: RNP_PROVIDER_ID,
+          endpointId: 'robots',
+          url: RNP_ROBOTS_URL,
+          accept: 'text/plain',
+          query: {},
+        },
         AbortSignal.timeout(RNP_DEADLINE_MS),
       );
       if (response.status === 404) return null;

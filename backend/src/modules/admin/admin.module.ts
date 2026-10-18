@@ -12,6 +12,9 @@ import { AdminGuard } from './admin.guard';
 import { AdminPlatformEnabledGuard } from './admin-platform.guard';
 import { AdminService } from './admin.service';
 import { AdminGlobalReachController } from './admin-global-reach.controller';
+import { RnpEgressDiagnosticController } from './diagnostics/rnp-egress-diagnostic.controller';
+import { RnpEgressDiagnosticService } from './diagnostics/rnp-egress-diagnostic.service';
+import { OfficialBulletinModule } from '../official-bulletin/official-bulletin.module';
 import { GlobalReachModule } from '../global-reach/global-reach.module';
 import { EconomyModule } from '../economy/economy.module';
 import { ElectionReadModule } from '../election/election-read.module';
@@ -62,6 +65,8 @@ import { AdminOperationsService } from './operations/admin-operations.service';
 @Module({
   imports: [
     ConfigModule,
+    /* CTO R158 — read-only view of the official-bulletin collector snapshot (no network). */
+    OfficialBulletinModule,
     AuthModule,
     NewsModule,
     GlobalReachModule,
@@ -85,6 +90,8 @@ import { AdminOperationsService } from './operations/admin-operations.service';
       no-mutation property and the boundary assertion can name ONE exception.
     */
     AdminOperationsController,
+    /* CTO R157 decision D — opt-in, admin-only, fixed-target egress measurement (GET; off unless RNP_EGRESS_DIAGNOSTIC_ENABLED). */
+    RnpEgressDiagnosticController,
   ],
   providers: [
     AdminService,
@@ -94,6 +101,7 @@ import { AdminOperationsService } from './operations/admin-operations.service';
     AlphaReviewService,
     AdminAskIntelligenceService,
     AdminOperationsService,
+    RnpEgressDiagnosticService,
     AdminGuard,
     AdminPlatformEnabledGuard,
   ],

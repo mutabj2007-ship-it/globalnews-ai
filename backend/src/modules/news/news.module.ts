@@ -1,3 +1,4 @@
+import { OfficialBulletinModule } from '../official-bulletin/official-bulletin.module';
 import {
   EvidenceDiscoveryService,
   SOCIAL_SEARCH_PROVIDERS,
@@ -176,7 +177,8 @@ function buildProviderSelectionInput(
  */
 
 @Module({
-  imports: [ConfigModule],
+  /* CTO R158 — the official-bulletin metadata connector (off unless enabled; never a request-path read). */
+  imports: [ConfigModule, OfficialBulletinModule],
   /* HOME R1 STAGE A — the zero-AI Compare read model (404 unless COMPARE_READ_ENABLED). */
   controllers: [NewsController, CountryNewsController, StoryCompareController],
   providers: [

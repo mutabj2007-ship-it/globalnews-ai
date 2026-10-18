@@ -1,7 +1,13 @@
 import { OfficialDataTransportFailure } from '@globalnews-ai/shared';
 import type { OfficialDataTransportRequest } from '@globalnews-ai/shared';
 import type { WireResponse } from '../official-data/official-data-transport.node';
-import { RNP_LISTING_URL, RNP_POLL_INTERVAL_MS, RNP_ROBOTS_RECHECK_MS, RNP_ROBOTS_URL, RnpListingReader } from './rnp-listing.reader';
+import {
+  RNP_LISTING_URL,
+  RNP_POLL_INTERVAL_MS,
+  RNP_ROBOTS_RECHECK_MS,
+  RNP_ROBOTS_URL,
+  RnpListingReader,
+} from './rnp-listing.reader';
 
 /* E1 ADDENDUM-02 §3 / ADDENDUM-04 — the read discipline, against a fake wire (no network). */
 const LISTING = `<html><head><base href="https://police.gov.rw/"></head><body><div class="news-default">
@@ -38,9 +44,13 @@ describe('RNP listing reader', () => {
     const h = harness({ [RNP_ROBOTS_URL]: [robotsEmpty], [RNP_LISTING_URL]: [listing] });
     const read = await h.reader.read();
     expect(h.calls.map((c) => c.url)).toEqual([RNP_ROBOTS_URL, RNP_LISTING_URL]);
-    expect(h.calls.every((c) => c.providerId === 'rnp' && Object.keys(c.query).length === 0)).toBe(true);
+    expect(h.calls.every((c) => c.providerId === 'rnp' && Object.keys(c.query).length === 0)).toBe(
+      true,
+    );
     expect(read.state).toBe('SEARCHED');
-    expect(read.items.map((i) => [i.slug, i.publishedOn, i.geography.iso3])).toEqual([['a-slug', '2026-10-17', 'SSD']]);
+    expect(read.items.map((i) => [i.slug, i.publishedOn, i.geography.iso3])).toEqual([
+      ['a-slug', '2026-10-17', 'SSD'],
+    ]);
     expect(JSON.stringify(read)).not.toMatch(/ZZ-SENTINEL|cookiesession/);
   });
 
@@ -57,34 +67,63 @@ describe('RNP listing reader', () => {
   });
 
   it('a failure is cached too — no retry inside the 30 minutes', async () => {
-    const h = harness({ [RNP_ROBOTS_URL]: [robotsEmpty], [RNP_LISTING_URL]: [() => response(503)] });
+    const h = harness({
+      [RNP_ROBOTS_URL]: [robotsEmpty],
+      [RNP_LISTING_URL]: [() => response(503)],
+    });
     expect((await h.reader.read()).reason).toBe('LISTING_HTTP_503');
     expect((await h.reader.read()).state).toBe('UPSTREAM_FAILED');
     expect(h.calls.filter((c) => c.url === RNP_LISTING_URL)).toHaveLength(1);
   });
 
-  it.each([429, 404, 410, 403])('HTTP %i opens the circuit: no further request for the life of the process', async (status) => {
-    const h = harness({ [RNP_ROBOTS_URL]: [robotsEmpty], [RNP_LISTING_URL]: [() => response(status)] });
-    expect(await h.reader.read()).toMatchObject({ state: 'UPSTREAM_FAILED', reason: `LISTING_HTTP_${status}` });
-    h.advance(RNP_POLL_INTERVAL_MS * 10);
-    expect(await h.reader.read()).toMatchObject({ state: 'UPSTREAM_FAILED', reason: `LISTING_HTTP_${status}` });
-    expect(h.calls).toHaveLength(2);
-  });
+  it.each([429, 404, 410, 403])(
+    'HTTP %i opens the circuit: no further request for the life of the process',
+    async (status) => {
+      const h = harness({
+        [RNP_ROBOTS_URL]: [robotsEmpty],
+        [RNP_LISTING_URL]: [() => response(status)],
+      });
+      expect(await h.reader.read()).toMatchObject({
+        state: 'UPSTREAM_FAILED',
+        reason: `LISTING_HTTP_${status}`,
+      });
+      h.advance(RNP_POLL_INTERVAL_MS * 10);
+      expect(await h.reader.read()).toMatchObject({
+        state: 'UPSTREAM_FAILED',
+        reason: `LISTING_HTTP_${status}`,
+      });
+      expect(h.calls).toHaveLength(2);
+    },
+  );
 
   it('robots.txt with directives, or unreadable, stops the lane before any listing read (RIGHTS_NOT_ADMITTED)', async () => {
-    const changed = harness({ [RNP_ROBOTS_URL]: [() => response(200, 'User-agent: *\nDisallow: /')] });
+    const changed = harness({
+      [RNP_ROBOTS_URL]: [() => response(200, 'User-agent: *\nDisallow: /')],
+    });
     expect((await changed.reader.read()).state).toBe('RIGHTS_NOT_ADMITTED');
     const unreadable = harness({ [RNP_ROBOTS_URL]: [() => response(403)] });
-    expect(await unreadable.reader.read()).toMatchObject({ state: 'RIGHTS_NOT_ADMITTED', reason: 'ROBOTS_HTTP_403' });
-    for (const h of [changed, unreadable]) expect(h.calls.map((c) => c.url)).toEqual([RNP_ROBOTS_URL]);
+    expect(await unreadable.reader.read()).toMatchObject({
+      state: 'RIGHTS_NOT_ADMITTED',
+      reason: 'ROBOTS_HTTP_403',
+    });
+    for (const h of [changed, unreadable])
+      expect(h.calls.map((c) => c.url)).toEqual([RNP_ROBOTS_URL]);
   });
 
   it('robots.txt is re-read every 30 days', async () => {
-    const h = harness({ [RNP_ROBOTS_URL]: [robotsEmpty, robotsEmpty], [RNP_LISTING_URL]: [listing, listing] });
+    const h = harness({
+      [RNP_ROBOTS_URL]: [robotsEmpty, robotsEmpty],
+      [RNP_LISTING_URL]: [listing, listing],
+    });
     await h.reader.read();
     h.advance(RNP_ROBOTS_RECHECK_MS);
     await h.reader.read();
-    expect(h.calls.map((c) => c.url)).toEqual([RNP_ROBOTS_URL, RNP_LISTING_URL, RNP_ROBOTS_URL, RNP_LISTING_URL]);
+    expect(h.calls.map((c) => c.url)).toEqual([
+      RNP_ROBOTS_URL,
+      RNP_LISTING_URL,
+      RNP_ROBOTS_URL,
+      RNP_LISTING_URL,
+    ]);
   });
 
   it('a transport refusal is UPSTREAM_FAILED; an off-host redirect opens the circuit', async () => {
@@ -92,8 +131,14 @@ describe('RNP listing reader', () => {
       throw new OfficialDataTransportFailure(kind, 'rnp', 'x');
     };
     const slow = harness({ [RNP_ROBOTS_URL]: [robotsEmpty], [RNP_LISTING_URL]: [fail('TIMEOUT')] });
-    expect(await slow.reader.read()).toMatchObject({ state: 'UPSTREAM_FAILED', reason: 'LISTING_TIMEOUT' });
-    const offHost = harness({ [RNP_ROBOTS_URL]: [robotsEmpty], [RNP_LISTING_URL]: [fail('REDIRECT_REFUSED')] });
+    expect(await slow.reader.read()).toMatchObject({
+      state: 'UPSTREAM_FAILED',
+      reason: 'LISTING_TIMEOUT',
+    });
+    const offHost = harness({
+      [RNP_ROBOTS_URL]: [robotsEmpty],
+      [RNP_LISTING_URL]: [fail('REDIRECT_REFUSED')],
+    });
     await offHost.reader.read();
     offHost.advance(RNP_POLL_INTERVAL_MS * 2);
     expect(await offHost.reader.read()).toMatchObject({ reason: 'LISTING_REDIRECT_REFUSED' });
@@ -103,11 +148,18 @@ describe('RNP listing reader', () => {
   it('no read on boot: before one full interval after start nothing is requested (a restart costs zero reads)', async () => {
     const calls: string[] = [];
     let t = Date.parse('2026-10-18T08:00:00Z');
-    const reader = new RnpListingReader(async (request) => {
-      calls.push(request.url);
-      return request.url === RNP_ROBOTS_URL ? robotsEmpty() : listing();
-    }, () => t);
-    expect(await reader.read()).toMatchObject({ state: 'NOT_YET_DUE', reason: 'FIRST_READ_NOT_DUE', items: [] });
+    const reader = new RnpListingReader(
+      async (request) => {
+        calls.push(request.url);
+        return request.url === RNP_ROBOTS_URL ? robotsEmpty() : listing();
+      },
+      () => t,
+    );
+    expect(await reader.read()).toMatchObject({
+      state: 'NOT_YET_DUE',
+      reason: 'FIRST_READ_NOT_DUE',
+      items: [],
+    });
     t += RNP_POLL_INTERVAL_MS - 1;
     expect((await reader.read()).state).toBe('NOT_YET_DUE');
     expect(calls).toEqual([]);
@@ -119,14 +171,25 @@ describe('RNP listing reader', () => {
   it('validators are not assumed absent: an ETag or Last-Modified on the listing stops the lane until honoured', async () => {
     const withEtag = (): WireResponse => ({ ...listing(), headers: { etag: '"abc"' } });
     const h = harness({ [RNP_ROBOTS_URL]: [robotsEmpty], [RNP_LISTING_URL]: [withEtag] });
-    expect(await h.reader.read()).toMatchObject({ state: 'UPSTREAM_FAILED', reason: 'LISTING_VALIDATORS_NOT_HONOURED', items: [] });
+    expect(await h.reader.read()).toMatchObject({
+      state: 'UPSTREAM_FAILED',
+      reason: 'LISTING_VALIDATORS_NOT_HONOURED',
+      items: [],
+    });
     h.advance(RNP_POLL_INTERVAL_MS * 2);
     await h.reader.read();
     expect(h.calls).toHaveLength(2);
   });
 
   it('a page without the listing markup is UPSTREAM_FAILED, never an empty "no news" result', async () => {
-    const h = harness({ [RNP_ROBOTS_URL]: [robotsEmpty], [RNP_LISTING_URL]: [() => response(200, '<html>maintenance</html>')] });
-    expect(await h.reader.read()).toMatchObject({ state: 'UPSTREAM_FAILED', reason: 'LISTING_UNPARSEABLE', items: [] });
+    const h = harness({
+      [RNP_ROBOTS_URL]: [robotsEmpty],
+      [RNP_LISTING_URL]: [() => response(200, '<html>maintenance</html>')],
+    });
+    expect(await h.reader.read()).toMatchObject({
+      state: 'UPSTREAM_FAILED',
+      reason: 'LISTING_UNPARSEABLE',
+      items: [],
+    });
   });
 });
