@@ -11,6 +11,11 @@ import { COUNTRIES } from '@globalnews-ai/shared';
   C-4  country names and official short forms only, as whole tokens: "Rwandan" is an actor, not a place.
   C-5  two or more countries → AMBIGUOUS; none → NOT_STATED; never the publisher's country.
   Bare "Congo" is deliberately NOT a key (the Congo-Kinshasa → COG P0): only the explicit DR / Republic forms.
+
+  CTO R157 decision C — a country counts ONLY with a positive event-location relation: it must follow "in" or
+  "in the" ("… in South Sudan"). A country that merely appears — inside an organisation's name ("a Uganda Police
+  Force delegation"), as an actor, or as a partner — never places the event. Other organisation names are NOT
+  stripped (that could corrupt context); they simply fail the relation test.
 */
 export const RNP_GEO_RULE = 'RNP-GEO-R1';
 
@@ -53,7 +58,8 @@ export function rnpHeadlineCountry(title: string): RnpGeography {
     const needle = ` ${key} `;
     let at = text.indexOf(needle);
     while (at !== -1) {
-      found.add(iso3);
+      /* The span is consumed whether or not it is located, so "South Sudan" can never also yield SDN. */
+      if (/ in (the )?$/.test(text.slice(0, at + 1))) found.add(iso3);
       text = text.slice(0, at) + ' '.repeat(needle.length) + text.slice(at + needle.length);
       at = text.indexOf(needle);
     }

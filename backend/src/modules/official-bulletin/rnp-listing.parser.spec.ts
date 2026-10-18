@@ -72,14 +72,19 @@ describe('ADDENDUM-05 headline → country (C-2..C-5)', () => {
     ['RNP officers trained in Sudan', 'MATCHED', 'SDN'],
     ['Rwanda National Police (RNP) holds a meeting', 'NOT_STATED', null],
     ['Rwandan officers recognised', 'NOT_STATED', null],
-    ['Police meet counterparts from Kenya and Uganda', 'AMBIGUOUS', null],
-    ['Cooperation with DR Congo police', 'MATCHED', 'COD'],
-    ['Delegation from the Democratic Republic of the Congo', 'MATCHED', 'COD'],
+    ['Police meet counterparts in Kenya and in Uganda', 'AMBIGUOUS', null],
+    ['Workshop held in DR Congo', 'MATCHED', 'COD'],
+    ['Delegation meets in the Democratic Republic of the Congo', 'MATCHED', 'COD'],
     ['Talks on the Congo river', 'NOT_STATED', null],
-    ['Team visits Guinea-Bissau', 'MATCHED', 'GNB'],
+    ['Team arrives in Guinea-Bissau', 'MATCHED', 'GNB'],
     ['Nigerian delegation visits', 'NOT_STATED', null],
     ['Peacekeepers rotate in the Central African Republic', 'MATCHED', 'CAF'],
     ['Community policing week in Rwanda', 'MATCHED', 'RWA'],
+    /* CTO R157 decision C — a country without a locative relation never places the event */
+    ['RNP hosts a Uganda Police Force delegation', 'NOT_STATED', null],
+    ['Cooperation with DR Congo police', 'NOT_STATED', null],
+    ['Kenya and Rwanda sign a policing agreement', 'NOT_STATED', null],
+    ['Officers from South Sudan train in Rwanda', 'MATCHED', 'RWA'],
   ])('%s → %s %s', (title, outcome, iso3) => {
     expect(geo(title)).toEqual({ outcome, iso3, rule: 'RNP-GEO-R1' });
   });
