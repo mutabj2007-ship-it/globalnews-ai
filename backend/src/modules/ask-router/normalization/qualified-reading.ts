@@ -300,9 +300,17 @@ export function maskMonthTimes(text: string): string {
    I meant Tanzania." read KEN, the rejected country. A name after "not", followed by a correction
    ("I meant", "but", "rather", "instead"), is blanked (same length) before resolving. */
 const NEGATED_PLACE =
-  /(?<=\b[Nn]ot\s+(?:the\s+)?)[A-Z][\p{L}'’.-]*(?:[ -][A-Z][\p{L}'’.-]*){0,3}(?=\s*[,.;:!?]?\s*(?:[Ii]\s+(?:meant|mean)|[Bb]ut\b|[Rr]ather\b|[Ii]nstead\b))/gu;
+  /(?<=\b[Nn]ot\s+(?:the\s+)?)[A-Z][\p{L}'’-]*(?:[ -][A-Z][\p{L}'’-]*){0,3}(?=\s*[,.;:!?]?\s*(?:[Ii]\s+(?:meant|mean)|[Bb]ut\b|[Rr]ather\b|[Ii]nstead\b))/gu;
+/* EA R164 NR-1 — contrast and exclusion forms name a place the reader does NOT ask about: "Kenya, not
+   Tanzania", "Uganda rather than Kenya", "instead of / except (for) / other than / excluding Kenya", and a
+   turn that opens by rejecting one ("Not Rwanda. Burundi instead."). "not only Kenya but also Uganda"
+   keeps both ("only" is not a name). */
+const EXCLUDED_PLACE =
+  /(?<=(?:,\s*not|\brather\s+than|\binstead\s+of|\bexcept(?:\s+for)?|\bother\s+than|\bexcluding)\s+(?:the\s+)?)[A-Z][\p{L}'’-]*(?:[ -][A-Z][\p{L}'’-]*){0,3}|(?<=(?:^|[.!?]\s+)(?:[Nn]o[,.]?\s+)?[Nn]ot\s+(?:the\s+)?)[A-Z][\p{L}'’-]*(?:[ -][A-Z][\p{L}'’-]*){0,3}(?=\s*[.;!?])/gu;
 export function maskNegatedPlaces(text: string): string {
-  return text.replace(NEGATED_PLACE, (m) => ' '.repeat(m.length));
+  return text
+    .replace(NEGATED_PLACE, (m) => ' '.repeat(m.length))
+    .replace(EXCLUDED_PLACE, (m) => ' '.repeat(m.length));
 }
 
 /** Blanks every case-insensitive whole-word occurrence of `phrase` (same length). */
@@ -634,7 +642,15 @@ export function normalizeAskQuestion(req: NormalizationRequest): NormalizationOu
        "How is the war in Gaza affecting Kenya?" kept Gaza and lost Kenya. The text is read once more
        with the first place blanked; a further country NAMED there (never a demonym) is a second
        member of the question, as in C-2. */
-    if (!demonym && geo.precision !== 'COUNTRY' && geo.matchedText !== undefined) {
+    /* EA R164 — in an impact question the other side may be a demonym ("How does the Kenyan election
+       affect Uganda?"), so the second read also runs after a country. */
+    const impactQuestion =
+      /\b(?:affect(?:s|ed|ing)?|impact(?:s|ed|ing)?|effects?|consequences?)\b/i.test(text);
+    if (
+      !demonym &&
+      geo.matchedText !== undefined &&
+      (geo.precision !== 'COUNTRY' || impactQuestion)
+    ) {
       const rest = resolveGeography(
         maskPhrase(geoText, geo.matchedText),
       );
@@ -645,9 +661,7 @@ export function normalizeAskQuestion(req: NormalizationRequest): NormalizationOu
       const restNamed =
         rest.precision === 'COUNTRY' &&
         rest.matchedText !== undefined &&
-        (restDemonym
-          ? /\b(?:affect(?:s|ed|ing)?|impact(?:s|ed|ing)?|effects?|consequences?)\b/i.test(text)
-          : rest.reason === 'COUNTRY_ONLY');
+        (restDemonym ? impactQuestion : rest.reason === 'COUNTRY_ONLY');
       if (restNamed)
         for (const p of rest.place ? [rest.place] : rest.candidates)
           readPlace(p.country.iso3, rest.matchedText, 'resolveGeography:MULTI_ENTITY (R-5)');

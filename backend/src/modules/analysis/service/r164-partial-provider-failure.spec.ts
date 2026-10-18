@@ -149,3 +149,99 @@ describe('CTO R164 P-2 · the country branch carries its provider failures', () 
     expect(result.retrievalContext.evidenceState).toBe('no-relevant-evidence');
   });
 });
+
+/*
+  Politics R164 V-1 — the live frontend (ea8074e) still runs the OLDER shared rule, copied verbatim
+  from a3e5b1e below. The backend record alone must make that rule read "limited".
+*/
+function legacyEvidenceState(
+  context: Pick<AnalysisRetrievalContext, 'dataMode' | 'fallbackReason' | 'outcome'>,
+  articleCount: number,
+): string {
+  const failed =
+    context.outcome === 'PROVIDER_UNAVAILABLE' ||
+    context.outcome === 'PROVIDER_RATE_LIMITED' ||
+    context.fallbackReason === 'provider-error';
+  if (articleCount === 0) {
+    if (context.outcome === 'NO_RELEVANT_EVIDENCE') return 'no-relevant-evidence';
+    if (failed) return 'degraded-fallback';
+    if (context.dataMode === 'unavailable' && context.fallbackReason !== 'no-live-results') {
+      return 'degraded-fallback';
+    }
+    return 'no-relevant-evidence';
+  }
+  if (failed) return 'degraded-fallback';
+  if (context.outcome === 'RETAINED_ONLY') return 'retained';
+  if (context.dataMode === 'live') return 'live';
+  return 'retained';
+}
+
+describe('Politics R164 V-1 · the backend record alone reads "limited" on the older frontend rule', () => {
+  const config = {
+    get: () => ({
+      maxArticles: 8,
+      maxArticleChars: 1200,
+      timeoutMs: 20000,
+      totalBudgetMs: ANALYSIS_TOTAL_BUDGET_MS,
+      cacheTtlSeconds: 300,
+      openAiApiKey: undefined,
+      rightsAudience: 'TEST_FIXTURE' as const,
+      openAiModel: 'gpt-4o-mini',
+      executionMode: 'development' as const,
+      retryAttempts: 2,
+      retryBaseDelayMs: 300,
+      maxCompletionTokens: 2000,
+    }),
+  } as unknown as AnalysisConfigService;
+  const empty: NewsResponse = {
+    articles: [],
+    totalResults: 0,
+    providers: ['gnews'],
+    dataMode: 'live',
+    generatedAt: new Date().toISOString(),
+  };
+  const run = (failures: ProviderFailure[]) =>
+    new AnalysisService(
+      {
+        search: jest.fn().mockResolvedValue(empty),
+        topHeadlines: jest.fn().mockResolvedValue(empty),
+        findArticleById: jest.fn().mockResolvedValue(null),
+      } as never,
+      {
+        getCountryNews: jest.fn().mockResolvedValue(
+          attachProviderFailures<CountryNewsResponse>(
+            {
+              countryCode: 'LBN',
+              countryName: 'Lebanon',
+              articles: [],
+              totalResults: 0,
+              providers: ['gnews'],
+              dataMode: 'live',
+              feedTier: 'delayed',
+              providerDisplayName: 'GNews',
+              generatedAt: new Date().toISOString(),
+            },
+            failures,
+          ),
+        ),
+      } as never,
+      new MockAnalysisProvider(),
+      config,
+    ).analyzeNews('What is happening in Lebanon?');
+
+  it('country 0 + GDELT 429 → fallbackReason provider-error, no NO_RELEVANT_EVIDENCE, legacy rule limited', async () => {
+    const result = await run([
+      { providerId: 'gdelt-doc', kind: 'rate-limited' } as ProviderFailure,
+    ]);
+    expect(result.retrievalContext.fallbackReason).toBe('provider-error');
+    expect(result.retrievalContext.outcome).not.toBe('NO_RELEVANT_EVIDENCE');
+    expect(legacyEvidenceState(result.retrievalContext, 0)).toBe('degraded-fallback');
+  });
+
+  it('control: a rights refusal alone is not stamped as a provider error', async () => {
+    const result = await run([
+      { providerId: 'gnews', kind: 'rights-not-cleared' } as unknown as ProviderFailure,
+    ]);
+    expect(result.retrievalContext.fallbackReason).not.toBe('provider-error');
+  });
+});

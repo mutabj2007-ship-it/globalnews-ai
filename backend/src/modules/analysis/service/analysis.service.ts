@@ -261,6 +261,7 @@ import { classifyQueryIntent } from '../query/query-intent.util';
 import {
   assertsImpact,
   readFollowUpGeography,
+  withoutImpactClaims,
   withoutRejectedPlaces,
 } from '../query/follow-up-impact.util';
 import { detectSourceAttributedIntent } from '../query/derive-source-attributed-query.util';
@@ -1260,7 +1261,11 @@ export class AnalysisService {
           !followUpGeography.correction &&
           followUpGeography.origin.length > 0 &&
           followUpGeography.added.length > 0
-            ? { origin: followUpGeography.origin, destination: followUpGeography.added }
+            ? {
+                origin: followUpGeography.origin,
+                originTerms: followUpGeography.originTerms,
+                destination: followUpGeography.added,
+              }
             : undefined;
         const classification = classifyQueryIntent(retrievalQuery);
 
@@ -4297,6 +4302,27 @@ export class AnalysisService {
         ) {
           retrievalContext = { ...retrievalContext, fallbackReason: 'provider-error' };
         }
+        /*
+          CTO R164 P-2 (Politics V-1) — nothing admitted while a provider FAILED is a limited search,
+          stamped here in the record itself: a reader on an older shared rule reads 'provider-error'
+          and never "0 matching reports", and NO_RELEVANT_EVIDENCE (a statement about the corpus)
+          is never left standing over an outage. A rights refusal or an unconfigured lane is not one.
+        */
+        {
+          const outage = [...retrievalFailures, ...(retrievalContext.providerFailures ?? [])].some(
+            (f) => f.kind !== 'rights-not-cleared' && f.kind !== 'not-configured',
+          );
+          if (articles.length === 0 && outage) {
+            const { outcome: stamped, ...rest } = retrievalContext;
+            retrievalContext = {
+              ...(stamped === 'NO_RELEVANT_EVIDENCE' ? rest : retrievalContext),
+              ...(retrievalContext.fallbackReason === undefined ||
+              retrievalContext.fallbackReason === 'no-live-results'
+                ? { fallbackReason: 'provider-error' as const }
+                : {}),
+            };
+          }
+        }
 
         const sourceCoverage = this.sourceCoverageFor(
           retrievalContext.countryCode,
@@ -4426,13 +4452,30 @@ export class AnalysisService {
             ...(originEvidenced ? [] : origin),
             ...destination.filter((iso3) => !covered(iso3)),
           ];
+          /* Politics R164 V-2 — reporting on each side is not a report linking them: a LINKING report
+             is about the named place AND names the earlier event's place. */
+          const linkingReports = deduped.filter((article) => {
+            const text = `${article.title} ${article.summary ?? ''}`.toLowerCase();
+            return (
+              crossRegionImpact.originTerms.some((term) => text.includes(term)) &&
+              crossRegionImpact.destination.some(
+                (side) => scoreCountryRelevance(article, side, requestedLanguage).isRelevant,
+              )
+            );
+          }).length;
           retrievalContext = {
             ...retrievalContext,
             impactEvidenceGap: {
-              state: missing.length > 0 ? 'BILATERAL_EVIDENCE_GAP' : 'BOTH_SIDES_EVIDENCED',
+              state:
+                missing.length > 0
+                  ? 'BILATERAL_EVIDENCE_GAP'
+                  : linkingReports === 0
+                    ? 'NO_LINKING_REPORT'
+                    : 'LINKING_REPORT_FOUND',
               origin,
               destination,
               missing,
+              linkingReports,
             },
           };
         }
@@ -4829,17 +4872,29 @@ export class AnalysisService {
             one is withheld, fail closed, and the reader is told coverage is incomplete. Deterministic;
             the prompt's linkage instruction is not the guard.
           */
-          if ((retrievalContext.impactEvidenceGap?.missing.length ?? 0) > 0) {
-            retrievalContext = { ...retrievalContext, verificationNotice: 'COVERAGE_INCOMPLETE' };
-            if (assertsImpact(analysis.summary) || assertsImpact(analysis.headline)) {
-              if (assertsImpact(analysis.headline)) analysisResult = { ...analysisResult, headline: '' };
-              briefVerdict = {
-                ...briefVerdict,
-                compliant: false,
-                reason:
-                  'BILATERAL_EVIDENCE_GAP: the brief asserts an effect between places, and at least ' +
-                  'one of them has no admitted evidence.',
+          {
+            const impact = retrievalContext.impactEvidenceGap;
+            /* Politics R164 V-2/V-3 — without a linking report no effect is shown anywhere: brief,
+               headline and every answer list. A gap is also disclosed as incomplete coverage. */
+            if (impact !== undefined && impact.state !== 'LINKING_REPORT_FOUND') {
+              retrievalContext = {
+                ...retrievalContext,
+                verificationNotice:
+                  impact.state === 'BILATERAL_EVIDENCE_GAP' ? 'COVERAGE_INCOMPLETE' : 'NOT_VERIFIED',
               };
+              const lists = withoutImpactClaims(analysisResult);
+              analysisResult = lists.analysis;
+              if (assertsImpact(analysis.summary) || assertsImpact(analysis.headline)) {
+                if (assertsImpact(analysis.headline))
+                  analysisResult = { ...analysisResult, headline: '' };
+                briefVerdict = {
+                  ...briefVerdict,
+                  compliant: false,
+                  reason:
+                    `${impact.state}: the brief asserts an effect between places, and no admitted ` +
+                    'report links them.',
+                };
+              }
             }
           }
           const repairRequested = false;

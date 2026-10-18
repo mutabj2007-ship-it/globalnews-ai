@@ -899,14 +899,17 @@ export interface AnalysisRetrievalContext {
   /**
    * CTO R164 P-1 — a follow-up asking how an earlier event affects another place ("How does that
    * affect Kenya?" after Gaza). Both sides are searched; `missing` lists every side with no
-   * admitted evidence. A non-empty `missing` is BILATERAL_EVIDENCE_GAP: no cause-and-effect claim
-   * is shown. Absent for every other question.
+   * admitted evidence (BILATERAL_EVIDENCE_GAP). Reporting on each side is not a report LINKING them:
+   * `linkingReports` counts admitted reports about the named place that also name the earlier
+   * event's place. Unless LINKING_REPORT_FOUND, no cause-and-effect claim is shown anywhere in the
+   * answer. Absent for every other question.
    */
   impactEvidenceGap?: {
-    readonly state: 'BILATERAL_EVIDENCE_GAP' | 'BOTH_SIDES_EVIDENCED';
+    readonly state: 'BILATERAL_EVIDENCE_GAP' | 'NO_LINKING_REPORT' | 'LINKING_REPORT_FOUND';
     readonly origin: readonly string[];
     readonly destination: readonly string[];
     readonly missing: readonly string[];
+    readonly linkingReports: number;
   };
 
   /**

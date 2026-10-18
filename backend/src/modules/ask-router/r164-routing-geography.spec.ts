@@ -102,3 +102,34 @@ describe('R-3 / R-5 / R-6 · every named country reaches the envelope', () => {
     expect(r.relationship?.countries).toEqual(['RWA', 'COD']);
   });
 });
+
+describe('EA R164 NR-1 · an excluded or contrasted place is not searched', () => {
+  it.each([
+    ['What happened in Kenya, not Tanzania, this week?', ['KEN'], 'TZA'],
+    ['Tell me about Uganda rather than Kenya', ['UGA'], 'KEN'],
+    ['What is happening in East Africa other than Rwanda?', [], 'RWA'],
+    ['Any news from Kenya, excluding Somalia?', ['KEN'], 'SOM'],
+  ])('%s', (q, want, never) => {
+    const t = typed(route(q));
+    expect(t).toEqual(expect.arrayContaining(want));
+    expect(t).not.toContain(never);
+  });
+
+  it('a turn that opens by rejecting a place: "Not Rwanda. Burundi instead." → BDI', () => {
+    const t = typed(route('Not Rwanda. Burundi instead.', "What's happening in Rwanda this week?"));
+    expect(t).toContain('BDI');
+    expect(t).not.toContain('RWA');
+  });
+
+  it('"not only … but also …" keeps both places', () => {
+    expect(typed(route('What is happening not only in Kenya but also in Uganda?'))).toEqual(
+      expect.arrayContaining(['KEN', 'UGA']),
+    );
+  });
+
+  it('an impact question carries a demonym origin: "the Kenyan election affect Uganda"', () => {
+    expect(typed(route('How does the Kenyan election affect Uganda?'))).toEqual(
+      expect.arrayContaining(['UGA', 'KEN']),
+    );
+  });
+});
