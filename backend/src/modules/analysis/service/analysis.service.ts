@@ -258,6 +258,11 @@ import { describeFreeText } from '../../../observability/free-text-log';
 import { deriveRelationalSearchQueries } from '../query/derive-relational-search-queries.util';
 import { blocksGeographicRouting } from '../query/routing-function-words.util';
 import { classifyQueryIntent } from '../query/query-intent.util';
+import {
+  assertsImpact,
+  readFollowUpGeography,
+  withoutRejectedPlaces,
+} from '../query/follow-up-impact.util';
 import { detectSourceAttributedIntent } from '../query/derive-source-attributed-query.util';
 import {
   resolveRequestedSource,
@@ -1177,8 +1182,20 @@ export class AnalysisService {
         */
         const priorNormalized =
           priorQuestion !== undefined ? normalizeQuery(priorQuestion).normalizedQuery : undefined;
+        /* CTO R164 P-1 — which countries the follow-up adds, and which it rejects (follow-up-impact.util). */
+        const followUpGeography =
+          priorNormalized !== undefined && !storyContext?.articleId
+            ? readFollowUpGeography(normalizedQuery, priorNormalized)
+            : undefined;
+        /* a correction that rejects a place is read on its own words, never routed by the earlier
+           question (that would search the place the reader just ruled out) */
+        const rejectsPlace =
+          followUpGeography !== undefined &&
+          followUpGeography.correction &&
+          followUpGeography.rejected.length > 0;
         const anaphoricPriorQuestion =
           priorNormalized !== undefined &&
+          !rejectsPlace &&
           !storyContext?.articleId &&
           isAnaphoricFollowUp(normalizedQuery) &&
           isEventTopic(deriveEventTopic(priorNormalized))
@@ -1198,6 +1215,7 @@ export class AnalysisService {
         const continuedSubject =
           anaphoricPriorQuestion === undefined &&
           priorNormalized !== undefined &&
+          !rejectsPlace &&
           !storyContext?.articleId &&
           isSubjectFollowUp(normalizedQuery)
             ? deriveConversationSubject(priorNormalized)
@@ -1217,13 +1235,33 @@ export class AnalysisService {
         */
         const { query: retrievalQuery, spellings: entitySpellings } = withCanonicalEntityNames(
           withoutReaderRequestFrame(
-            retrievalSubjectOf(anaphoricPriorQuestion ?? subjectPriorQuestion ?? normalizedQuery),
+            retrievalSubjectOf(
+              anaphoricPriorQuestion ??
+                subjectPriorQuestion ??
+                (rejectsPlace ? withoutRejectedPlaces(normalizedQuery) : normalizedQuery),
+            ),
           ),
         );
         /* A bare "Congo" is COD or COG — never silently one of them. */
         const ambiguousCountry = detectAmbiguousCountryMention(retrievalQuery);
         let countryInterpretation: EventAnchorDisclosure | undefined;
 
+        /*
+          CTO R164 P-1 — "What happened in Gaza?" → "How does that affect Kenya?": the earlier event
+          is carried AND the place the follow-up names is searched too, each side's evidence counted,
+          so a missing side is a recorded gap, never Gaza-only evidence presented as an
+          answer about Kenya. The earlier event keeps its own retrieval (routing above, unchanged);
+          the named place is added by the existing per-side member retrieval after the branch below.
+          The cause-and-effect guard reads the same gap.
+        */
+        const crossRegionImpact =
+          (anaphoricPriorQuestion !== undefined || subjectPriorQuestion !== undefined) &&
+          followUpGeography !== undefined &&
+          !followUpGeography.correction &&
+          followUpGeography.origin.length > 0 &&
+          followUpGeography.added.length > 0
+            ? { origin: followUpGeography.origin, destination: followUpGeography.added }
+            : undefined;
         const classification = classifyQueryIntent(retrievalQuery);
 
         /*
@@ -4196,6 +4234,51 @@ export class AnalysisService {
           };
         }
 
+        /* CTO R164 P-1 — the place a cross-region follow-up names, searched alongside the earlier event. */
+        let impactOriginIds: Set<string> | undefined;
+        if (crossRegionImpact !== undefined) {
+          impactOriginIds = new Set(articles.map((article) => article.id));
+          const destination = await this.retrievePerSideEvidence(
+            crossRegionImpact.destination,
+            requestedLanguage,
+          );
+          const seen = new Set(articles.map((article) => article.url));
+          const added = destination.articles.filter((article) => !seen.has(article.url));
+          /* interleaved, so neither side is cut by the article cap */
+          const merged: NewsArticle[] = [];
+          for (let i = 0; i < Math.max(articles.length, added.length); i += 1) {
+            if (articles[i] !== undefined) merged.push(articles[i]!);
+            if (added[i] !== undefined) merged.push(added[i]!);
+          }
+          articles = merged;
+          retrievalFailures.push(
+            ...(destination.retrievalContext.providerFailures ?? []).map(
+              (failure) => failure as ProviderFailure,
+            ),
+          );
+          retrievalContext = {
+            ...retrievalContext,
+            providers: [
+              ...new Set([
+                ...(retrievalContext.providers ?? []),
+                ...(destination.retrievalContext.providers ?? []),
+              ]),
+            ],
+            ...((destination.retrievalContext.providerFailures ?? []).length === 0
+              ? {}
+              : {
+                  providerFailures: [
+                    ...(retrievalContext.providerFailures ?? []),
+                    ...(destination.retrievalContext.providerFailures ?? []),
+                  ],
+                }),
+            comparisonCoverage: [
+              ...(retrievalContext.comparisonCoverage ?? []),
+              ...(destination.retrievalContext.comparisonCoverage ?? []),
+            ],
+          };
+        }
+
         /*
           CURRENT-REPORTING TRUTH R1 (B2) — PROVIDER HEALTH, ONE RULE FOR EVERY BRANCH.
           Usable evidence was admitted while a provider the branch attempted failed: the answer uses
@@ -4328,6 +4411,30 @@ export class AnalysisService {
                 : member.retrievalState === 'NOT_ATTEMPTED'
                   ? 'NOT_ATTEMPTED'
                   : 'NO_QUALIFYING_EVIDENCE';
+        }
+        /* CTO R164 P-1 — which side of a cross-region follow-up has no admitted evidence. */
+        if (crossRegionImpact !== undefined) {
+          const covered = (iso3: string) =>
+            (retrievalContext.comparisonCoverage ?? []).some(
+              (member) => member.iso3 === iso3 && (member.finalQualifyingEvidenceCount ?? 0) > 0,
+            );
+          const origin = crossRegionImpact.origin.map((c) => c.iso3);
+          const destination = crossRegionImpact.destination.map((c) => c.iso3);
+          /* the earlier event is evidenced by its own retrieval's admitted articles */
+          const originEvidenced = deduped.some((article) => impactOriginIds?.has(article.id) === true);
+          const missing = [
+            ...(originEvidenced ? [] : origin),
+            ...destination.filter((iso3) => !covered(iso3)),
+          ];
+          retrievalContext = {
+            ...retrievalContext,
+            impactEvidenceGap: {
+              state: missing.length > 0 ? 'BILATERAL_EVIDENCE_GAP' : 'BOTH_SIDES_EVIDENCED',
+              origin,
+              destination,
+              missing,
+            },
+          };
         }
 
         /**
@@ -4478,7 +4585,8 @@ export class AnalysisService {
             /* BETA-ASK-004 R1B — multi-facet evidence is never linked by co-occurrence. */
             ...(activeCompoundPlan !== undefined ||
             eventFrame !== undefined ||
-            broadCoverage !== undefined
+            broadCoverage !== undefined ||
+            crossRegionImpact !== undefined
               ? { evidenceLinkageGuard: true }
               : {}),
             /* PUBLIC BETA HARDENING R1B — a headline selection is never "the world". */
@@ -4712,6 +4820,25 @@ export class AnalysisService {
                 reason:
                   'The brief asserts that something did not happen without counter-evidence; ' +
                   'absence of retrieved evidence is not evidence of absence.',
+              };
+            }
+          }
+          /*
+            CTO R164 P-1 — BILATERAL_EVIDENCE_GAP. When either side of a cross-region follow-up has no
+            admitted evidence, no cause-and-effect claim is shown: the brief (or headline) asserting
+            one is withheld, fail closed, and the reader is told coverage is incomplete. Deterministic;
+            the prompt's linkage instruction is not the guard.
+          */
+          if ((retrievalContext.impactEvidenceGap?.missing.length ?? 0) > 0) {
+            retrievalContext = { ...retrievalContext, verificationNotice: 'COVERAGE_INCOMPLETE' };
+            if (assertsImpact(analysis.summary) || assertsImpact(analysis.headline)) {
+              if (assertsImpact(analysis.headline)) analysisResult = { ...analysisResult, headline: '' };
+              briefVerdict = {
+                ...briefVerdict,
+                compliant: false,
+                reason:
+                  'BILATERAL_EVIDENCE_GAP: the brief asserts an effect between places, and at least ' +
+                  'one of them has no admitted evidence.',
               };
             }
           }
@@ -6287,10 +6414,10 @@ export class AnalysisService {
             ?.publishedAtBasis;
 
     /* ASK R2 — which provider failed and how, from the failure channel (ids + kinds only). */
+    /* CTO R164 P-2 — the country feed carries the same channel (country-news.service attaches it);
+       reading only search responses turned a GDELT 429 + empty GNews into "0 matching reports". */
     const failed = new Map<string, string>();
-    if (!isCountryResponse) {
-      for (const f of readProviderFailures(source)) if (!failed.has(f.providerId)) failed.set(f.providerId, f.kind);
-    }
+    for (const f of readProviderFailures(source)) if (!failed.has(f.providerId)) failed.set(f.providerId, f.kind);
     return {
       dataMode: source.dataMode,
       providers: source.providers,

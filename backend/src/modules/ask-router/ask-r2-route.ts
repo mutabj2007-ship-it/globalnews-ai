@@ -917,10 +917,26 @@ export function routeAskR2(
   /* ASK R2 · GEOGRAPHY — the corridor's further typed places, right after the primary one (frozen
      C's envelope carries one typed place; its planner carries every candidate as a constraint).
      Only when the composed source kept typed geography (a stable / reasoning turn drops it). */
+  /* EA R161 R-3/R-5/R-6 (CTO R164) — the same holds for every country the reader NAMED: a two-country
+     question ("Compare inflation in Kenya and Brazil", "Rwanda and DR Congo: what changed", "the war
+     in Gaza affecting Kenya") kept only the first, so retrieval searched one side. Typed places only:
+     never surface-supplied, contested, demonym or excluded. A bilateral relationship is untouched — its
+     two actors reach retrieval through its own lane (analysis.service relationship scope). */
+  const namedPlaces = [
+    ...(corridor === null ? [] : corridorCountries(corridor)),
+    ...reading.geography
+      .filter(
+        (g) =>
+          g.provenance !== 'SUPPLIED_BY_SURFACE' &&
+          g.value !== 'CONTESTED' &&
+          g.source !== DEMONYM_SOURCE,
+      )
+      .map((g) => g.value),
+  ].filter((iso3) => !(corridor?.excluded ?? []).some((p) => p.iso3 === iso3));
   const corridorExtra =
-    corridor === null || source.typedGeography === undefined
+    source.typedGeography === undefined || d.relationship !== null
       ? []
-      : corridorCountries(corridor).filter(
+      : [...new Set(namedPlaces)].filter(
           (iso3) => !built.geography.candidates.some((c) => c.value === iso3),
         );
   const derived: typeof built =

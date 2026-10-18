@@ -420,6 +420,50 @@ describe('ASK FIRST-ANSWER RETRIEVAL R3 — a refused search is "limited", never
     expect(askR2View(empty(undefined), EN, 'en').searchLimited).toBe(false);
   });
 
+  /* CTO R164 P-2 — a recorded provider failure is a limited search, whatever outcome was stamped */
+  const failed = (outcome?: string) =>
+    payload('INSUFFICIENT', {
+      aiExecuted: false,
+      analysis: {
+        analysis: null,
+        articles: [],
+        retrievalContext: {
+          dataMode: 'live',
+          providerFailures: [{ providerId: 'gdelt-doc', kind: 'rate-limited' }],
+          ...(outcome ? { outcome } : {}),
+        },
+      } as never,
+    });
+
+  it.each([undefined, 'NO_RELEVANT_EVIDENCE'])(
+    'R164 P-2: a provider failure (outcome %s) never reads "0 matching reports"',
+    (outcome) => {
+      const v = askR2View(failed(outcome), EN, 'en');
+      expect(v.searchLimited).toBe(true);
+      expect(v.freshness).not.toMatch(/0 matching reports/);
+      expect(v.freshness).toMatch(/temporarily unavailable/);
+    },
+  );
+
+  it('R164 P-2: a rights refusal alone is not an outage (stays out of "limited")', () => {
+    const v = askR2View(
+      payload('INSUFFICIENT', {
+        aiExecuted: false,
+        analysis: {
+          analysis: null,
+          articles: [],
+          retrievalContext: {
+            dataMode: 'live',
+            providerFailures: [{ providerId: 'gnews', kind: 'rights-not-cleared' }],
+          },
+        } as never,
+      }),
+      EN,
+      'en',
+    );
+    expect(v.searchLimited).toBe(false);
+  });
+
   it('an answer that stands on reachable reporting while a source failed is flagged, still citable', () => {
     const v = askR2View(
       payload('CURRENT_REPORTING', {

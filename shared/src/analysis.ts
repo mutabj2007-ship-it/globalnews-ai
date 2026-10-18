@@ -897,6 +897,19 @@ export interface AnalysisRetrievalContext {
   providerFailures?: Array<{ providerId: string; kind: string }>;
 
   /**
+   * CTO R164 P-1 — a follow-up asking how an earlier event affects another place ("How does that
+   * affect Kenya?" after Gaza). Both sides are searched; `missing` lists every side with no
+   * admitted evidence. A non-empty `missing` is BILATERAL_EVIDENCE_GAP: no cause-and-effect claim
+   * is shown. Absent for every other question.
+   */
+  impactEvidenceGap?: {
+    readonly state: 'BILATERAL_EVIDENCE_GAP' | 'BOTH_SIDES_EVIDENCED';
+    readonly origin: readonly string[];
+    readonly destination: readonly string[];
+    readonly missing: readonly string[];
+  };
+
+  /**
    * ASK TRUTHFUL RETRIEVAL R2A — per-claim verification states for an event question, decided
    * deterministically from the admitted evidence BEFORE prose (never by the model).
    */
@@ -1213,17 +1226,26 @@ export type AnalysisEvidenceState = 'live' | 'retained' | 'degraded-fallback' | 
 
 /** The single derivation. Pure; reads only fields the contract already carries. */
 export function resolveEvidenceState(
-  context: Pick<AnalysisRetrievalContext, 'dataMode' | 'fallbackReason' | 'outcome'>,
+  context: Pick<AnalysisRetrievalContext, 'dataMode' | 'fallbackReason' | 'outcome'> &
+    Partial<Pick<AnalysisRetrievalContext, 'providerFailures'>>,
   articleCount: number,
 ): AnalysisEvidenceState {
+  /* CTO R164 P-2 — a recorded provider failure IS a failure, whatever else was stamped. A
+     rights refusal or an unconfigured lane is not an outage and is read elsewhere. */
+  const providerFailed = (context.providerFailures ?? []).some(
+    (f) => f.kind !== 'rights-not-cleared' && f.kind !== 'not-configured',
+  );
   const failed =
     context.outcome === 'PROVIDER_UNAVAILABLE' ||
     context.outcome === 'PROVIDER_RATE_LIMITED' ||
-    context.fallbackReason === 'provider-error';
+    context.fallbackReason === 'provider-error' ||
+    providerFailed;
 
   if (articleCount === 0) {
-    if (context.outcome === 'NO_RELEVANT_EVIDENCE') return 'no-relevant-evidence';
+    /* a failed search is never "nothing relevant exists" (P-2: NO_RELEVANT_EVIDENCE stamped over
+       provider-error read as a completed, empty search) */
     if (failed) return 'degraded-fallback';
+    if (context.outcome === 'NO_RELEVANT_EVIDENCE') return 'no-relevant-evidence';
     if (context.dataMode === 'unavailable' && context.fallbackReason !== 'no-live-results') {
       return 'degraded-fallback';
     }

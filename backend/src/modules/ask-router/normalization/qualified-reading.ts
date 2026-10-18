@@ -281,6 +281,38 @@ export function tokens(text: string): readonly string[] {
   return text.toLowerCase().match(/[\p{L}\p{N}]+(?:[.,][\p{N}]+)*/gu) ?? [];
 }
 
+/* EA R161 R-1 (CTO R164) — a month written as a time is not a place. The resolver read "August" in
+   "South Sudan in August 2026" as a US city and ranked it above the named country; Gate H then dropped
+   the city and no country was left. Months in a time construction are blanked (same length) before
+   resolving; a month standing alone ("Augusta", "the March on Washington") is untouched. */
+const EN_MONTH = 'january|february|march|april|may|june|july|august|september|october|november|december';
+const EN_MONTH_TIME = new RegExp(
+  `(?<=\\b(?:in|since|during|until|till|by|before|after|from|through|throughout|early|mid|late|last|next|this|of)\\s+)(?:${EN_MONTH})\\b` +
+    `|\\b(?:${EN_MONTH})(?=\\s+\\d{1,4}\\b)` +
+    `|(?<=\\b\\d{1,2}(?:st|nd|rd|th)?\\s+)(?:${EN_MONTH})\\b`,
+  'gi',
+);
+export function maskMonthTimes(text: string): string {
+  return text.replace(EN_MONTH_TIME, (m) => ' '.repeat(m.length));
+}
+
+/* EA R161 R-2 (CTO R164) — a place the reader rejects is not a place they ask about. "No, not Kenya.
+   I meant Tanzania." read KEN, the rejected country. A name after "not", followed by a correction
+   ("I meant", "but", "rather", "instead"), is blanked (same length) before resolving. */
+const NEGATED_PLACE =
+  /(?<=\b[Nn]ot\s+(?:the\s+)?)[A-Z][\p{L}'’.-]*(?:[ -][A-Z][\p{L}'’.-]*){0,3}(?=\s*[,.;:!?]?\s*(?:[Ii]\s+(?:meant|mean)|[Bb]ut\b|[Rr]ather\b|[Ii]nstead\b))/gu;
+export function maskNegatedPlaces(text: string): string {
+  return text.replace(NEGATED_PLACE, (m) => ' '.repeat(m.length));
+}
+
+/** Blanks every case-insensitive whole-word occurrence of `phrase` (same length). */
+function maskPhrase(text: string, phrase: string): string {
+  const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return text.replace(new RegExp(`(?<![\\p{L}])${escaped}(?![\\p{L}])`, 'giu'), (m) =>
+    ' '.repeat(m.length),
+  );
+}
+
 function hasToken(toks: readonly string[], set: readonly string[]): string | undefined {
   for (const t of toks) if (set.includes(t)) return t;
   return undefined;
@@ -571,7 +603,8 @@ export function normalizeAskQuestion(req: NormalizationRequest): NormalizationOu
   }
   /* CANONICAL PARITY (L): called exactly as canonical calls it — no options. */
   /* ASK R2 LIVE-GATE REPAIR (P0-1) — requested columns / headers are not places ("| Date |" → Date, Hokkaido) */
-  const geo = resolveGeography(maskOutputVocabulary(text));
+  const geoText = maskNegatedPlaces(maskMonthTimes(maskOutputVocabulary(text)));
+  const geo = resolveGeography(geoText);
   const readPlace = (iso3: string, matched: string | undefined, source: string): void => {
     if (!geography.some((g) => g.value === iso3 && g.provenance !== 'SUPPLIED_BY_SURFACE')) {
       geography.push(el(iso3, matched, 'CANONICAL_RESOLVER', source));
@@ -597,6 +630,28 @@ export function normalizeAskQuestion(req: NormalizationRequest): NormalizationOu
       geo.matchedText !== undefined && resolveCountriesByDemonym(geo.matchedText).length > 0;
     for (const p of chosen)
       readPlace(p.country.iso3, geo.matchedText, demonym ? DEMONYM_SOURCE : 'resolveGeography');
+    /* EA R161 R-5 (CTO R164 P-1) — a sub-national place outranks a country in the resolver, so
+       "How is the war in Gaza affecting Kenya?" kept Gaza and lost Kenya. The text is read once more
+       with the first place blanked; a further country NAMED there (never a demonym) is a second
+       member of the question, as in C-2. */
+    if (!demonym && geo.precision !== 'COUNTRY' && geo.matchedText !== undefined) {
+      const rest = resolveGeography(
+        maskPhrase(geoText, geo.matchedText),
+      );
+      /* a demonym is the impact side only when the reader asks about impact ("…on Kenyan trade");
+         elsewhere it stays a passing mention ("Kenyan runner wins the Berlin marathon" is DEU) */
+      const restDemonym =
+        rest.matchedText !== undefined && resolveCountriesByDemonym(rest.matchedText).length > 0;
+      const restNamed =
+        rest.precision === 'COUNTRY' &&
+        rest.matchedText !== undefined &&
+        (restDemonym
+          ? /\b(?:affect(?:s|ed|ing)?|impact(?:s|ed|ing)?|effects?|consequences?)\b/i.test(text)
+          : rest.reason === 'COUNTRY_ONLY');
+      if (restNamed)
+        for (const p of rest.place ? [rest.place] : rest.candidates)
+          readPlace(p.country.iso3, rest.matchedText, 'resolveGeography:MULTI_ENTITY (R-5)');
+    }
   } else if (!pl) {
     /* GATE H (G V2-C1) — the canonical resolver treats capitalisation as evidence, so
        "security developments in kenya" named nothing on /ask while the Map dock (the landed

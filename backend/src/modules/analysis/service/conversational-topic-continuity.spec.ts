@@ -251,7 +251,8 @@ describe('2–4 — the other required shapes', () => {
     const h = harness(CORPUS);
     await turn(h, 'Explain the sanctions on Russia');
     const t2 = await turn(h, 'How could this affect Poland?', 'Explain the sanctions on Russia');
-    expect(t2.search).toEqual(['sanctions on Russia']);
+    /* CTO R164 P-1 — the subject continues AND the named place is searched too (was: the subject only) */
+    expect(t2.search).toEqual(['sanctions on Russia', 'Poland']);
     expect(t2.r.articles.map((x) => x.id)).toContain('sa-1');
     expect(t2.input!.query).toBe('How could this affect Poland?');
     expect(t2.r.retrievalContext.conversationSubject?.subject).toBe('sanctions on Russia');
@@ -447,7 +448,8 @@ describe('D.1 — the current turn narrows the inherited subject', () => {
     const subject = t.r.retrievalContext.conversationSubject!;
     expect(subject.retrievalMeaning).toBe('sanctions on Russia Poland impact');
     expect(subject.focus).toEqual(['Poland']);
-    expect(t.search).toEqual(['sanctions on Russia']);
+    /* CTO R164 P-1 — Poland is searched as well; the Poland-linked sanctions report still leads */
+    expect(t.search).toEqual(['sanctions on Russia', 'Poland']);
     expect(t.input!.articles[0].id).toBe('sa-poland');
     expect(promptFor(t.input!).system).toContain("the reader's current focus is: Poland");
   });
