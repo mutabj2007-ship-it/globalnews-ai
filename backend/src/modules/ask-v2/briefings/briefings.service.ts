@@ -26,6 +26,7 @@ import {
   type FollowedBaseline,
   type FollowedCandidate,
 } from './followed-change';
+import { containedStoredIntelligence } from '../../ask-intelligence/cited-outlets';
 
 type Tx = Prisma.TransactionClient;
 
@@ -77,6 +78,13 @@ function baselineOf(row: {
     /* versions saved before Reason to Return carry no revision: they are revision 0 */
     scopeRevision: typeof blocks.scopeRevision === 'number' ? blocks.scopeRevision : 0,
   };
+}
+
+/** The stored blocks with their intelligence block (if any) in the contained Conflict shape. Pure. */
+function containedVersionBlocks(blocks: unknown): unknown {
+  if (!blocks || typeof blocks !== 'object' || Array.isArray(blocks) || !('intelligence' in blocks)) return blocks;
+  const b = blocks as { intelligence?: unknown };
+  return { ...b, intelligence: containedStoredIntelligence(b.intelligence) };
 }
 
 function scopeRevisionOf(scope: unknown): number {
@@ -725,6 +733,8 @@ export class BriefingsService {
       briefingId: briefing.id,
       title: briefing.title,
       ...row,
+      /* CTO R150 / PD-1 — a version saved before the R143 containment is read in the contained Conflict shape */
+      blocks: containedVersionBlocks(row.blocks),
       /* superseded is disclosed, never rewritten */
       supersededBy: latest > version ? latest : null,
       aiExecuted: false,
