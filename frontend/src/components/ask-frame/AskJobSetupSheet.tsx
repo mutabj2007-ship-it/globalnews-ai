@@ -6,7 +6,6 @@ import { askR3FullStrings } from '@/lib/ask/askR3FullStrings';
 import { askDirectionProps } from '@/lib/ask/askDirection';
 import { askR32Strings } from '@/lib/ask/askR32Strings';
 import { askR38Strings } from '@/lib/ask/askR38Strings';
-import { AskTendersBlock } from './AskTendersBlock';
 import styles from './askDashboard.module.css';
 
 /**
@@ -139,8 +138,6 @@ export function AskJobSetupSheet({
           </button>
           <p className={styles.r3Small}>{r38.jobsNothingSent}</p>
           <p className={styles.r3Small}>{s.jobBoundary}</p>
-          {/* R135 ASK EXPLORE R1 — real public tenders we hold, labelled as tenders, never vacancies. */}
-          <AskTendersBlock locale={locale} />
         </form>
       </section>
     </div>

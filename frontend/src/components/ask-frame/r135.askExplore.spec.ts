@@ -20,7 +20,6 @@ import { AskTendersBlock } from './AskTendersBlock';
 import { AskExploreLinks } from './AskExploreLinks';
 import { AskPlatformPagesProvider } from './AskExploreContext';
 import { AskWelcomeEntries } from './AskWelcomeEntries';
-import { StoryPicker } from '@/components/ask/StoryPicker';
 import CONFLICT from './r135.conflictFixture.json';
 import TED from './r135.tedFixture.json';
 
@@ -268,24 +267,6 @@ describe('R135 · jobs sheet tenders, drawer Explore, welcome and story picker e
     expect(off.toJSON()).toBeNull();
     expect(calls).toHaveLength(0);
   });
-  it('welcome: G1 and the three region buttons open the region sheet; nothing is fetched or sent by the entries', () => {
-    const onOpenRegion = jest.fn();
-    const onStageDraft = jest.fn();
-    let r!: ReactTestRenderer;
-    act(() => {
-      r = create(
-        createElement(AskWelcomeEntries, { locale: 'en', onStageDraft, onOpenJobs: jest.fn(), onOpenRegion, placement: 'welcome' }),
-      );
-    });
-    act(() => byAsk(r.root, 'cue-g1')[0]?.props.onClick());
-    expect(onOpenRegion).toHaveBeenLastCalledWith('east-africa');
-    for (const id of ['europe', 'east-africa', 'middle-east']) {
-      act(() => byAsk(r.root, `coverage-region-${id}`)[0]?.props.onClick());
-      expect(onOpenRegion).toHaveBeenLastCalledWith(id);
-    }
-    expect(onStageDraft).not.toHaveBeenCalled();
-    expect(calls).toHaveLength(0);
-  });
   it('welcome without onOpenRegion keeps the approved behaviour (G1 stages; G4 is plain text)', () => {
     const onStageDraft = jest.fn();
     let r!: ReactTestRenderer;
@@ -296,18 +277,35 @@ describe('R135 · jobs sheet tenders, drawer Explore, welcome and story picker e
     expect(onStageDraft).toHaveBeenCalledTimes(1);
     expect(byAsk(r.root, 'coverage-region-europe')).toHaveLength(0);
   });
-  it('Explain a story, held: the picker offers the recorded events by region and opens them; still no story list', () => {
-    const onOpenRegions = jest.fn();
+  /*
+    MASTER CTO R151 (2026-10-18) — the Product Owner REJECTS the R135 Explore placements inside Ask. Two
+    assertions here pinned them and are RETIRED by that ruling, each replaced by the R151 test below:
+    'welcome: G1 and the three region buttons open the region sheet …' and 'Explain a story, held: the
+    picker offers the recorded events by region …'. The components stay (reused by the in-Ask region slice);
+    Ask no longer mounts them.
+  */
+  it('R151: Ask mounts no Explore drawer, region sheet, tenders block or picker region exit', () => {
+    const fs = jest.requireActual<typeof import('fs')>('fs');
+    const path = jest.requireActual<typeof import('path')>('path');
+    const src = (p: string): string => fs.readFileSync(path.join(__dirname, p), 'utf8');
+    expect(src('../ask-nav/AskNavShell.tsx')).not.toMatch(/AskExploreLinks/);
+    expect(src('./AskFrameScreen.tsx')).not.toMatch(/AskRegionSheet|onOpenRegion/);
+    expect(src('./AskJobSetupSheet.tsx')).not.toMatch(/AskTendersBlock/);
+    expect(src('../../app/ask/page.tsx')).not.toMatch(/AskPlatformPagesProvider/);
+    expect(src('../ask/StoryPicker.tsx')).not.toMatch(/onOpenRegions|picker-open-regions/);
+  });
+  it('R151: G4 is the approved non-interactive line, and G1 stages its draft (R100 G1/G4)', () => {
+    const onStageDraft = jest.fn();
     let r!: ReactTestRenderer;
     act(() => {
-      r = create(
-        createElement(StoryPicker, { locale: 'en', onClose: jest.fn(), onStageDraft: jest.fn(), onOpenRegions }),
-      );
+      r = create(createElement(AskWelcomeEntries, { locale: 'en', onStageDraft, onOpenJobs: jest.fn(), placement: 'welcome' }));
     });
-    const open = byAsk(r.root, 'picker-open-regions')[0];
-    expect(open).toBeDefined();
-    act(() => open?.props.onClick());
-    expect(onOpenRegions).toHaveBeenCalledTimes(1);
+    act(() => byAsk(r.root, 'cue-g1')[0]?.props.onClick());
+    expect(onStageDraft).toHaveBeenCalledTimes(1);
+    const g4 = byAsk(r.root, 'coverage-focus');
+    expect(g4).toHaveLength(1);
+    expect(g4[0].type).toBe('p');
+    expect(g4[0].findAll((n) => n.type === 'button')).toHaveLength(0);
     expect(calls).toHaveLength(0);
   });
 });

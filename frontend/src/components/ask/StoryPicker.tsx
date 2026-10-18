@@ -10,7 +10,6 @@ import type { BriefResult, StoredBriefContent, StoryBriefView } from '@/lib/stor
 import { askDirectionProps, askFormatLocalDayCompact } from '@/lib/ask/askDirection';
 import { r23PickerStrings } from '@/lib/ask/r23PickerStrings';
 import { askR38Strings } from '@/lib/ask/askR38Strings';
-import { askExploreStrings } from '@/lib/ask/askExploreStrings';
 import { PICKER_PUBLISHER_CONTENT } from '@/lib/rights/pickerPublisherContent';
 import tokens from '../account/settingsTokens.module.css';
 import styles from './d01.module.css';
@@ -74,7 +73,6 @@ export function StoryPicker({
   onReplaceDraft,
   onAsk,
   initialDescribed = '',
-  onOpenRegions,
 }: {
   readonly locale: DisplayLocale;
   readonly onClose: () => void;
@@ -92,8 +90,6 @@ export function StoryPicker({
   readonly onAsk?: (question: string) => void;
   /** R98 — the reader's words, restored when an ask from this form was refused and Ask's box was taken. */
   readonly initialDescribed?: string;
-  /** R135 — held: opens Ask's region sheet (recorded events we hold), closing this picker. */
-  readonly onOpenRegions?: () => void;
 }): JSX.Element {
   const titleId = useId();
   const viewportBox = useVisualViewportBox();
@@ -171,7 +167,6 @@ export function StoryPicker({
             onReplaceDraft={onReplaceDraft}
             onAsk={onAsk}
             initialDescribed={initialDescribed}
-            onOpenRegions={onOpenRegions}
           />
         ) : view.kind === 'search' ? (
           <PickerSearch
@@ -339,7 +334,6 @@ function PickerDescribe({
   onReplaceDraft,
   onAsk,
   initialDescribed = '',
-  onOpenRegions,
 }: {
   readonly locale: DisplayLocale;
   readonly titleId: string;
@@ -349,7 +343,6 @@ function PickerDescribe({
   readonly onReplaceDraft?: (draft: string) => void;
   readonly onAsk?: (question: string) => void;
   readonly initialDescribed?: string;
-  readonly onOpenRegions?: () => void;
 }): JSX.Element {
   const s = d01Strings(locale);
   const r23 = r23PickerStrings(locale);
@@ -444,19 +437,6 @@ function PickerDescribe({
           unsent draft. On the one-tap ask path the tap sends, so that claim would be false: it is not shown.
         */}
         {!(onAsk !== undefined && typed.length > 0) && <p className={styles.small}>{r38.storyNothingSent}</p>}
-        {/*
-          R135 ASK EXPLORE R1 — PO: "Explain a story" must not be a dead end. While publisher stories
-          are held (no headline can be listed), the picker points at what IS held: the recorded events
-          by region, inside Ask. Opens the region sheet; reads nothing itself, sends nothing.
-        */}
-        {onOpenRegions !== undefined && (
-          <div data-ask="picker-explore" className={styles.small}>
-            <p>{askExploreStrings(locale).storyExploreLead}</p>
-            <button type="button" data-ask="picker-open-regions" onClick={onOpenRegions} className={styles.secondary}>
-              {askExploreStrings(locale).storyOpenRegions}
-            </button>
-          </div>
-        )}
       </div>
     </>
   );
