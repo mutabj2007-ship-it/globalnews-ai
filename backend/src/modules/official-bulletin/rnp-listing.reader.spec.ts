@@ -26,6 +26,8 @@ function harness(script: Record<string, (() => WireResponse)[]>) {
     return next();
   });
   const reader = new RnpListingReader(wire, () => t);
+  /* ADDENDUM-06 §2 — the first read is due one interval after start; every case below begins at that moment. */
+  t += RNP_POLL_INTERVAL_MS;
   return { reader, calls, advance: (ms: number) => (t += ms) };
 }
 const robotsEmpty = () => response(200, '');
@@ -96,6 +98,31 @@ describe('RNP listing reader', () => {
     offHost.advance(RNP_POLL_INTERVAL_MS * 2);
     expect(await offHost.reader.read()).toMatchObject({ reason: 'LISTING_REDIRECT_REFUSED' });
     expect(offHost.calls).toHaveLength(2);
+  });
+
+  it('no read on boot: before one full interval after start nothing is requested (a restart costs zero reads)', async () => {
+    const calls: string[] = [];
+    let t = Date.parse('2026-10-18T08:00:00Z');
+    const reader = new RnpListingReader(async (request) => {
+      calls.push(request.url);
+      return request.url === RNP_ROBOTS_URL ? robotsEmpty() : listing();
+    }, () => t);
+    expect(await reader.read()).toMatchObject({ state: 'NOT_YET_DUE', reason: 'FIRST_READ_NOT_DUE', items: [] });
+    t += RNP_POLL_INTERVAL_MS - 1;
+    expect((await reader.read()).state).toBe('NOT_YET_DUE');
+    expect(calls).toEqual([]);
+    t += 1;
+    expect((await reader.read()).state).toBe('SEARCHED');
+    expect(calls).toEqual([RNP_ROBOTS_URL, RNP_LISTING_URL]);
+  });
+
+  it('validators are not assumed absent: an ETag or Last-Modified on the listing stops the lane until honoured', async () => {
+    const withEtag = (): WireResponse => ({ ...listing(), headers: { etag: '"abc"' } });
+    const h = harness({ [RNP_ROBOTS_URL]: [robotsEmpty], [RNP_LISTING_URL]: [withEtag] });
+    expect(await h.reader.read()).toMatchObject({ state: 'UPSTREAM_FAILED', reason: 'LISTING_VALIDATORS_NOT_HONOURED', items: [] });
+    h.advance(RNP_POLL_INTERVAL_MS * 2);
+    await h.reader.read();
+    expect(h.calls).toHaveLength(2);
   });
 
   it('a page without the listing markup is UPSTREAM_FAILED, never an empty "no news" result', async () => {
