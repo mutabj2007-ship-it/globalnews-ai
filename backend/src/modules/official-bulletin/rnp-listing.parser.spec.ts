@@ -110,6 +110,9 @@ describe('ADDENDUM-05 headline → country (C-2..C-5)', () => {
     ['Workshop held in DR Congo', 'MATCHED', 'COD'],
     ['Delegation meets in the Democratic Republic of the Congo', 'MATCHED', 'COD'],
     ['Talks on the Congo river', 'NOT_STATED', null],
+    /* E1 R158-C1 — the COG half of "COD vs COG distinguished", and the bare name pinned as unplaced */
+    ['Delegation meets in the Republic of the Congo', 'MATCHED', 'COG'],
+    ['Workshop held in Congo', 'NOT_STATED', null],
     ['Team arrives in Guinea-Bissau', 'MATCHED', 'GNB'],
     ['Nigerian delegation visits', 'NOT_STATED', null],
     ['Peacekeepers rotate in the Central African Republic', 'MATCHED', 'CAF'],
