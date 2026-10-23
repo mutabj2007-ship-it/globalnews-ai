@@ -121,7 +121,9 @@ function everyLaneRefused(ctx: NonNullable<RetrievalFacts['retrievalContext']>):
       lane: (l as { lane?: unknown } | null)?.lane,
       reason: (l as { reason?: unknown } | null)?.reason,
     })),
-  ];
+  ].filter((r) => r.reason !== 'not-configured');
+  /* CTO #95 6372269751 — a NOT CONFIGURED lane was not searched either: beside an all-lanes rights
+     refusal it never turns NOT_PERMITTED into a provider failure or a "0 matching" search. */
   if (reasons.length === 0 || reasons.some((r) => r.reason !== RIGHTS_NOT_CLEARED_REASON)) return false;
   const refused = new Set(reasons.map((r) => r.lane));
   return (ctx.providers ?? []).every((id) => refused.has(id));

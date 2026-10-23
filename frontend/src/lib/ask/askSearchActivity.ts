@@ -91,10 +91,11 @@ function classifyLegacyTrace(articles: readonly unknown[] | undefined, ctx: NonN
   const seen = ctx.retrievalTrace?.candidatesSeen;
   /* F6–F8 (E1 R-6) — a POST-fix stored trace where EVERY unreached lane was refused for rights is "not
      searched"; a pre-fix trace ("unavailable") or any genuine outage keeps its existing reading (R-8). */
+  /* CTO #95 6372269751 — a NOT CONFIGURED lane was not searched either; it never breaks "not searched". */
   const refusals = [
     ...(ctx.retrievalTrace?.lanesUnavailable ?? []).map((u) => ({ lane: u.lane, reason: u.reason })),
     ...(ctx.providerFailures ?? []).map((f) => ({ lane: f.providerId, reason: f.kind })),
-  ];
+  ].filter((r) => r.reason !== 'not-configured');
   /* EA C-2 — mirrors the backend's everyLaneRefused (retrieval-outcome.ts): on the per-side path the
      backend also lists the refused providers in `providers`, so a listed provider counts as answered
      only when it is NOT one of the refused lanes. */

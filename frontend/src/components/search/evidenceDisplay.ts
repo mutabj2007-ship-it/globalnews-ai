@@ -107,8 +107,12 @@ export function rightsRefusedOnly(context: AnalysisRetrievalContext, articleCoun
     ...(context.retrievalTrace?.lanesUnavailable ?? []).map((u) => ({ lane: u.lane as string | undefined, reason: u.reason as string | undefined })),
     ...(context.providerFailures ?? []).map((f) => ({ lane: f.providerId as string | undefined, reason: (f as { kind?: string }).kind })),
   ];
-  if (reasons.length === 0 || reasons.some((r) => r.reason !== 'rights-not-cleared')) return false;
-  const refused = new Set(reasons.map((r) => r.lane));
+  /* CTO #95 6372269751 — a lane that is merely NOT CONFIGURED was not searched either: it must never
+     turn an all-lanes rights refusal into "0 matching reports". At least one rights refusal is still
+     required, and any genuine outage reason still makes this false. */
+  const refusals = reasons.filter((r) => r.reason !== 'not-configured');
+  if (refusals.length === 0 || refusals.some((r) => r.reason !== 'rights-not-cleared')) return false;
+  const refused = new Set(refusals.map((r) => r.lane));
   if ((context.retrievalTrace?.lanesSucceeded ?? []).length > 0) return false;
   return (context.providers ?? []).every((p) => refused.has(p));
 }
