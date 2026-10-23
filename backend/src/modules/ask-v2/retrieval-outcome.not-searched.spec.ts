@@ -39,6 +39,24 @@ describe('NOT SEARCHED — a not-configured lane never turns a rights refusal in
     expect(retrievalNotPermitted(r)).toBe(true);
   });
 
+  it('Politics OBS-1 · a listed provider only not-configured + the other refused → NOT_PERMITTED', () => {
+    const r = {
+      articles: [],
+      retrievalContext: {
+        dataMode: 'unavailable',
+        /* the per-side path lists the providers it tried and marks the outcome (EA C-2) */
+        outcome: 'PROVIDER_UNAVAILABLE',
+        providers: ['gnews', 'gdelt-doc'],
+        fallbackReason: 'provider-error',
+        providerFailures: [
+          { providerId: 'gnews', kind: 'not-configured' },
+          { providerId: 'gdelt-doc', kind: 'rights-not-cleared' },
+        ],
+      },
+    } as never;
+    expect(observedRetrievalOf(r).retrievalOutcome).toBe('NOT_PERMITTED');
+  });
+
   it('a genuine outage beside the refusal stays PROVIDER_FAILED', () => {
     const r = response([
       { lane: 'gnews', reason: 'rights-not-cleared' },

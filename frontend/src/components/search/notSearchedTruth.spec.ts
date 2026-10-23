@@ -60,6 +60,16 @@ describe('NOT SEARCHED is never "0 matching reports"', () => {
     expect(rightsRefusedOnly(c, 0)).toBe(false);
   });
 
+  it('Politics OBS-1 · a LISTED provider that is itself not-configured + the other refused → not searched', () => {
+    const c = ctx({
+      providerFailures: [
+        { providerId: 'gnews', kind: 'not-configured' },
+        { providerId: 'gdelt-doc', kind: 'rights-not-cleared' },
+      ],
+    } as never);
+    expect(rightsRefusedOnly(c, 0)).toBe(true);
+  });
+
   it('a lane that answered means a search ran', () => {
     const c = ctx({
       providerFailures: [{ providerId: 'gnews', kind: 'rights-not-cleared' }],

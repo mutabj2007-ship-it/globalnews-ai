@@ -112,7 +112,7 @@ export function retrievalIncomplete(response: RetrievalFacts | null | undefined)
  * retrieval). Reads only the facts the response already carries.
  */
 function everyLaneRefused(ctx: NonNullable<RetrievalFacts['retrievalContext']>): boolean {
-  const reasons = [
+  const allReasons = [
     ...(ctx.providerFailures ?? []).map((f) => ({
       lane: (f as { providerId?: unknown } | null)?.providerId,
       reason: (f as { kind?: unknown } | null)?.kind,
@@ -121,12 +121,19 @@ function everyLaneRefused(ctx: NonNullable<RetrievalFacts['retrievalContext']>):
       lane: (l as { lane?: unknown } | null)?.lane,
       reason: (l as { reason?: unknown } | null)?.reason,
     })),
-  ].filter((r) => r.reason !== 'not-configured');
+  ];
   /* CTO #95 6372269751 — a NOT CONFIGURED lane was not searched either: beside an all-lanes rights
      refusal it never turns NOT_PERMITTED into a provider failure or a "0 matching" search. */
+  const reasons = allReasons.filter((r) => r.reason !== 'not-configured');
   if (reasons.length === 0 || reasons.some((r) => r.reason !== RIGHTS_NOT_CLEARED_REASON)) return false;
   const refused = new Set(reasons.map((r) => r.lane));
-  return (ctx.providers ?? []).every((id) => refused.has(id));
+  /* Politics OBS-1 — a listed provider that is itself only not-configured was not searched either. */
+  const notConfigured = new Set(
+    allReasons
+      .filter((r) => r.reason === 'not-configured' && !refused.has(r.lane))
+      .map((r) => r.lane),
+  );
+  return (ctx.providers ?? []).every((id) => refused.has(id) || notConfigured.has(id));
 }
 
 const count = (v: unknown): number | null =>

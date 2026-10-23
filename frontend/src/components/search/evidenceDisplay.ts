@@ -114,7 +114,11 @@ export function rightsRefusedOnly(context: AnalysisRetrievalContext, articleCoun
   if (refusals.length === 0 || refusals.some((r) => r.reason !== 'rights-not-cleared')) return false;
   const refused = new Set(refusals.map((r) => r.lane));
   if ((context.retrievalTrace?.lanesSucceeded ?? []).length > 0) return false;
-  return (context.providers ?? []).every((p) => refused.has(p));
+  /* Politics OBS-1 — a listed provider that is itself only not-configured was not searched either. */
+  const notConfigured = new Set(
+    reasons.filter((r) => r.reason === 'not-configured' && !refused.has(r.lane)).map((r) => r.lane),
+  );
+  return (context.providers ?? []).every((p) => refused.has(p) || notConfigured.has(p));
 }
 
 /** True only when NO live lane answered and nothing usable was served: a real outage. */

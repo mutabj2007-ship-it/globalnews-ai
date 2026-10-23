@@ -92,18 +92,25 @@ function classifyLegacyTrace(articles: readonly unknown[] | undefined, ctx: NonN
   /* F6–F8 (E1 R-6) — a POST-fix stored trace where EVERY unreached lane was refused for rights is "not
      searched"; a pre-fix trace ("unavailable") or any genuine outage keeps its existing reading (R-8). */
   /* CTO #95 6372269751 — a NOT CONFIGURED lane was not searched either; it never breaks "not searched". */
-  const refusals = [
+  const allReasons = [
     ...(ctx.retrievalTrace?.lanesUnavailable ?? []).map((u) => ({ lane: u.lane, reason: u.reason })),
     ...(ctx.providerFailures ?? []).map((f) => ({ lane: f.providerId, reason: f.kind })),
-  ].filter((r) => r.reason !== 'not-configured');
+  ];
+  const refusals = allReasons.filter((r) => r.reason !== 'not-configured');
   /* EA C-2 — mirrors the backend's everyLaneRefused (retrieval-outcome.ts): on the per-side path the
      backend also lists the refused providers in `providers`, so a listed provider counts as answered
      only when it is NOT one of the refused lanes. */
   const refusedLanes = new Set(refusals.map((r) => r.lane));
+  /* Politics OBS-1 — a listed provider that is itself only not-configured was not searched either. */
+  const notConfiguredLanes = new Set(
+    allReasons
+      .filter((r) => r.reason === 'not-configured' && !refusedLanes.has(r.lane))
+      .map((r) => r.lane),
+  );
   const refusedOnly =
     refusals.length > 0 &&
     refusals.every((r) => r.reason === RIGHTS_REFUSAL) &&
-    (ctx.providers ?? []).every((id) => refusedLanes.has(id));
+    (ctx.providers ?? []).every((id) => refusedLanes.has(id) || notConfiguredLanes.has(id));
   const outcome: AskResearchOutcome =
     refusedOnly && admitted === 0
       ? 'NOT_PERMITTED'
