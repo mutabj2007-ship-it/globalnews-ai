@@ -1,4 +1,5 @@
 import type { AnalysisApiResponse, NewsAnalysisResult } from '@globalnews-ai/shared';
+import { retrievalFiguresWithheld } from '../search/evidenceDisplay';
 
 /**
  * PAF-R1 — what the persistent brief is allowed to say, and where every
@@ -127,7 +128,10 @@ export function buildBriefTelemetry(
   response: AnalysisApiResponse,
   unresolvedCount: number | null,
 ): BriefTelemetry {
-  const diversity = response.sourceDiversity;
+  /* E1 C-2 — the shared decision: no figure where "0 retrieved" would be false */
+  const diversity = retrievalFiguresWithheld(response.retrievalContext, response.articles?.length)
+    ? undefined
+    : response.sourceDiversity;
   return {
     retrievedArticleCount: diversity?.retrievedArticleCount ?? null,
     reportingClusterCount: diversity?.reportingClusterCount ?? null,

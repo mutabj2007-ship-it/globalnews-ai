@@ -1,6 +1,6 @@
 import { RIGHTS_REFUSAL, searchActivityOf } from './askSearchActivity';
 import { askRightsRefusalStrings } from './askRightsRefusal';
-import { rightsRefusedOnly } from '@/components/search/evidenceDisplay';
+import { retrievalFiguresWithheld, rightsRefusedOnly } from '@/components/search/evidenceDisplay';
 import { congoClarificationOf } from './askCongoClarification';
 import { askFormatUtcInstant } from './askDirection';
 import type { AskAnswerState, AskPlanChip, AskR2Payload } from '@/lib/api/askV2Api';
@@ -312,19 +312,21 @@ export function failedTurnCopy(failure: string | undefined, s: AskR2Strings): st
  * searched" while About this answer read "0 retrieved reports · 0 reporting clusters", a completed
  * search's figures. Decided from the SAME facts as Search activity (searchActivityOf) and the
  * freshness line (rightsRefusedOnly), so the panels cannot disagree.
+ *
+ * E1 ADDENDUM-18 C-1 — also null when reports were found and EVERY one was withheld for rights:
+ * the counts are post-exclusion, so "0 retrieved" there would read as "no reporting exists".
+ * Decided by the one shared rule every count renderer uses (retrievalFiguresWithheld).
  */
 export function aboutRetrievalFigures(
   payload: AskR2Payload,
 ): { readonly reports: number | null; readonly clusters: number | null } | null {
   const analysis = payload.analysis;
   if (analysis == null) return null;
-  const notSearched =
+  const withheld =
     (searchActivityOf(payload)?.steps ?? []).some(
       (step) => step.kind === 'SEARCH' && step.status === 'not-searched',
-    ) ||
-    (analysis.retrievalContext != null &&
-      rightsRefusedOnly(analysis.retrievalContext, analysis.articles?.length ?? 0));
-  if (notSearched) return null;
+    ) || retrievalFiguresWithheld(analysis.retrievalContext, analysis.articles?.length ?? 0);
+  if (withheld) return null;
   const diversity = analysis.sourceDiversity;
   return {
     reports: diversity?.retrievedArticleCount ?? null,

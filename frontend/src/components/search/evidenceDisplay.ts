@@ -121,6 +121,33 @@ export function rightsRefusedOnly(context: AnalysisRetrievalContext, articleCoun
   return (context.providers ?? []).every((p) => refused.has(p) || notConfigured.has(p));
 }
 
+/**
+ * E1 ADDENDUM-18 C-1 / C-2 (CTO #95 c6375734941) — THE ONE DECISION FOR RETRIEVAL FIGURES.
+ *
+ * `articlesRetrieved` and `sourceDiversity.retrievedArticleCount` are counted AFTER the rights gate
+ * (analysis.service `articles = allowed`), so in three states a printed "0 retrieved reports" is
+ * false — it reads as "no reporting exists" when nothing was searched, or when reports WERE found
+ * and then withheld:
+ *
+ *   not attempted     no provider was asked (`retrievalAttempted: false`)
+ *   rights refused    every lane was refused for source-use rights before any network call
+ *   rights withheld   reports came back, every one was withheld for rights, none was admitted
+ *
+ * In those states every reader-facing renderer states NO figure (each already has its own copy for
+ * the state). A search that ran and found nothing, a partial outage and a genuine outage keep their
+ * true figures: 0 is a real result there.
+ */
+export function retrievalFiguresWithheld(
+  context: AnalysisRetrievalContext | null | undefined,
+  articleCount?: number,
+): boolean {
+  if (context == null) return false;
+  if (context.retrievalAttempted === false) return true;
+  const count = articleCount ?? context.articlesRetrieved ?? 0;
+  if (count === 0 && (context.rightsExcluded?.count ?? 0) > 0) return true;
+  return rightsRefusedOnly(context, articleCount);
+}
+
 /** True only when NO live lane answered and nothing usable was served: a real outage. */
 export function reportingWhollyUnavailable(
   context: AnalysisRetrievalContext,

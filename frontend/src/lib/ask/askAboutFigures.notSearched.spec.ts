@@ -75,6 +75,19 @@ describe('"About this answer" never shows search figures when nothing was search
     expect(aboutRetrievalFigures(p)).toEqual({ reports: 0, clusters: 0 });
   });
 
+  it('E1 C-1: reports found and ALL withheld for rights → no figures (never "0 retrieved")', () => {
+    const p = base({
+      retrievalContext: {
+        dataMode: 'live',
+        providers: ['rss-feeds'],
+        articlesRetrieved: 0,
+        rightsExcluded: { count: 4, reasons: { SOURCE_RIGHTS_NOT_CLEARED: 4 } },
+        retrievalTrace: { candidatesSeen: 4, lanesUnavailable: [] },
+      },
+    });
+    expect(aboutRetrievalFigures(p)).toBeNull();
+  });
+
   it('a genuine outage keeps its figures (a search was attempted)', () => {
     const p = base({
       retrievalContext: {

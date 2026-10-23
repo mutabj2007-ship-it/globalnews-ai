@@ -1,5 +1,6 @@
 import type { LanguageCode, NewsArticle, NewsDataMode } from '@globalnews-ai/shared';
 import { fetchTopHeadlines } from '@/lib/api/newsApi';
+import { feedNotSearchedRightsUncleared } from '@/lib/news/feedAcquisition';
 import {
   allocateHomeFeed,
   DEFAULT_IN_FOCUS_COUNT,
@@ -71,6 +72,12 @@ export interface HomeFeed {
   isLive: boolean;
   /** Whether the backend served live provider data or mock data. null = unknown (backend unreachable). */
   dataMode: NewsDataMode | null;
+  /**
+   * CTO #95 c6375734941 §4 — the backend's own typed statement that the news was NOT SEARCHED
+   * because no source is cleared (`acquisition.state === 'SOURCE_RIGHTS_UNCLEARED'`). False when
+   * the backend was unreachable: "couldn't load" is then the truth.
+   */
+  notSearchedRightsUncleared: boolean;
 }
 
 const EMPTY_FEED: HomeFeed = {
@@ -82,6 +89,7 @@ const EMPTY_FEED: HomeFeed = {
   today: EMPTY_TODAY_ALLOCATION,
   isLive: false,
   dataMode: null,
+  notSearchedRightsUncleared: false,
 };
 
 /**
@@ -182,6 +190,7 @@ export async function getHomeFeed(language?: LanguageCode): Promise<HomeFeed> {
       today: allocateToday(response.articles, observedAt),
       isLive: true,
       dataMode: response.dataMode,
+      notSearchedRightsUncleared: feedNotSearchedRightsUncleared(response),
     };
   } catch (error) {
     // eslint-disable-next-line no-console

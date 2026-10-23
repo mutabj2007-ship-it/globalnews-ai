@@ -16,6 +16,7 @@ import type {
   UncertaintyItem,
   WatchNextItem,
 } from '@globalnews-ai/shared';
+import { retrievalFiguresWithheld } from './evidenceDisplay';
 
 /**
  * H2A — ANALYSIS DIMENSION ADAPTER
@@ -703,7 +704,8 @@ export type BriefAnswerValue =
   | {
       readonly kind: 'evidence-strength';
       readonly meter: EvidenceMeterState;
-      readonly articlesRetrieved: number;
+      /** null when no figure may be stated (retrievalFiguresWithheld, E1 C-2) */
+      readonly articlesRetrieved: number | null;
       readonly reportingClusterCount: number | null;
       readonly distinctSourceNameCount: number | null;
     }
@@ -831,9 +833,13 @@ export function selectBriefAnswers(response: AnalysisApiResponse): readonly Brie
     'how-strong-is-the-evidence': {
       kind: 'evidence-strength',
       meter,
-      articlesRetrieved: response.retrievalContext?.articlesRetrieved ?? 0,
-      reportingClusterCount: response.sourceDiversity?.reportingClusterCount ?? null,
-      distinctSourceNameCount: response.sourceDiversity?.distinctSourceNameCount ?? null,
+      ...(retrievalFiguresWithheld(response.retrievalContext, response.articles?.length)
+        ? { articlesRetrieved: null, reportingClusterCount: null, distinctSourceNameCount: null }
+        : {
+            articlesRetrieved: response.retrievalContext?.articlesRetrieved ?? 0,
+            reportingClusterCount: response.sourceDiversity?.reportingClusterCount ?? null,
+            distinctSourceNameCount: response.sourceDiversity?.distinctSourceNameCount ?? null,
+          }),
     },
 
     'what-is-uncertain': {

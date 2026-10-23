@@ -41,7 +41,8 @@ import { pluralWithForms } from '@/lib/i18n/pluralize';
 
 export interface AnalysisTelemetryProps {
   meter: EvidenceMeterState;
-  articlesRetrieved: number;
+  /** null when no figure may be stated (retrievalFiguresWithheld, E1 C-2): the E-05 cell is omitted. */
+  articlesRetrieved: number | null;
   /** From sourceDiversity when the payload carries it; null when it does not. */
   reportingClusterCount: number | null;
   /**
@@ -94,7 +95,8 @@ export function AnalysisTelemetry({
      localized parts rather than an English template. */
   const meterLabel = `${t.evidenceAriaPrefix}: ${levelWord}, ${meter.filledSegments} ${t.segmentsOf} ${meter.totalSegments}`;
 
-  const articlesText = pluralWithForms(articlesRetrieved, language, t.articleForms);
+  const articlesText =
+    articlesRetrieved === null ? '' : pluralWithForms(articlesRetrieved, language, t.articleForms);
   const retrievalLabel =
     reportingClusterCount === null
       ? articlesText
@@ -138,34 +140,36 @@ export function AnalysisTelemetry({
       </div>
 
       {/* ── E-05 ─────────────────────────────────────────────── */}
-      <div
-        className={`${CELL} border-r border-gn-line-telemetry`}
-        aria-label={retrievalLabel}
-        role="group"
-      >
-        <span className="font-gn-mono text-gn-hud-micro uppercase text-gn-hud">
-          {t.retrievalLabel}
-        </span>
-        {articlesRetrieved === 0 ? (
-          <span className="font-gn-mono text-gn-hud-value uppercase text-gn-hud-faint">
-            {t.noArticlesRetrieved}
+      {articlesRetrieved !== null && (
+        <div
+          className={`${CELL} border-r border-gn-line-telemetry`}
+          aria-label={retrievalLabel}
+          role="group"
+        >
+          <span className="font-gn-mono text-gn-hud-micro uppercase text-gn-hud">
+            {t.retrievalLabel}
           </span>
-        ) : (
-          <span className="whitespace-nowrap font-gn-mono text-gn-hud-value text-gn-ink-value">
-            {/*
-              Both figures name what they count, in full and abbreviated
-              form alike (E-05: "if they differ, both labels must name
-              what they count"). Articles are articles and clusters are
-              clusters — neither is ever presented as a number of events.
-            */}
-            <span className="xl:hidden">
-              {articlesRetrieved} {t.articlesShort}
-              {reportingClusterCount !== null && ` · ${reportingClusterCount} ${t.clustersShort}`}
+          {articlesRetrieved === 0 ? (
+            <span className="font-gn-mono text-gn-hud-value uppercase text-gn-hud-faint">
+              {t.noArticlesRetrieved}
             </span>
-            <span className="hidden xl:inline">{retrievalLabel}</span>
-          </span>
-        )}
-      </div>
+          ) : (
+            <span className="whitespace-nowrap font-gn-mono text-gn-hud-value text-gn-ink-value">
+              {/*
+                Both figures name what they count, in full and abbreviated
+                form alike (E-05: "if they differ, both labels must name
+                what they count"). Articles are articles and clusters are
+                clusters — neither is ever presented as a number of events.
+              */}
+              <span className="xl:hidden">
+                {articlesRetrieved} {t.articlesShort}
+                {reportingClusterCount !== null && ` · ${reportingClusterCount} ${t.clustersShort}`}
+              </span>
+              <span className="hidden xl:inline">{retrievalLabel}</span>
+            </span>
+          )}
+        </div>
+      )}
 
       {/*
         ── E-05b — EVIDENCE USED ──────────────────────────────────

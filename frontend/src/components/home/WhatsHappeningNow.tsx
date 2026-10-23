@@ -21,6 +21,7 @@ import {
 } from '@/components/home/homePresentation';
 import { formatObservationalTime } from '@/lib/formatRelativeTime';
 import { pluralWithForms } from '@/lib/i18n/pluralize';
+import { emptyFeedLine } from '@/lib/news/feedAcquisition';
 import { SafeImage } from '@/components/ui/SafeImage';
 import { DataModeLabel } from '@/components/ui/DataModeLabel';
 import { safeExternalHref } from '@globalnews-ai/shared';
@@ -117,6 +118,8 @@ interface WhatsHappeningNowProps {
    * vocabulary invented here.
    */
   dataMode: NewsDataMode | null;
+  /** CTO #95 §4 — the backend's typed SOURCE_RIGHTS_UNCLEARED: an empty feed reads "not searched" */
+  notSearched?: boolean;
   language?: LanguageCode;
 }
 
@@ -148,6 +151,7 @@ export function WhatsHappeningNow({
   secondary,
   discovery,
   dataMode,
+  notSearched = false,
   language = 'en',
 }: WhatsHappeningNowProps): JSX.Element {
   const t = getDictionary(language).betaHome;
@@ -257,7 +261,7 @@ export function WhatsHappeningNow({
             role="status"
             className="rounded-2xl border border-border-strong bg-void/60 p-6 text-sm text-ink-tertiary"
           >
-            {t.feedUnavailable}
+            {emptyFeedLine(notSearched, language, t.feedUnavailable)}
           </p>
         </>
       ) : (

@@ -18,6 +18,7 @@ import type {
 } from '@globalnews-ai/shared';
 import { resolveCountryByAnyIdentifier } from '@globalnews-ai/shared';
 import { buildCitationNumbering, citationNumberFor } from './analysisDimensions';
+import { retrievalFiguresWithheld } from './evidenceDisplay';
 import type { PrimaryDimensionKey, SubViewKey } from './analysisDimensions';
 
 /**
@@ -415,7 +416,8 @@ export function buildExecutiveBriefModel(
  * which would silently present articles as clusters.
  */
 export interface TelemetryModel {
-  readonly articlesRetrieved: number;
+  /** null when no figure may be stated (retrievalFiguresWithheld, E1 C-2) */
+  readonly articlesRetrieved: number | null;
   readonly reportingClusterCount: number | null;
   /**
    * R2a — THE EVIDENCE-USED COUNT, AND WHY IT IS NOT DERIVED HERE.
@@ -444,10 +446,22 @@ export interface TelemetryModel {
   readonly evidenceUsedCount: number | null;
 }
 
-export function buildTelemetryModel(response: AnalysisApiResponse): TelemetryModel {
+/** E1 C-2 — the retrieval counts through the shared decision: none where "0 retrieved" would be false. */
+function retrievalCounts(
+  response: AnalysisApiResponse,
+): Pick<TelemetryModel, 'articlesRetrieved' | 'reportingClusterCount'> {
+  if (retrievalFiguresWithheld(response.retrievalContext, response.articles?.length)) {
+    return { articlesRetrieved: null, reportingClusterCount: null };
+  }
   return {
     articlesRetrieved: response.retrievalContext.articlesRetrieved,
     reportingClusterCount: response.sourceDiversity?.reportingClusterCount ?? null,
+  };
+}
+
+export function buildTelemetryModel(response: AnalysisApiResponse): TelemetryModel {
+  return {
+    ...retrievalCounts(response),
     evidenceUsedCount: response.analysis?.trustState.distinctSourceArticleCount ?? null,
   };
 }

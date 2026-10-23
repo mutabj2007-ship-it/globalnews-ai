@@ -4,6 +4,7 @@ import { safeExternalHref, type LanguageCode, type NewsArticle, type NewsDataMod
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { formatObservationalTime } from '@/lib/formatRelativeTime';
 import { pluralWithForms } from '@/lib/i18n/pluralize';
+import { emptyFeedLine } from '@/lib/news/feedAcquisition';
 import { StoryVisual } from '@/components/home/StoryVisual';
 import { StoryRailMotion } from '@/components/home/StoryRailMotion';
 import { DataModeLabel } from '@/components/ui/DataModeLabel';
@@ -44,9 +45,12 @@ export function HomeR1Stories({
   compareTray,
   discussionRead = false,
   alertsInApp = false,
+  notSearched = false,
 }: {
   readonly stories: readonly HomeR1Story[];
   readonly dataMode: NewsDataMode | null;
+  /** CTO #95 §4 — the backend's typed SOURCE_RIGHTS_UNCLEARED: an empty feed reads "not searched" */
+  readonly notSearched?: boolean;
   readonly language: LanguageCode;
   readonly cardActions: boolean;
   readonly compareTray: boolean;
@@ -97,7 +101,7 @@ export function HomeR1Stories({
     <section id="whats-happening-now" aria-labelledby="home-r1-now" className="flex scroll-mt-24 flex-col gap-3 [container-type:inline-size]">
       {stories.length === 0 ? (
         <p role="status" className="rounded-[12px] border border-[var(--gt-line)] bg-[var(--gt-card)] p-6 text-[14px] text-[var(--gt-ink2)]">
-          {b.feedUnavailable}
+          {emptyFeedLine(notSearched, language, b.feedUnavailable)}
         </p>
       ) : (
         <>

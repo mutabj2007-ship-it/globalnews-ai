@@ -40,6 +40,7 @@ export function HomeR1Page({
   worldIn60,
   whats,
   dataMode,
+  notSearched = false,
   theme,
 }: {
   readonly language: LanguageCode;
@@ -47,6 +48,8 @@ export function HomeR1Page({
   readonly worldIn60: readonly NewsArticle[];
   readonly whats: readonly NewsArticle[];
   readonly dataMode: NewsDataMode | null;
+  /** CTO #95 §4 — HomeFeed.notSearchedRightsUncleared, the backend's typed reason */
+  readonly notSearched?: boolean;
   /** The reader’s Light / Dark / System choice from the first-party cookie (server-read). */
   readonly theme: ThemePreference;
 }): JSX.Element {
@@ -78,6 +81,7 @@ export function HomeR1Page({
                       <HomeR1Stories
                         stories={stories}
                         dataMode={dataMode}
+                        notSearched={notSearched}
                         language={language}
                         cardActions={gates.cardActions}
                         compareTray={gates.compareTray}

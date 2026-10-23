@@ -415,16 +415,18 @@ export function ExecutiveBrief({
                   UNRATED: tel.evidenceLevels.unrated,
                 }[meter.label]
               : tel.evidenceLevels.unrated;
-            /* Counts of existing records only — never a score. */
-            const parts = [
-              pluralWithForms(cell.value.articlesRetrieved, language, tel.articleForms),
-            ];
+            /* Counts of existing records only — never a score. None at all where the shared
+               decision withholds them (E1 C-2: a post-rights "0" would read as "no reporting"). */
+            const parts: string[] = [];
+            if (cell.value.articlesRetrieved !== null) {
+              parts.push(pluralWithForms(cell.value.articlesRetrieved, language, tel.articleForms));
+            }
             if (cell.value.reportingClusterCount !== null) {
               parts.push(
                 pluralWithForms(cell.value.reportingClusterCount, language, tel.clusterForms),
               );
             }
-            meta = parts.join(' · ');
+            if (parts.length > 0) meta = parts.join(' · ');
           }
 
           const accessibleName =

@@ -8,6 +8,7 @@ import { SourceEntitiesPanel } from '../search/SourceEntitiesPanel';
 import { AnalysisModeBadge } from '../search/AnalysisModeBadge';
 import { SourcesDock } from './SourcesDock';
 import { buildAnalysisWorkspaceModel } from '../search/analysisDimensions';
+import { retrievalFiguresWithheld } from '../search/evidenceDisplay';
 
 /**
  * P-12 — the Complete Analysis Record, as a separate destination.
@@ -115,7 +116,12 @@ export function CompleteRecordView({
           <AnalysisResultView
             analysis={analysis}
             provenance={response.provenance}
-            sourceDiversity={response.sourceDiversity}
+            sourceDiversity={
+              /* E1 C-2 — the shared decision: no "0 retrieved" where it would be false */
+              retrievalFiguresWithheld(response.retrievalContext, response.articles?.length)
+                ? undefined
+                : response.sourceDiversity
+            }
             language={language}
           />
         </div>
