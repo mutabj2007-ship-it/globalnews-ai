@@ -33,6 +33,10 @@ const WIRE_BYLINES: ReadonlyArray<readonly [string, RegExp]> = [
     /\(\s*ap\s*\)|\bby\s+(?:the\s+)?associated\s+press\b|\(\s*associated\s+press\s*\)/i,
   ],
   ['afp.com', /\(\s*(?:afp|أ\s*ف\s*ب|agence\s+france[-\s]presse)\s*\)|\bby\s+afp\b/i],
+  /* Politics RV-19 — further syndicating wires */
+  ['dpa.com', /\(\s*dpa\s*\)/i],
+  ['xinhuanet.com', /\(\s*xinhua\s*\)|\bxinhua\s*\)\s*--/i],
+  ['aa.com.tr', /\(\s*(?:aa|anadolu(?:\s+agency)?)\s*\)/i],
   ['bloomberg.com', /\(\s*bloomberg\s*\)/i],
 ];
 

@@ -186,3 +186,51 @@ describe('current-status corroboration · P-3 lineage', () => {
     expect(r.corroborated).toBe(false);
   });
 });
+
+describe('Politics F-1 · refutation is bound, never negated, never another kind of claim', () => {
+  const strike1 = art(
+    'www.aljazeera.com',
+    'Strike hits Gaza hospital',
+    'A strike hit the hospital, medics said.',
+  );
+  const strike2 = art(
+    'www.reuters.com',
+    'Gaza hospital struck, witnesses say',
+    'GAZA (Reuters) - Witnesses said a strike hit the hospital.',
+  );
+  it.each([
+    ['RV-14', 'Rescuers said there was no evidence of survivors after the strike.'],
+    ['RV-15', 'It is not disputed that the strike took place.'],
+    ['RV-16', 'No one disputes the account of the strike.'],
+    ['RV-17', 'Separately, the army rejected reports of looting at a border crossing.'],
+    ['RV-17b', 'Insurers have rejected the claims from families of the victims.'],
+  ])('%s does not dispute a corroborated strike', (_id, sentence) => {
+    const third = art('www.bbc.com', 'Hospital strike aftermath', sentence);
+    const c = occ([strike1, strike2, third]);
+    expect(c.state).toBe('CORROBORATED_REPORTING');
+    expect(c.contradictingArticleIds).toEqual([]);
+  });
+
+  it('a genuine refutation still disputes', () => {
+    const third = art(
+      'www.timesofisrael.com',
+      'Army responds',
+      'The army rejected the account of the strike.',
+    );
+    expect(occ([strike1, strike2, third]).state).toBe('DISPUTED');
+  });
+
+  it('a summary that only repeats the headline is not assessable (RV-21)', () => {
+    const echo = art('www.x.com', 'Strike hits Gaza hospital', 'Strike hits Gaza hospital');
+    const echo2 = art('www.y.com', 'Gaza hospital hit', 'Gaza hospital hit');
+    expect(occ([echo, echo2]).state).toBe('UNASSESSED');
+  });
+
+  it.each([
+    ['BERLIN (dpa) - text', 'dpa.com'],
+    ['BEIJING (Xinhua) -- text', 'xinhuanet.com'],
+    ['ANKARA (AA) - text', 'aa.com.tr'],
+  ])('reads further wire bylines (RV-19): %p', (summary, wire) => {
+    expect(wireBylineOf({ title: 'x', summary })).toBe(wire);
+  });
+});

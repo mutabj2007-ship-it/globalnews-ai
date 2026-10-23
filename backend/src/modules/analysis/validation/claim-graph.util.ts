@@ -154,20 +154,53 @@ function isReporting(article: NewsArticle): boolean {
  * or a body withheld) is never support, never contradiction: it can only make a claim UNASSESSED.
  */
 function isAssessable(article: NewsArticle): boolean {
-  return (article.summary ?? '').trim().length > 0;
+  const summary = (article.summary ?? '').trim();
+  /* Politics RV-21 — a body that only repeats the headline adds no accessible text. */
+  return summary.length > 0 && summary.toLowerCase() !== (article.title ?? '').trim().toLowerCase();
 }
 
 /**
- * CTO R164 P-4 — an explicit refutation of the reported account (beyond "denies"). Bound to
- * the account itself ("rejects … account", "calls the report false"), so "rejects a bill" is
- * not a refutation.
+ * CTO R164 P-4 — an explicit refutation of the reported account (beyond "denies"), read per
+ * sentence. Politics F-1: bound to a determined account ("rejects THE account", "calls THE
+ * report false", "no evidence THE hospital was hit"), never negated ("not disputed", "no one
+ * disputes"), never another kind of claim (insurance, asylum, compensation), and — when the
+ * question names an event — in a sentence that names it. "Rejects a bill" is not a refutation.
  */
+const ACCOUNT = String.raw`(?:account|claims?|reports?|allegations?|accusations?|version|narrative)`;
+const DETERMINER = String.raw`(?:the|a|an|this|that|these|those|its|their|his|her|such)`;
 const EVENT_REFUTATION: readonly RegExp[] = [
-  /\b(?:reject\w*|dismiss\w*|refut\w*|disput\w*|contest\w*)\b(?:\W+[\p{L}\p{N}']+){0,4}?\W+(?:account|claims?|reports?|allegations?|accusations?|version|narrative)\b/iu,
+  new RegExp(
+    String.raw`\b(?:reject\w*|dismiss\w*|refut\w*|disput\w*|contest\w*)\s+(?:[\p{L}\p{N}'-]+\s+){0,2}?${DETERMINER}\s+(?:[\p{L}\p{N}'-]+\s+){0,3}?${ACCOUNT}\b`,
+    'iu',
+  ),
   /\bdisput\w*\s+that\b/i,
-  /\bthere\s+(?:is|was|were)\s+no\s+evidence\b/i,
-  /\bcall\w*\b(?:\W+[\p{L}\p{N}']+){0,4}?\W+(?:account|claims?|reports?|allegations?)\s+(?:as\s+)?(?:false|untrue|baseless|unfounded|fabricated|fake)\b/iu,
+  /\bno\s+evidence\s+(?:that\s+)?(?:the|its|their|any)\b/i,
+  new RegExp(
+    String.raw`\bcall\w*\s+${DETERMINER}\s+(?:[\p{L}\p{N}'-]+\s+){0,3}?${ACCOUNT}\s+(?:as\s+)?(?:false|untrue|baseless|unfounded|fabricated|fake)\b`,
+    'iu',
+  ),
 ];
+const REFUTATION_NEGATED =
+  /\b(?:not|no\s+one|nobody|none|never)\s+(?:[\p{L}\p{N}'-]+\s+){0,2}?(?:disput|reject|dismiss|refut|contest)\w*|\bundisputed\b|n't\s+(?:[\p{L}\p{N}'-]+\s+){0,2}?(?:disput|reject|dismiss|refut|contest)/iu;
+const OTHER_CLAIM_KIND = /\b(?:insur\w*|asylum|compensation|benefits?|refunds?|tax)\b/i;
+
+function sentencesOf(text: string): string[] {
+  return text
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+}
+
+function refutesInSentence(sentence: string, ctx: ClaimContext): boolean {
+  if (!EVENT_REFUTATION.some((pattern) => pattern.test(sentence))) return false;
+  if (REFUTATION_NEGATED.test(sentence) || OTHER_CLAIM_KIND.test(sentence)) return false;
+  if (ctx.event === undefined) return true;
+  const folded = foldForPlan(sentence);
+  return (
+    namesIdentifier(folded, ctx.event.identifiers) ||
+    ctx.event.endpoints.some((endpoint) => namesEndpoint(folded, endpoint))
+  );
+}
 
 function supports(claim: ClaimInput, article: NewsArticle, ctx: ClaimContext): boolean {
   const text = textOf(article);
@@ -197,11 +230,12 @@ function supports(claim: ClaimInput, article: NewsArticle, ctx: ClaimContext): b
   }
 }
 
-function contradicts(claim: ClaimInput, article: NewsArticle): boolean {
+function contradicts(claim: ClaimInput, article: NewsArticle, ctx: ClaimContext): boolean {
   if (claim.type !== 'OCCURRENCE') return false;
   const text = textOf(article);
   return (
-    EVENT_COUNTER_EVIDENCE.test(text) || EVENT_REFUTATION.some((pattern) => pattern.test(text))
+    EVENT_COUNTER_EVIDENCE.test(text) ||
+    sentencesOf(text).some((sentence) => refutesInSentence(sentence, ctx))
   );
 }
 
@@ -214,7 +248,7 @@ export function assessClaims(
     /* R2B — a discovery lead (repost / unknown origin) is never evidence for or against. */
     const present = evidence.filter((a) => a.evidenceRole !== 'DISCOVERY_LEAD');
     const usable = present.filter(isAssessable);
-    const contradicting = usable.filter((a) => contradicts(claim, a));
+    const contradicting = usable.filter((a) => contradicts(claim, a, ctx));
     const supporting = usable.filter((a) => !contradicting.includes(a) && supports(claim, a, ctx));
     const families = independentFamilies(supporting);
     const officialFamily = families.some((family) => family.some(isOfficialSource));
