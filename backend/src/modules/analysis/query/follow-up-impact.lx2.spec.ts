@@ -19,7 +19,9 @@ describe('Politics LX-2 · the both-places test reads cities, demonyms and every
 
   it('builds both sides from the existing authorities', () => {
     expect(geo.added.map((c) => c.iso3)).toEqual(['KEN']);
-    expect(places.origin).toEqual(expect.arrayContaining(['gaza', 'gazan', 'gazans', 'palestinian']));
+    expect(places.origin).toEqual(
+      expect.arrayContaining(['gaza', 'gazan', 'gazans', 'palestinian']),
+    );
     expect(places.destination).toEqual(
       expect.arrayContaining(['kenya', 'kenyan', 'kenyans', 'nairobi', 'mombasa']),
     );
