@@ -4229,6 +4229,7 @@ export class AnalysisService {
             ...(claimAssessments.length === 0 ? {} : { claimAssessments }),
             ...(articles.length === 0 ||
             core?.state === 'NOT_VERIFIED' ||
+            core?.state === 'UNASSESSED' ||
             core?.state === 'COVERAGE_INCOMPLETE'
               ? {
                   verificationNotice: coverageIncomplete

@@ -650,6 +650,7 @@ export const esShellOverlay: ShellLocaleOverlay = {
           DISPUTED: "Disputado",
           NOT_VERIFIED: "No verificado",
           REPORTED: "Reportado (una sola fuente)",
+          UNASSESSED: "No evaluado — texto de los reportes no disponible",
         },
         unavailable: "no disponible",
       },

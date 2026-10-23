@@ -36,7 +36,8 @@ function tokenize(title: string): Set<string> {
   return new Set(
     title
       .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, ' ')
+      /* CTO R164 P-3 — Unicode letters, so an identical non-Latin headline is one story. */
+      .replace(/[^\p{L}\p{N}\s]/gu, ' ')
       .split(/\s+/)
       .filter((token) => token.length > 2 && !STOP_WORDS.has(token)),
   );

@@ -6,7 +6,7 @@ import type {
 import { canonicalPublisherHost } from '@globalnews-ai/shared';
 import { clusterArticlesWithMembership } from '../duplicates/cluster-articles.util';
 import { FEED_SOURCES } from '../../news/providers/feed-source-registry';
-import { familyOfHost } from '../../news/evidence/evidence-candidate';
+import { reportingLineageOf } from '../../news/evidence/reporting-lineage.util';
 import {
   articleSpeaksToFacet,
   foldForPlan,
@@ -43,6 +43,8 @@ import {
  *                           organisation concerned (verified feed identity, never a name)
  *   CORROBORATED_REPORTING  ≥ 2 independent families of reporting
  *   REPORTED                exactly 1 family
+ *   UNASSESSED              reports exist, but none carries accessible text to assess the claim
+ *                           (title-only / body unavailable) — CTO R164 P-4, never a positive
  *   COVERAGE_INCOMPLETE     no support, and a source lane failed / was unavailable
  *   NOT_VERIFIED            no support, every attempted lane answered
  *
@@ -110,14 +112,20 @@ export function independentFamilies(articles: readonly NewsArticle[]): NewsArtic
     const [first, ...rest] = cluster.members.map((m) => index.get(m)!);
     for (const other of rest) union(first!, other);
   }
-  const byHost = new Map<string, number>();
-  articles.forEach((a, i) => {
-    /* R2B — a declared family (a shared report, an organisation's own account) or the host's
-       family (a wire's copies are the wire). */
-    const key = a.sourceFamily ?? familyOfHost(hostOf(a)) ?? `source:${a.sourceId}`;
-    const seen = byHost.get(key);
-    if (seen === undefined) byHost.set(key, i);
+  /* CTO R164 P-3 — one reporting chain per lineage (wire byline, wire host, declared family,
+     masthead), shared with current-status corroboration. */
+  const lineages = articles.map((a) => reportingLineageOf(a));
+  const byLineage = new Map<string, number>();
+  lineages.forEach((lineage, i) => {
+    const seen = byLineage.get(lineage.key);
+    if (seen === undefined) byLineage.set(lineage.key, i);
     else union(seen, i);
+  });
+  /* Unknown lineage never adds an independent family: it joins a known chain, or the other unknowns. */
+  const anchor = lineages.findIndex((lineage) => lineage.known);
+  const unknownAnchor = lineages.findIndex((lineage) => !lineage.known);
+  lineages.forEach((lineage, i) => {
+    if (!lineage.known) union(anchor >= 0 ? anchor : unknownAnchor, i);
   });
   const groups = new Map<number, NewsArticle[]>();
   articles.forEach((a, i) => {
@@ -140,6 +148,26 @@ const REPORTING_ROLES: ReadonlySet<string> = new Set([
 function isReporting(article: NewsArticle): boolean {
   return article.evidenceRole === undefined || REPORTING_ROLES.has(article.evidenceRole);
 }
+
+/**
+ * CTO R164 P-4 — a stance is read only from accessible report text. A title-only item (no body,
+ * or a body withheld) is never support, never contradiction: it can only make a claim UNASSESSED.
+ */
+function isAssessable(article: NewsArticle): boolean {
+  return (article.summary ?? '').trim().length > 0;
+}
+
+/**
+ * CTO R164 P-4 — an explicit refutation of the reported account (beyond "denies"). Bound to
+ * the account itself ("rejects … account", "calls the report false"), so "rejects a bill" is
+ * not a refutation.
+ */
+const EVENT_REFUTATION: readonly RegExp[] = [
+  /\b(?:reject\w*|dismiss\w*|refut\w*|disput\w*|contest\w*)\b(?:\W+[\p{L}\p{N}']+){0,4}?\W+(?:account|claims?|reports?|allegations?|accusations?|version|narrative)\b/iu,
+  /\bdisput\w*\s+that\b/i,
+  /\bthere\s+(?:is|was|were)\s+no\s+evidence\b/i,
+  /\bcall\w*\b(?:\W+[\p{L}\p{N}']+){0,4}?\W+(?:account|claims?|reports?|allegations?)\s+(?:as\s+)?(?:false|untrue|baseless|unfounded|fabricated|fake)\b/iu,
+];
 
 function supports(claim: ClaimInput, article: NewsArticle, ctx: ClaimContext): boolean {
   const text = textOf(article);
@@ -170,7 +198,11 @@ function supports(claim: ClaimInput, article: NewsArticle, ctx: ClaimContext): b
 }
 
 function contradicts(claim: ClaimInput, article: NewsArticle): boolean {
-  return claim.type === 'OCCURRENCE' && EVENT_COUNTER_EVIDENCE.test(textOf(article));
+  if (claim.type !== 'OCCURRENCE') return false;
+  const text = textOf(article);
+  return (
+    EVENT_COUNTER_EVIDENCE.test(text) || EVENT_REFUTATION.some((pattern) => pattern.test(text))
+  );
 }
 
 export function assessClaims(
@@ -180,7 +212,8 @@ export function assessClaims(
 ): AnalysisClaimAssessment[] {
   return claims.map((claim) => {
     /* R2B — a discovery lead (repost / unknown origin) is never evidence for or against. */
-    const usable = evidence.filter((a) => a.evidenceRole !== 'DISCOVERY_LEAD');
+    const present = evidence.filter((a) => a.evidenceRole !== 'DISCOVERY_LEAD');
+    const usable = present.filter(isAssessable);
     const contradicting = usable.filter((a) => contradicts(claim, a));
     const supporting = usable.filter((a) => !contradicting.includes(a) && supports(claim, a, ctx));
     const families = independentFamilies(supporting);
@@ -195,9 +228,11 @@ export function assessClaims(
         : supporting.length === 0
           ? contradicting.length > 0
             ? 'DISPUTED'
-            : ctx.coverageIncomplete
-              ? 'COVERAGE_INCOMPLETE'
-              : 'NOT_VERIFIED'
+            : present.length > usable.length
+              ? 'UNASSESSED'
+              : ctx.coverageIncomplete
+                ? 'COVERAGE_INCOMPLETE'
+                : 'NOT_VERIFIED'
           : officialFamily && reportingFamilies >= 1
             ? 'CONFIRMED'
             : reportingFamilies >= 2

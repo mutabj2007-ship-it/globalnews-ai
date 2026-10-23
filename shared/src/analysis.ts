@@ -1813,7 +1813,9 @@ export type ClaimVerificationState =
   | 'REPORTED'
   | 'DISPUTED'
   | 'NOT_VERIFIED'
-  | 'COVERAGE_INCOMPLETE';
+  | 'COVERAGE_INCOMPLETE'
+  /** R164 P-4 — reports exist but accessible text (title-only / body unavailable) was insufficient to assess; never a confirmation. */
+  | 'UNASSESSED';
 
 export interface AnalysisClaimAssessment {
   id: string;

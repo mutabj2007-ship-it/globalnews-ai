@@ -650,6 +650,7 @@ export const deShellOverlay: ShellLocaleOverlay = {
           DISPUTED: "Bestritten",
           NOT_VERIFIED: "Nicht bestätigt",
           REPORTED: "Berichtet (eine Quelle)",
+          UNASSESSED: "Nicht bewertet — Berichtstext nicht verfügbar",
         },
         unavailable: "nicht verfügbar",
       },

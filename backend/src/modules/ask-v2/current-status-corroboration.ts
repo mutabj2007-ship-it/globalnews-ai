@@ -13,6 +13,7 @@ import {
   resolveRegistrableDomain,
 } from '../news/identity/publisher-identity.util';
 import { clusterArticlesWithMembership } from '../analysis/duplicates/cluster-articles.util';
+import { reportingLineageOf } from '../news/evidence/reporting-lineage.util';
 import { COUNTRY_DEMONYMS_BY_ISO3 } from '../news/country/country-relevance.util';
 
 /**
@@ -381,17 +382,25 @@ export function corroborateCurrentStatus(input: {
   clusterArticlesWithMembership(qualified.map((q) => q.article)).forEach((cluster, i) => {
     for (const member of cluster.members) clusterOf.set(member.id, i);
   });
+  /* CTO R164 P-3 — one reporting chain per lineage (shared with the claim graph); a report of
+     unknown lineage never adds a second independent count. */
+  const lineageOf = new Map(qualified.map((q) => [q.article.id, reportingLineageOf(q.article)]));
   const chosen: Qualified[] = [];
-  for (const q of [...qualified].sort((a, b) => b.at - a.at)) {
+  const byFreshness = [...qualified].sort((a, b) => b.at - a.at);
+  for (const q of byFreshness) {
     const cluster = clusterOf.get(q.article.id);
+    const lineage = lineageOf.get(q.article.id)!;
+    if (!lineage.known) continue;
     const independent = chosen.every(
       (c) =>
         c.domain !== q.domain &&
+        lineageOf.get(c.article.id)!.key !== lineage.key &&
         (c.source === undefined || q.source === undefined || c.source !== q.source) &&
         (cluster === undefined || clusterOf.get(c.article.id) !== cluster),
     );
     if (independent) chosen.push(q);
   }
+  if (chosen.length === 0 && byFreshness[0] !== undefined) chosen.push(byFreshness[0]);
   const first = chosen[0];
   if (first === undefined || chosen.length < input.minIndependentReports) {
     return {
