@@ -1,4 +1,5 @@
 import {
+  countryAliasesFor,
   getCuratedCityNames,
   resolveCountryByAnyIdentifier,
   resolveCountryByCity,
@@ -140,6 +141,17 @@ function namesTerm(lower: string, term: string): boolean {
   return new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, 'u').test(lower);
 }
 
+/*
+  EA LX-2 P2 — "Congolese" names BOTH Congos, so it can never enter COUNTRY_DEMONYMS_BY_ISO3, which
+  routes country relevance (it would send a Brazzaville story to Kinshasa). Here it is guard-only:
+  the both-places test can only WITHHOLD an uncited sentence, so a word shared by two countries
+  over-withholds at worst and never misroutes.
+*/
+const GUARD_ONLY_DEMONYMS: Readonly<Partial<Record<string, readonly string[]>>> = {
+  COD: ['congolese'],
+  COG: ['congolese'],
+};
+
 /**
  * Politics LX-2a/b — the both-places test reads each side as a reader names it: the origin
  * country's demonyms ("Palestinian") and the earlier place's own demonym ("Gazan"); the destination
@@ -152,16 +164,28 @@ export function impactPlacesFor(
   origin: readonly CountryMeta[],
   destination: readonly CountryMeta[],
 ): ImpactPlaces {
-  const demonymsOf = (c: CountryMeta) =>
-    (COUNTRY_DEMONYMS_BY_ISO3[c.iso3] ?? []).flatMap(demonymForms);
+  const demonymsOf = (c: CountryMeta) => [
+    ...(COUNTRY_DEMONYMS_BY_ISO3[c.iso3] ?? []).flatMap(demonymForms),
+    ...(GUARD_ONLY_DEMONYMS[c.iso3] ?? []),
+  ];
   const citiesOf = (c: CountryMeta) =>
     getCuratedCityNames().filter((city) => resolveCountryByCity(city)?.iso3 === c.iso3);
+  /* EA LX-2 P2 — how readers name the country ("DRC", "Democratic Republic of Congo"), from the
+     resolver's own alias table. Two-letter aliases ("us", "uk") are left out: "us" is a pronoun. */
+  const aliasesOf = (c: CountryMeta) =>
+    countryAliasesFor(c.iso3).filter((alias) => alias.length >= 3);
   /* "gaza" → "gazan", "gazans": only the regular -a → -an form */
   const placeDemonyms = originTerms.flatMap((t) => (/\p{L}a$/u.test(t) ? [`${t}n`, `${t}ns`] : []));
   const lower = (terms: readonly string[]) => [...new Set(terms.map((t) => t.toLowerCase()))];
   return {
-    origin: lower([...originTerms, ...placeDemonyms, ...origin.flatMap(demonymsOf)]),
-    destination: lower(destination.flatMap((c) => [c.name, ...demonymsOf(c), ...citiesOf(c)])),
+    origin: lower([
+      ...originTerms,
+      ...placeDemonyms,
+      ...origin.flatMap((c) => [...demonymsOf(c), ...aliasesOf(c)]),
+    ]),
+    destination: lower(
+      destination.flatMap((c) => [c.name, ...demonymsOf(c), ...aliasesOf(c), ...citiesOf(c)]),
+    ),
   };
 }
 

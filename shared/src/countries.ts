@@ -825,6 +825,17 @@ export function searchCountriesByName(query: string, limit = 8): CountryMeta[] {
  * than a client error, since a country naming mismatch isn't the same
  * as a malformed request.
  */
+/**
+ * EA LX-2 P2 (c084b06 review) — READ-ONLY view of the alias table above for one country, so a caller
+ * that must recognise how readers NAME a country ("DRC", "Democratic Republic of Congo") reads the
+ * same governed vocabulary the resolver uses instead of keeping a second list. The table is unchanged.
+ */
+export function countryAliasesFor(iso3: string): readonly string[] {
+  return Object.entries(COUNTRY_ALIASES)
+    .filter(([, code]) => code === iso3)
+    .map(([alias]) => alias);
+}
+
 export function resolveCountryByAnyIdentifier(input: string): CountryMeta | undefined {
   const trimmed = input.trim();
   if (!trimmed) return undefined;
