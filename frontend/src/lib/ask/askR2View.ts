@@ -1,6 +1,7 @@
 import { RIGHTS_REFUSAL, searchActivityOf } from './askSearchActivity';
 import { askRightsRefusalStrings } from './askRightsRefusal';
-import { retrievalFiguresWithheld, rightsRefusedOnly } from '@/components/search/evidenceDisplay';
+import { retrievalFiguresWithheld, rightsRefusedOnly, rightsWithheldTotal } from '@/components/search/evidenceDisplay';
+import { askProgressStrings } from './askProgressStrings';
 import { congoClarificationOf } from './askCongoClarification';
 import { askFormatUtcInstant } from './askDirection';
 import type { AskAnswerState, AskPlanChip, AskR2Payload } from '@/lib/api/askV2Api';
@@ -392,7 +393,11 @@ export function askR2View(
     freshness =
       retrieval != null && rightsRefusedOnly(retrieval, sourceCount)
         ? `${checkedAt ?? '—'} · ${askRightsRefusalStrings(locale).chip}`
-        : fill(searchLimited ? s.freshness.limited : s.freshness.zero, checkedAt);
+        : /* Politics F-1 (a66972b review) — reports were found and ALL withheld for rights: never
+             "0 matching reports". The same qualified line Search activity shows for the same fact. */
+          retrieval != null && rightsWithheldTotal(retrieval, sourceCount)
+          ? `${checkedAt ?? '—'} · ${askProgressStrings(locale).rightsWithheld(retrieval.rightsExcluded?.count ?? 0)}`
+          : fill(searchLimited ? s.freshness.limited : s.freshness.zero, checkedAt);
   else if (badge === 'rec') freshness = s.freshness.retainedRecord;
   else if (badge === 'calc') freshness = s.freshness.computed;
   else if (badge === 'part' && payload.verification?.asOf != null)

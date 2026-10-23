@@ -1,7 +1,9 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import type { AskR2Payload } from '@/lib/api/askV2Api';
-import { aboutRetrievalFigures } from './askR2View';
+import { ASK_PROGRESS_LOCALES, askProgressStrings } from './askProgressStrings';
+import { askR2Strings } from './askR2Strings';
+import { aboutRetrievalFigures, askR2View } from './askR2View';
 import { searchActivityOf } from './askSearchActivity';
 
 /**
@@ -14,6 +16,7 @@ const base = (analysis: Record<string, unknown>, extra: Record<string, unknown> 
     schema: 'ask-r2-result/1',
     route: { terminalState: 'EXECUTABLE' },
     answer: { state: 'INSUFFICIENT', basis: 'x', missingRoles: [] },
+    chips: { kind: 'NONE' },
     analysis: {
       articles: [],
       sourceDiversity: { retrievedArticleCount: 0, reportingClusterCount: 0 },
@@ -87,6 +90,32 @@ describe('"About this answer" never shows search figures when nothing was search
     });
     expect(aboutRetrievalFigures(p)).toBeNull();
   });
+
+  /* Politics F-1 (a66972b review) — the freshness line on the same answer said "0 matching reports" */
+  it.each(ASK_PROGRESS_LOCALES)(
+    '%s: a total rights withholding never reads "0 matching reports" in the freshness line',
+    (locale) => {
+      const withheld = base({
+        retrievalContext: {
+          dataMode: 'live',
+          providers: ['rss-feeds'],
+          articlesRetrieved: 0,
+          rightsExcluded: { count: 4, reasons: { SOURCE_RIGHTS_NOT_CLEARED: 4 } },
+        },
+      });
+      const s = askR2Strings(locale as never);
+      const v = askR2View(withheld, s, locale as never);
+      expect(v.freshness).toContain(askProgressStrings(locale).rightsWithheld(4));
+      expect(v.freshness).not.toContain(s.freshness.zero.replace(/^.*\{when\}/, '').trim());
+      /* positive control: the same answer from a search that ran and matched nothing keeps "0 matching" */
+      const zero = base({
+        retrievalContext: { dataMode: 'live', providers: ['rss-feeds'], articlesRetrieved: 0 },
+      });
+      expect(askR2View(zero, s, locale as never).freshness).toContain(
+        s.freshness.zero.replace(/^.*\{when\}/, '').trim(),
+      );
+    },
+  );
 
   it('a genuine outage keeps its figures (a search was attempted)', () => {
     const p = base({

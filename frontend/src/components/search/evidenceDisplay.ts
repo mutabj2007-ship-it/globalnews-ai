@@ -143,9 +143,21 @@ export function retrievalFiguresWithheld(
 ): boolean {
   if (context == null) return false;
   if (context.retrievalAttempted === false) return true;
-  const count = articleCount ?? context.articlesRetrieved ?? 0;
-  if (count === 0 && (context.rightsExcluded?.count ?? 0) > 0) return true;
+  if (rightsWithheldTotal(context, articleCount)) return true;
   return rightsRefusedOnly(context, articleCount);
+}
+
+/**
+ * E1 C-1 — reports WERE found and every one was withheld for rights: nothing admitted, at least one
+ * excluded. Distinct from rightsRefusedOnly (nothing was searched at all).
+ */
+export function rightsWithheldTotal(
+  context: AnalysisRetrievalContext | null | undefined,
+  articleCount?: number,
+): boolean {
+  if (context == null) return false;
+  const count = articleCount ?? context.articlesRetrieved ?? 0;
+  return count === 0 && (context.rightsExcluded?.count ?? 0) > 0;
 }
 
 /** True only when NO live lane answered and nothing usable was served: a real outage. */
