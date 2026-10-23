@@ -153,10 +153,19 @@ function isReporting(article: NewsArticle): boolean {
  * CTO R164 P-4 — a stance is read only from accessible report text. A title-only item (no body,
  * or a body withheld) is never support, never contradiction: it can only make a claim UNASSESSED.
  */
+/** A post IS its own full text: its title and text are the same by construction. */
+const SOCIAL_ROLES: ReadonlySet<string> = new Set([
+  'OFFICIAL_SOCIAL',
+  'SOCIAL_REPORT',
+  'WITNESS_SOCIAL',
+]);
+
 function isAssessable(article: NewsArticle): boolean {
   const summary = (article.summary ?? '').trim();
-  /* Politics RV-21 — a body that only repeats the headline adds no accessible text. */
-  return summary.length > 0 && summary.toLowerCase() !== (article.title ?? '').trim().toLowerCase();
+  if (summary.length === 0) return false;
+  if (article.evidenceRole !== undefined && SOCIAL_ROLES.has(article.evidenceRole)) return true;
+  /* Politics RV-21 — an article body that only repeats the headline adds no accessible text. */
+  return summary.toLowerCase() !== (article.title ?? '').trim().toLowerCase();
 }
 
 /**
