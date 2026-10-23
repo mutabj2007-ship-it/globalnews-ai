@@ -36,6 +36,19 @@ export interface FixtureStory extends ObservableRecord {
   readonly url: string;
   readonly title: string;
   readonly sourceName: string;
+  /**
+   * E1 U-1 · R3B — THE CANONICAL INTERNAL SOURCE ID, and the ONLY key the
+   * image-clearance decision may be asked with for this record.
+   *
+   * OPTIONAL BECAUSE IT DOES NOT ARRIVE YET, NOT BECAUSE IT IS NICE TO HAVE.
+   * The My Intelligence read carries `sourceName` and no identity; Claude
+   * Code's U1 API candidate 2fcf76e adds this field. Declared here as the
+   * smallest stable interface this lane needs so the view can ask the right
+   * question today and simply start getting answers when the payload lands.
+   *
+   * Its absence FAILS CLOSED. `sourceName` is NEVER a substitute.
+   */
+  readonly sourceId?: string | null;
   readonly publishedAt: string;
   readonly firstSeenAt?: string;
   readonly countryCode: string;

@@ -4,6 +4,8 @@ import type { JSX } from 'react';
 import { BookOpenText, ExternalLink, MessagesSquare, Search } from 'lucide-react';
 import { safeExternalHref, type HomeEditorialResponse, type HomeStoryCard, type LanguageCode, type NewsArticle } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { withheldReportingLine } from '@/lib/news/withheldReporting';
+import type { ReadableEditorial } from './readableEditorial';
 import { formatObservationalTime } from '@/lib/formatRelativeTime';
 import { StoryVisual } from '@/components/home/StoryVisual';
 import { useStageB } from '@/lib/stories/stageBStore';
@@ -31,7 +33,7 @@ export function HomeHeroSection({
   language,
   discussionRead,
 }: {
-  readonly editorial: HomeEditorialResponse | null;
+  readonly editorial: ReadableEditorial | null;
   readonly language: LanguageCode;
   readonly discussionRead: boolean;
 }): JSX.Element {
@@ -85,7 +87,12 @@ export function HomeHeroSection({
           </h1>
           {hero === null ? (
             <p role="status" data-home-w60-empty="" className="rounded-[0.75rem] bg-white/[0.06] p-4 text-[0.875rem] leading-snug text-[var(--gt-hdrInk)]">
-              {editorial === null || editorial.degraded ? t.w60Unavailable : t.w60Empty}
+              {/* R135-V1: withheld for rights is not a service failure */}
+              {editorial?.rightsWithheld.hero === true
+                ? withheldReportingLine(language)
+                : editorial === null || editorial.degraded
+                  ? t.w60Unavailable
+                  : t.w60Empty}
             </p>
           ) : (
             <>
@@ -145,6 +152,10 @@ function LeadStory({
         <div aria-hidden="true" className="pointer-events-none relative select-none">
           <StoryVisual
             article={{ category: card.category as NewsArticle['category'], imageUrl: card.imageUrl ?? undefined }}
+            /* E1 U-1 · R3B — the canonical id, never the display name. HomeStoryCard
+               carries both, and the display name was the one picked under the old
+               prop name. A card with no canonical id fails closed. */
+            sourceId={card.sourceId}
             className="aspect-[16/9] min-[520px]:h-full min-[520px]:aspect-auto min-[520px]:min-h-[170px] max-h-[132px] min-[520px]:max-h-none"
             missingLabel={dict.betaHome.imageUnavailable}
             sizes="(min-width: 848px) 300px, 100vw"

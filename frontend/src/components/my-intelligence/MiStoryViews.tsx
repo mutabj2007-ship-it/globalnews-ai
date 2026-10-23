@@ -9,6 +9,7 @@ import { hasObservationTime } from './newSince';
 import type { FixtureStory } from './devFixtures';
 import type { SyntheticEvent } from 'react';
 import { safeExternalHref } from '@globalnews-ai/shared';
+import { resolvePublisherImage } from '@/lib/rights/publisherImageDisplay';
 
 /**
  * COLOR / ACTION-AWARENESS R1 — THE STORY'S OWN IMAGE, OR AN HONEST FALLBACK.
@@ -23,15 +24,38 @@ import { safeExternalHref } from '@globalnews-ai/shared';
  * The designed placeholder sits UNDER the image, so a URL that 404s or times
  * out is hidden and reveals the placeholder instead of a broken-image glyph.
  */
-export function storyImageSrc(story: Pick<FixtureStory, 'imageUrl'>): string | undefined {
-  const raw = story.imageUrl;
-  if (typeof raw !== 'string' || raw.trim().length === 0) return undefined;
-  try {
-    const parsed = new URL(raw);
-    return parsed.protocol === 'https:' || parsed.protocol === 'http:' ? parsed.toString() : undefined;
-  } catch {
-    return undefined;
-  }
+/**
+ * E1 U-1 — PUBLISHER IMAGE RIGHTS CONTAINMENT.
+ *
+ * The absolute-http(s) check is PRESERVED, unchanged, inside the governed
+ * decision — it was never the rights question, only a sanity check on the
+ * string, and it still runs. What is added is the question nobody asked: may
+ * this product display that publisher's photograph. No clearance exists, so
+ * every retained story now resolves to `undefined`.
+ *
+ * The designed placeholder already sits UNDER the image, per this file's own
+ * header, so a refusal reveals exactly what a story with no image reveals.
+ * The retained record is untouched: `story.imageUrl` still carries what it
+ * always carried, and nothing was deleted from saved data.
+ */
+export function storyImageSrc(story: Pick<FixtureStory, 'imageUrl' | 'sourceId'>): string | undefined {
+  /*
+    R3B — THE KEY IS THE CANONICAL `sourceId`, NEVER `sourceName`.
+
+    This surface used the publisher's DISPLAY NAME as the rights key. A display
+    name is self-asserted, not unique and not stable: two retained stories can
+    carry the same one, an outlet can rename itself, and a crafted name can be
+    made to collide with whatever a clearance is one day filed under.
+
+    FAIL CLOSED WHILE THE FIELD IS ABSENT. `FixtureStory.sourceId` is optional
+    because the My Intelligence read does not carry it yet — Claude Code's U1
+    API candidate 2fcf76e adds it. Until then every retained story resolves to
+    `undefined` here, which is the outcome the empty clearance set already
+    produced, now reached for the right reason. There is no fallback to
+    `sourceName`, and none to the article URL's host.
+  */
+  const decision = resolvePublisherImage(story.imageUrl, story.sourceId);
+  return decision.kind === 'CLEARED' ? decision.src : undefined;
 }
 
 /** Stateless, so it works identically for every card. */

@@ -10,6 +10,7 @@ import { askThemeColor, parseAskThemePreference } from '@/lib/ask/askTheme';
 import { AskContinuityHeader } from '@/components/ask-nav/AskContinuityHeader';
 import { BriefingDetailClient } from '@/components/ask/BriefingDetailClient';
 import { surfaceLocale } from '@/lib/i18n/displayLocale.server';
+import { briefingOriginOf } from '@/lib/ask/followedQuestions';
 
 /**
  * R2 · D1 — `/saved/briefing?id=…&v=…`: one of the reader's briefings, a stored version at a time.
@@ -35,7 +36,7 @@ export function generateViewport(): Viewport {
 export default function BriefingPage({
   searchParams,
 }: {
-  readonly searchParams: { readonly id?: string; readonly v?: string };
+  readonly searchParams: { readonly id?: string; readonly v?: string; readonly from?: string; readonly check?: string };
 }): JSX.Element {
   /* R4 · SEVEN-LANGUAGE ASK FRONTEND — the reader's own locale, resolved once and not clamped.
      This line was `=== 'pl' ? 'pl' : 'en'`; see lib/ask/askLocale.ts for the one declared
@@ -49,18 +50,28 @@ export default function BriefingPage({
   const chrome = askLanguageDisposition(locale).catalogueLocale;
   const v = Number(searchParams.v);
   const requestedVersion = Number.isInteger(v) && v >= 1 ? v : null;
+  /* ASK R3 NAVIGATION / USABILITY R1 — opened from My updates (?from=updates) or from Saved: the
+     header section, the back link and the post-delete destination follow the opener (audit D09). */
+  const origin = briefingOriginOf(searchParams.from);
+  /* ASK R3 · D09 — one recorded check's Before / Latest (an id or 'latest'; anything else is no check) */
+  const checkId =
+    typeof searchParams.check === 'string' && /^(latest|[0-9a-zA-Z-]{1,64})$/.test(searchParams.check)
+      ? searchParams.check
+      : null;
 
   return (
     <AskThemedSurface theme={parseAskThemePreference(cookies().get(THEME_COOKIE_NAME)?.value)}>
       <AskNavProvider>
-        <AskNavShell language={chrome} selected={locale} />
-        <AskContinuityHeader locale={chrome} surface="saved" />
+        <AskNavShell language={chrome} selected={locale} section={origin} />
+        <AskContinuityHeader locale={chrome} surface={origin} />
         {/* R4 · the detail is outside the nav shell's direction scope: Arabic laid it out LTR */}
         <div className="contents" {...askDirectionProps(locale)}>
           <BriefingDetailClient
             id={typeof searchParams.id === 'string' ? searchParams.id : ''}
             requestedVersion={requestedVersion}
             locale={locale}
+            origin={origin}
+            checkId={checkId}
           />
         </div>
       </AskNavProvider>

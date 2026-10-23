@@ -628,12 +628,14 @@ export const esShellOverlay: ShellLocaleOverlay = {
       verification: {
         available: "consultada",
         claims: "Estado de la afirmación",
+        coverageNotSearched: "La verificación quedó incompleta porque algunas fuentes no están autorizadas para este uso y no se consultaron.",
         coverageIncomplete: "La verificación quedó incompleta porque algunas vías de fuentes no estaban disponibles.",
         lanes: {
           "news-providers": "Proveedores de noticias",
           "rss-feeds": "Canales de los editores",
         },
         notVerified: "No pude verificar esta afirmación a partir de las fuentes consultadas con éxito.",
+        notSearched: "no consultada",
         reasons: {
           auth: "acceso denegado",
           "not-configured": "no configurada",

@@ -19,8 +19,9 @@ export function AskUpdatesChecking({ locale }: { readonly locale: DisplayLocale 
   const name = useId();
   const row = 'flex items-start gap-3 py-1.5 text-[14px]';
   return (
-    <details data-ask="updates-checking" className="rounded-lg border border-line px-4 py-3">
-      <summary className="min-h-[44px] cursor-pointer py-2 text-[15px] font-semibold text-ink-primary">
+    /* R3.2 MOBILE COMPACT — the same collapsed disclosure, with less padding and a quieter title */
+    <details data-ask="updates-checking" className="rounded-lg border border-line px-3 py-0.5">
+      <summary className="flex min-h-[44px] cursor-pointer items-center text-[14px] font-semibold text-ink-secondary">
         {s.howChecked}
       </summary>
       <fieldset className="mt-2">

@@ -2020,6 +2020,122 @@
 .conversations input[type='search']::placeholder {
   color: var(--ad-ink-3, #7d89a1);
 }
+/*
+  ASK R3 SETTINGS-NAV ENGINEERING §3 (Claude Design GLOBALNEWSAI-R3-SETTINGS-NAV-ENGINEERING.zip,
+  frames 02, 05–07 and the control-state sheet) — the search field, Clear, count and list states.
+*/
+.conversationsSearch {
+  position: relative;
+}
+.conversationsSearchGlyph {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 12px;
+  margin-block: auto;
+  pointer-events: none;
+  color: var(--ad-ink-2, #93a0b8);
+}
+[dir='rtl'] .conversationsSearchGlyph {
+  transform: scaleX(-1);
+}
+.conversationsSearch input[type='search'] {
+  height: 44px;
+  padding-inline: 38px 46px;
+  font-size: 16px;
+}
+.conversationsSearch input[type='search']::placeholder {
+  font-size: 15px;
+}
+/* 2 px accent when it has text or focus; padding reduced by 1 px so the text does not shift */
+.conversationsSearch input[type='search']:focus,
+.conversationsSearch input[type='search']:not(:placeholder-shown) {
+  outline: none;
+  border-width: 2px;
+  border-color: var(--ad-accent, #6c93ff);
+  padding-inline: 37px 45px;
+}
+.conversationsSearch input[type='search']::-webkit-search-cancel-button {
+  display: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.conversationsSearch > button {
+  position: absolute;
+  inset-block: 2px;
+  inset-inline-end: 2px;
+  display: inline-flex;
+  width: 44px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ad-ink-2, #93a0b8);
+}
+.conversationsClearDot {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+}
+@media (hover: hover) {
+  .conversationsSearch > button:hover .conversationsClearDot {
+    background: var(--ad-hover-bg2, #161d2c);
+  }
+}
+.conversationsSearch > button:focus-visible {
+  outline: none;
+}
+.conversationsSearch > button:focus-visible .conversationsClearDot {
+  box-shadow: inset 0 0 0 2px var(--ad-accent, #6c93ff);
+}
+.conversationsCount {
+  margin: 0 4px;
+  font-size: 13px;
+  color: var(--ad-ink-3, #7d89a1);
+}
+.conversationsLoading {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 20px;
+}
+.conversationsLoading > span {
+  display: block;
+  height: 14px;
+  border-radius: 4px;
+  background: var(--ad-line, #1e2636);
+}
+.conversationsLoading > span:nth-child(1) {
+  width: 40%;
+  height: 12px;
+}
+.conversationsLoading > span:nth-child(2) {
+  width: 90%;
+}
+.conversationsLoading > span:nth-child(3) {
+  width: 75%;
+}
+.conversationsLoading > span:nth-child(4) {
+  width: 84%;
+}
+.conversationsRetry {
+  align-self: flex-start;
+  min-height: 44px;
+  margin-inline-start: 8px;
+  border: 1px solid var(--ad-line-strong, #2a3548);
+  border-radius: 22px;
+  padding: 0 14px;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ad-ink, #edeff5);
+}
+.conversationsRetry[aria-disabled='true'] {
+  opacity: 0.6;
+}
 .conversations h3 {
   margin: 12px 8px 4px;
   font-size: var(--ad-t-xs, 0.8125rem);
@@ -2201,6 +2317,25 @@
   }
   .frame[data-ask-entry='true'] .entrySpacer {
     display: none;
+  }
+}
+/*
+  MASTER CTO R38 · U-1 — TALL PORTRAIT WINDOWS THAT ARE NOT PHONES (the Product Owner's 820x1280 /
+  845x1308 Chrome windows; portrait tablets). The phone rule above put the composer at the bottom
+  edge and the welcome group in the middle of the free space, which on a 1,300 px window left the
+  composer stranded ~400 px below the group (PO red mark). Here the free space is split EVENLY
+  above the group and below the composer, so headline, cues and the one composer form one
+  contiguous group at the optical centre — the same composition the desktop entry grid uses.
+  Phones (<= 600 px) keep the thumb-reach bottom composer; nothing changes after the first question.
+*/
+@media (min-width: 601px) and (max-width: 1100px) and (orientation: portrait) and (min-height: 900px) {
+  .frame[data-ask-entry='true'] .reader {
+    justify-content: flex-end;
+  }
+  .frame[data-ask-entry='true'] .entrySpacer {
+    display: block;
+    flex: 1 1 0;
+    height: auto;
   }
 }
 
@@ -3436,4 +3571,165 @@
   font-size: var(--ad-t-sm, 0.9375rem);
   font-weight: 600;
   cursor: pointer;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   ASK R3 NAVIGATION / USABILITY R1 (CTO R3 conformity rulings, 2026-10-10)
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* The conversation list scrolls in its own region (drawer and column alike): New question and
+   search stay on top, the drawer footer stays in view with up to 50 conversations. */
+.conversationsList {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/*
+  The R3 header: ☰ · [Ask | My updates | Saved] · + (HANDOFF.md §3 L74). Phones and narrow
+  tablets draw it literally — the primary navigation takes the wordmark's place and New question
+  is the icon-only "+" with its accessible name (aria-label) — so no locale can push a control off
+  screen (audit: FR "+ Nouvelle question" overflowed 18 px at 320). From 700 px there is room for
+  the canonical wordmark and the labelled "+ New question" beside the navigation, unchanged.
+*/
+.page[data-ask-standalone] .frame .phoneHeader {
+  min-width: 0;
+}
+.page[data-ask-standalone] .frame .newButton {
+  margin-inline-start: 0;
+}
+@media (max-width: 699px) {
+  .page[data-ask-standalone] .frame .brand {
+    display: none;
+  }
+  .page[data-ask-standalone] .frame .newButton {
+    padding-inline: 0;
+  }
+  .page[data-ask-standalone] .frame .newButton > :global([data-ask='new-question-label']) {
+    display: none;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   ASK R3 IA + GUIDED DISCOVER R2 (Claude H) — appended; no rule above is edited.
+   Claude Design GLOBALNEWSAI-R3-IA-DISCOVER-FINAL-R2.zip (SHA-256 574fc35b…55e32be8),
+   approved by the Product Owner 11 Oct 2026. Frames F01b / F02 / F03a–d / F05a.
+   Every selector here is ia…-prefixed. Colours are existing tokens only; no animation,
+   so nothing to reduce under reduced motion.
+   ══════════════════════════════════════════════════════════════════════════════ */
+.iaCuesPills {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin: 2px 0 2px;
+}
+.iaCuesList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 2px 0 2px;
+}
+.iaCue {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--ad-line, #d9d9d2);
+  border-radius: 22px;
+  background: transparent;
+  color: var(--ad-ink, inherit);
+  padding: 0 16px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: start;
+}
+.iaCuesList .iaCue {
+  width: 100%;
+  justify-content: flex-start;
+}
+.iaCue:hover {
+  background: var(--ad-surface-2, transparent);
+}
+.iaCue:focus-visible {
+  outline: 2px solid var(--ad-focus, #6c93ff);
+  outline-offset: -2px;
+}
+.iaCueGlyph {
+  flex: none;
+  color: var(--ad-accent-text, currentColor);
+}
+.iaGlobe {
+  display: inline-block;
+  margin-inline-end: 6px;
+  vertical-align: -3px;
+}
+.iaContinueHead {
+  margin: 0;
+  padding: 10px 14px 2px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ad-ink-2, #6b6a62);
+}
+.iaTwoLine {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  min-width: 0;
+}
+.iaAllConversations {
+  min-height: 44px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--ad-accent-text, #1f6f78);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-align: start;
+  padding: 0 14px;
+  cursor: pointer;
+}
+.iaAllConversations:focus-visible {
+  outline: 2px solid var(--ad-focus, #6c93ff);
+  outline-offset: -2px;
+}
+
+/*
+  R3.1 · PRODUCT OWNER GUIDED-ACTIONS LAYOUT (MASTER CTO, 2026-10-11) — two actions side by side,
+  "Find job opportunities" centred on the row below, the regional line under them. The pills
+  container becomes a centred two-column grid whose tracks are at most their content's width
+  (so desktop keeps its natural pill widths) and shrink EQUALLY when space is short (so a phone
+  gets two balanced columns whose labels wrap onto a second line instead of each pill taking its
+  own row). The compact list (iaCuesList, width < 360 or height < 640) is unchanged. Same three
+  buttons, same handlers and icons, same 44 px minimum target; nothing animates.
+*/
+.iaCuesPills {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, max-content));
+  justify-content: center;
+  width: 100%;
+  max-width: 100%;
+}
+.iaCuesPills > .iaCue {
+  min-width: 0;
+  min-height: 44px;
+  justify-content: center;
+  border-radius: 22px;
+}
+.iaCuesPills > .iaCue > span {
+  min-width: 0;
+  overflow-wrap: break-word;
+  line-height: 1.25;
+  padding-block: 6px;
+}
+.iaCuesPills > .iaCue:nth-child(3) {
+  grid-column: 1 / -1;
+  justify-self: center;
+  max-width: 100%;
 }

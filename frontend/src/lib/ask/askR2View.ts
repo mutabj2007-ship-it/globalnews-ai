@@ -1,3 +1,7 @@
+import { RIGHTS_REFUSAL } from './askSearchActivity';
+import { askRightsRefusalStrings } from './askRightsRefusal';
+import { rightsRefusedOnly } from '@/components/search/evidenceDisplay';
+import { congoClarificationOf } from './askCongoClarification';
 import { askFormatUtcInstant } from './askDirection';
 import type { AskAnswerState, AskPlanChip, AskR2Payload } from '@/lib/api/askV2Api';
 import type { AskR2Locale, AskR2Strings } from './askR2Strings';
@@ -353,7 +357,14 @@ export function askR2View(
   else if (badge === 'unavail')
     freshness = basis in s.unavailableBecause ? s.noAnswer : s.unavailable;
   else if (badge === 'insuf')
-    freshness = fill(searchLimited ? s.freshness.limited : s.freshness.zero, checkedAt);
+    /* WAVE 1c — every lane refused for rights (the turn's and the chip's own predicate): nothing was
+       searched, so neither "temporarily unavailable" nor "0 matching reports". E1 W1C-F1: never
+       freshness.checked either (its verb asserts a check, its {sources} names checked sources) — the time,
+       " · ", the qualified rights chip. Any outage in play keeps freshness.limited. */
+    freshness =
+      retrieval != null && rightsRefusedOnly(retrieval, sourceCount)
+        ? `${checkedAt ?? '—'} · ${askRightsRefusalStrings(locale).chip}`
+        : fill(searchLimited ? s.freshness.limited : s.freshness.zero, checkedAt);
   else if (badge === 'rec') freshness = s.freshness.retainedRecord;
   else if (badge === 'calc') freshness = s.freshness.computed;
   else if (badge === 'part' && payload.verification?.asOf != null)
@@ -457,13 +468,35 @@ export function askR2View(
     lead ??= s.clarify.fallback;
   }
   const trimmed = question.trim().replace(/[?.!]+$/, '');
-  const choices =
+  let choices =
     trimmed.length === 0
       ? []
       : candidates.map((label) => ({
           label,
           question: objectiveAsk ? s.r3.choiceFor(trimmed, label) : `${trimmed} (${label})?`,
         }));
+  /*
+    MASTER CTO R47 · D04–D06 — the reader named a bare "Congo": the ONE specific question is which
+    Congo, whether the server said so (LANDED_AMBIGUOUS_COUNTRY → [COD, COG]) or returned a
+    clarification with no candidates (live NO_PRIOR_SUBJECT defect). Each choice is the reader's own
+    question with only that word replaced; nothing is assigned until the reader picks and sends.
+  */
+  const serverCandidates = payload.answer.candidates ?? [];
+  const congoAmbiguity =
+    serverCandidates.length === 2 && serverCandidates.includes('COD') && serverCandidates.includes('COG');
+  const congo =
+    badge === 'clar' &&
+    !objectiveAsk &&
+    basis !== 'CONSTRAINT_NOTED' &&
+    basis !== 'PRIOR_REFERENCE_UNRESOLVED' &&
+    (candidates.length === 0 || congoAmbiguity)
+      ? congoClarificationOf(question, locale)
+      : null;
+  if (congo !== null) {
+    lead = congo.lead;
+    suggestion = null;
+    choices = congo.choices.map(({ label, question: draft }) => ({ label, question: draft }));
+  }
 
   return {
     badge,
@@ -483,7 +516,7 @@ export function askR2View(
     unavailableText,
     clarification: {
       byExecutor,
-      candidates,
+      candidates: congo !== null ? congo.choices.map((choice) => choice.label) : candidates,
       /* MC-070: the place is kept as the plan's GEOGRAPHY chip, not inflected into the sentence. */
       lead,
       suggestion,
@@ -506,6 +539,11 @@ function verificationOf(
      claim. An open question with nothing admitted is told so by its answer state; an incomplete
      search is still disclosed, without calling the question a claim (existing seven-locale copy). */
   const hasClaims = (retrieval.claimAssessments ?? []).length > 0;
+  /* F6–F8 (E1 R-5, W-1) — when every unreached lane was REFUSED (no source cleared for the use), the
+     coverage notice says so instead of calling the lanes "unavailable"; any genuine outage keeps it. */
+  const unreachedReasons = trace?.lanesUnavailable.map((u) => u.reason) ?? [];
+  const refusedOnly = unreachedReasons.length > 0 && unreachedReasons.every((r) => r === RIGHTS_REFUSAL);
+  const coverage = refusedOnly ? s.verification.coverageNotSearched : s.verification.coverageIncomplete;
   const notice =
     retrieval.verificationNotice === undefined
       ? null
@@ -515,10 +553,10 @@ function verificationOf(
           retrievalOwnsIncompleteLine
           ? null
           : retrieval.verificationNotice === 'COVERAGE_INCOMPLETE'
-            ? s.verification.coverageIncomplete
+            ? coverage
             : null
         : retrieval.verificationNotice === 'COVERAGE_INCOMPLETE'
-          ? `${s.verification.notVerified} ${s.verification.coverageIncomplete}`
+          ? `${s.verification.notVerified} ${coverage}`
           : s.verification.notVerified;
   if (notice === null && trace === undefined && retrieval.claimAssessments === undefined)
     return null;
@@ -532,11 +570,22 @@ function verificationOf(
             ok: true,
             status: s.verification.available,
           })),
-          ...trace.lanesUnavailable.map((u) => ({
-            label: label(u.lane),
-            ok: false,
-            status: `${s.verification.unavailable} (${s.verification.reasons[u.reason] ?? u.reason})`,
-          })),
+          ...trace.lanesUnavailable
+            .filter((u) => u.reason !== RIGHTS_REFUSAL)
+            .map((u) => ({
+              label: label(u.lane),
+              ok: false,
+              status: `${s.verification.unavailable} (${s.verification.reasons[u.reason] ?? u.reason})`,
+            })),
+          /* F6–F8 — refused lanes: "not searched", under the publisher-feed or the aggregate news-provider
+             label (never a raw provider id or the raw reason token), one row per label */
+          ...Array.from(
+            new Set(
+              trace.lanesUnavailable
+                .filter((u) => u.reason === RIGHTS_REFUSAL)
+                .map((u) => (u.lane === 'rss-feeds' ? label('rss-feeds') : label('news-providers'))),
+            ),
+          ).map((l) => ({ label: l, ok: false, status: s.verification.notSearched })),
         ];
   const claims = (retrieval.claimAssessments ?? []).map((c) => ({
     text: c.text,

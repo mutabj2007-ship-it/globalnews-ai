@@ -29,7 +29,16 @@ describe('ruling 1 — standalone Ask has the Design header only', () => {
 describe('ruling 2 — the drawer is the conversations', () => {
   it('no navigation menu under the list on the reading surface', () => {
     const drawer = shell.slice(shell.indexOf('data-ask-nav="drawer"'));
-    expect(drawer).toMatch(/\{reading \? \(\s*<AskReadingFooter/);
+    /* ASK R3 NAVIGATION / USABILITY R1 — the drawer on EVERY Ask page now ends in the one
+       conversations footer (no route menu under the list anywhere), not only on the reading
+       surface. */
+    /* SUPERSEDED, NOT DELETED (R3.1 FIX 3) — the line here required the drawer to end in
+       `<AskReadingFooter` after the conversations. The PO removed that footer: the drawer now
+       ends with the conversations, and still has no navigation menu under the list. */
+    expect(drawer.slice(0, drawer.indexOf('{settingsOpen && ('))).not.toContain('<AskReadingFooter');
+    expect(drawer).toMatch(/data-ask-nav="conversations">[\s\S]*?<\/div>/);
+    expect(drawer).not.toMatch(/renderRoutes\(/);
+    expect(drawer).not.toMatch(/\{reading \? \(/);
   });
 });
 
@@ -73,7 +82,10 @@ describe('ruling 6 — legacy hand-offs are More rows, not cards', () => {
 describe('ruling 8 — nothing verified vs search incomplete', () => {
   it('one reader sentence, and the incomplete-search line only when the search was limited', () => {
     expect(turn).toContain('{r.noReportingTitle}');
-    expect(turn).toMatch(/view\.badge === 'insuf' && view\.searchLimited && \(\s*<p data-ask="search-incomplete">/);
+    /* CTO R115 (G-1) — SUPERSEDED, NOT DELETED: was /…&& \(\s*<p data-ask="search-incomplete">/. The same line
+       under the same condition; it now carries a rights-refused marker and says "not cleared" instead of
+       an outage when every lane was refused for rights. */
+    expect(turn).toMatch(/view\.badge === 'insuf' && view\.searchLimited && \(\s*(?:\/\*[\s\S]*?\*\/\s*)?<p data-ask="search-incomplete"/);
   });
 });
 

@@ -206,6 +206,7 @@ export function SixtySecondBrief({
         */}
         <StoryVisual
           article={lead}
+          sourceId={lead.sourceId}
           /*
             FINAL CORRECTION: "restore the stronger large-image treatment in
             `Your world in 60 seconds`" on phone.

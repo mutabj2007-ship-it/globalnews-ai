@@ -99,7 +99,7 @@ describe('header and welcome group (A1/A2, F2)', () => {
     expect(emblem).toMatch(/<AskEmblemSvg id=\{id\} size=\{24\} still \/>/);
     expect(emblem).toMatch(/still \? \{ style: \{ animation: 'none' \} \} : \{\}/);
   });
-  it('the welcome group is headline and ONE supporting sentence; typing collapses it', () => {
+  it('the welcome group is headline and ONE supporting sentence; typing collapses it only when the visible height is under 460 px (R38 U-1)', () => {
     /*
       SUPERSEDED BY PRODUCT OWNER / CTO DESIGN R3 REVIEW, 9 Oct 2026 (H-R3-1). This asserted a
       third element, `r2s.read.welcomeExample`, and was titled "… and a quiet example". The
@@ -115,7 +115,9 @@ describe('header and welcome group (A1/A2, F2)', () => {
     expect(markup).not.toMatch(/data-ask="welcome-example"/);
     expect(markup).not.toMatch(/data-ask="welcome-example-desktop"/);
     expect(markup).not.toMatch(/r2s\.read\.welcomeExample/);
-    expect(frame).toMatch(/const typing = entryState && \(composerFocused \|\| question\.trim\(\) !== ''\);/);
+    /* MASTER CTO R38 · U-1 — typing keeps the welcome group on normal and tall viewports; the
+       collapse is kept only where space is short (compact: phone keyboard, small phone). */
+    expect(frame).toMatch(/const typing = entryState && frameSize\.short && \(composerFocused \|\| question\.trim\(\) !== ''\);/);
     expect(frame).toMatch(/data-ask-typing=\{typing \? 'true' : undefined\}/);
     expect(read('components', 'ask-frame', 'askDashboard.module.css')).toMatch(
       /\.frame\[data-ask-typing='true'\] \.welcomeCollapsible \{\s*max-height: 0;\s*opacity: 0;/,

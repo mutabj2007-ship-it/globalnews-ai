@@ -1,0 +1,358 @@
+/*
+  ASK D0.1 — the story picker sheet (D1) and Choose a place (D2), drawn to the accepted D0.1 S01–S08.
+  Every colour is an existing --ad-* token from the Settings/drawer R3 scope (settingsTokens.module.css,
+  applied by the component through `settingsScope`), so Light / Navy / System / Scheduled all follow the
+  reader's Ask treatment. No new colour is introduced.
+*/
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 85;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: var(--ad-scrim, rgba(0, 0, 0, 0.55));
+}
+.sheet {
+  display: flex;
+  width: 100%;
+  height: calc(100% - 56px);
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 20px 20px 0 0;
+  background: var(--ad-bg, #080b12);
+  color: var(--ad-ink, #edeff5);
+}
+@media (min-width: 700px) {
+  .backdrop {
+    align-items: center;
+  }
+  .sheet {
+    width: min(92%, 520px);
+    height: min(86%, 760px);
+    border-radius: 16px;
+  }
+}
+/* MASTER CTO R38 · U-2 — the held Explain-a-story dialog is CONTENT-sized: notice, field and action
+   stay together; it scrolls only when the content is taller than the space (keyboard up). */
+.sheet.sheetContent {
+  height: auto;
+  max-height: calc(100% - 56px);
+}
+@media (min-width: 700px) {
+  .sheet.sheetContent {
+    height: auto;
+    max-height: min(86%, 760px);
+  }
+}
+.bodyContent {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 12px;
+  padding: 6px 18px max(18px, env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.describeLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ad-ink, #edeff5);
+}
+.describeInput {
+  min-height: 48px;
+  width: 100%;
+  padding: 0 14px;
+  border: 1px solid var(--ad-accent, #6c93ff);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ad-ink, #edeff5);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 400;
+}
+.head {
+  display: flex;
+  min-height: 60px;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 8px 0 18px;
+}
+.title {
+  margin: 0;
+  font-size: 1.1875rem;
+  font-weight: 600;
+  color: var(--ad-ink, #edeff5);
+}
+.iconButton {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 0;
+  border-radius: 22px;
+  background: transparent;
+  color: var(--ad-ink-2, #93a0b8);
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+.body {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  padding: 6px 18px max(18px, env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.search {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border: 1px solid var(--ad-accent, #6c93ff);
+  border-radius: 12px;
+  background: var(--ad-surface, #0f1420);
+}
+.search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--ad-ink, #edeff5);
+  font: inherit;
+  font-size: 16px;
+}
+/* The outer field carries the visible focus (`.search:focus-within`); the inner input is reset
+   explicitly so a global or form-reset focus style cannot draw a second ring inside it. */
+.search input,
+.search input:focus,
+.search input:focus-visible {
+  appearance: none;
+  padding: 0;
+  border: 0 !important;
+  border-radius: 0;
+  outline: none !important;
+  box-shadow: none !important;
+}
+.search input::-webkit-search-cancel-button {
+  display: none;
+}
+.search:focus-within {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ad-accent, #6c93ff) 22%, transparent);
+}
+.searchGlyph {
+  flex: none;
+  color: var(--ad-ink-2, #93a0b8);
+}
+.small {
+  margin: 0;
+  color: var(--ad-ink-2, #93a0b8);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+.notice {
+  margin: 0;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--ad-surface-2, #1d466c);
+  color: var(--ad-ink, #edeff5);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+.list {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--ad-line, #1e2636);
+  border-radius: 12px;
+  background: var(--ad-surface, #0f1420);
+  list-style: none;
+}
+.list > li + li {
+  border-top: 1px solid var(--ad-line, #1e2636);
+}
+.row {
+  display: flex;
+  width: 100%;
+  min-height: 52px;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 0;
+  background: transparent;
+  color: var(--ad-ink, #edeff5);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.rowMain {
+  min-width: 0;
+  flex: 1;
+}
+.rowTitle {
+  display: block;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+.rowMeta {
+  display: block;
+  margin-top: 4px;
+  color: var(--ad-ink-2, #93a0b8);
+  font-size: 0.8125rem;
+}
+.chevron {
+  flex: none;
+  color: var(--ad-ink-2, #93a0b8);
+}
+.back {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--ad-accent-text, #8aa9ff);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+}
+.storyTitle {
+  margin: 0;
+  font-size: 1.1875rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.sectionTitle {
+  margin: 4px 0 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.sectionSub {
+  color: var(--ad-ink-2, #93a0b8);
+  font-size: 0.8125rem;
+  font-weight: 400;
+}
+.prose {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+.cite {
+  margin-inline-start: 4px;
+  padding: 0 4px;
+  border: 1px solid var(--ad-line, #1e2636);
+  border-radius: 4px;
+  color: var(--ad-ink-2, #93a0b8);
+  font-size: 0.6875rem;
+}
+.link {
+  color: var(--ad-accent-text, #8aa9ff);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.foot {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px max(18px, env(safe-area-inset-bottom));
+}
+.primary,
+.secondary {
+  display: flex;
+  width: 100%;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 24px;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+/* CTO R23 — the reader's own words, quoted under the "Ask a question" action, one line, never wider than the sheet */
+.continueText {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  opacity: 0.85;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.primary {
+  border: 0;
+  background: var(--ad-accent, #6c93ff);
+  color: var(--ad-accent-ink, #080b12);
+}
+.secondary {
+  border: 1px solid var(--ad-line, #1e2636);
+  background: var(--ad-surface, #0f1420);
+  color: var(--ad-ink, #edeff5);
+}
+.page {
+  min-height: 100vh;
+  background: var(--ad-bg, #080b12);
+  color: var(--ad-ink, #edeff5);
+}
+.pageInner {
+  display: flex;
+  max-width: 48rem;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0 auto;
+  padding: 8px 18px 32px;
+}
+.pageTitle {
+  margin: 0;
+  font-size: 1.625rem;
+  font-weight: 600;
+}
+.pageIntro {
+  margin: 0;
+  color: var(--ad-ink-2, #93a0b8);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+.followRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.follow {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 18px;
+  border: 2px solid var(--ad-accent, #6c93ff);
+  border-radius: 22px;
+  background: transparent;
+  color: var(--ad-ink, #edeff5);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}

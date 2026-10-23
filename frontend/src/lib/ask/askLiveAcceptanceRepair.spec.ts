@@ -284,13 +284,18 @@ describe('C — retained Conflict records as concise structured observations (G1
       3,
     )!;
     const [row] = view.sections[0].rows;
+    /* R143 — CHANGED ASSERTIONS (R70): label was 'Armed clash — Attack near Beni', cited was
+       'Radio Okapi,2026-08-31 · Actualite.cd,2026-09-01'. The recorded headline is the outlet's
+       expression, not licensed by UCDP's CC BY 4.0 (E1 R135 addendum 02): event type and outlet
+       NAMES only. */
     expect(row).toMatchObject({
       period: '2026-08-31',
       place: 'Beni territory, North Kivu',
-      label: 'Armed clash — Attack near Beni',
+      label: 'Armed clash',
       parties: 'ADF vs Civilians',
-      cited: 'Radio Okapi,2026-08-31 · Actualite.cd,2026-09-01',
+      cited: 'Radio Okapi · Actualite.cd',
     });
+    expect(JSON.stringify(row)).not.toContain('Attack near Beni');
     expect(view.sections[0].caveats).toContain(
       'Read at country level: the area you named is not resolved to provinces, so each record shows its own stated place.',
     );

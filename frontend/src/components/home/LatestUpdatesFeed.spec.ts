@@ -24,7 +24,27 @@ describe('LatestUpdatesFeed editorial redesign (Milestone #51 browser-acceptance
   it('uses the existing SafeImage/fallback path for both lead and secondary imagery — no new image-handling logic', () => {
     const safeImageUsages = (source.match(/<SafeImage/g) ?? []).length;
     expect(safeImageUsages).toBe(2);
-    expect(source).toMatch(/imageUrl \|\| '\/images\/article-placeholder\.jpg'/);
+  /* ── SUPERSEDED BY E1 U-1 · PUBLISHER IMAGE RIGHTS CONTAINMENT ──────────
+     The assertion below USED TO REQUIRE the publisher's photograph to render.
+     E1 identified publisher images rendered with no recorded image-display
+     clearance, and the CTO independently confirmed this render path, so the
+     requirement is withdrawn — not because it became inconvenient, but
+     because the behaviour it pinned is the defect.
+
+     THE ORIGINAL IS KEPT ABOVE EACH REPLACEMENT, commented, with its
+     authority, so a reader can see exactly what was traded and for what. The
+     replacement is the INVERSE where an inverse exists: it is stronger than
+     deleting, because deleting would leave nothing stopping the photograph
+     from coming back. Every neighbouring assertion in this file is untouched.
+     ──────────────────────────────────────────────────────────────────────── */
+    /* WAS: expect(source).toMatch(/imageUrl \|\| '\/images\/article-placeholder\.jpg'/);
+       The fallback is THE SAME first-party artwork and the SafeImage path is
+       unchanged — the test's own subject. What changed is that reaching the
+       publisher's photograph is now a governed decision rather than a truthy
+       check, so the `||` is gone and the governed call stands in its place. */
+    expect(source).toMatch(
+      /publisherImageSrcOrFallback\((?:lead|item)\.imageUrl, (?:lead|item)\.sourceId, '\/images\/article-placeholder\.jpg'\)/,
+    );
   });
 
   it('does not fabricate an image URL — every SafeImage src still traces back to the real article field', () => {

@@ -18,24 +18,93 @@
  */
 export const FIRST_PARTY_PROXY_TIMEOUT_MS = 120_000;
 
+/**
+ * R76 (E1_B_NAME_PRIVACY_CONDITIONAL, C-4) — My Intelligence dev fixtures greet an anonymous
+ * visitor as "Anna" with fixture stories presented as theirs. `NEXT_PUBLIC_MI_DEV_FIXTURES` is a
+ * PUBLIC, build-time variable, so the guarantee that it is off in Alpha / Production is a build
+ * check, not a convention: a production build (or any Railway build) with it set to 'true' fails.
+ * `next dev` (NODE_ENV=development) and local test runs are unaffected.
+ */
+export function assertNoDevFixturesInPublicBuild(env = process.env) {
+  const publicBuild = env.NODE_ENV === 'production' || Boolean(env.RAILWAY_ENVIRONMENT_NAME ?? env.RAILWAY_ENVIRONMENT);
+  if (publicBuild && env.NEXT_PUBLIC_MI_DEV_FIXTURES === 'true') {
+    throw new Error(
+      'NEXT_PUBLIC_MI_DEV_FIXTURES=true is refused in a production / Railway build (E1-B C-4): ' +
+        'fixture accounts must never reach a public build.',
+    );
+  }
+}
+assertNoDevFixturesInPublicBuild();
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   experimental: {
     proxyTimeout: FIRST_PARTY_PROXY_TIMEOUT_MS,
   },
+  /**
+   * ════════════════════════════════════════════════════════════════════════
+   * E1 U-1 · B-2 — THE IMAGE OPTIMIZER IS NOT AN OPEN PROXY
+   * ════════════════════════════════════════════════════════════════════════
+   *
+   * WHAT WAS HERE, AND WHY IT WAS WRONG NOW. This block carried
+   * `remotePatterns: [{ protocol: 'https', hostname: '**' }]`, with a comment
+   * arguing that live providers serve article images from an unbounded set of
+   * domains so a wildcard was the recommended shape. That reasoning was sound
+   * while the product DISPLAYED publisher photographs. Under E1 U-1 it no
+   * longer does: no external publisher image is rendered on any surface
+   * without a recorded display clearance, and no such clearance exists.
+   *
+   * The wildcard outlived its reason and became a liability. `/_next/image` is
+   * a RAW ENDPOINT: it does not care what the components render, and
+   * `unoptimized` on an <Image> does not protect it. Anyone could ask this
+   * deployment to fetch and re-serve any HTTPS image on the internet, from our
+   * origin, with our cache in front of it.
+   *
+   * MEASURED ON THIS REPOSITORY'S OWN NEXT (14.2.35), against a controlled
+   * local HTTPS fixture — no live publisher was contacted:
+   *
+   *   BEFORE  /_next/image?url=https://<fixture>/x.png   → 200 image/png
+   *           ... with an UPPERCASE scheme (HTTPS://)    → 200 image/png
+   *           ... at every deviceSizes width (6 of 6)    → 200
+   *           ... via a 302 from an allowed origin       → 200 image/png
+   *   AFTER   every one of the above                     → 400 "url" parameter is not allowed
+   *
+   * THE FIX IS DEFAULT-DENY, NOT AN ALLOWLIST, and the redirect case is the
+   * reason. `fetchExternalImage` in 14.2.35 is a bare `fetch(href)`, and
+   * undici follows redirects by default; `hasRemoteMatch` is applied ONLY to
+   * the URL as given. So any origin left on an allowlist could redirect to a
+   * publisher host and the optimizer would follow it — the allowlist would
+   * check the doorway while the traffic went through the window. An EMPTY
+   * `remotePatterns` removes the doorway: with no pattern to match, no
+   * absolute URL is admitted, so there is nothing to redirect FROM.
+   *
+   * Nothing in this product needs it. Every optimizer-eligible image here is
+   * first-party and local (audited: `/images/hero-globe-night.png` and
+   * `/images/topics/*.png` are the only two, and there are no static image
+   * imports). Everything that could carry an external URL goes through
+   * `SafeImage` or `StoryPhoto`, both of which set `unoptimized` and are both
+   * gated by the E1 U-1 display decision.
+   *
+   * `localPatterns` NARROWS THE OTHER HALF. A RELATIVE url is not matched
+   * against `remotePatterns` at all — it is replayed through this server's own
+   * router by `fetchInternalImage`, rewrites included. Measured before this
+   * change: `/_next/image?url=/api/users/me` and `?url=/news/top-headlines`
+   * were ADMITTED by policy and failed only on content type. Scoping local
+   * matching to the one directory that actually holds images closes that
+   * without touching a single rendered asset.
+   *
+   * NOT A PROXY REPLACEMENT AND NOT A MIRROR. Nothing here fetches, caches or
+   * re-serves third-party imagery by another route. This block only removes
+   * permission.
+   *
+   * TO ADMIT AN EXTERNAL ORIGIN LATER: that is a rights act (E1), not a
+   * configuration convenience, and it must name the origin — never `'**'`,
+   * and never a host that can redirect off itself.
+   */
   images: {
-    // Live news providers (GNews and any future real provider) serve
-    // article images from an unbounded, provider-controlled set of
-    // domains — there is no fixed list to whitelist. A wildcard
-    // remotePattern is the officially recommended approach for this
-    // case instead of hand-maintaining a domain allowlist.
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**',
-      },
-    ],
+    remotePatterns: [],
+    localPatterns: [{ pathname: '/images/**' }],
   },
 
   /**
@@ -281,8 +350,13 @@ const nextConfig = {
    * reject the manifest outright — which fails installability silently, with no
    * console error worth the name.
    *
-   * Nothing above this block changes: reactStrictMode and the wildcard
-   * remotePatterns are exactly as they were.
+   * Nothing above this block changes: reactStrictMode and the images block are
+   * exactly as they were.
+   *
+   * E1 U-1 · B-2 — THIS SENTENCE WAS CORRECTED, NOT LEFT STANDING. It used to
+   * read "the wildcard remotePatterns are exactly as they were", which stopped
+   * being true the moment the wildcard was removed above. A stale assurance in
+   * a security-relevant file is worse than no assurance.
    */
   async headers() {
     return [

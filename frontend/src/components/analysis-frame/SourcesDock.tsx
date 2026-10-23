@@ -42,6 +42,7 @@ import { assessmentsFor, EMPTY_RELATIONAL_EVIDENCE } from './relationalEvidence'
 import type { RelationalEvidenceModel } from './relationalEvidence';
 import { StoryBookmark } from '@/components/bookmark/StoryBookmark';
 import { safeExternalHref } from '@globalnews-ai/shared';
+import { publisherImageIsDisplayable } from '@/lib/rights/publisherImageDisplay';
 
 /* ------------------------------------------------------------------ *
  * THE SOURCE THUMBNAIL
@@ -79,8 +80,26 @@ const THUMB_STRIPES =
   'repeating-linear-gradient(135deg, rgba(148,163,184,.09) 0 6px, transparent 6px 12px)';
 
 /** The library's own test, so the two surfaces cannot drift apart. */
+/**
+ * E1 U-1 — PUBLISHER IMAGE RIGHTS CONTAINMENT.
+ *
+ * The question was "does the record carry a non-empty imageUrl". It is now
+ * "may this product display THAT PUBLISHER'S PHOTOGRAPH", which no part of
+ * the source matrix could previously answer and which is answered `no` for
+ * every publisher today, because no image-display clearance exists.
+ *
+ * THE NAME AND THE CALLERS ARE UNCHANGED ON PURPOSE. This predicate is the
+ * one both surfaces read so that "the two surfaces cannot drift apart"; a
+ * second, rights-aware predicate beside it would be exactly the drift that
+ * contract exists to prevent.
+ *
+ * The designed empty state is untouched: the striped wrapper is already
+ * painted underneath and the slot keeps its geometry, so a refusal renders
+ * what a record with no image has always rendered. Nothing is substituted,
+ * and no stock photograph appears anywhere on this path.
+ */
 export function hasSourceThumbnail(article: NewsArticle): boolean {
-  return typeof article.imageUrl === 'string' && article.imageUrl.length > 0;
+  return publisherImageIsDisplayable(article.imageUrl, article.sourceId);
 }
 
 /**

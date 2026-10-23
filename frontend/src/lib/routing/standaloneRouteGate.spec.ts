@@ -190,6 +190,8 @@ describe('every application page is classified (no accidental exposure)', () => 
       /* REASON TO RETURN R1 §8 — My updates + saved answers (server-gated by ASK_BRIEFINGS_ENABLED) */
       '/saved/briefing',
       '/saved/updates',
+      /* ASK D0.1 · D2 — My updates › Choose a place: ephemeral browsing, no account write; rows E1-gated */
+      '/saved/updates/place',
       '/source-policy',
       '/support',
       '/terms',

@@ -71,3 +71,54 @@ export function followCheckHref(briefingId: string): string {
 
 /** My updates: the reader's followed questions (under the governed `saved` surface). */
 export const MY_UPDATES_HREF = '/saved/updates';
+
+/**
+ * ASK R3 NAVIGATION / USABILITY R1 — what the welcome's My updates entry and the My updates page
+ * may say, built ONLY from fields `GET /ask-v2/briefings` returns (no unread state, no invented
+ * count, no monitoring claim):
+ *
+ * - `followed`: the number of followed questions (Ask-question briefings) the server returned;
+ * - `withChanges`: how many of them had a LAST check whose server outcome reported new, changed or
+ *   corrected evidence (tone REPORTED). A fact about the last check — never "unreviewed" (B2);
+ * - `lastSuccessfulAt`: the newest completed check — `lastSuccessfulCheckAt`, else the latest
+ *   check's time when that check was not incomplete. Null when no check has completed.
+ *
+ * Null when nothing is followed: the entry is then omitted (R3 spec L12 "omit when no data").
+ */
+export interface FollowSummary {
+  readonly followed: number;
+  readonly withChanges: number;
+  readonly lastSuccessfulAt: string | null;
+}
+
+const REPORTED_OUTCOMES: ReadonlySet<string> = new Set(['NEW_EVIDENCE', 'MATERIAL_CHANGE', 'CORRECTION']);
+
+export function summarizeFollows(rows: readonly AskV2BriefingSummary[]): FollowSummary | null {
+  const followed = rows.filter(isFollowedQuestion);
+  if (followed.length === 0) return null;
+  let withChanges = 0;
+  let newest: number | null = null;
+  let newestIso: string | null = null;
+  for (const row of followed) {
+    const check = row.latestCheck ?? null;
+    if (check !== null && REPORTED_OUTCOMES.has(check.outcome)) withChanges += 1;
+    const completed =
+      row.lastSuccessfulCheckAt ??
+      (check !== null && check.outcome !== 'INCOMPLETE_CHECK' ? check.checkedAt : null);
+    if (completed === null || completed === undefined) continue;
+    const at = Date.parse(completed);
+    if (!Number.isFinite(at)) continue;
+    if (newest === null || at > newest) {
+      newest = at;
+      newestIso = completed;
+    }
+  }
+  return { followed: followed.length, withChanges, lastSuccessfulAt: newestIso };
+}
+
+/** Where a change detail (`/saved/briefing`) was opened from: My updates, or Saved (default). */
+export type BriefingOrigin = 'updates' | 'saved';
+
+export function briefingOriginOf(value: unknown): BriefingOrigin {
+  return value === 'updates' ? 'updates' : 'saved';
+}

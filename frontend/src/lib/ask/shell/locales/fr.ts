@@ -628,12 +628,14 @@ export const frShellOverlay: ShellLocaleOverlay = {
       verification: {
         available: "consultée",
         claims: "État de l’affirmation",
+        coverageNotSearched: "La vérification est restée incomplète, car certaines sources ne sont pas autorisées pour cet usage et n’ont pas été consultées.",
         coverageIncomplete: "La vérification est restée incomplète car certaines voies de sources étaient indisponibles.",
         lanes: {
           "news-providers": "Fournisseurs d’actualité",
           "rss-feeds": "Flux des éditeurs",
         },
         notVerified: "Je n’ai pas pu vérifier cette affirmation à partir des sources effectivement consultées.",
+        notSearched: "non consultée",
         reasons: {
           auth: "accès refusé",
           "not-configured": "non configurée",

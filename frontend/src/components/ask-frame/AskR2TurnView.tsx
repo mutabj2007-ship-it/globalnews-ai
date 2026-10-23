@@ -10,6 +10,8 @@ import { askFormatDate, isolatedAuto, isolatedLtr } from '@/lib/ask/askDirection
 import type { StoryContext } from '@globalnews-ai/shared';
 import { AskCompactResult } from '@/components/ask/AskCompactResult';
 import { AskIntelligenceBasis } from './AskIntelligenceBasis';
+import { AskEvidencePlaces } from './AskEvidencePlaces';
+import { askR38Strings } from '@/lib/ask/askR38Strings';
 import { askGovernedConversation } from '@/lib/ask/askGovernedConversation';
 import { askR2View, failedTurnCopy, type AskR2View } from '@/lib/ask/askR2View';
 import { openFullAnalysisHref, type AskR2Turn } from '@/lib/ask/useAskR2Conversation';
@@ -21,6 +23,8 @@ import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 import { askLocaleForLegacyCatalogue } from '@/lib/ask/askLocale';
 import { askSevenStrings } from '@/lib/ask/askSevenStrings';
 import { buildBriefTelemetry } from '@/components/analysis-frame/briefModel';
+import { rightsRefusedOnly } from '@/components/search/evidenceDisplay';
+import { askRightsRefusalStrings } from '@/lib/ask/askRightsRefusal';
 
 /**
  * ASK R2 CONSOLIDATED INTEGRATION R1 · GATE G — ONE ASK R2 TURN, AS D25 DRAWS IT.
@@ -140,6 +144,8 @@ export function AskR2TurnView({
   onRefresh,
   reopenedAt,
   onRetry,
+  onStageDraft,
+  onOpenJobs,
 }: {
   readonly turn: AskR2Turn;
   readonly locale: DisplayLocale;
@@ -173,6 +179,13 @@ export function AskR2TurnView({
   readonly reopenedAt?: string | null;
   /** ASK DESIGN AUTHORITY R3 — Design D2 "Try again": resend this (latest, failed) question. */
   readonly onRetry?: () => void;
+  /**
+   * MASTER CTO R32 — stages an UNSENT draft in the composer (the reader's own unsent words are
+   * kept): "Ask about <place>" under the cited reports. Absent → listed without the action.
+   */
+  readonly onStageDraft?: (draft: string) => void;
+  /** MASTER CTO R32 — opens the job sheet from an answer the router read as a job decision. */
+  readonly onOpenJobs?: () => void;
 }): JSX.Element {
   const s = askShellStrings(locale).askR2Strings;
   const r = s.read;
@@ -195,6 +208,17 @@ export function AskR2TurnView({
           governed sentence (budget, deadline, length) in the same panel. "Try again" only where
           sending the same question again can help, and only for the latest turn (onRetry).
         */}
+        {/* MASTER CTO R47 · D13/D15 — a REOPENED failed or timed-out request says when it was made and that
+            nothing new ran; it never reads as a fresh failure. */}
+        {reopenedAt != null && !Number.isNaN(Date.parse(reopenedAt)) && (
+          <p data-ask="reopened-line" className={`mb-2 ${NOTE}`}>
+            {askR38Strings(locale).reopenedFailedRequest(
+              new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(
+                new Date(reopenedAt),
+              ),
+            )}
+          </p>
+        )}
         <div
           role="alert"
           data-ask="unavailable"
@@ -248,6 +272,13 @@ export function AskR2TurnView({
   const guidanceKind = payload.guidance?.kind ?? null;
   /* The SAME array the inline citations number against, so item n is always [n]. */
   const answerSources = payload.analysis?.analysis?.sources ?? [];
+  /* CTO R115 (G-1) — every reporting lane refused for rights before any network call */
+  const refusedForRights =
+    payload.analysis?.retrievalContext != null &&
+    rightsRefusedOnly(payload.analysis.retrievalContext, payload.analysis.articles?.length ?? 0);
+  /* WAVE 1c — the limited note ("a news source was temporarily unavailable") under an answer and on the
+     Sources sheet: a rights refusal reads its own notSearched sentence; any outage keeps limitedNote */
+  const limitedNote = refusedForRights ? askRightsRefusalStrings(locale).notSearched : s.limitedNote;
   /*
     ASK DESIGN COMPLETENESS R1 — THE FOOTER LINE (Design B1): "Based on N cited reports from M
     publishers. Newest report <date>." Counted from this answer's own source records only —
@@ -417,6 +448,18 @@ export function AskR2TurnView({
             ? s.r3.continuationJobNote
             : s.continuationNote}
         </p>
+      )}
+      {/* MASTER CTO R32 · J01 — a job decision continues into the SAME job sheet (role and place
+          editable, truthful "not connected" outcome); opening it runs nothing. */}
+      {payload.continuation?.kind === 'JOB_CONTEXT' && onOpenJobs !== undefined && (
+        <button
+          type="button"
+          data-ask="job-entry"
+          onClick={onOpenJobs}
+          className={`-mt-1 mb-3 inline-flex min-h-[44px] items-center text-[0.8125rem] font-medium text-[var(--ask-read-control-ink,#7cc4f5)] underline underline-offset-2`}
+        >
+          {askR38Strings(locale).jobsCue}
+        </button>
       )}
       {/* ASK R3 RESEARCH ACTIVITY R1 — the answer position's Search activity RECORD, after the reader's
           words and the continuation note: derived from what the backend recorded about the search,
@@ -716,12 +759,15 @@ export function AskR2TurnView({
           )}
           {/* CTO R3 ruling 8 — nothing verified vs search incomplete: the difference is kept. */}
           {view.badge === 'insuf' && view.searchLimited && (
-            <p data-ask="search-incomplete">{r.searchIncomplete}</p>
+            /* CTO R115 (G-1) — every lane refused for rights is said as that, not as an outage */
+            <p data-ask="search-incomplete" data-ask-rights-refused={refusedForRights ? 'true' : undefined}>
+              {refusedForRights ? askRightsRefusalStrings(locale).notSearched : r.searchIncomplete}
+            </p>
           )}
           {/* ASK FIRST-ANSWER RETRIEVAL R3 — an answer standing on reachable reporting says so. */}
           {view.badge !== 'insuf' && view.searchLimited && (
             <p data-ask="search-limited" className="text-[13px] leading-[1.45] text-[var(--ask-read-deep-ink,#c9b27a)]">
-              {s.limitedNote}
+              {limitedNote}
             </p>
           )}
           {/*
@@ -914,6 +960,9 @@ export function AskR2TurnView({
         hideNotes={governed !== null}
       />
 
+      {/* MASTER CTO R32 · D10 — where this answer's cited reports are, country level, no map. */}
+      <AskEvidencePlaces payload={payload} locale={locale} onStageDraft={displayOnly ? undefined : onStageDraft} />
+
       {/*
         ASK DESIGN COMPLETENESS R1 — the Design toolbar after the answer and its footer:
         Copy · Share · Save · Sources (n) · More. Only controls with a real backing render
@@ -926,7 +975,7 @@ export function AskR2TurnView({
         canSave={canSave}
         sources={answerSources}
         opening={opening}
-        note={view.searchLimited ? s.limitedNote : null}
+        note={view.searchLimited ? limitedNote : null}
         about={about}
         onRefresh={onRefresh}
         /* CTO R3 ruling 6 — the legacy hand-offs are More rows, not cards in the reading flow. */

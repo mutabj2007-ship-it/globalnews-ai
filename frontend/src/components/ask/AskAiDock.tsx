@@ -187,6 +187,10 @@ const ASK_STANDALONE_UTILITY_ROUTES: ReadonlySet<string> = new Set([
 const ASK_CONTINUITY_ROUTES: ReadonlySet<string> = new Set([
   `${ASK_CANONICAL_ROUTE}/recent`,
   '/saved',
+  /* ASK R3 NAVIGATION / USABILITY R1 — My updates and its change detail are standalone Ask pages
+     too; the floating "Ask AI" pill overlapped their cards at 390 (audit D08). */
+  '/saved/updates',
+  '/saved/briefing',
 ]);
 
 /**

@@ -5,6 +5,8 @@ import { askRelativeTime } from '@/lib/ask/askRelativeTime';
 import { formatRelativeTime, formatUtcClock } from '@/lib/formatRelativeTime';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { displayRetrievalContext } from '@/components/search/evidenceDisplay';
+import { rightsRefusedOnly } from '@/components/search/evidenceDisplay';
+import { askRightsRefusalStrings } from '@/lib/ask/askRightsRefusal';
 
 interface RetrievalContextStatusProps {
   retrievalContext: AnalysisRetrievalContext;
@@ -112,12 +114,16 @@ export function resolveRetrievalContextText(
       ? `${formatCityForDisplay(city)}, ${countryName}`
       : countryName;
 
-  const label = locationLabel
-    ? `${BADGE_LABEL[dataMode]} \u00b7 ${locationLabel}`
-    : BADGE_LABEL[dataMode];
+  /* CTO R115 (G-1) — refused for rights is not "live data unavailable" */
+  const refused = rightsRefusedOnly(rawRetrievalContext, articleCount);
+  const badge = refused ? askRightsRefusalStrings(locale ?? language).chip : BADGE_LABEL[dataMode];
+  const label = locationLabel ? `${badge} \u00b7 ${locationLabel}` : badge;
 
-  const explanation =
-    dataMode === 'cached'
+  /* WAVE 1b (P0, live Alpha 0e95cd0) — a rights refusal has no outage explanation either: nothing was
+     attempted, so "could not be reached" is false. The chip and the turn's notSearched sentence say it. */
+  const explanation = refused
+    ? undefined
+    : dataMode === 'cached'
       ? fallbackReason === 'provider-error'
         ? t.liveUnavailableStoredUsed
         : fallbackReason === 'no-live-results'

@@ -1,0 +1,190 @@
+[
+ {
+  "portalReference": {
+   "portalId": "TED",
+   "noticeId": "660346-2026"
+  },
+  "artifactClass": "PROCUREMENT_NOTICE",
+  "publicationDate": "2026-09-24+02:00",
+  "noticeType": "cn-standard",
+  "title": {
+   "en": "Poland – Ultrasonic unit – Zakup wraz z dostawą aparatów USG dla Wojewódzkiego Pogotowia Ratunkowego w Katowicach.",
+   "pl": "Polska – Aparaty ultrasonograficzne – Zakup wraz z dostawą aparatów USG dla Wojewódzkiego Pogotowia Ratunkowego w Katowicach."
+  },
+  "buyerNames": {
+   "pl": [
+    "Wojewódzkie Pogotowie Ratunkowe w Katowicach"
+   ],
+   "source": [
+    "Wojewódzkie Pogotowie Ratunkowe w Katowicach"
+   ]
+  },
+  "buyerCountryIso3": "POL",
+  "cpvCodes": [
+   "33112200"
+  ],
+  "totalValue": null,
+  "currency": null,
+  "deadlineDate": "2026-09-30+02:00",
+  "deadlineTime": "10:00:00+02:00",
+  "sourceUrl": "https://ted.europa.eu/en/notice/660346-2026/html",
+  "providerId": "TED",
+  "retainedAt": "2026-09-24T20:28:49.417Z",
+  "retrievalId": "ted-search:2026-09-24:POL:cn-standard:b7ed2fcd901873611533a19fa34e75e2e6c4faab7599362296b2f421383dcbb4",
+  "contentAddress": "b7ed2fcd901873611533a19fa34e75e2e6c4faab7599362296b2f421383dcbb4",
+  "freshnessBasis": "RETAINED_ONLY"
+ },
+ {
+  "portalReference": {
+   "portalId": "TED",
+   "noticeId": "660342-2026"
+  },
+  "artifactClass": "PROCUREMENT_NOTICE",
+  "publicationDate": "2026-09-24+02:00",
+  "noticeType": "cn-standard",
+  "title": {
+   "en": "Poland – System and support services – Rozbudowa i utrzymanie platformy do wykrywania i analizy zagrożeń w sieci klasy NDR wraz ze wsparciem technicznym na okres 36 miesięcy",
+   "pl": "Polska – Usługi w zakresie konserwacji i wsparcia systemów – Rozbudowa i utrzymanie platformy do wykrywania i analizy zagrożeń w sieci klasy NDR wraz ze wsparciem technicznym na okres 36 miesięcy"
+  },
+  "buyerNames": {
+   "pl": [
+    "Województwo Lubelskie - Lubelskie Centrum Innowacji i Technologii"
+   ],
+   "source": [
+    "Województwo Lubelskie - Lubelskie Centrum Innowacji i Technologii"
+   ]
+  },
+  "buyerCountryIso3": "POL",
+  "cpvCodes": [
+   "72250000",
+   "48730000",
+   "48000000",
+   "72000000"
+  ],
+  "totalValue": null,
+  "currency": null,
+  "deadlineDate": "2026-10-26+01:00",
+  "deadlineTime": "11:00:00+01:00",
+  "sourceUrl": "https://ted.europa.eu/en/notice/660342-2026/html",
+  "providerId": "TED",
+  "retainedAt": "2026-09-24T20:28:49.417Z",
+  "retrievalId": "ted-search:2026-09-24:POL:cn-standard:b7ed2fcd901873611533a19fa34e75e2e6c4faab7599362296b2f421383dcbb4",
+  "contentAddress": "b7ed2fcd901873611533a19fa34e75e2e6c4faab7599362296b2f421383dcbb4",
+  "freshnessBasis": "RETAINED_ONLY"
+ },
+ {
+  "portalReference": {
+   "portalId": "TED",
+   "noticeId": "660329-2026"
+  },
+  "artifactClass": "PROCUREMENT_NOTICE",
+  "publicationDate": "2026-09-24+02:00",
+  "noticeType": "cn-standard",
+  "title": {
+   "en": "Poland – Laboratory, optical and precision equipments (excl. glasses) – dostawę wyposażenia Pracowni Konserwacji Archiwum Uniwersytetu Szczecińskiego wraz z montażem i uruchomieniem urządzeń",
+   "pl": "Polska – Sprzęt laboratoryjny, optyczny i precyzyjny (z wyjątkiem szklanego) – dostawę wyposażenia Pracowni Konserwacji Archiwum Uniwersytetu Szczecińskiego wraz z montażem i uruchomieniem urządzeń"
+  },
+  "buyerNames": {
+   "pl": [
+    "Uniwersytet Szczeciński"
+   ],
+   "source": [
+    "Uniwersytet Szczeciński"
+   ]
+  },
+  "buyerCountryIso3": "POL",
+  "cpvCodes": [
+   "38000000",
+   "39100000",
+   "24000000",
+   "30200000",
+   "42900000",
+   "39180000",
+   "30199000",
+   "38651000"
+  ],
+  "totalValue": null,
+  "currency": null,
+  "deadlineDate": "2026-10-26+01:00",
+  "deadlineTime": "11:30:00+01:00",
+  "sourceUrl": "https://ted.europa.eu/en/notice/660329-2026/html",
+  "providerId": "TED",
+  "retainedAt": "2026-09-24T20:28:49.417Z",
+  "retrievalId": "ted-search:2026-09-24:POL:cn-standard:b7ed2fcd901873611533a19fa34e75e2e6c4faab7599362296b2f421383dcbb4",
+  "contentAddress": "b7ed2fcd901873611533a19fa34e75e2e6c4faab7599362296b2f421383dcbb4",
+  "freshnessBasis": "RETAINED_ONLY"
+ },
+ {
+  "portalReference": {
+   "portalId": "TED",
+   "noticeId": "660312-2026"
+  },
+  "artifactClass": "PROCUREMENT_NOTICE",
+  "publicationDate": "2026-09-24+02:00",
+  "noticeType": "cn-standard",
+  "title": {
+   "en": "Poland – Planting and maintenance services of green areas – Wykonanie nasadzeń zieleni na obszarze Placu Narutowicza oraz nasadzeń rozchodników na obszarze torowiska w pasie drogowym ul. Grójeckiej w Warszawie",
+   "pl": "Polska – Usługi sadzenia roślin oraz utrzymania terenów zielonych – Wykonanie nasadzeń zieleni na obszarze Placu Narutowicza oraz nasadzeń rozchodników na obszarze torowiska w pasie drogowym ul. Grójeckiej w Warszawie"
+  },
+  "buyerNames": {
+   "pl": [
+    "Zakład Remontów i Konserwacji Dróg"
+   ],
+   "source": [
+    "Zakład Remontów i Konserwacji Dróg"
+   ]
+  },
+  "buyerCountryIso3": "POL",
+  "cpvCodes": [
+   "77310000"
+  ],
+  "totalValue": null,
+  "currency": null,
+  "deadlineDate": "2026-09-29+02:00",
+  "deadlineTime": "11:00:00+02:00",
+  "sourceUrl": "https://ted.europa.eu/en/notice/660312-2026/html",
+  "providerId": "TED",
+  "retainedAt": "2026-09-24T20:28:49.417Z",
+  "retrievalId": "ted-search:2026-09-24:POL:cn-standard:b7ed2fcd901873611533a19fa34e75e2e6c4faab7599362296b2f421383dcbb4",
+  "contentAddress": "b7ed2fcd901873611533a19fa34e75e2e6c4faab7599362296b2f421383dcbb4",
+  "freshnessBasis": "RETAINED_ONLY"
+ },
+ {
+  "portalReference": {
+   "portalId": "TED",
+   "noticeId": "660308-2026"
+  },
+  "artifactClass": "PROCUREMENT_NOTICE",
+  "publicationDate": "2026-09-24+02:00",
+  "noticeType": "cn-standard",
+  "title": {
+   "en": "Poland – Construction works for power plants and heating plants – zaprojektowanie i wykonanie robót budowlanych dla zadania Budowa elektrociepłowni gazowej w oparciu o moduły silników gazowych do skojarzonego wytwarzania energii elektrycznej i ciepła w PEC Legionowo",
+   "pl": "Polska – Roboty budowlane w zakresie budowy elektrowni i elektrociepłowni – zaprojektowanie i wykonanie robót budowlanych dla zadania Budowa elektrociepłowni gazowej w oparciu o moduły silników gazowych do skojarzonego wytwarzania energii elektrycznej i ciepła w PEC Legionowo"
+  },
+  "buyerNames": {
+   "pl": [
+    "Przedsiębiorstwo Energetyki Cieplnej \"Legionowo\" Sp. z o.o."
+   ],
+   "source": [
+    "Przedsiębiorstwo Energetyki Cieplnej \"Legionowo\" Sp. z o.o."
+   ]
+  },
+  "buyerCountryIso3": "POL",
+  "cpvCodes": [
+   "45251000",
+   "45251200",
+   "45232140",
+   "71220000"
+  ],
+  "totalValue": null,
+  "currency": null,
+  "deadlineDate": "2026-10-16+02:00",
+  "deadlineTime": "11:00:00+02:00",
+  "sourceUrl": "https://ted.europa.eu/en/notice/660308-2026/html",
+  "providerId": "TED",
+  "retainedAt": "2026-09-24T20:28:49.417Z",
+  "retrievalId": "ted-search:2026-09-24:POL:cn-standard:b7ed2fcd901873611533a19fa34e75e2e6c4faab7599362296b2f421383dcbb4",
+  "contentAddress": "b7ed2fcd901873611533a19fa34e75e2e6c4faab7599362296b2f421383dcbb4",
+  "freshnessBasis": "RETAINED_ONLY"
+ }
+]

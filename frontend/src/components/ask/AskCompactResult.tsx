@@ -40,6 +40,8 @@ import { resolveAskLocale } from '@/lib/ask/askLocale';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 import { useAskSourcesPanel } from '@/components/ask-frame/AskSourcesPanel';
 import { AskAnswerDetail } from './AskAnswerDetail';
+import { rightsRefusedOnly } from '@/components/search/evidenceDisplay';
+import { askRightsRefusalStrings } from '@/lib/ask/askRightsRefusal';
 
 /**
  * ═══ ASK AI REV A §6 — THE COMPACT RESULT ════════════════════════════════
@@ -249,7 +251,10 @@ export function AskCompactResult({
 
   /* ASK/SEARCH R1 — the backend's own outcome, when stamped, decides failure
      vs absence before dataMode is consulted. */
+  /* CTO R115 (G-1) — every lane refused for rights: a truthful "not searched", never an outage */
+  const refusedForRights = rightsRefusedOnly(response.retrievalContext, response.articles.length);
   const retrievalUnavailable =
+    !refusedForRights &&
     (response.retrievalContext.evidenceState ??
       resolveEvidenceState(response.retrievalContext, response.articles.length)) ===
       'degraded-fallback' &&
@@ -264,12 +269,14 @@ export function AskCompactResult({
     ? ambiguousCountry.sentence
     : askedNotSearched
       ? askedNotSearched.sentence
+      : refusedForRights
+        ? askRightsRefusalStrings(locale ?? language).notSearched
       : retrievalUnavailable
         ? t.resultNoAnswerProvider
         : t.resultNoAnswerEvidence;
   /* ASK NO-EVIDENCE PRESENTATION R1 — inside an Ask R2 turn, only what the turn does not say. */
   const showNoAnswer =
-    !noAnswerOwnedByTurn || !!ambiguousCountry || !!askedNotSearched || retrievalUnavailable;
+    !noAnswerOwnedByTurn || !!ambiguousCountry || !!askedNotSearched || retrievalUnavailable || refusedForRights;
   const canOpenFullAnalysis = hasAnalysis || response.articles.length > 0;
   /*
     ASK DESIGN COMPLETENESS R1 — ANSWER FIRST (RECONCILIATION_GUIDE §5). On the Ask reading
@@ -456,7 +463,7 @@ export function AskCompactResult({
           ) : null}
           {/* "Try again shortly / ask a narrower question" is advice for a question that WAS
               searched; a question asked instead of searched already says what to do. */}
-          {askedNotSearched || noAnswerOwnedByTurn ? null : (
+          {askedNotSearched || noAnswerOwnedByTurn || refusedForRights ? null : (
             <p className="mt-1.5 text-xs leading-relaxed text-ink-secondary">
               {t.resultNoAnswerSafety}
             </p>

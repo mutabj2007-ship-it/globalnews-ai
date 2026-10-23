@@ -656,9 +656,16 @@ describe('N10/N11/N12 — routing, product contracts and providers are untouched
        allowlist (Production redirects it), a query (?q=&region=…) not a dynamic segment, so N5 holds. */
     /* REASON TO RETURN R1 — sixty-one: /saved/updates, My updates (one reader's own followed
        questions; noindex, signed-in, absent from the sitemap, no dynamic segment). */
-    expect(pages).toHaveLength(61);
+    /* ASK D0.1 · D2 (CTO-approved 2026-10-12) — sixty-two: /saved/updates/place, My updates ›
+       Choose a place. The page declares noindex itself and classify() gives it /saved/updates'
+       entry by prefix (noindex, absent from the sitemap), so no registry entry is added; no
+       dynamic segment, so N5 holds. */
+    expect(pages).toHaveLength(62);
     expect(pages).toContain('/saved/updates');
     expect(classify('/saved/updates').indexability).toBe('noindex');
+    expect(pages).toContain('/saved/updates/place');
+    expect(classify('/saved/updates/place').indexability).toBe('noindex');
+    expect(classify('/saved/updates/place').sitemap).toBe(false);
     expect(pages).toContain('/stories');
     expect(pages).toContain('/visual');
     expect(pages).toContain('/admin/news/stories');

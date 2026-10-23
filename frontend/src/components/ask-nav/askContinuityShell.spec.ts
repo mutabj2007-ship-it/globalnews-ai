@@ -76,7 +76,8 @@ describe('the continuity phone header is narrow and drives the ONE Ask drawer', 
   it('takes a surface name, never a React node', () => {
     /* ALPHA VISUAL ACCEPTANCE REPAIR R1 — Help & feedback and Settings joined; still names only. */
     expect(header).toContain(
-      "export type AskContinuitySurface = 'recent' | 'saved' | 'help' | 'settings';",
+      /* ASK R3 NAVIGATION / USABILITY R1 — My updates joined (titled My updates, not Saved). */
+      "export type AskContinuitySurface = 'recent' | 'saved' | 'updates' | 'help' | 'settings';",
     );
     expect(header).not.toMatch(/ReactNode|children/);
   });

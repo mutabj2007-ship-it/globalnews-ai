@@ -5,6 +5,7 @@ import { useHeroFocus } from '@/components/home/HeroFocusProvider';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import { pluralWithForms } from '@/lib/i18n/pluralize';
 import { SafeImage } from '@/components/ui/SafeImage';
+import { publisherImageIsDisplayable } from '@/lib/rights/publisherImageDisplay';
 import { safeExternalHref } from '@globalnews-ai/shared';
 
 /**
@@ -252,9 +253,19 @@ export function TrendingCard({ article, language, isLead = false }: TrendingCard
           className="absolute inset-0 opacity-70 cd-hero:opacity-75"
           style={{ backgroundImage: visual.texture }}
         />
-        {article.imageUrl ? (
+        {/*
+          E1 U-1 — the publisher's photograph is not requested without a
+          recorded image-display clearance. None exists. The tile and texture
+          gradients above are already the card's full visual treatment, so a
+          refusal shows the card exactly as a story with no image has always
+          shown. Not written rather than hidden: this file's own header says
+          a hidden <img> is still fetched.
+        */}
+        {publisherImageIsDisplayable(article.imageUrl, article.sourceId) ? (
           <SafeImage
-            src={article.imageUrl}
+            src={article.imageUrl as string}
+            /* already CLEARED one line above; the backstop re-decides, it does not trust this */
+            clearedSourceId={article.sourceId}
             alt=""
             fallbackSrc={TRANSPARENT_PIXEL}
             fill

@@ -5,6 +5,7 @@ import { getDictionary } from '@/lib/i18n/dictionaries';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import { StoryBookmark } from '@/components/bookmark/StoryBookmark';
 import { safeExternalHref } from '@globalnews-ai/shared';
+import { publisherImageIsDisplayable } from '@/lib/rights/publisherImageDisplay';
 
 /**
  * The Evidence Library, as a SEPARATE DESTINATION.
@@ -64,9 +65,13 @@ export function EvidenceLibrary({
             <li key={article.id}>
               <article className="overflow-hidden rounded-[12px] border border-[#16202e]">
                 <div className="relative h-[132px] w-full bg-[#071016]">
-                  {article.imageUrl !== undefined && article.imageUrl.length > 0 ? (
+                  {/* E1 U-1 — the publisher's photograph is not requested without a
+                      recorded image-display clearance; none exists. The striped panel
+                      below is this card's existing treatment for a record with no
+                      image, and the green event-evidence chip is unaffected. */}
+                  {publisherImageIsDisplayable(article.imageUrl, article.sourceId) ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={article.imageUrl} alt="" className="h-full w-full object-cover" />
+                    <img src={article.imageUrl as string} alt="" className="h-full w-full object-cover" />
                   ) : (
                     <div
                       className="h-full w-full"

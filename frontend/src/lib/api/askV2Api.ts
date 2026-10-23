@@ -151,7 +151,9 @@ export type AskResearchOutcome =
   | 'PARTIAL_NO_MATCH'
   | 'PROVIDER_FAILED'
   /* R1.1 — a retrieval call was made but returned no typed outcome */
-  | 'OUTCOME_UNAVAILABLE';
+  | 'OUTCOME_UNAVAILABLE'
+  /* F6–F8 (E1 R96 C1) — no lane was searched: no source is cleared for the use (a refusal, not an outage) */
+  | 'NOT_PERMITTED';
 export interface AskResearchRecord {
   readonly schema: 'ask-research/1';
   /** P0 NEWS R1 (Claude G G-ASK-4) — the reader named a publisher: its verdict (identity only). */

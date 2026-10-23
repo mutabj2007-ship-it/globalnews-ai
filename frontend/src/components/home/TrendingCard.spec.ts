@@ -199,7 +199,24 @@ describe('TrendingCard — real data and honest fallbacks', () => {
   });
 
   it('shows the released category composition when a story has no photograph', () => {
-    expect(source).toMatch(/\{article\.imageUrl \? \(/);
+  /* ── SUPERSEDED BY E1 U-1 · PUBLISHER IMAGE RIGHTS CONTAINMENT ──────────
+     The assertion below USED TO REQUIRE the publisher's photograph to render.
+     E1 identified publisher images rendered with no recorded image-display
+     clearance, and the CTO independently confirmed this render path, so the
+     requirement is withdrawn — not because it became inconvenient, but
+     because the behaviour it pinned is the defect.
+
+     THE ORIGINAL IS KEPT ABOVE EACH REPLACEMENT, commented, with its
+     authority, so a reader can see exactly what was traded and for what. The
+     replacement is the INVERSE where an inverse exists: it is stronger than
+     deleting, because deleting would leave nothing stopping the photograph
+     from coming back. Every neighbouring assertion in this file is untouched.
+     ──────────────────────────────────────────────────────────────────────── */
+    /* WAS: expect(source).toMatch(/\{article\.imageUrl \? \(/);
+       The two composition assertions below are UNTOUCHED and are the released
+       category treatment this test exists to protect — under U-1 it is now
+       what every card shows. */
+    expect(source).toMatch(/\{publisherImageIsDisplayable\(article\.imageUrl, article\.sourceId\) \? \(/);
     expect(source).toMatch(/style=\{\{ backgroundImage: visual\.tile \}\}/);
     expect(source).toMatch(/style=\{\{ backgroundImage: visual\.texture \}\}/);
   });

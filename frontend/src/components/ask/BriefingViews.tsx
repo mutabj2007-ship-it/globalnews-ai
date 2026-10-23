@@ -19,9 +19,12 @@ import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
  * returned it: no fetch, no effect, no AI, nothing composed. The client wrappers
  * (SavedBriefings, BriefingDetailClient) do the reads.
  */
-export function briefingHref(id: string, version?: number): string {
+export function briefingHref(id: string, version?: number, origin?: 'updates' | 'saved'): string {
   const base = `/saved/briefing?id=${encodeURIComponent(id)}`;
-  return version === undefined ? base : `${base}&v=${encodeURIComponent(String(version))}`;
+  const withVersion = version === undefined ? base : `${base}&v=${encodeURIComponent(String(version))}`;
+  /* ASK R3 NAVIGATION / USABILITY R1 — a detail opened from My updates says so, so its header,
+     back link and post-delete destination return there (audit D09). Saved is the default. */
+  return origin === 'updates' ? `${withVersion}&from=updates` : withVersion;
 }
 
 function UpdateLine({
@@ -60,20 +63,24 @@ export function BriefingListView({
       </p>
     );
   return (
-    <ul className="mt-3 flex flex-col gap-2">
+    <ul className="mt-2 flex flex-col gap-1.5">
       {rows.map((row) => (
+        /* R3.2 MOBILE COMPACT — the title (two lines at most, full text kept) is the Open target at
+           44 px; one meta line under it */
         <li
           key={row.id}
           data-briefing="row"
-          className="rounded-[10px] border border-white/10 px-3 py-2.5"
+          className="rounded-lg border border-line px-3 py-1"
         >
           <Link
             href={briefingHref(row.id)}
-            className="text-[14px] font-semibold text-ink-primary hover:underline"
+            dir="auto"
+            title={row.title}
+            className="flex min-h-[44px] items-center text-[14px] font-semibold text-ink-primary hover:underline"
           >
-            {row.title}
+            <span className="line-clamp-2">{row.title}</span>
           </Link>
-          <p className="mt-0.5 text-[12px] text-ink-tertiary">
+          <p className="-mt-1 pb-1 text-[12px] text-ink-tertiary">
             {row.scope.storyId
               ? t.scopeStory
               : row.scope.countryCode
@@ -93,10 +100,13 @@ export function BriefingVersionView({
   detail,
   version,
   locale,
+  origin = 'saved',
 }: {
   readonly detail: AskV2BriefingDetail;
   readonly version: AskV2BriefingVersion;
   readonly locale: DisplayLocale;
+  /** Where the detail was opened from; version links keep it. */
+  readonly origin?: 'updates' | 'saved';
 }): JSX.Element {
   const t = askShellStrings(locale).briefingStrings;
   const when = (iso: string | null) => (iso === null ? null : (formatUtc(iso, locale) ?? iso));
@@ -142,7 +152,7 @@ export function BriefingVersionView({
           {detail.versions.map((v) => (
             <li key={v.version}>
               <Link
-                href={briefingHref(detail.id, v.version)}
+                href={briefingHref(detail.id, v.version, origin)}
                 aria-current={v.version === version.version ? 'page' : undefined}
                 className={`inline-block rounded-[8px] border px-2.5 py-1 text-[12px] ${
                   v.version === version.version

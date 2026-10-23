@@ -1,6 +1,7 @@
 import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 import { formatObservationalTime } from '@/lib/formatRelativeTime';
 import { SafeImage } from '@/components/ui/SafeImage';
+import { publisherImageSrcOrFallback } from '@/lib/rights/publisherImageDisplay';
 import { safeExternalHref } from '@globalnews-ai/shared';
 
 interface SourceArticleCardProps {
@@ -55,7 +56,7 @@ export function SourceArticleCard({ article, language = 'en' }: SourceArticleCar
     >
       <div className="relative aspect-[16/9] w-full overflow-hidden border-b border-border">
         <SafeImage
-          src={article.imageUrl || '/images/article-placeholder.jpg'}
+          src={publisherImageSrcOrFallback(article.imageUrl, article.sourceId, '/images/article-placeholder.jpg')}
           alt={article.title}
           fill
           sizes="(min-width: 1024px) 33vw, 100vw"

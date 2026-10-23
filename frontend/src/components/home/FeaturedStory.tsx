@@ -2,6 +2,7 @@ import { Link2 } from 'lucide-react';
 import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import { SafeImage } from '@/components/ui/SafeImage';
+import { publisherImageSrcOrFallback } from '@/lib/rights/publisherImageDisplay';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { pluralWithForms } from '@/lib/i18n/pluralize';
 import { safeExternalHref } from '@globalnews-ai/shared';
@@ -34,7 +35,7 @@ export function FeaturedStory({ story, language = 'en' }: FeaturedStoryProps): J
       >
         <div className="relative aspect-[16/9] w-full overflow-hidden border-b border-border">
           <SafeImage
-            src={story.imageUrl || '/images/article-placeholder.jpg'}
+            src={publisherImageSrcOrFallback(story.imageUrl, story.sourceId, '/images/article-placeholder.jpg')}
             alt={story.title}
             fill
             priority

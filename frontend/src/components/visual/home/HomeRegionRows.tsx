@@ -4,6 +4,7 @@ import { useRef, type JSX } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { HomeRegionRow, LanguageCode } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { withheldReportingLine } from '@/lib/news/withheldReporting';
 import { fill } from '@/components/home/reva/homeRevaModel';
 import { HomeStoryCardView } from './HomeStoryCardView';
 import { regionLabel, storiesHref } from './homeStoryView';
@@ -27,10 +28,13 @@ export function HomeRegionRows({
   rows,
   language,
   discussionRead,
+  withheldRows,
 }: {
   readonly rows: readonly HomeRegionRow[];
   readonly language: LanguageCode;
   readonly discussionRead: boolean;
+  /** R135-V1: rows the response states were emptied by reader-rights withholding */
+  readonly withheldRows?: ReadonlySet<HomeRegionRow['id']>;
 }): JSX.Element {
   const t = getDictionary(language).visual.home;
   return (
@@ -39,13 +43,13 @@ export function HomeRegionRows({
         {t.regionsHeading}
       </h2>
       {rows.map((row) => (
-        <RegionRow key={row.id} row={row} language={language} discussionRead={discussionRead} />
+        <RegionRow key={row.id} row={row} language={language} discussionRead={discussionRead} withheld={withheldRows?.has(row.id) === true} />
       ))}
     </section>
   );
 }
 
-function RegionRow({ row, language, discussionRead }: { readonly row: HomeRegionRow; readonly language: LanguageCode; readonly discussionRead: boolean }): JSX.Element {
+function RegionRow({ row, language, discussionRead, withheld }: { readonly row: HomeRegionRow; readonly language: LanguageCode; readonly discussionRead: boolean; readonly withheld: boolean }): JSX.Element {
   const t = getDictionary(language).visual.home;
   const listRef = useRef<HTMLUListElement | null>(null);
   const name = regionLabel(row.id, t);
@@ -58,7 +62,9 @@ function RegionRow({ row, language, discussionRead }: { readonly row: HomeRegion
   };
   const status =
     row.state === 'UNAVAILABLE'
-      ? t.rowUnavailable
+      ? withheld
+        ? withheldReportingLine(language)
+        : t.rowUnavailable
       : row.state === 'EMPTY'
         ? t.rowEmpty
         : row.counts.recent === 0

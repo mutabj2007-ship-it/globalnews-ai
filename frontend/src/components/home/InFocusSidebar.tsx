@@ -1,6 +1,7 @@
 import type { LanguageCode, NewsArticle } from '@globalnews-ai/shared';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import { SafeImage } from '@/components/ui/SafeImage';
+import { publisherImageSrcOrFallback } from '@/lib/rights/publisherImageDisplay';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { safeExternalHref } from '@globalnews-ai/shared';
 
@@ -48,7 +49,7 @@ export function InFocusSidebar({ items, language = 'en' }: InFocusSidebarProps):
               >
                 <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-border">
                   <SafeImage
-                    src={item.imageUrl || '/images/article-placeholder.jpg'}
+                    src={publisherImageSrcOrFallback(item.imageUrl, item.sourceId, '/images/article-placeholder.jpg')}
                     alt={item.title}
                     fill
                     sizes="64px"

@@ -347,9 +347,28 @@ describe('IM & FB — only the article\'s own image, and an honest full-footprin
 
   it('the ONLY src ever emitted is the retained article\'s own imageUrl', () => {
     const html = frame(5);
+  /* ── SUPERSEDED BY E1 U-1 · PUBLISHER IMAGE RIGHTS CONTAINMENT ──────────
+     The assertion below USED TO REQUIRE the publisher's photograph to render.
+     E1 identified publisher images rendered with no recorded image-display
+     clearance, and the CTO independently confirmed this render path, so the
+     requirement is withdrawn — not because it became inconvenient, but
+     because the behaviour it pinned is the defect.
+
+     THE ORIGINAL IS KEPT ABOVE EACH REPLACEMENT, commented, with its
+     authority, so a reader can see exactly what was traded and for what. The
+     replacement is the INVERSE where an inverse exists: it is stronger than
+     deleting, because deleting would leave nothing stopping the photograph
+     from coming back. Every neighbouring assertion in this file is untouched.
+     ──────────────────────────────────────────────────────────────────────── */
+    /* WAS: five <img> elements, each carrying the retained article's own URL.
+       The invariant "only the article's OWN imageUrl is ever emitted" is not
+       weakened — it is now satisfied vacuously and ALSO enforced from the
+       other side: no <img> is emitted at all on this path, and in particular
+       no substituted photograph. `no substitution path exists in the source`
+       below is untouched and still does the work it always did. */
     const srcs = [...html.matchAll(/<img[^>]*src="([^"]*)"/g)].map((m) => m[1]);
-    expect(srcs.length).toBe(5);
-    for (const s of srcs) expect(s).toMatch(/^https:\/\/cdn\.test\/img-\d\.jpg$/);
+    expect(srcs.length).toBe(0);
+    expect(html).not.toMatch(/cdn\.test\/img-\d\.jpg/);
   });
 
   it('no substitution path exists in the source at all', () => {
@@ -370,8 +389,12 @@ describe('IM & FB — only the article\'s own image, and an honest full-footprin
 
   it('exactly one treatment per record — never both, never neither', () => {
     const html = frame(3);
-    expect((html.match(/data-has-image="true"/g) ?? []).length).toBe(3);
-    expect((html.match(/data-has-image="false"/g) ?? []).length).toBe(2);
+    /* SUPERSEDED BY E1 U-1 — WAS 3 true / 2 false for a response with three
+       images. "Exactly one treatment per record, never both and never
+       neither" is the invariant, and it still holds exactly: every record now
+       takes the striped treatment, and the frame count below is unchanged. */
+    expect((html.match(/data-has-image="true"/g) ?? []).length).toBe(0);
+    expect((html.match(/data-has-image="false"/g) ?? []).length).toBe(5);
     expect((html.match(/data-paf="source-image-frame"/g) ?? []).length).toBe(5);
   });
 

@@ -43,7 +43,10 @@ import { useAskNavOptional } from '@/components/ask-nav/AskNavShell';
 import { AskReadingFooter } from '@/components/ask-nav/AskReadingFooter';
 import { AskDeepConfirm } from './AskDeepConfirm';
 import { AskJobSetupSheet } from './AskJobSetupSheet';
-import { AskWelcomeEntries, useResumeConversation } from './AskWelcomeEntries';
+import { StoryPicker } from '@/components/ask/StoryPicker';
+import { AskWelcomeEntries } from './AskWelcomeEntries';
+import { askDayPart, askGreetingStrings } from '@/lib/ask/askGreetingStrings';
+import { AskPrimaryNav } from '@/components/ask-nav/AskPrimaryNav';
 import { askR3FullStrings } from '@/lib/ask/askR3FullStrings';
 import { Composer } from './AskParts';
 import styles from './askDashboard.module.css';
@@ -269,16 +272,56 @@ export function AskFrameScreen({
     never drawn beside an answer, a reopened conversation or a sign-in interruption.
   */
   const [composerFocused, setComposerFocused] = useState(false);
-  /* Design A2 — typing collapses the welcome group; only the emblem and the composer remain. */
-  const typing = entryState && (composerFocused || question.trim() !== '');
-  const emblemState = isPending
-    ? 'leaving'
-    : composerFocused || question.trim() !== ''
-      ? 'typing'
-      : 'ready';
+  /* IA R2 — the staged cue's hint, announced through the composer's aria-describedby. */
+  const [cueHint, setCueHint] = useState<string | null>(null);
+  /* ASK D0.1 · D1 — the G2 story picker (zero compute; stages a draft only). */
+  const [storyPickerOpen, setStoryPickerOpen] = useState(false);
+  /* MASTER CTO R98 — the story form's words, restored after a refused ask when the Ask box was taken */
+  const [storyPickerReturn, setStoryPickerReturn] = useState('');
+  /* IA R2 02 decision 4 — compact is width < 360 OR height < 640; wide is >= 1024. */
+  /* R38 U-1 — `short`: the visible height is under 460 px (a small phone with the keyboard up, landscape). */
+  const [frameSize, setFrameSize] = useState<{ compact: boolean; wide: boolean; short: boolean }>({
+    compact: false,
+    wide: false,
+    short: false,
+  });
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const compactQuery = window.matchMedia('(max-width: 359px), (max-height: 639px)');
+    const wideQuery = window.matchMedia('(min-width: 1024px)');
+    const shortQuery = window.matchMedia('(max-height: 459px)');
+    const read = () =>
+      setFrameSize({ compact: compactQuery.matches, wide: wideQuery.matches, short: shortQuery.matches });
+    read();
+    compactQuery.addEventListener?.('change', read);
+    wideQuery.addEventListener?.('change', read);
+    shortQuery.addEventListener?.('change', read);
+    return () => {
+      compactQuery.removeEventListener?.('change', read);
+      wideQuery.removeEventListener?.('change', read);
+      shortQuery.removeEventListener?.('change', read);
+    };
+  }, []);
+  /*
+    MASTER CTO R38 · U-1 (Product Owner screenshot rejection, supersedes Design A2 "typing collapses
+    the welcome group"): on a normal or tall viewport, typing KEEPS the welcome group — headline,
+    support line and cues stay with the one composer as the same calm composition as the ready
+    screen, so a tall narrow window never shows a lone emblem in an empty viewport above a composer
+    pinned to the bottom. The collapse remains only where the visible height is genuinely too small
+    for the group (short: under 460 px — a small phone with its keyboard up, or landscape), so the
+    composer and Send stay in view; a 390 x 844 phone with its keyboard up (~544 px) keeps the group.
+    One composer, one Send; the draft and focus are untouched either way.
+  */
+  const typing = entryState && frameSize.short && (composerFocused || question.trim() !== '');
+  const emblemState = isPending ? 'leaving' : typing ? 'typing' : 'ready';
   const showEmblem =
-    entryState ||
-    (isPending && r2.turns.length === 0 && opened === null && r2.signInRequired === null);
+    (entryState ||
+      (isPending && r2.turns.length === 0 && opened === null && r2.signInRequired === null)) &&
+    /* IA + GUIDED DISCOVER R2, 02 decision 4 (F03a–d): when compact, "the radar appears only in
+       the header" — the hero radar is dropped so the cues, the orientation line and one Continue
+       row fit above the composer. The header's own emblem is untouched, and nothing is dropped at
+       any other size. */
+    !(frameSize.compact && entryState);
   /*
     The rotating examples. Client-side, zero compute, zero network, zero personalisation, and
     every rule decided by the pure machine in `askExampleRotation`. `enabled` is the entry
@@ -303,17 +346,21 @@ export function AskFrameScreen({
     suspended: nav?.open === true || jobSheetOpen || r2.signInRequired !== null || r2.deepQuote !== null,
   });
   /*
-    R3 FULL DESIGN · D02 — "when genuinely available": the signed-in reader's own latest
-    conversation (a read of their threads; 0 AI). A guest reads nothing here.
+    R3.1 PRODUCT OWNER ACCEPTANCE · FIX 1 — SUPERSEDED: the welcome's Resume / Continue rows and
+    My updates activity line, and the two reads behind them (GET /ask-v2/threads,
+    GET /ask-v2/briefings). The Ask home shows no history; the drawer reads it when opened.
   */
+  /* The greeting's audience: a signed-in reader (the shell's one session read). A guest reads nothing. */
   const signedInReader = !guestMode && nav?.account === 'signed-in';
-  const resumeConversation = useResumeConversation(signedInReader && entryState);
   const r3 = askR3FullStrings(interfaceLocale);
   const closeJobSheet = (): void => {
     setJobSheetOpen(false);
     /* focus returns to the entry that opened it (the one placement CSS shows) */
     requestAnimationFrame(() => {
-      const entries = Array.from(document.querySelectorAll<HTMLElement>('[data-ask="job-entry"]'));
+      /* MASTER CTO R32 — the entries are the G3 cue (welcome / desktop) and an answer's job-context entry */
+      const entries = Array.from(
+        document.querySelectorAll<HTMLElement>('[data-ask="cue-g3"], [data-ask="job-entry"]'),
+      );
       entries.find((node) => node.offsetParent !== null)?.focus();
     });
   };
@@ -394,6 +441,10 @@ export function AskFrameScreen({
                 operation: read.value,
                 payload: askR2PayloadOf(read.value),
                 expired: read.value.result?.expired === true,
+                /* MASTER CTO R47 · D13/D15 — a reopened timed-out or failed operation keeps its own
+                   recorded failure (as earlier turns already do, askThreadRestore), so it never reads
+                   as "Ask is unavailable right now. Nothing was run." */
+                ...(read.value.failureCode ? { failure: read.value.failureCode } : {}),
               }
             : { question: '', failure: read.reason },
         );
@@ -488,11 +539,7 @@ export function AskFrameScreen({
       the server cannot resolve runs nothing and keeps the draft (never a silent generic Ask).
     */
     setAskUnavailable(false);
-    const compareRef = compareContext === undefined ? undefined : await askCompareRef(compareContext);
-    const outcome = await r2.submit(
-      draft,
-      compareRef ?? moduleContext?.ref ?? askContextRefOf(context, undefined),
-    );
+    const outcome = await sendCaptured(draft);
     if (outcome === 'context-unavailable') setQuestion(draft);
     else if (outcome === 'legacy') {
       setAskUnavailable(true);
@@ -504,6 +551,50 @@ export function AskFrameScreen({
     else if (outcome === 'failed') {
       setQuestion(draft);
       setRetryKept(true);
+    }
+  }
+  /*
+    MASTER CTO R98 — THE ONE SUBMISSION STEP. The composer's Ask and the story form's one-tap ask
+    both send the text they CAPTURED (never `setQuestion(draft); ask()` in one tick) through this:
+    the same context, the same r2.submit, so the same session, quota, refusal and retry handling.
+  */
+  async function sendCaptured(draft: string) {
+    const compareRef = compareContext === undefined ? undefined : await askCompareRef(compareContext);
+    return r2.submit(draft, compareRef ?? moduleContext?.ref ?? askContextRefOf(context, undefined));
+  }
+  /*
+    MASTER CTO R98 (PO iPhone proof) — "Explain a story": ONE explicit tap asks the reader's exact
+    words. A second tap while it starts is ignored (`storySubmitting`), so a rapid double tap sends
+    once. The Ask box is not touched when the ask starts, so an unsent question already in it is
+    kept. Refused or failed, the words come back where they can be retried: into the Ask box when it
+    is free, otherwise into the story form, reopened. Nothing is ever dropped.
+  */
+  const storySubmitting = useRef(false);
+  async function askStory(draft: string) {
+    if (isPending || storySubmitting.current || !draft.trim()) return;
+    storySubmitting.current = true;
+    try {
+      const boxTaken = question.trim().length > 0;
+      const keep = () => {
+        if (boxTaken) {
+          setStoryPickerReturn(draft);
+          setStoryPickerOpen(true);
+        } else setQuestion(draft);
+      };
+      setRetryKept(false);
+      followNext.current = true;
+      setAskUnavailable(false);
+      const outcome = await sendCaptured(draft);
+      if (outcome === 'legacy') {
+        setAskUnavailable(true);
+        keep();
+      } else if (outcome === 'context-unavailable' || outcome === 'signed-out' || outcome === 'kept') keep();
+      else if (outcome === 'failed') {
+        keep();
+        if (!boxTaken) setRetryKept(true);
+      }
+    } finally {
+      storySubmitting.current = false;
     }
   }
   /*
@@ -572,6 +663,24 @@ export function AskFrameScreen({
     requestAnimationFrame(() =>
       document.querySelector<HTMLTextAreaElement>('[data-ask="composer-input"]')?.focus(),
     );
+  }
+  /*
+    ASK R3 IA + GUIDED DISCOVER R2 (approved 11 Oct 2026) — a guided cue STAGES a draft:
+    handoff §4, "set the composer value only if it is empty, focus it, caret at end, show the
+    hint via aria-describedby; NEVER submit". A reader's own unsent words are never overwritten,
+    and no request of any kind is issued here.
+  */
+  function stageGuidedDraft(draft: string, hint: string) {
+    setCueHint(hint);
+    const area = document.querySelector<HTMLTextAreaElement>('[data-ask="composer-input"]');
+    if (question.trim().length === 0) setQuestion(draft);
+    requestAnimationFrame(() => {
+      const node = area ?? document.querySelector<HTMLTextAreaElement>('[data-ask="composer-input"]');
+      if (node === null) return;
+      node.focus();
+      const end = node.value.length;
+      node.setSelectionRange(end, end);
+    });
   }
   function leave() {
     if (returnPath !== null) {
@@ -710,6 +819,9 @@ export function AskFrameScreen({
           <AskWordmark name={r2s.askTitle} />
         </h1>
         {/* The source-count readout stays for assistive technology; the Design header shows New. */}
+        {/* ASK R3 NAVIGATION / USABILITY R1 — the R3 primary navigation (HANDOFF §3 L74), on
+            phone and desktop; standalone Ask only (the shell context exists). */}
+        {nav !== null && <AskPrimaryNav locale={interfaceLocale} current="ask" />}
         <span data-ask="header-state" className={styles.visuallyHidden}>
           {lastR2View !== null ? r2s.sourcesLabel(lastR2View.sourceCount) : ''}
         </span>
@@ -721,9 +833,12 @@ export function AskFrameScreen({
           onClick={newQuestion}
           disabled={entryState || isPending}
           className={styles.newButton}
+          /* ASK R3 NAVIGATION / USABILITY R1 — icon-only "+" below 700 px (R3 header); the
+             accessible name is always the localized "New question". */
+          aria-label={shell.askNavStrings.newQuestion}
         >
           <span aria-hidden="true">+</span>
-          {shell.askNavStrings.newQuestion}
+          <span data-ask="new-question-label">{shell.askNavStrings.newQuestion}</span>
         </button>
       </header>
       {/*
@@ -802,22 +917,32 @@ export function AskFrameScreen({
                     {/* R3 FULL DESIGN · D02 — the verified name, or the neutral greeting; never a guess. */}
                     {signedInReader && (
                       <p data-ask="welcome-greeting" className={styles.emptyLead}>
+                        {/* R3.1 GOOGLE PROFILE PERSONALIZATION — a time-appropriate, localised
+                            greeting by name (R76 E1-B: the reader's SAVED name only — no Google /
+                            email source); no honorific, never an address. No saved name → the
+                            neutral line. */}
                         {nav?.displayName != null
-                          ? followStrings(interfaceLocale).greeting(nav.displayName)
+                          ? askGreetingStrings(interfaceLocale).greet[askDayPart(new Date())](nav.displayName)
                           : r3.welcomeBack}
                       </p>
                     )}
                     <h1 className={styles.emptyTitle}>{sevenStrings.composerHint}</h1>
-                    {/* R3 FULL DESIGN · WELCOME_PLACEHOLDER_SPEC §Composition 4 (R1-C sentence). */}
-                    <p data-ask="welcome-support" className={styles.emptyLead}>
-                      {r3.welcomeSupport}
-                    </p>
+                    {/* R3 FULL DESIGN · WELCOME_PLACEHOLDER_SPEC §Composition 4 (R1-C sentence).
+                        IA R2 02 decision 4 — the compact welcome (F03a–d) omits it so the cues and
+                        one Continue row clear the composer. The sentence itself is unchanged and is
+                        shown at every other size. */}
+                    {!frameSize.compact && (
+                      <p data-ask="welcome-support" className={styles.emptyLead}>
+                        {r3.welcomeSupport}
+                      </p>
+                    )}
                   </div>
                   <AskWelcomeEntries
                     locale={interfaceLocale}
-                    signedIn={signedInReader}
-                    latest={resumeConversation}
+                    onStageDraft={stageGuidedDraft}
+                    compact={frameSize.compact}
                     onOpenJobs={() => setJobSheetOpen(true)}
+                    onOpenStoryPicker={() => setStoryPickerOpen(true)}
                     placement="welcome"
                   />
                 </div>
@@ -938,6 +1063,8 @@ export function AskFrameScreen({
                       locale={interfaceLocale}
                       context={context}
                       onRunDeeper={guestMode ? undefined : (q) => void r2.runDeeper(q)}
+                      onStageDraft={(draft) => stageGuidedDraft(draft, '')}
+                      onOpenJobs={() => setJobSheetOpen(true)}
                     />
                   </div>
                 ))}
@@ -952,6 +1079,8 @@ export function AskFrameScreen({
                   context={context}
                   onRunDeeper={guestMode ? undefined : (q) => void r2.runDeeper(q)}
                   onUseQuestion={draftQuestion}
+                  onStageDraft={(draft) => stageGuidedDraft(draft, '')}
+                  onOpenJobs={() => setJobSheetOpen(true)}
                   onRefresh={guestMode ? undefined : (q) => void resubmit(q)}
                   /* Design D2 — the failed turn's own panel resends the kept draft. */
                   onRetry={retryKept && !isPending ? () => void ask() : undefined}
@@ -1177,6 +1306,7 @@ export function AskFrameScreen({
                The Alpha line's R2 input-limit contract (limitCopy) is kept as it was. */
             maxHeight={168}
             limitCopy={r2s}
+            cueHint={cueHint}
             /*
               SUPERSEDED BY PRODUCT OWNER DIRECTIVE 9 Oct 2026 / CLAUDE DESIGN R3 §11 (R1-C).
 
@@ -1222,9 +1352,10 @@ export function AskFrameScreen({
           {entryState && !typing && (
             <AskWelcomeEntries
               locale={interfaceLocale}
-              signedIn={signedInReader}
-              latest={resumeConversation}
+              onStageDraft={stageGuidedDraft}
+              compact={frameSize.compact}
               onOpenJobs={() => setJobSheetOpen(true)}
+              onOpenStoryPicker={() => setStoryPickerOpen(true)}
               placement="desktop"
             />
           )}
@@ -1266,11 +1397,42 @@ export function AskFrameScreen({
         <AskJobSetupSheet
           locale={interfaceLocale}
           onClose={closeJobSheet}
-          onAskGeneral={() => {
+          onAskGeneral={(draft) => {
             setJobSheetOpen(false);
-            requestAnimationFrame(() =>
-              document.querySelector<HTMLTextAreaElement>('[data-ask="composer-input"]')?.focus(),
-            );
+            /* MASTER CTO R32 · J06 — a general question from the reader's own role and place, STAGED
+               (unsent; a reader's own unsent words are kept). Nothing is searched or sent. */
+            stageGuidedDraft(draft, '');
+          }}
+        />
+      )}
+      {storyPickerOpen && (
+        <StoryPicker
+          locale={interfaceLocale}
+          initialDescribed={storyPickerReturn}
+          /* MASTER CTO R98 — one explicit tap asks the reader's words, through the one submission step */
+          onAsk={(asked) => {
+            setStoryPickerOpen(false);
+            setStoryPickerReturn('');
+            void askStory(asked);
+          }}
+          onClose={() => {
+            setStoryPickerOpen(false);
+            setStoryPickerReturn('');
+            /* G2-10 — close keeps nothing staged and returns focus to the cue that opened it */
+            requestAnimationFrame(() => document.querySelector<HTMLButtonElement>('[data-ask="cue-g2"]')?.focus());
+          }}
+          onStageDraft={(draft) => {
+            /* G2-7 — stage only; the reader sends (G2-8). An unsent question already in the composer
+               is kept (stageGuidedDraft sets the draft only when the composer is empty). */
+            setStoryPickerOpen(false);
+            stageGuidedDraft(draft, '');
+          }}
+          /* CTO R23 — the picker shows that an unsent question will be kept, and offers an explicit
+             replace. Both only fill and focus the composer; neither sends. */
+          existingDraft={question}
+          onReplaceDraft={(draft) => {
+            setStoryPickerOpen(false);
+            draftQuestion(draft);
           }}
         />
       )}

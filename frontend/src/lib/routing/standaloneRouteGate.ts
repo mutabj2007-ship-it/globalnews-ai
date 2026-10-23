@@ -34,6 +34,8 @@ const STANDALONE_PAGES: ReadonlySet<string> = new Set([
     (Supersedes the earlier note that kept /saved/briefing Alpha-only.)
   */
   '/saved/updates',
+  /* ASK D0.1 · D2 — My updates › Choose a place: ephemeral place browsing (no account write). */
+  '/saved/updates/place',
   '/saved/briefing',
   '/history',
   '/account/settings',

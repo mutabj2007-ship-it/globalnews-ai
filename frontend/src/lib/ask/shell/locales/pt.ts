@@ -628,12 +628,14 @@ export const ptShellOverlay: ShellLocaleOverlay = {
       verification: {
         available: "consultada",
         claims: "Situação da afirmação",
+        coverageNotSearched: "A verificação ficou incompleta porque algumas fontes não estão autorizadas para este uso e não foram consultadas.",
         coverageIncomplete: "A verificação ficou incompleta porque algumas vias de fontes estavam indisponíveis.",
         lanes: {
           "news-providers": "Provedores de notícias",
           "rss-feeds": "Feeds dos veículos",
         },
         notVerified: "Não foi possível verificar esta afirmação a partir das fontes efetivamente consultadas.",
+        notSearched: "não consultada",
         reasons: {
           auth: "acesso recusado",
           "not-configured": "não configurada",

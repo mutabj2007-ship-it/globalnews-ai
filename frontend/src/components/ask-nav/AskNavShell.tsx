@@ -20,7 +20,7 @@ import {
   isPlainClick,
 } from '@/lib/ask/askCleanNavigation';
 import { useAccount } from '@/lib/hooks/useAccount';
-import { addressableName } from '@globalnews-ai/shared';
+import { shownAccountName } from '@/lib/account/accountName';
 import { persistLanguageSelection, displayLocaleOf } from '@/lib/i18n/languages';
 import { LanguageSelector } from '@/components/search/LanguageSelector';
 import { ThemeControl, ThemeScopeContext } from '@/components/platform/ThemeControl';
@@ -37,7 +37,11 @@ import { askProductName, askShellStrings } from '@/lib/ask/shell/askShellCatalog
 import { askDirectionProps } from '@/lib/ask/askDirection';
 import { AskConversations } from '@/components/ask-frame/AskConversations';
 import { AskEmblemMark } from '@/components/ask-frame/AskEmblem';
-import { AskReadingFooter } from './AskReadingFooter';
+import { AskSettingsGlyph } from '@/components/ask-frame/AskSettingsGlyph';
+import { AskSettingsSheet } from '@/components/account/AskSettingsSheet';
+import { askSettingsR2Strings } from '@/lib/ask/askSettingsR2Strings';
+import { AskPrimaryNav } from './AskPrimaryNav';
+import { askPrimarySectionForPath, type AskPrimarySectionId } from '@/lib/askNavModel';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -275,6 +279,7 @@ export function AskNavShell({
   selected,
   theme,
   surface,
+  section,
 }: {
   readonly language: DisplayLocale;
   /**
@@ -305,6 +310,12 @@ export function AskNavShell({
    * those are the product locations Account, Settings and Help are reached from.
    */
   readonly surface?: 'reading';
+  /**
+   * ASK R3 NAVIGATION / USABILITY R1 — the R3 section this page belongs to, for the primary
+   * navigation in the desktop bar. Absent → derived from the path (/saved/updates → My updates,
+   * /saved… → Saved, /ask → Ask). The change detail passes it, because only its opener knows.
+   */
+  readonly section?: AskPrimarySectionId | null;
 }): JSX.Element {
   const reading = surface === 'reading';
   const { open, setOpen, clearAndGo, clear, setAccount, setDisplayName, threadId, runNewQuestion } =
@@ -319,16 +330,24 @@ export function AskNavShell({
   /* ASK DESIGN COMPLETENESS R1 — publish what the one session read found (no second read). */
   useEffect(() => {
     setAccount(isLoading ? 'pending' : user === null ? 'signed-out' : 'signed-in');
-    /* REASON TO RETURN R1 · G6 — the reader's own saved name only; null for a guest */
-    setDisplayName(user === null ? null : addressableName(user.displayName));
+    /* REASON TO RETURN R1 · G6 — null for a guest. R76 E1-B — the reader's own saved name only
+       (never the address, never a Google / email-derived name). Sign-out sets user to null, so the
+       shown name is cleared with it (E1 C-6). */
+    setDisplayName(shownAccountName(user));
   }, [isLoading, user, setAccount, setDisplayName]);
   const [accountOpen, setAccountOpen] = useState(false);
   const accountRef = useRef<HTMLDivElement | null>(null);
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const wasOpen = useRef(false);
+  /* ASK R3 SETTINGS-NAV ENGINEERING §2 — Settings opened from the gear, over this view */
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const s = askShellStrings(language).askNavStrings;
+  /* ASK D0.1 PO ACCEPTANCE R1 · V-01 — one path rule, owned by the nav model (a My updates child
+     such as Choose a place is My updates, not Saved). */
+  const currentSection: AskPrimarySectionId | null =
+    section !== undefined ? section : askPrimarySectionForPath(pathname);
   /* R4 · PHASE B — the shell's own direction scope. See the note at the header below. */
   const shellDirection = askDirectionProps(language);
   const audience: AskMenuAudience = user === null ? 'signed-out' : 'signed-in';
@@ -424,8 +443,20 @@ export function AskNavShell({
     }
     if (!wasOpen.current) return;
     wasOpen.current = false;
+    /* the gear opened Settings: its sheet takes focus now, and gives it back to ☰ on close */
+    if (settingsOpen) return;
+    focusMenuTrigger();
+  }, [open, settingsOpen]);
+
+  /* ☰ — the control that opened the drawer, wherever it is rendered at this width */
+  function focusMenuTrigger(): void {
     document.querySelector<HTMLElement>('[data-ask="shell-menu"]')?.focus();
-  }, [open]);
+    /* ASK R3 NAVIGATION / USABILITY R1 — above the phone threshold the visible trigger is the
+       desktop bar's own (the continuity header's is display:none there, so focus did not move). */
+    if (document.activeElement === document.body || document.activeElement === null) {
+      document.querySelector<HTMLElement>('[data-ask-nav="bar-menu"]')?.focus();
+    }
+  }
 
   /*
    * Drawer keyboard contract. Escape closes, and Tab is CONTAINED.
@@ -447,6 +478,11 @@ export function AskNavShell({
         /* ALPHA VISUAL ACCEPTANCE REPAIR R1 — an open language list closes first; the next
            Escape closes the drawer. */
         const active = document.activeElement;
+        /* ASK R3 SETTINGS-NAV ENGINEERING §3 — Escape in a search field with text clears it
+           (AskConversations); only Escape in an empty field closes the drawer. */
+        if (active instanceof HTMLInputElement && active.dataset.ask === 'conversations-search' && active.value !== '') {
+          return;
+        }
         if (
           active !== null &&
           drawerRef.current?.contains(active) === true &&
@@ -477,10 +513,9 @@ export function AskNavShell({
 
   const itemClass =
     'flex min-h-11 items-center rounded-[22px] px-3 font-cd-body text-[0.9375rem] text-[var(--ad-ink-2,#cfe2f2)] transition-colors hover:bg-[var(--ad-surface-2,rgba(56,189,248,0.10))] hover:text-[var(--ad-ink,#ffffff)]';
-  const drawerRowClass = 'flex min-h-[52px] items-center font-cd-body text-[1.0625rem] text-[var(--ad-ink,#e6eef6)]';
 
-  function renderRoutes(className: string, onNavigate?: () => void): JSX.Element[] {
-    return items.map((entry) => (
+  function renderRoutes(className: string, onNavigate?: () => void, omit: readonly string[] = []): JSX.Element[] {
+    return items.filter((entry) => !omit.includes(entry.id)).map((entry) => (
       <Link
         key={entry.id}
         href={entry.href ?? '/ask'}
@@ -538,7 +573,24 @@ export function AskNavShell({
         data-ask-nav-audience={isLoading ? 'pending' : audience}
         className={`${styles.shell} sticky top-0 z-50 h-[62px] items-center border-b border-[var(--ad-line,#0a2744)] bg-[var(--ad-bg,rgba(2,15,32,0.96))]`}
       >
-        <div className="mx-auto flex h-[62px] w-full max-w-cd-page items-center gap-6 px-[26px]">
+        <div className={`${styles.barRow} mx-auto flex h-[62px] w-full max-w-cd-page items-center gap-6 px-[26px]`}>
+          {/*
+            ASK R3 NAVIGATION / USABILITY R1 — the Conversations drawer is reachable from the
+            desktop bar too (it opened only from the phone header): the same shared state, the
+            same drawer, opened only when the reader asks (PO rail ruling, every width).
+          */}
+          <button
+            type="button"
+            data-ask-nav="bar-menu"
+            aria-label={open ? s.closeMenuAriaLabel : s.openMenuAriaLabel}
+            aria-expanded={open}
+            onClick={() => setOpen(!open)}
+            className="-ms-3 inline-flex min-h-11 min-w-11 shrink-0 flex-col items-center justify-center gap-[4px] text-[var(--ad-ink,#cfe2f2)]"
+          >
+            <span aria-hidden="true" className="block h-[2px] w-[18px] rounded-sm bg-current" />
+            <span aria-hidden="true" className="block h-[2px] w-[18px] rounded-sm bg-current" />
+            <span aria-hidden="true" className="me-[6px] block h-[2px] w-[12px] rounded-sm bg-current" />
+          </button>
           {/*
             IDENTITY, NOT NAVIGATION. The wordmark is plain text with no href on
             purpose: a link here would point at `/ask`, duplicating New question
@@ -552,8 +604,14 @@ export function AskNavShell({
             {askProductName(language)}
           </span>
 
-          <nav aria-label={s.navAriaLabel} className="flex items-center gap-1">
-            {renderRoutes(itemClass)}
+          {/* ASK R3 NAVIGATION / USABILITY R1 — the R3 primary navigation, on desktop too. */}
+          <AskPrimaryNav locale={selectedLocale} current={currentSection} />
+
+          <nav aria-label={s.navAriaLabel} className={`${styles.barRoutes} flex items-center gap-1`}>
+            {/* ASK R3 NAVIGATION / USABILITY R1 — the bar keeps New question beside the R3
+                navigation; Saved is in the navigation, and Recent (the Conversations list), Help &
+                feedback and Settings are in the drawer the bar's menu control opens. */}
+            {renderRoutes(`${itemClass} whitespace-nowrap`, undefined, ['saved', 'recent', 'help', 'settings'])}
           </nav>
 
           <div className="ml-auto flex shrink-0 items-center gap-2">
@@ -655,20 +713,77 @@ export function AskNavShell({
           dir={shellDirection.dir}
           className={styles.drawer}
         >
-          {/* Design D4 — "Conversations" and a text Close, 56 px. */}
+          {/*
+            ASK R3 SETTINGS-NAV ENGINEERING §1 (Design F06a/F07a/F07b) — Close · identity · gear,
+            DOM = tab order. Close stays first, so it still takes focus when the drawer opens. The
+            identity is the shell's one session read: the reader's own saved name and "Signed in",
+            or "Signed in" alone — never an email. A guest gets the Sign in pill instead. The gear
+            (22 px, Design's asset) is always shown and always operable, for guests too; a plain
+            click opens Settings as a sheet / dialog over this view, so the draft underneath is
+            untouched; any other click follows the route.
+            SUPERSEDED: the visible "Conversations" heading and the text Close (Design D4). The
+            heading stays for assistive technology, so the list keeps its name.
+          */}
           <div className={styles.drawerHead}>
-            <h2 className="m-0 text-[0.9375rem] font-semibold text-[var(--ad-ink,#ffffff)]">
+            <h2 className="sr-only">
               {askShellStrings(selected ?? displayLocaleOf(language)).askR2Strings.read.conversations}
             </h2>
             <button
               ref={closeRef}
               type="button"
+              data-ask-nav="drawer-close"
               aria-label={s.closeMenuAriaLabel}
               onClick={() => setOpen(false)}
-              className="inline-flex min-h-11 items-center justify-center rounded-[22px] px-3 text-[0.9375rem] font-medium text-[var(--ad-ink-2,#cfe2f2)] hover:bg-[var(--ad-surface-2,transparent)]"
+              className={styles.drawerIconButton}
             >
-              {askShellStrings(selected ?? displayLocaleOf(language)).askR2Strings.close}
+              <AskSettingsGlyph name="close" />
             </button>
+            <div data-ask-nav="drawer-identity" className={styles.drawerIdentity}>
+              {!isLoading && user !== null && (
+                <>
+                  {shownAccountName(user) !== null && (
+                    <span aria-hidden="true" className={styles.drawerAvatar}>
+                      {Array.from(shownAccountName(user) ?? "")[0]?.toLocaleUpperCase()}
+                    </span>
+                  )}
+                  <span className="min-w-0">
+                    {shownAccountName(user) !== null && (
+                      <span dir="auto" style={{ unicodeBidi: "isolate" }} className={styles.drawerIdentityName}>
+                        {shownAccountName(user)}
+                      </span>
+                    )}
+                    <span className={styles.drawerIdentityState}>
+                      {askSettingsR2Strings(selectedLocale).signedInState}
+                    </span>
+                  </span>
+                </>
+              )}
+              {!isLoading && user === null && (
+                <a
+                  href={accountSignInUrl(pathname ?? undefined)}
+                  data-ask-nav="drawer-sign-in"
+                  className={styles.drawerSignIn}
+                >
+                  {s.signIn}
+                </a>
+              )}
+            </div>
+            <Link
+              href="/account/settings"
+              prefetch={false}
+              data-ask-nav="drawer-settings"
+              aria-label={s.settings}
+              title={s.settings}
+              onClick={(event) => {
+                setOpen(false);
+                if (pathname === "/account/settings" || !isPlainClick(event)) return;
+                event.preventDefault();
+                setSettingsOpen(true);
+              }}
+              className={styles.drawerIconButton}
+            >
+              <AskSettingsGlyph name="gear" />
+            </Link>
           </div>
 
           {/*
@@ -685,74 +800,32 @@ export function AskNavShell({
             />
           </div>
 
-          {reading ? (
-            <AskReadingFooter
-              language={language}
-              selected={selectedLocale}
-              account={isLoading ? 'pending' : audience}
-              onSignOut={() => {
-                void signOutClean();
-              }}
-            />
-          ) : (
-          <>
-          <nav aria-label={s.navAriaLabel} className={styles.drawerGroup}>
-            {renderRoutes(drawerRowClass, () => setOpen(false))}
-          </nav>
-
-          <div className={styles.drawerGroup}>
-            {languageEntry !== undefined && (
-              <div className="flex min-h-[52px] items-center">
-                <LanguageSelector
-                  value={selectedLocale}
-                  onChange={changeLanguage}
-                  label={s.language}
-                  actionLabel={s.languageSelectorAction}
-                  variant="mobile"
-                  anchor="self"
-                />
-              </div>
-            )}
-            {controlTheme !== undefined && (
-              <div className="flex min-h-[52px] items-center" data-ask-nav="theme">
-                <ThemeControl
-                  language={language as LanguageCode}
-                  locale={language}
-                  initial={controlTheme}
-                  tone="surface"
-                />
-              </div>
-            )}
-            {!isLoading && signInEntry !== undefined && (
-              <a
-                href={accountSignInUrl(pathname ?? undefined)}
-                data-ask-nav="utility"
-                data-ask-nav-id={signInEntry.id}
-                className={drawerRowClass}
-              >
-                {labelOf(signInEntry, s)}
-              </a>
-            )}
-            {!isLoading && user !== null && signOutEntry !== undefined && (
-              <>
-                <button
-                  type="button"
-                  data-ask-nav="utility"
-                  data-ask-nav-id={signOutEntry.id}
-                  onClick={() => {
-                    setOpen(false);
-                    void signOutClean();
-                  }}
-                  className={`${drawerRowClass} text-start`}
-                >
-                  {labelOf(signOutEntry, s)}
-                </button>
-              </>
-            )}
-          </div>
-          </>
-          )}
+          {/*
+            R3.1 PRODUCT OWNER ACCEPTANCE · FIX 3 (MASTER CTO, 2026-10-11) — THE DRAWER FOOTER IS
+            REMOVED. The drawer holds only Close · identity or Sign in · the Settings gear, New
+            question, conversation search and the compact history. Everything the footer carried
+            is in Settings (the gear above, AccountSettingsBody): Account and the display name,
+            Language, Appearance, Privacy & data with Privacy and Cookies, Followed questions → My
+            updates, Help & legal, Sign out. Ask / My updates / Saved stay in the primary
+            navigation, where they were approved. A guest's Sign in is the pill in the head row.
+            SUPERSEDED: ASK R3 NAVIGATION / USABILITY R1's pinned drawer footer (AskReadingFooter).
+          */}
         </div>
+      )}
+      {settingsOpen && (
+        <AskSettingsSheet
+          locale={language}
+          title={s.settings}
+          closeLabel={askShellStrings(selectedLocale).askR2Strings.close}
+          onSignOut={() => {
+            setSettingsOpen(false);
+            void signOutClean();
+          }}
+          onClose={() => {
+            setSettingsOpen(false);
+            focusMenuTrigger();
+          }}
+        />
       )}
     </>
   );

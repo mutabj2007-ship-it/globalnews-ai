@@ -11,6 +11,7 @@ import {
   MI_SELECTION_MODE_CONTROL,
 } from './miPresentation';
 import type { FixtureStory } from './devFixtures';
+import { resolvePublisherImage } from '@/lib/rights/publisherImageDisplay';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -392,13 +393,30 @@ describe('§9 story images: the story’s own image, or an honest fallback', () 
       ...(imageUrl !== undefined ? { imageUrl } : {}),
     }) as FixtureStory;
 
-  it('only an absolute http(s) URL on the story is used', () => {
-    expect(views.storyImageSrc(story('https://example.com/a.jpg'))).toBe('https://example.com/a.jpg');
-    expect(views.storyImageSrc(story('http://example.com/a.jpg'))).toBe('http://example.com/a.jpg');
+  /* ── SUPERSEDED BY E1 U-1 · PUBLISHER IMAGE RIGHTS CONTAINMENT ──────────
+     E1 identified publisher images rendered with no recorded image-display
+     clearance. The retained story's own photograph is one of them, so the
+     three assertions in this block that REQUIRED it to render are withdrawn
+     and replaced by their inverse, with the reason asserted rather than
+     inferred. Originals are kept inline. Every other assertion in §9 — the
+     URL hygiene refusals, the designed fallback, the no-<img> case, the
+     thumbnail geometry, the error handler — is untouched.
+     ──────────────────────────────────────────────────────────────────────── */
+  it('the URL hygiene refusals are unchanged, and a clean URL is now refused too', () => {
+    /* UNCHANGED, and still the first thing asked: these were never images. */
     for (const bad of ['', '   ', 'javascript:alert(1)', '/relative.jpg', 'data:image/png;base64,AAAA', 'not a url']) {
       expect(views.storyImageSrc(story(bad))).toBeUndefined();
     }
     expect(views.storyImageSrc(story())).toBeUndefined();
+
+    /* WAS: a clean absolute http(s) URL came back verbatim. It is now refused
+       for a RIGHTS reason, which is asserted directly so this test cannot be
+       satisfied by a URL parser that merely broke. */
+    expect(views.storyImageSrc(story('https://example.com/a.jpg'))).toBeUndefined();
+    expect(views.storyImageSrc(story('http://example.com/a.jpg'))).toBeUndefined();
+    const decision = resolvePublisherImage('https://example.com/a.jpg', 'Example Wire');
+    expect(decision.kind).toBe('REFUSED');
+    expect(decision.kind === 'REFUSED' && decision.refusals).toContain('IMAGE-NO-DISPLAY-CLEARANCE');
   });
 
   const common = { language: 'en' as const, isSaved: true, onToggleSaved: () => undefined, selecting: false, isSelected: false, onToggleSelected: () => undefined };
@@ -406,15 +424,15 @@ describe('§9 story images: the story’s own image, or an honest fallback', () 
   it.each([
     ['phone row', 'SavedRow'],
     ['desktop card', 'SavedCard'],
-  ] as const)('%s: a valid imageUrl renders the image over the designed fallback', (_label, component) => {
+  ] as const)('%s: a valid imageUrl is NOT rendered, and the designed fallback shows (E1 U-1)', (_label, component) => {
+    /* WAS: the slot resolved to 'present', carried an <img> at that exact URL
+       with an empty alt and the shared error handler, and kept the fallback
+       underneath. The fallback assertion is the one thing PRESERVED below,
+       because it is what the reader now sees. */
     const View = views[component] as unknown as (props: Record<string, unknown>) => JSX.Element;
     mount(createElement(View, { ...common, story: story('https://example.com/a.jpg') }));
-    const slot = byData('data-mi-story-image', 'present')[0];
-    const img = slot.findByType('img');
-    expect(img.props.src).toBe('https://example.com/a.jpg');
-    expect(img.props.alt).toBe('');
-    expect(img.props.onError).toBe(views.hideFailedStoryImage);
-    /* The fallback stays underneath, so a failed image reveals it rather than a broken glyph. */
+    const slot = byData('data-mi-story-image', 'missing')[0];
+    expect(slot.findAllByType('img')).toHaveLength(0);
     expect(text(slot)).toContain(getDictionary('en').myIntelligence.saved.noImage);
   });
 
@@ -430,9 +448,17 @@ describe('§9 story images: the story’s own image, or an honest fallback', () 
   });
 
   it('DENSITY R1 — the card image is a fixed compact thumbnail (76 / 96 / 104px), never a collapsing overlay', () => {
+    /* RETARGETED, NOT RELAXED (E1 U-1). Every geometry assertion below is
+       byte-for-byte the original: this test exists to pin the thumbnail's
+       size and to forbid a collapsing overlay, and that requirement is
+       unchanged and is exactly what must survive a refusal. Only the slot it
+       reads moved from 'present' to 'missing', because under U-1 a story with
+       a perfectly good URL now renders the designed fallback — and the
+       geometry has to be identical in that state, which is what this now
+       proves. */
     const View = views.SavedCard as unknown as (props: Record<string, unknown>) => JSX.Element;
     mount(createElement(View, { ...common, story: story('https://example.com/a.jpg') }));
-    const slot = byData('data-mi-story-image', 'present')[0];
+    const slot = byData('data-mi-story-image', 'missing')[0];
     for (const size of ['h-[76px] w-[76px]', 'md:h-[96px] md:w-[96px]', 'xl:h-[104px] xl:w-[104px]']) {
       expect(slot.props.className).toContain(size);
     }

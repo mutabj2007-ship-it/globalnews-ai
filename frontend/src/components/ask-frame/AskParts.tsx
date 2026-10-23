@@ -209,6 +209,7 @@ export function Composer({
   example,
   exampleFocus,
   limitCopy,
+  cueHint,
 }: {
   readonly value: string;
   readonly onChange: (next: string) => void;
@@ -238,6 +239,8 @@ export function Composer({
   readonly exampleFocus?: { readonly onFocus: () => void; readonly onBlur: () => void };
   /** ASK R2 — the documented input limit's copy (askR2Strings); the limit itself is shared. */
   readonly limitCopy: AskQuestionLimitCopy;
+  /* ASK R3 IA + DISCOVER R2 — the staged cue's hint, announced via aria-describedby. */
+  readonly cueHint?: string | null;
 }): JSX.Element {
   /* ASK R2 — the whole draft is kept; over the documented limit Send waits and says why. */
   const limit = askQuestionLimitState(value);
@@ -272,6 +275,12 @@ export function Composer({
         <label className="sr-only" htmlFor="ask-frame-composer">
           {inputLabel}
         </label>
+        {/* IA R2 — the guided cue's hint. It describes the staged draft; it never submits. */}
+        {cueHint && (
+          <p id="ask-frame-cue-hint" data-ask="cue-hint" className="sr-only">
+            {cueHint}
+          </p>
+        )}
         <div className="relative flex min-w-0 flex-1 self-center">
           <AdaptiveTextarea
             id="ask-frame-composer"
@@ -301,7 +310,13 @@ export function Composer({
             }}
             placeholder={showExample ? '' : placeholder}
             aria-invalid={limit.over ? true : undefined}
-            aria-describedby={limit.near || limit.over ? 'ask-frame-composer-limit' : undefined}
+            /* IA R2 — the cue hint joins the limit message rather than replacing it; the limit
+               is listed first so an over-limit reader hears the blocking fact first. */
+            aria-describedby={
+              [limit.near || limit.over ? 'ask-frame-composer-limit' : null, cueHint ? 'ask-frame-cue-hint' : null]
+                .filter((id): id is string => id !== null)
+                .join(' ') || undefined
+            }
             minHeight={32}
             maxHeight={maxHeight}
             maxViewportFraction={0.4}

@@ -13,6 +13,8 @@ import { followStrings } from '@/lib/ask/followStrings';
 import { finishedCheckTurn, MY_UPDATES_HREF } from '@/lib/ask/followedQuestions';
 import { askFormatLocalDay } from '@/lib/ask/askDirection';
 import { AskFollowAssessment } from './AskFollowAssessment';
+import { AskCheckComparison } from '@/components/ask/AskCheckComparison';
+import { askR32Strings } from '@/lib/ask/askR32Strings';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -43,6 +45,8 @@ export function AskFollowCheck({
   /* turns already on screen at arrival are never the check */
   const sentFrom = useRef<number | null>(null);
   const recordedFor = useRef<string | null>(null);
+  /* MASTER CTO R32 · D09 — the recorded check's own Before / Latest, opened on request (two DB reads) */
+  const [comparing, setComparing] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -115,6 +119,23 @@ export function AskFollowCheck({
         <>
           <AskFollowAssessment check={recorded} locale={locale} />
           <p role="status">{s.checkRecorded}</p>
+          {/* MASTER CTO R32 · D09 — what changed, inside the Ask check itself: the comparison of THIS
+              recorded check (its own baseline and resulting versions), or its truthful status when
+              the record names no pair. Opening it reads two stored versions; 0 AI, 0 provider. */}
+          <button
+            type="button"
+            data-ask="follow-compare-toggle"
+            aria-expanded={comparing}
+            onClick={() => setComparing((open) => !open)}
+            className="inline-flex min-h-[44px] w-fit items-center font-medium text-[var(--ad-accent,#7aa2ff)] underline underline-offset-4"
+          >
+            {comparing ? askR32Strings(locale).hideWhatChanged : askR32Strings(locale).seeWhatChanged}
+          </button>
+          {comparing && (
+            <div data-ask="follow-compare">
+              <AskCheckComparison briefingId={followId} check={recorded} locale={locale} />
+            </div>
+          )}
         </>
       )}
       <Link href={MY_UPDATES_HREF} prefetch={false} data-ask="follow-open-updates" className="font-medium text-[var(--ad-accent,#7aa2ff)] underline underline-offset-4">

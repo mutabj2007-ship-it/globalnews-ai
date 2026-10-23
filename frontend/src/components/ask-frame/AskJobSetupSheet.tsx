@@ -4,27 +4,25 @@ import { useEffect, useId, useRef, useState, type JSX } from 'react';
 import type { DisplayLocale } from '@globalnews-ai/shared';
 import { askR3FullStrings } from '@/lib/ask/askR3FullStrings';
 import { askDirectionProps } from '@/lib/ask/askDirection';
+import { askR32Strings } from '@/lib/ask/askR32Strings';
+import { askR38Strings } from '@/lib/ask/askR38Strings';
 import styles from './askDashboard.module.css';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
- * ASK R3 FULL DESIGN R1 — J01 JOB SEARCH SETUP (optional) AND ITS TRUTHFUL OUTCOME (J06)
+ * MASTER CTO R38 · U-3 — JOBS: SAY IT FIRST, THEN OFFER A GENUINE CAREER QUESTION
  * ════════════════════════════════════════════════════════════════════════════
  *
- * Claude Design R3 J01 (AskPrototype `ov === 'jobSetup'`): role or keywords, an editable city or
- * country, progressive filters and an explicit "Search opportunities". Opening the sheet and typing
- * run NOTHING (addendum §2, acceptance 4).
+ * Ask has NO job-listing source (East Africa Opportunities R1-A is fixture-only; every candidate
+ * source is NOT_ASSESSED / BLOCKED for rights). The earlier sheet (J01) collected role, place and
+ * filters behind a "Search opportunities" button whose submit only revealed that nothing could be
+ * searched — the Product Owner rejected that as a pretend search.
  *
- * WHAT SEARCH DOES TODAY, AND WHY. Ask has NO job-listing source: the East Africa Opportunities
- * R1-A domain package is fixture-only and every candidate source is NOT_ASSESSED / BLOCKED for
- * rights (R1-A §7). So the only true outcome for ANY place the reader types is J06-unsupported:
- * "Ask doesn't check job sources for {place} yet. This isn't a 'no jobs' result." It is decided
- * here, with no network request and no AI call, and it never reads as "no jobs" (addendum §4).
- * Results (J03), source review (J04), follow (J05) and the other J06 states arrive only with a
- * rights-cleared source — never from fixtures.
- *
- * "Use my location" is deliberately absent: R1-A §4 requires a permission flow and a geography
- * authority that do not exist yet. The typed destination is the only input, as R1-A requires.
+ * Now the FIRST thing the sheet says is that job listings are not connected, before any field. What
+ * it offers is real: the reader's role (optional) and place become an UNSENT general career question
+ * in the Ask box ("What is the job market like for nurses in Kigali?"), answered from news and public
+ * sources when the reader presses Send. No vacancy, employer, deadline, filter, "searched" state or
+ * network request; "Use my location" stays absent (R1-A §4).
  */
 export function AskJobSetupSheet({
   locale,
@@ -33,22 +31,19 @@ export function AskJobSetupSheet({
 }: {
   readonly locale: DisplayLocale;
   readonly onClose: () => void;
-  /** Closes the sheet and focuses the composer, empty: nothing is written or sent. */
-  readonly onAskGeneral: () => void;
+  /** Closes the sheet and STAGES the general career question in the Ask box: unsent, nothing searched. */
+  readonly onAskGeneral: (draft: string) => void;
 }): JSX.Element {
   const s = askR3FullStrings(locale);
+  const r32 = askR32Strings(locale);
+  const r38 = askR38Strings(locale);
   const titleId = useId();
-  const helpId = useId();
+  const noticeId = useId();
   const sheet = useRef<HTMLElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const placeRef = useRef<HTMLInputElement>(null);
   const [role, setRole] = useState('');
   const [place, setPlace] = useState('');
-  const [filters, setFilters] = useState(false);
-  const [workType, setWorkType] = useState(0);
-  const [level, setLevel] = useState(0);
-  /** The place the reader searched, once they chose Search. */
-  const [outcomeFor, setOutcomeFor] = useState<string | null>(null);
 
   useEffect(() => {
     closeRef.current?.focus();
@@ -78,7 +73,7 @@ export function AskJobSetupSheet({
   }, [onClose]);
 
   const destination = place.trim();
-  const canSearch = destination !== '';
+  const work = role.trim();
 
   return (
     <div data-ask="job-sheet-backdrop" className={styles.r3SheetBackdrop} onClick={onClose}>
@@ -87,134 +82,64 @@ export function AskJobSetupSheet({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        aria-describedby={noticeId}
         data-ask="job-sheet"
         className={styles.r3Sheet}
         onClick={(event) => event.stopPropagation()}
         {...askDirectionProps(locale)}
       >
         <div className={styles.r3SheetHead}>
-          <h2 id={titleId}>{s.jobEntry}</h2>
+          <h2 id={titleId}>{r38.jobsCue}</h2>
           <button ref={closeRef} type="button" data-ask="job-sheet-close" onClick={onClose} className={styles.r3TextButton}>
             {s.close}
           </button>
         </div>
-        {outcomeFor === null ? (
-          <form
-            data-ask="job-setup"
-            className={styles.r3SheetBody}
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (!canSearch) {
-                placeRef.current?.focus();
-                return;
-              }
-              setOutcomeFor(destination);
-            }}
-          >
-            <p className={styles.r3Quiet}>{s.jobIntro}</p>
-            <label className={styles.r3Field}>
-              <span>{s.jobRoleLabel}</span>
-              <input
-                data-ask="job-role"
-                value={role}
-                onChange={(event) => setRole(event.target.value)}
-                placeholder={s.jobRolePlaceholder}
-              />
-            </label>
-            <label className={styles.r3Field}>
-              <span>{s.jobPlaceLabel}</span>
-              <input
-                ref={placeRef}
-                data-ask="job-place"
-                value={place}
-                onChange={(event) => setPlace(event.target.value)}
-                placeholder={s.jobPlacePlaceholder}
-                aria-describedby={helpId}
-              />
-            </label>
-            <p id={helpId} className={styles.r3Small}>
-              {s.jobPlaceHelp}
-            </p>
-            <button
-              type="button"
-              data-ask="job-filters-toggle"
-              aria-expanded={filters}
-              onClick={() => setFilters((open) => !open)}
-              className={styles.r3TextButton}
-            >
-              {filters ? s.jobHideFilters : s.jobMoreFilters}
-            </button>
-            {filters && (
-              <>
-                <Chips label={s.jobWorkType} options={s.jobWorkTypes} value={workType} onChange={setWorkType} name="work" />
-                <Chips label={s.jobExperience} options={s.jobLevels} value={level} onChange={setLevel} name="level" />
-              </>
-            )}
-            {!canSearch && <p className={styles.r3Small}>{s.jobNeedsPlace}</p>}
-            <button type="submit" data-ask="job-search" disabled={!canSearch} className={styles.r3Primary}>
-              {s.jobSearch}
-            </button>
-            <p className={styles.r3Small}>{s.jobBoundary}</p>
-          </form>
-        ) : (
-          <div data-ask="job-outcome" data-ask-job-outcome="UNSUPPORTED" className={styles.r3SheetBody}>
-            <div role="status" className={styles.r3Notice}>
-              <p className={styles.r3NoticeTitle}>{s.jobUnsupported(outcomeFor)}</p>
-              <p>{s.jobNotNoJobs(outcomeFor)}</p>
-              <p className={styles.r3Quiet}>{s.jobGeneralHint}</p>
-            </div>
-            <div className={styles.r3Actions}>
-              <button
-                type="button"
-                data-ask="job-change-place"
-                onClick={() => {
-                  setOutcomeFor(null);
-                  requestAnimationFrame(() => placeRef.current?.focus());
-                }}
-                className={styles.r3Secondary}
-              >
-                {s.jobChangePlace}
-              </button>
-              <button type="button" data-ask="job-ask-general" onClick={onAskGeneral} className={styles.r3Secondary}>
-                {s.jobAskGeneral}
-              </button>
-            </div>
+        <form
+          data-ask="job-setup"
+          className={styles.r3SheetBody}
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (destination === '') {
+              placeRef.current?.focus();
+              return;
+            }
+            onAskGeneral(work === '' ? r32.jobGeneralDraftNoRole(destination) : r32.jobGeneralDraft(work, destination));
+          }}
+        >
+          {/* Said FIRST, before any field: nothing here searches vacancies. */}
+          <div id={noticeId} role="note" data-ask="job-not-connected" className={styles.r3Notice}>
+            <p className={styles.r3NoticeTitle}>{r38.jobsNotConnected}</p>
+            <p>{r38.jobsCareerIntro}</p>
           </div>
-        )}
-      </section>
-    </div>
-  );
-}
-
-function Chips({
-  label,
-  options,
-  value,
-  onChange,
-  name,
-}: {
-  readonly label: string;
-  readonly options: readonly string[];
-  readonly value: number;
-  readonly onChange: (next: number) => void;
-  readonly name: string;
-}): JSX.Element {
-  return (
-    <div role="group" aria-label={label} data-ask={`job-${name}`} className={styles.r3ChipGroup}>
-      <span className={styles.r3Small}>{label}</span>
-      <div>
-        {options.map((option, index) => (
-          <button
-            key={option}
-            type="button"
-            aria-pressed={value === index}
-            onClick={() => onChange(index)}
-            className={styles.r3Chip}
-          >
-            {option}
+          <label className={styles.r3Field}>
+            <span>{r38.jobsRoleLabel}</span>
+            <input
+              data-ask="job-role"
+              value={role}
+              onChange={(event) => setRole(event.target.value)}
+              placeholder={s.jobRolePlaceholder}
+              dir="auto"
+            />
+          </label>
+          <label className={styles.r3Field}>
+            <span>{r38.jobsPlaceLabel}</span>
+            <input
+              ref={placeRef}
+              data-ask="job-place"
+              value={place}
+              onChange={(event) => setPlace(event.target.value)}
+              placeholder={s.jobPlacePlaceholder}
+              dir="auto"
+            />
+          </label>
+          {destination === '' && <p className={styles.r3Small}>{s.jobNeedsPlace}</p>}
+          <button type="submit" data-ask="job-ask-general" disabled={destination === ''} className={styles.r3Primary}>
+            {r38.jobsStageQuestion}
           </button>
-        ))}
-      </div>
+          <p className={styles.r3Small}>{r38.jobsNothingSent}</p>
+          <p className={styles.r3Small}>{s.jobBoundary}</p>
+        </form>
+      </section>
     </div>
   );
 }

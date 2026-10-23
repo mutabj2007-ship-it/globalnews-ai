@@ -202,6 +202,7 @@ export function HomeAccountPanel({ articles, language = 'en' }: HomeAccountPanel
                     */}
                     <StoryVisual
                       article={article}
+                      sourceId={article.sourceId}
                       className="aspect-[16/9]"
                       missingLabel={t.imageUnavailable}
                       sizes="(min-width: 1024px) 200px, 45vw"

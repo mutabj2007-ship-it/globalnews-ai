@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type JSX } from 'react';
 import { ExternalLink, Flag, Lock, MessagesSquare, Pencil, Reply, Trash2, X } from 'lucide-react';
 import { safeExternalHref, type LanguageCode } from '@globalnews-ai/shared';
 import { getDictionary } from '@/lib/i18n/dictionaries';
+import { commentAuthorNote } from '@/lib/stories/commentAuthorNote';
 import { pluralWithForms } from '@/lib/i18n/pluralize';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import { accountSignInUrl } from '@/lib/api/accountLinks';
@@ -54,6 +55,8 @@ export function DiscussionPanel({
   readonly initialParentId?: string | null;
 }): JSX.Element {
   const t = getDictionary(language).homeR1.discussion;
+  /* R77 — the public-name disclosure in the reader's own language (7 locales) */
+  const authorNote = commentAuthorNote(language);
   const [load, setLoad] = useState<Load>({ kind: 'loading' });
   const [draft, setDraft] = useState(initialDraft ?? '');
   const [parentId, setParentId] = useState<string | null>(initialParentId ?? null);
@@ -251,12 +254,16 @@ export function DiscussionPanel({
                 <p className="text-[12px] text-[var(--gt-ink2)]">{t.signInNote}</p>
               </div>
             ) : (
+              <>
+              {/* R76 E1-B C-3 — before posting: the saved name is the public author label */}
+              <p data-discussion-author-note="" lang={authorNote.lang} dir={authorNote.dir} className="mt-1 text-[11.5px] text-[var(--gt-ink3)]">{authorNote.text}</p>
               <div className="mt-2 flex items-center justify-between gap-2">
                 <span className="text-[11.5px] text-[var(--gt-ink3)]">{draft.length > 0 ? `${t.draftLabel} · ${draft.trim().length}/${MAX}` : ''}</span>
                 <button type="submit" disabled={posting || draft.trim().length === 0 || signedIn === null} className="min-h-[44px] rounded-full bg-[var(--gt-act)] px-5 text-[14px] font-semibold text-white disabled:opacity-50">
                   {posting ? t.posting : t.post}
                 </button>
               </div>
+              </>
             )}
           </form>
         )}
