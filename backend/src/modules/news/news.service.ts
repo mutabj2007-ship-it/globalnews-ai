@@ -1706,12 +1706,19 @@ export class NewsService {
 
     this.recordCache('miss');
 
+    /* CTO #95 6376647758 §5 — the Map reads this route. When NO configured provider may run (Gate A),
+       nothing can ever be retained, so the empty answer carries the same typed reason the executing
+       route sends; a plain miss with an admitted provider stays reason-less ("not retained yet"). */
+    const notSearched = this.notAdmittedProviderIds();
     return {
       articles: [],
       totalResults: 0,
       providers: [],
       dataMode: 'unavailable',
       generatedAt: new Date().toISOString(),
+      ...(notSearched.length > 0
+        ? { acquisition: { state: 'SOURCE_RIGHTS_UNCLEARED' as const, notSearched } }
+        : {}),
     };
   }
 

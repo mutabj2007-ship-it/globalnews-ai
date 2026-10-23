@@ -101,6 +101,12 @@ export interface ContextSummaryPanelProps {
   readonly totals: EvidenceTotals;
   readonly ranked: readonly GeographyTotal[];
   readonly noEvidence: readonly EvidenceGeography[];
+  /**
+   * CTO #95 6376647758 §5 — when nothing at all is shown AND the backend stated news was not
+   * searched (typed reason), this replaces the mode/period "widen the period" body, which would
+   * blame the filter for an empty set the filter did not cause.
+   */
+  readonly emptyReason?: string;
   /** READ ONLY, and strictly as metadata. See the note above. */
   readonly watch?: ReadonlySet<string>;
   readonly onSelectGeography?: (geographyId: string) => void;
@@ -143,6 +149,7 @@ export function ContextSummaryPanel({
   totals,
   ranked,
   noEvidence,
+  emptyReason,
   watch,
   onSelectGeography,
   jumpTargets = [],
@@ -341,7 +348,9 @@ export function ContextSummaryPanel({
 
       {nothingAtAll ? (
         <Section gn="context-empty" title={labels.emptyHeading}>
-          <p className="text-[11px] leading-[1.5] text-sp-ink-3">{labels.emptyBody}</p>
+          <p data-gn-empty-reason={emptyReason === undefined ? undefined : 'not-searched'} className="text-[11px] leading-[1.5] text-sp-ink-3">
+            {emptyReason ?? labels.emptyBody}
+          </p>
         </Section>
       ) : (
         <>

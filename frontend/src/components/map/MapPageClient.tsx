@@ -31,6 +31,8 @@ import type { MapMode, MapPeriod, MapSelection } from '@/lib/map/state/mapState'
 import { countryEvidenceSet, mapFeedRecordsFrom, mergeEvidenceSets } from '@/lib/map/evidence/evidenceFeed';
 import { globalEvidenceSet, placeableArticles } from '@/lib/map/evidence/globalEvidenceFeed';
 import { fetchRetainedTopHeadlines } from '@/lib/api/newsApi';
+import { feedNotSearchedRightsUncleared } from '@/lib/news/feedAcquisition';
+import { askProgressStrings } from '@/lib/ask/askProgressStrings';
 import {
   mapFeedRequestKey,
   type MapEvidenceGeography,
@@ -1722,6 +1724,16 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
     the entire rest of the world, which was not looked at and about which the
     panel says nothing.
   */
+  /*
+    CTO #95 6376647758 §5 — the world view's empty rail states WHY only from the backend's typed reason
+    on the retained feed (`acquisition.state`), the same line Home and Ask's Search activity show.
+    Never inferred from an empty set: without the field the existing empty copy stays.
+  */
+  const emptyReason =
+    globalFeed !== null && feedNotSearchedRightsUncleared(globalFeed)
+      ? askProgressStrings(language).searchNotPermitted
+      : undefined;
+
   const noEvidenceGeography = useMemo<readonly EvidenceGeography[]>(() => {
     const out: EvidenceGeography[] = [];
 
@@ -1891,6 +1903,7 @@ export function MapPageClient({ language = 'en' }: MapPageClientProps): JSX.Elem
             onOpenSources={handleOpenSources}
             evidenceSet={narrowedEvidenceSet}
             noEvidenceGeography={noEvidenceGeography}
+            emptyReason={emptyReason}
             watch={watchSet}
             follow={selectionFollow}
             countryStoryCounts={countryStoryCounts}

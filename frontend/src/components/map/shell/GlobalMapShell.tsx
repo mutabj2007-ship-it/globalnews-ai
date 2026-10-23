@@ -244,6 +244,11 @@ export interface GlobalMapShellProps {
   readonly evidenceSet?: EvidenceSet;
   /** Geography the surface QUERIED and retained nothing for. Never inferred. */
   readonly noEvidenceGeography?: readonly EvidenceGeography[];
+  /**
+   * CTO #95 6376647758 §5 — the empty rail's reason when the backend states news was NOT SEARCHED
+   * (typed `acquisition.state`, never inferred from an empty set). Absent: the existing empty copy.
+   */
+  readonly emptyReason?: string;
   /** The finest level this deployment holds geometry for. */
   readonly availableGeometry?: DisplayPrecision;
 
@@ -388,6 +393,7 @@ export function GlobalMapShell({
   density = WORLD_MAP_DENSITY,
   evidenceSet = EMPTY_EVIDENCE_SET,
   noEvidenceGeography = [],
+  emptyReason,
   availableGeometry = 'COUNTRY',
   mode = 'WORLD',
   onModeChange,
@@ -1476,6 +1482,7 @@ export function GlobalMapShell({
           totals={overall}
           ranked={totals}
           noEvidence={noEvidenceGeography}
+          emptyReason={emptyReason}
           watch={watch}
           /*
             MAIN-CONFLICT-D1-DOMAIN-BIND-R1 §4 — "as today, receiving one prop".
