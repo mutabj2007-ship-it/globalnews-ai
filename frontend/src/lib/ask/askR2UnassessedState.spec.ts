@@ -10,6 +10,8 @@ import { askR2View } from './askR2View';
  */
 
 const UNASSESSED: ClaimVerificationState = 'UNASSESSED';
+/* Restored (E1 ADDENDUM-14 FE-1 / Claude L): an UNASSESSED label never reads as a positive state. */
+const POSITIVE = /confirm|corroborat|potwierdz|confirmé|bestätigt|confirmado|مؤكَّد|مؤيِّدة/i;
 
 function withClaim(): AskR2Payload {
   return {
@@ -57,14 +59,33 @@ describe('CTO finishing order — UNASSESSED reads "Not assessed", distinct from
     expect(askShellStrings('pl').askR2Strings.verification.states.UNASSESSED).toBe('Nieocenione');
   });
 
-  it.each(['fr', 'de', 'es', 'pt', 'ar'] as const)(
-    '%s: HELD — reuses its own Claude-L-qualified "Not verified" wording, never English, never machine copy',
+  it.each([
+    ['fr', 'Non évalué'],
+    ['de', 'Nicht bewertet'],
+    ['es', 'No evaluado'],
+    ['pt', 'Não avaliado'],
+    ['ar', 'غير مُقيَّم'],
+  ] as const)('%s: carries Claude L’s approved NOT_ASSESSED label %p', (locale, approved) => {
+    expect(askShellStrings(locale).askR2Strings.verification.states.UNASSESSED).toBe(approved);
+  });
+
+  it.each(DISPLAY_LOCALES.map((l) => [l]))(
+    '%s has its own non-empty, non-positive UNASSESSED label, distinct from NOT_VERIFIED',
     (locale) => {
       const s = askShellStrings(locale).askR2Strings.verification.states;
-      expect(s.UNASSESSED).toBe(s.NOT_VERIFIED);
-      expect(s.UNASSESSED).not.toBe('Not assessed');
+      const english = askShellStrings('en').askR2Strings.verification.states.UNASSESSED;
+      expect(typeof s.UNASSESSED).toBe('string');
+      expect(s.UNASSESSED!.trim().length).toBeGreaterThan(0);
+      expect(s.UNASSESSED).not.toMatch(POSITIVE);
+      expect(s.UNASSESSED).not.toBe(s.NOT_VERIFIED);
+      if (locale !== 'en') expect(s.UNASSESSED).not.toBe(english);
     },
   );
+
+  it('the guard bites: the positive lexeme catches the old collapsed German value', () => {
+    expect('Nicht bestätigt').toMatch(POSITIVE);
+    expect('Non évalué').not.toMatch(POSITIVE);
+  });
 
   it.each(DISPLAY_LOCALES.map((l) => [l]))(
     '%s: askR2View shows the UNASSESSED label — never the raw code, never a positive state',
@@ -79,10 +100,7 @@ describe('CTO finishing order — UNASSESSED reads "Not assessed", distinct from
       expect(label).not.toBe(s.verification.states.CONFIRMED);
       expect(label).not.toBe(s.verification.states.CORROBORATED_REPORTING);
       expect(label).not.toBe(s.verification.states.REPORTED);
-      /* the semantic distinction is carried where the wording is authored */
-      if (locale === 'en' || locale === 'pl') {
-        expect(label).not.toBe(s.verification.states.NOT_VERIFIED);
-      }
+      expect(label).not.toBe(s.verification.states.NOT_VERIFIED);
     },
   );
 });

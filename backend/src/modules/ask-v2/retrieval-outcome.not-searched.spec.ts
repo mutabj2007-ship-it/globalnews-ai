@@ -57,6 +57,19 @@ describe('NOT SEARCHED — a not-configured lane never turns a rights refusal in
     expect(observedRetrievalOf(r).retrievalOutcome).toBe('NOT_PERMITTED');
   });
 
+  it('E1 control · only not-configured lanes (no rights refusal) are never NOT_PERMITTED', () => {
+    const r = {
+      articles: [],
+      retrievalContext: {
+        dataMode: 'unavailable',
+        providers: [],
+        fallbackReason: 'provider-error',
+        providerFailures: [{ providerId: 'gnews', kind: 'not-configured' }],
+      },
+    } as never;
+    expect(observedRetrievalOf(r).retrievalOutcome).not.toBe('NOT_PERMITTED');
+  });
+
   it('a genuine outage beside the refusal stays PROVIDER_FAILED', () => {
     const r = response([
       { lane: 'gnews', reason: 'rights-not-cleared' },

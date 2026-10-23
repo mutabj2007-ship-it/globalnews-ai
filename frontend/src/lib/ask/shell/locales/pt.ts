@@ -652,7 +652,7 @@ export const ptShellOverlay: ShellLocaleOverlay = {
           DISPUTED: "Contestado",
           NOT_VERIFIED: "Não verificado",
           REPORTED: "Relatado (uma única fonte)",
-          UNASSESSED: "Não verificado",
+          UNASSESSED: "Não avaliado",
         },
         unavailable: "indisponível",
       },

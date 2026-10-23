@@ -590,9 +590,8 @@ function verificationOf(
   const claims = (retrieval.claimAssessments ?? []).map((c) => ({
     text: c.text,
     state: c.state,
-    /* UNASSESSED reads "Not assessed" in EN (cause-neutral, CTO finishing order) and "Nieocenione" in PL.
-       Until Claude L qualifies it, fr/de/es/pt-BR/ar HOLD the new text and reuse their own qualified
-       "Not verified" wording (true for a title-only claim; no machine translation, no English fallback). */
+    /* UNASSESSED reads "Not assessed" (EN) / "Nieocenione" (PL) and Claude L's approved NOT_ASSESSED label
+       in fr/de/es/pt-BR/ar — always distinct from "Not verified" (E1 ADDENDUM-14 FE-1). */
     label: s.verification.states[c.state] ?? c.state,
   }));
   return { notice, lanes, claims };
