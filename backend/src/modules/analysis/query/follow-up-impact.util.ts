@@ -90,9 +90,24 @@ export function withoutRejectedPlaces(followUp: string): string {
 
 /** A sentence asserting that one thing affects / causes / drives another (Politics R164 V-4 widened it). */
 const IMPACT_CLAIM =
-  /\b(?:affect(?:s|ed|ing)?|impact(?:s|ed|ing)?|caus(?:e|es|ed|ing)|le(?:a)?ds? to|led to|result(?:s|ed|ing)? in|because of|due to|owing to|as a result|consequences?|conseq\p{L}*|driv(?:e|es|ing|en)|hurt(?:s|ing)?|boost(?:s|ed|ing)?|spill(?:s|ed|ing)?\s*over|spillover|knock-on|ripple|means? (?:that|for|higher|lower|more|less|cheaper|costlier|dearer)|makes? (?:\p{L}+\s+){0,3}(?:cheaper|costlier|dearer|more expensive)|exposed to|exposure|vulnerab\p{L}*|rais(?:e|es|ed|ing) (?:prices?|costs?|inflation)|push(?:es|ed|ing)? (?:up|down)|weigh(?:s|ed|ing)? on|pressure on|threat(?:en|ens|ened)?\s+to|disrupt(?:s|ed|ing|ion)?|fuel(?:s|led|ling)?\s+(?:inflation|prices|tension)|(?:higher|lower|rising|falling) (?:prices?|costs?) (?:in|for))\b/iu;
+  /\b(?:affect(?:s|ed|ing)?|impact(?:s|ed|ing)?|caus(?:e|es|ed|ing)|le(?:a)?ds? to|led to|result(?:s|ed|ing)? in|because of|due to|owing to|as a result|consequences?|conseq\p{L}*|driv(?:e|es|ing|en)|hurt(?:s|ing)?|boost(?:s|ed|ing)?|spill(?:s|ed|ing)?\s*over|spillover|knock-on|ripple|means? (?:that|for|higher|lower|more|less|cheaper|costlier|dearer)|makes? (?:\p{L}+\s+){0,3}(?:cheaper|costlier|dearer|more expensive)|exposed to|exposure|vulnerab\p{L}*|rais(?:e|es|ed|ing) (?:prices?|costs?|inflation)|linked to|tied to|(?:rais|push|driv)(?:es|ing)\s+(?:\p{L}+\s+){0,2}?(?:prices?|costs?|bills?|inflation)(?:\s+up)?|(?:higher|lower|rising|falling)\s+(?:\p{L}+\s+){0,2}?(?:prices?|costs?)|push(?:es|ed|ing)? (?:up|down)|weigh(?:s|ed|ing)? on|pressure on|threat(?:en|ens|ened)?\s+to|disrupt(?:s|ed|ing|ion)?|fuel(?:s|led|ling)?\s+(?:inflation|prices|tension)|(?:higher|lower|rising|falling) (?:prices?|costs?) (?:in|for))\b/iu;
 export function assertsImpact(text: string | undefined): boolean {
   return text !== undefined && IMPACT_CLAIM.test(text);
+}
+
+/**
+ * Politics RV-12b — a report LINKS the places only when one sentence of its accessible body
+ * names the earlier event's place AND asserts an effect: an effect of something else in a report
+ * that mentions the event elsewhere is no link.
+ */
+export function bodyAssertsEffectOf(
+  summary: string | undefined,
+  originTerms: readonly string[],
+): boolean {
+  return (summary ?? '').split(/(?<=[.!?])\s+|\n+/).some((sentence) => {
+    const lower = sentence.toLowerCase();
+    return originTerms.some((term) => lower.includes(term)) && assertsImpact(sentence);
+  });
 }
 
 /** Every answer list a cause-and-effect claim can sit in (the same set the negative-assertion guard reads). */

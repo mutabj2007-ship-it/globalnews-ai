@@ -191,15 +191,34 @@ function sentencesOf(text: string): string[] {
     .filter((s) => s.length > 0);
 }
 
-function refutesInSentence(sentence: string, ctx: ClaimContext): boolean {
-  if (!EVENT_REFUTATION.some((pattern) => pattern.test(sentence))) return false;
+/** An account noun's complement ("the reports OF a pilot strike") names what is refuted. */
+const ACCOUNT_COMPLEMENT = /^\s*(?:of|about|on|regarding|concerning|that)\b(.*)$/i;
+
+/**
+ * Politics RV-23 / RV-17c — what is refuted. With a complement ("the reports of X", "disputed
+ * that X", "no evidence the X"), X itself must name the event; a bare, anaphoric account ("the
+ * airline rejected the account as untrue") refers back to the report, which must name it.
+ */
+function refutesInSentence(sentence: string, ctx: ClaimContext, report: string): boolean {
+  const index = EVENT_REFUTATION.findIndex((pattern) => pattern.test(sentence));
+  if (index < 0) return false;
   if (REFUTATION_NEGATED.test(sentence) || OTHER_CLAIM_KIND.test(sentence)) return false;
-  if (ctx.event === undefined) return true;
-  const folded = foldForPlan(sentence);
-  return (
-    namesIdentifier(folded, ctx.event.identifiers) ||
-    ctx.event.endpoints.some((endpoint) => namesEndpoint(folded, endpoint))
-  );
+  const event = ctx.event;
+  if (event === undefined) return true;
+  const namesEvent = (text: string) => {
+    const folded = foldForPlan(text);
+    return (
+      namesIdentifier(folded, event.identifiers) ||
+      event.endpoints.some((endpoint) => namesEndpoint(folded, endpoint))
+    );
+  };
+  const match = EVENT_REFUTATION[index]!.exec(sentence)!;
+  const tail = sentence.slice(match.index + match[0].length);
+  /* "disputed that …" / "no evidence the …" — what follows IS the complement */
+  const complement = index === 1 || index === 2 ? tail : ACCOUNT_COMPLEMENT.exec(tail)?.[1];
+  return complement !== undefined && complement.trim().length > 0
+    ? namesEvent(complement)
+    : namesEvent(report);
 }
 
 function supports(claim: ClaimInput, article: NewsArticle, ctx: ClaimContext): boolean {
@@ -235,7 +254,7 @@ function contradicts(claim: ClaimInput, article: NewsArticle, ctx: ClaimContext)
   const text = textOf(article);
   return (
     EVENT_COUNTER_EVIDENCE.test(text) ||
-    sentencesOf(text).some((sentence) => refutesInSentence(sentence, ctx))
+    sentencesOf(text).some((sentence) => refutesInSentence(sentence, ctx, text))
   );
 }
 

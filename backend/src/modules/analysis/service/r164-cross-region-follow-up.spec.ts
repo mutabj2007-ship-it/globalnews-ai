@@ -9,12 +9,46 @@ import { AnalysisConfigService } from '../config/analysis-config.service';
 import { MockAnalysisProvider } from '../providers/mock-analysis.provider';
 import {
   assertsImpact,
+  bodyAssertsEffectOf,
   impactSummaryCited,
   readFollowUpGeography,
   withoutImpactClaims,
   withoutRejectedPlaces,
 } from '../query/follow-up-impact.util';
 import { buildEvidenceReferences } from '../prompt/build-analysis-prompt.util';
+
+describe('Politics RV-12a/b/c · effect lexicon and same-sentence linking (pure)', () => {
+  it.each([
+    'Kenyan importers face higher freight costs linked to the Gaza war.',
+    'The Gaza war is raising fuel costs in Kenya.',
+    'The conflict is driving fuel prices up in Kenya.',
+    'Shipping delays tied to the war hit Mombasa.',
+  ])('asserts an effect: %p', (sentence) => {
+    expect(assertsImpact(sentence)).toBe(true);
+  });
+
+  it('a past-tense price decision stays a plain fact', () => {
+    expect(assertsImpact('Kenya raised pump prices in its October review.')).toBe(false);
+  });
+
+  it('a link needs ONE body sentence naming the origin AND an effect (RV-12b)', () => {
+    expect(
+      bodyAssertsEffectOf(
+        'Kenya energy regulator raised prices due to global oil costs and a weaker shilling.',
+        ['gaza'],
+      ),
+    ).toBe(false);
+    expect(
+      bodyAssertsEffectOf('Kenya urged a Gaza truce. Fuel prices rose due to oil costs.', ['gaza']),
+    ).toBe(false);
+    expect(
+      bodyAssertsEffectOf(
+        'Kenya traders said the Gaza conflict has disrupted shipping and raised freight costs.',
+        ['gaza'],
+      ),
+    ).toBe(true);
+  });
+});
 
 describe('CTO R164 R-1 · cited effects (pure)', () => {
   it('"means cheaper" / "makes … more expensive" assert an effect', () => {

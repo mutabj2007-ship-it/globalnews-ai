@@ -260,6 +260,7 @@ import { blocksGeographicRouting } from '../query/routing-function-words.util';
 import { classifyQueryIntent } from '../query/query-intent.util';
 import {
   assertsImpact,
+  bodyAssertsEffectOf,
   impactSummaryCited,
   readFollowUpGeography,
   withoutImpactClaims,
@@ -4459,10 +4460,9 @@ export class AnalysisService {
              2026-10-23) — and its own accessible body asserts an effect: a co-mention, or a
              headline alone, is not a link. */
           const linking = deduped.filter((article) => {
-            const text = `${article.title} ${article.summary ?? ''}`.toLowerCase();
             return (
-              crossRegionImpact.originTerms.some((term) => text.includes(term)) &&
-              assertsImpact(article.summary ?? '') &&
+              /* Politics RV-12b — one body sentence names the earlier event's place AND an effect */
+              bodyAssertsEffectOf(article.summary, crossRegionImpact.originTerms) &&
               crossRegionImpact.destination.some(
                 (side) => scoreCountryRelevance(article, side, requestedLanguage).isRelevant,
               )
