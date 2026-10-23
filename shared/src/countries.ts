@@ -817,15 +817,6 @@ export function searchCountriesByName(query: string, limit = 8): CountryMeta[] {
 }
 
 /**
- * Resolves a country from any reasonable identifier a person or client
- * might send: an ISO alpha-2/alpha-3 code, the exact country name, or a
- * known alias/common name (e.g. "USA", "Britain", "DR Congo", "UAE",
- * "Czech Republic") — all case-insensitive. Returns undefined only if
- * nothing matches; callers should treat that as "no results" rather
- * than a client error, since a country naming mismatch isn't the same
- * as a malformed request.
- */
-/**
  * EA LX-2 P2 (c084b06 review) — READ-ONLY view of the alias table above for one country, so a caller
  * that must recognise how readers NAME a country ("DRC", "Democratic Republic of Congo") reads the
  * same governed vocabulary the resolver uses instead of keeping a second list. The table is unchanged.
@@ -836,6 +827,15 @@ export function countryAliasesFor(iso3: string): readonly string[] {
     .map(([alias]) => alias);
 }
 
+/**
+ * Resolves a country from any reasonable identifier a person or client
+ * might send: an ISO alpha-2/alpha-3 code, the exact country name, or a
+ * known alias/common name (e.g. "USA", "Britain", "DR Congo", "UAE",
+ * "Czech Republic") — all case-insensitive. Returns undefined only if
+ * nothing matches; callers should treat that as "no results" rather
+ * than a client error, since a country naming mismatch isn't the same
+ * as a malformed request.
+ */
 export function resolveCountryByAnyIdentifier(input: string): CountryMeta | undefined {
   const trimmed = input.trim();
   if (!trimmed) return undefined;
