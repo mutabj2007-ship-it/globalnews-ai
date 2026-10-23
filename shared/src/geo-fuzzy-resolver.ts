@@ -99,6 +99,37 @@ function maxEditDistanceFor(canonicalLength: number): number {
   return 1;
 }
 
+/**
+ * R131-GEO-1 — A CORRECTLY SPELLED FOREIGN TOPONYM IS NOT AN ENGLISH TYPO.
+ *
+ * "Konga" is the Polish genitive of "Kongo" and is exactly how a Polish reader
+ * writes the country ("DR Konga", "Demokratyczna Republika Konga"). It is one
+ * edit from "Tonga", and a 5-letter target lands on MIN_SIMILARITY exactly
+ * (1 - 1/5 = 0.8), so the generic gate accepted it and resolved a Polish
+ * question about DR Congo to a Pacific island ~13,000 km away (EA-GEO-R1 G-2,
+ * open since 2026-10-12; live at bc13149).
+ *
+ * This module is an ENGLISH typo corrector. A word that is the correct spelling
+ * in another product language is not a typo of anything, so it must never be
+ * corrected TO a different country. Such words are named here and fail closed.
+ * Their real meaning is resolved upstream by the exact alias table
+ * (COUNTRY_ALIASES in countries.ts), which is where language variants belong —
+ * the same place the French "RDC" / "republique democratique du congo" forms
+ * live. A bare, unqualified token stays unresolved: under finding G3 a
+ * discarded qualifier is not permission to claim a sovereign country.
+ *
+ * NOT a global threshold change. Raising MIN_SIMILARITY above 0.8 would also
+ * have closed this one case, but it would silently change every 5-letter
+ * target in the pool; R131-GEO-1 asks for no other geography change in this
+ * commit. Each entry here is one named word with one named reason.
+ */
+const PROTECTED_FOREIGN_TOPONYMS: ReadonlySet<string> = new Set([
+  /* PL: Kongo / Konga (genitive) — resolved for COD via COUNTRY_ALIASES when
+     qualified ("DR Konga"); never fuzzy-corrected to Tonga. */
+  'konga',
+  'kongo',
+]);
+
 let cachedTargets: GeoFuzzyTarget[] | undefined;
 
 /**
@@ -198,6 +229,12 @@ function similarity(a: string, b: string, distance: number): number {
 export function resolveGeoTypo(candidate: string): GeoFuzzyMatch | undefined {
   const typed = candidate.trim().toLowerCase();
   if (!typed || typed.length < MIN_TARGET_LENGTH || typed.includes(' ')) {
+    return undefined;
+  }
+  /* R131-GEO-1 — see PROTECTED_FOREIGN_TOPONYMS: correctly spelled in another
+     product language, so not a typo; fail closed rather than correct it to a
+     different country. */
+  if (PROTECTED_FOREIGN_TOPONYMS.has(typed)) {
     return undefined;
   }
 

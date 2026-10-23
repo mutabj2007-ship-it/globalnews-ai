@@ -518,6 +518,36 @@ const COUNTRY_ALIASES: Record<string, string> = {
   'rd congo': 'COD',
   'république démocratique du congo': 'COD',
   'republique democratique du congo': 'COD',
+  /*
+    R131-GEO-1 — THE FORMS A POLISH READER ACTUALLY TYPES.
+
+    Polish inflects the country's name: "Kongo" becomes "Konga" in the genitive,
+    which is the form that appears in every ordinary phrasing ("DR Konga",
+    "Demokratyczna Republika Konga", "we wschodniej DR Konga"). Without these
+    keys the bare embedded token was handed to the English typo corrector, which
+    is one edit from "Tonga" and resolved a Polish DR Congo question to TON
+    (EA-GEO-R1 G-2). PL is a product language, so these are first-class names,
+    not typos.
+
+    Listed exactly, each inflection on its own line, accented AND unaccented —
+    the same discipline as the French forms above, and for the same reason:
+    matching lowercases but does not fold diacritics. An exact table that
+    carries the real spellings stays an exact table.
+
+    BARE "konga" / "kongo" IS DELIBERATELY ABSENT. It is ambiguous between the
+    two Congos, and under finding G3 a discarded qualifier is not permission to
+    claim a sovereign country, so it must stay unresolved rather than guess
+    (CTO D5; EA control C-03).
+  */
+  'dr konga': 'COD',
+  'dr kongo': 'COD',
+  'drk': 'COD',
+  'demokratyczna republika konga': 'COD',
+  'demokratycznej republiki konga': 'COD',
+  'demokratycznej republice konga': 'COD',
+  'demokratyczną republikę konga': 'COD',
+  'demokratyczna republike konga': 'COD',
+  'republika demokratyczna konga': 'COD',
   'south korea': 'KOR',
   'north korea': 'PRK',
   uae: 'ARE',

@@ -179,6 +179,16 @@ describe('2 · the rung fills gaps and can never override an answer', () => {
      *   in total       the reduction is EXACTLY 6, the measured F5 family
      *
      * Either an added wrong country or a drift in the six still fails here.
+     *
+     * R131-GEO-1 (applied from Claude G's R131 package) — SIX BECOMES FIVE,
+     * REPORTED NOT SILENT. One of the six was PL "Demokratyczna Republika
+     * Konga", which the no-language path read as country:TON through the
+     * English typo corrector ("konga" -> "tonga"). GEO-1 fixes that at the
+     * source, so the WITHOUT-language row no longer resolves to a wrong country
+     * and there is nothing left for the language rung to remove. Measured row
+     * diff before/after GEO-1: exactly that one row disappears; no row is
+     * added in any language. The total wrong-country count fell by one on the
+     * baseline side, so the reduction is now EXACTLY 5.
      */
     let reduction = 0;
 
@@ -190,7 +200,7 @@ describe('2 · the rung fills gaps and can never override an answer', () => {
       reduction += withoutLanguage - withLanguage;
     }
 
-    expect(reduction).toBe(6);
+    expect(reduction).toBe(5);
   });
 
   it('an existing city resolution is not displaced by a country name in the same text', () => {
