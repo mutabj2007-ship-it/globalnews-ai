@@ -260,6 +260,7 @@ import { blocksGeographicRouting } from '../query/routing-function-words.util';
 import { classifyQueryIntent } from '../query/query-intent.util';
 import {
   assertsImpact,
+  impactSummaryCited,
   readFollowUpGeography,
   withoutImpactClaims,
   withoutRejectedPlaces,
@@ -4454,16 +4455,20 @@ export class AnalysisService {
             ...destination.filter((iso3) => !covered(iso3)),
           ];
           /* Politics R164 V-2 — reporting on each side is not a report linking them: a LINKING report
-             is about the named place AND names the earlier event's place. */
-          const linkingReports = deduped.filter((article) => {
+             is about the named place AND names the earlier event's place. CTO R164 R-1 (PO-approved
+             2026-10-23) — and its own accessible body asserts an effect: a co-mention, or a
+             headline alone, is not a link. */
+          const linking = deduped.filter((article) => {
             const text = `${article.title} ${article.summary ?? ''}`.toLowerCase();
             return (
               crossRegionImpact.originTerms.some((term) => text.includes(term)) &&
+              assertsImpact(article.summary ?? '') &&
               crossRegionImpact.destination.some(
                 (side) => scoreCountryRelevance(article, side, requestedLanguage).isRelevant,
               )
             );
-          }).length;
+          });
+          const linkingReports = linking.length;
           retrievalContext = {
             ...retrievalContext,
             impactEvidenceGap: {
@@ -4477,6 +4482,7 @@ export class AnalysisService {
               destination,
               missing,
               linkingReports,
+              linkingReportIds: linking.map((article) => article.id),
             },
           };
         }
@@ -4883,17 +4889,34 @@ export class AnalysisService {
                 verificationNotice:
                   impact.state === 'BILATERAL_EVIDENCE_GAP' ? 'COVERAGE_INCOMPLETE' : 'NOT_VERIFIED',
               };
-              const lists = withoutImpactClaims(analysisResult);
+            }
+            /* CTO R164 R-1 — with a linking report, each effect shown must CITE one; any other is
+               removed, and a brief whose effect sentence is uncited is withheld. */
+            if (impact !== undefined) {
+              const citable =
+                impact.state === 'LINKING_REPORT_FOUND'
+                  ? new Set(impact.linkingReportIds ?? [])
+                  : undefined;
+              const lists = withoutImpactClaims(analysisResult, citable);
               analysisResult = lists.analysis;
-              if (assertsImpact(analysis.summary) || assertsImpact(analysis.headline)) {
+              const briefCited =
+                citable !== undefined &&
+                impactSummaryCited(analysis.summary, analysisResult.summaryStatements, citable);
+              if (
+                !briefCited &&
+                (assertsImpact(analysis.summary) || assertsImpact(analysis.headline))
+              ) {
                 if (assertsImpact(analysis.headline))
                   analysisResult = { ...analysisResult, headline: '' };
                 briefVerdict = {
                   ...briefVerdict,
                   compliant: false,
                   reason:
-                    `${impact.state}: the brief asserts an effect between places, and no admitted ` +
-                    'report links them.',
+                    impact.state === 'LINKING_REPORT_FOUND'
+                      ? 'UNCITED_IMPACT_CLAIM: the brief asserts an effect between places without ' +
+                        'citing the report that links them.'
+                      : `${impact.state}: the brief asserts an effect between places, and no ` +
+                        'admitted report links them.',
                 };
               }
             }

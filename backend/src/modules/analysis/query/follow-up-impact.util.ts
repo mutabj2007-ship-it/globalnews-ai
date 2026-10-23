@@ -90,7 +90,7 @@ export function withoutRejectedPlaces(followUp: string): string {
 
 /** A sentence asserting that one thing affects / causes / drives another (Politics R164 V-4 widened it). */
 const IMPACT_CLAIM =
-  /\b(?:affect(?:s|ed|ing)?|impact(?:s|ed|ing)?|caus(?:e|es|ed|ing)|le(?:a)?ds? to|led to|result(?:s|ed|ing)? in|because of|due to|owing to|as a result|consequences?|conseq\p{L}*|driv(?:e|es|ing|en)|hurt(?:s|ing)?|boost(?:s|ed|ing)?|spill(?:s|ed|ing)?\s*over|spillover|knock-on|ripple|means? (?:that|for|higher|lower|more|less)|exposed to|exposure|vulnerab\p{L}*|rais(?:e|es|ed|ing) (?:prices?|costs?|inflation)|push(?:es|ed|ing)? (?:up|down)|weigh(?:s|ed|ing)? on|pressure on|threat(?:en|ens|ened)?\s+to|disrupt(?:s|ed|ing|ion)?|fuel(?:s|led|ling)?\s+(?:inflation|prices|tension)|(?:higher|lower|rising|falling) (?:prices?|costs?) (?:in|for))\b/iu;
+  /\b(?:affect(?:s|ed|ing)?|impact(?:s|ed|ing)?|caus(?:e|es|ed|ing)|le(?:a)?ds? to|led to|result(?:s|ed|ing)? in|because of|due to|owing to|as a result|consequences?|conseq\p{L}*|driv(?:e|es|ing|en)|hurt(?:s|ing)?|boost(?:s|ed|ing)?|spill(?:s|ed|ing)?\s*over|spillover|knock-on|ripple|means? (?:that|for|higher|lower|more|less|cheaper|costlier|dearer)|makes? (?:\p{L}+\s+){0,3}(?:cheaper|costlier|dearer|more expensive)|exposed to|exposure|vulnerab\p{L}*|rais(?:e|es|ed|ing) (?:prices?|costs?|inflation)|push(?:es|ed|ing)? (?:up|down)|weigh(?:s|ed|ing)? on|pressure on|threat(?:en|ens|ened)?\s+to|disrupt(?:s|ed|ing|ion)?|fuel(?:s|led|ling)?\s+(?:inflation|prices|tension)|(?:higher|lower|rising|falling) (?:prices?|costs?) (?:in|for))\b/iu;
 export function assertsImpact(text: string | undefined): boolean {
   return text !== undefined && IMPACT_CLAIM.test(text);
 }
@@ -107,21 +107,90 @@ const IMPACT_LIST_FIELDS: ReadonlyArray<readonly [string, string]> = [
   ['timeline', 'event'],
 ];
 
-/** The answer with every list item asserting an effect removed (Politics R164 V-3). Removal only. */
+/** True when the item cites one of the citable (linking) reports. */
+function citesAny(item: unknown, citable: ReadonlySet<string> | undefined): boolean {
+  const ids = (item as Record<string, unknown> | null)?.['sourceArticleIds'];
+  return citable !== undefined && Array.isArray(ids) && ids.some((id) => citable.has(String(id)));
+}
+
+/**
+ * The answer with every item asserting an effect removed (Politics R164 V-3) — unless it cites a
+ * report that itself links the places and asserts the effect (CTO R164 R-1, PO-approved
+ * 2026-10-23). With no citable set, every effect is removed. Removal only.
+ */
 export function withoutImpactClaims<T extends object>(
   analysis: T,
+  citable?: ReadonlySet<string>,
 ): { analysis: T; removed: number } {
   let removed = 0;
+  const keep = (item: unknown, key: string) => {
+    const text = (item as Record<string, unknown> | null)?.[key];
+    const bad = typeof text === 'string' && assertsImpact(text) && !citesAny(item, citable);
+    if (bad) removed += 1;
+    return !bad;
+  };
   const out: Record<string, unknown> = { ...(analysis as Record<string, unknown>) };
   for (const [field, key] of IMPACT_LIST_FIELDS) {
     const items = out[field];
     if (!Array.isArray(items)) continue;
-    out[field] = items.filter((item: unknown) => {
-      const text = (item as Record<string, unknown> | null)?.[key];
-      const bad = typeof text === 'string' && assertsImpact(text);
-      if (bad) removed += 1;
-      return !bad;
-    });
+    out[field] = items.filter((item: unknown) => keep(item, key));
+  }
+  /* Politics R164 — the effect-bearing structures beyond the plain lists. */
+  if (Array.isArray(out['affectedParties'])) {
+    out['affectedParties'] = (out['affectedParties'] as unknown[]).filter((item) =>
+      keep(item, 'effect'),
+    );
+  }
+  if (Array.isArray(out['differences'])) {
+    out['differences'] = (out['differences'] as Array<Record<string, unknown>>)
+      .map((difference) =>
+        Array.isArray(difference['positions'])
+          ? {
+              ...difference,
+              positions: (difference['positions'] as unknown[]).filter((p) =>
+                keep(p, 'description'),
+              ),
+            }
+          : difference,
+      )
+      .filter(
+        (difference) =>
+          !Array.isArray(difference['positions']) || difference['positions'].length > 0,
+      );
+  }
+  const significance = out['significance'] as Record<string, unknown> | null | undefined;
+  if (
+    significance !== null &&
+    significance !== undefined &&
+    Array.isArray(significance['rationale'])
+  ) {
+    out['significance'] = {
+      ...significance,
+      rationale: (significance['rationale'] as unknown[]).filter((item) => keep(item, 'claim')),
+    };
   }
   return { analysis: (removed === 0 ? analysis : out) as T, removed };
+}
+
+/**
+ * CTO R164 R-1 — may the brief's summary carry its effect sentence(s)? Only when every effect it
+ * asserts sits in a statement that cites a linking report. A summary without validated statements
+ * cannot show its citation, so an effect in it fails closed.
+ */
+export function impactSummaryCited(
+  summary: string | undefined,
+  statements:
+    | ReadonlyArray<{ readonly text: string; readonly sourceArticleIds: readonly string[] }>
+    | undefined,
+  citable: ReadonlySet<string>,
+): boolean {
+  if (!assertsImpact(summary)) return true;
+  if (statements === undefined || statements.length === 0) return false;
+  let rest = summary ?? '';
+  for (const statement of statements) {
+    if (!assertsImpact(statement.text)) continue;
+    if (!statement.sourceArticleIds.some((id) => citable.has(id))) return false;
+    rest = rest.split(statement.text).join(' ');
+  }
+  return !assertsImpact(rest);
 }

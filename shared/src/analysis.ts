@@ -910,6 +910,8 @@ export interface AnalysisRetrievalContext {
     readonly destination: readonly string[];
     readonly missing: readonly string[];
     readonly linkingReports: number;
+    /** CTO R164 R-1 — the linking reports (each asserts an effect); an effect shown must cite one. */
+    readonly linkingReportIds?: readonly string[];
   };
 
   /**

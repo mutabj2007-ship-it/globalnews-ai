@@ -9,9 +9,68 @@ import { AnalysisConfigService } from '../config/analysis-config.service';
 import { MockAnalysisProvider } from '../providers/mock-analysis.provider';
 import {
   assertsImpact,
+  impactSummaryCited,
   readFollowUpGeography,
+  withoutImpactClaims,
   withoutRejectedPlaces,
 } from '../query/follow-up-impact.util';
+import { buildEvidenceReferences } from '../prompt/build-analysis-prompt.util';
+
+describe('CTO R164 R-1 · cited effects (pure)', () => {
+  it('"means cheaper" / "makes … more expensive" assert an effect', () => {
+    expect(assertsImpact('The truce means cheaper fuel for Kenya.')).toBe(true);
+    expect(assertsImpact('The war makes Kenyan imports more expensive.')).toBe(true);
+  });
+
+  it('affectedParties, differences and significance are filtered by citation too', () => {
+    const analysis = {
+      affectedParties: [
+        {
+          party: 'Kenyan exporters',
+          effect: 'Shipping costs are rising due to the war',
+          sourceArticleIds: ['x'],
+        },
+        { party: 'Tea farmers', effect: 'Shipping is disrupted', sourceArticleIds: ['link'] },
+      ],
+      differences: [
+        {
+          topic: 't',
+          positions: [{ description: 'The war hurts Kenya', sourceArticleIds: ['x'] }],
+        },
+      ],
+      significance: {
+        level: 'high',
+        rationale: [{ claim: 'It affects Kenya trade', sourceArticleIds: ['x'] }],
+      },
+    };
+    const { analysis: out, removed } = withoutImpactClaims(analysis, new Set(['link']));
+    expect(removed).toBe(3);
+    expect(out.affectedParties.map((p) => p.party)).toEqual(['Tea farmers']);
+    expect(out.differences).toEqual([]);
+    expect(out.significance.rationale).toEqual([]);
+  });
+
+  it('a summary effect is cited only when every effect sentence is a statement citing a link', () => {
+    const effect = 'The war disrupts Kenya tea shipments.';
+    const citable = new Set(['link']);
+    expect(impactSummaryCited(`Talks continue. ${effect}`, undefined, citable)).toBe(false);
+    expect(
+      impactSummaryCited(
+        `Talks continue. ${effect}`,
+        [{ text: effect, sourceArticleIds: ['link'] }],
+        citable,
+      ),
+    ).toBe(true);
+    expect(
+      impactSummaryCited(
+        `${effect} Fuel prices rise due to the war.`,
+        [{ text: effect, sourceArticleIds: ['link'] }],
+        citable,
+      ),
+    ).toBe(false);
+    expect(impactSummaryCited('Talks continue.', undefined, citable)).toBe(true);
+  });
+});
 
 /*
   CTO R164 P-1 — a cross-region follow-up searches the earlier event AND the place it names; a missing
@@ -73,7 +132,7 @@ const BY_PLACE: Record<string, NewsArticle[]> = {
     art(
       'kl1',
       'Kenya tea exporters reroute shipments as Gaza war disrupts Red Sea route',
-      'Kenya traders said the Gaza conflict has raised freight costs.',
+      'Kenya traders said the Gaza conflict has disrupted shipping and raised freight costs.',
       'KEN',
     ),
   ],
@@ -231,6 +290,7 @@ describe('CTO R164 P-1 · cross-region follow-up (service)', () => {
       destination: ['KEN'],
       missing: [],
       linkingReports: 0,
+      linkingReportIds: [],
     });
     expect(result.retrievalContext.verificationNotice).toBe('NOT_VERIFIED');
     const input = spy.mock.calls.at(-1)?.[0] as { evidenceLinkageGuard?: boolean };
@@ -266,13 +326,13 @@ describe('CTO R164 P-1 · cross-region follow-up (service)', () => {
     expect(result.analysis?.briefState?.reason).toMatch(/^BILATERAL_EVIDENCE_GAP/);
   });
 
-  it('a Kenya report naming the Gaza war is a LINKING report: the effect may be shown', async () => {
+  it('a Kenya report naming the Gaza war AND asserting an effect is a LINKING report; an UNCITED effect is still withheld (R-1)', async () => {
     const { service, spy, real } = harness({ gaza: BY_PLACE.gaza!, kenya: BY_PLACE.linked! });
     spy.mockImplementation(async (input) => {
       const out = (await real(input)) as { summary: string };
       return {
         ...out,
-        summary: `${out.summary} The Gaza war has raised freight costs for Kenya.`,
+        summary: `${out.summary} The Gaza war has disrupted freight for Kenya.`,
       } as never;
     });
     const result = await service.analyzeNews(
@@ -283,7 +343,104 @@ describe('CTO R164 P-1 · cross-region follow-up (service)', () => {
     );
     expect(result.retrievalContext.impactEvidenceGap?.state).toBe('LINKING_REPORT_FOUND');
     expect(result.retrievalContext.impactEvidenceGap?.linkingReports).toBe(1);
-    expect(result.analysis?.summary).toMatch(/freight costs for Kenya/);
+    expect(result.retrievalContext.impactEvidenceGap?.linkingReportIds).toEqual(['kl1']);
+    expect(result.analysis?.summary).toBe('');
+    expect(result.analysis?.briefState?.reason).toMatch(/^UNCITED_IMPACT_CLAIM/);
+  });
+
+  it('R-1 · an effect sentence that CITES the linking report is shown', async () => {
+    const { service, spy, real } = harness({ gaza: BY_PLACE.gaza!, kenya: BY_PLACE.linked! });
+    spy.mockImplementation(async (input) => {
+      const out = (await real(input)) as { summary: string };
+      const ref = buildEvidenceReferences(input.articles).find((r) => r.articleId === 'kl1')!;
+      const effect = 'Kenya tea exporters say the Gaza war has disrupted their Red Sea route.';
+      return {
+        ...out,
+        summary: `${out.summary} ${effect}`,
+        summaryStatements: [
+          { text: effect, kind: 'REPORTED_CONSEQUENCE', evidenceIds: [ref.evidenceId] },
+        ],
+      } as never;
+    });
+    const result = await service.analyzeNews(
+      'How does that affect Kenya?',
+      'en',
+      undefined,
+      'What happened in Gaza?',
+    );
+    expect(result.retrievalContext.impactEvidenceGap?.state).toBe('LINKING_REPORT_FOUND');
+    expect(result.analysis?.summary).toMatch(/disrupted their Red Sea route/);
+  });
+
+  it('R-1 · list effects survive only when they cite the linking report', async () => {
+    const { service, spy, real } = harness({ gaza: BY_PLACE.gaza!, kenya: BY_PLACE.linked! });
+    spy.mockImplementation(async (input) => {
+      const out = (await real(input)) as { keyFacts: Record<string, unknown>[] };
+      const idOf = (id: string) =>
+        buildEvidenceReferences(input.articles).find((r) => r.articleId === id)!.evidenceId;
+      const base = out.keyFacts[0] ?? {};
+      return {
+        ...out,
+        keyFacts: [
+          ...out.keyFacts,
+          {
+            ...base,
+            claim: 'The Gaza war disrupts Kenya tea shipments.',
+            evidenceIds: [idOf('kl1')],
+          },
+          {
+            ...base,
+            claim: 'The Gaza war is driving fuel prices up in Kenya.',
+            evidenceIds: [idOf('g1')],
+          },
+        ],
+      } as never;
+    });
+    const result = await service.analyzeNews(
+      'How does that affect Kenya?',
+      'en',
+      undefined,
+      'What happened in Gaza?',
+    );
+    const facts = JSON.stringify(result.analysis?.keyFacts ?? []);
+    expect(facts).toMatch(/disrupts Kenya tea shipments/);
+    expect(facts).not.toMatch(/driving fuel prices up in Kenya/);
+  });
+
+  it('R-1 · an effect only in a HEADLINE (empty body) does not make a linking report', async () => {
+    const headlineOnly = [art('kh1', 'Gaza war raises Kenya fuel costs', '', 'KEN')];
+    const { service } = harness({
+      gaza: BY_PLACE.gaza!,
+      kenya: [...BY_PLACE.kenya!, ...headlineOnly],
+    });
+    const result = await service.analyzeNews(
+      'How does that affect Kenya?',
+      'en',
+      undefined,
+      'What happened in Gaza?',
+    );
+    expect(result.retrievalContext.impactEvidenceGap?.linkingReportIds ?? []).not.toContain('kh1');
+    expect(result.retrievalContext.impactEvidenceGap?.state).not.toBe('LINKING_REPORT_FOUND');
+  });
+
+  it('R-1 (Politics RV-8) · a report that merely CO-MENTIONS both places is not a link', async () => {
+    const coMention = [
+      art(
+        'kc1',
+        'Kenya calls for lasting Gaza ceasefire at UN',
+        "Kenya's envoy urged a lasting ceasefire in Gaza at the UN General Assembly.",
+        'KEN',
+      ),
+    ];
+    const { service } = harness({ gaza: BY_PLACE.gaza!, kenya: coMention });
+    const result = await service.analyzeNews(
+      'How does that affect Kenya?',
+      'en',
+      undefined,
+      'What happened in Gaza?',
+    );
+    expect(result.retrievalContext.impactEvidenceGap?.state).toBe('NO_LINKING_REPORT');
+    expect(result.retrievalContext.impactEvidenceGap?.linkingReports).toBe(0);
   });
 
   it('no linking report: the effect is removed from every list, not only the brief (Politics V-2/V-3)', async () => {
