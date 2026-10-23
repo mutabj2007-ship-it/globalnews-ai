@@ -652,7 +652,6 @@ export const frShellOverlay: ShellLocaleOverlay = {
           DISPUTED: "Contesté",
           NOT_VERIFIED: "Non vérifié",
           REPORTED: "Rapporté (une seule source)",
-          UNASSESSED: "Non évalué — texte des articles indisponible",
         },
         unavailable: "indisponible",
       },

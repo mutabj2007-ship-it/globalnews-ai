@@ -590,7 +590,12 @@ function verificationOf(
   const claims = (retrieval.claimAssessments ?? []).map((c) => ({
     text: c.text,
     state: c.state,
-    label: s.verification.states[c.state] ?? c.state,
+    /* CTO R164 B-2 — UNASSESSED reads with the already-qualified "Not verified" label in every
+       locale (no new reader copy until Claude L qualifies one); never the raw code. */
+    label:
+      s.verification.states[c.state] ??
+      (c.state === 'UNASSESSED' ? s.verification.states.NOT_VERIFIED : undefined) ??
+      c.state,
   }));
   return { notice, lanes, claims };
 }

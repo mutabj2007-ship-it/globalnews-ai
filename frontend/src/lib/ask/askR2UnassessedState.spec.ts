@@ -10,7 +10,6 @@ import { askR2View } from './askR2View';
  */
 
 const UNASSESSED: ClaimVerificationState = 'UNASSESSED';
-const POSITIVE = /confirm|corroborat|potwierdz|confirmé|bestätigt|confirmado|مؤكَّد|مؤيِّدة/i;
 
 function withClaim(): AskR2Payload {
   return {
@@ -52,33 +51,33 @@ function withClaim(): AskR2Payload {
   };
 }
 
-describe('R164 P-4 — UNASSESSED claim state', () => {
-  const english = askShellStrings('en').askR2Strings.verification.states.UNASSESSED;
-
-  it('English and Polish carry the exact CTO labels', () => {
-    expect(english).toBe('Not assessed — report text unavailable');
-    expect(askShellStrings('pl').askR2Strings.verification.states.UNASSESSED).toBe(
-      'Nieocenione — brak dostępnego tekstu doniesień',
-    );
+describe('R164 P-4 / CTO B-2 — UNASSESSED reads as the qualified "Not verified" label', () => {
+  it('no new reader copy: no locale carries an UNASSESSED string of its own', () => {
+    for (const locale of DISPLAY_LOCALES) {
+      expect(askShellStrings(locale).askR2Strings.verification.states.UNASSESSED).toBeUndefined();
+    }
   });
 
   it.each(DISPLAY_LOCALES.map((l) => [l]))(
-    '%s has its own non-empty, non-positive UNASSESSED label',
+    '%s: askR2View shows the localized NOT_VERIFIED label — never the raw code, never a positive state',
     (locale) => {
-      const label = askShellStrings(locale).askR2Strings.verification.states.UNASSESSED;
-      expect(typeof label).toBe('string');
-      expect(label!.trim().length).toBeGreaterThan(0);
-      expect(label).not.toMatch(POSITIVE);
-      if (locale !== 'en') expect(label).not.toBe(english);
+      const s = askShellStrings(locale).askR2Strings;
+      const v = askR2View(withClaim(), s, locale === 'pl' ? 'pl' : 'en');
+      const label = s.verification.states.NOT_VERIFIED!;
+      expect(label.trim().length).toBeGreaterThan(0);
+      expect(v.verification?.claims).toEqual([
+        { text: 'A ceasefire was signed', state: 'UNASSESSED', label },
+      ]);
+      expect(label).not.toBe('UNASSESSED');
+      /* never one of this locale's positive labels ("Nicht bestätigt" is a negation, so compare labels, not words) */
+      expect(label).not.toBe(s.verification.states.CONFIRMED);
+      expect(label).not.toBe(s.verification.states.CORROBORATED_REPORTING);
+      expect(label).not.toBe(s.verification.states.REPORTED);
     },
   );
 
-  it.each(DISPLAY_LOCALES.map((l) => [l]))('%s: askR2View renders the label, never the raw code', (locale) => {
-    const s = askShellStrings(locale).askR2Strings;
-    const v = askR2View(withClaim(), s, locale === 'pl' ? 'pl' : 'en');
-    expect(v.verification?.claims).toEqual([
-      { text: 'A ceasefire was signed', state: 'UNASSESSED', label: s.verification.states.UNASSESSED },
-    ]);
-    expect(v.verification?.claims[0]?.label).not.toBe('UNASSESSED');
+  it('Arabic (RTL) resolves to its own qualified label, not the English one', () => {
+    const ar = askShellStrings('ar').askR2Strings.verification.states.NOT_VERIFIED;
+    expect(ar).not.toBe(askShellStrings('en').askR2Strings.verification.states.NOT_VERIFIED);
   });
 });
