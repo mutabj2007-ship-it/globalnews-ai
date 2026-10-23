@@ -10,6 +10,7 @@
 */
 import { EXTERNAL_READER_POLICY, partitionByRights } from '../news/rights/source-use-policy';
 import { isPublisherRightsHeld } from '../news/rights/publisher-rights-hold';
+import { containedStoredIntelligence } from '../ask-intelligence/cited-outlets';
 
 export const WITHHELD_BASIS = 'WITHHELD_SOURCE_RIGHTS' as const;
 
@@ -23,7 +24,10 @@ const articlesOf = (payload: Json): Array<{ sourceId?: string | null; providerId
 
 export function withheldForSourceRights(payload: unknown): unknown {
   if (payload === null || typeof payload !== 'object' || Array.isArray(payload)) return payload;
-  const p = payload as Json;
+  /* CTO R150 / PD-1 — an answer stored before the R143 containment still holds the Conflict record's recorded
+     headline (label, detail.headline, citation pieces); every reader response leaves in the contained shape. */
+  const raw = payload as Json;
+  const p: Json = 'intelligence' in raw ? { ...raw, intelligence: containedStoredIntelligence(raw.intelligence) } : raw;
   /* MASTER CTO R47 / E1-R46 R46-1/2/5/7 — every operation response (fresh, reopen, Saved, guest)
      passes here: an external reader gets a stored answer only on a POSITIVE basis */
   const excluded = partitionByRights(articlesOf(p), 'AI_INPUT', EXTERNAL_READER_POLICY).excluded;

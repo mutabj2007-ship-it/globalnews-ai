@@ -4,7 +4,7 @@ import type {
   AskContributionObservation,
 } from '../../ask-intelligence/ask-contribution.contract';
 import type { BriefingIntelligence } from './briefing-snapshot';
-import { outletNamesOf } from '../../ask-intelligence/cited-outlets';
+import { containedConflictObservation } from '../../ask-intelligence/cited-outlets';
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -89,18 +89,7 @@ function relevant(c: AskContribution): boolean {
  * change in the record, and must never read as "content changed".
  */
 function comparable(o: AskContributionObservation): AskContributionObservation {
-  if (!o.reference.startsWith('cfl:')) return o;
-  return {
-    ...o,
-    label: null,
-    detail: o.detail
-      ? {
-          ...o.detail,
-          headline: null,
-          citedOutlets: outletNamesOf(o.detail.citedOutlets),
-        }
-      : o.detail,
-  };
+  return containedConflictObservation(o);
 }
 
 export function structuredFingerprint(observation: AskContributionObservation): string {
@@ -122,7 +111,9 @@ function recordsOf(intel: BriefingIntelligence | null) {
   const out = new Map<string, { change: StructuredRecordChange; fingerprint: string }>();
   for (const c of intel?.contributions ?? []) {
     if (!relevant(c) || c.status !== 'USED') continue;
-    for (const o of c.observations ?? []) {
+    for (const raw of c.observations ?? []) {
+      /* CTO R150 / PD-1: the change entry a check stores and returns carries the contained shape too */
+      const o = comparable(raw);
       out.set(`${c.contributorId}|${c.geographyBasis ?? '*'}|${o.reference}`, {
         fingerprint: structuredFingerprint(o),
         change: {

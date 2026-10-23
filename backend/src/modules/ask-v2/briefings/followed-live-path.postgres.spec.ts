@@ -124,7 +124,7 @@ live('followed question — fresh manual check through normal Ask execution (liv
     await producer.admitRetained(retrievalId, 'live-path');
   }
 
-  async function ask(): Promise<{ turnId: string; payload: Record<string, unknown>; storedId: string }> {
+  async function ask(): Promise<{ turnId: string; payload: Record<string, unknown>; storedId: string; operationId: string }> {
     const thread = await service.createThread(accountPrincipal(userId), { idempotencyKey: randomUUID(), language: 'en' });
     const op = await run(() =>
       service.submit(accountPrincipal(userId), thread.id, {
@@ -137,7 +137,7 @@ live('followed question — fresh manual check through normal Ask execution (liv
     expect(op.status).toBe('COMPLETED');
     const turn = await db.askTurn.findFirstOrThrow({ where: { operationId: op.operationId } });
     const stored = await db.storedResult.findUniqueOrThrow({ where: { id: op.storedResultId as string } });
-    return { turnId: turn.id, payload: stored.payload as Record<string, unknown>, storedId: stored.id };
+    return { turnId: turn.id, payload: stored.payload as Record<string, unknown>, storedId: stored.id, operationId: op.operationId };
   }
 
   const conflictRefs = (payload: Record<string, unknown>): string[] => {
@@ -320,5 +320,65 @@ live('followed question — fresh manual check through normal Ask execution (liv
     expect(structured.contentChanged).toEqual([]);
     expect(check.outcome).toBe('UNCHANGED');
     expect(check.resultingVersion).toBeNull();
+  });
+
+  /* CTO R150 / PD-1 — the same pre-containment stored shape, read back through the REAL reader paths: reopening the
+     answer (getOperation, the path reopen/Saved/guest share) and a saved briefing version (getVersion). The stored
+     rows keep the old shape (not rewritten); what a reader receives does not. Synthetic strings only. */
+  it('R150: an answer and a briefing version stored in the pre-containment shape are READ without the recorded headline', async () => {
+    const HEADLINE = 'Synthetic R150 stored headline (test)';
+    await admit([
+      ucdpRow(eventId(), '2026-08-16', { source_headline: HEADLINE, source_article: 'Synthetic Wire', source_office: 'Synthetic Wire' }),
+      ucdpRow(eventId(), '2026-08-17', { source_headline: HEADLINE, source_article: 'Other Wire', source_office: 'Other Wire' }),
+    ]);
+    const first = await ask();
+    expect(conflictRefs(first.payload).length).toBeGreaterThanOrEqual(2);
+    const stored = await db.storedResult.findUniqueOrThrow({ where: { id: first.storedId } });
+    const old = JSON.parse(JSON.stringify(stored.payload)) as {
+      intelligence: { contributions: { contributorId: string; observations: { label: unknown; detail: { headline: unknown; citedOutlets: string[] } | null }[] }[] };
+    };
+    let rewritten = 0;
+    for (const c of old.intelligence.contributions) {
+      if (c.contributorId !== 'CONFLICT') continue;
+      for (const o of c.observations) {
+        o.label = HEADLINE;
+        if (o.detail) {
+          o.detail.headline = HEADLINE;
+          o.detail.citedOutlets = o.detail.citedOutlets.map((name) => `${name},2026-08-16,"${HEADLINE}"`);
+        }
+        rewritten++;
+      }
+    }
+    expect(rewritten).toBeGreaterThanOrEqual(2);
+    /* a Conflict-only stored answer: this harness's synthetic news articles have no reader basis, so with them the
+       whole answer is (correctly) withheld and the Conflict containment would never be exercised */
+    const analysis = (old as unknown as { analysis?: { articles?: unknown[] } | null }).analysis;
+    if (analysis && Array.isArray(analysis.articles)) analysis.articles = [];
+    await db.storedResult.update({ where: { id: stored.id }, data: { payload: old as never } });
+    /* non-vacuous: the STORED row now holds the headline */
+    expect(JSON.stringify((await db.storedResult.findUniqueOrThrow({ where: { id: stored.id } })).payload)).toContain(HEADLINE);
+
+    const reopened = await service.getOperation(accountPrincipal(userId), first.operationId);
+    const reopenedPayload = (reopened.result as { payload: Record<string, unknown> }).payload;
+    /* non-vacuous: the answer is served (not withheld) and still carries its Conflict records */
+    expect(reopenedPayload.withheld).toBeUndefined();
+    expect(conflictRefs(reopenedPayload).length).toBeGreaterThanOrEqual(2);
+    expect(JSON.stringify(reopened)).not.toContain(HEADLINE);
+
+    const followed = await briefings.create(userId, { turnId: first.turnId });
+    /* a Conflict-only version: without news evidence refs it is served (with them it is 451-withheld, unexercised) */
+    await db.briefingVersion.update({
+      where: { briefingId_version: { briefingId: followed.id, version: 1 } },
+      data: { evidenceRefs: [] },
+    });
+    const version = await briefings.getVersion(userId, followed.id, 1);
+    /* non-vacuous: the version is served with its intelligence block, and that block has the Conflict records */
+    const served = (version.blocks as { intelligence?: Record<string, unknown> | null } | null)?.intelligence ?? null;
+    expect(served).not.toBeNull();
+    expect(conflictRefs({ intelligence: served } as Record<string, unknown>).length).toBeGreaterThanOrEqual(2);
+    expect(JSON.stringify(version)).not.toContain(HEADLINE);
+    /* the stored version itself is untouched (audit), only the read is contained */
+    const row = await db.briefingVersion.findUniqueOrThrow({ where: { briefingId_version: { briefingId: followed.id, version: 1 } } });
+    expect(JSON.stringify(row.blocks)).toContain(HEADLINE);
   });
 });

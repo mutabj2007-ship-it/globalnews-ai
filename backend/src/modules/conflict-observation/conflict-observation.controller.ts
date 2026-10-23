@@ -3,6 +3,7 @@ import { Throttle } from '@nestjs/throttler';
 import { IsInt, IsOptional, Max, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ConflictObservationRepository } from './conflict-observation.repository';
+import { toPublicConflictObservation, toPublicEvidenceDetail } from './conflict-public-reader';
 
 class ConflictObservationQuery {
   @IsOptional()
@@ -15,6 +16,8 @@ class ConflictObservationQuery {
 
 /**
  * Retained-data reader only. It cannot activate UCDP or any other producer.
+ * CTO R150 / PD-1: every response leaves through the public reader shape (conflict-public-reader.ts), so the
+ * recorded publisher citation, headline and source_original never reach a reader from here.
  */
 @Controller('conflict')
 export class ConflictObservationController {
@@ -22,16 +25,17 @@ export class ConflictObservationController {
 
   @Get('observations')
   @Throttle({ default: { limit: 30, ttl: 60_000 } })
-  observations(@Query() query: ConflictObservationQuery) {
-    return this.repository.latest(query.limit ?? 250);
+  async observations(@Query() query: ConflictObservationQuery) {
+    return (await this.repository.latest(query.limit ?? 250)).map(toPublicConflictObservation);
   }
 
   @Get('observations/:observationKey/evidence')
   @Throttle({ default: { limit: 60, ttl: 60_000 } })
-  evidence(@Param('observationKey') observationKey: string) {
+  async evidence(@Param('observationKey') observationKey: string) {
     if (!observationKey || observationKey.length > 512) {
       throw new BadRequestException('INVALID_OBSERVATION_KEY');
     }
-    return this.repository.evidenceDetail(observationKey);
+    const detail = await this.repository.evidenceDetail(observationKey);
+    return detail === null ? null : toPublicEvidenceDetail(detail);
   }
 }
