@@ -320,12 +320,8 @@ export function ConflictDashboard({
         </div>
       )}
       <ConflictSourceField row={row} sourceLabel={t.source} />
-      {evidenceDetail?.sourceOriginal && (
-        <div>
-          <dt>{t.sourceOriginal}</dt>
-          <dd>{evidenceDetail.sourceOriginal}</dd>
-        </div>
-      )}
+      {/* CTO R144: UCDP's source_original is unreviewed free text — withheld (fail closed) until E1
+          rules which of it may be shown. */}
       {evidenceDetail?.conflictName && (
         <div>
           <dt>{t.conflictName}</dt>
