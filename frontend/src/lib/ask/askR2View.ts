@@ -1,4 +1,4 @@
-import { RIGHTS_REFUSAL } from './askSearchActivity';
+import { RIGHTS_REFUSAL, searchActivityOf } from './askSearchActivity';
 import { askRightsRefusalStrings } from './askRightsRefusal';
 import { rightsRefusedOnly } from '@/components/search/evidenceDisplay';
 import { congoClarificationOf } from './askCongoClarification';
@@ -304,6 +304,32 @@ export function failedTurnCopy(failure: string | undefined, s: AskR2Strings): st
   /* ASK R2 — the documented length limit is named, never "unavailable". */
   if (failure === ASK_INPUT_TOO_LONG) return s.questionTooLong(ASK_INPUT_MAX_CHARS);
   return s.unavailable;
+}
+
+/**
+ * "About this answer" retrieval figures (retrieved reports · reporting clusters) — or null when
+ * NOTHING WAS SEARCHED. PO live test on Alpha e5e4ac3 (Kenya economy): Search activity read "not
+ * searched" while About this answer read "0 retrieved reports · 0 reporting clusters", a completed
+ * search's figures. Decided from the SAME facts as Search activity (searchActivityOf) and the
+ * freshness line (rightsRefusedOnly), so the panels cannot disagree.
+ */
+export function aboutRetrievalFigures(
+  payload: AskR2Payload,
+): { readonly reports: number | null; readonly clusters: number | null } | null {
+  const analysis = payload.analysis;
+  if (analysis == null) return null;
+  const notSearched =
+    (searchActivityOf(payload)?.steps ?? []).some(
+      (step) => step.kind === 'SEARCH' && step.status === 'not-searched',
+    ) ||
+    (analysis.retrievalContext != null &&
+      rightsRefusedOnly(analysis.retrievalContext, analysis.articles?.length ?? 0));
+  if (notSearched) return null;
+  const diversity = analysis.sourceDiversity;
+  return {
+    reports: diversity?.retrievedArticleCount ?? null,
+    clusters: diversity?.reportingClusterCount ?? null,
+  };
 }
 
 export function askR2View(

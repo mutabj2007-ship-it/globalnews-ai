@@ -13,7 +13,12 @@ import { AskIntelligenceBasis } from './AskIntelligenceBasis';
 import { AskEvidencePlaces } from './AskEvidencePlaces';
 import { askR38Strings } from '@/lib/ask/askR38Strings';
 import { askGovernedConversation } from '@/lib/ask/askGovernedConversation';
-import { askR2View, failedTurnCopy, type AskR2View } from '@/lib/ask/askR2View';
+import {
+  aboutRetrievalFigures,
+  askR2View,
+  failedTurnCopy,
+  type AskR2View,
+} from '@/lib/ask/askR2View';
 import { openFullAnalysisHref, type AskR2Turn } from '@/lib/ask/useAskR2Conversation';
 import { askCountryName } from '@/lib/ask/askCountryName';
 import { AskRecentReporting } from './AskRecentReporting';
@@ -22,7 +27,6 @@ import { AskAnswerProse } from '@/components/ask/AskAnswerProse';
 import { askShellStrings } from '@/lib/ask/shell/askShellCatalogue';
 import { askLocaleForLegacyCatalogue } from '@/lib/ask/askLocale';
 import { askSevenStrings } from '@/lib/ask/askSevenStrings';
-import { buildBriefTelemetry } from '@/components/analysis-frame/briefModel';
 import { rightsRefusedOnly } from '@/components/search/evidenceDisplay';
 import { askRightsRefusalStrings } from '@/lib/ask/askRightsRefusal';
 
@@ -308,15 +312,16 @@ export function AskR2TurnView({
     .split(/\n\s*\n/)
     .map((part) => part.trim())
     .find((part) => part !== '' && !part.startsWith('|')) ?? '';
-  /* "About this answer" in the Sources panel: the answer's own status and retrieval figures. */
-  const telemetry = payload.analysis === null ? null : buildBriefTelemetry(payload.analysis, null);
+  /* "About this answer" in the Sources panel: the answer's own status and retrieval figures —
+     none when nothing was searched (the same decision as Search activity; see aboutRetrievalFigures). */
+  const figures = aboutRetrievalFigures(payload);
   const askAi = askShellStrings(locale).dict.askAi;
   const about = [
-    telemetry === null
+    figures === null
       ? ''
       : [
-          telemetry.retrievedArticleCount === null ? null : `${telemetry.retrievedArticleCount} ${askAi.telemetryReports}`,
-          telemetry.reportingClusterCount === null ? null : `${telemetry.reportingClusterCount} ${askAi.telemetryClusters}`,
+          figures.reports === null ? null : `${figures.reports} ${askAi.telemetryReports}`,
+          figures.clusters === null ? null : `${figures.clusters} ${askAi.telemetryClusters}`,
         ]
           .filter((part): part is string => part !== null)
           .join(' · '),
