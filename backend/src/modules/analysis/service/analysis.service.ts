@@ -212,7 +212,6 @@ import {
   type AnalyticalDomain,
 } from '../query/detect-analytical-domains.util';
 import {
-  COUNTRY_DEMONYMS_BY_ISO3,
   scoreCountryRelevance,
   resolveCountriesByDemonym,
 } from '../../news/country/country-relevance.util';
@@ -262,6 +261,7 @@ import { classifyQueryIntent } from '../query/query-intent.util';
 import {
   assertsImpact,
   bodyAssertsEffectOf,
+  impactPlacesFor,
   impactSummaryCited,
   relatesPlaces,
   readFollowUpGeography,
@@ -4903,15 +4903,11 @@ export class AnalysisService {
               const places =
                 crossRegionImpact === undefined
                   ? undefined
-                  : {
-                      origin: crossRegionImpact.originTerms,
-                      destination: crossRegionImpact.destination.flatMap((country) => [
-                        country.name.toLowerCase(),
-                        ...(COUNTRY_DEMONYMS_BY_ISO3[country.iso3] ?? []).map((d) =>
-                          d.toLowerCase(),
-                        ),
-                      ]),
-                    };
+                  : impactPlacesFor(
+                      crossRegionImpact.originTerms,
+                      crossRegionImpact.origin,
+                      crossRegionImpact.destination,
+                    );
               const lists = withoutImpactClaims(analysisResult, citable, places);
               analysisResult = lists.analysis;
               const briefCited =

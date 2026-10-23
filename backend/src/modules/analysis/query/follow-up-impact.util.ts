@@ -1,5 +1,11 @@
-import { resolveCountryByAnyIdentifier, type CountryMeta } from '@globalnews-ai/shared';
+import {
+  getCuratedCityNames,
+  resolveCountryByAnyIdentifier,
+  resolveCountryByCity,
+  type CountryMeta,
+} from '@globalnews-ai/shared';
 import { resolveGeography } from '../../geo/geo-resolver';
+import { COUNTRY_DEMONYMS_BY_ISO3, demonymForms } from '../../news/country/country-relevance.util';
 
 /*
   CTO R164 P-1 — A FOLLOW-UP THAT NAMES A NEW COUNTRY IS NOT ANSWERED FROM THE EARLIER ONE ALONE.
@@ -128,12 +134,35 @@ export interface ImpactPlaces {
   readonly destination: readonly string[];
 }
 
+/** Politics LX-2c — every occurrence is tested: "Gazans fled; since the Gaza war …" names Gaza. */
 function namesTerm(lower: string, term: string): boolean {
-  const at = lower.indexOf(term);
-  if (at < 0) return false;
-  const before = at === 0 ? '' : lower[at - 1]!;
-  const after = lower[at + term.length] ?? '';
-  return !/[\p{L}\p{N}]/u.test(before) && !/[\p{L}\p{N}]/u.test(after);
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, 'u').test(lower);
+}
+
+/**
+ * Politics LX-2a/b — the both-places test reads each side as a reader names it: the origin
+ * country's demonyms ("Palestinian") and the earlier place's own demonym ("Gazan"); the destination
+ * country's demonyms and its curated cities ("Nairobi"). Guard-only and fail-closed: a wider
+ * vocabulary can only withhold an uncited sentence, never admit one. The link test
+ * (bodyAssertsEffectOf) keeps the narrow originTerms, so what counts as a link is unchanged.
+ */
+export function impactPlacesFor(
+  originTerms: readonly string[],
+  origin: readonly CountryMeta[],
+  destination: readonly CountryMeta[],
+): ImpactPlaces {
+  const demonymsOf = (c: CountryMeta) =>
+    (COUNTRY_DEMONYMS_BY_ISO3[c.iso3] ?? []).flatMap(demonymForms);
+  const citiesOf = (c: CountryMeta) =>
+    getCuratedCityNames().filter((city) => resolveCountryByCity(city)?.iso3 === c.iso3);
+  /* "gaza" → "gazan", "gazans": only the regular -a → -an form */
+  const placeDemonyms = originTerms.flatMap((t) => (/\p{L}a$/u.test(t) ? [`${t}n`, `${t}ns`] : []));
+  const lower = (terms: readonly string[]) => [...new Set(terms.map((t) => t.toLowerCase()))];
+  return {
+    origin: lower([...originTerms, ...placeDemonyms, ...origin.flatMap(demonymsOf)]),
+    destination: lower(destination.flatMap((c) => [c.name, ...demonymsOf(c), ...citiesOf(c)])),
+  };
 }
 
 /**
