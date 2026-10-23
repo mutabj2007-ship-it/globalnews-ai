@@ -51,33 +51,38 @@ function withClaim(): AskR2Payload {
   };
 }
 
-describe('R164 P-4 / CTO B-2 — UNASSESSED reads as the qualified "Not verified" label', () => {
-  it('no new reader copy: no locale carries an UNASSESSED string of its own', () => {
-    for (const locale of DISPLAY_LOCALES) {
-      expect(askShellStrings(locale).askR2Strings.verification.states.UNASSESSED).toBeUndefined();
-    }
+describe('CTO finishing order — UNASSESSED reads "Not assessed", distinct from "Not verified"', () => {
+  it('English is cause-neutral "Not assessed"; Polish (authored) "Nieocenione"', () => {
+    expect(askShellStrings('en').askR2Strings.verification.states.UNASSESSED).toBe('Not assessed');
+    expect(askShellStrings('pl').askR2Strings.verification.states.UNASSESSED).toBe('Nieocenione');
   });
 
+  it.each(['fr', 'de', 'es', 'pt', 'ar'] as const)(
+    '%s: HELD — reuses its own Claude-L-qualified "Not verified" wording, never English, never machine copy',
+    (locale) => {
+      const s = askShellStrings(locale).askR2Strings.verification.states;
+      expect(s.UNASSESSED).toBe(s.NOT_VERIFIED);
+      expect(s.UNASSESSED).not.toBe('Not assessed');
+    },
+  );
+
   it.each(DISPLAY_LOCALES.map((l) => [l]))(
-    '%s: askR2View shows the localized NOT_VERIFIED label — never the raw code, never a positive state',
+    '%s: askR2View shows the UNASSESSED label — never the raw code, never a positive state',
     (locale) => {
       const s = askShellStrings(locale).askR2Strings;
       const v = askR2View(withClaim(), s, locale === 'pl' ? 'pl' : 'en');
-      const label = s.verification.states.NOT_VERIFIED!;
-      expect(label.trim().length).toBeGreaterThan(0);
+      const label = s.verification.states.UNASSESSED!;
       expect(v.verification?.claims).toEqual([
         { text: 'A ceasefire was signed', state: 'UNASSESSED', label },
       ]);
       expect(label).not.toBe('UNASSESSED');
-      /* never one of this locale's positive labels ("Nicht bestätigt" is a negation, so compare labels, not words) */
       expect(label).not.toBe(s.verification.states.CONFIRMED);
       expect(label).not.toBe(s.verification.states.CORROBORATED_REPORTING);
       expect(label).not.toBe(s.verification.states.REPORTED);
+      /* the semantic distinction is carried where the wording is authored */
+      if (locale === 'en' || locale === 'pl') {
+        expect(label).not.toBe(s.verification.states.NOT_VERIFIED);
+      }
     },
   );
-
-  it('Arabic (RTL) resolves to its own qualified label, not the English one', () => {
-    const ar = askShellStrings('ar').askR2Strings.verification.states.NOT_VERIFIED;
-    expect(ar).not.toBe(askShellStrings('en').askR2Strings.verification.states.NOT_VERIFIED);
-  });
 });

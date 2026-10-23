@@ -541,7 +541,8 @@ const COUNTRY_ALIASES: Record<string, string> = {
   */
   'dr konga': 'COD',
   'dr kongo': 'COD',
-  'drk': 'COD',
+  /* EA P2 (23 Oct): no bare 'drk' alias — German "DRK" is the Deutsches Rotes Kreuz. Polish DRK
+     still routes through semantic-ir entities. */
   'demokratyczna republika konga': 'COD',
   'demokratycznej republiki konga': 'COD',
   'demokratycznej republice konga': 'COD',

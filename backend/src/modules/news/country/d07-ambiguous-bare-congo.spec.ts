@@ -64,7 +64,7 @@ const ROWS: Row[] = [
   ['C-COD-FR3', 'bare-fr', 'AMBIG', "Embuscade dans l'est du Congo", '', 'fr', undefined],
   ['C-COD-CITY', 'bare+codcity', 'CD', 'Congo: clashes near Goma displace thousands', '', undefined, 'CD'],
   ['C-PL-1', 'bare-pl', 'AMBIG', 'Walki we wschodnim Kongo', '', 'pl', undefined],
-  ['C-PL-2', 'cod-explicit-pl', 'CD', 'Walki w Demokratycznej Republice Konga', '', 'pl', undefined],  /* RECORDED UNRESOLVED */
+  ['C-PL-2', 'cod-explicit-pl', 'CD', 'Walki w Demokratycznej Republice Konga', '', 'pl', 'CD'],  /* GEO-1 (G R131 Part B, 23 Oct): now resolves to its truth */
   ['C-ACT-M23', 'actor', 'AMBIG', 'M23 advances in Congo', '', undefined, undefined],
   ['C-ACT-FARDC', 'actor', 'NONE', 'FARDC soldiers repelled an assault', '', undefined, undefined],
   ['C-ACT-MONUSCO', 'actor', 'NONE', 'MONUSCO patrols were suspended', '', undefined, undefined],

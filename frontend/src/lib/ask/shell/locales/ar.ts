@@ -696,6 +696,7 @@ export const arShellOverlay: ShellLocaleOverlay = {
           DISPUTED: "مُتنازَع عليه",
           NOT_VERIFIED: "غير مُتحقَّق منه",
           REPORTED: "مذكور (مصدر واحد)",
+          UNASSESSED: "غير مُتحقَّق منه",
         },
         unavailable: "غير متوفرة",
       },

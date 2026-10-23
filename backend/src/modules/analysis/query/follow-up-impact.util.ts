@@ -122,6 +122,48 @@ const IMPACT_LIST_FIELDS: ReadonlyArray<readonly [string, string]> = [
   ['timeline', 'event'],
 ];
 
+/** The two sides of a cross-region follow-up, as lower-case names / demonyms / place terms. */
+export interface ImpactPlaces {
+  readonly origin: readonly string[];
+  readonly destination: readonly string[];
+}
+
+function namesTerm(lower: string, term: string): boolean {
+  const at = lower.indexOf(term);
+  if (at < 0) return false;
+  const before = at === 0 ? '' : lower[at - 1]!;
+  const after = lower[at + term.length] ?? '';
+  return !/[\p{L}\p{N}]/u.test(before) && !/[\p{L}\p{N}]/u.test(after);
+}
+
+/**
+ * Politics LX-1 — structural, wording-independent: a sentence naming BOTH the earlier event's
+ * place and the place asked about relates them, whatever verb it uses ("suffered amid", "pays more
+ * since"), so while an impact-gap state is set it needs a linking citation like an effect does.
+ */
+function namesBothPlaces(text: string, places: ImpactPlaces | undefined): boolean {
+  if (places === undefined) return false;
+  const lower = text.toLowerCase();
+  return (
+    places.origin.some((term) => namesTerm(lower, term)) &&
+    places.destination.some((term) => namesTerm(lower, term))
+  );
+}
+
+function sentencesIn(text: string): string[] {
+  return text.split(/(?<=[.!?])\s+|\n+/).filter((s) => s.trim().length > 0);
+}
+
+/** One sentence (or item) that asserts an effect, or relates both places, needs a linking citation. */
+function needsLinkCitation(text: string, places: ImpactPlaces | undefined): boolean {
+  return assertsImpact(text) || namesBothPlaces(text, places);
+}
+
+/** Does any sentence of the text assert an effect, or relate both places? */
+export function relatesPlaces(text: string | undefined, places?: ImpactPlaces): boolean {
+  return sentencesIn(text ?? '').some((sentence) => needsLinkCitation(sentence, places));
+}
+
 /** True when the item cites one of the citable (linking) reports. */
 function citesAny(item: unknown, citable: ReadonlySet<string> | undefined): boolean {
   const ids = (item as Record<string, unknown> | null)?.['sourceArticleIds'];
@@ -136,11 +178,13 @@ function citesAny(item: unknown, citable: ReadonlySet<string> | undefined): bool
 export function withoutImpactClaims<T extends object>(
   analysis: T,
   citable?: ReadonlySet<string>,
+  places?: ImpactPlaces,
 ): { analysis: T; removed: number } {
   let removed = 0;
   const keep = (item: unknown, key: string) => {
     const text = (item as Record<string, unknown> | null)?.[key];
-    const bad = typeof text === 'string' && assertsImpact(text) && !citesAny(item, citable);
+    const bad =
+      typeof text === 'string' && needsLinkCitation(text, places) && !citesAny(item, citable);
     if (bad) removed += 1;
     return !bad;
   };
@@ -198,14 +242,15 @@ export function impactSummaryCited(
     | ReadonlyArray<{ readonly text: string; readonly sourceArticleIds: readonly string[] }>
     | undefined,
   citable: ReadonlySet<string>,
+  places?: ImpactPlaces,
 ): boolean {
-  if (!assertsImpact(summary)) return true;
+  if (!relatesPlaces(summary, places)) return true;
   if (statements === undefined || statements.length === 0) return false;
   let rest = summary ?? '';
   for (const statement of statements) {
-    if (!assertsImpact(statement.text)) continue;
+    if (!needsLinkCitation(statement.text, places)) continue;
     if (!statement.sourceArticleIds.some((id) => citable.has(id))) return false;
     rest = rest.split(statement.text).join(' ');
   }
-  return !assertsImpact(rest);
+  return !relatesPlaces(rest, places);
 }

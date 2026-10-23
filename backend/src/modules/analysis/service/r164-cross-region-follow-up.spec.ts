@@ -12,10 +12,59 @@ import {
   bodyAssertsEffectOf,
   impactSummaryCited,
   readFollowUpGeography,
+  relatesPlaces,
   withoutImpactClaims,
   withoutRejectedPlaces,
 } from '../query/follow-up-impact.util';
 import { buildEvidenceReferences } from '../prompt/build-analysis-prompt.util';
+
+describe('Politics LX-1 · a sentence naming both places needs a linking citation, whatever its verb (pure)', () => {
+  const places = { origin: ['gaza'], destination: ['kenya', 'kenyan'] };
+
+  it.each([
+    'The Gaza war raised freight costs for Kenyan importers.',
+    'Kenya tea exports suffered amid the Gaza war.',
+    'Kenya pays more for fuel since the Gaza war began.',
+  ])('relates both places: %p', (sentence) => {
+    expect(relatesPlaces(sentence, places)).toBe(true);
+  });
+
+  it('one side only, or a place name inside another word, relates nothing', () => {
+    expect(relatesPlaces("Kenya's energy regulator raised pump prices on Friday.", places)).toBe(
+      false,
+    );
+    expect(relatesPlaces('The Gaza ceasefire held for a third day.', places)).toBe(false);
+    expect(relatesPlaces('Gazaland reports rain. Kenyanite is a mineral.', places)).toBe(false);
+  });
+
+  it('two places in DIFFERENT sentences do not relate them', () => {
+    expect(
+      relatesPlaces('The Gaza ceasefire held. Kenya raised pump prices in October.', places),
+    ).toBe(false);
+  });
+
+  it('list items naming both places survive only when citing a linking report', () => {
+    const analysis = {
+      keyFacts: [
+        { claim: 'Kenya tea exports suffered amid the Gaza war.', sourceArticleIds: ['g1'] },
+        { claim: 'Kenya tea exports suffered amid the Gaza war.', sourceArticleIds: ['link'] },
+        { claim: 'Kenya raised pump prices in its October review.', sourceArticleIds: ['k1'] },
+      ],
+    };
+    const { analysis: out } = withoutImpactClaims(analysis, new Set(['link']), places);
+    expect(out.keyFacts.map((f) => f.sourceArticleIds[0])).toEqual(['link', 'k1']);
+  });
+
+  it('a summary relating both places is cited only through a statement citing a link', () => {
+    const s = 'Kenya pays more for fuel since the Gaza war began.';
+    expect(
+      impactSummaryCited(s, [{ text: s, sourceArticleIds: ['g1'] }], new Set(['link']), places),
+    ).toBe(false);
+    expect(
+      impactSummaryCited(s, [{ text: s, sourceArticleIds: ['link'] }], new Set(['link']), places),
+    ).toBe(true);
+  });
+});
 
 describe('Politics RV-12a/b/c · effect lexicon and same-sentence linking (pure)', () => {
   it.each([

@@ -549,6 +549,8 @@ const EN: AskR2Strings = {
       DISPUTED: 'Disputed',
       NOT_VERIFIED: 'Not verified',
       COVERAGE_INCOMPLETE: 'Not verified — coverage incomplete',
+      /* CTO finishing order 23 Oct: cause-neutral, distinct from "Not verified" */
+      UNASSESSED: 'Not assessed',
     },
   },
   limitedTitle: 'Search was limited',
@@ -902,6 +904,7 @@ const PL: AskR2Strings = {
       DISPUTED: 'Sporne',
       NOT_VERIFIED: 'Niezweryfikowane',
       COVERAGE_INCOMPLETE: 'Niezweryfikowane — niepełne pokrycie',
+      UNASSESSED: 'Nieocenione',
     },
   },
   limitedTitle: 'Wyszukiwanie było ograniczone',

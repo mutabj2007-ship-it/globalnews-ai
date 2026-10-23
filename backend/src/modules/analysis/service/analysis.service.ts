@@ -212,6 +212,7 @@ import {
   type AnalyticalDomain,
 } from '../query/detect-analytical-domains.util';
 import {
+  COUNTRY_DEMONYMS_BY_ISO3,
   scoreCountryRelevance,
   resolveCountriesByDemonym,
 } from '../../news/country/country-relevance.util';
@@ -262,6 +263,7 @@ import {
   assertsImpact,
   bodyAssertsEffectOf,
   impactSummaryCited,
+  relatesPlaces,
   readFollowUpGeography,
   withoutImpactClaims,
   withoutRejectedPlaces,
@@ -4897,16 +4899,34 @@ export class AnalysisService {
                 impact.state === 'LINKING_REPORT_FOUND'
                   ? new Set(impact.linkingReportIds ?? [])
                   : undefined;
-              const lists = withoutImpactClaims(analysisResult, citable);
+              /* Politics LX-1 — a sentence naming both places needs the same citation, whatever its verb */
+              const places =
+                crossRegionImpact === undefined
+                  ? undefined
+                  : {
+                      origin: crossRegionImpact.originTerms,
+                      destination: crossRegionImpact.destination.flatMap((country) => [
+                        country.name.toLowerCase(),
+                        ...(COUNTRY_DEMONYMS_BY_ISO3[country.iso3] ?? []).map((d) =>
+                          d.toLowerCase(),
+                        ),
+                      ]),
+                    };
+              const lists = withoutImpactClaims(analysisResult, citable, places);
               analysisResult = lists.analysis;
               const briefCited =
                 citable !== undefined &&
-                impactSummaryCited(analysis.summary, analysisResult.summaryStatements, citable);
+                impactSummaryCited(
+                  analysis.summary,
+                  analysisResult.summaryStatements,
+                  citable,
+                  places,
+                );
               if (
                 !briefCited &&
-                (assertsImpact(analysis.summary) || assertsImpact(analysis.headline))
+                (relatesPlaces(analysis.summary, places) || relatesPlaces(analysis.headline, places))
               ) {
-                if (assertsImpact(analysis.headline))
+                if (relatesPlaces(analysis.headline, places))
                   analysisResult = { ...analysisResult, headline: '' };
                 briefVerdict = {
                   ...briefVerdict,
