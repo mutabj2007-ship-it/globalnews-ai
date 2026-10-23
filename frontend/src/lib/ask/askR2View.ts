@@ -394,8 +394,10 @@ export function askR2View(
       retrieval != null && rightsRefusedOnly(retrieval, sourceCount)
         ? `${checkedAt ?? '—'} · ${askRightsRefusalStrings(locale).chip}`
         : /* Politics F-1 (a66972b review) — reports were found and ALL withheld for rights: never
-             "0 matching reports". The same qualified line Search activity shows for the same fact. */
-          retrieval != null && rightsWithheldTotal(retrieval, sourceCount)
+             "0 matching reports". The same qualified line Search activity shows for the same fact.
+             Politics CD-3b (fa15e60 review) — only on a COMPLETE search: with a lane down the
+             incomplete-search line (freshness.limited) wins, as the backend's retrievalRightsWithheld. */
+          retrieval != null && !searchLimited && rightsWithheldTotal(retrieval, sourceCount)
           ? `${checkedAt ?? '—'} · ${askProgressStrings(locale).rightsWithheld(retrieval.rightsExcluded?.count ?? 0)}`
           : fill(searchLimited ? s.freshness.limited : s.freshness.zero, checkedAt);
   else if (badge === 'rec') freshness = s.freshness.retainedRecord;

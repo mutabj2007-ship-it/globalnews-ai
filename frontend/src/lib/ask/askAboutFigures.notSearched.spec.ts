@@ -117,6 +117,30 @@ describe('"About this answer" never shows search figures when nothing was search
     },
   );
 
+  /* Politics CD-3b (fa15e60 review) — mixed: one lane's reports all withheld, another lane down */
+  it.each(ASK_PROGRESS_LOCALES)(
+    '%s: withheld + a lane down keeps the incomplete-search line, never the rights line alone or "0 matching"',
+    (locale) => {
+      const mixed = base({
+        retrievalContext: {
+          dataMode: 'unavailable',
+          providers: ['rss-feeds'],
+          articlesRetrieved: 0,
+          rightsExcluded: { count: 2, reasons: { SOURCE_RIGHTS_NOT_CLEARED: 2 } },
+          providerFailures: [{ providerId: 'gnews', kind: 'rate-limited' }],
+        },
+      });
+      const s = askR2Strings(locale as never);
+      const freshness = askR2View(mixed, s, locale as never).freshness;
+      const limitedTail = s.freshness.limited.replace(/^.*\{when\}/, '').trim();
+      expect(freshness).toContain(limitedTail);
+      expect(freshness).not.toContain(askProgressStrings(locale).rightsWithheld(2));
+      expect(freshness).not.toContain(s.freshness.zero.replace(/^.*\{when\}/, '').trim());
+      /* the figure itself stays suppressed (retrievalFiguresWithheld unchanged) */
+      expect(aboutRetrievalFigures(mixed)).toBeNull();
+    },
+  );
+
   it('a genuine outage keeps its figures (a search was attempted)', () => {
     const p = base({
       retrievalContext: {
