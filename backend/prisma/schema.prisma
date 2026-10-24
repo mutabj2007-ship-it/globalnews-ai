@@ -35,6 +35,17 @@ model Article {
   relevanceScore  Int?
   confidenceScore Int?
 
+  /// CTO R132 (B3) — ACQUISITION SNAPSHOT, written once at insert and never in
+  /// an upsert's `update:` (immutable like `fetchedAt`); never re-derived from
+  /// today's registry. NULL is the honest value for every row stored before it.
+  /// The item's own credited creators, ", "-joined; NULL = not recorded, never "no author".
+  authorName String?
+  /// CTO R132 — the per-source licence id the item was acquired under (FeedSourceLicence.id).
+  licenseId  String?
+  /// CTO R132 — that licence's reference (FeedSourceLicence.reference): a URL
+  /// for CC BY, a statutory citation (not a URL) for the PL PSI Act.
+  licenseUrl String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
