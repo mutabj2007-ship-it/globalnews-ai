@@ -42,6 +42,7 @@ export type CoverageLeadsState =
   | 'NOT_AUTHORIZED'
   | 'SUPPRESSED'
   | 'NO_PLACE'
+  | 'MULTI_PLACE'
   | 'CAPACITY'
   | 'UNAVAILABLE'
   | 'NONE'

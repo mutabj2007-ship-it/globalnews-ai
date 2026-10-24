@@ -3,6 +3,7 @@ import {
   COUNTRY_ALIASES_BY_ISO3,
   getCuratedCityNames,
   normalizeGeographicLookupKey,
+  resolveCountryByCity,
 } from '@globalnews-ai/shared';
 
 /*
@@ -102,37 +103,78 @@ export type LeadKeywords =
       readonly gdeltQuery: string;
     }
   | { readonly kind: 'NO_PLACE' }
+  | { readonly kind: 'MULTI_PLACE' }
   | { readonly kind: 'SUPPRESSED' };
 
+/*
+  EA R168 (A) — places that are NOT countries but whose names contain a country's name. GDELT's
+  phrase search for "niger" also finds the Niger Delta (Nigeria), "mexico" finds New Mexico,
+  "ireland" finds Northern Ireland, "jersey" finds New Jersey. In a question they are masked (never
+  read as the country); as a SENT name, a country contained in one is never sent.
+  (Follow-up, not relied on: GDELT's minus operator could keep Sudan/Niger/Mexico with exclusions
+  once its behaviour is verified; until then such places fail closed to zero leads.)
+*/
+const NON_COUNTRY_CONTAINERS: readonly string[] = [
+  'niger delta',
+  'niger river',
+  'new mexico',
+  'new jersey',
+  'northern ireland',
+];
+
 interface PlaceEntry {
-  readonly key: string; // lowercase lookup form
+  readonly key: string; // normalized lookup form
   readonly sent: string; // gazetteer spelling sent to GDELT
+  readonly iso3: string;
+  readonly isCity: boolean;
 }
 
 let placeIndex: readonly PlaceEntry[] | null = null;
 
 function places(): readonly PlaceEntry[] {
   if (placeIndex !== null) return placeIndex;
-  const entries = new Map<string, string>();
   const key = normalizeGeographicLookupKey;
-  for (const country of COUNTRIES) entries.set(key(country.name), country.name);
+  const entries = new Map<string, PlaceEntry>();
+  const put = (lookup: string, sent: string, iso3: string, isCity: boolean) =>
+    entries.set(key(lookup), { key: key(lookup), sent, iso3, isCity });
+  for (const country of COUNTRIES) put(country.name, country.name, country.iso3, false);
   for (const [alias, iso3] of Object.entries(COUNTRY_ALIASES_BY_ISO3)) {
     const country = COUNTRIES.find((c) => c.iso3 === iso3);
     /* aliases of 4+ letters only: "us", "uk", "drc" stay out — "us" is a pronoun */
-    if (country !== undefined && alias.length >= 4) entries.set(key(alias), country.name);
+    if (country !== undefined && alias.length >= 4) put(alias, country.name, iso3, false);
   }
-  for (const city of getCuratedCityNames()) entries.set(key(city), city);
-  for (const ambiguous of AMBIGUOUS_PLACE_NAMES) entries.delete(ambiguous);
-  /* longest first, so "south sudan" wins over "sudan" and "papua new guinea" over "guinea" */
-  placeIndex = [...entries]
-    .map(([key, sent]) => ({ key, sent }))
-    .sort((a, b) => b.key.length - a.key.length);
+  for (const city of getCuratedCityNames()) {
+    const iso3 = resolveCountryByCity(city)?.iso3;
+    if (iso3 !== undefined) put(city, city, iso3, true);
+  }
+  /*
+    EA R168 P1 — ambiguity is judged on the name SENT, never on the reader's spelling: an alias of
+    an ambiguous place ("congo brazzaville" → "Congo") is dropped with it. A sent name that sits
+    word-bounded inside ANOTHER country's name ("republic of the congo" in the DRC's, "sudan" in
+    "south sudan", "guinea" in "papua new guinea") or inside a non-country container is not one
+    place to a phrase search either. Such a place looks nothing up: zero leads, never mixed ones.
+  */
+  const containers = [...COUNTRIES.map((c) => key(c.name)), ...NON_COUNTRY_CONTAINERS];
+  const ambiguous = (sent: string): boolean => {
+    const s = key(sent);
+    return (
+      AMBIGUOUS_PLACE_NAMES.has(s) ||
+      containers.some((other) => other !== s && containsTerm(other, s) >= 0)
+    );
+  };
+  for (const [lookup, entry] of [...entries]) if (ambiguous(entry.sent)) entries.delete(lookup);
+  /* longest first, so "south sudan" is read (and masked) before anything shorter inside it */
+  placeIndex = [...entries.values()].sort((a, b) => b.key.length - a.key.length);
   return placeIndex;
 }
 
-function containsTerm(haystack: string, term: string): number {
+function termPattern(term: string): RegExp {
   const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, 'u').exec(haystack);
+  return new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, 'gu');
+}
+
+function containsTerm(haystack: string, term: string): number {
+  const match = termPattern(term).exec(haystack);
   return match === null ? -1 : match.index;
 }
 
@@ -140,15 +182,27 @@ function containsTerm(haystack: string, term: string): number {
 export function deriveLeadKeywords(question: string): LeadKeywords {
   const text = question.slice(0, 500);
   if (SENSITIVE_MARKERS.some((pattern) => pattern.test(text))) return { kind: 'SUPPRESSED' };
-  const lower = normalizeGeographicLookupKey(text);
-  let place: string | null = null;
+  let lower = normalizeGeographicLookupKey(text);
+  for (const container of NON_COUNTRY_CONTAINERS)
+    lower = lower.replace(termPattern(container), ' ');
+  /*
+    EA R168 (C) — every place named, longest first, each match masked so a nested name is not
+    counted twice ("south sudan" never also counts "sudan"). Two DIFFERENT countries named → nothing
+    is looked up (MULTI_PLACE): picking one by string length would put Ukraine leads under a Kenya
+    answer. A city and its own country are one place (Goma + DR Congo = COD); the country is sent.
+  */
+  const found: PlaceEntry[] = [];
+  let rest = lower;
   for (const entry of places()) {
-    if (containsTerm(lower, entry.key) >= 0) {
-      place = entry.sent;
-      break;
+    const pattern = termPattern(entry.key);
+    if (pattern.test(rest)) {
+      found.push(entry);
+      rest = rest.replace(termPattern(entry.key), ' ');
     }
   }
-  if (place === null) return { kind: 'NO_PLACE' };
+  if (found.length === 0) return { kind: 'NO_PLACE' };
+  if (new Set(found.map((f) => f.iso3)).size > 1) return { kind: 'MULTI_PLACE' };
+  const place = (found.find((f) => !f.isCity) ?? found[0]).sent;
   const topics: string[] = [];
   for (const word of lower.split(/[^\p{L}]+/u)) {
     const topic = Object.prototype.hasOwnProperty.call(LEAD_TOPICS, word)

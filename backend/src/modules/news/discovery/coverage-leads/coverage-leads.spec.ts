@@ -96,6 +96,63 @@ describe('coverage leads · privacy: only closed vocabularies leave the server (
     },
   );
 
+  it.each([
+    'Republic of the Congo floods',
+    'News from Congo-Brazzaville',
+    'Congo Brazzaville economy',
+    'What happened in Sudan this week?',
+    'Guinea election news',
+    'Georgia protests today',
+    'Oil spill in the Niger Delta',
+    'New Mexico wildfires',
+    'Northern Ireland protests',
+    'New Jersey election',
+  ])('EA R168 P1/(A) · an ambiguous or contained place is never looked up: %p', (question) => {
+    expect(deriveLeadKeywords(question)).toEqual({ kind: 'NO_PLACE' });
+  });
+
+  it.each([
+    ['South Sudan floods', 'south sudan'],
+    ['Papua New Guinea election', 'papua new guinea'],
+    ['Nigeria inflation', 'nigeria'],
+    ['Kinshasa protests', 'kinshasa'],
+    ['Goma fighting in DR Congo', 'dr congo'],
+  ])('EA R168 · the unambiguous place still works: %p', (question, place) => {
+    const k = deriveLeadKeywords(question);
+    expect(k.kind === 'QUERY' ? k.place.toLowerCase() : k.kind).toBe(place);
+  });
+
+  it.each([
+    'How does the war in Ukraine affect food prices in Kenya?',
+    'Rwanda and DR Congo talks',
+    'Nairobi and Kampala protests',
+  ])(
+    'EA R168 (C) · two different countries named → MULTI_PLACE, nothing looked up: %p',
+    (question) => {
+      expect(deriveLeadKeywords(question)).toEqual({ kind: 'MULTI_PLACE' });
+    },
+  );
+
+  it('EA R168 · no query ever sends a bare "congo", "sudan", "guinea", "georgia", "niger" or "mexico"', () => {
+    for (const q of [
+      'Congo',
+      'Republic of Congo',
+      'Sudan',
+      'Guinea',
+      'Georgia',
+      'Congo Brazzaville',
+      'Niger',
+      'Mexico',
+      'Ireland',
+    ]) {
+      const k = deriveLeadKeywords(q);
+      if (k.kind === 'QUERY')
+        expect(k.gdeltQuery).not.toMatch(
+          /^"(congo|sudan|guinea|georgia|niger|mexico|ireland|republic of the congo)"/,
+        );
+    }
+  });
+
   it('the long DR Congo name is one place, sent in the gazetteer spelling', () => {
     const k = deriveLeadKeywords('Floods in the Democratic Republic of the Congo');
     expect(k.kind).toBe('QUERY');
