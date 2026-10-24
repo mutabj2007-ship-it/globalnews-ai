@@ -11,6 +11,11 @@ import { COVERAGE_LEADS_UI_ENABLED } from '@/lib/ask/coverageLeadsActivation';
 import { formatUtc } from '@/lib/ask/askR2View';
 import { isolatedAuto } from '@/lib/ask/askDirection';
 
+/* H R168 E5 — the accessible name is the L-approved visible text without its arrow glyph */
+export function linkName(visible: string): string {
+  return visible.replace(/\s*[↗↖]\s*$/u, '');
+}
+
 /* H R168 E1 — every control on this panel is a 44 px touch target */
 const TAP = 'inline-flex min-h-[44px] items-center underline underline-offset-2';
 
@@ -63,8 +68,13 @@ export function AskCoverageLeadsList({
               {lead.outlet}
             </span>
             {seen !== null && (
-              <span data-ask="coverage-lead-seen" className="text-[var(--ask-read-ink3,#8299b4)]" {...isolatedAuto()}>
-                {s.seenBy(seen)}
+              <span data-ask="coverage-lead-seen" className="text-[var(--ask-read-ink3,#8299b4)]">
+                {/* L R168 §1.1 — the label, then the time as its own isolated run (never a control
+                    character in the string); every locale puts {time} last (pinned by spec) */}
+                {s.seenBy('').trimEnd()}{' '}
+                <span data-ask="coverage-lead-seen-time" {...isolatedAuto()}>
+                  {seen}
+                </span>
               </span>
             )}
             <a
@@ -73,7 +83,7 @@ export function AskCoverageLeadsList({
               target="_blank"
               rel={`${EXTERNAL_LINK_REL} nofollow`}
               referrerPolicy="no-referrer"
-              aria-label={`${s.readOriginalAria} — ${lead.outlet} (${s.opensOutlet})`}
+              aria-label={`${linkName(s.readOriginal)} — ${lead.outlet} (${s.opensOutlet})`}
               className={TAP}
             >
               {s.readOriginal}

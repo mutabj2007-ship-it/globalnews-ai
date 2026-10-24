@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, statSync } from 'fs';
 import { join, resolve } from 'path';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { AskCoverageLeads, AskCoverageLeadsList, wantsCoverageLeads } from './AskCoverageLeads';
+import { AskCoverageLeads, AskCoverageLeadsList, linkName, wantsCoverageLeads } from './AskCoverageLeads';
 import { COVERAGE_LEADS_UI_ENABLED } from '@/lib/ask/coverageLeadsActivation';
 import { safeLeadHref, sanitizeCoverageLeads, type CoverageLeadsResult } from '@/lib/api/coverageLeadsApi';
 import { askCoverageLeadsStrings } from '@/lib/ask/askCoverageLeadsStrings';
@@ -165,15 +165,40 @@ describe('CTO R168 · what the reader sees after asking', () => {
   });
 });
 
+describe('L R168 · no direction-control character in any coverage-leads string', () => {
+  /* written as escapes, never as literal characters */
+  const BIDI_CONTROL = /[\u200E\u200F\u202A-\u202E\u2066-\u2069\u061C]/u;
+
+  it('positive control: the guard finds a planted control character', () => {
+    expect(BIDI_CONTROL.test(`x${String.fromCharCode(0x200f)}y`)).toBe(true);
+  });
+
+  it.each(['en', 'pl', 'fr', 'de', 'es', 'pt', 'ar'])('%s carries none', (locale) => {
+    const s = askCoverageLeadsStrings(locale);
+    for (const value of [s.heading, s.note, s.readOriginal, s.opensOutlet, s.credit, s.show, s.loading, s.none, s.unavailable, s.seenBy('X')]) {
+      expect(BIDI_CONTROL.test(value)).toBe(false);
+    }
+  });
+
+  it('Arabic: the heading uses the governed "not verified" lexeme and the link glyph points up-left', () => {
+    const s = askCoverageLeadsStrings('ar');
+    expect(s.heading).toContain('غير مُتحقَّق منها');
+    expect(s.readOriginal.endsWith('↖')).toBe(true);
+  });
+});
+
 describe('CTO R168 · seven locales', () => {
   it.each(['en', 'pl', 'fr', 'de', 'es', 'pt', 'ar'])('%s carries every string, and "seen" never reads as publication', (locale) => {
     const s = askCoverageLeadsStrings(locale);
-    for (const value of [s.heading, s.note, s.readOriginal, s.readOriginalAria, s.opensOutlet, s.credit, s.show, s.loading, s.none, s.unavailable, s.seenBy('X')]) {
+    for (const value of [s.heading, s.note, s.readOriginal, s.opensOutlet, s.credit, s.show, s.loading, s.none, s.unavailable, s.seenBy('X')]) {
       expect(value.trim().length).toBeGreaterThan(0);
     }
     expect(s.seenBy('X')).toContain('GDELT');
     expect(s.credit).toContain('GDELT');
-    expect(s.readOriginalAria).not.toContain('↗');
+    expect(linkName(s.readOriginal)).not.toMatch(/[↗↖]/u);
+    expect(linkName(s.readOriginal).length).toBeGreaterThan(0);
+    /* the markup renders the label then the time: every locale must put {time} last */
+    expect(s.seenBy('§TIME§').endsWith('§TIME§')).toBe(true);
     if (locale !== 'en') expect(s.heading).not.toBe(askCoverageLeadsStrings('en').heading);
   });
 });
