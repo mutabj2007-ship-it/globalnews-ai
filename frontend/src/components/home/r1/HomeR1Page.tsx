@@ -14,6 +14,7 @@ import { HomeR1World60 } from './HomeR1World60';
 import { HomeR1Stories } from './HomeR1Stories';
 import { HomeR1Bridge } from './HomeR1Sections';
 import { HomeR1Compare } from './HomeR1Compare';
+import { HomeR1Credited } from './HomeR1Credited';
 import { StageBHost } from './stageb/StageBHost';
 
 /**
@@ -41,6 +42,7 @@ export function HomeR1Page({
   whats,
   dataMode,
   notSearched = false,
+  credited = [],
   theme,
 }: {
   readonly language: LanguageCode;
@@ -50,6 +52,8 @@ export function HomeR1Page({
   readonly dataMode: NewsDataMode | null;
   /** CTO #95 §4 — HomeFeed.notSearchedRightsUncleared, the backend's typed reason */
   readonly notSearched?: boolean;
+  /** E1 V7 — HomeFeed.credited: rendered only with each item's full licence credit line */
+  readonly credited?: readonly NewsArticle[];
   /** The reader’s Light / Dark / System choice from the first-party cookie (server-read). */
   readonly theme: ThemePreference;
 }): JSX.Element {
@@ -91,6 +95,7 @@ export function HomeR1Page({
                     </div>
                   </div>
                   <div className="mt-10 flex flex-col gap-10">
+                    <HomeR1Credited articles={credited} language={language} />
                     <HomeR1Bridge language={language} />
                     {/* PHONE-FIRST HOME CORRECTION R1 — Explore intelligence removed from Home (PO ruling);
                         HomeR1Explore and the module routes remain. */}

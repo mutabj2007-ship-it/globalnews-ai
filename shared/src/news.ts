@@ -294,6 +294,18 @@ export interface NewsArticle {
    * populated by inference from sourceName.
    */
   sourceAuthorityClass?: OfficialSourceClass;
+
+  /**
+   * E1 V7 C-B1 — licence attribution, set ONLY from an admission verdict on the publisher's own
+   * page (never from a feed's dc:creator). Present together or not at all. A source whose registry
+   * row obliges attribution is WITHHELD on every path when any of the three is missing, so a reader
+   * never sees an uncredited item from it (CC BY 3.0 terminates on breach with no cure period).
+   */
+  authorName?: string;
+  /** e.g. 'CC-BY-3.0' */
+  licenseId?: string;
+  /** the licence deed URL for that exact version */
+  licenseUrl?: string;
 }
 
 /**
@@ -390,6 +402,13 @@ export type ProviderFailureKind =
 /** Standard envelope returned by every news-fetching endpoint. */
 export interface NewsResponse {
   articles: NewsArticle[];
+  /**
+   * E1 V7 C-B1 — articles whose licence obliges attribution (Global Voices, CC BY 3.0), carried
+   * ONLY here and never in `articles`. The reader-rights interceptor withholds such an article
+   * anywhere else in any reader response, so it can reach a reader only through a surface built to
+   * render its credit (author, publisher, link to the original, licence link, change notice).
+   */
+  creditedArticles?: NewsArticle[];
   totalResults: number;
 
   /** IDs of providers that successfully contributed results. */

@@ -156,7 +156,8 @@ async function services(opts: {
       totalBudgetMs: ANALYSIS_TOTAL_BUDGET_MS,
       cacheTtlSeconds: 0,
       openAiApiKey: undefined,
-      rightsAudience: 'TEST_FIXTURE' as const, openAiModel: 'fixture',
+      rightsAudience: 'TEST_FIXTURE' as const,
+      openAiModel: 'fixture',
       executionMode: 'development' as const,
       retryAttempts: 1,
       retryBaseDelayMs: 1,
@@ -238,7 +239,11 @@ describe('PUBLIC BETA HARDENING R1B — broad global headlines, live first', () 
     /* ONE local read, bounded by count and by the 24-hour age, with no invented topic */
     expect(persistence.findRecent).toHaveBeenCalledTimes(1);
     /* P0 #86 / #87 F-1 — held rows are handed on to be withheld AND counted at the rights point */
-    expect(persistence.findRecent).toHaveBeenCalledWith({ limit: 40, maxAgeMinutes: 1440, retainPublisherRightsHeld: true });
+    expect(persistence.findRecent).toHaveBeenCalledWith({
+      limit: 40,
+      maxAgeMinutes: 1440,
+      retainPublisherRightsHeld: true,
+    });
     expect(result.articles.map((x) => x.id).sort()).toEqual(['r1', 'r2']);
     expect(result.retrievalContext?.dataMode).toBe('cached');
     expect(result.retrievalContext?.fallbackReason).toBe('provider-error');
@@ -268,8 +273,16 @@ describe('PUBLIC BETA HARDENING R1B — broad global headlines, live first', () 
 
   it('6 · the six-feed registry is never labelled complete global coverage', async () => {
     /* the registry is six regional feeds (RW, KE, PL) — not the world */
-    expect(FEED_SOURCES).toHaveLength(6);
-    expect([...new Set(FEED_SOURCES.map((f) => f.countryCode))].sort()).toEqual(['KE', 'PL', 'RW']);
+    const regional = FEED_SOURCES.filter((f) => f.scope !== 'INTERNATIONAL');
+    expect(regional).toHaveLength(6);
+    expect([...new Set(regional.map((f) => f.countryCode))].sort()).toEqual(['KE', 'PL', 'RW']);
+    /* E1 V7 — the one international row is display-only: never a headline INPUT, so never "the world" */
+    expect(
+      FEED_SOURCES.filter((f) => f.scope === 'INTERNATIONAL').map((f) => [
+        f.sourceId,
+        f.displayOnly,
+      ]),
+    ).toEqual([['feed:globalvoices', true]]);
     /* GNews HEALTHY but empty, feeds answer: still LIMITED — a fallback-tier-only set is never LIVE */
     const { ask, inputs } = await services({ gnews: () => [], feeds: () => FEEDS });
     const result = await ask();

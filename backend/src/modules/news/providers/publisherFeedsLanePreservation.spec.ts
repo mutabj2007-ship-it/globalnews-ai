@@ -122,7 +122,10 @@ describe('PUBLISHER FEEDS LANE — presence (guards against a silent orphan re-r
   });
 
   it('the lane is shipped off in .env.example, both switches', () => {
-    const env = readFileSync(join(PROVIDERS_DIR, '..', '..', '..', '..', '..', '.env.example'), 'utf8');
+    const env = readFileSync(
+      join(PROVIDERS_DIR, '..', '..', '..', '..', '..', '.env.example'),
+      'utf8',
+    );
 
     expect(env).toContain('RSS_FEEDS_ENABLED=false');
     expect(env).toMatch(/^RSS_FEED_SOURCES=\s*$/m);
@@ -164,9 +167,21 @@ describe('PUBLISHER FEEDS LANE — the six recovered publishers, by identity', (
   });
 
   it('the registry has exactly these six and no silently added seventh', () => {
-    expect(FEED_SOURCES.map((source) => source.sourceId).sort()).toEqual(
-      EXPECTED.map((e) => e.sourceId).slice().sort(),
+    expect(
+      FEED_SOURCES.filter((source) => source.scope !== 'INTERNATIONAL')
+        .map((source) => source.sourceId)
+        .sort(),
+    ).toEqual(
+      EXPECTED.map((e) => e.sourceId)
+        .slice()
+        .sort(),
     );
+    /* E1 V7 — the one deliberate addition, by name: the international display-only Global Voices row */
+    expect(
+      FEED_SOURCES.filter((source) => source.scope === 'INTERNATIONAL').map(
+        (source) => source.sourceId,
+      ),
+    ).toEqual(['feed:globalvoices']);
   });
 
   it('the verified-and-rejected candidates are retained so they are not re-proposed', () => {
@@ -225,9 +240,13 @@ describe('PUBLISHER FEEDS LANE — ships disabled, and nothing can switch it on 
   /* E1-TAA-1 — the MECHANICS on a synthetic CLEARED copy (no live row is CLEARED today) */
   it('naming an id activates exactly that id, and only through `enabled`', () => {
     const cleared = FEED_SOURCES.map((f) =>
-      f.sourceId === 'feed:ktpress-rw' ? { ...f, rights: { ...f.rights, state: 'CLEARED' as const } } : f,
+      f.sourceId === 'feed:ktpress-rw'
+        ? { ...f, rights: { ...f.rights, state: 'CLEARED' as const } }
+        : f,
     );
-    expect(resolveActiveFeedSources(FEED_SOURCES, 'feed:ktpress-rw').sources).toEqual([]); /* real state: refused */
+    expect(resolveActiveFeedSources(FEED_SOURCES, 'feed:ktpress-rw').sources).toEqual(
+      [],
+    ); /* real state: refused */
     const selection = resolveActiveFeedSources(cleared, 'feed:ktpress-rw');
 
     expect(selection.sources).toHaveLength(1);
@@ -266,10 +285,17 @@ describe('PUBLISHER FEEDS LANE — corroboration class is declared per feed, nev
   });
 
   it('every registry entry is classified, and nothing else is', () => {
-    expect(classifiedFeedSources()).toHaveLength(FEED_SOURCES.length);
+    /*
+      E1 V7 — a DISPLAY-ONLY row is deliberately unclassified: it is never AI_INPUT, so it can never be
+      counted as corroboration, and absence is this authority's safe answer.
+    */
+    const corroborating = FEED_SOURCES.filter((source) => source.displayOnly !== true);
+    expect(classifiedFeedSources()).toHaveLength(corroborating.length);
     expect(CLASSIFIED_FEED_IDS.slice().sort()).toEqual(
-      FEED_SOURCES.map((source) => source.sourceId).sort(),
+      corroborating.map((source) => source.sourceId).sort(),
     );
+    expect(corroborationClassForFeed('feed:globalvoices')).toBeUndefined();
+    expect(contributesJournalisticCorroboration('feed:globalvoices')).toBe(false);
   });
 });
 

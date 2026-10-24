@@ -12,7 +12,10 @@ import {
  * canonical accounting, and the committed artefact matches the registries.
  */
 describe('T1 · coverage check (whole-product matrix input)', () => {
-  const committed = readFileSync(join(__dirname, '..', '..', '..', '..', COVERAGE_CHECK_OUTPUT), 'utf-8');
+  const committed = readFileSync(
+    join(__dirname, '..', '..', '..', '..', COVERAGE_CHECK_OUTPUT),
+    'utf-8',
+  );
 
   it('the committed coverage-check.json is exactly what the registries produce (regenerate on drift)', () => {
     expect(committed).toBe(renderCoverageCheck());
@@ -49,9 +52,15 @@ describe('T1 · coverage check (whole-product matrix input)', () => {
     expect(maximal.totals.coverageStates.COVERED_LOCAL).toBe(0);
     expect(maximal.totals.coverageStates.UNVERIFIED).toBe(0);
     /* E1-TAA-1 — every live feed is below CLEARED, so maximal activation is refused in full */
-    expect(maximal.feedRightsGate.refused.map((r) => r.sourceId).sort()).toEqual(
-      ['feed:cbk-ke', 'feed:gus-pl', 'feed:ktpress-rw', 'feed:standardmedia-ke', 'feed:taarifa-rw', 'feed:wp-pl'],
-    );
+    expect(maximal.feedRightsGate.refused.map((r) => r.sourceId).sort()).toEqual([
+      'feed:cbk-ke',
+      'feed:globalvoices',
+      'feed:gus-pl',
+      'feed:ktpress-rw',
+      'feed:standardmedia-ke',
+      'feed:taarifa-rw',
+      'feed:wp-pl',
+    ]);
   });
 
   it('building the check performs no HTTP request', () => {

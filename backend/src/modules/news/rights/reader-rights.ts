@@ -1,9 +1,20 @@
 import { FEED_SOURCES, type FeedSourceEntry } from '../providers/feed-source-registry';
-import { readerRightsReasons, sourceUseDecision } from './source-use-policy';
+import {
+  isAttributionObligedArticle,
+  readerRightsReasons,
+  sourceUseDecision,
+  type UseInput,
+} from './source-use-policy';
 
 /* E1 R102 S-3 — does a reason histogram carry a class that could identify a publisher? */
-const PUBLISHER_CLASSES = ['PUBLISHER_RIGHTS_HOLD', 'RIGHTS_PROHIBITED', 'RIGHTS_RESTRICTED', 'RIGHTS_NOT_CLEARED_FOR_AI'];
-const hasPublisherClass = (map: Record<string, unknown>): boolean => PUBLISHER_CLASSES.some((k) => k in map);
+const PUBLISHER_CLASSES = [
+  'PUBLISHER_RIGHTS_HOLD',
+  'RIGHTS_PROHIBITED',
+  'RIGHTS_RESTRICTED',
+  'RIGHTS_NOT_CLEARED_FOR_AI',
+];
+const hasPublisherClass = (map: Record<string, unknown>): boolean =>
+  PUBLISHER_CLASSES.some((k) => k in map);
 export { __setReaderRightsFixtureModeForTests, readerRightsEnforced } from './rights-enforcement';
 import { __setRightsTestFeeds } from './rights-enforcement';
 
@@ -55,30 +66,65 @@ export function readerRightsDecision(
   sourceId: string | null | undefined,
   feeds: readonly FeedSourceEntry[] = activeFeeds(),
   url?: string | null,
+  /* E1 V7 C-B1 — the item's own attribution; absent on a stored row, so an obliged row is withheld */
+  attribution?: Pick<UseInput, 'authorName' | 'licenseId' | 'licenseUrl'>,
 ): ReaderRightsDecision {
-  const decision = sourceUseDecision({ sourceId, url }, 'METADATA', { enforcement: 'enforce', feeds });
-  return decision.allowed ? { allowed: true, basis: decision.basis } : { allowed: false, reason: decision.reason };
+  const decision = sourceUseDecision({ sourceId, url, ...attribution }, 'METADATA', {
+    enforcement: 'enforce',
+    feeds,
+  });
+  return decision.allowed
+    ? { allowed: true, basis: decision.basis }
+    : { allowed: false, reason: decision.reason };
 }
 
 /** Splits news articles by the affirmative decision; order preserved. */
-export function partitionReaderRights<T extends { readonly sourceId?: string | null }>(
+export function partitionReaderRights<
+  T extends { readonly sourceId?: string | null } & Pick<
+    UseInput,
+    'authorName' | 'licenseId' | 'licenseUrl'
+  >,
+>(
   items: readonly T[],
   feeds: readonly FeedSourceEntry[] = activeFeeds(),
 ): { readonly allowed: T[]; readonly withheld: number } {
   const allowed: T[] = [];
   let withheld = 0;
   for (const item of items) {
-    if (readerRightsDecision(item.sourceId, feeds).allowed) allowed.push(item);
+    if (readerRightsDecision(item.sourceId, feeds, undefined, attributionOf(item)).allowed)
+      allowed.push(item);
     else withheld += 1;
   }
   return { allowed, withheld };
 }
 
 /** CTO R52 · U-1 — the fields that carry a hotlinked third-party image in reader JSON. */
-const IMAGE_KEYS: ReadonlySet<string> = new Set(['imageUrl', 'image', 'urlToImage', 'thumbnail', 'thumbnailUrl', 'heroImageUrl']);
+const IMAGE_KEYS: ReadonlySet<string> = new Set([
+  'imageUrl',
+  'image',
+  'urlToImage',
+  'thumbnail',
+  'thumbnailUrl',
+  'heroImageUrl',
+]);
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
+
+/** E1 V7 C-B1 — the one container key in which an attribution-obliged article may reach a reader. */
+export const CREDITED_ARTICLES_KEY = 'creditedArticles';
+
+/** E1 V7 C-B1 — the attribution an item carries in reader JSON (string fields only). */
+function attributionOf(item: object): Pick<UseInput, 'authorName' | 'licenseId' | 'licenseUrl'> {
+  const record = item as Record<string, unknown>;
+  const text = (key: string): string | undefined =>
+    typeof record[key] === 'string' ? (record[key] as string) : undefined;
+  return {
+    authorName: text('authorName'),
+    licenseId: text('licenseId'),
+    licenseUrl: text('licenseUrl'),
+  };
+}
 
 /**
  * A third-party ARTICLE (or a reference to one) as it appears in reader JSON: a link plus a
@@ -120,7 +166,14 @@ export function withholdThirdPartyArticles<T>(
     if (
       typeof node.sourceId === 'string' &&
       typeof node.id === 'string' &&
-      readerRightsDecision(node.sourceId, feeds, typeof node.url === 'string' ? node.url : undefined).allowed
+      /* a credited article never clears a reference: a reference cannot carry its credit */
+      !isAttributionObligedArticle(node, feeds) &&
+      readerRightsDecision(
+        node.sourceId,
+        feeds,
+        typeof node.url === 'string' ? node.url : undefined,
+        attributionOf(node),
+      ).allowed
     ) {
       clearedIds.add(node.id);
     }
@@ -129,14 +182,29 @@ export function withholdThirdPartyArticles<T>(
   collect(value, 0);
   const allowedArticle = (item: Record<string, unknown>): boolean =>
     typeof item.sourceId === 'string'
-      ? readerRightsDecision(item.sourceId, feeds, typeof item.url === 'string' ? item.url : undefined).allowed
+      ? readerRightsDecision(
+          item.sourceId,
+          feeds,
+          typeof item.url === 'string' ? item.url : undefined,
+          attributionOf(item),
+        ).allowed
       : typeof item.articleId === 'string' && clearedIds.has(item.articleId);
-  const walk = (node: unknown, depth: number): unknown => {
+  /*
+    E1 V7 C-B1 — an attribution-obliged article is admissible ONLY as a direct item of a
+    `creditedArticles` array; anywhere else in any reader response (an `articles` list, a story, an
+    analysis, a stored answer) it is withheld, so no surface that cannot render its credit receives it.
+  */
+  const placedOutsideCredit = (item: unknown, inCredited: boolean): boolean =>
+    !inCredited && isRecord(item) && isAttributionObligedArticle(item, feeds);
+  const walk = (node: unknown, depth: number, inCredited = false): unknown => {
     if (depth > 40) return node;
     if (Array.isArray(node)) {
       const out: unknown[] = [];
       for (const item of node) {
-        if (isThirdPartyArticle(item) && !allowedArticle(item)) {
+        if (
+          placedOutsideCredit(item, inCredited) ||
+          (isThirdPartyArticle(item) && !allowedArticle(item))
+        ) {
           withheld += 1;
           continue;
         }
@@ -157,11 +225,23 @@ export function withholdThirdPartyArticles<T>(
       const clearedArticle = isThirdPartyArticle(node) && allowedArticle(node);
       const out: Record<string, unknown> = {};
       for (const [key, child] of Object.entries(node)) {
-        if (isThirdPartyArticle(child) && !allowedArticle(child)) {
+        if (
+          placedOutsideCredit(child, false) ||
+          (isThirdPartyArticle(child) && !allowedArticle(child))
+        ) {
           withheld += 1;
           continue;
         }
-        if (!clearedArticle && IMAGE_KEYS.has(key) && typeof child === 'string' && /^https?:\/\//i.test(child.trim())) {
+        if (key === CREDITED_ARTICLES_KEY && Array.isArray(child)) {
+          out[key] = walk(child, depth + 1, true);
+          continue;
+        }
+        if (
+          !clearedArticle &&
+          IMAGE_KEYS.has(key) &&
+          typeof child === 'string' &&
+          /^https?:\/\//i.test(child.trim())
+        ) {
           withheld += 1;
           continue;
         }
@@ -172,7 +252,12 @@ export function withholdThirdPartyArticles<T>(
         if (key === 'rightsExcluded' && isRecord(child) && 'sourceIds' in child) {
           const { sourceIds: _withheldPublishers, ...rest } = child;
           scrubbed = true;
-          out[key] = walk(isRecord(rest.reasons) ? { ...rest, reasons: readerRightsReasons(rest.reasons as Record<string, number>) } : rest, depth + 1);
+          out[key] = walk(
+            isRecord(rest.reasons)
+              ? { ...rest, reasons: readerRightsReasons(rest.reasons as Record<string, number>) }
+              : rest,
+            depth + 1,
+          );
           continue;
         }
         /*
@@ -180,7 +265,11 @@ export function withholdThirdPartyArticles<T>(
           class. Applies to rightsExcluded.reasons, analysisStages.rightsAiInput.reasons and
           storedRightsDrops wherever they appear; a no-op when already folded.
         */
-        if ((key === 'reasons' || key === 'storedRightsDrops') && isRecord(child) && hasPublisherClass(child)) {
+        if (
+          (key === 'reasons' || key === 'storedRightsDrops') &&
+          isRecord(child) &&
+          hasPublisherClass(child)
+        ) {
           scrubbed = true;
           out[key] = readerRightsReasons(child as Record<string, number>);
           continue;

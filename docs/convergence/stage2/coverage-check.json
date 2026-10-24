@@ -73,6 +73,12 @@
         "reason": "RIGHTS_PROHIBITED",
         "rightsState": "PROHIBITED",
         "evidence": "G R10 ruling: ACTIVATION PROHIBITED on current published terms (recorded in b5ProviderDormancy.spec.ts); canonical eu27:pl:publisher-1 rightsStatus UNREVIEWED. The stricter recorded state is kept."
+      },
+      {
+        "sourceId": "feed:globalvoices",
+        "reason": "RIGHTS_NOT_CLEARED",
+        "rightsState": "UNRESOLVED",
+        "evidence": "E1 ADDENDUM-26 (V7): gate 8f9170b GO; one item per-use GO; C-GV7 discharged. CLEARED is a PO/CTO act (C-GV9) and is NOT set in code; until then this row collects nothing."
       }
     ],
     "activatableWithUnresolvedRights": []

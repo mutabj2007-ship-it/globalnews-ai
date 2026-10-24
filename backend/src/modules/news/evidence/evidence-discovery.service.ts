@@ -79,7 +79,9 @@ export class EvidenceDiscoveryService {
       FEED_SOURCES,
       this.config?.get<string>('RSS_FEED_SOURCES'),
     ).sources;
-    return active.some((feed) => iso2s.includes(feed.countryCode));
+    return active.some(
+      (feed) => feed.countryCode !== undefined && iso2s.includes(feed.countryCode),
+    );
   }
 
   /**

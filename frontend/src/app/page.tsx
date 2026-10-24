@@ -173,6 +173,7 @@ export default async function HomePage(): Promise<JSX.Element> {
         whats={[...(whats.featured === null ? [] : [whats.featured]), ...whats.inFocus, ...whats.discovery]}
         dataMode={feed.dataMode}
         notSearched={feed.notSearchedRightsUncleared}
+        credited={feed.credited ?? []}
         theme={parseThemePreference(cookies().get(THEME_COOKIE_NAME)?.value)}
       />
     );

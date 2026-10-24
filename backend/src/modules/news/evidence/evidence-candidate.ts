@@ -69,7 +69,9 @@ export function newsRoleOf(
     host !== null &&
     (host === feed.canonicalHost || host.endsWith(`.${feed.canonicalHost}`));
   if (feed !== undefined && onOwnHost) {
-    return feed.sourceType === 'OFFICIAL_SOURCE' ? 'OFFICIAL_WEB' : 'LOCAL_REPORTING';
+    if (feed.sourceType === 'OFFICIAL_SOURCE') return 'OFFICIAL_WEB';
+    /* E1 V7 §4.2 — an international outlet is never local reporting for any country */
+    return feed.scope === 'INTERNATIONAL' ? 'INTERNATIONAL_REPORTING' : 'LOCAL_REPORTING';
   }
   if (article.publishedAtBasis === 'observed') return 'AGGREGATOR';
   const family = familyOfHost(host);

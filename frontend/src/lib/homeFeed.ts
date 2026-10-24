@@ -78,6 +78,11 @@ export interface HomeFeed {
    * the backend was unreachable: "couldn't load" is then the truth.
    */
   notSearchedRightsUncleared: boolean;
+  /**
+   * E1 V7 C-B1 — the response's `creditedArticles` (licence-obliged attribution), kept OUT of every
+   * allocation above. Rendered only by HomeR1Credited, which shows each item's full credit line.
+   */
+  credited?: NewsArticle[];
 }
 
 const EMPTY_FEED: HomeFeed = {
@@ -191,6 +196,7 @@ export async function getHomeFeed(language?: LanguageCode): Promise<HomeFeed> {
       isLive: true,
       dataMode: response.dataMode,
       notSearchedRightsUncleared: feedNotSearchedRightsUncleared(response),
+      credited: Array.isArray(response.creditedArticles) ? response.creditedArticles : [],
     };
   } catch (error) {
     // eslint-disable-next-line no-console

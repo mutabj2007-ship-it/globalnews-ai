@@ -146,7 +146,7 @@ export class AdminNewsService {
       sources: FEED_SOURCES.map((source) => ({
         sourceId: source.sourceId,
         displayName: source.displayName,
-        countryCode: source.countryCode,
+        countryCode: source.countryCode ?? '',
         sourceType: source.sourceType,
         ...(source.language ? { language: source.language } : {}),
         enabled: activeFeedIds.has(source.sourceId),

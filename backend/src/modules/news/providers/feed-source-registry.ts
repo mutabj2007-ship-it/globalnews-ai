@@ -32,8 +32,29 @@ export interface FeedSourceEntry {
   readonly sourceId: string;
   /** The publisher's own name — becomes NewsArticle.sourceName. */
   readonly displayName: string;
-  /** ISO2 of the market this publisher serves. */
-  readonly countryCode: string;
+  /**
+   * ISO2 of the market this publisher serves. ABSENT exactly when `scope` is INTERNATIONAL — an
+   * international outlet serves no single market and is never local reporting for any country
+   * (E1 V7 §4.2; same shape as OfficialSourceEntry.countryCode for international organisations).
+   */
+  readonly countryCode?: string;
+  /** E1 V7 — an international publisher: role INTERNATIONAL_REPORTING, never LOCAL_REPORTING. */
+  readonly scope?: 'INTERNATIONAL';
+  /**
+   * E1 V6 — every item is admitted only by a verdict on its OWN article page
+   * (providers/article-page-admission.ts → rights/gv-v6-admission.ts). No verdict, no item.
+   */
+  readonly articlePageGate?: 'GV_V6';
+  /**
+   * E1 V7 C-B1 — the licence obliges attribution. An item lacking authorName / licenseId /
+   * licenseUrl is WITHHELD on every path (rights/source-use-policy.ts, ATTRIBUTION_MISSING).
+   */
+  readonly attribution?: { readonly licenseId: string; readonly licenseUrl: string };
+  /**
+   * E1 V7 C-FR2 / C-FR3 — METADATA (credited display) only: never persisted, never AI_INPUT, until the
+   * attribution columns exist and a stored answer can carry the credit inline.
+   */
+  readonly displayOnly?: true;
   readonly sourceType: SourceType;
   readonly feedUrl: string;
   /**
@@ -182,6 +203,34 @@ export const FEED_SOURCES: readonly FeedSourceEntry[] = [
         'G R10 ruling: ACTIVATION PROHIBITED on current published terms (recorded in b5ProviderDormancy.spec.ts); canonical eu27:pl:publisher-1 rightsStatus UNREVIEWED. The stricter recorded state is kept.',
     },
   },
+
+  // ---------------- International ----------------
+  {
+    sourceId: 'feed:globalvoices',
+    displayName: 'Global Voices',
+    scope: 'INTERNATIONAL',
+    sourceType: 'NEWS_PROVIDER',
+    feedUrl: 'https://globalvoices.org/feed/',
+    canonicalHost: 'globalvoices.org',
+    language: 'en',
+    enabled: false,
+    articlePageGate: 'GV_V6',
+    attribution: {
+      licenseId: 'CC-BY-3.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by/3.0/',
+    },
+    displayOnly: true,
+    provenanceNote:
+      'Fetched 2026-10-24 by G (R175): worldwide RSS 2.0, hourly. Items are admitted only by the ' +
+      'V6 page gate; dc:creator is never read. Site licence CC BY 3.0; media always dropped.',
+    verifiedAt: '2026-10-24',
+    rights: {
+      state: 'UNRESOLVED',
+      evidence:
+        'E1 ADDENDUM-26 (V7): gate 8f9170b GO; one item per-use GO; C-GV7 discharged. CLEARED is a PO/CTO ' +
+        'act (C-GV9) and is NOT set in code; until then this row collects nothing.',
+    },
+  },
 ];
 
 /**
@@ -262,7 +311,12 @@ export function feedActivationRefusal(entry: FeedSourceEntry): RefusedFeedSource
   if (entry.rights.state === 'CLEARED') return null;
   return {
     sourceId: entry.sourceId,
-    reason: entry.rights.state === 'PROHIBITED' ? 'RIGHTS_PROHIBITED' : entry.rights.state === 'RESTRICTED' ? 'RIGHTS_RESTRICTED' : 'RIGHTS_NOT_CLEARED',
+    reason:
+      entry.rights.state === 'PROHIBITED'
+        ? 'RIGHTS_PROHIBITED'
+        : entry.rights.state === 'RESTRICTED'
+          ? 'RIGHTS_RESTRICTED'
+          : 'RIGHTS_NOT_CLEARED',
     rightsState: entry.rights.state,
     evidence: entry.rights.evidence,
   };

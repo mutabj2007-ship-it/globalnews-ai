@@ -4,9 +4,17 @@ import { readPublishedAtBasis, writePublishedAtBasis } from './published-at-basi
 import { normalizeArticleUrl, type NewsArticle, type NewsCategory } from '@globalnews-ai/shared';
 import { PrismaService } from '../../../database/prisma.service';
 import { stripUnresolvedTemplatePlaceholders } from '../article-metadata-hygiene.util';
-import { admittedStoredSourceWhere, storedRowAdmissible, storedRowExclusionReason } from '../rights/source-use-policy';
+import {
+  admittedStoredSourceWhere,
+  storedRowAdmissible,
+  storedRowExclusionReason,
+  isDisplayOnlyFeedArticle,
+} from '../rights/source-use-policy';
 import { partitionPublisherRightsHeld } from '../rights/publisher-rights-hold';
-import { RETAINED_ARTICLE_OBSERVER, type RetainedArticleObserver } from './retained-article-observer.port';
+import {
+  RETAINED_ARTICLE_OBSERVER,
+  type RetainedArticleObserver,
+} from './retained-article-observer.port';
 import { currentRetrievalTrace, traceSafely } from '../retrieval-trace/retrieval-trace';
 
 interface FindRecentArticlesOptions {
@@ -135,7 +143,9 @@ export class ArticlePersistenceService {
   constructor(
     private readonly prisma: PrismaService,
     /* Stage B — optional DB-only observation seam (see retained-article-observer.port.ts). */
-    @Optional() @Inject(RETAINED_ARTICLE_OBSERVER) private readonly observer?: RetainedArticleObserver,
+    @Optional()
+    @Inject(RETAINED_ARTICLE_OBSERVER)
+    private readonly observer?: RetainedArticleObserver,
   ) {}
 
   /**
@@ -163,9 +173,22 @@ export class ArticlePersistenceService {
       and no update over a row already stored (E1 B-5: those rows are RESTRICTED — retained as-is,
       never back-filled or rewritten). Counts only are logged; never the URL or title.
     */
-    const { kept: articles, held } = partitionPublisherRightsHeld(incoming);
+    const { kept: unheld, held } = partitionPublisherRightsHeld(incoming);
     if (held.length > 0) {
-      this.logger.debug(`persistence withheld ${held.length} article(s) under a publisher rights hold`);
+      this.logger.debug(
+        `persistence withheld ${held.length} article(s) under a publisher rights hold`,
+      );
+    }
+    /*
+      E1 V7 C-FR2 — a display-only feed row (Global Voices) is FRESH ONLY: never written. The Article
+      table has no attribution columns, so a stored copy could never be shown credited; writing it
+      would only accumulate rows that are permanently withheld.
+    */
+    const articles = unheld.filter((article) => !isDisplayOnlyFeedArticle(article));
+    if (articles.length < unheld.length) {
+      this.logger.debug(
+        `persistence skipped ${unheld.length - articles.length} display-only (fresh-only) article(s)`,
+      );
     }
     if (articles.length === 0) {
       return NO_OBSERVATIONS;
@@ -409,7 +432,9 @@ export class ArticlePersistenceService {
             },
             ...(category ? { category } : {}),
             /* E1-TAA-5 — enforce by absence */
-            ...admittedStoredSourceWhere(undefined, { publisherHold: retainPublisherRightsHeld !== true }),
+            ...admittedStoredSourceWhere(undefined, {
+              publisherHold: retainPublisherRightsHeld !== true,
+            }),
           },
         },
         include: {
@@ -475,7 +500,14 @@ export class ArticlePersistenceService {
     }
   }
   async findRecent(options: FindRecentArticlesOptions = {}): Promise<NewsArticle[]> {
-    const { limit = 20, maxAgeMinutes = 1440, category, query, queryTerms, retainPublisherRightsHeld } = options;
+    const {
+      limit = 20,
+      maxAgeMinutes = 1440,
+      category,
+      query,
+      queryTerms,
+      retainPublisherRightsHeld,
+    } = options;
 
     const safeLimit = Math.max(1, Math.min(limit, 100));
 
@@ -533,7 +565,9 @@ export class ArticlePersistenceService {
           },
           ...(category ? { category } : {}),
           /* E1-TAA-5 — enforce by absence */
-          ...admittedStoredSourceWhere(undefined, { publisherHold: retainPublisherRightsHeld !== true }),
+          ...admittedStoredSourceWhere(undefined, {
+            publisherHold: retainPublisherRightsHeld !== true,
+          }),
           ...(usingTermNet
             ? { OR: termNetClauses }
             : normalizedQuery

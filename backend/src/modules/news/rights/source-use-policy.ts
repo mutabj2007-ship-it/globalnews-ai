@@ -56,7 +56,11 @@ export type RightsExclusionReason =
   | 'SOCIAL_RIGHTS_NOT_REVIEWED'
   | 'UNKNOWN_PROVENANCE'
   /* MASTER CTO R4 · P0 #86 — the article's own URL host is under a publisher rights hold */
-  | 'PUBLISHER_RIGHTS_HOLD';
+  | 'PUBLISHER_RIGHTS_HOLD'
+  /* E1 V7 C-B1 — the row's licence obliges attribution and this item does not carry all of it */
+  | 'ATTRIBUTION_MISSING'
+  /* E1 V7 C-FR3 — a display-only row is never model input (its answers would store uncredited text) */
+  | 'DISPLAY_ONLY_SOURCE';
 
 export type ProviderEnforcement = 'record' | 'enforce';
 
@@ -86,6 +90,25 @@ export interface UseInput {
   readonly providerId?: string | null;
   /** P0 #86 — the article's own URL; its canonical host decides a publisher rights hold. */
   readonly url?: string | null;
+  /** E1 V7 C-B1 — the item's own attribution, required by a row that declares `attribution`. */
+  readonly authorName?: string | null;
+  readonly licenseId?: string | null;
+  readonly licenseUrl?: string | null;
+}
+
+/**
+ * E1 V7 C-B1 — does this item carry the full attribution its row's licence requires? The licence must
+ * be the row's own (a wrong deed URL is itself a breach of "link to the licence"). A stored row has no
+ * attribution columns, so it never satisfies this: an uncredited item is withheld on every path.
+ */
+function carriesRequiredAttribution(input: UseInput, entry: FeedSourceEntry): boolean {
+  if (!entry.attribution) return true;
+  const author = typeof input.authorName === 'string' ? input.authorName.trim() : '';
+  return (
+    author.length > 0 &&
+    input.licenseId === entry.attribution.licenseId &&
+    input.licenseUrl === entry.attribution.licenseUrl
+  );
 }
 
 export interface PolicyOptions {
@@ -101,7 +124,11 @@ const SOCIAL_ID = /^social:(?:x|youtube):\S{1,200}$/;
 /** Stored provider rows carry no providerId (not persisted); their acquisition is unverified. */
 const STORED_PROVIDER_UNVERIFIED = 'stored-provider-unverified';
 
-export function sourceUseDecision(input: UseInput, use: EvidenceUse, options: PolicyOptions = {}): SourceUseDecision {
+export function sourceUseDecision(
+  input: UseInput,
+  use: EvidenceUse,
+  options: PolicyOptions = {},
+): SourceUseDecision {
   /* CTO R81 — the one feed table every gate reads (a test-only table replaces it in specs) */
   const feeds = options.feeds ?? rightsTestFeeds() ?? FEED_SOURCES;
   const providers = options.providers ?? INTERNATIONAL_NEWS_SOURCES;
@@ -115,7 +142,8 @@ export function sourceUseDecision(input: UseInput, use: EvidenceUse, options: Po
     basis for the publisher (AI_INPUT and headline display HOLD). `record` mode cannot loosen it —
     PROVIDER_PENDING_REVIEW is not a licence. See publisher-rights-hold.ts.
   */
-  if (heldPublisherHostOf(input.url) !== undefined) return { allowed: false, reason: 'PUBLISHER_RIGHTS_HOLD' };
+  if (heldPublisherHostOf(input.url) !== undefined)
+    return { allowed: false, reason: 'PUBLISHER_RIGHTS_HOLD' };
 
   if (id.startsWith(FEED_PREFIX)) {
     const entry = feeds.find((row) => row.sourceId === id);
@@ -123,6 +151,11 @@ export function sourceUseDecision(input: UseInput, use: EvidenceUse, options: Po
     const state = entry.rights.state;
     if (state === 'PROHIBITED') return { allowed: false, reason: 'RIGHTS_PROHIBITED' };
     if (state === 'RESTRICTED') return { allowed: false, reason: 'RIGHTS_RESTRICTED' };
+    /* E1 V7 — both checks bind BEFORE clearance: a CLEARED row never admits an uncredited item */
+    if (!carriesRequiredAttribution(input, entry))
+      return { allowed: false, reason: 'ATTRIBUTION_MISSING' };
+    if (entry.displayOnly && use === 'AI_INPUT')
+      return { allowed: false, reason: 'DISPLAY_ONLY_SOURCE' };
     if (state === 'CLEARED') return { allowed: true, basis: 'FEED_CLEARED' };
     /*
       E1 R81 C-1 (BLOCKING, resolved by removal) — the former LIMITED_SCOPE_REVIEW → METADATA admission
@@ -142,15 +175,24 @@ export function sourceUseDecision(input: UseInput, use: EvidenceUse, options: Po
 
   const providerId = (input.providerId ?? '').trim();
   const record = providerId === '' ? undefined : providers.find((p) => p.sourceId === providerId);
-  if (providerId !== '' && record === undefined) return { allowed: false, reason: 'UNKNOWN_PROVENANCE' };
-  if (record?.rightsState === 'CLEARED') return { allowed: true, basis: 'PROVIDER_CLEARED', provider: providerId };
+  if (providerId !== '' && record === undefined)
+    return { allowed: false, reason: 'UNKNOWN_PROVENANCE' };
+  if (record?.rightsState === 'CLEARED')
+    return { allowed: true, basis: 'PROVIDER_CLEARED', provider: providerId };
   if (record?.rightsState === 'RESTRICTED' || record?.rightsState === 'PROHIBITED') {
     return { allowed: false, reason: 'PROVIDER_RIGHTS_NOT_CLEARED' };
   }
   if (enforcement === 'enforce') {
-    return { allowed: false, reason: record === undefined ? 'UNKNOWN_PROVENANCE' : 'PROVIDER_RIGHTS_NOT_CLEARED' };
+    return {
+      allowed: false,
+      reason: record === undefined ? 'UNKNOWN_PROVENANCE' : 'PROVIDER_RIGHTS_NOT_CLEARED',
+    };
   }
-  return { allowed: true, basis: 'PROVIDER_PENDING_REVIEW', provider: record?.sourceId ?? STORED_PROVIDER_UNVERIFIED };
+  return {
+    allowed: true,
+    basis: 'PROVIDER_PENDING_REVIEW',
+    provider: record?.sourceId ?? STORED_PROVIDER_UNVERIFIED,
+  };
 }
 
 /** Splits items by the decision for `use`; excluded entries keep their reason, pending ones their provider. */
@@ -170,9 +212,13 @@ export function partitionByRights<T extends UseInput>(
     const decision = sourceUseDecision(item, use, options);
     if (decision.allowed) {
       allowed.push(item);
-      if (decision.basis === 'PROVIDER_PENDING_REVIEW') pending.push(decision.provider ?? STORED_PROVIDER_UNVERIFIED);
+      if (decision.basis === 'PROVIDER_PENDING_REVIEW')
+        pending.push(decision.provider ?? STORED_PROVIDER_UNVERIFIED);
     } else {
-      excluded.push({ sourceId: (item.sourceId ?? '').trim() || '<none>', reason: decision.reason });
+      excluded.push({
+        sourceId: (item.sourceId ?? '').trim() || '<none>',
+        reason: decision.reason,
+      });
     }
   }
   return { allowed, excluded, pending };
@@ -202,7 +248,11 @@ export function summarizeExclusions(
   if (excluded.length === 0) return undefined;
   const reasons: Partial<Record<RightsExclusionReason, number>> = {};
   for (const { reason } of excluded) reasons[reason] = (reasons[reason] ?? 0) + 1;
-  return { count: excluded.length, reasons, sourceIds: [...new Set(excluded.map((e) => e.sourceId))].sort() };
+  return {
+    count: excluded.length,
+    reasons,
+    sourceIds: [...new Set(excluded.map((e) => e.sourceId))].sort(),
+  };
 }
 
 /*
@@ -226,7 +276,9 @@ export function readerRightsReasons(
   const out: Record<string, number> = {};
   for (const [key, n] of Object.entries(reasons ?? {})) {
     if (typeof n !== 'number' || n <= 0) continue;
-    const readerKey = PUBLISHER_IDENTIFYING_REASONS.has(key) ? READER_SOURCE_RIGHTS_NOT_CLEARED : key;
+    const readerKey = PUBLISHER_IDENTIFYING_REASONS.has(key)
+      ? READER_SOURCE_RIGHTS_NOT_CLEARED
+      : key;
     out[readerKey] = (out[readerKey] ?? 0) + n;
   }
   return out;
@@ -250,7 +302,9 @@ export function admittedStoredSourceWhere(
   /* P0 #86 — false only for a caller that withholds and counts held rows itself */
   { publisherHold = true }: { readonly publisherHold?: boolean } = {},
 ): Prisma.ArticleWhereInput {
-  const clearedFeedIds = feeds.filter((row) => row.rights.state === 'CLEARED').map((row) => row.sourceId);
+  const clearedFeedIds = feeds
+    .filter((row) => row.rights.state === 'CLEARED')
+    .map((row) => row.sourceId);
   return {
     AND: [
       { NOT: { sourceId: '' } },
@@ -258,7 +312,12 @@ export function admittedStoredSourceWhere(
          basis); fixture mode keeps the earlier query (provider slugs pass, feeds only when CLEARED) */
       readerRightsEnforced()
         ? { sourceId: { in: clearedFeedIds } }
-        : { OR: [{ NOT: { sourceId: { startsWith: FEED_PREFIX } } }, { sourceId: { in: clearedFeedIds } }] },
+        : {
+            OR: [
+              { NOT: { sourceId: { startsWith: FEED_PREFIX } } },
+              { sourceId: { in: clearedFeedIds } },
+            ],
+          },
       /* P0 #86 — a held publisher host is not obtainable either (query half; the exact host predicate
          runs again on every returned row in the repository) */
       ...(publisherHold ? [publisherRightsHoldWhere()] : []),
@@ -290,4 +349,29 @@ export function storedRowExclusionReason(
   /* CTO R81 — no explicit `record`: the stored read follows the one enforcement switch */
   const decision = sourceUseDecision({ sourceId, url }, 'AI_INPUT', { feeds });
   return decision.allowed ? null : decision.reason;
+}
+
+/**
+ * E1 V7 C-FR2 — an article from a DISPLAY-ONLY feed row (Global Voices): fresh only, never persisted.
+ * Keyed on the registry row, never on the publisher's name.
+ */
+export function isDisplayOnlyFeedArticle(
+  article: { readonly sourceId?: string | null },
+  feeds: readonly FeedSourceEntry[] = rightsTestFeeds() ?? FEED_SOURCES,
+): boolean {
+  const id = (article.sourceId ?? '').trim();
+  return feeds.some((row) => row.sourceId === id && row.displayOnly === true);
+}
+
+/**
+ * E1 V7 C-B1 — an article from a feed row whose licence OBLIGES attribution. Such an article may reach
+ * a reader only inside a response's `creditedArticles` list (the surface built to render its credit);
+ * the reader-rights interceptor withholds it anywhere else. Keyed on the registry row.
+ */
+export function isAttributionObligedArticle(
+  article: { readonly sourceId?: unknown },
+  feeds: readonly FeedSourceEntry[] = rightsTestFeeds() ?? FEED_SOURCES,
+): boolean {
+  const id = typeof article.sourceId === 'string' ? article.sourceId.trim() : '';
+  return id !== '' && feeds.some((row) => row.sourceId === id && row.attribution !== undefined);
 }

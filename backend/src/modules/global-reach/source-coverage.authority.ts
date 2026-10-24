@@ -109,7 +109,7 @@ function hostOfUrl(url: string): string | null {
 }
 
 function feedCandidate(feed: FeedSourceEntry, active: boolean): LocalSourceCandidate | null {
-  const iso3 = ISO3_BY_ISO2.get(feed.countryCode.toUpperCase());
+  const iso3 = feed.countryCode ? ISO3_BY_ISO2.get(feed.countryCode.toUpperCase()) : undefined;
   if (!iso3) return null;
   return {
     sourceId: feed.sourceId,
@@ -125,7 +125,9 @@ function feedCandidate(feed: FeedSourceEntry, active: boolean): LocalSourceCandi
 }
 
 /** Local candidates from the feed and official-source registries (not the packs). */
-export function registryLocalCandidates(activation: SourceActivation): readonly LocalSourceCandidate[] {
+export function registryLocalCandidates(
+  activation: SourceActivation,
+): readonly LocalSourceCandidate[] {
   const out: LocalSourceCandidate[] = [];
   for (const feed of FEED_SOURCES) {
     const candidate = feedCandidate(feed, activation.activeFeedIds.has(feed.sourceId));

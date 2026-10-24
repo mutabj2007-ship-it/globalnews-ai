@@ -15,6 +15,7 @@ import {
   type FeedSourceEntry,
 } from './feed-source-registry';
 import { admittedFeedSources } from '../rights/provider-admission';
+import { ArticlePageAdmission, PAGE_MAX_BYTES } from './article-page-admission';
 
 /**
  * S1 — A GENERIC RSS/ATOM CONNECTOR OVER A CURATED PUBLISHER REGISTRY.
@@ -99,7 +100,10 @@ export function isRssFeedsEnabled(value: string | undefined): boolean {
  * E1-TAA-1 — the pre-release configuration check (pure; no I/O). Lists every RSS_FEED_SOURCES entry
  * the registry refuses while the lane is enabled; empty when the configuration is admissible.
  */
-export function rssConfigViolations(enabledValue: string | undefined, sourcesValue: string | undefined): string[] {
+export function rssConfigViolations(
+  enabledValue: string | undefined,
+  sourcesValue: string | undefined,
+): string[] {
   if (!isRssFeedsEnabled(enabledValue)) return [];
   const selection = resolveActiveFeedSources(FEED_SOURCES, sourcesValue);
   return [
@@ -132,6 +136,14 @@ export class RssFeedProvider implements NewsProvider, OnModuleInit {
   private warnedRefusedIds = false;
   private warnedUnknownIds = false;
 
+  /*
+    E1 V6/V7 — one process-wide reader for page-gated feeds: at most one page read per 10 s, verdicts
+    cached, an item without a verdict never emitted.
+  */
+  private readonly pageAdmission = new ArticlePageAdmission({
+    readBody: (response) => readBoundedText(response, PAGE_MAX_BYTES),
+  });
+
   constructor(private readonly config: ConfigService) {}
 
   /*
@@ -145,7 +157,10 @@ export class RssFeedProvider implements NewsProvider, OnModuleInit {
       this.config.get<string>('RSS_FEEDS_ENABLED'),
       this.config.get<string>('RSS_FEED_SOURCES'),
     );
-    if (violations.length > 0) this.logger.error(`RSS configuration refused by the source registry: ${violations.join('; ')}`);
+    if (violations.length > 0)
+      this.logger.error(
+        `RSS configuration refused by the source registry: ${violations.join('; ')}`,
+      );
   }
 
   /**
@@ -248,6 +263,9 @@ export class RssFeedProvider implements NewsProvider, OnModuleInit {
 
     if (needle.length === 0) return false;
 
+    /* an INTERNATIONAL publisher serves no single country: never an own-country widening */
+    if (source.countryCode === undefined) return false;
+
     const iso2 = source.countryCode.trim().toLowerCase();
 
     if (needle === iso2) return true;
@@ -320,6 +338,13 @@ export class RssFeedProvider implements NewsProvider, OnModuleInit {
      * anything for the Kenyan or Polish feeds.
      */
     for (const { source, articles } of results) {
+      /*
+        E1 V7 C-FR3 — a display-only source feeds the headline surfaces only. A query is an Ask/analysis
+        path whose answers are model input and are stored; its items stay out until a stored answer can
+        carry the credit inline.
+      */
+      if (needle && source.displayOnly) continue;
+
       if (!needle) {
         collected.push(...articles);
         continue;
@@ -401,7 +426,35 @@ export class RssFeedProvider implements NewsProvider, OnModuleInit {
       if (article) articles.push(article);
     }
 
-    return articles;
+    return source.articlePageGate === 'GV_V6' ? this.admitByPage(articles, source) : articles;
+  }
+
+  /**
+   * E1 V6/V7 — a page-gated feed emits ONLY items whose own article page the V6 gate ADMITTED, each
+   * carrying the attribution that verdict resolved: the byline author (never dc:creator), the licence
+   * read from the page (which must be the registry's licence), and the canonical URL read from the
+   * page. No verdict yet, any other outcome, or a licence mismatch → the item is not emitted.
+   */
+  private async admitByPage(
+    articles: readonly NewsArticle[],
+    source: FeedSourceEntry,
+  ): Promise<NewsArticle[]> {
+    const verdicts = await this.pageAdmission.verdictsFor(articles.map((article) => article.url));
+    const admitted: NewsArticle[] = [];
+    for (const article of articles) {
+      const verdict = verdicts.get(article.url);
+      if (verdict?.outcome !== 'ADMIT') continue;
+      if (!source.attribution || verdict.licence.id !== source.attribution.licenseId) continue;
+      if (verdict.licence.url !== source.attribution.licenseUrl) continue;
+      admitted.push({
+        ...article,
+        url: verdict.canonicalUrl,
+        authorName: verdict.author.name,
+        licenseId: verdict.licence.id,
+        licenseUrl: verdict.licence.url,
+      });
+    }
+    return admitted;
   }
 
   /**
@@ -448,7 +501,8 @@ export class RssFeedProvider implements NewsProvider, OnModuleInit {
      * than a feed blurb, which is what lets the evidence assessment stop treating
      * the two as interchangeable. KT Press and GUS syndicate no body at all.
      */
-    const syndicated = item.syndicatedBody ?? '';
+    /* E1 V7 C-FR2 — a display-only source carries its feed description only, never a syndicated body */
+    const syndicated = source.displayOnly ? '' : (item.syndicatedBody ?? '');
     const evidenceText = syndicated.length > item.summary.length ? syndicated : item.summary;
 
     return attachSyndicatedBody(
@@ -484,8 +538,8 @@ export class RssFeedProvider implements NewsProvider, OnModuleInit {
          * pubDate on the 'publisher' basis. The body provenance travels alongside
          * them rather than replacing any of them.
          */
-        text: item.syndicatedBody,
-        source: item.bodySource,
+        text: source.displayOnly ? undefined : item.syndicatedBody,
+        source: source.displayOnly ? 'description' : item.bodySource,
       },
     );
   }
@@ -619,8 +673,8 @@ export class RssFeedProvider implements NewsProvider, OnModuleInit {
         ? selection.refused.length > 0
           ? 'Every feed named in RSS_FEED_SOURCES was refused by the rights gate. No publisher is being fetched.'
           : selection.overridden
-          ? 'RSS_FEED_SOURCES named no id that matches the feed registry. No publisher is being fetched.'
-          : 'The lane is enabled but no feed source is activated. Set RSS_FEED_SOURCES to activate specific publishers.'
+            ? 'RSS_FEED_SOURCES named no id that matches the feed registry. No publisher is being fetched.'
+            : 'The lane is enabled but no feed source is activated. Set RSS_FEED_SOURCES to activate specific publishers.'
         : this.activeMessage(activeCount);
 
     const base: ProviderHealthStatus = {
@@ -628,7 +682,8 @@ export class RssFeedProvider implements NewsProvider, OnModuleInit {
       displayName: this.displayName,
       enabled,
       /* E1-TAA-1 — a lane running beside refused feeds is never reported as plainly ok */
-      status: ((observed) => (enabled && selection.refused.length > 0 && observed === 'ok' ? 'degraded' : observed))(
+      status: ((observed) =>
+        enabled && selection.refused.length > 0 && observed === 'ok' ? 'degraded' : observed)(
         this.observedStatus(enabled, activeCount),
       ),
       message:

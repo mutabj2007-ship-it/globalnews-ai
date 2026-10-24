@@ -255,7 +255,8 @@ export function scoreCountryEconomyRelevance(
   const named = scoreCountryRelevance(article, country, language).isRelevant;
   const publisher = verifiedFeedPublisherOf(article);
   const ownCountry =
-    publisher !== undefined && publisher.countryCode.toUpperCase() === country.iso2.toUpperCase();
+    publisher?.countryCode !== undefined &&
+    publisher.countryCode.toUpperCase() === country.iso2.toUpperCase();
   const countryComponent: CountryEconomyRelevance['country'] = named
     ? 'named'
     : ownCountry

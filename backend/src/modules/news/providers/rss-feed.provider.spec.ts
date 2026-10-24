@@ -383,9 +383,16 @@ describe('the registry records what was verified, and what was rejected', () => 
   });
 
   it('covers all three markets, with both news and official sources', () => {
-    const markets = new Set(FEED_SOURCES.map((entry) => entry.countryCode));
+    /* E1 V7 — an INTERNATIONAL row serves no single market and carries no country */
+    const regional = FEED_SOURCES.filter((entry) => entry.scope !== 'INTERNATIONAL');
+    const markets = new Set(regional.map((entry) => entry.countryCode));
 
     expect(markets).toEqual(new Set(['RW', 'KE', 'PL']));
+    expect(
+      FEED_SOURCES.filter((e) => e.scope === 'INTERNATIONAL').every(
+        (e) => e.countryCode === undefined,
+      ),
+    ).toBe(true);
     expect(FEED_SOURCES.some((e) => e.sourceType === 'OFFICIAL_SOURCE')).toBe(true);
     expect(FEED_SOURCES.some((e) => e.sourceType === 'NEWS_PROVIDER')).toBe(true);
   });
@@ -543,7 +550,10 @@ describe('PER-SOURCE ACTIVATION BY ENVIRONMENT — RSS_FEED_SOURCES', () => {
     expect(selection.sources.map((source) => source.sourceId)).toEqual(
       SIX.filter((id) => id !== 'feed:standardmedia-ke' && id !== 'feed:wp-pl'),
     );
-    expect(selection.refused.map((r) => r.sourceId)).toEqual(['feed:standardmedia-ke', 'feed:wp-pl']);
+    expect(selection.refused.map((r) => r.sourceId)).toEqual([
+      'feed:standardmedia-ke',
+      'feed:wp-pl',
+    ]);
     expect(selection.unknownIds).toHaveLength(0);
     expect(selection.overridden).toBe(true);
   });

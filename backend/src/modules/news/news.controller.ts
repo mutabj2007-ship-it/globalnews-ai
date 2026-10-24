@@ -5,6 +5,7 @@ import { NewsService } from './news.service';
 import { CategoryParamsDto, SearchNewsDto, TopHeadlinesQueryDto } from './dto';
 import { LegacyRouteUsageInterceptor } from '../legacy-usage/legacy-route-usage.interceptor';
 import { withoutPublisherRightsHeld } from './rights/publisher-rights-hold';
+import { isAttributionObligedArticle } from './rights/source-use-policy';
 
 /*
   MASTER CTO R4 · P0 #86 — THE READER EDGE. NewsService responses keep a held publisher's items so
@@ -14,10 +15,22 @@ import { withoutPublisherRightsHeld } from './rights/publisher-rights-hold';
 export function readerSafeNewsResponse(response: NewsResponse): NewsResponse {
   /* a response without an article list has nothing to withhold (never throws on the reader path) */
   if (!Array.isArray(response?.articles)) return response;
-  const articles = withoutPublisherRightsHeld(response.articles);
-  return articles.length === response.articles.length
-    ? response
-    : { ...response, articles, totalResults: articles.length };
+  const kept = withoutPublisherRightsHeld(response.articles);
+  /*
+    E1 V7 C-B1 — an article whose licence obliges attribution leaves `articles` for `creditedArticles`,
+    the only list a credit-rendering surface reads (the reader-rights interceptor withholds it anywhere
+    else). Its credit fields travel with it; whether it is shown at all is still the rights decision.
+  */
+  const credited = kept.filter((article) => isAttributionObligedArticle(article));
+  const articles =
+    credited.length === 0 ? kept : kept.filter((article) => !isAttributionObligedArticle(article));
+  if (articles.length === response.articles.length) return response;
+  return {
+    ...response,
+    articles,
+    totalResults: articles.length,
+    ...(credited.length > 0 ? { creditedArticles: credited } : {}),
+  };
 }
 
 @Controller('news')
