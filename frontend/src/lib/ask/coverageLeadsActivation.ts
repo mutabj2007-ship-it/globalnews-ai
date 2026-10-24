@@ -5,4 +5,4 @@
   reviewed commit that sets this to `true` together with the backend's governed E1 use record,
   deployed by exact SHA; rolling back is redeploying the previous exact SHA. Nothing else turns it on.
 */
-export const COVERAGE_LEADS_UI_ENABLED = false;
+export const COVERAGE_LEADS_UI_ENABLED = true;

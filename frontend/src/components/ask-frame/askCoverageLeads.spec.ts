@@ -18,9 +18,9 @@ const lead = (i: number, over: Record<string, unknown> = {}) => ({
 });
 
 describe('CTO R168 · the control exists only with the switch on, for an explicit news question', () => {
-  it('the switch is a code constant, OFF at this SHA, never an environment variable', () => {
-    /* R169 · the switch is code, OFF at this SHA; activation is one reviewed commit, never a variable */
-    expect(COVERAGE_LEADS_UI_ENABLED).toBe(false);
+  it('the switch is a code constant, ON at the activation SHA (E1 V5 + H + L + CTO R169), never an environment variable', () => {
+    /* R169 · activation is this one reviewed commit; rollback is the previous exact SHA (false) */
+    expect(COVERAGE_LEADS_UI_ENABLED).toBe(true);
     const source = readFileSync(join(__dirname, 'AskCoverageLeads.tsx'), 'utf8');
     expect(source).not.toMatch(/process.env/);
   });
