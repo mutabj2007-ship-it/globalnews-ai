@@ -648,9 +648,9 @@ export const deShellOverlay: ShellLocaleOverlay = {
         states: {
           CONFIRMED: "Bestätigt",
           CORROBORATED_REPORTING: "Durch mehrere Berichte gestützt",
-          COVERAGE_INCOMPLETE: "Nicht bestätigt — Abdeckung unvollständig",
+          COVERAGE_INCOMPLETE: "Nicht verifiziert — Abdeckung unvollständig",
           DISPUTED: "Bestritten",
-          NOT_VERIFIED: "Nicht bestätigt",
+          NOT_VERIFIED: "Nicht verifiziert",
           REPORTED: "Berichtet (eine Quelle)",
           UNASSESSED: "Nicht bewertet",
         },

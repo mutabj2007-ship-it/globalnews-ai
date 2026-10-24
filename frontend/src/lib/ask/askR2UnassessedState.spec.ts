@@ -104,3 +104,25 @@ describe('CTO finishing order — UNASSESSED reads "Not assessed", distinct from
     },
   );
 });
+
+describe('CTO R175 ruling 1 · German claim-state labels', () => {
+  const de = () => askShellStrings('de').askR2Strings.verification;
+
+  it('NOT_VERIFIED / COVERAGE_INCOMPLETE / UNASSESSED carry the ruled values', () => {
+    expect(de().states.NOT_VERIFIED).toBe('Nicht verifiziert');
+    expect(de().states.COVERAGE_INCOMPLETE).toBe('Nicht verifiziert — Abdeckung unvollständig');
+    expect(de().states.UNASSESSED).toBe('Nicht bewertet');
+  });
+
+  it('the three non-positive states are distinct and none carries a positive lexeme', () => {
+    const { NOT_VERIFIED, COVERAGE_INCOMPLETE, UNASSESSED } = de().states;
+    expect(new Set([NOT_VERIFIED, COVERAGE_INCOMPLETE, UNASSESSED]).size).toBe(3);
+    for (const label of [NOT_VERIFIED, COVERAGE_INCOMPLETE, UNASSESSED]) expect(label).not.toMatch(POSITIVE);
+  });
+
+  it('the attempted-check prose is preserved (its negation describes a check that ran)', () => {
+    expect(de().notVerified).toBe(
+      'Diese Aussage konnte aus den erfolgreich geprüften Quellen nicht bestätigt werden.',
+    );
+  });
+});
