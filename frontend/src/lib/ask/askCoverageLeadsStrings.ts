@@ -14,6 +14,11 @@ export interface AskCoverageLeadsStrings {
   /** appended to the link's accessible name */
   readonly opensOutlet: string;
   readonly credit: string;
+  /** the reader's explicit request: nothing is sent before it is pressed */
+  readonly show: string;
+  readonly loading: string;
+  readonly none: string;
+  readonly unavailable: string;
 }
 
 const STRINGS: Record<DisplayLocale, AskCoverageLeadsStrings> = {
@@ -24,6 +29,10 @@ const STRINGS: Record<DisplayLocale, AskCoverageLeadsStrings> = {
     readOriginal: 'Read original ↗',
     opensOutlet: 'opens the outlet’s website',
     credit: 'Leads from The GDELT Project',
+    show: 'Show coverage leads from other outlets',
+    loading: 'Looking for coverage leads…',
+    none: 'No coverage leads were found for this question.',
+    unavailable: 'Coverage leads are not available right now.',
   },
   pl: {
     heading: 'Tropy publikacji — niezweryfikowane doniesienia',
@@ -32,6 +41,10 @@ const STRINGS: Record<DisplayLocale, AskCoverageLeadsStrings> = {
     readOriginal: 'Czytaj oryginał ↗',
     opensOutlet: 'otwiera stronę redakcji',
     credit: 'Tropy z The GDELT Project',
+    show: 'Pokaż tropy publikacji innych redakcji',
+    loading: 'Szukam tropów publikacji…',
+    none: 'Nie znaleziono tropów publikacji dla tego pytania.',
+    unavailable: 'Tropy publikacji są teraz niedostępne.',
   },
   fr: {
     heading: 'Pistes de couverture — articles non vérifiés',
@@ -40,6 +53,10 @@ const STRINGS: Record<DisplayLocale, AskCoverageLeadsStrings> = {
     readOriginal: 'Lire l’original ↗',
     opensOutlet: 'ouvre le site du média',
     credit: 'Pistes issues de The GDELT Project',
+    show: 'Afficher des pistes de couverture d’autres médias',
+    loading: 'Recherche de pistes de couverture…',
+    none: 'Aucune piste de couverture trouvée pour cette question.',
+    unavailable: 'Les pistes de couverture ne sont pas disponibles pour le moment.',
   },
   de: {
     heading: 'Berichterstattungshinweise — keine geprüften Berichte',
@@ -48,6 +65,10 @@ const STRINGS: Record<DisplayLocale, AskCoverageLeadsStrings> = {
     readOriginal: 'Original lesen ↗',
     opensOutlet: 'öffnet die Website des Mediums',
     credit: 'Hinweise von The GDELT Project',
+    show: 'Berichterstattungshinweise anderer Medien anzeigen',
+    loading: 'Suche nach Berichterstattungshinweisen…',
+    none: 'Für diese Frage wurden keine Berichterstattungshinweise gefunden.',
+    unavailable: 'Berichterstattungshinweise sind derzeit nicht verfügbar.',
   },
   es: {
     heading: 'Pistas de cobertura — informaciones no verificadas',
@@ -56,6 +77,10 @@ const STRINGS: Record<DisplayLocale, AskCoverageLeadsStrings> = {
     readOriginal: 'Leer el original ↗',
     opensOutlet: 'abre el sitio web del medio',
     credit: 'Pistas de The GDELT Project',
+    show: 'Mostrar pistas de cobertura de otros medios',
+    loading: 'Buscando pistas de cobertura…',
+    none: 'No se encontraron pistas de cobertura para esta pregunta.',
+    unavailable: 'Las pistas de cobertura no están disponibles en este momento.',
   },
   pt: {
     heading: 'Pistas de cobertura — reportagens não verificadas',
@@ -64,6 +89,10 @@ const STRINGS: Record<DisplayLocale, AskCoverageLeadsStrings> = {
     readOriginal: 'Ler o original ↗',
     opensOutlet: 'abre o site do meio de comunicação',
     credit: 'Pistas do The GDELT Project',
+    show: 'Mostrar pistas de cobertura de outros meios',
+    loading: 'A procurar pistas de cobertura…',
+    none: 'Não foram encontradas pistas de cobertura para esta pergunta.',
+    unavailable: 'As pistas de cobertura não estão disponíveis neste momento.',
   },
   ar: {
     heading: 'مؤشرات تغطية — ليست تقارير موثّقة',
@@ -72,9 +101,18 @@ const STRINGS: Record<DisplayLocale, AskCoverageLeadsStrings> = {
     readOriginal: 'اقرأ الأصل ↗',
     opensOutlet: 'يفتح موقع الوسيلة الإعلامية',
     credit: 'مؤشرات من The GDELT Project',
+    show: 'عرض مؤشرات التغطية من وسائل إعلام أخرى',
+    loading: 'جارٍ البحث عن مؤشرات التغطية…',
+    none: 'لم يُعثر على مؤشرات تغطية لهذا السؤال.',
+    unavailable: 'مؤشرات التغطية غير متاحة حاليًا.',
   },
 };
 
-export function askCoverageLeadsStrings(locale: DisplayLocale | string | undefined): AskCoverageLeadsStrings {
-  return (locale !== undefined && (STRINGS as Record<string, AskCoverageLeadsStrings>)[locale]) || STRINGS.en;
+export function askCoverageLeadsStrings(
+  locale: DisplayLocale | string | undefined,
+): AskCoverageLeadsStrings {
+  return (
+    (locale !== undefined && (STRINGS as Record<string, AskCoverageLeadsStrings>)[locale]) ||
+    STRINGS.en
+  );
 }

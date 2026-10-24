@@ -2,8 +2,8 @@ import { readdirSync, readFileSync, statSync } from 'fs';
 import { join, resolve } from 'path';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { AskCoverageLeadsList, wantsCoverageLeads } from './AskCoverageLeads';
-import { safeLeadHref, sanitizeCoverageLeads } from '@/lib/api/coverageLeadsApi';
+import { AskCoverageLeads, AskCoverageLeadsList, coverageLeadsSwitchOn, wantsCoverageLeads } from './AskCoverageLeads';
+import { safeLeadHref, sanitizeCoverageLeads, type CoverageLeadsResult } from '@/lib/api/coverageLeadsApi';
 import { askCoverageLeadsStrings } from '@/lib/ask/askCoverageLeadsStrings';
 
 const GDELT = { citation: 'The GDELT Project', link: 'https://www.gdeltproject.org/' };
@@ -16,59 +16,96 @@ const lead = (i: number, over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-describe('CTO R168 · coverage leads appear only for an explicit news question', () => {
+describe('CTO R168 · the control exists only with the switch on, for an explicit news question', () => {
+  it('the frontend switch is exactly "on"', () => {
+    expect(coverageLeadsSwitchOn('on')).toBe(true);
+    for (const v of [undefined, '', 'true', 'ON', '1']) expect(coverageLeadsSwitchOn(v)).toBe(false);
+  });
+
   it.each([
-    ['CURRENT_REPORTING', false, true],
-    ['CURRENT_STATUS_VERIFICATION', false, true],
-    ['REFERENCE', false, false],
-    ['HISTORICAL', false, false],
-    ['PERSONAL_INTELLIGENCE', false, false],
-    ['COMPUTATION', false, false],
-    [undefined, false, false],
-    ['CURRENT_REPORTING', true, false],
-  ])('class %p (displayOnly %p) → asks for leads: %p', (questionClass, displayOnly, expected) => {
-    expect(wantsCoverageLeads(questionClass, displayOnly)).toBe(expected);
+    ['CURRENT_REPORTING', false, true, true],
+    ['CURRENT_STATUS_VERIFICATION', false, true, true],
+    ['CURRENT_REPORTING', false, false, false],
+    ['REFERENCE', false, true, false],
+    ['HISTORICAL', false, true, false],
+    ['PERSONAL_INTELLIGENCE', false, true, false],
+    ['COMPUTATION', false, true, false],
+    [undefined, false, true, false],
+    ['CURRENT_REPORTING', true, true, false],
+  ])('class %p · displayOnly %p · switch %p → control: %p', (questionClass, displayOnly, switchOn, expected) => {
+    expect(wantsCoverageLeads(questionClass, displayOnly, switchOn)).toBe(expected);
+  });
+});
+
+describe('CTO R168 · nothing is sent until the reader asks', () => {
+  const props = { question: 'Kenya economy this week?', questionClass: 'CURRENT_REPORTING', locale: 'en' as const, displayOnly: false };
+
+  it('switch off: nothing renders and nothing is sent', () => {
+    const fetchSpy = jest.spyOn(globalThis, 'fetch' as never);
+    expect(renderToStaticMarkup(createElement(AskCoverageLeads, { ...props, switchOn: false }))).toBe('');
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  });
+
+  it('switch on: rendering shows only the "Show coverage leads" button and sends nothing', () => {
+    const fetchSpy = jest.spyOn(globalThis, 'fetch' as never);
+    const html = renderToStaticMarkup(createElement(AskCoverageLeads, { ...props, switchOn: true }));
+    expect(html).toContain('data-ask="coverage-leads-show"');
+    expect(html).toContain('Show coverage leads from other outlets');
+    expect(html).not.toContain('coverage-lead-link');
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  });
+
+  it('the panel has no effect hook: a render can never trigger a request', () => {
+    const source = readFileSync(join(__dirname, 'AskCoverageLeads.tsx'), 'utf8');
+    expect(source).not.toMatch(/useEffect|useLayoutEffect/);
   });
 });
 
 describe('CTO R168 · the browser re-checks what it renders', () => {
-  it.each(['http://outlet.example.org/a', 'javascript:alert(1)', 'data:text/html,x', 'https://u:p@outlet.example.org/a', 42, null])(
-    'an unsafe link is dropped: %p',
-    (url) => {
-      expect(safeLeadHref(url)).toBeNull();
-    },
-  );
+  it.each(['http://outlet.example.org/a', 'javascript:alert(1)', 'data:text/html,x', 42, null])('an unsafe link is dropped: %p', (url) => {
+    expect(safeLeadHref(url)).toBeNull();
+  });
 
-  it('keeps at most five fields-only leads; any extra field (a title) never survives', () => {
-    const result = sanitizeCoverageLeads({
+  it('keeps at most five display-field leads; a title, snippet, language or country never survives', () => {
+    const outcome = sanitizeCoverageLeads({
       state: 'LEADS',
       attribution: GDELT,
       leads: Array.from({ length: 7 }, (_, i) => lead(i, { title: 'PUBLISHER HEADLINE', snippet: 'body text' })),
     });
-    expect(result?.leads).toHaveLength(5);
-    expect(Object.keys(result!.leads[0]).sort()).toEqual(['language', 'outlet', 'outletCountry', 'seenByGdeltAt', 'url']);
-    expect(JSON.stringify(result)).not.toMatch(/PUBLISHER HEADLINE|body text/);
+    expect(outcome.kind).toBe('LEADS');
+    const leads = outcome.kind === 'LEADS' ? outcome.result.leads : [];
+    expect(leads).toHaveLength(5);
+    expect(Object.keys(leads[0]).sort()).toEqual(['outlet', 'seenByGdeltAt', 'url']);
+    expect(JSON.stringify(outcome)).not.toMatch(/PUBLISHER HEADLINE|body text|Kenya|English/);
   });
 
   it.each([
-    [{ state: 'OFF', leads: [], attribution: GDELT }],
-    [{ state: 'NONE', leads: [], attribution: GDELT }],
-    [{ state: 'LEADS', leads: [lead(1)], attribution: { ...GDELT, link: 'https://evil.example/' } }],
-    [{ state: 'LEADS', leads: [lead(1, { url: 'http://x.example/a' })], attribution: GDELT }],
-    [{ state: 'LEADS', leads: [lead(1, { seenByGdeltAt: 'yesterday' })], attribution: GDELT }],
-    [null],
-    ['<html>'],
-  ])('anything but a usable LEADS body renders nothing (%#)', (body) => {
-    expect(sanitizeCoverageLeads(body)).toBeNull();
+    [{ state: 'NONE', leads: [], attribution: GDELT }, 'NONE'],
+    [{ state: 'NO_PLACE', leads: [], attribution: GDELT }, 'NONE'],
+    [{ state: 'MULTI_PLACE', leads: [], attribution: GDELT }, 'NONE'],
+    [{ state: 'SUPPRESSED', leads: [], attribution: GDELT }, 'NONE'],
+    [{ state: 'OFF', leads: [], attribution: GDELT }, 'UNAVAILABLE'],
+    [{ state: 'NOT_AUTHORIZED', leads: [], attribution: GDELT }, 'UNAVAILABLE'],
+    [{ state: 'CAPACITY', leads: [], attribution: GDELT }, 'UNAVAILABLE'],
+    [{ state: 'LEADS', leads: [lead(1)], attribution: { ...GDELT, link: 'https://evil.example/' } }, 'UNAVAILABLE'],
+    [{ state: 'LEADS', leads: [lead(1, { url: 'http://x.example/a' })], attribution: GDELT }, 'NONE'],
+    [{ state: 'LEADS', leads: [lead(1, { seenByGdeltAt: 'yesterday' })], attribution: GDELT }, 'NONE'],
+    [null, 'UNAVAILABLE'],
+    ['<html>', 'UNAVAILABLE'],
+  ])('a body that is not usable leads shows a plain state, never a list (%#)', (body, kind) => {
+    expect(sanitizeCoverageLeads(body).kind).toBe(kind);
   });
 });
 
-describe('CTO R168 · what the reader sees', () => {
-  const result = sanitizeCoverageLeads({
+describe('CTO R168 · what the reader sees after asking', () => {
+  const outcome = sanitizeCoverageLeads({
     state: 'LEADS',
     attribution: GDELT,
     leads: [lead(1), lead(2, { outlet: '<img src=x onerror=alert(1)>' })],
-  })!;
+  });
+  const result = (outcome.kind === 'LEADS' ? outcome.result : null) as CoverageLeadsResult;
   const html = renderToStaticMarkup(createElement(AskCoverageLeadsList, { result, locale: 'en' }));
 
   it('the CTO heading, the not-verified note, and "Seen by GDELT" — never "published"', () => {
@@ -78,7 +115,7 @@ describe('CTO R168 · what the reader sees', () => {
     expect(html).not.toMatch(/[Pp]ublished/);
   });
 
-  it('each link is an explicit "Read original ↗", new tab, no opener, no referrer', () => {
+  it('each link is an explicit "Read original ↗": new tab, noopener, noreferrer, no referrer', () => {
     const links = html.match(/<a [^>]*data-ask="coverage-lead-link"[^>]*>/g) ?? [];
     expect(links).toHaveLength(2);
     for (const a of links) {
@@ -106,7 +143,7 @@ describe('CTO R168 · what the reader sees', () => {
 describe('CTO R168 · seven locales', () => {
   it.each(['en', 'pl', 'fr', 'de', 'es', 'pt', 'ar'])('%s carries every string, and "seen" never reads as publication', (locale) => {
     const s = askCoverageLeadsStrings(locale);
-    for (const value of [s.heading, s.note, s.readOriginal, s.opensOutlet, s.credit, s.seenBy('X')]) {
+    for (const value of [s.heading, s.note, s.readOriginal, s.opensOutlet, s.credit, s.show, s.loading, s.none, s.unavailable, s.seenBy('X')]) {
       expect(value.trim().length).toBeGreaterThan(0);
     }
     expect(s.seenBy('X')).toContain('GDELT');
