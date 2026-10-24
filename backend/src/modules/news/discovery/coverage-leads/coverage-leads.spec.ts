@@ -69,7 +69,7 @@ class BudgetTwin implements LeadBudgetStore {
   };
 }
 
-/** every rolling hour holds at most 60 calls and every two calls are at least 5 s apart */
+/** every rolling hour holds at most LEAD_CALLS_PER_HOUR calls and every two calls are at least 5 s apart */
 function assertWithinBudget(calls: readonly number[]): void {
   const sorted = [...calls].sort((a, b) => a - b);
   for (let i = 0; i < sorted.length; i++) {
@@ -290,7 +290,7 @@ describe('coverage leads · privacy: only closed vocabularies leave the server (
   });
 });
 
-describe('coverage leads · durable environment-wide budget (CTO R169: ≤60 per rolling hour, ≥5 s, no fail-open)', () => {
+describe('coverage leads · durable environment-wide budget (CTO R169 ≤60, E1 V5 30 per rolling hour, ≥5 s, no fail-open)', () => {
   it('cap exhaustion: 60 calls in an hour, the 61st refused; the window rolls, it never resets', async () => {
     const store = new BudgetTwin({ t: 0 });
     const gate = new LeadCallGate(store);
@@ -317,7 +317,7 @@ describe('coverage leads · durable environment-wide budget (CTO R169: ≤60 per
   });
 
   it.each([3, 5, 12])(
-    '%i restarts inside one hour never exceed 60: every new process reads the shared count',
+    '%i restarts inside one hour never exceed the cap: every new process reads the shared count',
     async (restarts) => {
       const store = new BudgetTwin({ t: 0 });
       const perProcess = Math.ceil(LEAD_WINDOW_MS / LEAD_MIN_SPACING_MS / (restarts + 1));
@@ -398,8 +398,9 @@ describe('coverage leads · durable environment-wide budget (CTO R169: ≤60 per
     expect(await afterRestart.reserve()).toEqual({ granted: true });
   });
 
-  it('the shipped gate is 60 per rolling hour and at least 5 s apart', () => {
-    expect(LEAD_CALLS_PER_HOUR).toBe(60);
+  it('the shipped gate is 30 per rolling hour (E1 V5), inside the CTO 60 ceiling, and at least 5 s apart', () => {
+    expect(LEAD_CALLS_PER_HOUR).toBe(30);
+    expect(LEAD_CALLS_PER_HOUR).toBeLessThanOrEqual(60);
     expect(LEAD_MIN_SPACING_MS).toBe(5_000);
     expect(LEAD_WINDOW_MS).toBe(3_600_000);
   });

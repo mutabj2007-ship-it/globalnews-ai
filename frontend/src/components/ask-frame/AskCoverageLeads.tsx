@@ -9,6 +9,10 @@ import {
 import { askCoverageLeadsStrings } from '@/lib/ask/askCoverageLeadsStrings';
 import { COVERAGE_LEADS_UI_ENABLED } from '@/lib/ask/coverageLeadsActivation';
 import { formatUtc } from '@/lib/ask/askR2View';
+import { isolatedAuto } from '@/lib/ask/askDirection';
+
+/* H R168 E1 — every control on this panel is a 44 px touch target */
+const TAP = 'inline-flex min-h-[44px] items-center underline underline-offset-2';
 
 /*
   CTO R168 — GDELT coverage leads, a clearly separate OPTIONAL section after the answer. It is NOT
@@ -49,27 +53,34 @@ export function AskCoverageLeadsList({
         {s.note}
       </p>
       <ul className="flex flex-col gap-1.5">
-        {result.leads.map((lead) => (
+        {result.leads.map((lead) => {
+          /* H R168 note — an unformattable time is dropped, never shown raw beside "Seen by GDELT" */
+          const seen = formatUtc(lead.seenByGdeltAt, locale);
+          return (
           <li key={lead.url} data-ask="coverage-lead" className="flex flex-wrap items-baseline gap-x-2 text-[0.8125rem] leading-[1.5]">
-            <span data-ask="coverage-lead-outlet" className="break-all text-[var(--ask-read-ink,#dbe6f3)]">
+            {/* H R168 E2/E4 — names wrap at word boundaries; outlet and time are bidi-isolated runs */}
+            <span data-ask="coverage-lead-outlet" className="break-words text-[var(--ask-read-ink,#dbe6f3)]" {...isolatedAuto()}>
               {lead.outlet}
             </span>
-            <span data-ask="coverage-lead-seen" className="text-[var(--ask-read-ink3,#8299b4)]">
-              {s.seenBy(formatUtc(lead.seenByGdeltAt, locale) ?? lead.seenByGdeltAt)}
-            </span>
+            {seen !== null && (
+              <span data-ask="coverage-lead-seen" className="text-[var(--ask-read-ink3,#8299b4)]" {...isolatedAuto()}>
+                {s.seenBy(seen)}
+              </span>
+            )}
             <a
               data-ask="coverage-lead-link"
               href={safeExternalHref(lead.url)}
               target="_blank"
               rel={`${EXTERNAL_LINK_REL} nofollow`}
               referrerPolicy="no-referrer"
-              aria-label={`${s.readOriginal} — ${lead.outlet} (${s.opensOutlet})`}
-              className="underline underline-offset-2"
+              aria-label={`${s.readOriginalAria} — ${lead.outlet} (${s.opensOutlet})`}
+              className={TAP}
             >
               {s.readOriginal}
             </a>
           </li>
-        ))}
+          );
+        })}
       </ul>
       <p data-ask="coverage-leads-credit" className="text-[0.75rem] leading-[1.5] text-[var(--ask-read-ink3,#8299b4)]">
         <a
@@ -77,7 +88,7 @@ export function AskCoverageLeadsList({
           target="_blank"
           rel={EXTERNAL_LINK_REL}
           referrerPolicy="no-referrer"
-          className="underline underline-offset-2"
+          className={TAP}
         >
           {s.credit}
         </a>
@@ -118,10 +129,11 @@ export function AskCoverageLeads({
       data-ask="coverage-leads"
       data-ask-coverage-state={state.kind}
       aria-label={s.heading}
-      className="mt-4 flex flex-col gap-2 rounded-[12px] border border-[var(--ask-read-rule,#26384f)] p-3.5"
+      /* H R168 E3 — no bordered card around the lone button: the frame appears with content */
+      className={`mt-4 flex flex-col gap-2 ${state.kind === 'IDLE' ? '' : 'rounded-[12px] border border-[var(--ask-read-rule,#26384f)] p-3.5'}`}
     >
       {state.kind === 'IDLE' && (
-        <button type="button" data-ask="coverage-leads-show" onClick={load} className="self-start text-[0.8125rem] underline underline-offset-2">
+        <button type="button" data-ask="coverage-leads-show" onClick={load} className={`self-start text-[0.8125rem] ${TAP}`}>
           {s.show}
         </button>
       )}

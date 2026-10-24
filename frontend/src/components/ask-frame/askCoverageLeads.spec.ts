@@ -54,6 +54,8 @@ describe('CTO R168 · nothing is sent until the reader asks', () => {
     const fetchSpy = jest.spyOn(globalThis, 'fetch' as never);
     const html = renderToStaticMarkup(createElement(AskCoverageLeads, { ...props, switchOn: true }));
     expect(html).toContain('data-ask="coverage-leads-show"');
+    expect(html).toContain('min-h-[44px]');
+    expect(html).not.toContain('rounded-[12px]'); // H R168 E3: no frame around the lone button
     expect(html).toContain('Show coverage leads from other outlets');
     expect(html).not.toContain('coverage-lead-link');
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -129,6 +131,26 @@ describe('CTO R168 · what the reader sees after asking', () => {
     expect(html).toContain('Read original ↗');
   });
 
+  it('H R168 · every control is a 44 px target; the accessible name carries no arrow glyph', () => {
+    const anchors = html.match(/<a [^>]*>/g) ?? [];
+    expect(anchors.length).toBeGreaterThanOrEqual(3);
+    for (const a of anchors) expect(a).toContain('min-h-[44px]');
+    for (const label of html.match(/aria-label="[^"]*"/g) ?? []) expect(label).not.toContain('↗');
+    expect(html).toContain('aria-label="Read original — outlet1.example.org');
+  });
+
+  it('H R168 · outlet and time are bidi-isolated; names wrap at word boundaries', () => {
+    expect(html).toMatch(/data-ask="coverage-lead-outlet" class="break-words[^"]*" style="unicode-bidi:isolate"/);
+    expect(html).not.toContain('break-all');
+  });
+
+  it('H R168 · an unformattable time is dropped, never shown raw', () => {
+    const odd = { leads: [{ outlet: 'outlet9.example.org', url: 'https://outlet9.example.org/a', seenByGdeltAt: 'not-a-time' }], attribution: GDELT };
+    const markup = renderToStaticMarkup(createElement(AskCoverageLeadsList, { result: odd, locale: 'en' }));
+    expect(markup).not.toContain('Seen by GDELT');
+    expect(markup).not.toContain('not-a-time');
+  });
+
   it('an outlet name is plain text, never markup', () => {
     expect(html).not.toContain('<img');
     expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
@@ -146,11 +168,12 @@ describe('CTO R168 · what the reader sees after asking', () => {
 describe('CTO R168 · seven locales', () => {
   it.each(['en', 'pl', 'fr', 'de', 'es', 'pt', 'ar'])('%s carries every string, and "seen" never reads as publication', (locale) => {
     const s = askCoverageLeadsStrings(locale);
-    for (const value of [s.heading, s.note, s.readOriginal, s.opensOutlet, s.credit, s.show, s.loading, s.none, s.unavailable, s.seenBy('X')]) {
+    for (const value of [s.heading, s.note, s.readOriginal, s.readOriginalAria, s.opensOutlet, s.credit, s.show, s.loading, s.none, s.unavailable, s.seenBy('X')]) {
       expect(value.trim().length).toBeGreaterThan(0);
     }
     expect(s.seenBy('X')).toContain('GDELT');
     expect(s.credit).toContain('GDELT');
+    expect(s.readOriginalAria).not.toContain('↗');
     if (locale !== 'en') expect(s.heading).not.toBe(askCoverageLeadsStrings('en').heading);
   });
 });

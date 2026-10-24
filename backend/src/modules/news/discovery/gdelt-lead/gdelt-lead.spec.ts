@@ -104,8 +104,29 @@ describe('GDELT lead-only discovery · fail-closed state machine (spec §3)', ()
     expect(source.fetchLeads).not.toHaveBeenCalled();
   });
 
-  it('the shipped governed record is null: no placeholder licence exists in code', () => {
-    expect(GDELT_LEAD_USE_RECORD).toBeNull();
+  it('the shipped governed record is E1’s (ADDENDUM-22) over a real hash, never a placeholder', () => {
+    const record = GDELT_LEAD_USE_RECORD;
+    expect(record).not.toBeNull();
+    expect(record!.termsUrl).toBe('https://gdeltproject.org/about.html');
+    expect(record!.termsSha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(new Set(record!.termsSha256).size).toBeGreaterThan(4); // not 'a'.repeat(64)
+    expect(record!.e1VerdictRef).toContain('ADDENDUM-22');
+    for (const clause of [
+      'a citation to The GDELT Project and a link to its website',
+      'never presented as a publication date',
+      "must never render, store or model a publisher's title, snippet or image",
+      "must never fetch anything from a publisher's host on the strength of this licence",
+    ]) {
+      expect(record!.e1Wording).toContain(clause);
+    }
+  });
+
+  it('a filled record alone switches nothing on: without the flag discovery stays OFF', async () => {
+    const source = spySource();
+    expect(
+      (await discoverLeads('kenya', { env: {}, useRecord: GDELT_LEAD_USE_RECORD, source })).state,
+    ).toBe('OFF');
+    expect(source.fetchLeads).not.toHaveBeenCalled();
   });
 
   it('the shipped source is NoLiveLeadSource: LIVE_WIRING_ABSENT, and it refuses if ever called', async () => {

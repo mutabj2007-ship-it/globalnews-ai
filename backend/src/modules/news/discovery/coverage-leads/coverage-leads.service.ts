@@ -24,7 +24,7 @@ import { prismaLeadBudgetStore } from './prisma-lead-budget.store';
   called by the answer, telemetry or search builders, and its result has no count-shaped field.
 
   Fail-closed order: switch OFF → no governed E1 use record (NOT_AUTHORIZED) → question suppressed
-  or without a gazetteer place → cache → durable environment-wide budget (≤60 per rolling hour,
+  or without a gazetteer place → cache → durable environment-wide budget (≤30 per rolling hour,
   ≥5 s apart, shared by every replica and restart) → one GDELT call. Any doubt answers "no leads"; nothing is retried.
 */
 

@@ -54,7 +54,23 @@ export interface GdeltLeadUseRecord {
   readonly e1Wording: string;
 }
 
-export const GDELT_LEAD_USE_RECORD: GdeltLeadUseRecord | null = null;
+/*
+  E1 ADDENDUM-22 (V5 GO WITH CONDITIONS, C-V5-1…C-V5-9) — the governed record. The wording is E1's,
+  verbatim. The hash is over the RAW bytes Main captured over HTTPS (E1 would not hash model-processed
+  text): R153-RETRIEVAL/MAIN/GDELT-TERMS-CAPTURE-20261024/ (www.gdeltproject.org 301 → gdeltproject.org,
+  24,355 bytes, last-modified 2022-09-03; the grant and citation sentences E1 quoted are present).
+  Filling it switches NOTHING on: discovery still needs GDELT_LEAD_DISCOVERY_ENABLED=true (Alpha BE
+  only) and the UI needs COVERAGE_LEADS_UI_ENABLED. Re-read the terms at every expansion (C-V5-3).
+*/
+export const GDELT_LEAD_USE_RECORD: GdeltLeadUseRecord | null = Object.freeze({
+  termsUrl: 'https://gdeltproject.org/about.html',
+  termsSha256: '384754b514042255c4542d51dc1e631da55c83c67d46a92b53b48a812d94be6b',
+  termsReadAt: '2026-10-24T08:09:08Z',
+  e1VerdictRef:
+    'E1 ADDENDUM-19 §2, §2.1–§2.4, C-G1…C-G4 + ADDENDUM-22 (V5 GO WITH CONDITIONS), C-V5-1…C-V5-9',
+  e1Wording:
+    "GDELT's published terms grant unlimited and unrestricted use of the GDELT datasets, for any purpose including commercial, provided every use or redistribution carries a citation to The GDELT Project and a link to its website; those terms are silent on the publishers' articles the index points at, so GlobalNewsAI may use only GDELT's own observed fields — the URL, the outlet domain, the observation time (never presented as a publication date), the language, and the outlet country as GDELT asserts it — must never render, store or model a publisher's title, snippet or image, and must never fetch anything from a publisher's host on the strength of this licence.",
+});
 
 /*
   CTO R165 §GDELT 1 — a host-wide clearance is NOT a fetch licence. The only positive answer names

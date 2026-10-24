@@ -1,5 +1,5 @@
 /*
-  CTO R168/R169 · CAPACITY — a hard GLOBAL cap for the whole Alpha environment: at most 60 outgoing
+  CTO R168/R169 · CAPACITY — a hard GLOBAL cap for the whole Alpha environment: at most 30 outgoing
   GDELT requests in ANY rolling hour, at least 5 s between any two, no burst, no retry, NO fail-open.
 
   The budget is DURABLE and SHARED: every reservation is decided inside one database transaction that
@@ -15,7 +15,8 @@
   tests).
 */
 
-export const LEAD_CALLS_PER_HOUR = 60;
+/** E1 V5 (ADDENDUM-22): the conservative figure governs — 30 per rolling hour, inside the CTO's 60 ceiling */
+export const LEAD_CALLS_PER_HOUR = 30;
 export const LEAD_MIN_SPACING_MS = 5_000;
 export const LEAD_COOLDOWN_AFTER_REFUSAL_MS = 15 * 60_000;
 export const LEAD_WINDOW_MS = 60 * 60_000;
