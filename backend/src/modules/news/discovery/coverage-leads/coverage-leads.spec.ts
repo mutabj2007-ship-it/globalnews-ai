@@ -19,8 +19,10 @@ import {
   type CoverageLeadView,
 } from './coverage-leads.service';
 import {
+  describeOutcome,
   fetchGdeltLeads,
   gdeltDocUrl,
+  repairGdeltJson,
   GdeltDocLeadSource,
   GDELT_DOC_API,
   type FetchLike,
@@ -531,14 +533,88 @@ describe('coverage leads · the one network file', () => {
       { kind: 'FAILED', reason: 'BODY_TOO_LARGE' },
     ],
   ])('a bad answer is no leads (%#)', async (response, expected) => {
-    expect(await fetchGdeltLeads('"kenya"', jest.fn().mockResolvedValue(response))).toEqual(
+    expect(await fetchGdeltLeads('"kenya"', jest.fn().mockResolvedValue(response))).toMatchObject(
       expected,
     );
   });
 
+  /* CTO R170 — the second live attempt got a ~5.6 KB 200 that did not parse. GDELT's known defects: */
+  const MALFORMED =
+    '{"articles": [{"url": "https://outlet1.example.org/business/a", "title": "Kenya\'s \\\'shilling\\\' \u0007falls\u0001\n today", ' +
+    '"seendate": "20261024T061500Z", "domain": "outlet1.example.org", "language": "English", "sourcecountry": "Kenya"}]}';
+
+  it("repairs GDELT malformed JSON (raw control characters, invalid \\' escapes) and still builds fields only", async () => {
+    expect(() => JSON.parse(MALFORMED)).toThrow();
+    const outcome = await fetchGdeltLeads(
+      '"kenya"',
+      jest.fn().mockResolvedValue(new Response(MALFORMED, { status: 200 })),
+    );
+    expect(outcome).toMatchObject({ kind: 'OK', diag: { repaired: true, status: 200 } });
+    const leads = outcome.kind === 'OK' ? outcome.leads : [];
+    expect(leads).toHaveLength(1);
+    expect(JSON.stringify(leads)).not.toMatch(/shilling|falls|today/);
+  });
+
+  it('the repair never splits an escaped backslash and keeps valid escapes', () => {
+    const text = String.raw`{"a": "x\\y \"q\" \n é", "b": "it\'s"}`;
+    expect(JSON.parse(repairGdeltJson(text))).toEqual({ a: 'x\\y "q" \n é', b: "it\\'s" });
+  });
+
+  it('valid JSON is parsed directly (repaired=false)', async () => {
+    const outcome = await fetchGdeltLeads(
+      '"kenya"',
+      jest.fn().mockResolvedValue(jsonResponse({ articles: [article(1)] })),
+    );
+    expect(outcome).toMatchObject({ kind: 'OK', diag: { repaired: false } });
+  });
+
+  it('GDELT throttle text (HTTP 200, plain sentence) is a refusal that cools the gate down', async () => {
+    const throttle = new Response(
+      'Please limit requests to one every 5 seconds or contact kalev.leetaru5@gmail.com for larger queries.',
+      { status: 200 },
+    );
+    expect(await fetchGdeltLeads('"kenya"', jest.fn().mockResolvedValue(throttle))).toMatchObject({
+      kind: 'REFUSED_BY_GDELT',
+      status: 200,
+      reason: 'THROTTLE_TEXT',
+    });
+  });
+
+  it('the operator line holds kinds, numbers and media type only: no body, URL, title or address', async () => {
+    const lines = [
+      describeOutcome(
+        await fetchGdeltLeads(
+          '"kenya"',
+          jest.fn().mockResolvedValue(
+            new Response(MALFORMED, {
+              status: 200,
+              headers: { 'content-type': 'application/json; charset=utf-8' },
+            }),
+          ),
+        ),
+      ),
+      describeOutcome(
+        await fetchGdeltLeads(
+          '"kenya"',
+          jest
+            .fn()
+            .mockResolvedValue(new Response('<html>oops kalev@x.org</html>', { status: 200 })),
+        ),
+      ),
+    ];
+    expect(lines[0]).toMatch(
+      /^outcome=OK leads=1 httpStatus=200 bytes=\d+ type=application\/json repaired=true$/,
+    );
+    expect(lines[1]).toMatch(
+      /^outcome=FAILED reason=NOT_JSON httpStatus=200 bytes=\d+ type=text\/plain repaired=-$/,
+    );
+    for (const line of lines)
+      expect(line).not.toMatch(/outlet1|shilling|kenya|kalev|html|https?:/i);
+  });
+
   it('a network error or timeout is no leads, never a throw to the reader path', async () => {
     const timeout = Object.assign(new Error('t'), { name: 'TimeoutError' });
-    expect(await fetchGdeltLeads('"kenya"', jest.fn().mockRejectedValue(timeout))).toEqual({
+    expect(await fetchGdeltLeads('"kenya"', jest.fn().mockRejectedValue(timeout))).toMatchObject({
       kind: 'FAILED',
       reason: 'TimeoutError',
     });

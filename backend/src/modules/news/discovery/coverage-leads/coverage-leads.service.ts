@@ -14,7 +14,7 @@ import {
 import { checkLeadUrl } from '../gdelt-lead/lead-url-guard';
 import { deriveLeadKeywords } from '../gdelt-lead/lead-keywords';
 import { LeadCallGate, LeadQueryCache } from '../gdelt-lead/lead-call-gate';
-import { GdeltDocLeadSource, LeadFetchError } from './gdelt-doc-lead.source';
+import { describeOutcome, GdeltDocLeadSource, LeadFetchError } from './gdelt-doc-lead.source';
 import { prismaLeadBudgetStore } from './prisma-lead-budget.store';
 
 /*
@@ -138,7 +138,10 @@ export class CoverageLeadsService {
     this.deps = {
       env: process.env,
       useRecord: GDELT_LEAD_USE_RECORD,
-      source: new GdeltDocLeadSource(),
+      /* CTO R170 — the sanitized upstream outcome (kinds, numbers, media type; never content) */
+      source: new GdeltDocLeadSource(fetch, (outcome) =>
+        this.logger.log(`coverage-leads gdelt ${describeOutcome(outcome)}`),
+      ),
       gate: new LeadCallGate(prismaLeadBudgetStore(prisma)),
       cache: new LeadQueryCache<readonly CoverageLeadView[]>(CACHE_TTL_MS, 200),
     };
