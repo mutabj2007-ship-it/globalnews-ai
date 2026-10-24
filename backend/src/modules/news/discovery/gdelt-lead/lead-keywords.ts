@@ -120,13 +120,29 @@ const NON_COUNTRY_CONTAINERS: readonly string[] = [
   'new mexico',
   'new jersey',
   'northern ireland',
+  /* EA R168 P2-2 — a US territory absent from COUNTRIES; "samoa" alone would find it */
+  'american samoa',
 ];
+
+/*
+  EA R168 P3 — country names that are also common words or people ("Michael Jordan", roast turkey,
+  "Chad"). Only a locative cue right before them ("in Jordan", "from Turkey") makes them a place to
+  SEND; without one they still count as a named place (detect-only), never sent alone.
+*/
+const CUE_REQUIRED: ReadonlySet<string> = new Set(['jordan', 'turkey', 'chad']);
+const LOCATIVE_CUE = '(?:in|from|to|across|inside|at|near|between|within|into|throughout)';
 
 interface PlaceEntry {
   readonly key: string; // normalized lookup form
   readonly sent: string; // gazetteer spelling sent to GDELT
   readonly iso3: string;
   readonly isCity: boolean;
+  /*
+    EA R168 P2-1 — an ambiguous place is still DETECTED: it counts toward "two places named"
+    (MULTI_PLACE) and alone gives NO_PLACE, but it is never sent. Dropping it from detection let
+    "Is Ethiopia's dam affecting Sudan?" send Ethiopia alone.
+  */
+  readonly detectOnly: boolean;
 }
 
 let placeIndex: readonly PlaceEntry[] | null = null;
@@ -136,7 +152,7 @@ function places(): readonly PlaceEntry[] {
   const key = normalizeGeographicLookupKey;
   const entries = new Map<string, PlaceEntry>();
   const put = (lookup: string, sent: string, iso3: string, isCity: boolean) =>
-    entries.set(key(lookup), { key: key(lookup), sent, iso3, isCity });
+    entries.set(key(lookup), { key: key(lookup), sent, iso3, isCity, detectOnly: false });
   for (const country of COUNTRIES) put(country.name, country.name, country.iso3, false);
   for (const [alias, iso3] of Object.entries(COUNTRY_ALIASES_BY_ISO3)) {
     const country = COUNTRIES.find((c) => c.iso3 === iso3);
@@ -162,7 +178,12 @@ function places(): readonly PlaceEntry[] {
       containers.some((other) => other !== s && containsTerm(other, s) >= 0)
     );
   };
-  for (const [lookup, entry] of [...entries]) if (ambiguous(entry.sent)) entries.delete(lookup);
+  for (const [lookup, entry] of [...entries]) {
+    if (!ambiguous(entry.sent)) continue;
+    /* bare "congo" / "georgia" name no single country: their own sentinel, so they never merge */
+    const iso3 = AMBIGUOUS_PLACE_NAMES.has(lookup) ? `?${lookup}` : entry.iso3;
+    entries.set(lookup, { ...entry, iso3, detectOnly: true });
+  }
   /* longest first, so "south sudan" is read (and masked) before anything shorter inside it */
   placeIndex = [...entries.values()].sort((a, b) => b.key.length - a.key.length);
   return placeIndex;
@@ -196,12 +217,19 @@ export function deriveLeadKeywords(question: string): LeadKeywords {
   for (const entry of places()) {
     const pattern = termPattern(entry.key);
     if (pattern.test(rest)) {
-      found.push(entry);
+      const cued =
+        !CUE_REQUIRED.has(entry.key) ||
+        new RegExp(
+          `(?<![\\p{L}\\p{N}])${LOCATIVE_CUE}\\s+${entry.key}(?![\\p{L}\\p{N}])`,
+          'u',
+        ).test(rest);
+      found.push(cued ? entry : { ...entry, detectOnly: true });
       rest = rest.replace(termPattern(entry.key), ' ');
     }
   }
   if (found.length === 0) return { kind: 'NO_PLACE' };
   if (new Set(found.map((f) => f.iso3)).size > 1) return { kind: 'MULTI_PLACE' };
+  if (found.some((f) => f.detectOnly)) return { kind: 'NO_PLACE' };
   const place = (found.find((f) => !f.isCity) ?? found[0]).sent;
   const topics: string[] = [];
   for (const word of lower.split(/[^\p{L}]+/u)) {

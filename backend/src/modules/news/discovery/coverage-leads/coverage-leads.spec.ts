@@ -133,6 +133,43 @@ describe('coverage leads · privacy: only closed vocabularies leave the server (
     },
   );
 
+  it.each([
+    "Is Ethiopia's dam affecting Sudan?",
+    'Refugees crossing from Sudan into Chad',
+    'Rwanda and the Republic of the Congo',
+    'Kenya and Congo trade',
+    'Nigeria border with Niger',
+    'South Sudan oil through Sudan',
+    'Kinshasa and Congo',
+    'Michael Jordan visits Israel',
+  ])(
+    'EA R168 P2-1 · an ambiguous or uncued place still counts as a second place → MULTI_PLACE: %p',
+    (question) => {
+      expect(deriveLeadKeywords(question)).toEqual({ kind: 'MULTI_PLACE' });
+    },
+  );
+
+  it.each([
+    'Cyclone in American Samoa',
+    'Michael Jordan retirement news',
+    'Turkey prices before the holidays',
+    'Chad Smith concert',
+  ])(
+    'EA R168 P2-2/P3 · a contained place or an uncued common word is never looked up alone: %p',
+    (question) => {
+      expect(deriveLeadKeywords(question)).toEqual({ kind: 'NO_PLACE' });
+    },
+  );
+
+  it.each([
+    ['Floods in Jordan', 'jordan'],
+    ['Inflation in Turkey', 'turkey'],
+    ['Refugees arriving from Chad', 'chad'],
+  ])('EA R168 P3 · a cued country that is also a common word is sent: %p', (question, place) => {
+    const k = deriveLeadKeywords(question);
+    expect(k.kind === 'QUERY' ? k.place.toLowerCase() : k.kind).toBe(place);
+  });
+
   it('EA R168 · no query ever sends a bare "congo", "sudan", "guinea", "georgia", "niger" or "mexico"', () => {
     for (const q of [
       'Congo',
