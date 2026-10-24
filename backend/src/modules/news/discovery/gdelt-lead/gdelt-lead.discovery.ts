@@ -53,7 +53,9 @@ export function defaultLeadDiscoveryDeps(): LeadDiscoveryDeps {
   return { env: process.env, useRecord: GDELT_LEAD_USE_RECORD, source: new NoLiveLeadSource() };
 }
 
-function isCompleteUseRecord(record: GdeltLeadUseRecord | null): record is GdeltLeadUseRecord {
+export function isCompleteUseRecord(
+  record: GdeltLeadUseRecord | null,
+): record is GdeltLeadUseRecord {
   return (
     record !== null &&
     /^https:\/\//.test(record.termsUrl) &&

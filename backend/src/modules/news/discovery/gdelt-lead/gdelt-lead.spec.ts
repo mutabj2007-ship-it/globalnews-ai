@@ -418,16 +418,19 @@ describe('GDELT lead · counting and isolation (spec §5, T9, T11)', () => {
     expect(Object.keys(out).sort()).toEqual(['leads', 'state']);
   });
 
-  it('T11 · nothing outside this folder imports it: no Nest module, builder, other backend file or the frontend', () => {
+  /* CTO R168 — the ONE permitted importer is the coverage-leads feature folder (its own spec proves
+     that only app.module imports IT); no answer/telemetry builder, other module or the frontend. */
+  it('T11 · nothing outside this folder imports it except coverage-leads: no builder, other backend file or the frontend', () => {
     const repo = resolve(__dirname, '../../../../../..');
     const own = resolve(__dirname);
+    const permitted = resolve(__dirname, '../coverage-leads');
     const offenders: string[] = [];
     const walk = (dir: string) => {
       for (const name of readdirSync(dir)) {
         if (name === 'node_modules' || name === 'generated' || name.startsWith('.')) continue;
         const path = join(dir, name);
         if (statSync(path).isDirectory()) {
-          if (path !== own) walk(path);
+          if (path !== own && path !== permitted) walk(path);
         } else if (
           /\.(ts|tsx|js|mjs|cjs)$/.test(name) &&
           /gdelt-lead/.test(readFileSync(path, 'utf8'))

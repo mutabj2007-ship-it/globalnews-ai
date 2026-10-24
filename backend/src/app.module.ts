@@ -15,6 +15,7 @@ import { DataRetentionModule } from './modules/data-retention/data-retention.mod
 import { HealthModule } from './health/health.module';
 import { AnalysisModule } from './modules/analysis/analysis.module';
 import { NewsModule } from './modules/news/news.module';
+import { CoverageLeadsModule } from './modules/news/discovery/coverage-leads/coverage-leads.controller';
 import { ElectionReadModule } from './modules/election/election-read.module';
 import { EconomyModule } from './modules/economy/economy.module';
 import { EnergyReadModule } from './modules/energy/energy-read.module';
@@ -75,6 +76,8 @@ import {
     HealthModule,
     PoliticsReadModule, // Retained-only; no acquisition or schedule activation.
     NewsModule,
+    /* CTO R168 — GDELT coverage leads; answers OFF until switched on with a governed E1 use record */
+    CoverageLeadsModule,
     /*
       ECONOMY — ONE READ ROUTE OVER RETAINED EVIDENCE, AND NO PROVIDER.
 
