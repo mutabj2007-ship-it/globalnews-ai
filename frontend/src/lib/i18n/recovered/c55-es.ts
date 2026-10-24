@@ -481,6 +481,8 @@ export const es: Dictionary = {
     feedPanelEyebrow: 'Inteligencia mundial',
     feedPanelHeading: 'Flujo en directo',
     feedPanelViewMap: 'Ver el mapa mundial',
+    /** C907 — retrieval succeeded and the stream is empty; Claude L qualified (L_HOME_STRINGS_RETURN §1) */
+    feedPanelEmptyBody: 'La recuperación se completó correctamente. Por ahora no hay temas actuales en este flujo.',
     feedPanelUnavailableHeading: 'Estado de las fuentes',
     feedPanelUnavailableBody: 'Flujo en directo no disponible temporalmente.',
     feedPanelUnavailableFooter: 'La búsqueda y la inteligencia de países siguen accesibles.',

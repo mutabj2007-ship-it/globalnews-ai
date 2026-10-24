@@ -481,6 +481,8 @@ export const ar: Dictionary = {
     feedPanelEyebrow: 'رؤى عالمية',
     feedPanelHeading: 'البث المباشر',
     feedPanelViewMap: 'عرض خريطة العالم',
+    /** C907 — retrieval succeeded and the stream is empty; Claude L qualified (L_HOME_STRINGS_RETURN §1) */
+    feedPanelEmptyBody: 'تم الجلب بنجاح. لا توجد موضوعات حالية في هذا البث الآن.',
     feedPanelUnavailableHeading: 'حالة المصادر',
     feedPanelUnavailableBody: 'البث المباشر غير متاح مؤقتًا.',
     feedPanelUnavailableFooter: 'يبقى البحث ورؤى البلدان في المتناول.',

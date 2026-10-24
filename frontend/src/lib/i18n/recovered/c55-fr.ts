@@ -481,6 +481,8 @@ export const fr: Dictionary = {
     feedPanelEyebrow: 'Renseignement mondial',
     feedPanelHeading: 'Flux en direct',
     feedPanelViewMap: 'Voir la carte du monde',
+    /** C907 — retrieval succeeded and the stream is empty; Claude L qualified (L_HOME_STRINGS_RETURN §1) */
+    feedPanelEmptyBody: 'La récupération a réussi. Aucun sujet actuel ne figure dans ce flux pour le moment.',
     feedPanelUnavailableHeading: 'État des sources',
     feedPanelUnavailableBody: 'Flux en direct temporairement indisponible.',
     feedPanelUnavailableFooter: 'La recherche et le renseignement par pays restent accessibles.',

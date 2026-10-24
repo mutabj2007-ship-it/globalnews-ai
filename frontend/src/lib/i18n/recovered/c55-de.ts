@@ -481,6 +481,8 @@ export const de: Dictionary = {
     feedPanelEyebrow: 'Globales Lagebild',
     feedPanelHeading: 'Live-Feed',
     feedPanelViewMap: 'Weltkarte ansehen',
+    /** C907 — retrieval succeeded and the stream is empty; Claude L qualified (L_HOME_STRINGS_RETURN §1) */
+    feedPanelEmptyBody: 'Der Abruf war erfolgreich. In diesem Feed sind derzeit keine aktuellen Storys vorhanden.',
     feedPanelUnavailableHeading: 'Quellenstatus',
     feedPanelUnavailableBody: 'Live-Feed vorübergehend nicht verfügbar.',
     feedPanelUnavailableFooter: 'Suche und Länderlagebild bleiben zugänglich.',

@@ -669,7 +669,7 @@ export const pl: Dictionary = {
     contractBasisValue: 'artyku\u0142y pobrane w tej odpowiedzi',
     contractUpdatedLabel: 'Aktualizacja',
     contractCoverageLabel: 'Pokrycie',
-    contractCoverageValue: 'nie zmierzono',
+    contractCoverageValue: 'nie oceniono',
     countryCountForms: ['kraj', 'kraje', 'kraj\u00f3w'] as [string, string, string],
     unresolvedShort: 'nieustalone',
     geoSummaryLink: 'Przejd\u017a do zestawienia kraj\u00f3w',

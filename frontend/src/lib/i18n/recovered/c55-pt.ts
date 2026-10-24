@@ -481,6 +481,8 @@ export const pt: Dictionary = {
     feedPanelEyebrow: 'Inteligência mundial',
     feedPanelHeading: 'Fluxo ao vivo',
     feedPanelViewMap: 'Ver o mapa-múndi',
+    /** C907 — retrieval succeeded and the stream is empty; Claude L qualified (L_HOME_STRINGS_RETURN §1) */
+    feedPanelEmptyBody: 'A recuperação foi concluída com êxito. Não há matérias atuais neste fluxo no momento.',
     feedPanelUnavailableHeading: 'Status das fontes',
     feedPanelUnavailableBody: 'Fluxo ao vivo temporariamente indisponível.',
     feedPanelUnavailableFooter: 'A busca e a inteligência de países continuam acessíveis.',
