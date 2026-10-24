@@ -13,7 +13,12 @@ import type { LeadSource } from '../gdelt-lead/gdelt-lead.discovery';
   where GDELT itself refused (429 / 5xx), and never retried.
 */
 export const GDELT_DOC_API = 'https://api.gdeltproject.org/api/v2/doc/doc';
-export const GDELT_TIMEOUT_MS = 8_000;
+/*
+  Bounded, and sized from the first live Alpha call (24 Oct, 08:26:40Z): TLS to api.gdeltproject.org
+  was immediate, and GDELT's response arrived ~9 s later, after the original 8 s bound had aborted it.
+  The DOC API is slow; 20 s keeps the call bounded without refusing every answer.
+*/
+export const GDELT_TIMEOUT_MS = 20_000;
 export const GDELT_MAX_BODY_BYTES = 1_000_000;
 export const GDELT_MAX_RECORDS = 25;
 /** "current": what GDELT observed in the last three days */
