@@ -40,11 +40,34 @@ describe('E1 V7 C-B1 · the licence credit line', () => {
     expect(html).toMatch(/Written by <bdi data-credit-author="">Gabriela Mesones Rojo<\/bdi>/);
     expect(html).toContain('data-credit-publisher="">Global Voices<');
     expect(html).toMatch(new RegExp(`data-credit-original="" href="${article().url}"`));
+    expect(html).toContain('lang="en"');
     expect(html).toMatch(new RegExp(`data-credit-licence="" href="${BY3}"[^>]*>CC BY 3.0<`));
     expect(html).toContain('Headline shown unchanged');
     expect(html).toContain('Not endorsed');
     expect(html).not.toMatch(/<img|Power cuts spread/);
   });
+
+  it('CTO R177: the headline is plain text; "Read Original ↗" is the one story link; the licence link stays', () => {
+    const html = render([article()]);
+    const title = /<h3 data-credited-title=""[^>]*>([\s\S]*?)<\/h3>/.exec(html)?.[1] ?? '';
+    expect(title).toBe(article().title);
+    expect(title).not.toMatch(/<a\b/);
+    const links = [...html.matchAll(/<a\b[^>]*>[\s\S]*?<\/a>/g)].map((m) => m[0]);
+    expect(links).toHaveLength(2);
+    expect(links[0]).toMatch(/data-credit-original=""[^>]*target="_blank"[^>]*rel="noopener noreferrer"[^>]*>Read Original ↗</);
+    expect(links[1]).toMatch(/data-credit-licence=""[^>]*rel="noopener noreferrer license"[^>]*>CC BY 3.0</);
+  });
+
+  it.each(['pl', 'fr', 'de', 'es', 'pt', 'ar'])(
+    'CTO R177: %s is not yet qualified by L → the English line, DECLARED lang="en" (never an unreviewed translation)',
+    (language) => {
+      const html = render([article()], language);
+      expect(html).toMatch(/<section[^>]*lang="en"/);
+      expect(html).toMatch(/<p data-licence-attribution="" lang="en"/);
+      expect(html).toContain('Written by');
+      expect(html).toContain('Read Original ↗');
+    },
+  );
 
   it.each([
     ['no author', { authorName: undefined }],

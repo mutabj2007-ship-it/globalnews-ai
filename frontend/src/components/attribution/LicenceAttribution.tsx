@@ -6,9 +6,10 @@ import { LICENCE_NAMES, licenceAttributionStrings } from '@/lib/i18n/licenceAttr
  * E1 V7 C-B1 — THE LICENCE CREDIT LINE, rendered in code at the render seam.
  *
  * The four CC BY 3.0 conditions plus the publisher's house rule, for one article:
- *   "Written by <author> · <publisher> · Original article · Licence: CC BY 3.0 · Headline shown unchanged"
+ *   "Written by <author> · <publisher> · Read Original ↗ · Licence: CC BY 3.0 · Headline shown unchanged"
  * - the author comes only from the article's own `authorName` (an admission verdict on its page);
- * - "Original article" links the canonical URL the page itself declared (`url`);
+ * - "Read Original ↗" — the ONE story-navigation link (CTO R177: headline, image and publisher are never
+ *   external links) — opens the canonical URL the page itself declared (`url`);
  * - the licence links the exact deed the item carries (a wrong deed is itself a breach);
  * - the change notice says the headline is unchanged — this surface shows nothing else of the text.
  *
@@ -38,7 +39,7 @@ export function LicenceAttribution({
   if (!isFullyCredited(article)) return null;
   const t = licenceAttributionStrings(language);
   return (
-    <p data-licence-attribution="" className="text-[12px] leading-[1.5] text-[var(--gt-ink2)]">
+    <p data-licence-attribution="" lang={t.lang} className="text-[12px] leading-[1.5] text-[var(--gt-ink2)]">
       <span>
         {t.writtenBy} <bdi data-credit-author="">{article.authorName}</bdi>
       </span>
