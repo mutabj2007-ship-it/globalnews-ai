@@ -29,6 +29,7 @@ import { askLocaleForLegacyCatalogue } from '@/lib/ask/askLocale';
 import { askSevenStrings } from '@/lib/ask/askSevenStrings';
 import { rightsRefusedOnly } from '@/components/search/evidenceDisplay';
 import { askRightsRefusalStrings } from '@/lib/ask/askRightsRefusal';
+import { AskCoverageLeads } from './AskCoverageLeads';
 
 /**
  * ASK R2 CONSOLIDATED INTEGRATION R1 · GATE G — ONE ASK R2 TURN, AS D25 DRAWS IT.
@@ -967,6 +968,15 @@ export function AskR2TurnView({
 
       {/* MASTER CTO R32 · D10 — where this answer's cited reports are, country level, no map. */}
       <AskEvidencePlaces payload={payload} locale={locale} onStageDraft={displayOnly ? undefined : onStageDraft} />
+
+      {/* CTO R168 — GDELT coverage leads: separate from the answer, never a source; a live news
+          question only (a reopened stored answer asks for none). */}
+      <AskCoverageLeads
+        question={turn.question}
+        questionClass={payload.route?.questionClass}
+        locale={locale}
+        displayOnly={displayOnly || reopenedAt != null}
+      />
 
       {/*
         ASK DESIGN COMPLETENESS R1 — the Design toolbar after the answer and its footer:
