@@ -7,6 +7,7 @@ import {
   type CoverageLeadsResult,
 } from '@/lib/api/coverageLeadsApi';
 import { askCoverageLeadsStrings } from '@/lib/ask/askCoverageLeadsStrings';
+import { COVERAGE_LEADS_UI_ENABLED } from '@/lib/ask/coverageLeadsActivation';
 import { formatUtc } from '@/lib/ask/askR2View';
 
 /*
@@ -16,7 +17,8 @@ import { formatUtc } from '@/lib/ask/askR2View';
 
   Nothing is sent until the reader presses "Show coverage leads": rendering a turn (live, restored
   or reopened) never makes a request, so every "nothing is sent" invariant of the Ask surface holds.
-  The control exists only when the frontend switch is on (NEXT_PUBLIC_COVERAGE_LEADS=on) and only
+  The control exists only when the code switch COVERAGE_LEADS_UI_ENABLED is on (R169: never a build
+  variable; see coverageLeadsActivation.ts) and only
   for an explicit news question; any other class renders nothing. Outlet names are plain text; each
   link goes through the shared external-href boundary and opens the outlet's page in a new tab.
 */
@@ -25,9 +27,6 @@ export const COVERAGE_LEAD_QUESTION_CLASSES: ReadonlySet<string> = new Set([
   'CURRENT_STATUS_VERIFICATION',
 ]);
 
-export function coverageLeadsSwitchOn(value: string | undefined = process.env.NEXT_PUBLIC_COVERAGE_LEADS): boolean {
-  return value === 'on';
-}
 
 export function wantsCoverageLeads(questionClass: string | undefined, displayOnly: boolean, switchOn: boolean): boolean {
   return switchOn && !displayOnly && questionClass !== undefined && COVERAGE_LEAD_QUESTION_CLASSES.has(questionClass);
@@ -94,7 +93,7 @@ export function AskCoverageLeads({
   questionClass,
   locale,
   displayOnly,
-  switchOn = coverageLeadsSwitchOn(),
+  switchOn = COVERAGE_LEADS_UI_ENABLED,
 }: {
   readonly question: string;
   readonly questionClass: string | undefined;

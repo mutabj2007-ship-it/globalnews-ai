@@ -2,7 +2,8 @@ import { readdirSync, readFileSync, statSync } from 'fs';
 import { join, resolve } from 'path';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { AskCoverageLeads, AskCoverageLeadsList, coverageLeadsSwitchOn, wantsCoverageLeads } from './AskCoverageLeads';
+import { AskCoverageLeads, AskCoverageLeadsList, wantsCoverageLeads } from './AskCoverageLeads';
+import { COVERAGE_LEADS_UI_ENABLED } from '@/lib/ask/coverageLeadsActivation';
 import { safeLeadHref, sanitizeCoverageLeads, type CoverageLeadsResult } from '@/lib/api/coverageLeadsApi';
 import { askCoverageLeadsStrings } from '@/lib/ask/askCoverageLeadsStrings';
 
@@ -17,9 +18,11 @@ const lead = (i: number, over: Record<string, unknown> = {}) => ({
 });
 
 describe('CTO R168 · the control exists only with the switch on, for an explicit news question', () => {
-  it('the frontend switch is exactly "on"', () => {
-    expect(coverageLeadsSwitchOn('on')).toBe(true);
-    for (const v of [undefined, '', 'true', 'ON', '1']) expect(coverageLeadsSwitchOn(v)).toBe(false);
+  it('the switch is a code constant, OFF at this SHA, never an environment variable', () => {
+    /* R169 · the switch is code, OFF at this SHA; activation is one reviewed commit, never a variable */
+    expect(COVERAGE_LEADS_UI_ENABLED).toBe(false);
+    const source = readFileSync(join(__dirname, 'AskCoverageLeads.tsx'), 'utf8');
+    expect(source).not.toMatch(/process.env/);
   });
 
   it.each([

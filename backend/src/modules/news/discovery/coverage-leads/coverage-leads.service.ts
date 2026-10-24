@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Client } from 'pg';
+import { PrismaService } from '../../../../database/prisma.service';
 import {
   discoverLeads,
   isCompleteUseRecord,
@@ -13,13 +13,9 @@ import {
 } from '../gdelt-lead/gdelt-lead.types';
 import { checkLeadUrl } from '../gdelt-lead/lead-url-guard';
 import { deriveLeadKeywords } from '../gdelt-lead/lead-keywords';
-import {
-  LeadCallGate,
-  LeadQueryCache,
-  type InstanceLock,
-  type LockHandle,
-} from '../gdelt-lead/lead-call-gate';
+import { LeadCallGate, LeadQueryCache } from '../gdelt-lead/lead-call-gate';
 import { GdeltDocLeadSource, LeadFetchError } from './gdelt-doc-lead.source';
+import { prismaLeadBudgetStore } from './prisma-lead-budget.store';
 
 /*
   CTO R168 · GDELT COVERAGE LEADS (Alpha only, PO Option 1). A lead is a link to another outlet's
@@ -28,14 +24,12 @@ import { GdeltDocLeadSource, LeadFetchError } from './gdelt-doc-lead.source';
   called by the answer, telemetry or search builders, and its result has no count-shaped field.
 
   Fail-closed order: switch OFF → no governed E1 use record (NOT_AUTHORIZED) → question suppressed
-  or without a gazetteer place → cache → capacity gate (single instance, 30/h per holder, ≥5 s) →
-  one GDELT call. Any doubt answers "no leads"; nothing is retried.
+  or without a gazetteer place → cache → durable environment-wide budget (≤60 per rolling hour,
+  ≥5 s apart, shared by every replica and restart) → one GDELT call. Any doubt answers "no leads"; nothing is retried.
 */
 
 export const MAX_LEADS_SHOWN = 5;
 const CACHE_TTL_MS = 15 * 60_000;
-/** a fixed, arbitrary key for pg_try_advisory_lock, owned by this feature alone */
-export const GDELT_LEAD_LOCK_KEY = 4_744_454_001;
 
 export type CoverageLeadsState =
   | 'OFF'
@@ -130,38 +124,9 @@ export async function coverageLeadsFor(
       outcome.kind === 'REFUSED_BY_GDELT' ||
       outcome.reason === 'TimeoutError'
     )
-      deps.gate.refused();
+      await deps.gate.refused();
     return respond('UNAVAILABLE', [], lookedUp);
   }
-}
-
-/** pg_try_advisory_lock on a dedicated session; released when this process (or its connection) ends. */
-export function postgresInstanceLock(connectionString: string | undefined): InstanceLock {
-  return async (): Promise<LockHandle | null> => {
-    if (connectionString === undefined || connectionString === '') return null;
-    const client = new Client({ connectionString });
-    let alive = true;
-    client.on('error', () => {
-      alive = false;
-    });
-    client.on('end', () => {
-      alive = false;
-    });
-    try {
-      await client.connect();
-      const result = await client.query<{ ok: boolean }>('SELECT pg_try_advisory_lock($1) AS ok', [
-        GDELT_LEAD_LOCK_KEY,
-      ]);
-      if (result.rows[0]?.ok !== true) {
-        await client.end().catch(() => undefined);
-        return null;
-      }
-      return { alive: () => alive };
-    } catch {
-      await client.end().catch(() => undefined);
-      return null;
-    }
-  };
 }
 
 @Injectable()
@@ -169,12 +134,12 @@ export class CoverageLeadsService {
   private readonly logger = new Logger(CoverageLeadsService.name);
   private readonly deps: CoverageLeadsDeps;
 
-  constructor() {
+  constructor(prisma: PrismaService) {
     this.deps = {
       env: process.env,
       useRecord: GDELT_LEAD_USE_RECORD,
       source: new GdeltDocLeadSource(),
-      gate: new LeadCallGate(postgresInstanceLock(process.env.DATABASE_URL)),
+      gate: new LeadCallGate(prismaLeadBudgetStore(prisma)),
       cache: new LeadQueryCache<readonly CoverageLeadView[]>(CACHE_TTL_MS, 200),
     };
   }

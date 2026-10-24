@@ -1,89 +1,79 @@
 /*
-  CTO R168 · CAPACITY — a hard GLOBAL cap for the whole Alpha environment: at most 60 outgoing GDELT
-  requests per rolling hour, at least 5 s between any two, no burst, no retry, and NO fail-open.
+  CTO R168/R169 · CAPACITY — a hard GLOBAL cap for the whole Alpha environment: at most 60 outgoing
+  GDELT requests in ANY rolling hour, at least 5 s between any two, no burst, no retry, NO fail-open.
 
-  Across replicas: only the ONE instance holding a Postgres session-level advisory lock may call
-  GDELT at all ("single-instance bounded gate"). The lock lives on a dedicated connection; it is
-  released when that instance stops, and another instance may take it then. No table, no migration.
-  If the lock cannot be taken, or the database cannot be reached, this instance calls nothing.
+  The budget is DURABLE and SHARED: every reservation is decided inside one database transaction that
+  first takes a transaction-scoped advisory lock (so replicas are serialised) and reads the calls
+  already recorded in the last hour from the database (so a restart, a crash or a new replica starts
+  from the true count, never from zero). Time is the DATABASE clock, so replicas cannot disagree about
+  the window. A reservation is written before the call is made, so a crash after it still counts.
 
-  After a 429 or a 5xx the gate stays shut for 15 minutes; a failed call still counts against the
-  hour, and the hourly count restarts empty only for a new holder session (see
-  LEAD_CALLS_PER_HOUR). Everything is injected so the rules are testable without a clock or a database.
+  After a 429 / 5xx / timeout a refusal row shuts the gate for 15 minutes for every instance.
+  If the store cannot be read or written, nothing is called (BUDGET_UNREADABLE).
+
+  This file is pure policy: the store is injected (the database in production, an in-memory twin in
+  tests).
 */
 
-/** CTO R168: the environment-wide ceiling */
-export const LEAD_CALLS_PER_HOUR_GLOBAL = 60;
-/*
-  One holder cannot see a previous holder's count (no shared table, by design: no migration). When the
-  lock passes on (a deploy, a crash), two holder sessions can fall inside one rolling hour, so each
-  session may use only HALF the ceiling: any hour with at most one hand-over stays within 60.
-  Residual, disclosed to E1/CTO: three or more backend restarts inside one hour could exceed it.
-*/
-export const LEAD_CALLS_PER_HOUR = LEAD_CALLS_PER_HOUR_GLOBAL / 2;
+export const LEAD_CALLS_PER_HOUR = 60;
 export const LEAD_MIN_SPACING_MS = 5_000;
 export const LEAD_COOLDOWN_AFTER_REFUSAL_MS = 15 * 60_000;
-const HOUR_MS = 60 * 60_000;
+export const LEAD_WINDOW_MS = 60 * 60_000;
 
-/** A held lock reports whether its connection (and so the lock) is still alive. */
-export interface LockHandle {
-  alive(): boolean;
+/** The reads and writes one locked reservation needs; all times are the store's own clock (ms). */
+export interface LeadBudgetTx {
+  now(): Promise<number>;
+  callsSince(sinceMs: number): Promise<number>;
+  lastCallAt(): Promise<number | null>;
+  lastRefusalAt(): Promise<number | null>;
+  recordCall(atMs: number): Promise<void>;
+  recordRefusal(atMs: number): Promise<void>;
 }
 
-/** Tries once to become the single GDELT caller. Resolves null (never throws) when unsure. */
-export type InstanceLock = () => Promise<LockHandle | null>;
+/** Runs `fn` while holding the one environment-wide lock; rejects if it cannot. */
+export interface LeadBudgetStore {
+  withLock<T>(fn: (tx: LeadBudgetTx) => Promise<T>): Promise<T>;
+}
 
-export type GateRefusal = 'NOT_THE_GATE_INSTANCE' | 'HOURLY_CAP' | 'SPACING' | 'COOLDOWN';
+export type GateRefusal = 'HOURLY_CAP' | 'SPACING' | 'COOLDOWN' | 'BUDGET_UNREADABLE';
+
+export type GateDecision =
+  { readonly granted: true } | { readonly granted: false; readonly reason: GateRefusal };
 
 export class LeadCallGate {
-  private readonly calls: number[] = [];
-  private cooldownUntil = 0;
-  private held: LockHandle | null = null;
-  private lockAttemptAt = -Infinity;
+  constructor(private readonly store: LeadBudgetStore) {}
 
-  constructor(
-    private readonly lock: InstanceLock,
-    private readonly now: () => number = Date.now,
-  ) {}
-
-  /** Reserves one call slot, or says why not. A reserved slot is spent even if the call fails. */
-  async reserve(): Promise<
-    { readonly granted: true } | { readonly granted: false; readonly reason: GateRefusal }
-  > {
-    const t = this.now();
-    if (this.held !== null && !this.held.alive()) {
-      /* a lost lock is a new session when re-taken: its window starts full, never empty */
-      this.held = null;
-      this.calls.length = 0;
-      for (let i = 0; i < LEAD_CALLS_PER_HOUR; i++) this.calls.push(t);
+  /** Reserves one call, durably, or says why not. A reserved call is spent even if it then fails. */
+  async reserve(): Promise<GateDecision> {
+    try {
+      return await this.store.withLock(async (tx): Promise<GateDecision> => {
+        const t = await tx.now();
+        const refusedAt = await tx.lastRefusalAt();
+        if (refusedAt !== null && t - refusedAt < LEAD_COOLDOWN_AFTER_REFUSAL_MS) {
+          return { granted: false, reason: 'COOLDOWN' };
+        }
+        if ((await tx.callsSince(t - LEAD_WINDOW_MS)) >= LEAD_CALLS_PER_HOUR) {
+          return { granted: false, reason: 'HOURLY_CAP' };
+        }
+        const last = await tx.lastCallAt();
+        if (last !== null && t - last < LEAD_MIN_SPACING_MS) {
+          return { granted: false, reason: 'SPACING' };
+        }
+        await tx.recordCall(t);
+        return { granted: true };
+      });
+    } catch {
+      return { granted: false, reason: 'BUDGET_UNREADABLE' };
     }
-    if (this.held === null) {
-      /* re-try taking the lock at most once a minute: a waiting instance never hammers the DB */
-      if (t - this.lockAttemptAt < 60_000)
-        return { granted: false, reason: 'NOT_THE_GATE_INSTANCE' };
-      this.lockAttemptAt = t;
-      this.held = await this.lock().catch(() => null);
-      if (this.held === null) return { granted: false, reason: 'NOT_THE_GATE_INSTANCE' };
-    }
-    if (t < this.cooldownUntil) return { granted: false, reason: 'COOLDOWN' };
-    while (this.calls.length > 0 && t - this.calls[0] >= HOUR_MS) this.calls.shift();
-    if (this.calls.length >= LEAD_CALLS_PER_HOUR) return { granted: false, reason: 'HOURLY_CAP' };
-    const last = this.calls[this.calls.length - 1];
-    if (last !== undefined && t - last < LEAD_MIN_SPACING_MS)
-      return { granted: false, reason: 'SPACING' };
-    this.calls.push(t);
-    return { granted: true };
   }
 
-  /** A refusal from GDELT (429 / 5xx / timeout) shuts the gate; nothing is retried. */
-  refused(): void {
-    this.cooldownUntil = this.now() + LEAD_COOLDOWN_AFTER_REFUSAL_MS;
-  }
-
-  /** For tests and the status probe only. */
-  usedThisHour(): number {
-    const t = this.now();
-    return this.calls.filter((c) => t - c < HOUR_MS).length;
+  /** GDELT refused (429 / 5xx / timeout): every instance stays shut for 15 minutes. Best effort. */
+  async refused(): Promise<void> {
+    try {
+      await this.store.withLock(async (tx) => tx.recordRefusal(await tx.now()));
+    } catch {
+      /* the call itself was already counted; only the cooldown row is lost */
+    }
   }
 }
 

@@ -5,8 +5,11 @@ import {
   LeadCallGate,
   LeadQueryCache,
   LEAD_CALLS_PER_HOUR,
+  LEAD_COOLDOWN_AFTER_REFUSAL_MS,
   LEAD_MIN_SPACING_MS,
-  type InstanceLock,
+  LEAD_WINDOW_MS,
+  type LeadBudgetStore,
+  type LeadBudgetTx,
 } from '../gdelt-lead/lead-call-gate';
 import type { GdeltLeadUseRecord } from '../gdelt-lead/gdelt-lead.types';
 import {
@@ -23,7 +26,58 @@ import {
   type FetchLike,
 } from './gdelt-doc-lead.source';
 
-/* Synthetic only: every fetch is a fake, every lock is a fake, no clock is real. */
+/* Synthetic only: every fetch is a fake, the budget store is an in-memory twin, no clock is real. */
+
+/*
+  The in-memory twin of the database budget store: ONE shared record of calls and refusals (what the
+  ComputeMeter rows are), a lock that serialises every withLock exactly as pg_advisory_xact_lock does,
+  and a clock the test drives. A "restart" or a "replica" is a NEW LeadCallGate on the SAME store.
+*/
+class BudgetTwin implements LeadBudgetStore {
+  readonly calls: number[] = [];
+  readonly refusals: number[] = [];
+  unavailable = false;
+  inside = 0;
+  maxInside = 0;
+  private chain: Promise<unknown> = Promise.resolve();
+  constructor(readonly clock: { t: number }) {}
+  withLock<T>(fn: (tx: LeadBudgetTx) => Promise<T>): Promise<T> {
+    if (this.unavailable) return Promise.reject(new Error('database unreachable'));
+    const run = this.chain.then(async () => {
+      this.inside += 1;
+      this.maxInside = Math.max(this.maxInside, this.inside);
+      try {
+        return await fn(this.tx);
+      } finally {
+        this.inside -= 1;
+      }
+    });
+    this.chain = run.catch(() => undefined);
+    return run;
+  }
+  private readonly tx: LeadBudgetTx = {
+    now: async () => this.clock.t,
+    callsSince: async (since) => this.calls.filter((c) => c > since).length,
+    lastCallAt: async () => (this.calls.length === 0 ? null : Math.max(...this.calls)),
+    lastRefusalAt: async () => (this.refusals.length === 0 ? null : Math.max(...this.refusals)),
+    recordCall: async (at) => {
+      this.calls.push(at);
+    },
+    recordRefusal: async (at) => {
+      this.refusals.push(at);
+    },
+  };
+}
+
+/** every rolling hour holds at most 60 calls and every two calls are at least 5 s apart */
+function assertWithinBudget(calls: readonly number[]): void {
+  const sorted = [...calls].sort((a, b) => a - b);
+  for (let i = 0; i < sorted.length; i++) {
+    if (i > 0) expect(sorted[i] - sorted[i - 1]).toBeGreaterThanOrEqual(LEAD_MIN_SPACING_MS);
+    const inWindow = sorted.filter((c) => c > sorted[i] - LEAD_WINDOW_MS && c <= sorted[i]).length;
+    expect(inWindow).toBeLessThanOrEqual(LEAD_CALLS_PER_HOUR);
+  }
+}
 
 const USE_RECORD: GdeltLeadUseRecord = {
   termsUrl: 'https://www.gdeltproject.org/about.html',
@@ -33,7 +87,6 @@ const USE_RECORD: GdeltLeadUseRecord = {
   e1Wording: 'synthetic',
 };
 const ON = { GDELT_LEAD_DISCOVERY_ENABLED: 'true' };
-const held: InstanceLock = async () => ({ alive: () => true });
 
 const article = (i: number, over: Record<string, unknown> = {}) => ({
   url: `https://outlet${i}.example.org/business/story-${i}`,
@@ -58,7 +111,7 @@ function deps(
     env: ON,
     useRecord: USE_RECORD,
     source: new GdeltDocLeadSource(fetchImpl),
-    gate: new LeadCallGate(held, () => clock.t),
+    gate: new LeadCallGate(new BudgetTwin(clock)),
     cache: new LeadQueryCache<readonly CoverageLeadView[]>(15 * 60_000, 200, () => clock.t),
     ...over,
   };
@@ -237,79 +290,118 @@ describe('coverage leads · privacy: only closed vocabularies leave the server (
   });
 });
 
-describe('coverage leads · capacity gate (≤60/h environment-wide, ≥5 s, no fail-open)', () => {
-  it('only the lock holder may call; a refused lock is retried at most once a minute', async () => {
-    let attempts = 0;
-    const clock = { t: 0 };
-    const gate = new LeadCallGate(
-      async () => {
-        attempts += 1;
-        return null;
-      },
-      () => clock.t,
-    );
-    expect(await gate.reserve()).toEqual({ granted: false, reason: 'NOT_THE_GATE_INSTANCE' });
-    clock.t += 30_000;
-    expect(await gate.reserve()).toEqual({ granted: false, reason: 'NOT_THE_GATE_INSTANCE' });
-    expect(attempts).toBe(1);
-    clock.t += 31_000;
-    await gate.reserve();
-    expect(attempts).toBe(2);
-  });
-
-  it('a lock that throws is treated as not held (fail closed)', async () => {
-    const gate = new LeadCallGate(async () => {
-      throw new Error('db down');
-    });
-    expect(await gate.reserve()).toEqual({ granted: false, reason: 'NOT_THE_GATE_INSTANCE' });
-  });
-
-  it('enforces ≥5 s spacing and the per-holder hourly cap (half the 60/h ceiling)', async () => {
-    const clock = { t: 0 };
-    const gate = new LeadCallGate(held, () => clock.t);
-    expect(await gate.reserve()).toEqual({ granted: true });
-    clock.t += LEAD_MIN_SPACING_MS - 1;
-    expect(await gate.reserve()).toEqual({ granted: false, reason: 'SPACING' });
-    clock.t += 1;
-    expect(await gate.reserve()).toEqual({ granted: true });
-    for (let i = 2; i < LEAD_CALLS_PER_HOUR; i++) {
-      clock.t += LEAD_MIN_SPACING_MS;
-      expect((await gate.reserve()).granted).toBe(true);
+describe('coverage leads · durable environment-wide budget (CTO R169: ≤60 per rolling hour, ≥5 s, no fail-open)', () => {
+  it('cap exhaustion: 60 calls in an hour, the 61st refused; the window rolls, it never resets', async () => {
+    const store = new BudgetTwin({ t: 0 });
+    const gate = new LeadCallGate(store);
+    for (let i = 0; i < LEAD_CALLS_PER_HOUR; i++) {
+      expect(await gate.reserve()).toEqual({ granted: true });
+      store.clock.t += LEAD_MIN_SPACING_MS;
     }
-    expect(LEAD_CALLS_PER_HOUR).toBe(30);
-    clock.t += LEAD_MIN_SPACING_MS;
     expect(await gate.reserve()).toEqual({ granted: false, reason: 'HOURLY_CAP' });
-    clock.t += 60 * 60_000;
+    store.clock.t = LEAD_WINDOW_MS - 1; // the first call is still inside the hour
+    expect(await gate.reserve()).toEqual({ granted: false, reason: 'HOURLY_CAP' });
+    store.clock.t = LEAD_WINDOW_MS; // now it has left: exactly one slot frees
+    expect(await gate.reserve()).toEqual({ granted: true });
+    assertWithinBudget(store.calls);
+  });
+
+  it('spacing: a call inside 5 s of the last one is refused', async () => {
+    const store = new BudgetTwin({ t: 0 });
+    const gate = new LeadCallGate(store);
+    expect(await gate.reserve()).toEqual({ granted: true });
+    store.clock.t = LEAD_MIN_SPACING_MS - 1;
+    expect(await gate.reserve()).toEqual({ granted: false, reason: 'SPACING' });
+    store.clock.t = LEAD_MIN_SPACING_MS;
     expect(await gate.reserve()).toEqual({ granted: true });
   });
 
-  it('a GDELT refusal shuts the gate for 15 minutes; nothing is retried', async () => {
-    const clock = { t: 0 };
-    const gate = new LeadCallGate(held, () => clock.t);
-    await gate.reserve();
-    gate.refused();
-    clock.t += 14 * 60_000;
-    expect(await gate.reserve()).toEqual({ granted: false, reason: 'COOLDOWN' });
-    clock.t += 60_000;
-    expect(await gate.reserve()).toEqual({ granted: true });
-  });
+  it.each([3, 5, 12])(
+    '%i restarts inside one hour never exceed 60: every new process reads the shared count',
+    async (restarts) => {
+      const store = new BudgetTwin({ t: 0 });
+      const perProcess = Math.ceil(LEAD_WINDOW_MS / LEAD_MIN_SPACING_MS / (restarts + 1));
+      let granted = 0;
+      for (let r = 0; r <= restarts; r++) {
+        const gate = new LeadCallGate(store); // a fresh process: no memory of its own
+        for (let i = 0; i < perProcess && store.clock.t < LEAD_WINDOW_MS; i++) {
+          if ((await gate.reserve()).granted) granted += 1;
+          store.clock.t += LEAD_MIN_SPACING_MS;
+        }
+      }
+      expect(granted).toBe(LEAD_CALLS_PER_HOUR); // the cap is reached, and not passed, across all restarts
+      assertWithinBudget(store.calls);
+    },
+  );
 
-  it('a lost lock re-taken starts a FULL window, never an empty one', async () => {
-    const clock = { t: 0 };
-    const sessions: { alive: boolean }[] = [];
-    const gate = new LeadCallGate(
-      async () => {
-        const session = { alive: true };
-        sessions.push(session);
-        return { alive: () => session.alive };
-      },
-      () => clock.t,
+  it('concurrent replicas: 4 replicas × 50 simultaneous requests → exactly one call, lock never shared', async () => {
+    const store = new BudgetTwin({ t: 0 });
+    const replicas = Array.from({ length: 4 }, () => new LeadCallGate(store));
+    const results = await Promise.all(
+      replicas.flatMap((gate) => Array.from({ length: 50 }, () => gate.reserve())),
     );
-    expect((await gate.reserve()).granted).toBe(true);
-    sessions[0].alive = false; // the first session's connection dropped
-    clock.t += 61_000;
-    expect(await gate.reserve()).toEqual({ granted: false, reason: 'HOURLY_CAP' });
-    expect(sessions).toHaveLength(2);
+    expect(results.filter((r) => r.granted)).toHaveLength(1);
+    expect(store.maxInside).toBe(1);
+  });
+
+  it('property: replicas, restarts and bursts over six simulated hours stay within every rolling hour', async () => {
+    const store = new BudgetTwin({ t: 0 });
+    let replicas = Array.from({ length: 3 }, () => new LeadCallGate(store));
+    let seed = 7;
+    const rand = () => (seed = (seed * 48271) % 2147483647) / 2147483647;
+    while (store.clock.t < 6 * LEAD_WINDOW_MS) {
+      if (rand() < 0.01) replicas = replicas.map(() => new LeadCallGate(store)); // everyone restarts
+      await Promise.all(
+        replicas.map((gate) => (rand() < 0.8 ? gate.reserve() : Promise.resolve(null))),
+      );
+      store.clock.t += Math.floor(rand() * 4_000);
+    }
+    expect(store.calls.length).toBeGreaterThan(LEAD_CALLS_PER_HOUR * 5); // the cap was actually reached
+    assertWithinBudget(store.calls);
+  });
+
+  it('lost lock / database unreachable: nothing is called (BUDGET_UNREADABLE), the service shows CAPACITY', async () => {
+    const store = new BudgetTwin({ t: 0 });
+    store.unavailable = true;
+    expect(await new LeadCallGate(store).reserve()).toEqual({
+      granted: false,
+      reason: 'BUDGET_UNREADABLE',
+    });
+    const fetchImpl = jest.fn();
+    const out = await coverageLeadsFor(
+      'Kenya economy',
+      deps(fetchImpl, { gate: new LeadCallGate(store) }),
+    );
+    expect(out.state).toBe('CAPACITY');
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('a crash inside the locked section releases the lock and records nothing', async () => {
+    const store = new BudgetTwin({ t: 0 });
+    await expect(
+      store.withLock(async () => {
+        throw new Error('process died mid-transaction');
+      }),
+    ).rejects.toThrow();
+    expect(await new LeadCallGate(store).reserve()).toEqual({ granted: true });
+    expect(store.calls).toHaveLength(1);
+  });
+
+  it('a GDELT refusal shuts EVERY instance for 15 minutes, across a restart; nothing is retried', async () => {
+    const store = new BudgetTwin({ t: 0 });
+    await new LeadCallGate(store).reserve();
+    await new LeadCallGate(store).refused();
+    const afterRestart = new LeadCallGate(store);
+    store.clock.t = LEAD_COOLDOWN_AFTER_REFUSAL_MS - 1;
+    expect(await afterRestart.reserve()).toEqual({ granted: false, reason: 'COOLDOWN' });
+    store.clock.t = LEAD_COOLDOWN_AFTER_REFUSAL_MS;
+    expect(await afterRestart.reserve()).toEqual({ granted: true });
+  });
+
+  it('the shipped gate is 60 per rolling hour and at least 5 s apart', () => {
+    expect(LEAD_CALLS_PER_HOUR).toBe(60);
+    expect(LEAD_MIN_SPACING_MS).toBe(5_000);
+    expect(LEAD_WINDOW_MS).toBe(3_600_000);
   });
 });
 
